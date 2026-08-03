@@ -251,17 +251,72 @@ direct media), nothing changes anywhere.
 - [ ] VM/compose mode with TURN env unset: calls still connect via LiveKit's embedded TURN,
       responses carry no ice_servers, and webrtc-internals shows the usual candidate mix.
 
+## Calendar inline event editing
+
+The event detail modal is the only event surface and edits every field in place; there is no
+separate edit modal, no right-sidebar mode, and no view-mode toggle in the header. Needs the
+organizer (A) and an attendee who is not the organizer (B).
+
+- [ ] As A, click an event. Title, date, times, repeat, reminders, location, meeting mode, room,
+      category, tags and focus time are all editable in place. No pencil button anywhere.
+- [ ] Each committed change fires exactly ONE `UpdateEvent`. Typing in the title or location does
+      NOT fire per keystroke - the write lands on blur or Enter.
+- [ ] Escape in a text field reverts the draft and does not close the modal.
+- [ ] Move the start past the end: the end shifts by 30 minutes and both ride one request.
+- [ ] On a recurring event, changing title / time / location / category / focus opens the scope
+      dialog once. Picking a scope applies it; cancelling discards the change.
+- [ ] On a recurring event, changing the channel binding, room, tags, reminders or attendees does
+      NOT prompt for scope - those are series-level and the backend ignores a per-occurrence
+      scope for them. Bind a channel on a recurring event: no dialog, and "Join meeting" appears.
+- [ ] Open the description editor, type, and close it (Done, Escape, or backdrop). One write, and
+      re-opening with no edits writes nothing.
+- [ ] The modal scrolls internally - long descriptions do not overflow it, and the delete confirm
+      and recurrence-scope dialogs render ABOVE the modal, not behind it.
+- [ ] Escape closes the innermost surface first: with the scope dialog open it cancels the dialog
+      and leaves the modal open; pressing it again closes the modal.
+- [ ] Closing the modal (X, backdrop, Escape) clears the selection - reopening any event starts
+      clean and the page behind never scrolls while the modal is open.
+- [ ] At 375px and 768px the modal still fits: it slides up from the bottom edge on mobile and no
+      right-hand panel appears at any width.
+- [ ] As attendee B, open the same event. Every field is read-only text, the delete button is
+      gone, and the description has no Edit affordance. The RSVP buttons still work.
+- [ ] Remove B's access entirely, then have B open a stale tab and try to edit: the write is
+      rejected and the global error toast explains it.
+
+## Calendar activity log
+
+Every event carries an activity log at the bottom of the detail modal: field edits, attendee
+changes, and RSVP responses, newest first. Needs the organizer (A) and an attendee (B).
+
+- [ ] Create an event. Open it: the log shows "created this event" by A.
+- [ ] Rename it, move the start time, change the location, and edit the description. Each lands as
+      its own entry with the new value inline; the description entry does NOT print the body.
+- [ ] Add attendee B and save. One "invited B" entry. Remove B: one "removed B" entry. Adding two
+      people at once produces ONE entry naming both.
+- [ ] As B, RSVP Accept. As A, reopen the event: the log shows "B accepted the invite" with a green
+      check and the time. B changes to Decline: a second entry, red, both kept in order.
+- [ ] Clicking the same RSVP answer twice adds nothing - only real changes are recorded.
+- [ ] With more than 6 entries, only the newest 6 render behind a "Show N earlier entries" toggle
+      that expands and collapses.
+- [ ] On a recurring event, open any occurrence: the log is the SERIES log (same entries from every
+      occurrence). Cancel one occurrence and edit another: each adds a distinct recurrence entry
+      naming the date.
+- [ ] As B (viewer), the log is visible and read-only. Remove B's access: `ListEventActivities`
+      is denied and the modal surfaces the error rather than an empty log.
+- [ ] Delete an event permanently: its activity rows go with it (no orphans in
+      `calendar_activities`).
+
 ## Calendar meetings (channel-bound)
 
 An event can bind to a chat channel as a Uniffy online meeting. Join rides the existing calls
 stack through the global pre-join modal; the calendar copies nothing into channel membership.
 Needs user A (organizer + channel member), user B (attendee to add), and user C (non-member).
 
-- [ ] As user A, open the event editor, switch the meeting section to "Uniffy meeting", pick a
-      private channel A belongs to, save. The detail panel shows a "Join meeting" button.
+- [ ] As user A, open the event detail, switch the meeting section to "Uniffy meeting", pick a
+      private channel A belongs to. The detail panel shows a "Join meeting" button.
 - [ ] Flip the section to "Link": the channel binding clears and the URL input returns. Flip to
-      "None": both the URL and the binding clear on save.
-- [ ] Add an attendee (B) who is NOT in the picked channel. The editor shows "N attendees cannot
+      "None": both the URL and the binding clear.
+- [ ] Add an attendee (B) who is NOT in the picked channel. The picker shows "N attendees cannot
       access <channel>". Add B to the channel; the warning drops.
 - [ ] As attendee B (a channel member), open the event and click "Join meeting". The global
       pre-join modal opens and join lands in the channel's call.
@@ -274,7 +329,7 @@ Needs user A (organizer + channel member), user B (attendee to add), and user C 
 - [ ] Delete the bound channel. The event silently becomes a non-meeting event (FK SET NULL) with
       no error on the detail panel.
 - [ ] Send both a meeting URL and a channel_id on one event via the API: the backend rejects with
-      a validation error (the editor already enforces one mode).
+      a validation error (the detail panel already enforces one mode).
 - [ ] Mobile: open a channel-bound event. It shows a read-only "Online meeting" row with no join
       affordance (native calls are not shipped).
 - [ ] In the editor's Uniffy-meeting mode, click "Create a meeting room from attendees". A PRIVATE
@@ -320,6 +375,37 @@ on two clients (web tab A, web tab B or mobile) plus a second user for the send 
 - [ ] Enter edit-message mode, change text, cancel: no draft was created or overwritten.
 - [ ] Kill the network, type, restore the network: the next debounce saves silently (no error
       toasts at any point).
+
+## Team mention fanout
+
+`@Team` notifies the team's members wherever a user mention already does. Needs a team with a
+member inside a private channel and a member outside it, plus a team above 10 members for the
+composer guard (`(both products)`).
+
+- [ ] Mention a team in a members-only channel: only team members who hold a channel membership
+      get the notification, titled "Mentioned {team} in #{channel}".
+- [ ] The team member who is NOT in that channel sees nothing anywhere: no bell entry, no toast,
+      no sidebar badge, no unread bump.
+- [ ] Mention the same team in a PUBLIC channel: every active team member is notified.
+- [ ] Mention a user directly AND their team in one message: they get one notification, the
+      "Mentioned you" one, never a duplicate team event.
+- [ ] Mention a user who is not a member of a members-only channel: they get NO notification
+      (a mention must not preview a channel they cannot open).
+- [ ] The recipient's sidebar mention badge increments live on send and clears when they read
+      the channel.
+- [ ] Add a user to a mentioned team AFTER the message was sent, then reload: the unread team
+      mention now counts toward their badge (badges are membership-relative at read time; the
+      notification row is a send-time snapshot and is deliberately not backfilled).
+- [ ] Compose a mention of a team with more than 10 members: a "Notify team members?" dialog
+      appears before the message is sent. Cancel keeps the composer text, chips, and pending
+      attachments intact, and the synced draft survives. Confirm sends normally.
+- [ ] A team of 10 or fewer sends with no dialog at all.
+- [ ] Mention a team in a note, a task, and a calendar event: team members who can see that
+      content get "Mentioned {team} in: {title}"; a member without access gets nothing.
+- [ ] Edit the note/task/event without changing the team mention: no second notification
+      (delta semantics). Adding a second team mention notifies only the new team.
+- [ ] Mention a team in a calendar event where some team members are already attendees: the
+      attendees get only the invite, not a duplicate mention notification.
 
 ## Chat notification deep links
 
@@ -1046,6 +1132,236 @@ gated by the task's own access policy. Needs a builder plus a second member
 - [ ] Folder names stay scoped: put a note in a private folder, share only the
       note with another member, ask their agent to list notes -> the location
       reads "unknown folder", never the private folder's name.
+
+## Dev demo seeding (one-shot seeder container)
+
+The dev stack seeds itself: the `seeder` service runs the demo-company script
+with `--fresh-only` on every `stack up` and a `deployment_settings` sentinel
+(`seed/demo_company`) makes later starts a no-op. Needs the provider key env
+vars in `.env` for the agents leg.
+
+- [ ] Fresh stack seeds itself: `./manage.py stack reset-data` -> watch
+      `./manage.py logs -s seeder` -> it waits for the backend bootstrap,
+      then seeds users, groups, keys, agents, notes, files, rooms, events,
+      projects and chat, and exits 0.
+- [ ] Second start is a no-op: `./manage.py stack up` again -> seeder logs
+      "sentinel present" and exits within seconds, no duplicate rows.
+- [ ] Login works for the seeded accounts: `maria@uniffy.io` / `demo` and
+      `alice@uniffy.io` / `admin`; Maria sees the public channels with
+      history, alice sits in the Engineering group.
+- [ ] Agents answer: as any member, DM `Uniffy Anthropic` -> a reply streams
+      (key came from `CLAUDE_API_KEY`); the builder page shows five agents
+      with full tool sets.
+- [ ] Generated binaries render: Files > People > `employee-handbook.pdf`
+      opens in the PDF viewer with 2+ pages and selectable text; Brand >
+      `brand-wallpaper.png` and `team-offsite-2026.jpg` render previews;
+      search finds "error budget" (text inside the generated release
+      quality manual PDF).
+- [ ] Projects landed: three projects (PLV, TELE, ONB) with tasks, assignees
+      resolve to the seeded users, due dates spread around today.
+- [ ] Environment gate holds: `docker exec -e ENVIRONMENT=production
+      uniffy-dev-backend uv run python -m uniffy.scripts.demo_company` ->
+      refuses to run.
+
+## Teams and groups
+
+Teams (org structure) and access groups (permission bundles) share one table
+and one per-org name namespace; pickers must keep them distinguishable.
+
+### 1. Name namespace (both products)
+
+1. As an org admin, open `/admin/teams` and create a team `Engineering`.
+2. Open `/admin/groups` and try to create a group named `engineering`
+   (lower case). The create must fail with a readable "already exists"
+   error; nothing is created.
+3. Rename an existing group to another group's name - same typed error.
+
+### 2. Kind-aware pickers (both products)
+
+1. Open a calendar event and add attendees. Type a shared prefix that
+   matches people, a team, and a group. The dropdown shows People / Teams /
+   Groups sections with distinct badges (Team = primary tint,
+   Group = violet).
+2. Select a team: the chip renders as a team (not a user), the event saves,
+   and the attendee list contains the team's active members only.
+3. Repeat the search in a sharing dialog (`AddMemberPopover`) - same
+   sections and badges.
+
+### 3. Group expansion privacy (both products)
+
+1. Create a PRIVATE access group with two members as an admin.
+2. As an ordinary member who is NOT in the group, add attendees to an
+   event using the private group's id (RPC-level; the picker will not
+   offer it). The call must fail with "group not found".
+3. As a member OF the private group, the same call expands the roster.
+4. Deactivate one group member (org level), invite the group to a fresh
+   event: the deactivated user must not appear as an attendee.
+
+### 4. Admin surfaces (both products)
+
+1. Admin nav shows Members / Teams / Groups / Directory as separate
+   entries; `/admin/people` renders identity sources + the two people
+   toggles only.
+2. `/admin/teams` renders teams as an indented tree with lead and member
+   count; creating a sub-team under a parent shows correct nesting.
+3. `/admin/groups` exposes the Private toggle; a private group shows a
+   Private badge and stays invisible to ordinary members in pickers.
+4. A directory-synced group (managed name) rejects rename with
+   "managed by the directory".
+
+### 5. Team entity: search and mentions (both products)
+
+1. Ctrl+K a team's name: the team appears with a Team badge and a
+   "N members · parent" subline; Enter lands on the org chart filtered
+   to it (`/people?team={id}`). `team:` prefix filters to teams only.
+2. Type `@` in a note, search the team, insert. The chip renders as an
+   inline pill; hover shows name, member count, parent badge, and an
+   "Open in org chart" action.
+3. Rename the team in `/admin/teams` from a second tab: the chip title
+   updates without a reload. Ctrl+K finds it under the new name.
+4. Add or remove a team member: the search row's member count follows.
+5. Delete the team (or demote it to a group): the chip tombstones
+   (dashed "Deleted"), and the team no longer appears in search.
+6. Access groups NEVER appear in Ctrl+K or `@` mention results,
+   private or not.
+
+### 6. Private group visible to its own member (both products)
+
+1. As an admin create a PRIVATE access group and add an ordinary member.
+2. As that member, open any sharing dialog and search the group's name:
+   it appears with a lock icon and a Private tooltip.
+3. As a member NOT in the group, the same search returns nothing.
+
+### 7. Invited-via provenance (both products)
+
+1. Create an event and invite a team plus one direct person.
+2. Open the event detail as a non-editing attendee: rows expanded from
+   the team show a muted "via {team}" subline; the direct invite shows
+   none.
+3. Remove someone from the team afterwards: the existing event row and
+   its subline stay (snapshot semantics).
+4. Delete the team: the subline disappears; the attendee rows stay.
+
+## People - org chart and manager edges
+
+The chart draws at most 2000 nodes at once; deeper branches stay collapsed
+until expanded. Manager edges are editable from a team roster and from the
+member profile dialog.
+
+### 1. Branch collapse and expand (both products)
+
+1. Open `/people`. Every person with reports carries a caret badge with the
+   descendant count; in an org that fits the budget all of them start
+   expanded and no status pill shows.
+2. Collapse a mid-level manager: their whole subtree disappears, edges and
+   team containers reflow, and a top-left pill reads
+   "Showing X of Y people - expand a branch to see more".
+3. Expand it again: the count returns to Y and the pill disappears.
+4. Clicking the badge must NOT navigate; clicking the card still opens
+   `/people/{id}`.
+
+### 2. Over-budget org (both products)
+
+Needs an org above 2000 active members (or temporarily lower
+`MAX_RENDERED_NODES` in `OrgChartCanvas.tsx`).
+
+1. `/people` opens with the top levels drawn and the deeper ones collapsed -
+   never a blank canvas or a frozen tab.
+2. Expanding a branch that does not fit leaves it collapsed and the pill
+   switches to "collapse a branch or pick a team to draw more".
+3. Collapse a sibling branch, then expand the first one again: it opens.
+4. Filtering by a team in the sidebar draws that subtree within the budget.
+
+### 3. Manager from a team roster (both products)
+
+1. `/admin/teams` -> View members on a team. Each row shows
+   "Reports to {name}" or "Set manager".
+2. Open the control on someone with no manager: a "Report to {lead}
+   (team lead)" shortcut plus a people search. Use the shortcut; the row
+   label updates immediately and `/people` shows a solid edge.
+3. Use the search on another member, pick anyone: same result.
+4. "Clear manager" removes the edge; the chart falls back to the dashed
+   team-lead edge.
+5. A cycle (manage your own manager) is rejected with a readable error.
+6. Open an ACCESS group roster in `/admin/groups`: no manager control at all.
+7. Turn the org chart off in `/admin/people`, reopen a team roster: the
+   manager control is gone (edits stay in `/admin/members`).
+
+### 4. Teams in the member profile dialog (both products)
+
+1. `/admin/members` -> Edit profile on someone in a team. The Teams row
+   lists their teams as chips, with a Lead badge where they lead.
+2. Clicking a chip closes the dialog and lands on `/people?team={id}`
+   filtered to that team.
+3. "Rosters are edited in Teams" links to `/admin/teams`.
+4. A member on no team shows "Not on any team."
+
+### 5. Every route into a profile (both products)
+
+Do this as an ORDINARY member, not an admin - the profile read path used
+to require a platform admin and failed silently for everyone else.
+
+1. Post `@someone` in a chat message. Click the chip: it lands on
+   `/people/{userId}` and renders that person, not a blank page.
+2. Same from a note body, a task description, a comment, and a calendar
+   event description. Every chip goes to the same place.
+3. Hover a chip without clicking: the card fills in with title,
+   department and team chips. "Profile" opens `/people/{id}`.
+4. Ctrl+K, type a colleague's name: the row shows
+   "job title · department" beside the name and Enter lands on their
+   profile. Searching a job title ("VP Sales") finds them too.
+5. From the org chart, click a node. From the dashboard People widget,
+   click the manager. Both land on the profile.
+6. Open `/people/{id}` for a deactivated member: a not-found state, not
+   a half-rendered profile.
+
+### 6. Profile reads and where edits live (both products)
+
+1. `/people/{someone else}` shows Message and Copy link. There is NO
+   edit affordance anywhere on the page.
+2. `/people/{self}` also has no edit affordance - only Copy link.
+3. Settings > Account: change pronouns, work phone, timezone
+   ("Use current"), an MM-DD birthday, bio, and a link. Each row saves on
+   its own. Reload the profile page: every value is there.
+4. A bad birthday ("1990-04-12") is rejected with a readable message.
+5. Settings > Account shows NO job title / department / start date
+   fields - those are admin-owned.
+6. `/admin/members` -> Edit profile: set job title, department, office,
+   start date and a manager. They appear on the person's profile and on
+   their chart node.
+7. As an admin, the same dialog offers no bio / birthday / links fields.
+8. If a field is directory-managed it renders disabled with a
+   "Synced from directory" hint, in BOTH edit homes.
+
+### 7. An admin editing a profile gains no content access (both products)
+
+The one hard invariant of this feature. Two accounts needed.
+
+1. As an ordinary member, create a note and leave it private
+   (`Only me`). Note its URL.
+2. As an org admin, open `/admin/members` and edit that member's job
+   title and manager. Both writes succeed.
+3. Still as the admin, open the member's note URL: access denied. The
+   note must not appear in the admin's sidebar, in search, or under any
+   tag filter.
+4. Repeat with a private file and a private project.
+
+### 8. Turning the people surfaces off (both products)
+
+1. `/admin/people` -> turn OFF "Org chart". The People entry disappears
+   from the user menu, the dashboard People widget hides, and the team
+   roster manager controls disappear.
+2. `@` mention chips and hover cards keep working - they are deliberately
+   not gated on the toggle.
+3. Turn OFF "Directory" as well, then reopen a mention chip: the profile
+   page still resolves for a member.
+4. Turn both back ON; everything returns without a reload of the app.
+5. `/admin/people` lists one identity source of kind LOCAL that cannot
+   be deleted or deactivated. Kinds without a connector say so rather
+   than offering a dead "Sync now".
+6. Create a SCIM source with a secret, then reopen it: the secret is
+   never returned to the client. A second active non-LOCAL source is
+   rejected.
 
 ## Pre-release sweep
 

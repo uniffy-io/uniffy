@@ -37,6 +37,7 @@ Adding a new domain:
 - **`BaseContentOperations`** (`core/content/base_operations.py`): extending it for content gets permission checking and search indexing for free.
 - **Permission checks live inside domain operations.** The full model is in `.claude/rules/permissions.md` - the single source of truth; do not re-explain it.
 - **Multi-tenancy:** all content scoped to `organization_id`; users are global, memberships org-scoped. Verifying org access is part of every domain operation's contract.
+- **Raise domain errors (`core/errors.py`), never leak exception text to clients.** `observability/crpc.py::DOMAIN_ERROR_CODES` maps every `UNIFFYError` subclass to its Connect code for ALL unary RPCs, so a handler without local mapping still returns the right code. Handlers may map locally for precision, but an `except Exception` block must respond with the literal `"Internal server error"` - `str(e)` in a client-facing message is a leak (the `logger.exception` line keeps the details server-side).
 - **Imports at the top.** The one exception is the circular-import case in agent tool executors.
 - **Content we ship is a file, not a literal.** Prompts, templates, catalogs and the like go in `src/uniffy/data/` (see "Shipped content"), never in a triple-quoted string or a hand-written python catalog.
 - **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.

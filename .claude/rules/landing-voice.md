@@ -173,6 +173,34 @@ Whenever the landing page introduces a concept that the docs cover in depth, the
 
 When you change the docs page for a concept, scan the landing for the same noun and align. When you ship a new landing pillar, ensure the docs page exists and uses the same vocabulary.
 
+## 13. Docs screenshots are one size, at 2x
+
+**Every screenshot in the docs uses the same frame: 1280 by 620 CSS pixels at a device pixel ratio of 2, which writes a 2560 by 1240 file.** No exceptions, no per page judgement calls.
+
+One shape means the docs read as one product instead of a pile of captures. It also means the page does not lurch as the reader scrolls past an image, because every image occupies the same block.
+
+The 2x part is not optional either. Images are click to zoom, and the reader can magnify one to 800%, so a 1x capture is upscaled the moment anyone looks closely. Check the pixel dimensions of what you produced before committing it, because a 1x file looks correct until someone zooms.
+
+Do not stretch the viewport to fit a long page. A member roster or an audit log will happily report six thousand pixels of content and produce an unusable strip. Showing the top of a long list is the point, not showing all of it.
+
+Files live in `src/landing/public/docs/{area}/{name}.png` and are referenced from markdown as `/docs/{area}/{name}.png`.
+
+The alt text becomes the caption under the zoomed image, so write a full sentence naming what the reader is looking at. The dash rules in section 1 apply to it. Reread it whenever you recapture. Framing changes go stale, and a caption promising a table the reader cannot see is worse than no caption.
+
+## 14. Document the behavior, not the interface
+
+A docs page earns its place by telling the reader something the screen cannot. What a control actually does to their data, what it costs them, what it does not undo, which rule holds even when they are an admin. If the reader could learn it in two seconds by looking at the page, it does not belong in the docs.
+
+**Sections we do not write:**
+
+- "Where to find it", "Getting there", "Navigation". A person reading the Members page docs is looking at the Members page. Naming the sidebar group tells them nothing.
+- "What it looks like" wrapped around a screenshot. Put the screenshot inline where it helps and let it speak. We are not narrating images.
+- Inventories of the interface. "Three counters sit above the table", "two controls sit above the roster", a column by column table explaining that the Member column shows an avatar and a name. That is a transcription of the screen, and it rots the first time someone moves a button.
+
+**Write instead:** what removal does to their content, that a role change applies with no confirmation, that there is no limited admin tier, that the filter is a server query rather than a slice of the loaded page, which action lands in the audit log.
+
+The test for any paragraph: would an admin who already has the page open still learn something? If no, cut it. A short page of real facts beats a long page that walks the reader around a screen they can see.
+
 ## When in doubt
 
 Read the principles page out loud. If a sentence cannot be spoken at a normal conversational pace without sounding like a press release, rewrite it.
