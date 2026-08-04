@@ -24,6 +24,14 @@ INTERVAL_TO_SECONDS: dict[str, int] = {
 }
 
 
+def _full_input_tokens():
+    return (
+        AgentRunLog.input_tokens
+        + AgentRunLog.cache_creation_input_tokens
+        + AgentRunLog.cache_read_input_tokens
+    )
+
+
 class UsageOperations:
     """Aggregate usage statistics from agent run logs."""
 
@@ -79,11 +87,14 @@ class UsageOperations:
         result = await self.session.execute(
             select(
                 func.count(AgentRunLog.id).label("total_runs"),
-                func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("total_input_tokens"),
+                func.coalesce(func.sum(_full_input_tokens()), 0).label("total_input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("total_output_tokens"),
-                func.coalesce(
-                    func.sum(AgentRunLog.cache_read_input_tokens), 0
-                ).label("total_cache_read_input_tokens"),
+                func.coalesce(func.sum(AgentRunLog.cache_read_input_tokens), 0).label(
+                    "total_cache_read_input_tokens"
+                ),
+                func.coalesce(func.sum(AgentRunLog.cache_creation_input_tokens), 0).label(
+                    "total_cache_creation_input_tokens"
+                ),
                 func.count(func.distinct(AgentRunLog.session_id)).label("total_sessions"),
                 func.coalesce(func.avg(AgentRunLog.duration_ms), 0).label("avg_duration_ms"),
                 func.coalesce(func.sum(AgentRunLog.cost), 0).label("total_cost"),
@@ -92,12 +103,12 @@ class UsageOperations:
                 ),
                 func.coalesce(func.sum(AgentRunLog.image_count), 0).label("total_image_count"),
                 func.coalesce(func.sum(AgentRunLog.retry_count), 0).label("total_retries"),
-                func.coalesce(
-                    func.sum(func.cast(AgentRunLog.cancelled, Integer)), 0
-                ).label("total_cancelled"),
-                func.coalesce(
-                    func.sum(func.cast(AgentRunLog.deadline_exceeded, Integer)), 0
-                ).label("total_deadline_exceeded"),
+                func.coalesce(func.sum(func.cast(AgentRunLog.cancelled, Integer)), 0).label(
+                    "total_cancelled"
+                ),
+                func.coalesce(func.sum(func.cast(AgentRunLog.deadline_exceeded, Integer)), 0).label(
+                    "total_deadline_exceeded"
+                ),
             ).where(*base_filter)
         )
         row = result.one()
@@ -106,6 +117,7 @@ class UsageOperations:
             "total_input_tokens": row.total_input_tokens,
             "total_output_tokens": row.total_output_tokens,
             "total_cache_read_input_tokens": row.total_cache_read_input_tokens,
+            "total_cache_creation_input_tokens": (row.total_cache_creation_input_tokens),
             "total_sessions": row.total_sessions,
             "avg_duration_ms": int(row.avg_duration_ms),
             "total_cost": str(row.total_cost or 0),
@@ -136,11 +148,14 @@ class UsageOperations:
             select(
                 bucket.label("bucket"),
                 func.count(AgentRunLog.id).label("runs"),
-                func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(_full_input_tokens()), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
-                func.coalesce(
-                    func.sum(AgentRunLog.cache_read_input_tokens), 0
-                ).label("cache_read_input_tokens"),
+                func.coalesce(func.sum(AgentRunLog.cache_read_input_tokens), 0).label(
+                    "cache_read_input_tokens"
+                ),
+                func.coalesce(func.sum(AgentRunLog.cache_creation_input_tokens), 0).label(
+                    "cache_creation_input_tokens"
+                ),
                 func.coalesce(func.sum(AgentRunLog.cost), 0).label("cost"),
                 func.coalesce(func.sum(AgentRunLog.image_count), 0).label("image_count"),
             )
@@ -157,6 +172,7 @@ class UsageOperations:
                     "input_tokens": row.input_tokens,
                     "output_tokens": row.output_tokens,
                     "cache_read_input_tokens": row.cache_read_input_tokens,
+                    "cache_creation_input_tokens": row.cache_creation_input_tokens,
                     "cost": str(row.cost or 0),
                     "image_count": row.image_count,
                 }
@@ -170,6 +186,7 @@ class UsageOperations:
                 "input_tokens": row.input_tokens,
                 "output_tokens": row.output_tokens,
                 "cache_read_input_tokens": row.cache_read_input_tokens,
+                "cache_creation_input_tokens": row.cache_creation_input_tokens,
                 "cost": str(row.cost or 0),
                 "image_count": row.image_count,
             }
@@ -181,16 +198,20 @@ class UsageOperations:
             select(
                 AgentRunLog.model,
                 func.count(AgentRunLog.id).label("runs"),
-                func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(_full_input_tokens()), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AgentRunLog.cache_read_input_tokens), 0).label(
+                    "cache_read_input_tokens"
+                ),
+                func.coalesce(func.sum(AgentRunLog.cache_creation_input_tokens), 0).label(
+                    "cache_creation_input_tokens"
+                ),
                 func.coalesce(func.sum(AgentRunLog.cost), 0).label("cost"),
                 func.coalesce(func.sum(AgentRunLog.image_count), 0).label("image_count"),
             )
             .where(*base_filter)
             .group_by(AgentRunLog.model)
-            .order_by(
-                (func.sum(AgentRunLog.input_tokens) + func.sum(AgentRunLog.output_tokens)).desc()
-            )
+            .order_by((func.sum(_full_input_tokens()) + func.sum(AgentRunLog.output_tokens)).desc())
         )
         return [
             {
@@ -198,6 +219,8 @@ class UsageOperations:
                 "runs": row.runs,
                 "input_tokens": row.input_tokens,
                 "output_tokens": row.output_tokens,
+                "cache_read_input_tokens": row.cache_read_input_tokens,
+                "cache_creation_input_tokens": row.cache_creation_input_tokens,
                 "cost": str(row.cost or 0),
                 "image_count": row.image_count,
             }
@@ -214,15 +237,19 @@ class UsageOperations:
                 AgentRunLog.agent_id,
                 Agent.name.label("agent_name"),
                 func.count(AgentRunLog.id).label("runs"),
-                func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(_full_input_tokens()), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AgentRunLog.cache_read_input_tokens), 0).label(
+                    "cache_read_input_tokens"
+                ),
+                func.coalesce(func.sum(AgentRunLog.cache_creation_input_tokens), 0).label(
+                    "cache_creation_input_tokens"
+                ),
             )
             .join(Agent, Agent.id == AgentRunLog.agent_id, isouter=True)
             .where(*base_filter)
             .group_by(AgentRunLog.agent_id, Agent.name)
-            .order_by(
-                (func.sum(AgentRunLog.input_tokens) + func.sum(AgentRunLog.output_tokens)).desc()
-            )
+            .order_by((func.sum(_full_input_tokens()) + func.sum(AgentRunLog.output_tokens)).desc())
         )
         return [
             {
@@ -231,6 +258,8 @@ class UsageOperations:
                 "runs": row.runs,
                 "input_tokens": row.input_tokens,
                 "output_tokens": row.output_tokens,
+                "cache_read_input_tokens": row.cache_read_input_tokens,
+                "cache_creation_input_tokens": row.cache_creation_input_tokens,
             }
             for row in result.all()
         ]
@@ -266,8 +295,14 @@ class UsageOperations:
                 ProviderKey.label.label("key_label"),
                 ProviderKey.provider.label("provider"),
                 func.count(AgentRunLog.id).label("runs"),
-                func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(_full_input_tokens()), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AgentRunLog.cache_read_input_tokens), 0).label(
+                    "cache_read_input_tokens"
+                ),
+                func.coalesce(func.sum(AgentRunLog.cache_creation_input_tokens), 0).label(
+                    "cache_creation_input_tokens"
+                ),
             )
             .join(ProviderKey, ProviderKey.id == AgentRunLog.provider_key_id, isouter=True)
             .where(
@@ -275,9 +310,7 @@ class UsageOperations:
                 AgentRunLog.provider_key_id.isnot(None),
             )
             .group_by(AgentRunLog.provider_key_id, ProviderKey.label, ProviderKey.provider)
-            .order_by(
-                (func.sum(AgentRunLog.input_tokens) + func.sum(AgentRunLog.output_tokens)).desc()
-            )
+            .order_by((func.sum(_full_input_tokens()) + func.sum(AgentRunLog.output_tokens)).desc())
         )
         return [
             {
@@ -287,6 +320,8 @@ class UsageOperations:
                 "runs": row.runs,
                 "input_tokens": row.input_tokens,
                 "output_tokens": row.output_tokens,
+                "cache_read_input_tokens": row.cache_read_input_tokens,
+                "cache_creation_input_tokens": row.cache_creation_input_tokens,
             }
             for row in result.all()
         ]
@@ -314,12 +349,15 @@ class UsageOperations:
                 .count(AgentRunLog.id)
                 .filter(AgentRunLog.status == "success")
                 .label("successes"),
-                func
-                .count(AgentRunLog.id)
-                .filter(AgentRunLog.status == "error")
-                .label("failures"),
-                func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
+                func.count(AgentRunLog.id).filter(AgentRunLog.status == "error").label("failures"),
+                func.coalesce(func.sum(_full_input_tokens()), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AgentRunLog.cache_read_input_tokens), 0).label(
+                    "cache_read_input_tokens"
+                ),
+                func.coalesce(func.sum(AgentRunLog.cache_creation_input_tokens), 0).label(
+                    "cache_creation_input_tokens"
+                ),
             )
             .join(
                 AgentCronTask,
@@ -341,12 +379,15 @@ class UsageOperations:
                 .count(AgentRunLog.id)
                 .filter(AgentRunLog.status == "success")
                 .label("successes"),
-                func
-                .count(AgentRunLog.id)
-                .filter(AgentRunLog.status == "error")
-                .label("failures"),
-                func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
+                func.count(AgentRunLog.id).filter(AgentRunLog.status == "error").label("failures"),
+                func.coalesce(func.sum(_full_input_tokens()), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AgentRunLog.cache_read_input_tokens), 0).label(
+                    "cache_read_input_tokens"
+                ),
+                func.coalesce(func.sum(AgentRunLog.cache_creation_input_tokens), 0).label(
+                    "cache_creation_input_tokens"
+                ),
             )
             .join(
                 AgentCronTask,
@@ -377,6 +418,8 @@ class UsageOperations:
                 "failures": row.failures,
                 "input_tokens": row.input_tokens,
                 "output_tokens": row.output_tokens,
+                "cache_read_input_tokens": row.cache_read_input_tokens,
+                "cache_creation_input_tokens": row.cache_creation_input_tokens,
             }
             for row in per_task_result.all()
         ]
@@ -388,6 +431,8 @@ class UsageOperations:
                 "failures": totals_row.failures,
                 "input_tokens": totals_row.input_tokens,
                 "output_tokens": totals_row.output_tokens,
+                "cache_read_input_tokens": totals_row.cache_read_input_tokens,
+                "cache_creation_input_tokens": totals_row.cache_creation_input_tokens,
             },
             "per_task": per_task,
         }

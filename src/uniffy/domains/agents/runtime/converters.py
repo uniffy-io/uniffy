@@ -94,19 +94,16 @@ def runtime_stream_event_to_proto(event: StreamEvent) -> AgentStreamEvent:
     """
     match event.type:
         case EventType.REPLY_START:
-            return AgentStreamEvent(
-                reply_start=StreamReplyStartEvent(role="assistant")
-            )
+            return AgentStreamEvent(reply_start=StreamReplyStartEvent(role="assistant"))
         case EventType.MODEL_CALL_START:
-            return AgentStreamEvent(
-                model_call_start=StreamModelCallStartEvent(model=event.model)
-            )
+            return AgentStreamEvent(model_call_start=StreamModelCallStartEvent(model=event.model))
         case EventType.MODEL_CALL_END:
             return AgentStreamEvent(
                 model_call_end=StreamModelCallEndEvent(
                     model=event.model,
                     input_tokens=event.input_tokens,
                     output_tokens=event.output_tokens,
+                    cache_creation_input_tokens=(event.cache_creation_input_tokens),
                     cache_read_input_tokens=event.cache_read_input_tokens,
                     thinking_tokens=event.thinking_tokens,
                 )
@@ -242,17 +239,13 @@ def runtime_stream_event_to_proto(event: StreamEvent) -> AgentStreamEvent:
             )
         case EventType.SKILL_DRAFT:
             return AgentStreamEvent(
-                skill_draft=StreamSkillDraftEvent(
-                    draft=skill_draft_to_proto(event.draft)
-                )
+                skill_draft=StreamSkillDraftEvent(draft=skill_draft_to_proto(event.draft))
             )
         case EventType.EXCEED_MAX_ITERS:
             return AgentStreamEvent(exceed_max_iters=StreamExceedMaxItersEvent())
         case EventType.MESSAGE_STORED:
             return AgentStreamEvent(
-                message_stored=StreamMessageStoredEvent(
-                    message=message_to_proto(event.message)
-                )
+                message_stored=StreamMessageStoredEvent(message=message_to_proto(event.message))
             )
         case EventType.DONE:
             return AgentStreamEvent(
@@ -271,7 +264,7 @@ _STREAM_EVENT_FIELDS = {f.name: f for f in fields(StreamEvent)}
 _UUID_FIELDS = frozenset({"message_id", "request_id"})
 _MESSAGE_FIELDS = frozenset({"message", "assistant_message"})
 # `result` (CompletionResult) is runtime-internal and never serialized.
-_SKIPPED_FIELDS = frozenset({"type", "result"})
+_SKIPPED_FIELDS = frozenset({"type", "result", "error_exception"})
 
 
 def runtime_stream_event_to_json(event: StreamEvent) -> dict[str, Any]:
@@ -306,9 +299,7 @@ def runtime_stream_event_from_json(payload: dict[str, Any]) -> StreamEvent:
     try:
         event_type = EventType(payload["type"])
     except (KeyError, ValueError) as exc:
-        raise ValueError(
-            f"Unknown runtime stream event type: {payload.get('type')!r}"
-        ) from exc
+        raise ValueError(f"Unknown runtime stream event type: {payload.get('type')!r}") from exc
 
     kwargs: dict[str, Any] = {}
     for name, value in payload.items():
@@ -349,6 +340,7 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
         total_input_tokens=totals["total_input_tokens"],
         total_output_tokens=totals["total_output_tokens"],
         total_cache_read_input_tokens=totals["total_cache_read_input_tokens"],
+        total_cache_creation_input_tokens=totals["total_cache_creation_input_tokens"],
         total_sessions=totals["total_sessions"],
         avg_duration_ms=totals["avg_duration_ms"],
         total_cost=totals.get("total_cost", "0"),
@@ -365,6 +357,7 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 input_tokens=d["input_tokens"],
                 output_tokens=d["output_tokens"],
                 cache_read_input_tokens=d["cache_read_input_tokens"],
+                cache_creation_input_tokens=d["cache_creation_input_tokens"],
                 cost=d.get("cost", "0"),
                 image_count=d.get("image_count", 0),
             )
@@ -378,6 +371,8 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 output_tokens=m["output_tokens"],
                 cost=m.get("cost", "0"),
                 image_count=m.get("image_count", 0),
+                cache_read_input_tokens=m["cache_read_input_tokens"],
+                cache_creation_input_tokens=m["cache_creation_input_tokens"],
             )
             for m in stats["model_usage"]
         ],
@@ -388,6 +383,8 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 runs=a["runs"],
                 input_tokens=a["input_tokens"],
                 output_tokens=a["output_tokens"],
+                cache_read_input_tokens=a["cache_read_input_tokens"],
+                cache_creation_input_tokens=a["cache_creation_input_tokens"],
             )
             for a in stats["agent_usage"]
         ],
@@ -406,6 +403,8 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 runs=p["runs"],
                 input_tokens=p["input_tokens"],
                 output_tokens=p["output_tokens"],
+                cache_read_input_tokens=p["cache_read_input_tokens"],
+                cache_creation_input_tokens=p["cache_creation_input_tokens"],
             )
             for p in stats["provider_key_usage"]
         ],
@@ -419,6 +418,8 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
                 failures=c["failures"],
                 input_tokens=c["input_tokens"],
                 output_tokens=c["output_tokens"],
+                cache_read_input_tokens=c["cache_read_input_tokens"],
+                cache_creation_input_tokens=c["cache_creation_input_tokens"],
             )
             for c in stats["cron_usage"]["per_task"]
         ],
@@ -427,4 +428,8 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
         cron_total_failures=stats["cron_usage"]["totals"]["failures"],
         cron_total_input_tokens=stats["cron_usage"]["totals"]["input_tokens"],
         cron_total_output_tokens=stats["cron_usage"]["totals"]["output_tokens"],
+        cron_total_cache_read_input_tokens=stats["cron_usage"]["totals"]["cache_read_input_tokens"],
+        cron_total_cache_creation_input_tokens=stats["cron_usage"]["totals"][
+            "cache_creation_input_tokens"
+        ],
     )

@@ -17,8 +17,10 @@ without a live database or Valkey.
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Any
 from uuid import UUID
 
@@ -28,6 +30,14 @@ from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.workers.tasks import agent_run as agent_run_mod
+
+
+@pytest.fixture(autouse=True)
+def _runtime_settings(monkeypatch):
+    async def resolve(_session, _organization_id):
+        return SimpleNamespace(send_deadline_seconds=300)
+
+    monkeypatch.setattr(agent_run_mod, "get_runtime_settings", resolve)
 
 
 class _FakeValkey:
@@ -78,13 +88,11 @@ class _StubSessionOps:
         organization_id: UUID,
         session_id: UUID,
     ) -> dict[str, UUID]:
-        self.calls.append(
-            {
-                "user_id": user_id,
-                "organization_id": organization_id,
-                "session_id": session_id,
-            }
-        )
+        self.calls.append({
+            "user_id": user_id,
+            "organization_id": organization_id,
+            "session_id": session_id,
+        })
         return {"id": session_id, "user_id": user_id}
 
 
@@ -168,7 +176,8 @@ def _install_ops_client(monkeypatch, *, lock_acquired: bool = True) -> _FakeOpsC
 
 
 def _make_done_event() -> StreamEvent:
-    return StreamEvent(type=EventType.DONE, 
+    return StreamEvent(
+        type=EventType.DONE,
         assistant_message=AgentMessage(
             id=generate_id(),
             session_id=generate_id(),
@@ -190,6 +199,39 @@ def _ids() -> dict[str, str]:
 
 
 class TestRunAgentSession:
+    async def test_configured_deadline_stops_the_run(self, monkeypatch) -> None:
+        ops_client = _install_ops_client(monkeypatch)
+        _install_session_stub(monkeypatch)
+        publisher = _install_publisher_stub(monkeypatch)
+        _install_open_session_stub(monkeypatch)
+        _install_state_stub(monkeypatch)
+
+        async def settings(_session, _organization_id):
+            return SimpleNamespace(send_deadline_seconds=0.01)
+
+        class Runtime:
+            def __init__(self, _session: Any) -> None:
+                pass
+
+            async def stream_send_message(self, **_kwargs: Any):
+                await asyncio.Future()
+                yield StreamEvent(type=EventType.DONE)
+
+        monkeypatch.setattr(agent_run_mod, "get_runtime_settings", settings)
+        monkeypatch.setattr(agent_run_mod, "RuntimeOperations", Runtime)
+
+        result = await agent_run_mod.run_agent_session(
+            ctx={"valkey": _FakeValkey()},
+            content="hi",
+            files=None,
+            user_timezone=None,
+            **_ids(),
+        )
+
+        assert result["error"] == "agent_deadline_exceeded"
+        assert publisher.events[-1].error == "agent_deadline_exceeded"
+        assert ops_client.delete_calls
+
     async def test_lock_loss_skips_runtime(self, monkeypatch) -> None:
         ops_client = _install_ops_client(monkeypatch, lock_acquired=False)
         session_ops = _install_session_stub(monkeypatch)
@@ -390,9 +432,7 @@ class TestDeleteRunStream:
 
         result = await run()
         assert result == {"status": "success", "run_id": str(run_id)}
-        assert captured == [
-            (f"agent:run:{run_id}", f"agent:run:{run_id}:state")
-        ]
+        assert captured == [(f"agent:run:{run_id}", f"agent:run:{run_id}:state")]
 
     async def test_delete_invalid_uuid_returns_error(self, monkeypatch) -> None:
         called: list[Any] = []

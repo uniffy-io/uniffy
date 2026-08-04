@@ -157,6 +157,9 @@ message GetUsageStatsResponse {
   // values in DailyUsage / ModelUsage. Defaults to "EUR" when no
   // org row exists.
   string display_currency = 24;
+  int64 total_cache_creation_input_tokens = 25;
+  int64 cron_total_cache_read_input_tokens = 26;
+  int64 cron_total_cache_creation_input_tokens = 27;
 }
 
 message DailyUsage {
@@ -168,6 +171,7 @@ message DailyUsage {
   int64 cache_read_input_tokens = 5;
   string cost = 6;
   int64 image_count = 7;
+  int64 cache_creation_input_tokens = 8;
 }
 
 message ModelUsage {
@@ -177,6 +181,8 @@ message ModelUsage {
   int64 output_tokens = 4;
   string cost = 5;
   int64 image_count = 6;
+  int64 cache_read_input_tokens = 7;
+  int64 cache_creation_input_tokens = 8;
 }
 
 message AgentUsageInfo {
@@ -185,6 +191,8 @@ message AgentUsageInfo {
   int64 runs = 3;
   int64 input_tokens = 4;
   int64 output_tokens = 5;
+  int64 cache_read_input_tokens = 6;
+  int64 cache_creation_input_tokens = 7;
 }
 
 message ToolUsage {
@@ -199,6 +207,8 @@ message ProviderKeyUsage {
   int64 runs = 4;
   int64 input_tokens = 5;
   int64 output_tokens = 6;
+  int64 cache_read_input_tokens = 7;
+  int64 cache_creation_input_tokens = 8;
 }
 
 message CronTaskUsage {
@@ -210,6 +220,8 @@ message CronTaskUsage {
   int64 failures = 6;
   int64 input_tokens = 7;
   int64 output_tokens = 8;
+  int64 cache_read_input_tokens = 9;
+  int64 cache_creation_input_tokens = 10;
 }
 
 message SendMessageRequest {
@@ -379,6 +391,7 @@ message StreamModelCallEndEvent {
   int64 output_tokens = 3;
   int64 cache_read_input_tokens = 4;
   int64 thinking_tokens = 5;
+  int64 cache_creation_input_tokens = 6;
 }
 
 // Block events carry the placeholder row id (message_id, chat

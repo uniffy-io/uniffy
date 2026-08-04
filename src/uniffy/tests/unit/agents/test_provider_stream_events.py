@@ -106,9 +106,7 @@ def _anthropic_events() -> list:
         SimpleNamespace(
             type="content_block_start",
             index=2,
-            content_block=SimpleNamespace(
-                type="tool_use", id="tc_1", name="notes.read_note"
-            ),
+            content_block=SimpleNamespace(type="tool_use", id="tc_1", name="notes.read_note"),
         ),
         SimpleNamespace(
             type="content_block_delta",
@@ -124,7 +122,9 @@ def _anthropic_events() -> list:
             type="content_block_stop",
             index=2,
             content_block=SimpleNamespace(
-                type="tool_use", id="tc_1", name="notes.read_note",
+                type="tool_use",
+                id="tc_1",
+                name="notes.read_note",
                 input={"note_id": "n1"},
             ),
         ),
@@ -149,9 +149,7 @@ def _make_anthropic(events: list | None = None) -> AnthropicProvider:
     fake = _FakeAnthropicStream(
         events if events is not None else _anthropic_events(), _anthropic_final()
     )
-    provider._client = SimpleNamespace(
-        messages=SimpleNamespace(stream=lambda **kwargs: fake)
-    )
+    provider._client = SimpleNamespace(messages=SimpleNamespace(stream=lambda **kwargs: fake))
     return provider
 
 
@@ -249,12 +247,8 @@ class TestAnthropicStream:
         def _boom(**kwargs):
             raise RuntimeError("api down")
 
-        provider._client = SimpleNamespace(
-            messages=SimpleNamespace(stream=_boom)
-        )
-        events = await _collect(
-            provider.chat_completion(MESSAGES, "claude-sonnet-4-6", stream=True)
-        )
+        provider._client = SimpleNamespace(messages=SimpleNamespace(stream=_boom))
+        events = await _collect(provider.chat_completion(MESSAGES, "claude-sonnet-4-6", stream=True))
         assert _types(events) == [EventType.ERROR]
         assert "api down" in events[0].error
 
@@ -335,9 +329,7 @@ class TestOpenAIFamilyStream:
             EventType.TEXT_BLOCK_END,
             EventType.MODEL_CALL_END,
         ]
-        thinking = "".join(
-            e.delta for e in _only(events, EventType.THINKING_BLOCK_DELTA)
-        )
+        thinking = "".join(e.delta for e in _only(events, EventType.THINKING_BLOCK_DELTA))
         assert thinking == "chain of thought"
 
     async def test_openrouter_reasoning_field_via_inheritance(self) -> None:
@@ -349,9 +341,7 @@ class TestOpenAIFamilyStream:
 
     async def test_xai_reasoning_content_via_inheritance(self) -> None:
         provider = XAIProvider("xai-0123456789abcdef1234")
-        _install_openai_stream(
-            provider, _openai_reasoning_chunks("reasoning_content")
-        )
+        _install_openai_stream(provider, _openai_reasoning_chunks("reasoning_content"))
         events = await _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
         assert _only(events, EventType.THINKING_BLOCK_DELTA)
 
@@ -367,12 +357,8 @@ class TestOpenAIFamilyStream:
         provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
         chunks = [
             _openai_chunk(content="Using a tool"),
-            _openai_chunk(
-                tool_calls=[_openai_tool_delta(0, "call_1", "files.search", '{"q"')]
-            ),
-            _openai_chunk(
-                tool_calls=[_openai_tool_delta(0, None, None, ': "report"}')]
-            ),
+            _openai_chunk(tool_calls=[_openai_tool_delta(0, "call_1", "files.search", '{"q"')]),
+            _openai_chunk(tool_calls=[_openai_tool_delta(0, None, None, ': "report"}')]),
             _openai_chunk(finish_reason="tool_calls"),
             SimpleNamespace(usage=_openai_usage(), model="gpt-test", choices=[]),
         ]
@@ -429,10 +415,21 @@ def _google_part(
     )
 
 
-def _google_chunk(parts: list, usage: SimpleNamespace | None = None) -> SimpleNamespace:
+def _google_chunk(
+    parts: list,
+    usage: SimpleNamespace | None = None,
+    *,
+    finish_reason: str | None = None,
+) -> SimpleNamespace:
     return SimpleNamespace(
         usage_metadata=usage,
-        candidates=[SimpleNamespace(content=SimpleNamespace(parts=parts))],
+        candidates=[
+            SimpleNamespace(
+                content=SimpleNamespace(parts=parts),
+                finish_reason=finish_reason,
+            )
+        ],
+        prompt_feedback=None,
     )
 
 
@@ -445,9 +442,7 @@ def _install_google_stream(provider: GoogleProvider, chunks: list) -> None:
         return _gen()
 
     provider._client = SimpleNamespace(
-        aio=SimpleNamespace(
-            models=SimpleNamespace(generate_content_stream=_stream)
-        )
+        aio=SimpleNamespace(models=SimpleNamespace(generate_content_stream=_stream))
     )
 
 
@@ -476,9 +471,7 @@ class TestGoogleStream:
             ),
         ]
         _install_google_stream(provider, chunks)
-        return await _collect(
-            provider.chat_completion(MESSAGES, "gemini-2.5-pro", stream=True)
-        )
+        return await _collect(provider.chat_completion(MESSAGES, "gemini-2.5-pro", stream=True))
 
     async def test_thought_parts_become_thinking_blocks(self) -> None:
         events = await self._events()
@@ -516,12 +509,27 @@ class TestGoogleStream:
             raise RuntimeError("blocked")
 
         provider._client = SimpleNamespace(
-            aio=SimpleNamespace(
-                models=SimpleNamespace(generate_content_stream=_stream)
-            )
+            aio=SimpleNamespace(models=SimpleNamespace(generate_content_stream=_stream))
         )
-        events = await _collect(
-            provider.chat_completion(MESSAGES, "gemini-2.5-pro", stream=True)
-        )
+        events = await _collect(provider.chat_completion(MESSAGES, "gemini-2.5-pro", stream=True))
         assert _types(events) == [EventType.ERROR]
         assert "blocked" in events[0].error
+
+    async def test_safety_block_becomes_visible_refusal(self) -> None:
+        provider = GoogleProvider("google-test-key")
+        _install_google_stream(
+            provider,
+            [_google_chunk([], finish_reason="SAFETY")],
+        )
+
+        events = await _collect(provider.chat_completion(MESSAGES, "gemini-2.5-pro", stream=True))
+
+        assert _types(events) == [
+            EventType.MODEL_CALL_START,
+            EventType.TEXT_BLOCK_START,
+            EventType.TEXT_BLOCK_DELTA,
+            EventType.TEXT_BLOCK_END,
+            EventType.MODEL_CALL_END,
+        ]
+        assert events[-1].result.stop_reason == "refusal"
+        assert events[-1].result.content

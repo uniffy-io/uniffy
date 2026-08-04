@@ -3,7 +3,7 @@
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
@@ -112,6 +112,32 @@ async def list_team_nodes(session: AsyncSession, organization_id: UUID) -> list[
     nodes = [_team_node(group) for group in result.scalars().all()]
     _break_parent_cycles(nodes)
     return nodes
+
+
+async def search_team_nodes(
+    session: AsyncSession,
+    organization_id: UUID,
+    *,
+    search: str | None = None,
+    limit: int = 25,
+) -> tuple[list[dict[str, Any]], int]:
+    base_query = select(Group).where(
+        Group.organization_id == organization_id,
+        Group.kind == GroupKind.TEAM,
+    )
+    if search:
+        pattern = f"%{search}%"
+        base_query = base_query.where(
+            Group.name.ilike(pattern) | Group.description.ilike(pattern)
+        )
+
+    total = (
+        await session.execute(select(func.count()).select_from(base_query.subquery()))
+    ).scalar() or 0
+    result = await session.execute(base_query.order_by(Group.name).limit(limit))
+    nodes = [_team_node(group) for group in result.scalars().all()]
+    _break_parent_cycles(nodes)
+    return nodes, total
 
 
 async def get_team(

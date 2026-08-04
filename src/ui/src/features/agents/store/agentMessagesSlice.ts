@@ -49,6 +49,7 @@ export interface StreamingUsage {
     model: string;
     inputTokens: number;
     outputTokens: number;
+    cacheCreationInputTokens: number;
     cacheReadInputTokens: number;
 }
 
@@ -163,6 +164,8 @@ export const agentMessagesSlice = createSlice({
                 content: displayContent,
                 inputTokens: 0,
                 outputTokens: 0,
+                cacheCreationInputTokens: 0,
+                cacheReadInputTokens: 0,
                 model: undefined,
                 toolName: undefined,
                 toolCallId: undefined,
@@ -233,6 +236,9 @@ export const agentMessagesSlice = createSlice({
                 model: action.payload.model || prev?.model || '',
                 inputTokens: (prev?.inputTokens ?? 0) + action.payload.inputTokens,
                 outputTokens: (prev?.outputTokens ?? 0) + action.payload.outputTokens,
+                cacheCreationInputTokens:
+                    (prev?.cacheCreationInputTokens ?? 0) +
+                    action.payload.cacheCreationInputTokens,
                 cacheReadInputTokens:
                     (prev?.cacheReadInputTokens ?? 0) + action.payload.cacheReadInputTokens,
             };

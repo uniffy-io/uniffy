@@ -8,6 +8,7 @@ ERROR capture (not forwarded).
 """
 
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.types import generate_id
@@ -16,10 +17,16 @@ from uniffy.domains.agents.providers.base import (
     EventType,
     StreamEvent,
 )
+from uniffy.domains.agents.runtime.model_calls import (
+    ModelCallController,
+    ModelCallTarget,
+)
 from uniffy.domains.agents.runtime.operations import (
     RuntimeOperations,
     _StreamSegmentResult,
 )
+from uniffy.domains.agents.runtime.run_usage import RunUsageAccumulator
+from uniffy.domains.agents.runtime.settings import ResolvedRuntimeSettings
 
 
 def _placeholder() -> AgentMessage:
@@ -64,16 +71,12 @@ def _provider_events() -> list[StreamEvent]:
     return [
         StreamEvent(type=EventType.MODEL_CALL_START, model="m"),
         StreamEvent(type=EventType.THINKING_BLOCK_START, block_id="t1"),
-        StreamEvent(
-            type=EventType.THINKING_BLOCK_DELTA, block_id="t1", delta="hmm"
-        ),
+        StreamEvent(type=EventType.THINKING_BLOCK_DELTA, block_id="t1", delta="hmm"),
         StreamEvent(type=EventType.THINKING_BLOCK_END, block_id="t1"),
         StreamEvent(type=EventType.TEXT_BLOCK_START, block_id="x1"),
         StreamEvent(type=EventType.TEXT_BLOCK_DELTA, block_id="x1", delta="Hello"),
         StreamEvent(type=EventType.TEXT_BLOCK_END, block_id="x1"),
-        StreamEvent(
-            type=EventType.MODEL_CALL_END, model="m", input_tokens=3, result=result
-        ),
+        StreamEvent(type=EventType.MODEL_CALL_END, model="m", input_tokens=3, result=result),
     ]
 
 
@@ -126,14 +129,11 @@ class TestStreamSegment:
 
     async def test_session_writer_leaves_events_unstamped(self) -> None:
         out = await _segment(_provider_events(), _SessionWriter())
-        assert not any(
-            e.type is EventType.MESSAGE_STORED for e in out[:-1]
-        )
+        assert not any(e.type is EventType.MESSAGE_STORED for e in out[:-1])
         deltas = [
             e
             for e in out[:-1]
-            if e.type
-            in (EventType.TEXT_BLOCK_DELTA, EventType.THINKING_BLOCK_DELTA)
+            if e.type in (EventType.TEXT_BLOCK_DELTA, EventType.THINKING_BLOCK_DELTA)
         ]
         assert all(e.message_id is None and e.sequence == 0 for e in deltas)
 
@@ -143,10 +143,7 @@ class TestStreamSegment:
             StreamEvent(type=EventType.ERROR, error="boom"),
         ]
         out = await _segment(events, _ChatWriter())
-        assert not any(
-            isinstance(e, StreamEvent) and e.type is EventType.ERROR
-            for e in out[:-1]
-        )
+        assert not any(isinstance(e, StreamEvent) and e.type is EventType.ERROR for e in out[:-1])
         sentinel = out[-1]
         assert sentinel.error == "boom"
         assert sentinel.completion is None
@@ -177,3 +174,89 @@ class TestStreamSegment:
         ]
         out = await _segment(events, _SessionWriter())
         assert out[-1].thinking == []
+
+
+class _StreamProvider:
+    def __init__(self, events: list[StreamEvent]) -> None:
+        self.name = "openai"
+        self._events = events
+
+    async def chat_completion(self, **_kwargs):
+        async def stream():
+            for event in self._events:
+                yield event
+
+        return stream()
+
+
+class _Unavailable(Exception):
+    status_code = 503
+
+
+def _runtime_settings() -> ResolvedRuntimeSettings:
+    return ResolvedRuntimeSettings(
+        send_deadline_seconds=30,
+        failover_enabled=True,
+        resume_enabled=True,
+        circuit_breaker_failure_threshold=5,
+        circuit_breaker_recovery_seconds=60,
+        display_currency="USD",
+        personal_memory_bridge_enabled=True,
+        default_provider_key_id=None,
+        default_chat_model=None,
+        image_max_resolution=None,
+        image_max_quality=None,
+    )
+
+
+async def test_controlled_segment_fails_over_before_output() -> None:
+    primary_key_id = generate_id()
+    fallback_key_id = generate_id()
+    failure = _Unavailable("unavailable")
+    primary = _StreamProvider([
+        StreamEvent(type=EventType.MODEL_CALL_START, model="m"),
+        StreamEvent(type=EventType.ERROR, error="unavailable", error_exception=failure),
+    ])
+    completion = CompletionResult(content="ok", model="m", input_tokens=4)
+    fallback = _StreamProvider([
+        StreamEvent(type=EventType.MODEL_CALL_START, model="m"),
+        StreamEvent(type=EventType.MODEL_CALL_END, model="m", result=completion),
+    ])
+    primary_key = MagicMock(id=primary_key_id, provider="openai")
+    fallback_key = MagicMock(id=fallback_key_id, provider="openai")
+    provider_ops = MagicMock()
+    provider_ops.list_enabled_keys_for_provider = AsyncMock(return_value=[primary_key, fallback_key])
+    provider_ops.get_provider_for_key = AsyncMock(return_value=(fallback, fallback_key))
+    usage = RunUsageAccumulator()
+    controller = ModelCallController(
+        provider_ops=provider_ops,
+        organization_id=generate_id(),
+        target=ModelCallTarget(primary, primary_key_id, "m"),
+        fallback_models=[],
+        settings=_runtime_settings(),
+        usage=usage,
+        params_for_target=lambda _provider, _model: None,
+    )
+    ops = object.__new__(RuntimeOperations)
+
+    events = [
+        event
+        async for event in ops._controlled_stream_segment(
+            controller=controller,
+            writer=_SessionWriter(),
+            messages=[],
+            system=None,
+            tools=None,
+            cache_key="agent",
+            safety_identifier="digest",
+        )
+    ]
+
+    assert [event.type for event in events[:-1]] == [
+        EventType.MODEL_CALL_START,
+        EventType.FAILOVER,
+        EventType.MODEL_CALL_START,
+        EventType.MODEL_CALL_END,
+    ]
+    assert events[1].to_provider_key_id == str(fallback_key_id)
+    assert [call.status for call in usage.calls] == ["error", "success"]

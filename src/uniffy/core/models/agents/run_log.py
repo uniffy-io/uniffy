@@ -89,9 +89,14 @@ class AgentRunLog(SQLModel, table=True):
     )
     input_tokens: int = Field(default=0, nullable=False)
     output_tokens: int = Field(default=0, nullable=False)
+    cache_creation_input_tokens: int = Field(default=0, nullable=False)
     cache_read_input_tokens: int = Field(default=0, nullable=False)
     thinking_tokens: int = Field(default=0, nullable=False)
     tool_calls: list[dict] | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
+    model_calls: list[dict] | None = Field(
         default=None,
         sa_column=Column(JSON, nullable=True),
     )

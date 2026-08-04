@@ -3,6 +3,7 @@
 import pytest
 
 from uniffy.core.errors import NotFoundError
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
 from uniffy.domains.people.operations import MAX_PAGE_SIZE, PeopleOperations
 
@@ -92,6 +93,27 @@ class TestFilters:
         rows, _ = await PeopleOperations(session).list_directory(people.org_id, department="Finance")
         assert rows == []
 
+    async def test_job_title_filter_is_case_insensitive_and_partial(self, session, people) -> None:
+        rows, total = await PeopleOperations(session).list_directory(
+            people.org_id, job_title="backend eng"
+        )
+        assert _ids(rows) == {people.ic_id}
+        assert total == 1
+
+    async def test_organization_role_filter_is_exact(self, session, people) -> None:
+        rows, total = await PeopleOperations(session).list_directory(
+            people.org_id, role_filter=OrganizationRole.ADMIN
+        )
+        assert _ids(rows) == {people.vp_id}
+        assert total == 1
+
+    async def test_manager_filter_returns_active_direct_reports(self, session, people) -> None:
+        rows, total = await PeopleOperations(session).list_directory(
+            people.org_id, manager_user_id=people.vp_id
+        )
+        assert _ids(rows) == {people.ic_id, people.contractor_id}
+        assert total == 2
+
     async def test_team_filter_narrows_to_active_team_members(self, session, people) -> None:
         rows, total = await PeopleOperations(session).list_directory(
             people.org_id, team_id=people.platform_id
@@ -111,6 +133,17 @@ class TestFilters:
             people.org_id, team_id=people.platform_id, department="Engineering"
         )
         assert _ids(rows) == {people.ic_id}
+
+    async def test_new_directory_filters_compose(self, session, people) -> None:
+        rows, total = await PeopleOperations(session).list_directory(
+            people.org_id,
+            job_title="Engineer",
+            role_filter=OrganizationRole.MEMBER,
+            team_id=people.platform_id,
+            manager_user_id=people.vp_id,
+        )
+        assert _ids(rows) == {people.ic_id}
+        assert total == 1
 
     async def test_composed_filters_can_return_nothing(self, session, people) -> None:
         rows, total = await PeopleOperations(session).list_directory(

@@ -63,6 +63,7 @@ describe('createAgentStreamConsumer', () => {
             model: 'claude-sonnet-4-6',
             inputTokens: 10n,
             outputTokens: 5n,
+            cacheCreationInputTokens: 4n,
             cacheReadInputTokens: 3n,
             thinkingTokens: 0n,
         }));
@@ -72,6 +73,7 @@ describe('createAgentStreamConsumer', () => {
             model: 'claude-sonnet-4-6',
             inputTokens: 10,
             outputTokens: 5,
+            cacheCreationInputTokens: 4,
             cacheReadInputTokens: 3,
         });
     });

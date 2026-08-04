@@ -37,6 +37,19 @@ from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.handlers import RuntimeHandlers
 
 
+@pytest.fixture(autouse=True)
+def _runtime_settings(monkeypatch):
+    @asynccontextmanager
+    async def open_session():
+        yield object()
+
+    async def resolve(_session, _organization_id):
+        return MagicMock(send_deadline_seconds=300, resume_enabled=True)
+
+    monkeypatch.setattr(handlers_mod, "open_session", open_session)
+    monkeypatch.setattr(handlers_mod, "get_runtime_settings", resolve)
+
+
 class _FakeQueue:
     def __init__(self) -> None:
         self.enqueued: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
@@ -65,13 +78,11 @@ class _FakeSessionOps:
         organization_id: UUID,
         session_id: UUID,
     ) -> Any:
-        self.calls.append(
-            {
-                "user_id": user_id,
-                "organization_id": organization_id,
-                "session_id": session_id,
-            }
-        )
+        self.calls.append({
+            "user_id": user_id,
+            "organization_id": organization_id,
+            "session_id": session_id,
+        })
         return MagicMock(id=session_id, user_id=user_id)
 
 
@@ -168,13 +179,11 @@ def _install_load_files(monkeypatch, files: list[FileContext] | None = None) -> 
     calls: list[dict[str, Any]] = []
 
     async def fake(session, user_id, organization_id, file_ids):
-        calls.append(
-            {
-                "user_id": user_id,
-                "organization_id": organization_id,
-                "file_ids": list(file_ids),
-            }
-        )
+        calls.append({
+            "user_id": user_id,
+            "organization_id": organization_id,
+            "file_ids": list(file_ids),
+        })
         return files or []
 
     monkeypatch.setattr(handlers_mod, "_load_files", fake)
@@ -203,7 +212,7 @@ def _install_subscribe(
 ) -> list[UUID]:
     captured: list[UUID] = []
 
-    async def fake_subscribe(run_id: UUID):
+    async def fake_subscribe(run_id: UUID, _wall_budget_seconds: float = 0):
         captured.append(run_id)
         for event in events:
             yield event
@@ -317,9 +326,7 @@ class TestStreamSendMessage:
         await run()
         assert queue.enqueued == []
 
-    async def test_org_membership_failure_short_circuits_before_enqueue(
-        self, monkeypatch
-    ) -> None:
+    async def test_org_membership_failure_short_circuits_before_enqueue(self, monkeypatch) -> None:
         _install_user_id(monkeypatch, generate_id())
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch, factory=_FailingOrgOps)
@@ -369,9 +376,7 @@ class TestStreamSendMessage:
         await run()
         assert queue.enqueued == [], "no enqueue when session lookup fails"
 
-    async def test_rate_limit_failure_short_circuits_before_enqueue(
-        self, monkeypatch
-    ) -> None:
+    async def test_rate_limit_failure_short_circuits_before_enqueue(self, monkeypatch) -> None:
         _install_user_id(monkeypatch, generate_id())
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
@@ -397,9 +402,7 @@ class TestStreamSendMessage:
         await run()
         assert queue.enqueued == [], "no enqueue when rate limit trips"
 
-    async def test_happy_path_enqueues_and_yields_events_in_order(
-        self, monkeypatch
-    ) -> None:
+    async def test_happy_path_enqueues_and_yields_events_in_order(self, monkeypatch) -> None:
         user_id = generate_id()
         org_id = generate_id()
         session_id = generate_id()
@@ -431,7 +434,8 @@ class TestStreamSendMessage:
             StreamEvent(type=EventType.MESSAGE_STORED, message=_make_user_message(session_id)),
             StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="he", sequence=1),
             StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="llo", sequence=2),
-            StreamEvent(type=EventType.DONE, 
+            StreamEvent(
+                type=EventType.DONE,
                 assistant_message=_make_assistant_message(session_id),
                 model="claude-sonnet-4-6",
             ),
@@ -567,7 +571,8 @@ class TestSendMessageUnary:
         events: list[StreamEvent] = [
             StreamEvent(type=EventType.MESSAGE_STORED, message=user_msg),
             StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="ok", sequence=1),
-            StreamEvent(type=EventType.DONE, 
+            StreamEvent(
+                type=EventType.DONE,
                 assistant_message=assistant_msg,
                 model="claude-sonnet-4-6",
             ),
@@ -617,9 +622,7 @@ class TestSendMessageUnary:
         assert exc_info.value.code == Code.INTERNAL
         assert "provider blew up" in exc_info.value.message
 
-    async def test_subscribe_timeout_surfaces_as_deadline_exceeded(
-        self, monkeypatch
-    ) -> None:
+    async def test_subscribe_timeout_surfaces_as_deadline_exceeded(self, monkeypatch) -> None:
         user_id = generate_id()
         org_id = generate_id()
         session_id = generate_id()
@@ -674,6 +677,35 @@ def _build_subscribe_request(
 
 
 class TestSubscribeToRun:
+    async def test_disabled_resume_is_rejected(self, monkeypatch) -> None:
+        user_id = generate_id()
+        org_id = generate_id()
+        run_id = generate_id()
+        _install_user_id(monkeypatch, user_id)
+        _install_run_state(
+            monkeypatch,
+            {
+                "run_id": str(run_id),
+                "user_id": str(user_id),
+                "organization_id": str(org_id),
+                "session_id": str(generate_id()),
+                "status": "running",
+                "last_seq": 1,
+            },
+        )
+
+        async def disabled(_session, _organization_id):
+            return MagicMock(send_deadline_seconds=300, resume_enabled=False)
+
+        monkeypatch.setattr(handlers_mod, "get_runtime_settings", disabled)
+        request = _build_subscribe_request(run_id=run_id, organization_id=org_id)
+
+        with pytest.raises(ConnectError) as exc_info:
+            async for _ in RuntimeHandlers().subscribe_to_run(request, ctx=MagicMock()):
+                pass
+
+        assert exc_info.value.code == Code.FAILED_PRECONDITION
+
     async def test_invalid_uuid_returns_invalid_argument(self, monkeypatch) -> None:
         _install_user_id(monkeypatch, generate_id())
         _install_run_state(monkeypatch, None)
@@ -787,7 +819,8 @@ class TestSubscribeToRun:
 
         events: list[StreamEvent] = [
             StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="he", sequence=1),
-            StreamEvent(type=EventType.DONE, 
+            StreamEvent(
+                type=EventType.DONE,
                 assistant_message=_make_assistant_message(session_id),
                 model="claude-sonnet-4-6",
             ),
@@ -817,9 +850,7 @@ class TestSubscribeToRun:
 
 
 class TestSubscribeRuntimeEvents:
-    async def test_yields_synthetic_error_when_wall_budget_elapsed(
-        self, monkeypatch
-    ) -> None:
+    async def test_yields_synthetic_error_when_wall_budget_elapsed(self, monkeypatch) -> None:
         async def empty_xread(*_args: Any, **_kwargs: Any) -> list[Any]:
             return []
 
@@ -851,7 +882,8 @@ class TestSubscribeRuntimeEvents:
         session_id = generate_id()
         events: list[StreamEvent] = [
             StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="hello", sequence=1),
-            StreamEvent(type=EventType.DONE, 
+            StreamEvent(
+                type=EventType.DONE,
                 assistant_message=_make_assistant_message(session_id),
                 model="claude-sonnet-4-6",
             ),
@@ -897,14 +929,12 @@ class _FakeApprovalStore:
         *,
         decided_by: UUID | None = None,
     ) -> bool:
-        self.respond_calls.append(
-            {
-                "scope_id": scope_id,
-                "request_id": request_id,
-                "approved": approved,
-                "decided_by": decided_by,
-            }
-        )
+        self.respond_calls.append({
+            "scope_id": scope_id,
+            "request_id": request_id,
+            "approved": approved,
+            "decided_by": decided_by,
+        })
         return True
 
 
@@ -967,9 +997,7 @@ class TestRespondToConfirmation:
         store = _FakeApprovalStore(state={"actor_user_id": str(owner), "status": "pending"})
         _install_approval_store(monkeypatch, store)
 
-        request = _build_confirmation_request(
-            organization_id=org_id, session_id=session_id
-        )
+        request = _build_confirmation_request(organization_id=org_id, session_id=session_id)
 
         async def drive() -> Any:
             return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
@@ -989,9 +1017,7 @@ class TestRespondToConfirmation:
         store = _FakeApprovalStore(state=None)
         _install_approval_store(monkeypatch, store)
 
-        request = _build_confirmation_request(
-            organization_id=org_id, session_id=session_id
-        )
+        request = _build_confirmation_request(organization_id=org_id, session_id=session_id)
 
         async def drive() -> Any:
             return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
@@ -1011,9 +1037,7 @@ class TestRespondToConfirmation:
         store = _FakeApprovalStore(state={"actor_user_id": str(user_id), "status": "pending"})
         _install_approval_store(monkeypatch, store)
 
-        request = _build_confirmation_request(
-            organization_id=org_id, session_id=session_id
-        )
+        request = _build_confirmation_request(organization_id=org_id, session_id=session_id)
 
         async def drive() -> Any:
             return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())

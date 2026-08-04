@@ -113,6 +113,7 @@ export function createAgentStreamConsumer(
                     model: v.model,
                     inputTokens: Number(v.inputTokens),
                     outputTokens: Number(v.outputTokens),
+                    cacheCreationInputTokens: Number(v.cacheCreationInputTokens),
                     cacheReadInputTokens: Number(v.cacheReadInputTokens),
                 }));
                 return null;
