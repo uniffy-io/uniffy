@@ -17,6 +17,7 @@ from uniffy.core.types import generate_id
 from uniffy.domains.people.teams import (
     get_team,
     list_team_nodes,
+    search_team_nodes,
     teams_for_users,
     update_team,
     user_team_ids,
@@ -110,6 +111,27 @@ class TestListTeamNodes:
 
     async def test_empty_org_lists_nothing(self, session, people) -> None:
         assert await list_team_nodes(session, generate_id()) == []
+
+
+class TestSearchTeamNodes:
+    async def test_searches_name_and_caps_results(self, session, people) -> None:
+        nodes, total = await search_team_nodes(
+            session,
+            people.org_id,
+            search="plat",
+            limit=1,
+        )
+        assert [node["group_id"] for node in nodes] == [str(people.platform_id)]
+        assert total == 1
+
+    async def test_access_groups_never_match(self, session, people) -> None:
+        nodes, total = await search_team_nodes(
+            session,
+            people.org_id,
+            search="Access",
+        )
+        assert nodes == []
+        assert total == 0
 
 
 class TestGetTeam:

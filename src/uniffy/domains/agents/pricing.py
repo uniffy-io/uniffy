@@ -12,7 +12,10 @@ from decimal import Decimal
 from loguru import logger
 
 from uniffy.domains.agents.providers.catalog import get_model
-from uniffy.domains.agents.providers.catalog.loader import cache_read_rate
+from uniffy.domains.agents.providers.catalog.loader import (
+    cache_read_rate,
+    cache_write_rate,
+)
 from uniffy.domains.agents.providers.catalog.schema import Model
 
 logger = logger.bind(component="agents.pricing")
@@ -34,15 +37,15 @@ def compute_text_cost(
     *,
     input_tokens: int,
     output_tokens: int,
+    cache_creation_input_tokens: int = 0,
     cache_read_input_tokens: int = 0,
     thinking_tokens: int = 0,
 ) -> Decimal:
     """Compute a text-model cost in USD from token counts.
 
-    ``input_tokens`` should exclude cached reads; cached reads are priced at
-    the model's cache-read rate (falling back to the input rate). Thinking
-    tokens are billed at the output rate - the catalog carries no separate
-    thinking price.
+    ``input_tokens`` excludes cache reads and cache creation. Cache creation
+    uses the published write rate, while reads fall back to the base input rate
+    when no discounted rate exists. Thinking tokens use the output rate.
     """
     cost = Decimal(0)
 
@@ -57,6 +60,11 @@ def compute_text_cost(
         rate = cache_read_rate(pricing) or pricing.cost_per_1m_in
         if rate > 0:
             cost += (Decimal(cache_read_input_tokens) * rate) / _ONE_MILLION
+
+    if cache_creation_input_tokens > 0:
+        rate = cache_write_rate(pricing) or pricing.cost_per_1m_in
+        if rate > 0:
+            cost += (Decimal(cache_creation_input_tokens) * rate) / _ONE_MILLION
 
     return cost.quantize(Decimal("0.000001"))
 
@@ -116,9 +124,7 @@ def image_price_estimates(provider: str, model_id: str) -> dict[str, str]:
                 else _fixed_size(pricing, ratio)
             )
             for quality in qualities:
-                cost = compute_image_cost(
-                    pricing, size=size, quality=quality, count=1
-                )
+                cost = compute_image_cost(pricing, size=size, quality=quality, count=1)
                 if cost is not None:
                     estimates[f"{ratio}|{resolution}|{quality}"] = str(cost)
     return estimates
@@ -151,9 +157,7 @@ def _image_unit_price(pricing: Model, *, size: str, quality: str) -> Decimal | N
 
     tiers = pricing.image_prices.get(size)
     if isinstance(tiers, dict):
-        raw_price = tiers.get(quality) or (
-            tiers.get("medium") if quality == "auto" else None
-        )
+        raw_price = tiers.get(quality) or (tiers.get("medium") if quality == "auto" else None)
         if raw_price is not None:
             return Decimal(str(raw_price))
 
@@ -171,9 +175,7 @@ def _image_unit_price(pricing: Model, *, size: str, quality: str) -> Decimal | N
     for priced_size, tiers in pricing.image_prices.items():
         if not isinstance(tiers, dict):
             continue
-        raw_price = tiers.get(quality) or (
-            tiers.get("medium") if quality == "auto" else None
-        )
+        raw_price = tiers.get(quality) or (tiers.get("medium") if quality == "auto" else None)
         priced_pixels = _pixels(priced_size)
         if raw_price is None or not priced_pixels:
             continue

@@ -1,5 +1,4 @@
-"""Deferred tool advertisement: planning, the load_group tool, loop expansion.
-"""
+"""Deferred tool advertisement: planning, the load_group tool, loop expansion."""
 
 from unittest.mock import AsyncMock, MagicMock
 
@@ -249,9 +248,7 @@ class TestRunToolLoopExpansion:
                 content="",
                 model="m",
                 stop_reason="tool_use",
-                tool_calls=[
-                    ToolCall(id="t1", name=LOAD_API_NAME, input={"group": "Notes"})
-                ],
+                tool_calls=[ToolCall(id="t1", name=LOAD_API_NAME, input={"group": "Notes"})],
             )
             result = await _loop_ops()._run_tool_loop(
                 user_id=ctx.user_id,

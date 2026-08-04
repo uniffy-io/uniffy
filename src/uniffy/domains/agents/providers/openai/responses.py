@@ -13,6 +13,7 @@ on tool-loop continuations, mirroring the Anthropic signature re-feed.
 
 import json
 from collections.abc import AsyncIterator
+from copy import deepcopy
 from typing import Any
 from uuid import uuid4
 
@@ -37,10 +38,57 @@ def convert_tools_to_responses(tools: list[dict]) -> list[dict]:
             "type": "function",
             "name": tool["name"],
             "description": tool.get("description", ""),
-            "parameters": tool.get("input_schema", {}),
+            "parameters": _strict_json_schema(tool.get("input_schema", {})),
+            "strict": True,
         }
         for tool in tools
     ]
+
+
+def _strict_json_schema(schema: dict) -> dict:
+    normalized = deepcopy(schema)
+    _normalize_schema_node(normalized)
+    return normalized
+
+
+def _normalize_schema_node(node: object) -> None:
+    if not isinstance(node, dict):
+        return
+    for branch_name in ("anyOf", "oneOf", "allOf"):
+        for branch in node.get(branch_name, []) or []:
+            _normalize_schema_node(branch)
+    items = node.get("items")
+    if isinstance(items, dict):
+        _normalize_schema_node(items)
+
+    if node.get("type") != "object" and "properties" not in node:
+        return
+    properties = node.setdefault("properties", {})
+    if not isinstance(properties, dict):
+        return
+    required = set(node.get("required") or [])
+    for name, property_schema in properties.items():
+        _normalize_schema_node(property_schema)
+        if name not in required:
+            _make_nullable(property_schema)
+    node["required"] = list(properties)
+    node["additionalProperties"] = False
+
+
+def _make_nullable(schema: object) -> None:
+    if not isinstance(schema, dict):
+        return
+    schema_type = schema.get("type")
+    if isinstance(schema_type, str):
+        schema["type"] = [schema_type, "null"]
+    elif isinstance(schema_type, list) and "null" not in schema_type:
+        schema["type"] = [*schema_type, "null"]
+    elif "anyOf" in schema:
+        branches = schema["anyOf"]
+        if not any(isinstance(branch, dict) and branch.get("type") == "null" for branch in branches):
+            branches.append({"type": "null"})
+    if "enum" in schema and None not in schema["enum"]:
+        schema["enum"] = [*schema["enum"], None]
 
 
 def convert_messages_to_responses(messages: list[dict]) -> list[dict]:
@@ -146,9 +194,7 @@ def _user_blocks_to_parts(blocks: list[dict]) -> list[dict]:
 def _tool_result_text(block: dict) -> str:
     content = block.get("content", "")
     if isinstance(content, list):
-        return "\n".join(
-            b.get("text", "") for b in content if b.get("type") == "text"
-        )
+        return "\n".join(b.get("text", "") for b in content if b.get("type") == "text")
     return str(content)
 
 
@@ -160,6 +206,7 @@ def build_responses_kwargs(
     tools: list[dict] | None,
     cache_key: str | None,
     params: dict | None,
+    safety_identifier: str | None = None,
 ) -> dict:
     params = params or {}
     kwargs: dict[str, Any] = {
@@ -173,6 +220,8 @@ def build_responses_kwargs(
         kwargs["tools"] = convert_tools_to_responses(tools)
     if cache_key:
         kwargs["prompt_cache_key"] = cache_key
+    if safety_identifier:
+        kwargs["safety_identifier"] = safety_identifier
     if params.get("max_tokens"):
         kwargs["max_output_tokens"] = params["max_tokens"]
     if params.get("temperature") is not None:
@@ -200,12 +249,15 @@ def _result_from_response(response: Any) -> CompletionResult:
         itype = getattr(item, "type", "")
         if itype == "message":
             for part in getattr(item, "content", None) or []:
-                if getattr(part, "type", "") == "output_text":
+                part_type = getattr(part, "type", "")
+                if part_type == "output_text":
                     content_parts.append(part.text)
+                elif part_type == "refusal":
+                    content_parts.append(part.refusal)
         elif itype == "function_call":
             try:
                 args = json.loads(item.arguments)
-            except (json.JSONDecodeError, TypeError):
+            except json.JSONDecodeError, TypeError:
                 args = {}
             tool_calls.append(ToolCall(id=item.call_id, name=item.name, input=args))
         elif itype == "reasoning":
@@ -214,13 +266,17 @@ def _result_from_response(response: Any) -> CompletionResult:
                 "item": item.model_dump(exclude_none=True),
             })
 
-    input_tokens, cached_tokens, output_tokens, _ = _split_usage(response.usage)
+    input_tokens, cached_tokens, cache_write_tokens, output_tokens, reasoning = _split_usage(
+        response.usage
+    )
     return CompletionResult(
         content="\n".join(content_parts),
         model=response.model,
-        input_tokens=input_tokens - cached_tokens,
-        output_tokens=output_tokens,
+        input_tokens=input_tokens - cached_tokens - cache_write_tokens,
+        output_tokens=output_tokens - reasoning,
+        cache_creation_input_tokens=cache_write_tokens,
         cache_read_input_tokens=cached_tokens,
+        thinking_tokens=reasoning,
         tool_calls=tool_calls,
         thinking_blocks=thinking_blocks,
         stop_reason=_stop_reason(response, tool_calls),
@@ -235,19 +291,21 @@ def _stop_reason(response: Any, tool_calls: list[ToolCall]) -> str:
     return "tool_use" if tool_calls else "end_turn"
 
 
-def _split_usage(usage: Any) -> tuple[int, int, int, int]:
-    """Return ``(input_tokens, cached_tokens, output_tokens, reasoning_tokens)``."""
+def _split_usage(usage: Any) -> tuple[int, int, int, int, int]:
+    """Return total input, cache read, cache write, output, and reasoning tokens."""
     if usage is None:
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0
     input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
     output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
     in_details = getattr(usage, "input_tokens_details", None)
     cached = int(getattr(in_details, "cached_tokens", 0) or 0) if in_details else 0
+    cache_write = int(getattr(in_details, "cache_write_tokens", 0) or 0) if in_details else 0
     out_details = getattr(usage, "output_tokens_details", None)
-    reasoning = (
-        int(getattr(out_details, "reasoning_tokens", 0) or 0) if out_details else 0
-    )
-    return input_tokens, min(cached, input_tokens), output_tokens, reasoning
+    reasoning = int(getattr(out_details, "reasoning_tokens", 0) or 0) if out_details else 0
+    cached = min(cached, input_tokens)
+    cache_write = min(cache_write, input_tokens - cached)
+    reasoning = min(reasoning, output_tokens)
+    return input_tokens, cached, cache_write, output_tokens, reasoning
 
 
 async def sync_completion(client: Any, kwargs: dict) -> CompletionResult:
@@ -265,9 +323,7 @@ async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEv
         kwargs["stream"] = True
         stream = await client.responses.create(**kwargs)
 
-        yield StreamEvent(
-            type=EventType.MODEL_CALL_START, model=str(kwargs.get("model", ""))
-        )
+        yield StreamEvent(type=EventType.MODEL_CALL_START, model=str(kwargs.get("model", "")))
 
         block_ids: dict[str, str] = {}
         pending_calls: dict[str, dict[str, str]] = {}
@@ -281,13 +337,9 @@ async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEv
                 block_id = uuid4().hex[:12]
                 block_ids[item.id or block_id] = block_id
                 if item.type == "reasoning":
-                    yield StreamEvent(
-                        type=EventType.THINKING_BLOCK_START, block_id=block_id
-                    )
+                    yield StreamEvent(type=EventType.THINKING_BLOCK_START, block_id=block_id)
                 elif item.type == "message":
-                    yield StreamEvent(
-                        type=EventType.TEXT_BLOCK_START, block_id=block_id
-                    )
+                    yield StreamEvent(type=EventType.TEXT_BLOCK_START, block_id=block_id)
                 elif item.type == "function_call":
                     pending_calls[item.id or block_id] = {
                         "id": item.call_id or "",
@@ -318,7 +370,7 @@ async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEv
                     delta=event.delta,
                 )
 
-            elif etype == "response.output_text.delta":
+            elif etype in ("response.output_text.delta", "response.refusal.delta"):
                 yield StreamEvent(
                     type=EventType.TEXT_BLOCK_DELTA,
                     block_id=block_ids.get(event.item_id, ""),
@@ -339,17 +391,13 @@ async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEv
                 item = event.item
                 block_id = block_ids.get(item.id or "", "")
                 if item.type == "reasoning":
-                    yield StreamEvent(
-                        type=EventType.THINKING_BLOCK_END, block_id=block_id
-                    )
+                    yield StreamEvent(type=EventType.THINKING_BLOCK_END, block_id=block_id)
                 elif item.type == "message":
-                    yield StreamEvent(
-                        type=EventType.TEXT_BLOCK_END, block_id=block_id
-                    )
+                    yield StreamEvent(type=EventType.TEXT_BLOCK_END, block_id=block_id)
                 elif item.type == "function_call":
                     try:
                         args = json.loads(item.arguments)
-                    except (json.JSONDecodeError, TypeError):
+                    except json.JSONDecodeError, TypeError:
                         args = {}
                     yield StreamEvent(
                         type=EventType.TOOL_CALL_END,
@@ -361,14 +409,14 @@ async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEv
 
             elif etype == "response.completed":
                 result = _result_from_response(event.response)
-                _, cached, _, reasoning = _split_usage(event.response.usage)
                 yield StreamEvent(
                     type=EventType.MODEL_CALL_END,
                     model=result.model,
                     input_tokens=result.input_tokens,
                     output_tokens=result.output_tokens,
-                    cache_read_input_tokens=cached,
-                    thinking_tokens=reasoning,
+                    cache_creation_input_tokens=result.cache_creation_input_tokens,
+                    cache_read_input_tokens=result.cache_read_input_tokens,
+                    thinking_tokens=result.thinking_tokens,
                     result=result,
                 )
 
@@ -381,12 +429,16 @@ async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEv
                         model=result.model,
                         input_tokens=result.input_tokens,
                         output_tokens=result.output_tokens,
+                        cache_creation_input_tokens=(result.cache_creation_input_tokens),
+                        cache_read_input_tokens=result.cache_read_input_tokens,
+                        thinking_tokens=result.thinking_tokens,
                         result=result,
                     )
                 else:
                     error = getattr(response, "error", None)
                     message = getattr(error, "message", "") or "response.failed"
                     yield StreamEvent(type=EventType.ERROR, error=message)
+                    return
 
         if result is None:
             yield StreamEvent(
@@ -394,4 +446,4 @@ async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEv
             )
     except Exception as e:
         logger.error(f"OpenAI responses streaming error: {e}")
-        yield StreamEvent(type=EventType.ERROR, error=str(e))
+        yield StreamEvent(type=EventType.ERROR, error=str(e), error_exception=e)

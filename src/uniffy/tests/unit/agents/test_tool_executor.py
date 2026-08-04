@@ -63,6 +63,39 @@ async def test_enabled_tool_executes() -> None:
     assert result.success
 
 
+async def test_strict_schema_nulls_are_omitted_for_optional_arguments() -> None:
+    captured: dict = {}
+
+    async def _exec(_ctx: ToolContext, args: dict) -> ToolResult:
+        captured.update(args)
+        return ToolResult(success=True, data="ok")
+
+    tool = ToolDefinition(
+        name="notes.search_notes",
+        description="",
+        parameter_schema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "limit": {"type": "integer"},
+            },
+            "required": ["query"],
+        },
+        executor=_exec,
+        read_only=True,
+    )
+    call = ToolCall(
+        id="tc_1",
+        name=tool.name,
+        input={"query": "roadmap", "limit": None},
+    )
+
+    result = await _executor_for(tool).execute(call)
+
+    assert result.success
+    assert captured == {"query": "roadmap"}
+
+
 async def test_internal_tool_runs_without_being_in_the_enabled_set() -> None:
     # view_skill / load_group are advertised by the runtime itself and are
     # absent from every builder's enabled set by design.

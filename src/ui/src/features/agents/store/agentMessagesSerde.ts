@@ -15,6 +15,8 @@ export const messageToPlain = (msg: MessageInfo) => ({
     content: msg.content,
     inputTokens: msg.inputTokens,
     outputTokens: msg.outputTokens,
+    cacheCreationInputTokens: msg.cacheCreationInputTokens,
+    cacheReadInputTokens: msg.cacheReadInputTokens,
     model: msg.model,
     toolName: msg.toolName,
     toolCallId: msg.toolCallId,

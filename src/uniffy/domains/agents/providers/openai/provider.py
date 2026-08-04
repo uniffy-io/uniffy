@@ -10,6 +10,7 @@ import openai
 from loguru import logger
 
 from uniffy.domains.agents.providers.base import (
+    VISIBLE_REFUSAL_MESSAGE,
     CompletionResult,
     EventType,
     LLMProvider,
@@ -42,6 +43,8 @@ def map_finish_reason(finish_reason: str | None) -> str:
         return "tool_use"
     if finish_reason == "length":
         return "max_tokens"
+    if finish_reason == "content_filter":
+        return "refusal"
     return "end_turn"
 
 
@@ -98,9 +101,7 @@ class OpenAIProvider(LLMProvider):
         request = build_image_request(
             model,
             params or {},
-            supports_arbitrary_size=bool(
-                catalog_model and catalog_model.image_arbitrary_size
-            ),
+            supports_arbitrary_size=bool(catalog_model and catalog_model.image_arbitrary_size),
         )
         # gpt-image models always return base64 and reject response_format.
         response = await self._client.images.generate(
@@ -118,9 +119,7 @@ class OpenAIProvider(LLMProvider):
         return build_image_request(
             model,
             params or {},
-            supports_arbitrary_size=bool(
-                catalog_model and catalog_model.image_arbitrary_size
-            ),
+            supports_arbitrary_size=bool(catalog_model and catalog_model.image_arbitrary_size),
         )["size"]
 
     async def chat_completion(
@@ -133,6 +132,7 @@ class OpenAIProvider(LLMProvider):
         stream: bool = False,
         cache_key: str | None = None,
         params: dict | None = None,
+        safety_identifier: str | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request to the OpenAI API.
 
@@ -172,6 +172,7 @@ class OpenAIProvider(LLMProvider):
                 tools=tools,
                 cache_key=cache_key,
                 params=params,
+                safety_identifier=safety_identifier,
             )
             if stream:
                 return stream_completion(self._client, responses_kwargs)
@@ -267,14 +268,14 @@ class OpenAIProvider(LLMProvider):
         choice = response.choices[0]
         message = choice.message
 
-        content = message.content or ""
+        content = message.content or getattr(message, "refusal", None) or ""
         tool_calls: list[ToolCall] = []
 
         if message.tool_calls:
             for tc in message.tool_calls:
                 try:
                     args = json.loads(tc.function.arguments)
-                except (json.JSONDecodeError, TypeError):
+                except json.JSONDecodeError, TypeError:
                     args = {}
                 tool_calls.append(
                     ToolCall(
@@ -315,9 +316,7 @@ class OpenAIProvider(LLMProvider):
             kwargs["stream_options"] = {"include_usage": True}
             stream = await self._client.chat.completions.create(**kwargs)
 
-            yield StreamEvent(
-                type=EventType.MODEL_CALL_START, model=str(kwargs.get("model", ""))
-            )
+            yield StreamEvent(type=EventType.MODEL_CALL_START, model=str(kwargs.get("model", "")))
 
             accumulated_content = ""
             pending_tool_calls: dict[int, dict[str, str]] = {}
@@ -333,9 +332,7 @@ class OpenAIProvider(LLMProvider):
 
             async for chunk in stream:
                 if chunk.usage:
-                    prompt_tokens, cached_tokens, output_tokens = _split_openai_usage(
-                        chunk.usage
-                    )
+                    prompt_tokens, cached_tokens, output_tokens = _split_openai_usage(chunk.usage)
 
                 if not chunk.choices:
                     continue
@@ -363,7 +360,8 @@ class OpenAIProvider(LLMProvider):
                         delta=reasoning,
                     )
 
-                if delta.content:
+                answer_delta = delta.content or getattr(delta, "refusal", None)
+                if answer_delta:
                     if thinking_block_id:
                         yield StreamEvent(
                             type=EventType.THINKING_BLOCK_END,
@@ -372,14 +370,12 @@ class OpenAIProvider(LLMProvider):
                         thinking_block_id = ""
                     if not text_block_id:
                         text_block_id = uuid4().hex[:12]
-                        yield StreamEvent(
-                            type=EventType.TEXT_BLOCK_START, block_id=text_block_id
-                        )
-                    accumulated_content += delta.content
+                        yield StreamEvent(type=EventType.TEXT_BLOCK_START, block_id=text_block_id)
+                    accumulated_content += answer_delta
                     yield StreamEvent(
                         type=EventType.TEXT_BLOCK_DELTA,
                         block_id=text_block_id,
-                        delta=delta.content,
+                        delta=answer_delta,
                     )
 
                 if delta.tool_calls:
@@ -423,18 +419,14 @@ class OpenAIProvider(LLMProvider):
                             )
 
             if thinking_block_id:
-                yield StreamEvent(
-                    type=EventType.THINKING_BLOCK_END, block_id=thinking_block_id
-                )
+                yield StreamEvent(type=EventType.THINKING_BLOCK_END, block_id=thinking_block_id)
             if text_block_id:
-                yield StreamEvent(
-                    type=EventType.TEXT_BLOCK_END, block_id=text_block_id
-                )
+                yield StreamEvent(type=EventType.TEXT_BLOCK_END, block_id=text_block_id)
 
             for idx, pending in sorted(pending_tool_calls.items()):
                 try:
                     args = json.loads(pending["arguments"])
-                except (json.JSONDecodeError, TypeError):
+                except json.JSONDecodeError, TypeError:
                     args = {}
                 tc = ToolCall(
                     id=pending["id"],
@@ -450,6 +442,18 @@ class OpenAIProvider(LLMProvider):
                     tool_args=tc.input,
                 )
 
+            stop_reason = map_finish_reason(finish_reason)
+            if not accumulated_content and not tool_calls and stop_reason == "refusal":
+                text_block_id = uuid4().hex[:12]
+                accumulated_content = VISIBLE_REFUSAL_MESSAGE
+                yield StreamEvent(type=EventType.TEXT_BLOCK_START, block_id=text_block_id)
+                yield StreamEvent(
+                    type=EventType.TEXT_BLOCK_DELTA,
+                    block_id=text_block_id,
+                    delta=accumulated_content,
+                )
+                yield StreamEvent(type=EventType.TEXT_BLOCK_END, block_id=text_block_id)
+
             yield StreamEvent(
                 type=EventType.MODEL_CALL_END,
                 model=model_name,
@@ -463,12 +467,12 @@ class OpenAIProvider(LLMProvider):
                     output_tokens=output_tokens,
                     cache_read_input_tokens=cached_tokens,
                     tool_calls=tool_calls,
-                    stop_reason=map_finish_reason(finish_reason),
+                    stop_reason=stop_reason,
                 ),
             )
         except Exception as e:
             logger.error(f"OpenAI streaming error: {e}")
-            yield StreamEvent(type=EventType.ERROR, error=str(e))
+            yield StreamEvent(type=EventType.ERROR, error=str(e), error_exception=e)
 
 
 def _extract_reasoning(delta) -> str:
@@ -479,9 +483,7 @@ def _extract_reasoning(delta) -> str:
     chat completions. The SDK's pydantic models allow extra fields, so
     attribute access works for both.
     """
-    reasoning = getattr(delta, "reasoning_content", None) or getattr(
-        delta, "reasoning", None
-    )
+    reasoning = getattr(delta, "reasoning_content", None) or getattr(delta, "reasoning", None)
     return reasoning if isinstance(reasoning, str) else ""
 
 

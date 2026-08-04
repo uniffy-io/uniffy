@@ -74,9 +74,8 @@ def models_for_provider(provider: str) -> list[Model]:
 def get_model(provider: str, model_id: str) -> Model | None:
     """Resolve a model id to its catalog entry.
 
-    Resolution order: exact id, declared alias, date-suffix-stripped id,
-    then longest-prefix match (so ``claude-opus-4-6-20990101`` resolves to
-    ``claude-opus-4-6``). Returns ``None`` when nothing matches.
+    Resolution order: exact id, declared alias, then date-suffix-stripped id.
+    Returns ``None`` when nothing matches.
     """
     pc = get_catalog().providers.get(provider)
     if pc is None:
@@ -91,12 +90,7 @@ def get_model(provider: str, model_id: str) -> Model | None:
         for model in pc.models:
             if model.id == alias or alias in model.aliases:
                 return model
-
-    best: Model | None = None
-    for model in pc.models:
-        if model_id.startswith(model.id) and (best is None or len(model.id) > len(best.id)):
-            best = model
-    return best
+    return None
 
 
 def resolve_pricing(provider: str, model_id: str) -> Model | None:
@@ -223,22 +217,22 @@ def cache_read_rate(model: Model) -> Decimal | None:
     operation (write), so the read rate is the cheaper of the two non-zero
     cached rates.
     """
-    cached = [
-        r
-        for r in (model.cost_per_1m_out_cached, model.cost_per_1m_in_cached)
-        if r > 0
-    ]
+    cached = [r for r in (model.cost_per_1m_out_cached, model.cost_per_1m_in_cached) if r > 0]
     return min(cached) if cached else None
+
+
+def cache_write_rate(model: Model) -> Decimal | None:
+    """Cache-creation price per 1M tokens, or ``None`` when unpublished."""
+    read_rate = cache_read_rate(model)
+    if read_rate is None or model.cost_per_1m_in_cached <= read_rate:
+        return None
+    return model.cost_per_1m_in_cached
 
 
 def to_model_info(provider: str, model: Model) -> ModelInfo:
     """Project a catalog ``Model`` onto the ``ModelInfo`` DTO consumers use."""
     read_rate = cache_read_rate(model)
-    write_rate = (
-        model.cost_per_1m_in_cached
-        if read_rate is not None and model.cost_per_1m_in_cached > read_rate
-        else None
-    )
+    write_rate = cache_write_rate(model)
     return ModelInfo(
         id=model.id,
         display_name=model.name,

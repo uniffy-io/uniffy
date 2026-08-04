@@ -57,6 +57,8 @@ class MessageWriter(Protocol):
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
         tool_call_id: str | None = None,
@@ -89,6 +91,8 @@ class MessageWriter(Protocol):
         content: str,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
@@ -155,6 +159,7 @@ class SessionMessageWriter:
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
@@ -175,6 +180,7 @@ class SessionMessageWriter:
             content=content,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_creation_input_tokens=cache_creation_input_tokens,
             cache_read_input_tokens=cache_read_input_tokens,
             model=model,
             tool_name=tool_name,
@@ -197,6 +203,8 @@ class SessionMessageWriter:
         content: str,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
@@ -275,6 +283,7 @@ class ChatChannelMessageWriter:
         self,
         input_tokens: int,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
     ) -> None:
         """Cache provider-reported prompt + completion sizes on the binding.
@@ -287,10 +296,11 @@ class ChatChannelMessageWriter:
         contribute to context window pressure; cache hits are stored
         separately so the meter can surface the savings.
         """
-        if input_tokens <= 0 and cache_read_input_tokens <= 0:
+        if input_tokens <= 0 and cache_creation_input_tokens <= 0 and cache_read_input_tokens <= 0:
             return
+        new_cache_creation = max(0, int(cache_creation_input_tokens))
         new_cache_read = max(0, int(cache_read_input_tokens))
-        new_input = max(0, int(input_tokens)) + new_cache_read
+        new_input = max(0, int(input_tokens)) + new_cache_creation + new_cache_read
         new_output = max(0, int(output_tokens))
         with contextlib.suppress(Exception):
             await self._session.execute(
@@ -317,6 +327,7 @@ class ChatChannelMessageWriter:
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
@@ -368,6 +379,8 @@ class ChatChannelMessageWriter:
             meta["input_tokens"] = input_tokens
         if output_tokens:
             meta["output_tokens"] = output_tokens
+        if cache_creation_input_tokens:
+            meta["cache_creation_input_tokens"] = cache_creation_input_tokens
         if cache_read_input_tokens:
             meta["cache_read_input_tokens"] = cache_read_input_tokens
         if thinking:
@@ -395,7 +408,10 @@ class ChatChannelMessageWriter:
         )
         self._session.add(chat_msg)
         await self._record_active_tokens(
-            input_tokens, output_tokens, cache_read_input_tokens
+            input_tokens,
+            output_tokens,
+            cache_creation_input_tokens,
+            cache_read_input_tokens,
         )
         # Compaction summaries are context artifacts, not conversation activity.
         if role != "summary":
@@ -467,6 +483,7 @@ class ChatChannelMessageWriter:
         content: str,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
         thinking: list[dict] | None = None,
@@ -483,6 +500,7 @@ class ChatChannelMessageWriter:
                 content=content,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
+                cache_creation_input_tokens=cache_creation_input_tokens,
                 cache_read_input_tokens=cache_read_input_tokens,
                 model=model,
                 thinking=thinking,
@@ -508,13 +526,18 @@ class ChatChannelMessageWriter:
             meta["input_tokens"] = input_tokens
         if output_tokens:
             meta["output_tokens"] = output_tokens
+        if cache_creation_input_tokens:
+            meta["cache_creation_input_tokens"] = cache_creation_input_tokens
         if cache_read_input_tokens:
             meta["cache_read_input_tokens"] = cache_read_input_tokens
         if thinking:
             meta["thinking"] = thinking
         chat_msg.message_metadata = meta
         await self._record_active_tokens(
-            input_tokens, output_tokens, cache_read_input_tokens
+            input_tokens,
+            output_tokens,
+            cache_creation_input_tokens,
+            cache_read_input_tokens,
         )
         await self._session.commit()
         await self._session.refresh(chat_msg)
@@ -527,6 +550,7 @@ class ChatChannelMessageWriter:
             model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_creation_input_tokens=cache_creation_input_tokens,
             cache_read_input_tokens=cache_read_input_tokens,
             created_at=chat_msg.created_at,
         )
@@ -567,10 +591,7 @@ class ChatChannelMessageWriter:
             conditions.append(ChatMessage.created_at > manual_reset_at)
 
         result = await self._session.execute(
-            select(ChatMessage)
-            .where(*conditions)
-            .order_by(ChatMessage.created_at.desc())
-            .limit(50)
+            select(ChatMessage).where(*conditions).order_by(ChatMessage.created_at.desc()).limit(50)
         )
         rows = [m for m in result.scalars().all() if m.id not in compacted_ids]
         rows.reverse()

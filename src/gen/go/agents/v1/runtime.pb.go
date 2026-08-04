@@ -572,9 +572,12 @@ type GetUsageStatsResponse struct {
 	// ISO 4217 currency for “total_cost“ and per-bucket “cost“
 	// values in DailyUsage / ModelUsage. Defaults to "EUR" when no
 	// org row exists.
-	DisplayCurrency string `protobuf:"bytes,24,opt,name=display_currency,json=displayCurrency,proto3" json:"display_currency,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	DisplayCurrency                   string `protobuf:"bytes,24,opt,name=display_currency,json=displayCurrency,proto3" json:"display_currency,omitempty"`
+	TotalCacheCreationInputTokens     int64  `protobuf:"varint,25,opt,name=total_cache_creation_input_tokens,json=totalCacheCreationInputTokens,proto3" json:"total_cache_creation_input_tokens,omitempty"`
+	CronTotalCacheReadInputTokens     int64  `protobuf:"varint,26,opt,name=cron_total_cache_read_input_tokens,json=cronTotalCacheReadInputTokens,proto3" json:"cron_total_cache_read_input_tokens,omitempty"`
+	CronTotalCacheCreationInputTokens int64  `protobuf:"varint,27,opt,name=cron_total_cache_creation_input_tokens,json=cronTotalCacheCreationInputTokens,proto3" json:"cron_total_cache_creation_input_tokens,omitempty"`
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *GetUsageStatsResponse) Reset() {
@@ -775,6 +778,27 @@ func (x *GetUsageStatsResponse) GetDisplayCurrency() string {
 	return ""
 }
 
+func (x *GetUsageStatsResponse) GetTotalCacheCreationInputTokens() int64 {
+	if x != nil {
+		return x.TotalCacheCreationInputTokens
+	}
+	return 0
+}
+
+func (x *GetUsageStatsResponse) GetCronTotalCacheReadInputTokens() int64 {
+	if x != nil {
+		return x.CronTotalCacheReadInputTokens
+	}
+	return 0
+}
+
+func (x *GetUsageStatsResponse) GetCronTotalCacheCreationInputTokens() int64 {
+	if x != nil {
+		return x.CronTotalCacheCreationInputTokens
+	}
+	return 0
+}
+
 type DailyUsage struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	Date         string                 `protobuf:"bytes,1,opt,name=date,proto3" json:"date,omitempty"` // YYYY-MM-DD
@@ -782,11 +806,12 @@ type DailyUsage struct {
 	InputTokens  int64                  `protobuf:"varint,3,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
 	OutputTokens int64                  `protobuf:"varint,4,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
 	// Cache reads in this bucket; subset of input_tokens.
-	CacheReadInputTokens int64  `protobuf:"varint,5,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
-	Cost                 string `protobuf:"bytes,6,opt,name=cost,proto3" json:"cost,omitempty"`
-	ImageCount           int64  `protobuf:"varint,7,opt,name=image_count,json=imageCount,proto3" json:"image_count,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	CacheReadInputTokens     int64  `protobuf:"varint,5,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	Cost                     string `protobuf:"bytes,6,opt,name=cost,proto3" json:"cost,omitempty"`
+	ImageCount               int64  `protobuf:"varint,7,opt,name=image_count,json=imageCount,proto3" json:"image_count,omitempty"`
+	CacheCreationInputTokens int64  `protobuf:"varint,8,opt,name=cache_creation_input_tokens,json=cacheCreationInputTokens,proto3" json:"cache_creation_input_tokens,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *DailyUsage) Reset() {
@@ -868,16 +893,25 @@ func (x *DailyUsage) GetImageCount() int64 {
 	return 0
 }
 
+func (x *DailyUsage) GetCacheCreationInputTokens() int64 {
+	if x != nil {
+		return x.CacheCreationInputTokens
+	}
+	return 0
+}
+
 type ModelUsage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Model         string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
-	Runs          int64                  `protobuf:"varint,2,opt,name=runs,proto3" json:"runs,omitempty"`
-	InputTokens   int64                  `protobuf:"varint,3,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	OutputTokens  int64                  `protobuf:"varint,4,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
-	Cost          string                 `protobuf:"bytes,5,opt,name=cost,proto3" json:"cost,omitempty"`
-	ImageCount    int64                  `protobuf:"varint,6,opt,name=image_count,json=imageCount,proto3" json:"image_count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Model                    string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
+	Runs                     int64                  `protobuf:"varint,2,opt,name=runs,proto3" json:"runs,omitempty"`
+	InputTokens              int64                  `protobuf:"varint,3,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens             int64                  `protobuf:"varint,4,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	Cost                     string                 `protobuf:"bytes,5,opt,name=cost,proto3" json:"cost,omitempty"`
+	ImageCount               int64                  `protobuf:"varint,6,opt,name=image_count,json=imageCount,proto3" json:"image_count,omitempty"`
+	CacheReadInputTokens     int64                  `protobuf:"varint,7,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	CacheCreationInputTokens int64                  `protobuf:"varint,8,opt,name=cache_creation_input_tokens,json=cacheCreationInputTokens,proto3" json:"cache_creation_input_tokens,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *ModelUsage) Reset() {
@@ -952,15 +986,31 @@ func (x *ModelUsage) GetImageCount() int64 {
 	return 0
 }
 
+func (x *ModelUsage) GetCacheReadInputTokens() int64 {
+	if x != nil {
+		return x.CacheReadInputTokens
+	}
+	return 0
+}
+
+func (x *ModelUsage) GetCacheCreationInputTokens() int64 {
+	if x != nil {
+		return x.CacheCreationInputTokens
+	}
+	return 0
+}
+
 type AgentUsageInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	AgentName     string                 `protobuf:"bytes,2,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
-	Runs          int64                  `protobuf:"varint,3,opt,name=runs,proto3" json:"runs,omitempty"`
-	InputTokens   int64                  `protobuf:"varint,4,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	OutputTokens  int64                  `protobuf:"varint,5,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	AgentId                  string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	AgentName                string                 `protobuf:"bytes,2,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
+	Runs                     int64                  `protobuf:"varint,3,opt,name=runs,proto3" json:"runs,omitempty"`
+	InputTokens              int64                  `protobuf:"varint,4,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens             int64                  `protobuf:"varint,5,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	CacheReadInputTokens     int64                  `protobuf:"varint,6,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	CacheCreationInputTokens int64                  `protobuf:"varint,7,opt,name=cache_creation_input_tokens,json=cacheCreationInputTokens,proto3" json:"cache_creation_input_tokens,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *AgentUsageInfo) Reset() {
@@ -1028,6 +1078,20 @@ func (x *AgentUsageInfo) GetOutputTokens() int64 {
 	return 0
 }
 
+func (x *AgentUsageInfo) GetCacheReadInputTokens() int64 {
+	if x != nil {
+		return x.CacheReadInputTokens
+	}
+	return 0
+}
+
+func (x *AgentUsageInfo) GetCacheCreationInputTokens() int64 {
+	if x != nil {
+		return x.CacheCreationInputTokens
+	}
+	return 0
+}
+
 type ToolUsage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ToolName      string                 `protobuf:"bytes,1,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
@@ -1081,15 +1145,17 @@ func (x *ToolUsage) GetCallCount() int64 {
 }
 
 type ProviderKeyUsage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProviderKeyId string                 `protobuf:"bytes,1,opt,name=provider_key_id,json=providerKeyId,proto3" json:"provider_key_id,omitempty"`
-	KeyLabel      string                 `protobuf:"bytes,2,opt,name=key_label,json=keyLabel,proto3" json:"key_label,omitempty"`
-	Provider      string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
-	Runs          int64                  `protobuf:"varint,4,opt,name=runs,proto3" json:"runs,omitempty"`
-	InputTokens   int64                  `protobuf:"varint,5,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	OutputTokens  int64                  `protobuf:"varint,6,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	ProviderKeyId            string                 `protobuf:"bytes,1,opt,name=provider_key_id,json=providerKeyId,proto3" json:"provider_key_id,omitempty"`
+	KeyLabel                 string                 `protobuf:"bytes,2,opt,name=key_label,json=keyLabel,proto3" json:"key_label,omitempty"`
+	Provider                 string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
+	Runs                     int64                  `protobuf:"varint,4,opt,name=runs,proto3" json:"runs,omitempty"`
+	InputTokens              int64                  `protobuf:"varint,5,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens             int64                  `protobuf:"varint,6,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	CacheReadInputTokens     int64                  `protobuf:"varint,7,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	CacheCreationInputTokens int64                  `protobuf:"varint,8,opt,name=cache_creation_input_tokens,json=cacheCreationInputTokens,proto3" json:"cache_creation_input_tokens,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *ProviderKeyUsage) Reset() {
@@ -1164,18 +1230,34 @@ func (x *ProviderKeyUsage) GetOutputTokens() int64 {
 	return 0
 }
 
+func (x *ProviderKeyUsage) GetCacheReadInputTokens() int64 {
+	if x != nil {
+		return x.CacheReadInputTokens
+	}
+	return 0
+}
+
+func (x *ProviderKeyUsage) GetCacheCreationInputTokens() int64 {
+	if x != nil {
+		return x.CacheCreationInputTokens
+	}
+	return 0
+}
+
 type CronTaskUsage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CronTaskId    string                 `protobuf:"bytes,1,opt,name=cron_task_id,json=cronTaskId,proto3" json:"cron_task_id,omitempty"`
-	TaskName      string                 `protobuf:"bytes,2,opt,name=task_name,json=taskName,proto3" json:"task_name,omitempty"`
-	AgentName     string                 `protobuf:"bytes,3,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
-	TotalRuns     int64                  `protobuf:"varint,4,opt,name=total_runs,json=totalRuns,proto3" json:"total_runs,omitempty"`
-	Successes     int64                  `protobuf:"varint,5,opt,name=successes,proto3" json:"successes,omitempty"`
-	Failures      int64                  `protobuf:"varint,6,opt,name=failures,proto3" json:"failures,omitempty"`
-	InputTokens   int64                  `protobuf:"varint,7,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	OutputTokens  int64                  `protobuf:"varint,8,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	CronTaskId               string                 `protobuf:"bytes,1,opt,name=cron_task_id,json=cronTaskId,proto3" json:"cron_task_id,omitempty"`
+	TaskName                 string                 `protobuf:"bytes,2,opt,name=task_name,json=taskName,proto3" json:"task_name,omitempty"`
+	AgentName                string                 `protobuf:"bytes,3,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
+	TotalRuns                int64                  `protobuf:"varint,4,opt,name=total_runs,json=totalRuns,proto3" json:"total_runs,omitempty"`
+	Successes                int64                  `protobuf:"varint,5,opt,name=successes,proto3" json:"successes,omitempty"`
+	Failures                 int64                  `protobuf:"varint,6,opt,name=failures,proto3" json:"failures,omitempty"`
+	InputTokens              int64                  `protobuf:"varint,7,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens             int64                  `protobuf:"varint,8,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	CacheReadInputTokens     int64                  `protobuf:"varint,9,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	CacheCreationInputTokens int64                  `protobuf:"varint,10,opt,name=cache_creation_input_tokens,json=cacheCreationInputTokens,proto3" json:"cache_creation_input_tokens,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *CronTaskUsage) Reset() {
@@ -1260,6 +1342,20 @@ func (x *CronTaskUsage) GetInputTokens() int64 {
 func (x *CronTaskUsage) GetOutputTokens() int64 {
 	if x != nil {
 		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *CronTaskUsage) GetCacheReadInputTokens() int64 {
+	if x != nil {
+		return x.CacheReadInputTokens
+	}
+	return 0
+}
+
+func (x *CronTaskUsage) GetCacheCreationInputTokens() int64 {
+	if x != nil {
+		return x.CacheCreationInputTokens
 	}
 	return 0
 }
@@ -2576,14 +2672,15 @@ func (x *StreamModelCallStartEvent) GetModel() string {
 
 // Per-model-call token accounting, driving live token/cost counters.
 type StreamModelCallEndEvent struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Model                string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
-	InputTokens          int64                  `protobuf:"varint,2,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	OutputTokens         int64                  `protobuf:"varint,3,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
-	CacheReadInputTokens int64                  `protobuf:"varint,4,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
-	ThinkingTokens       int64                  `protobuf:"varint,5,opt,name=thinking_tokens,json=thinkingTokens,proto3" json:"thinking_tokens,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Model                    string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
+	InputTokens              int64                  `protobuf:"varint,2,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens             int64                  `protobuf:"varint,3,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	CacheReadInputTokens     int64                  `protobuf:"varint,4,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	ThinkingTokens           int64                  `protobuf:"varint,5,opt,name=thinking_tokens,json=thinkingTokens,proto3" json:"thinking_tokens,omitempty"`
+	CacheCreationInputTokens int64                  `protobuf:"varint,6,opt,name=cache_creation_input_tokens,json=cacheCreationInputTokens,proto3" json:"cache_creation_input_tokens,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *StreamModelCallEndEvent) Reset() {
@@ -2647,6 +2744,13 @@ func (x *StreamModelCallEndEvent) GetCacheReadInputTokens() int64 {
 func (x *StreamModelCallEndEvent) GetThinkingTokens() int64 {
 	if x != nil {
 		return x.ThinkingTokens
+	}
+	return 0
+}
+
+func (x *StreamModelCallEndEvent) GetCacheCreationInputTokens() int64 {
+	if x != nil {
+		return x.CacheCreationInputTokens
 	}
 	return 0
 }
@@ -3915,7 +4019,7 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x14GetUsageStatsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04days\x18\x02 \x01(\x05R\x04days\x12\x1a\n" +
-	"\binterval\x18\x03 \x01(\tR\binterval\"\xb4\t\n" +
+	"\binterval\x18\x03 \x01(\tR\binterval\"\x9c\v\n" +
 	"\x15GetUsageStatsResponse\x12\x1d\n" +
 	"\n" +
 	"total_runs\x18\x01 \x01(\x03R\ttotalRuns\x12,\n" +
@@ -3948,7 +4052,10 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\rtotal_retries\x18\x15 \x01(\x03R\ftotalRetries\x12'\n" +
 	"\x0ftotal_cancelled\x18\x16 \x01(\x03R\x0etotalCancelled\x126\n" +
 	"\x17total_deadline_exceeded\x18\x17 \x01(\x03R\x15totalDeadlineExceeded\x12)\n" +
-	"\x10display_currency\x18\x18 \x01(\tR\x0fdisplayCurrency\"\xe8\x01\n" +
+	"\x10display_currency\x18\x18 \x01(\tR\x0fdisplayCurrency\x12H\n" +
+	"!total_cache_creation_input_tokens\x18\x19 \x01(\x03R\x1dtotalCacheCreationInputTokens\x12I\n" +
+	"\"cron_total_cache_read_input_tokens\x18\x1a \x01(\x03R\x1dcronTotalCacheReadInputTokens\x12Q\n" +
+	"&cron_total_cache_creation_input_tokens\x18\x1b \x01(\x03R!cronTotalCacheCreationInputTokens\"\xa7\x02\n" +
 	"\n" +
 	"DailyUsage\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12\x12\n" +
@@ -3958,7 +4065,8 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x17cache_read_input_tokens\x18\x05 \x01(\x03R\x14cacheReadInputTokens\x12\x12\n" +
 	"\x04cost\x18\x06 \x01(\tR\x04cost\x12\x1f\n" +
 	"\vimage_count\x18\a \x01(\x03R\n" +
-	"imageCount\"\xb3\x01\n" +
+	"imageCount\x12=\n" +
+	"\x1bcache_creation_input_tokens\x18\b \x01(\x03R\x18cacheCreationInputTokens\"\xa9\x02\n" +
 	"\n" +
 	"ModelUsage\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12\x12\n" +
@@ -3967,25 +4075,31 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\routput_tokens\x18\x04 \x01(\x03R\foutputTokens\x12\x12\n" +
 	"\x04cost\x18\x05 \x01(\tR\x04cost\x12\x1f\n" +
 	"\vimage_count\x18\x06 \x01(\x03R\n" +
-	"imageCount\"\xa6\x01\n" +
+	"imageCount\x125\n" +
+	"\x17cache_read_input_tokens\x18\a \x01(\x03R\x14cacheReadInputTokens\x12=\n" +
+	"\x1bcache_creation_input_tokens\x18\b \x01(\x03R\x18cacheCreationInputTokens\"\x9c\x02\n" +
 	"\x0eAgentUsageInfo\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1d\n" +
 	"\n" +
 	"agent_name\x18\x02 \x01(\tR\tagentName\x12\x12\n" +
 	"\x04runs\x18\x03 \x01(\x03R\x04runs\x12!\n" +
 	"\finput_tokens\x18\x04 \x01(\x03R\vinputTokens\x12#\n" +
-	"\routput_tokens\x18\x05 \x01(\x03R\foutputTokens\"G\n" +
+	"\routput_tokens\x18\x05 \x01(\x03R\foutputTokens\x125\n" +
+	"\x17cache_read_input_tokens\x18\x06 \x01(\x03R\x14cacheReadInputTokens\x12=\n" +
+	"\x1bcache_creation_input_tokens\x18\a \x01(\x03R\x18cacheCreationInputTokens\"G\n" +
 	"\tToolUsage\x12\x1b\n" +
 	"\ttool_name\x18\x01 \x01(\tR\btoolName\x12\x1d\n" +
 	"\n" +
-	"call_count\x18\x02 \x01(\x03R\tcallCount\"\xcf\x01\n" +
+	"call_count\x18\x02 \x01(\x03R\tcallCount\"\xc5\x02\n" +
 	"\x10ProviderKeyUsage\x12&\n" +
 	"\x0fprovider_key_id\x18\x01 \x01(\tR\rproviderKeyId\x12\x1b\n" +
 	"\tkey_label\x18\x02 \x01(\tR\bkeyLabel\x12\x1a\n" +
 	"\bprovider\x18\x03 \x01(\tR\bprovider\x12\x12\n" +
 	"\x04runs\x18\x04 \x01(\x03R\x04runs\x12!\n" +
 	"\finput_tokens\x18\x05 \x01(\x03R\vinputTokens\x12#\n" +
-	"\routput_tokens\x18\x06 \x01(\x03R\foutputTokens\"\x8e\x02\n" +
+	"\routput_tokens\x18\x06 \x01(\x03R\foutputTokens\x125\n" +
+	"\x17cache_read_input_tokens\x18\a \x01(\x03R\x14cacheReadInputTokens\x12=\n" +
+	"\x1bcache_creation_input_tokens\x18\b \x01(\x03R\x18cacheCreationInputTokens\"\x84\x03\n" +
 	"\rCronTaskUsage\x12 \n" +
 	"\fcron_task_id\x18\x01 \x01(\tR\n" +
 	"cronTaskId\x12\x1b\n" +
@@ -3997,7 +4111,10 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\tsuccesses\x18\x05 \x01(\x03R\tsuccesses\x12\x1a\n" +
 	"\bfailures\x18\x06 \x01(\x03R\bfailures\x12!\n" +
 	"\finput_tokens\x18\a \x01(\x03R\vinputTokens\x12#\n" +
-	"\routput_tokens\x18\b \x01(\x03R\foutputTokens\"\xd2\x02\n" +
+	"\routput_tokens\x18\b \x01(\x03R\foutputTokens\x125\n" +
+	"\x17cache_read_input_tokens\x18\t \x01(\x03R\x14cacheReadInputTokens\x12=\n" +
+	"\x1bcache_creation_input_tokens\x18\n" +
+	" \x01(\x03R\x18cacheCreationInputTokens\"\xd2\x02\n" +
 	"\x12SendMessageRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -4092,13 +4209,14 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x15StreamReplyStartEvent\x12\x12\n" +
 	"\x04role\x18\x01 \x01(\tR\x04role\"1\n" +
 	"\x19StreamModelCallStartEvent\x12\x14\n" +
-	"\x05model\x18\x01 \x01(\tR\x05model\"\xd7\x01\n" +
+	"\x05model\x18\x01 \x01(\tR\x05model\"\x96\x02\n" +
 	"\x17StreamModelCallEndEvent\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12!\n" +
 	"\finput_tokens\x18\x02 \x01(\x03R\vinputTokens\x12#\n" +
 	"\routput_tokens\x18\x03 \x01(\x03R\foutputTokens\x125\n" +
 	"\x17cache_read_input_tokens\x18\x04 \x01(\x03R\x14cacheReadInputTokens\x12'\n" +
-	"\x0fthinking_tokens\x18\x05 \x01(\x03R\x0ethinkingTokens\"q\n" +
+	"\x0fthinking_tokens\x18\x05 \x01(\x03R\x0ethinkingTokens\x12=\n" +
+	"\x1bcache_creation_input_tokens\x18\x06 \x01(\x03R\x18cacheCreationInputTokens\"q\n" +
 	"\x19StreamTextBlockStartEvent\x12\x19\n" +
 	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12\x1d\n" +
 	"\n" +

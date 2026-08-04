@@ -68,13 +68,16 @@ describe('streaming thinking state', () => {
     it('accumulates model call usage across tool-loop segments', () => {
         let state = initial();
         state = reducer(state, recordModelCallEnd({
-            model: 'm1', inputTokens: 10, outputTokens: 5, cacheReadInputTokens: 2,
+            model: 'm1', inputTokens: 10, outputTokens: 5,
+            cacheCreationInputTokens: 4, cacheReadInputTokens: 2,
         }));
         state = reducer(state, recordModelCallEnd({
-            model: 'm1', inputTokens: 7, outputTokens: 3, cacheReadInputTokens: 1,
+            model: 'm1', inputTokens: 7, outputTokens: 3,
+            cacheCreationInputTokens: 2, cacheReadInputTokens: 1,
         }));
         expect(state.streamingUsage).toEqual({
-            model: 'm1', inputTokens: 17, outputTokens: 8, cacheReadInputTokens: 3,
+            model: 'm1', inputTokens: 17, outputTokens: 8,
+            cacheCreationInputTokens: 6, cacheReadInputTokens: 3,
         });
     });
 });

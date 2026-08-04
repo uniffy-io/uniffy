@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, replace
@@ -18,7 +19,6 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
@@ -42,7 +42,7 @@ from uniffy.domains.agents.memories.recall import (
     render_recall_block,
 )
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
-from uniffy.domains.agents.pricing import PRICING_CURRENCY, compute_text_cost, get_pricing
+from uniffy.domains.agents.pricing import PRICING_CURRENCY
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
     EventType,
@@ -61,6 +61,12 @@ from uniffy.domains.agents.runtime.image_config import (
     apply_image_tool_schema,
     resolve_image_config,
 )
+from uniffy.domains.agents.runtime.model_calls import (
+    CircuitOpenError,
+    FailoverTransition,
+    ModelCallController,
+    ModelCallTarget,
+)
 from uniffy.domains.agents.runtime.model_resolver import resolve_provider_and_model
 from uniffy.domains.agents.runtime.prompt import (
     SKILL_VIEW_TOOL,
@@ -72,6 +78,7 @@ from uniffy.domains.agents.runtime.prompt import (
     skill_passes_activation,
     to_skill_prompt_entry,
 )
+from uniffy.domains.agents.runtime.run_usage import RunUsageAccumulator
 from uniffy.domains.agents.runtime.settings import get_runtime_settings
 from uniffy.domains.agents.runtime.writers import (
     ChatChannelMessageWriter,
@@ -116,6 +123,74 @@ MAX_LOAD_ONLY_ITERATIONS = 3
 READ_TOOL_POOL_SIZE = 5
 
 
+async def _recorded_completion(
+    *,
+    provider,
+    provider_key_id: UUID | None,
+    model: str,
+    usage: RunUsageAccumulator,
+    messages: list[dict],
+    system: str | None,
+    tools: list[dict] | None,
+    cache_key: str,
+    params: dict | None,
+    controller: ModelCallController | None = None,
+    safety_identifier: str | None = None,
+) -> CompletionResult:
+    if controller is not None:
+        return await controller.complete(
+            messages=messages,
+            system=system,
+            tools=tools,
+            cache_key=cache_key,
+            safety_identifier=safety_identifier,
+        )
+    provider_name = getattr(provider, "name", type(provider).__name__.lower())
+    try:
+        result = await provider.chat_completion(
+            messages=messages,
+            model=model,
+            system=system,
+            tools=tools,
+            cache_key=cache_key,
+            params=params,
+        )
+    except Exception as exc:
+        usage.record_failure(
+            provider=provider_name,
+            provider_key_id=provider_key_id,
+            model=model,
+            error=type(exc).__name__,
+        )
+        raise
+    usage.record_result(
+        provider=provider_name,
+        provider_key_id=provider_key_id,
+        result=result,
+    )
+    return result
+
+
+def _safety_identifier(*, organization_id: UUID, user_id: UUID) -> str:
+    value = f"uniffy:{organization_id}:{user_id}".encode()
+    return hashlib.sha256(value).hexdigest()
+
+
+def _failover_event(transition: FailoverTransition) -> StreamEvent:
+    return StreamEvent(
+        type=EventType.FAILOVER,
+        from_provider_key_id=(
+            str(transition.from_provider_key_id) if transition.from_provider_key_id else ""
+        ),
+        to_provider_key_id=(
+            str(transition.to_provider_key_id) if transition.to_provider_key_id else ""
+        ),
+        to_model=transition.to_model,
+        reason=transition.reason,
+        attempt=transition.attempt,
+    )
+
+
 def _resolve_tool_schemas(
     registry: ToolRegistry,
     enabled_tools: list[str],
@@ -133,9 +208,7 @@ def _resolve_tool_schemas(
     """
     schemas = registry.get_anthropic_schemas(enabled_tools)
     invoked_id = invoked_skill.id if invoked_skill else None
-    advertises = any(
-        not entry.always_active and entry.id != invoked_id for entry in skill_entries
-    )
+    advertises = any(not entry.always_active and entry.id != invoked_id for entry in skill_entries)
     if advertises and SKILL_VIEW_TOOL not in enabled_tools:
         schemas.extend(registry.get_anthropic_schemas([SKILL_VIEW_TOOL]))
     return schemas or None
@@ -149,16 +222,12 @@ def _allowed_tool_names(tool_schemas: list[dict] | None) -> frozenset[str]:
     connection is gone is not executable either. Deferral splits this set; it
     never widens it.
     """
-    return frozenset(
-        from_api_name(schema.get("name", "")) for schema in tool_schemas or []
-    )
+    return frozenset(from_api_name(schema.get("name", "")) for schema in tool_schemas or [])
 
 
 def _is_load_only_turn(tool_calls: list) -> bool:
     """True when every call in the turn is tools.load_group."""
-    return bool(tool_calls) and all(
-        from_api_name(tc.name) == LOAD_GROUP_TOOL for tc in tool_calls
-    )
+    return bool(tool_calls) and all(from_api_name(tc.name) == LOAD_GROUP_TOOL for tc in tool_calls)
 
 
 def _expand_loaded_schemas(
@@ -228,10 +297,7 @@ async def _gather_read_tool_results(
     if not read_calls:
         return {}
     semaphore = asyncio.Semaphore(READ_TOOL_POOL_SIZE)
-    tasks = [
-        _execute_read_tool_isolated(registry, base_ctx, tc, semaphore)
-        for tc in read_calls
-    ]
+    tasks = [_execute_read_tool_isolated(registry, base_ctx, tc, semaphore) for tc in read_calls]
     raw = await asyncio.gather(*tasks, return_exceptions=True)
     results: dict[str, ToolResult] = {}
     for tc, res in zip(read_calls, raw, strict=True):
@@ -526,9 +592,7 @@ class RuntimeOperations:
             organization_id=organization_id,
             session_id=session_id,
         )
-        tool_schemas = _resolve_tool_schemas(
-            registry, enabled_tools, skill_entries, invoked_entry
-        )
+        tool_schemas = _resolve_tool_schemas(registry, enabled_tools, skill_entries, invoked_entry)
         image_config = await resolve_image_config(
             self._session, agent, organization_id=organization_id
         )
@@ -642,9 +706,7 @@ class RuntimeOperations:
             context_messages=context_messages,
             content=content,
         )
-        recall_promoted = bool(
-            recall_block and attach_recall_block(llm_messages, recall_block)
-        )
+        recall_promoted = bool(recall_block and attach_recall_block(llm_messages, recall_block))
 
         # 12. Store user message with enriched content (file text baked in
         # so the LLM retains file context on subsequent turns).
@@ -662,18 +724,51 @@ class RuntimeOperations:
         # 13. Call LLM (with tools if configured) and track timing
         start_time = time.monotonic()
         run_tool_calls: list[dict] = []
+        run_usage = RunUsageAccumulator()
+        runtime_settings = await get_runtime_settings(self._session, organization_id)
+        call_controller = ModelCallController(
+            provider_ops=self._provider_ops,
+            organization_id=organization_id,
+            target=ModelCallTarget(
+                provider=provider,
+                provider_key_id=provider_key_id,
+                model=model,
+            ),
+            fallback_models=list(agent.fallback_models or []),
+            settings=runtime_settings,
+            usage=run_usage,
+            params_for_target=lambda provider_name, target_model: (
+                request_params
+                if provider_name == provider.name and target_model == model
+                else resolve_request_params(
+                    agent.model_params,
+                    None,
+                    provider_name,
+                    target_model,
+                )
+            ),
+        )
+        safety_identifier = _safety_identifier(
+            organization_id=organization_id,
+            user_id=user_id,
+        )
         tool_iterations = 0
         run_status = "success"
         run_error: str | None = None
 
         try:
-            result = await provider.chat_completion(
+            result = await _recorded_completion(
+                provider=provider,
+                provider_key_id=provider_key_id,
+                usage=run_usage,
                 messages=llm_messages,
                 model=model,
                 system=system_prompt,
                 tools=tool_schemas,
                 cache_key=str(agent_session.agent_id),
                 params=request_params,
+                controller=call_controller,
+                safety_identifier=safety_identifier,
             )
 
             # 13. Agentic tool loop
@@ -690,9 +785,7 @@ class RuntimeOperations:
                     memory_recall_promoted=recall_promoted,
                     is_test_session=agent_session.is_test,
                     image_params=image_config.params if image_config else {},
-                    image_max_resolution=(
-                        image_config.max_resolution if image_config else None
-                    ),
+                    image_max_resolution=(image_config.max_resolution if image_config else None),
                     image_max_quality=image_config.max_quality if image_config else None,
                     integration_connections=agent.integration_connections or {},
                     deferred_tool_groups=plan.deferred_names(),
@@ -714,6 +807,10 @@ class RuntimeOperations:
                     result=result,
                     executor=executor,
                     run_tool_calls=run_tool_calls,
+                    run_usage=run_usage,
+                    provider_key_id=provider_key_id,
+                    call_controller=call_controller,
+                    safety_identifier=safety_identifier,
                     model_params=request_params,
                     deferred_pool=deferred_pool,
                 )
@@ -729,8 +826,7 @@ class RuntimeOperations:
                 user_id=user_id,
                 organization_id=organization_id,
                 model=model,
-                input_tokens=0,
-                output_tokens=0,
+                usage=run_usage,
                 tool_calls=run_tool_calls or None,
                 tool_iterations=tool_iterations,
                 duration_ms=duration_ms,
@@ -749,6 +845,7 @@ class RuntimeOperations:
             content=result.content,
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
+            cache_creation_input_tokens=result.cache_creation_input_tokens,
             cache_read_input_tokens=result.cache_read_input_tokens,
             model=result.model,
         )
@@ -761,9 +858,7 @@ class RuntimeOperations:
             user_id=user_id,
             organization_id=organization_id,
             model=result.model,
-            input_tokens=result.input_tokens,
-            output_tokens=result.output_tokens,
-            cache_read_input_tokens=result.cache_read_input_tokens,
+            usage=run_usage,
             tool_calls=run_tool_calls or None,
             tool_iterations=tool_iterations,
             duration_ms=duration_ms,
@@ -789,6 +884,10 @@ class RuntimeOperations:
         result: CompletionResult,
         executor: ToolExecutor,
         run_tool_calls: list[dict] | None = None,
+        run_usage: RunUsageAccumulator | None = None,
+        provider_key_id: UUID | None = None,
+        call_controller: ModelCallController | None = None,
+        safety_identifier: str | None = None,
         model_params: dict | None = None,
         deferred_pool: dict[str, list[dict]] | None = None,
     ) -> CompletionResult:
@@ -834,6 +933,7 @@ class RuntimeOperations:
             If the loop exceeds MAX_TOOL_ITERATIONS.
 
         """
+        run_usage = run_usage or RunUsageAccumulator()
         work_iterations = 0
         load_iterations = 0
         while True:
@@ -841,9 +941,7 @@ class RuntimeOperations:
                 load_iterations += 1
             else:
                 work_iterations += 1
-            if work_iterations > MAX_TOOL_ITERATIONS or (
-                load_iterations > MAX_LOAD_ONLY_ITERATIONS
-            ):
+            if work_iterations > MAX_TOOL_ITERATIONS or (load_iterations > MAX_LOAD_ONLY_ITERATIONS):
                 break
             logger.debug(
                 "Tool loop iteration",
@@ -888,6 +986,7 @@ class RuntimeOperations:
                     tool_args=tc.input,
                     input_tokens=result.input_tokens,
                     output_tokens=result.output_tokens,
+                    cache_creation_input_tokens=(result.cache_creation_input_tokens),
                     cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
                 )
@@ -942,13 +1041,18 @@ class RuntimeOperations:
             _expand_loaded_schemas(tool_schemas, deferred_pool, tool_results)
 
             # Re-invoke LLM with updated conversation
-            result = await provider.chat_completion(
+            result = await _recorded_completion(
+                provider=provider,
+                provider_key_id=provider_key_id,
+                usage=run_usage,
                 messages=llm_messages,
                 model=model,
                 system=system_prompt,
                 tools=tool_schemas,
                 cache_key=str(agent_id),
                 params=model_params,
+                controller=call_controller,
+                safety_identifier=safety_identifier,
             )
 
             # If the LLM is done (no more tool calls), exit the loop
@@ -1303,9 +1407,7 @@ class RuntimeOperations:
             organization_id=organization_id,
             session_id=session_id,
         )
-        tool_schemas = _resolve_tool_schemas(
-            registry, enabled_tools, skill_entries, invoked_entry
-        )
+        tool_schemas = _resolve_tool_schemas(registry, enabled_tools, skill_entries, invoked_entry)
         image_config = await resolve_image_config(
             self._session,
             agent,
@@ -1438,9 +1540,7 @@ class RuntimeOperations:
             context_messages=context_messages,
             content=content,
         )
-        recall_promoted = bool(
-            recall_block and attach_recall_block(llm_messages, recall_block)
-        )
+        recall_promoted = bool(recall_block and attach_recall_block(llm_messages, recall_block))
 
         if rerun_anchor is None:
             # 11. Store user message with enriched content (file text baked in
@@ -1463,24 +1563,50 @@ class RuntimeOperations:
         # 12. Call LLM with streaming and track timing
         start_time = time.monotonic()
         run_tool_calls: list[dict] = []
-        tool_iterations = 0
-
-        stream_iter = await provider.chat_completion(
-            messages=llm_messages,
-            model=model,
-            system=system_prompt,
-            tools=tool_schemas,
-            stream=True,
-            cache_key=str(agent_id),
-            params=request_params,
+        run_usage = RunUsageAccumulator()
+        runtime_settings = await get_runtime_settings(self._session, organization_id)
+        call_controller = ModelCallController(
+            provider_ops=self._provider_ops,
+            organization_id=organization_id,
+            target=ModelCallTarget(
+                provider=provider,
+                provider_key_id=provider_key_id,
+                model=model,
+            ),
+            fallback_models=list(agent.fallback_models or []),
+            settings=runtime_settings,
+            usage=run_usage,
+            params_for_target=lambda provider_name, target_model: (
+                request_params
+                if provider_name == provider.name and target_model == model
+                else resolve_request_params(
+                    agent.model_params,
+                    params_override,
+                    provider_name,
+                    target_model,
+                )
+            ),
         )
+        safety_identifier = _safety_identifier(
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        tool_iterations = 0
 
         # Forward tokens in real-time as they arrive from the provider.
         # `_stream_segment` lazily reserves a chat placeholder row on the
         # first token and tags every token with its message_id, letting
         # the chat translator publish AGENT_TOKEN_DELTA events.
         stream_result: _StreamSegmentResult | None = None
-        async for event in self._stream_segment(stream_iter, writer):
+        async for event in self._controlled_stream_segment(
+            controller=call_controller,
+            writer=writer,
+            messages=llm_messages,
+            system=system_prompt,
+            tools=tool_schemas,
+            cache_key=str(agent_id),
+            safety_identifier=safety_identifier,
+        ):
             if isinstance(event, _StreamSegmentResult):
                 stream_result = event
             else:
@@ -1494,8 +1620,7 @@ class RuntimeOperations:
                 user_id=user_id,
                 organization_id=organization_id,
                 model=model,
-                input_tokens=0,
-                output_tokens=0,
+                usage=run_usage,
                 tool_calls=None,
                 tool_iterations=0,
                 duration_ms=int((time.monotonic() - start_time) * 1000),
@@ -1507,6 +1632,12 @@ class RuntimeOperations:
             return
 
         if stream_result.error:
+            logger.warning(
+                "Provider stream failed",
+                provider=call_controller.target.provider_name,
+                model=call_controller.target.model,
+                error=stream_result.error,
+            )
             await self._create_run_log(
                 session_id=session_id,
                 channel_id=channel_id,
@@ -1514,8 +1645,7 @@ class RuntimeOperations:
                 user_id=user_id,
                 organization_id=organization_id,
                 model=model,
-                input_tokens=0,
-                output_tokens=0,
+                usage=run_usage,
                 tool_calls=None,
                 tool_iterations=0,
                 duration_ms=int((time.monotonic() - start_time) * 1000),
@@ -1523,10 +1653,12 @@ class RuntimeOperations:
                 error=stream_result.error,
                 provider_key_id=provider_key_id,
             )
-            yield StreamEvent(type=EventType.ERROR, error=stream_result.error)
+            yield StreamEvent(type=EventType.ERROR, error="Model provider request failed")
             return
 
         completion = stream_result.completion
+        if completion is None:
+            raise RuntimeError("stream terminal result missing completion")
 
         # 13. Streaming tool loop
         has_tool_use = (
@@ -1543,6 +1675,7 @@ class RuntimeOperations:
                     content=completion.content or "",
                     input_tokens=completion.input_tokens,
                     output_tokens=completion.output_tokens,
+                    cache_creation_input_tokens=(completion.cache_creation_input_tokens),
                     cache_read_input_tokens=completion.cache_read_input_tokens,
                     model=completion.model,
                     thinking=stream_result.thinking or None,
@@ -1560,9 +1693,7 @@ class RuntimeOperations:
                 memory_recall_promoted=recall_promoted,
                 is_test_session=agent_session.is_test if agent_session else False,
                 image_params=image_config.params if image_config else {},
-                image_max_resolution=(
-                    image_config.max_resolution if image_config else None
-                ),
+                image_max_resolution=(image_config.max_resolution if image_config else None),
                 image_max_quality=image_config.max_quality if image_config else None,
                 integration_connections=agent.integration_connections or {},
                 channel_id=channel_id,
@@ -1572,10 +1703,9 @@ class RuntimeOperations:
             )
             executor = ToolExecutor(registry, tool_ctx)
 
+            terminal_error: str | None = None
             async for event in self._stream_tool_loop(
                 writer=writer,
-                provider=provider,
-                model=model,
                 agent_id=agent_id,
                 system_prompt=system_prompt,
                 tool_schemas=tool_schemas,
@@ -1583,19 +1713,17 @@ class RuntimeOperations:
                 result=completion,
                 executor=executor,
                 run_tool_calls=run_tool_calls,
+                call_controller=call_controller,
+                safety_identifier=safety_identifier,
                 pending_thinking=(
-                    stream_result.thinking
-                    if stream_result.placeholder_id is None
-                    else None
+                    stream_result.thinking if stream_result.placeholder_id is None else None
                 ),
-                model_params=request_params,
                 deferred_pool=deferred_pool,
             ):
                 if event.type is EventType.DONE:
                     # The tool loop yielded a done event with the final result;
                     # create run log and re-yield
                     tool_iterations = len(run_tool_calls)
-                    msg = event.assistant_message
                     await self._create_run_log(
                         session_id=session_id,
                         channel_id=channel_id,
@@ -1603,11 +1731,7 @@ class RuntimeOperations:
                         user_id=user_id,
                         organization_id=organization_id,
                         model=event.model,
-                        input_tokens=msg.input_tokens if msg else 0,
-                        output_tokens=msg.output_tokens if msg else 0,
-                        cache_read_input_tokens=(
-                            msg.cache_read_input_tokens if msg else 0
-                        ),
+                        usage=run_usage,
                         tool_calls=run_tool_calls or None,
                         tool_iterations=tool_iterations,
                         duration_ms=int((time.monotonic() - start_time) * 1000),
@@ -1617,10 +1741,25 @@ class RuntimeOperations:
                     )
                     yield event
                     return
+                if event.type is EventType.ERROR:
+                    terminal_error = event.error
                 yield event
 
-            # Tool loop ended without DONE: the max-iterations marker and
-            # terminal error events were already forwarded above.
+            await self._create_run_log(
+                session_id=session_id,
+                channel_id=channel_id,
+                agent_id=agent_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                model=run_usage.last_model or model,
+                usage=run_usage,
+                tool_calls=run_tool_calls or None,
+                tool_iterations=len(run_tool_calls),
+                duration_ms=int((time.monotonic() - start_time) * 1000),
+                status="error",
+                error=terminal_error or "tool_loop_incomplete",
+                provider_key_id=provider_key_id,
+            )
             return
 
         # 14. Store final assistant message (no tool use). When the chat
@@ -1633,6 +1772,7 @@ class RuntimeOperations:
                 content=completion.content or "",
                 input_tokens=completion.input_tokens,
                 output_tokens=completion.output_tokens,
+                cache_creation_input_tokens=(completion.cache_creation_input_tokens),
                 cache_read_input_tokens=completion.cache_read_input_tokens,
                 model=completion.model,
                 thinking=stream_result.thinking or None,
@@ -1643,6 +1783,7 @@ class RuntimeOperations:
                 content=completion.content,
                 input_tokens=completion.input_tokens,
                 output_tokens=completion.output_tokens,
+                cache_creation_input_tokens=(completion.cache_creation_input_tokens),
                 cache_read_input_tokens=completion.cache_read_input_tokens,
                 model=completion.model,
                 thinking=stream_result.thinking or None,
@@ -1658,9 +1799,7 @@ class RuntimeOperations:
             user_id=user_id,
             organization_id=organization_id,
             model=completion.model,
-            input_tokens=completion.input_tokens,
-            output_tokens=completion.output_tokens,
-            cache_read_input_tokens=completion.cache_read_input_tokens,
+            usage=run_usage,
             tool_calls=None,
             tool_iterations=0,
             duration_ms=int((time.monotonic() - start_time) * 1000),
@@ -1679,8 +1818,6 @@ class RuntimeOperations:
         self,
         *,
         writer: MessageWriter,
-        provider,
-        model: str,
         agent_id: UUID,
         system_prompt: str,
         tool_schemas: list[dict],
@@ -1688,8 +1825,9 @@ class RuntimeOperations:
         result: CompletionResult,
         executor: ToolExecutor,
         run_tool_calls: list[dict] | None = None,
+        call_controller: ModelCallController,
+        safety_identifier: str | None,
         pending_thinking: list[dict] | None = None,
-        model_params: dict | None = None,
         deferred_pool: dict[str, list[dict]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Run the streaming tool-use loop until the LLM produces a final response.
@@ -1735,9 +1873,7 @@ class RuntimeOperations:
                 load_iterations += 1
             else:
                 work_iterations += 1
-            if work_iterations > MAX_TOOL_ITERATIONS or (
-                load_iterations > MAX_LOAD_ONLY_ITERATIONS
-            ):
+            if work_iterations > MAX_TOOL_ITERATIONS or (load_iterations > MAX_LOAD_ONLY_ITERATIONS):
                 break
             logger.debug(
                 "Stream tool loop iteration",
@@ -1783,6 +1919,7 @@ class RuntimeOperations:
                     tool_args=tc.input,
                     input_tokens=result.input_tokens,
                     output_tokens=result.output_tokens,
+                    cache_creation_input_tokens=(result.cache_creation_input_tokens),
                     cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
                     thinking=pending_thinking,
@@ -1806,9 +1943,7 @@ class RuntimeOperations:
             base_ctx = executor.context
 
             read_calls, write_calls = _split_read_write(registry, result.tool_calls)
-            read_results = await _gather_read_tool_results(
-                registry, base_ctx, read_calls
-            )
+            read_results = await _gather_read_tool_results(registry, base_ctx, read_calls)
 
             results_content: dict[str, str] = {}
             results_success: dict[str, bool] = {}
@@ -1885,10 +2020,7 @@ class RuntimeOperations:
 
                 tool_result = await executor.execute(tc)
                 turn_tool_results[tc.id] = tool_result
-                content = (
-                    tool_result.data if tool_result.success
-                    else f"Error: {tool_result.error}"
-                )
+                content = tool_result.data if tool_result.success else f"Error: {tool_result.error}"
                 stored_result = await writer.add_message(
                     role="tool",
                     content=content,
@@ -1929,19 +2061,16 @@ class RuntimeOperations:
 
             _expand_loaded_schemas(tool_schemas, deferred_pool, turn_tool_results)
 
-            # Re-invoke LLM with streaming
-            stream_iter = await provider.chat_completion(
+            stream_result: _StreamSegmentResult | None = None
+            async for event in self._controlled_stream_segment(
+                controller=call_controller,
+                writer=writer,
                 messages=llm_messages,
-                model=model,
                 system=system_prompt,
                 tools=tool_schemas,
-                stream=True,
                 cache_key=str(agent_id),
-                params=model_params,
-            )
-
-            stream_result: _StreamSegmentResult | None = None
-            async for event in self._stream_segment(stream_iter, writer):
+                safety_identifier=safety_identifier,
+            ):
                 if isinstance(event, _StreamSegmentResult):
                     stream_result = event
                 else:
@@ -1956,10 +2085,18 @@ class RuntimeOperations:
                 return
 
             if stream_result.error:
-                yield StreamEvent(type=EventType.ERROR, error=stream_result.error)
+                logger.warning(
+                    "Provider tool-loop stream failed",
+                    provider=call_controller.target.provider_name,
+                    model=call_controller.target.model,
+                    error=stream_result.error,
+                )
+                yield StreamEvent(type=EventType.ERROR, error="Model provider request failed")
                 return
 
             result = stream_result.completion
+            if result is None:
+                raise RuntimeError("stream terminal result missing completion")
 
             # If the LLM is done (no more tool calls), settle the placeholder
             # (or write a fresh row when no streaming was used) and yield final.
@@ -1970,6 +2107,7 @@ class RuntimeOperations:
                         content=result.content or "",
                         input_tokens=result.input_tokens,
                         output_tokens=result.output_tokens,
+                        cache_creation_input_tokens=(result.cache_creation_input_tokens),
                         cache_read_input_tokens=result.cache_read_input_tokens,
                         model=result.model,
                         thinking=stream_result.thinking or None,
@@ -1980,6 +2118,7 @@ class RuntimeOperations:
                         content=result.content,
                         input_tokens=result.input_tokens,
                         output_tokens=result.output_tokens,
+                        cache_creation_input_tokens=(result.cache_creation_input_tokens),
                         cache_read_input_tokens=result.cache_read_input_tokens,
                         model=result.model,
                         thinking=stream_result.thinking or None,
@@ -2000,6 +2139,7 @@ class RuntimeOperations:
                     content=result.content or "",
                     input_tokens=result.input_tokens,
                     output_tokens=result.output_tokens,
+                    cache_creation_input_tokens=(result.cache_creation_input_tokens),
                     cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
                     thinking=stream_result.thinking or None,
@@ -2013,43 +2153,110 @@ class RuntimeOperations:
             error=f"Agent exceeded maximum tool iterations ({MAX_TOOL_ITERATIONS})",
         )
 
+    async def _controlled_stream_segment(
+        self,
+        *,
+        controller: ModelCallController,
+        writer: MessageWriter,
+        messages: list[dict],
+        system: str | None,
+        tools: list[dict] | None,
+        cache_key: str,
+        safety_identifier: str | None,
+    ) -> AsyncIterator[StreamEvent | _StreamSegmentResult]:
+        while True:
+            try:
+                stream_iter, transitions = await controller.open_stream(
+                    messages=messages,
+                    system=system,
+                    tools=tools,
+                    cache_key=cache_key,
+                    safety_identifier=safety_identifier,
+                )
+            except Exception as exc:
+                transition = (
+                    None
+                    if isinstance(exc, CircuitOpenError)
+                    else await controller.record_failure_and_failover(exc)
+                )
+                if transition is not None:
+                    yield _failover_event(transition)
+                    continue
+                yield _StreamSegmentResult(
+                    completion=None,
+                    error=str(exc),
+                    error_exception=exc,
+                    placeholder_id=None,
+                )
+                return
+
+            for transition in transitions:
+                yield _failover_event(transition)
+
+            stream_result: _StreamSegmentResult | None = None
+            started_output = False
+            try:
+                async with asyncio.timeout(controller.remaining_seconds()):
+                    async for event in self._stream_segment(stream_iter, writer):
+                        if isinstance(event, _StreamSegmentResult):
+                            stream_result = event
+                        else:
+                            if event.type in _BLOCK_EVENT_TYPES:
+                                started_output = True
+                            yield event
+            except Exception as exc:
+                stream_result = _StreamSegmentResult(
+                    completion=None,
+                    error=str(exc),
+                    error_exception=exc,
+                    placeholder_id=None,
+                    started_output=started_output,
+                )
+
+            if stream_result is None:
+                stream_result = _StreamSegmentResult(
+                    completion=None,
+                    error="stream ended without a terminal result",
+                    error_exception=None,
+                    placeholder_id=None,
+                    started_output=started_output,
+                )
+            if stream_result.completion is not None:
+                controller.record_result(stream_result.completion)
+                yield stream_result
+                return
+
+            failure = stream_result.error_exception or RuntimeError(
+                stream_result.error or "provider stream failed"
+            )
+            transition = await controller.record_failure_and_failover(
+                failure,
+                allow_failover=not (started_output or stream_result.started_output),
+            )
+            if transition is None:
+                yield stream_result
+                return
+            yield _failover_event(transition)
+
     async def _stream_segment(
         self,
         stream_iter: AsyncIterator[StreamEvent],
         writer: MessageWriter,
     ) -> AsyncIterator[StreamEvent | _StreamSegmentResult]:
-        """Enrich and forward one provider stream segment.
-
-        Block events pass through with `message_id` + one monotonic
-        `sequence` stamped once the writer supplies an in-flight
-        assistant row (chat destination; session writers return None).
-        The placeholder is reserved on the first non-empty thinking OR
-        text delta, but thinking never patches the row's content - the
-        bubble body stays empty until answer text arrives. The
-        placeholder envelope is yielded as MESSAGE_STORED so the chat
-        translator can fan MESSAGE_CREATED before the deltas.
-
-        `elapsed_ms` is stamped on THINKING_BLOCK_END (time since the
-        matching start) so live view, replay, and history agree on the
-        thinking duration. The provider's MODEL_CALL_END is forwarded
-        for live token counters with its runtime-internal
-        `CompletionResult` stripped; the result travels only on the
-        terminal `_StreamSegmentResult` sentinel. Provider ERROR events
-        are captured, not forwarded - the caller emits the terminal
-        error after writing the run log.
-        """
+        """Enrich public stream events while retaining terminal state for the runtime."""
         completion: CompletionResult | None = None
         error: str | None = None
+        error_exception: BaseException | None = None
         placeholder_id: UUID | None = None
+        started_output = False
         sequence = 0
         thinking_started: dict[str, float] = {}
         thinking_folded: dict[str, dict] = {}
 
         async for event in stream_iter:
-            if (
-                event.type is EventType.THINKING_BLOCK_DELTA
-                and event.block_id in thinking_folded
-            ):
+            if event.type in _BLOCK_EVENT_TYPES:
+                started_output = True
+            if event.type is EventType.THINKING_BLOCK_DELTA and event.block_id in thinking_folded:
                 thinking_folded[event.block_id]["content"] += event.delta
             match event.type:
                 case EventType.MODEL_CALL_END:
@@ -2057,7 +2264,9 @@ class RuntimeOperations:
                     yield replace(event, result=None)
                     continue
                 case EventType.ERROR:
-                    error = event.error
+                    if error is None:
+                        error = event.error
+                        error_exception = event.error_exception
                     continue
                 case EventType.THINKING_BLOCK_START:
                     thinking_started[event.block_id] = time.monotonic()
@@ -2066,23 +2275,19 @@ class RuntimeOperations:
                         "content": "",
                         "elapsed_ms": 0,
                     }
-                case (
-                    EventType.TEXT_BLOCK_DELTA | EventType.THINKING_BLOCK_DELTA
-                ) if event.delta and placeholder_id is None:
+                case EventType.TEXT_BLOCK_DELTA | EventType.THINKING_BLOCK_DELTA if (
+                    event.delta and placeholder_id is None
+                ):
                     placeholder = await writer.reserve_assistant_placeholder()
                     if placeholder is not None:
                         placeholder_id = placeholder.id
-                        yield StreamEvent(
-                            type=EventType.MESSAGE_STORED, message=placeholder
-                        )
+                        yield StreamEvent(type=EventType.MESSAGE_STORED, message=placeholder)
 
             enriched = event
             if event.type in _BLOCK_EVENT_TYPES:
                 if placeholder_id is not None:
                     sequence += 1
-                    enriched = replace(
-                        event, message_id=placeholder_id, sequence=sequence
-                    )
+                    enriched = replace(event, message_id=placeholder_id, sequence=sequence)
                 if enriched.type is EventType.THINKING_BLOCK_END:
                     started = thinking_started.pop(enriched.block_id, None)
                     if started is not None:
@@ -2091,15 +2296,15 @@ class RuntimeOperations:
                             elapsed_ms=int((time.monotonic() - started) * 1000),
                         )
                     if enriched.block_id in thinking_folded:
-                        thinking_folded[enriched.block_id]["elapsed_ms"] = (
-                            enriched.elapsed_ms
-                        )
+                        thinking_folded[enriched.block_id]["elapsed_ms"] = enriched.elapsed_ms
             yield enriched
 
         yield _StreamSegmentResult(
             completion=completion,
             error=error,
+            error_exception=error_exception,
             placeholder_id=placeholder_id,
+            started_output=started_output,
             thinking=[b for b in thinking_folded.values() if b["content"]],
         )
 
@@ -2160,9 +2365,7 @@ class RuntimeOperations:
 
         from uniffy.domains.chat.cache import get_or_load_channel
 
-        channel = await get_or_load_channel(
-            self._session, destination.channel_id, organization_id
-        )
+        channel = await get_or_load_channel(self._session, destination.channel_id, organization_id)
         if (
             channel is not None
             and channel.is_agent_dm
@@ -2173,14 +2376,11 @@ class RuntimeOperations:
 
     _MEMORY_SCOPE_LABELS = {
         MemoryScope.USER: (
-            "Personal memory for this user (private to them; kept with every "
-            "assistant they talk to)"
+            "Personal memory for this user (private to them; kept with every assistant they talk to)"
         ),
         MemoryScope.CHANNEL: "Channel memory (shared with all members of this channel)",
         MemoryScope.SESSION: "Session memory (shared with participants of this session)",
-        MemoryScope.ORG: (
-            "Organization memory (curated by agent managers; visible to all members)"
-        ),
+        MemoryScope.ORG: ("Organization memory (curated by agent managers; visible to all members)"),
     }
     _MEMORY_AGENT_ORG_LABEL = (
         "Organization memory kept for you specifically (curated by agent managers)"
@@ -2361,9 +2561,7 @@ class RuntimeOperations:
         user_id: UUID,
         organization_id: UUID,
         model: str,
-        input_tokens: int,
-        output_tokens: int,
-        cache_read_input_tokens: int = 0,
+        usage: RunUsageAccumulator,
         tool_calls: list[dict] | None,
         tool_iterations: int,
         duration_ms: int,
@@ -2372,20 +2570,13 @@ class RuntimeOperations:
         provider_key_id: UUID | None = None,
         channel_id: UUID | None = None,
     ) -> None:
-        """Create an AgentRunLog entry for observability.
-
-        Either `session_id` (session-backed runs) or `channel_id`
-        (chat-triggered runs) is set; both populate the same usage
-        analytics aggregation. The chat path leaves `session_id` NULL.
-        """
+        """Persist one session- or channel-backed run for usage analytics."""
         cost, cost_currency = await self._compute_run_cost(
             organization_id=organization_id,
-            model=model,
-            provider_key_id=provider_key_id,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cache_read_input_tokens=cache_read_input_tokens,
+            usage=usage,
         )
+        recorded_model = usage.last_model or model
+        recorded_provider_key_id = usage.last_provider_key_id or provider_key_id
         try:
             run_log = AgentRunLog(
                 session_id=session_id,
@@ -2393,16 +2584,22 @@ class RuntimeOperations:
                 agent_id=agent_id,
                 user_id=user_id,
                 organization_id=organization_id,
-                model=model,
-                provider_key_id=provider_key_id,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                cache_read_input_tokens=cache_read_input_tokens,
+                model=recorded_model,
+                provider_key_id=recorded_provider_key_id,
+                input_tokens=usage.input_tokens,
+                output_tokens=usage.output_tokens,
+                cache_creation_input_tokens=usage.cache_creation_input_tokens,
+                cache_read_input_tokens=usage.cache_read_input_tokens,
+                thinking_tokens=usage.thinking_tokens,
                 tool_calls=tool_calls,
+                model_calls=usage.to_list() or None,
                 tool_iterations=tool_iterations,
                 duration_ms=duration_ms,
                 status=status,
                 error=error,
+                retry_count=usage.retry_count,
+                failover_provider_key_ids=usage.failover_provider_key_ids or None,
+                deadline_exceeded=usage.deadline_exceeded,
                 cost=cost,
                 cost_currency=cost_currency,
             )
@@ -2424,50 +2621,19 @@ class RuntimeOperations:
         self,
         *,
         organization_id: UUID,
-        model: str,
-        provider_key_id: UUID | None,
-        input_tokens: int,
-        output_tokens: int,
-        cache_read_input_tokens: int,
+        usage: RunUsageAccumulator,
     ):
-        """Look up pricing, compute cost, convert to the org's display currency.
-
-        Returns ``(cost, cost_currency)`` on success or ``(None, None)`` when
-        any step (provider lookup, pricing row, currency rate) is missing.
-        Failures are logged but never raise - cost stays null and the run
-        log still gets written for token analytics.
-        """
+        """Keep token analytics writable when pricing or conversion is unavailable."""
         try:
-            provider: str | None = None
-            if provider_key_id is not None:
-                provider = (
-                    await self._session.execute(
-                        select(ProviderKey.provider).where(ProviderKey.id == provider_key_id)
-                    )
-                ).scalar_one_or_none()
-            if provider is None:
+            raw_cost = usage.cost_usd()
+            if raw_cost is None:
                 logger.warning(
-                    "Skipping cost calculation: provider not resolvable",
-                    model=model,
-                    provider_key_id=str(provider_key_id) if provider_key_id else None,
+                    "Skipping cost calculation: model call pricing is incomplete",
+                    model_calls=[
+                        {"provider": call.provider, "model": call.model} for call in usage.calls
+                    ],
                 )
                 return None, None
-
-            pricing = get_pricing(provider=provider, model=model)
-            if pricing is None:
-                logger.warning(
-                    "Skipping cost calculation: model not in catalog",
-                    provider=provider,
-                    model=model,
-                )
-                return None, None
-
-            raw_cost = compute_text_cost(
-                pricing,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                cache_read_input_tokens=cache_read_input_tokens,
-            )
             display_currency = await get_display_currency(self._session, organization_id)
             converted = await convert_currency(
                 raw_cost,
@@ -2510,7 +2676,9 @@ class _StreamSegmentResult:
 
     completion: CompletionResult | None
     error: str | None
+    error_exception: BaseException | None
     placeholder_id: UUID | None
+    started_output: bool = False
     # Display-safe reasoning folded from the segment's thinking events:
     # [{block_id, content, elapsed_ms}], persisted onto the assistant row.
     thinking: list[dict] = dataclass_field(default_factory=list)

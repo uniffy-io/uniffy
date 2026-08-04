@@ -252,6 +252,7 @@ function DailyUsageChart({
                 "Input Tokens": d.inputTokens,
                 "Output Tokens": d.outputTokens,
                 "Cache Reads": d.cacheReadInputTokens,
+                "Cache Writes": d.cacheCreationInputTokens,
             })),
         [data, interval]
     );
@@ -292,6 +293,10 @@ function DailyUsageChart({
                     <linearGradient id="gradCache" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#10b981" stopOpacity={0.2} />
                         <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="gradCacheWrite" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
                     </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -348,6 +353,17 @@ function DailyUsageChart({
                     activeDot={{ r: 5, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
                     animationDuration={800}
                     animationBegin={400}
+                />
+                <Area
+                    type="monotone"
+                    dataKey="Cache Writes"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    fill="url(#gradCacheWrite)"
+                    dot={showDots ? { r: 3, fill: "#f59e0b", strokeWidth: 0 } : false}
+                    activeDot={{ r: 5, fill: "#f59e0b", strokeWidth: 2, stroke: "#fff" }}
+                    animationDuration={800}
+                    animationBegin={500}
                 />
             </AreaChart>
         </ResponsiveContainer>
@@ -976,7 +992,7 @@ export function UsageView() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
                     <StatCard
                         label="Total Cost"
                         value={formatCurrency(stats.totalCost, stats.displayCurrency)}
@@ -1000,11 +1016,22 @@ export function UsageView() {
                         value={formatNumber(stats.totalCacheReadInputTokens)}
                         icon={Database}
                         subtitle={
-                            stats.totalCacheReadInputTokens + stats.totalInputTokens > 0
-                                ? `${Math.round((stats.totalCacheReadInputTokens / (stats.totalCacheReadInputTokens + stats.totalInputTokens)) * 100)}% of prompt from cache`
+                            stats.totalInputTokens > 0
+                                ? `${Math.round((stats.totalCacheReadInputTokens / stats.totalInputTokens) * 100)}% of prompt from cache`
                                 : "no input yet"
                         }
                         accentColor="#10b981"
+                    />
+                    <StatCard
+                        label="Cache Writes"
+                        value={formatNumber(stats.totalCacheCreationInputTokens)}
+                        icon={Database}
+                        subtitle={
+                            stats.totalInputTokens > 0
+                                ? `${Math.round((stats.totalCacheCreationInputTokens / stats.totalInputTokens) * 100)}% of prompt cached`
+                                : "no input yet"
+                        }
+                        accentColor="#f59e0b"
                     />
                     <StatCard
                         label="Avg Duration"

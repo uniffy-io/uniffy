@@ -54,6 +54,14 @@ class TestCatalogIntegrity:
             assert template.description.strip()
             assert template.enabled_tools
 
+    def test_navigator_has_rich_people_reads(self) -> None:
+        tools = set(get_template("navigator").enabled_tools)
+        assert {
+            "people.list_members",
+            "people.get_person",
+            "people.list_teams",
+        } <= tools
+
     def test_catalog_loaded_from_shipped_files(self) -> None:
         files = {p.stem for p in (DATA_DIR / "catalog").glob("*.md")}
         assert files == {t.key for t in AGENT_TEMPLATES}
