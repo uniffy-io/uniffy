@@ -1448,15 +1448,27 @@ export const initializeChat = createAsyncThunk<
   { state: RootState; rejectValue: string }
 >('chat/initialize', async ({ channelId: initialChannelId, messageId }, { getState, dispatch, rejectWithValue }) => {
   try {
-    // Load channels, categories, unread counts, and agents in parallel; agents power DM avatars and pickers.
-    // Provider keys and the model catalog ride along so the DM model picker is
-    // populated before the user opens it, not after.
+    // Channels are the only load-bearing fetch here: the active channel and its
+    // messages are picked from them. A transient failure would leave the sidebar
+    // and the message pane empty until the user reloads by hand, so retry once.
+    const loadChannels = async () => {
+      try {
+        await dispatch(fetchChannels()).unwrap();
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await dispatch(fetchChannels()).unwrap();
+      }
+    };
+
+    // Everything else is decoration around the channel list - categories, badges,
+    // agent metadata, the model picker's catalog. Each one is best-effort: a single
+    // slow or failing side fetch must not take the whole conversation down with it.
     await Promise.all([
-      dispatch(fetchChannels()).unwrap(),
-      dispatch(fetchCategories()).unwrap(),
+      loadChannels(),
+      dispatch(fetchCategories()).unwrap().catch(() => {}),
       dispatch(fetchAgentFolders()).unwrap().catch(() => {}),
-      dispatch(fetchUnreadCounts()).unwrap(),
-      dispatch(fetchThreadsInbox()).unwrap(),
+      dispatch(fetchUnreadCounts()).unwrap().catch(() => {}),
+      dispatch(fetchThreadsInbox()).unwrap().catch(() => {}),
       dispatch(fetchDrafts()).unwrap().catch(() => {}),
       dispatch(fetchAgents()).unwrap().catch(() => {}),
       dispatch(fetchProviderKeys()).unwrap().catch(() => {}),

@@ -116,12 +116,12 @@ function MessageItemInner({
     !isAgent && typeof message.metadata?.['invoked_skill_name'] === 'string' && message.metadata['invoked_skill_name']
       ? (message.metadata['invoked_skill_name'] as string)
       : null;
-  // DMs and agent chats (DIRECT, incl. is_agent_dm) thread every turn off the
-  // previous message; a reply quote on each one is noise there, so suppress it.
-  const isDmChannel = useAppSelector((state) => {
-    const ch = state.chatChannels.byId[message.channelId];
-    return ch?.channelType === 'DIRECT' || ch?.channelType === 'GROUP_DM';
-  });
+  // Agent chats thread every turn off the previous message, so a quote on each
+  // one is noise. Human DMs quote only when the sender picked a message, so the
+  // quote carries real information there and stays visible.
+  const isAgentDmChannel = useAppSelector(
+    (state) => state.chatChannels.byId[message.channelId]?.isAgentDm === true,
+  );
   const agent = useAppSelector((state) => state.agents.agents[message.senderId] ?? null);
   const senderName = (isAgent ? agent?.name : null) ?? message.senderName ?? (isAgent ? 'Agent' : 'Unknown User');
   const hasThread = message.thread && message.thread.replyCount > 0;
@@ -387,7 +387,7 @@ function MessageItemInner({
             </div>
           )}
 
-          {!isDmChannel && message.replyContext && (
+          {!isAgentDmChannel && message.replyContext && (
             <button
               type="button"
               className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer max-w-full"

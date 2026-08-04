@@ -84,6 +84,8 @@ Exception - status colors use explicit pairs: success `bg-green-100 text-green-8
 
 **URN type colors:** `@/config/theme/urnColors.ts` is the single source (`getUrnTypeHexColor` for canvas/SVG, `getUrnTypeTheme` for components, `URN_TYPE_LEGEND` for legends). New content types get their color there, nowhere else.
 
+**Person colors:** `@/config/theme/brandGradients.ts` is the single source (`identityStops` for raw stops, `identityPaint` for solid/gradient/wash, `brandRampStops` for ordered sets). Everything that paints a person - avatar backdrop, realtime caret, canvas pointer - hashes the display name through it, so the same person reads the same everywhere. Stops stay on the Unity Violet -> Belonging Pink axis; do not add a second palette.
+
 **Icons:** `@phosphor-icons/react` for all icons.
 
 **Logo:** `UniffyLogo` component (`@/components/ui/uniffy-logo`) or `/uniffy-symbol.png`. The mark is multi-color and theme-agnostic - never recolor or `invert()` it. Regenerate icon sizes from `docs/brand/uniffy-symbol.png`, do not hand-edit.

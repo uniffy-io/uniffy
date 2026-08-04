@@ -1719,12 +1719,13 @@
 .uniffy-yjs-cursor {
   position: relative;
   display: inline-block;
-  width: 0;
-  height: 1em;
+  width: 2px;
+  height: 1.1em;
   margin-left: -1px;
   margin-right: -1px;
-  border-left-width: 2px;
-  border-left-style: solid;
+  /* Rounded cap so the caret reads like the avatar chips rather than a
+   * hairline table border. */
+  border-radius: 9999px;
   vertical-align: text-bottom;
   pointer-events: none;
   user-select: none;
@@ -1732,15 +1733,18 @@
 
 .uniffy-yjs-cursor__flag {
   position: absolute;
-  top: -1.4em;
+  top: -1.5em;
   left: -1px;
-  padding: 0.1em 0.45em;
+  padding: 0.15em 0.5em;
   font-size: 0.7rem;
-  line-height: 1;
+  line-height: 1.2;
   font-weight: 500;
+  letter-spacing: 0.01em;
   color: #fff;
   white-space: nowrap;
-  border-radius: 3px 3px 3px 0;
+  /* Avatar geometry: pill everywhere except the corner that meets the caret. */
+  border-radius: 9999px 9999px 9999px 2px;
+  box-shadow: 0 1px 3px rgb(13 17 30 / 0.28);
   pointer-events: none;
   user-select: none;
   /* Always visible. An auto-fade was tried briefly but a hidden
@@ -1752,5 +1756,7 @@
 }
 
 .uniffy-yjs-selection {
-  border-radius: 2px;
+  border-radius: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }

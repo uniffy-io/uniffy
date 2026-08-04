@@ -21,7 +21,6 @@ import {
 import { RealtimeStatusBadge } from '@/features/notes/realtime/RealtimeStatusBadge';
 import { RealtimePresence, type RealtimeStatus } from '@/features/realtime';
 import type { Awareness } from 'y-protocols/awareness';
-import { resolveAwarenessColor } from '@/features/notes/realtime/awarenessColor';
 import { buildBreadcrumbPath } from '@/features/notes/utils/notesTreeUtils';
 import { NoteBreadcrumbs } from '@/features/notes/components/NoteBreadcrumbs';
 import type { EditorMode } from '@/features/notes/store/editorSlice';
@@ -112,12 +111,6 @@ export function EditorHeader({
                 awareness={realtimeAwareness}
                 localUserId={currentUser?.id ?? null}
                 localUserName={currentUser?.fullName || currentUser?.username || null}
-                localUserColor={
-                  resolveAwarenessColor(
-                    currentUser?.accentColor,
-                    currentUser?.id ?? 'self',
-                  ).solid
-                }
                 localHasAvatar={Boolean(currentUser?.hasAvatar)}
               />
             )}

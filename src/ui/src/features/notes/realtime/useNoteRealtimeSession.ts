@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as Y from 'yjs';
 import { useAppSelector } from '@/app/hooks';
-import { realtimeMultiplexer, useDocSession, type RealtimeStatus } from '@/features/realtime';
+import {
+  realtimeMultiplexer,
+  useDocSession,
+  useOutboundSyncing,
+  type RealtimeStatus,
+} from '@/features/realtime';
 import { PROSEMIRROR_FRAGMENT_FIELD } from '@/features/notes/realtime/markdown';
 import { registerLiveNoteDoc } from '@/features/notes/realtime/liveNoteDocs';
-import { resolveAwarenessColor } from '@/features/notes/realtime/awarenessColor';
 import type { CrepeRealtimeBinding } from '@/components/editor/CrepeEditor';
 
 export function useNoteRealtimeSession(
@@ -65,15 +69,11 @@ export function useNoteRealtimeSession(
   // Awareness user payload in its own effect so avatar/name changes do not rebuild UndoManager (would drop undo history).
   useEffect(() => {
     if (!session) return;
-    const { solid, translucent } = resolveAwarenessColor(
-      user?.accentColor,
-      user?.id ?? session.sessionId,
-    );
     session.awareness.setLocalStateField('user', {
       id: user?.id ?? null,
+      // Peers paint carets, labels and avatars from the name via
+      // ``identityPaint``, so no color travels on the wire.
       name: user?.fullName ?? user?.username ?? 'Anonymous',
-      color: solid,
-      colorLight: translucent,
       avatarUrl: user?.avatarUrl ?? null,
       hasAvatar: user?.hasAvatar ?? false,
     });
@@ -82,19 +82,11 @@ export function useNoteRealtimeSession(
     user?.id,
     user?.fullName,
     user?.username,
-    user?.accentColor,
     user?.hasAvatar,
     user?.avatarUrl,
   ]);
 
-  const subscribePending = useCallback(
-    (onChange: () => void) =>
-      docName ? realtimeMultiplexer.subscribeOutboundPending(docName, onChange) : () => {},
-    [docName],
-  );
-  const outboundPending = useSyncExternalStore(subscribePending, () =>
-    docName ? realtimeMultiplexer.isOutboundPending(docName) : false,
-  );
+  const syncing = useOutboundSyncing(docName);
 
   const binding = useMemo<CrepeRealtimeBinding | null>(() => {
     if (!session) return null;
@@ -109,7 +101,7 @@ export function useNoteRealtimeSession(
 
   const baseStatus = session?.status ?? 'idle';
   const status: RealtimeStatus =
-    outboundPending &&
+    syncing &&
     (baseStatus === 'connected' || baseStatus === 'connecting' || baseStatus === 'disconnected')
       ? 'syncing'
       : baseStatus;

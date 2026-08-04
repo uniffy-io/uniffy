@@ -63,6 +63,62 @@ export function brandRampStops(
 export const brandGradient = ({ start, end }: BrandStops, angle = 135): string =>
     `linear-gradient(${angle}deg, ${start}, ${end})`;
 
+// Endpoints, interpolated midpoints (#8e57fa, #b364f4, #d871ef) and a deep
+// violet shade. The duo reads well on dark and light and takes white content.
+// Kept in sync with the mobile Avatar so a person gets the same backdrop on
+// both.
+const IDENTITY_PAIRS: readonly BrandStops[] = [
+    { start: "#694aff", end: "#fd7eea" },
+    { start: "#fd7eea", end: "#694aff" },
+    { start: "#694aff", end: "#b364f4" },
+    { start: "#b364f4", end: "#fd7eea" },
+    { start: "#543bcc", end: "#d871ef" },
+    { start: "#8e57fa", end: "#fd7eea" },
+    { start: "#694aff", end: "#d871ef" },
+    { start: "#8e57fa", end: "#b364f4" },
+];
+
+function hashIdentity(key: string): number {
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+        hash = (hash * 31 + key.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash);
+}
+
+/**
+ * Stops a person is painted with everywhere they appear - avatar backdrop,
+ * realtime caret, canvas pointer. Same key in, same pair out, so the surfaces
+ * agree on who is who; hash the display name to match the avatars.
+ */
+export function identityStops(key: string): BrandStops {
+    return IDENTITY_PAIRS[hashIdentity(key) % IDENTITY_PAIRS.length];
+}
+
+export interface IdentityPaint {
+    /** Caret line, pointer arrow, anything that needs one flat value. */
+    solid: string;
+    /** Avatar backdrop and caret label. */
+    gradient: string;
+    /** Wash behind selected text. */
+    translucent: string;
+}
+
+/**
+ * Every surface a person shows up on - avatar, realtime caret, canvas pointer.
+ * Hash the display name so it matches the avatars. A viewer's accent color
+ * deliberately does not feed this: accent themes that viewer's own chrome,
+ * while identity paint has to look the same to everyone in the doc.
+ */
+export function identityPaint(key: string): IdentityPaint {
+    const stops = identityStops(key);
+    return {
+        solid: stops.start,
+        gradient: brandGradient(stops),
+        translucent: brandAlpha(stops.start, 0.2),
+    };
+}
+
 /** Hex with an alpha suffix, for washes and tinted chips. */
 export const brandAlpha = (hex: string, alpha: number): string =>
     `${hex}${Math.round(Math.min(1, Math.max(0, alpha)) * 255)

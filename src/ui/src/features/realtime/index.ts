@@ -6,6 +6,7 @@ export type {
 export { useDocSession } from '@/features/realtime/hooks/useDocSession';
 export type { DocSession, UseDocSessionOptions } from '@/features/realtime/hooks/useDocSession';
 export { useDocAwareness, setLocalAwareness } from '@/features/realtime/hooks/useDocAwareness';
+export { useOutboundSyncing } from '@/features/realtime/hooks/useOutboundSyncing';
 export type { AwarenessPeer } from '@/features/realtime/hooks/useDocAwareness';
 export { RealtimePresence } from '@/features/realtime/components/RealtimePresence';
 export {

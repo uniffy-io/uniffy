@@ -23,6 +23,7 @@ import {
   replaceProsemirrorFragment,
 } from '@/features/notes/realtime/markdown';
 import { HYDRATION_ORIGIN } from '@/features/realtime';
+import { identityPaint } from '@/config/theme/brandGradients';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
@@ -154,28 +155,30 @@ function muteSyncBinding(view: EditorView | null | undefined) {
 
 // Custom y-prosemirror cursor builder: colored caret with an
 // auto-hiding name flag so static labels do not clutter the editor.
-function buildRealtimeCursor(user: { name?: string; color?: string } | null): HTMLElement {
-  const color = user?.color ?? '#6366f1';
+// Peer paint is derived from the display name, the same way avatars are, so a
+// caret and its owner's avatar always carry one identity.
+function buildRealtimeCursor(user: { name?: string } | null): HTMLElement {
   const name = user?.name ?? 'Anonymous';
+  const paint = identityPaint(name);
 
   const caret = document.createElement('span');
   caret.classList.add('uniffy-yjs-cursor');
-  caret.setAttribute('style', `border-color: ${color}; background-color: ${color}`);
+  caret.setAttribute('style', `background-color: ${paint.solid}`);
 
   const flag = document.createElement('div');
   flag.classList.add('uniffy-yjs-cursor__flag');
-  flag.setAttribute('style', `background-color: ${color}`);
+  flag.setAttribute('style', `background-image: ${paint.gradient}`);
   flag.textContent = name;
 
   caret.appendChild(flag);
   return caret;
 }
 
-function buildRealtimeSelection(user: { color?: string } | null): { class?: string; style?: string } {
-  const color = user?.color ?? '#6366f1';
+function buildRealtimeSelection(user: { name?: string } | null): { class?: string; style?: string } {
+  const paint = identityPaint(user?.name ?? 'Anonymous');
   return {
     class: 'uniffy-yjs-selection',
-    style: `background-color: ${color}33`,
+    style: `background-color: ${paint.translucent}`,
   };
 }
 

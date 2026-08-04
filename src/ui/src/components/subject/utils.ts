@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { GroupKind } from '@uniffy/proto/common/v1/common_pb';
+import { brandGradient, identityStops } from '@/config/theme/brandGradients';
 import type { SerializedMemberInfo, SerializedGroupInfo } from '@/features/admin/store/adminSlice';
 import { SUBJECT_TYPE, type Subject, type SubjectGroupKind } from '@/components/subject/types';
 
@@ -9,23 +10,6 @@ export function getInitials(name: string): string {
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();
 }
-
-// Identity gradients live on the Unity Violet #694aff <-> Belonging Pink
-// #fd7eea axis only (docs/brand/palette.md); variants are the endpoints,
-// interpolated midpoints (#8e57fa, #b364f4, #d871ef), and a deep violet
-// shade. The duo reads well on dark and light and takes white initials.
-// Kept in sync with the mobile Avatar so a person gets the same backdrop
-// on both.
-const AVATAR_GRADIENT_PAIRS: [string, string][] = [
-    ['#694aff', '#fd7eea'],
-    ['#fd7eea', '#694aff'],
-    ['#694aff', '#b364f4'],
-    ['#b364f4', '#fd7eea'],
-    ['#543bcc', '#d871ef'],
-    ['#8e57fa', '#fd7eea'],
-    ['#694aff', '#d871ef'],
-    ['#8e57fa', '#b364f4'],
-];
 
 // Same axis, darkened stops, so agents read as a distinct species next to
 // people while keeping one visual language.
@@ -50,8 +34,7 @@ function hashName(name: string): number {
 
 /** Deterministic gradient backdrop for avatarless subjects. */
 export function getAvatarGradientStyle(name: string): CSSProperties {
-    const [start, end] = AVATAR_GRADIENT_PAIRS[hashName(name) % AVATAR_GRADIENT_PAIRS.length];
-    return { background: `linear-gradient(135deg, ${start}, ${end})` };
+    return { background: brandGradient(identityStops(name)) };
 }
 
 /** Agent variant: darker stops on the same violet-pink axis. */

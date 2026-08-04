@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useDocAwareness } from '@/features/realtime';
 import { PeerAvatar } from '@/features/realtime/components/PeerAvatar';
+import { brandGradient, identityStops } from '@/config/theme/brandGradients';
 import type { CanvasRealtimeBinding } from '@/features/notes/realtime/useCanvasRealtimeSession';
 import {
   AUTO_CURSORS_HIDE_THRESHOLD,
@@ -12,7 +13,6 @@ interface CanvasAwarenessPayload {
   user?: {
     id?: string | null;
     name?: string;
-    color?: string;
     hasAvatar?: boolean;
   };
   pointer?: { x: number; y: number };
@@ -121,10 +121,14 @@ export function CanvasAwarenessOverlay({
         const screen = flowToScreenPosition(payload.pointer);
         const x = containerRect ? screen.x - containerRect.left : screen.x;
         const y = containerRect ? screen.y - containerRect.top : screen.y;
-        const color = user?.color ?? '#6366f1';
+        const name = user?.name ?? 'Anonymous';
+        const paint = identityStops(name);
+        const key = userId ?? String(peer.clientId);
+        // SVG gradients are referenced by id, so each pointer needs its own.
+        const gradientId = `canvas-cursor-${key}`;
         return (
           <div
-            key={userId ?? peer.clientId}
+            key={key}
             className="absolute"
             style={{ left: x, top: y }}
           >
@@ -136,9 +140,15 @@ export function CanvasAwarenessOverlay({
               xmlns="http://www.w3.org/2000/svg"
               style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}
             >
+              <defs>
+                <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor={paint.start} />
+                  <stop offset="100%" stopColor={paint.end} />
+                </linearGradient>
+              </defs>
               <path
                 d="M2 2L16 8.5L9 10L6 16L2 2Z"
-                fill={color}
+                fill={`url(#${gradientId})`}
                 stroke="white"
                 strokeWidth="1.25"
                 strokeLinejoin="round"
@@ -147,12 +157,12 @@ export function CanvasAwarenessOverlay({
             <div className="absolute left-3.5 top-3.5">
               <PeerAvatar
                 userId={userId}
-                name={user?.name ?? 'Anonymous'}
-                color={color}
+                name={name}
+                gradient={brandGradient(paint)}
                 hasAvatar={Boolean(user?.hasAvatar)}
                 sizeClass="h-6 w-6 text-[10px]"
                 className="ring-2 ring-white/80 dark:ring-card"
-                title={user?.name ?? 'Anonymous'}
+                title={name}
               />
             </div>
           </div>

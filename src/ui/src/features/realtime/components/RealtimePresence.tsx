@@ -2,12 +2,12 @@ import { useMemo } from 'react';
 import type { Awareness } from 'y-protocols/awareness';
 import { useDocAwareness } from '@/features/realtime';
 import { PeerAvatar } from '@/features/realtime/components/PeerAvatar';
+import { identityPaint } from '@/config/theme/brandGradients';
 import { cn } from '@/shared/utils/cn';
 
 interface AwarenessUser {
   id?: string | null;
   name?: string;
-  color?: string;
   avatarUrl?: string | null;
   hasAvatar?: boolean;
 }
@@ -24,7 +24,6 @@ interface RealtimePresenceProps {
   includeSelf?: boolean;
   localUserId?: string | null;
   localUserName?: string | null;
-  localUserColor?: string | null;
   localHasAvatar?: boolean;
   className?: string;
 }
@@ -33,7 +32,7 @@ interface Participant {
   key: string;
   userId: string | null;
   name: string;
-  color: string;
+  gradient: string;
   hasAvatar: boolean;
   isSelf: boolean;
 }
@@ -45,7 +44,6 @@ export function RealtimePresence({
   includeSelf = true,
   localUserId = null,
   localUserName,
-  localUserColor,
   localHasAvatar = false,
   className,
 }: RealtimePresenceProps) {
@@ -56,13 +54,13 @@ export function RealtimePresence({
     // Dedupe by user.id so multiple tabs / GC-window stragglers collapse to one row.
     // Anonymous peers are deduped by clientId.
     const seenUserIds = new Set<string>();
-    if (includeSelf && (localUserName || localUserColor)) {
+    if (includeSelf && localUserName) {
       if (localUserId) seenUserIds.add(localUserId);
       out.push({
         key: 'self',
         userId: localUserId,
-        name: localUserName ?? 'You',
-        color: localUserColor ?? '#6366f1',
+        name: localUserName,
+        gradient: identityPaint(localUserName).gradient,
         hasAvatar: localHasAvatar,
         isSelf: true,
       });
@@ -74,17 +72,18 @@ export function RealtimePresence({
         if (seenUserIds.has(userId)) continue;
         seenUserIds.add(userId);
       }
+      const name = user?.name ?? 'Anonymous';
       out.push({
         key: userId ?? String(peer.clientId),
         userId,
-        name: user?.name ?? 'Anonymous',
-        color: user?.color ?? '#6366f1',
+        name,
+        gradient: identityPaint(name).gradient,
         hasAvatar: Boolean(user?.hasAvatar),
         isSelf: false,
       });
     }
     return out;
-  }, [peers, includeSelf, localUserId, localUserName, localUserColor, localHasAvatar]);
+  }, [peers, includeSelf, localUserId, localUserName, localHasAvatar]);
 
   if (participants.length === 0) return null;
 
@@ -107,7 +106,7 @@ export function RealtimePresence({
             key={participant.key}
             userId={participant.userId}
             name={participant.name}
-            color={participant.color}
+            gradient={participant.gradient}
             hasAvatar={participant.hasAvatar}
             sizeClass="h-5 w-5 text-[10px]"
             className={cn(
