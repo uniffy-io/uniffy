@@ -121,7 +121,7 @@ The catalog is a standing browse surface, not a creation-time popup. It is reach
 
 Keys are Fernet-encrypted in `agents_provider_keys` (`provider`, `key_hint`, `is_valid` + `is_enabled` both required). API keys are the only credential shape; there is no credential-type column and **no format validation** - key shapes change without notice, so the only trusted signal is the live probe (`LLMProvider.validate()`, a models-list call) run on add and on demand, whose failure lands on `is_valid` + `last_error`. A rejected key is still stored, with the error surfaced in the UI. Resolution consults two tiers before PG:
 
-1. `ProviderClientLRU` (`providers/client_cache.py`): process singleton, 1h TTL, 256 entries - holds decrypted credential + constructed SDK client (reuses the httpx pool).
+1. `ProviderClientLRU` (`providers/client_cache.py`): process singleton, 1h TTL, cap `PROVIDER_CLIENT_LRU_SIZE` (default 5000, sized for one entry per live org key) - holds decrypted credential + constructed SDK client (reuses the httpx pool).
 2. Valkey `provider:key:{key_id}`: non-secret routing metadata, so `get_provider_for_model` skips decrypt/construction for keys that don't own the model.
 
 Any key mutation publishes `provider_keys:invalidate:{key_id}` and deletes the Valkey entry; a `PSUBSCRIBE` listener in app lifespan + worker startup drops the LRU entry on every pod. One signal, both tiers drop.
