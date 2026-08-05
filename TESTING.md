@@ -422,6 +422,31 @@ metadata. Needs two users, one channel, one thread.
 - [ ] Mobile: a thread-reply notification opens the thread screen for the right root; mention and
       DM notifications open the channel.
 
+## Agents in threads
+
+An agent answering inside a thread is a first-class reply: it moves the thread's counters, can be
+stopped from the thread, and reads that branch only. Needs one agent with a working key, one
+channel, and a second thread on the same channel for the isolation checks.
+
+- [ ] Reply in a thread on an agent's message (or @-mention the agent inside a thread). While it
+      streams, the thread panel shows the working wave with a **Stop** control; clicking it ends
+      the run and the trigger message shows the stopped marker.
+- [ ] When the answer lands, the root message's footer counter includes it and the agent's avatar
+      joins the participant stack, live, with no reload.
+- [ ] Reload the page: the counter and the avatar stack are the same (the count is persisted, not
+      a client-side tally).
+- [ ] The counter moves by one per answer even when the turn ran tools - tool cards and results in
+      the thread do not each count as a reply.
+- [ ] Stop a turn before any text streams: no blank bubble is left and the counter does not stay
+      inflated.
+- [ ] Run two threads in the same channel with the same agent. Ask a question in thread B whose
+      answer would be wrong if thread A's content leaked: the answer stays inside B's topic.
+- [ ] Ask the agent in the channel (not in a thread) about something only said inside a thread: it
+      does not have it. Branches are separate conversations.
+- [ ] In a 1:1 agent DM, ask inside a thread "what are we talking about here": the agent names the
+      thread's own topic, not the DM at large.
+- [ ] Mobile: the same thread shows the new reply count and the agent avatar after the answer.
+
 ## Agents: OpenRouter and xAI provider keys
 
 Both flows need a real key for the provider under test. Run as an org

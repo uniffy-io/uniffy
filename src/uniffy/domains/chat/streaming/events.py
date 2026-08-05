@@ -16,6 +16,7 @@ MEMBER_LEFT = "member_left"
 MEMBER_UPDATED = "member_updated"
 MEMBERS_ADDED = "members_added"
 MEMBERS_REMOVED = "members_removed"
+CHANNEL_CREATED = "channel_created"
 CHANNEL_UPDATED = "channel_updated"
 THREAD_UPDATED = "thread_updated"
 

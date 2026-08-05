@@ -84,8 +84,9 @@ class ChatThreadOperations:
         )
         stats = stats_result.scalar_one_or_none()
 
+        # subject_id, not user_id: agent participants carry no user row.
         p_result = await self.session.execute(
-            select(ChatThreadParticipant.user_id)
+            select(ChatThreadParticipant.subject_id)
             .where(ChatThreadParticipant.root_message_id == root_message_id)
             .order_by(ChatThreadParticipant.created_at)
             .limit(THREAD_PARTICIPANT_PREVIEW_LIMIT)

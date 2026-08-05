@@ -17,6 +17,8 @@ function makeMessage(overrides: Partial<SerializedMessage>): SerializedMessage {
         content: 'hello',
         inputTokens: 0,
         outputTokens: 0,
+        cacheCreationInputTokens: 0,
+        cacheReadInputTokens: 0,
         model: undefined,
         toolName: undefined,
         toolCallId: undefined,

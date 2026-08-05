@@ -46,6 +46,31 @@ def _truncate_result(data: str) -> str:
     )
 
 
+def _drop_optional_nulls(value: object, schema: dict) -> object:
+    if isinstance(value, list):
+        item_schema = schema.get("items")
+        if not isinstance(item_schema, dict):
+            return value
+        return [_drop_optional_nulls(item, item_schema) for item in value]
+    if not isinstance(value, dict):
+        return value
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return value
+    required = set(schema.get("required") or [])
+    normalized: dict = {}
+    for name, item in value.items():
+        property_schema = properties.get(name)
+        if item is None and name not in required:
+            continue
+        normalized[name] = (
+            _drop_optional_nulls(item, property_schema)
+            if isinstance(property_schema, dict)
+            else item
+        )
+    return normalized
+
+
 class ToolExecutor:
     """Executes tool calls within a permission-scoped context."""
 
@@ -101,8 +126,12 @@ class ToolExecutor:
         error_reason: str | None = None
         started = time.perf_counter()
         try:
+            tool_input = _drop_optional_nulls(
+                tool_call.input,
+                tool_def.parameter_schema,
+            )
             result = await asyncio.wait_for(
-                tool_def.executor(self._context, tool_call.input),
+                tool_def.executor(self._context, tool_input),
                 timeout=tool_def.timeout_seconds,
             )
             if result.success and result.data:
@@ -122,10 +151,7 @@ class ToolExecutor:
             result = ToolResult(
                 success=False,
                 data="",
-                error=(
-                    f"Tool {tool_call.name} exceeded "
-                    f"{tool_def.timeout_seconds}s timeout"
-                ),
+                error=(f"Tool {tool_call.name} exceeded {tool_def.timeout_seconds}s timeout"),
             )
         except NotFoundError as exc:
             logger.warning(
@@ -164,11 +190,7 @@ class ToolExecutor:
                 error=f"Validation error: {exc}",
             )
         except Exception as exc:
-            logger.exception(
-                "Tool execution failed",
-                tool=tool_call.name,
-                error=str(exc)
-            )
+            logger.exception("Tool execution failed", tool=tool_call.name, error=str(exc))
             error_reason = type(exc).__name__
             result = ToolResult(
                 success=False,
@@ -176,9 +198,7 @@ class ToolExecutor:
                 error=sanitize_tool_error(tool_call.name, exc),
             )
 
-        AGENT_TOOL_DURATION.labels(tool=tool_def.name).observe(
-            time.perf_counter() - started
-        )
+        AGENT_TOOL_DURATION.labels(tool=tool_def.name).observe(time.perf_counter() - started)
         AGENT_TOOL_CALLS_TOTAL.labels(
             tool=tool_def.name, status=_metric_status(result, error_reason)
         ).inc()
@@ -235,6 +255,5 @@ class ToolExecutor:
             )
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).warning(
-                "Failed to emit tool-call audit row",
-                tool=tool_def.name
+                "Failed to emit tool-call audit row", tool=tool_def.name
             )

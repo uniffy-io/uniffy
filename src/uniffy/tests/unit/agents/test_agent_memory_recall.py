@@ -25,7 +25,7 @@ from uniffy.domains.agents.memories.recall import (
     MemoryRecall,
     RecallEntry,
     _neutralize,
-    attach_recall_block,
+    attach_to_trigger_turn,
     build_memory_recall,
     build_recall_query,
     render_recall_block,
@@ -275,14 +275,14 @@ class TestAttachRecallBlock:
             {"role": "assistant", "content": "hi"},
             {"role": "user", "content": "when can we deploy?"},
         ]
-        assert attach_recall_block(messages, "<block>")
+        assert attach_to_trigger_turn(messages, "<block>")
         assert messages[1]["content"] == "when can we deploy?\n\n<block>"
 
     def test_appends_text_block_to_list_content(self):
         messages = [
             {"role": "user", "content": [{"type": "text", "text": "hello"}]},
         ]
-        assert attach_recall_block(messages, "<block>")
+        assert attach_to_trigger_turn(messages, "<block>")
         assert messages[0]["content"][-1] == {"type": "text", "text": "<block>"}
 
     def test_skips_tool_result_carrier(self):
@@ -294,7 +294,7 @@ class TestAttachRecallBlock:
                 "content": [{"type": "tool_result", "tool_use_id": "t1"}],
             },
         ]
-        assert attach_recall_block(messages, "<block>")
+        assert attach_to_trigger_turn(messages, "<block>")
         assert messages[0]["content"].endswith("<block>")
         assert messages[2]["content"] == [
             {"type": "tool_result", "tool_use_id": "t1"}
@@ -302,7 +302,7 @@ class TestAttachRecallBlock:
 
     def test_no_user_turn_returns_false(self):
         messages = [{"role": "assistant", "content": "hi"}]
-        assert not attach_recall_block(messages, "<block>")
+        assert not attach_to_trigger_turn(messages, "<block>")
 
 
 class TestBuildRecallQuery:

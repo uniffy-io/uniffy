@@ -224,6 +224,13 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
             event.thread_updated.last_reply_at.CopyFrom(ts)
         return event
 
+    if event_type == evt.CHANNEL_CREATED:
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_CHANNEL_CREATED,
+            timestamp=_now_ts(),
+            channel_id=cid,
+        )
+
     if event_type == evt.CHANNEL_UPDATED:
         return ChatEvent(
             event_type=ChatEventType.CHAT_EVENT_TYPE_CHANNEL_UPDATED,
@@ -231,7 +238,9 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
             channel_id=cid,
             channel_updated=ProtoChatChannel(
                 id=cid,
-                is_archived=payload.get("is_archived", False),
+                # Removal (archive or delete) is the only state this stub
+                # carries; every other edit is hydrated by the recipient.
+                is_archived=payload.get("is_archived", False) or payload.get("is_deleted", False),
             ),
         )
 
@@ -621,6 +630,7 @@ _CHANNEL_EVENT_TYPES = {
     evt.MEMBER_UPDATED,
     evt.MEMBERS_ADDED,
     evt.MEMBERS_REMOVED,
+    evt.CHANNEL_CREATED,
     evt.CHANNEL_UPDATED,
     evt.THREAD_UPDATED,
     evt.AGENT_TYPING,

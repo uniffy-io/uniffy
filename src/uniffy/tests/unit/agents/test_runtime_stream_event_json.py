@@ -57,9 +57,7 @@ class TestRuntimeStreamEventRoundTrip:
         assert decoded.sequence == 7
 
     def test_text_delta_without_message_round_trip(self) -> None:
-        decoded = _round_trip(
-            StreamEvent(type=EventType.TEXT_BLOCK_DELTA, block_id="b1", delta="x")
-        )
+        decoded = _round_trip(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, block_id="b1", delta="x"))
         assert decoded.message_id is None
         assert decoded.sequence == 0
 
@@ -123,18 +121,18 @@ class TestRuntimeStreamEventRoundTrip:
                 model="claude-sonnet-4-6",
                 input_tokens=10,
                 output_tokens=5,
+                cache_creation_input_tokens=4,
                 cache_read_input_tokens=3,
             )
         )
         assert decoded.model == "claude-sonnet-4-6"
         assert decoded.input_tokens == 10
+        assert decoded.cache_creation_input_tokens == 4
         assert decoded.cache_read_input_tokens == 3
 
     def test_message_stored_round_trip(self) -> None:
         msg = _make_message()
-        decoded = _round_trip(
-            StreamEvent(type=EventType.MESSAGE_STORED, message=msg)
-        )
+        decoded = _round_trip(StreamEvent(type=EventType.MESSAGE_STORED, message=msg))
         assert decoded.message.id == msg.id
         assert decoded.message.role == msg.role
         assert decoded.message.content == msg.content
@@ -223,9 +221,7 @@ class TestRuntimeStreamEventRoundTrip:
 
     def test_unknown_field_raises(self) -> None:
         with pytest.raises(ValueError):
-            runtime_stream_event_from_json(
-                {"type": "text_block_delta", "bogus": 1}
-            )
+            runtime_stream_event_from_json({"type": "text_block_delta", "bogus": 1})
 
     def test_message_id_preserves_uuid(self) -> None:
         msg_id = UUID("00000000-0000-0000-0000-000000000001")

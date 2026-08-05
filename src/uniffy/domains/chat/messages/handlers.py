@@ -333,14 +333,15 @@ class MessageHandlers:
                 sub = (
                     select(
                         ChatThreadParticipant.root_message_id,
-                        ChatThreadParticipant.user_id,
+                        # subject_id, not user_id: agent participants carry no user row.
+                        ChatThreadParticipant.subject_id,
                         rn,
                     )
                     .where(ChatThreadParticipant.root_message_id.in_(thread_ids))
                     .subquery()
                 )
                 p_result = await session.execute(
-                    select(sub.c.root_message_id, sub.c.user_id)
+                    select(sub.c.root_message_id, sub.c.subject_id)
                     .where(sub.c.rn <= 4)
                     .order_by(sub.c.root_message_id, sub.c.rn)
                 )

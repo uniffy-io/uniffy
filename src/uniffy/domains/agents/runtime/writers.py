@@ -12,15 +12,27 @@ from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.chat.message import ChatMessage, SenderType
-from uniffy.domains.chat.messages.operations import bump_channel_message_stats
+from uniffy.domains.chat.messages.operations import (
+    AGENT_THREAD_REPLY_KINDS,
+    bump_channel_message_stats,
+    record_thread_reply,
+)
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from uniffy.domains.agents.sessions.operations import SessionOperations
 
 
 _FALLBACK_SENDER_NAME = "Unknown"
+
+CHANNEL_CONTEXT_LIMIT = 50
+THREAD_REPLY_CONTEXT_LIMIT = 40
+# Enough channel lead-in for the thread's topic to make sense without pulling
+# the whole room into a branch.
+THREAD_AMBIENT_CHANNEL_LIMIT = 10
 
 
 def _metadata_kind_for(role: str, tool_call_id: str | None) -> str:
@@ -57,6 +69,8 @@ class MessageWriter(Protocol):
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
         tool_call_id: str | None = None,
@@ -89,6 +103,8 @@ class MessageWriter(Protocol):
         content: str,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
@@ -155,6 +171,7 @@ class SessionMessageWriter:
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
@@ -175,6 +192,7 @@ class SessionMessageWriter:
             content=content,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_creation_input_tokens=cache_creation_input_tokens,
             cache_read_input_tokens=cache_read_input_tokens,
             model=model,
             tool_name=tool_name,
@@ -197,6 +215,8 @@ class SessionMessageWriter:
         content: str,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
         model: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
@@ -275,6 +295,7 @@ class ChatChannelMessageWriter:
         self,
         input_tokens: int,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
     ) -> None:
         """Cache provider-reported prompt + completion sizes on the binding.
@@ -287,10 +308,11 @@ class ChatChannelMessageWriter:
         contribute to context window pressure; cache hits are stored
         separately so the meter can surface the savings.
         """
-        if input_tokens <= 0 and cache_read_input_tokens <= 0:
+        if input_tokens <= 0 and cache_creation_input_tokens <= 0 and cache_read_input_tokens <= 0:
             return
+        new_cache_creation = max(0, int(cache_creation_input_tokens))
         new_cache_read = max(0, int(cache_read_input_tokens))
-        new_input = max(0, int(input_tokens)) + new_cache_read
+        new_input = max(0, int(input_tokens)) + new_cache_creation + new_cache_read
         new_output = max(0, int(output_tokens))
         with contextlib.suppress(Exception):
             await self._session.execute(
@@ -310,6 +332,19 @@ class ChatChannelMessageWriter:
                 )
             )
 
+    async def _record_thread_reply(self, *, at: datetime) -> None:
+        """Move the thread counter + participants for an in-thread agent row."""
+        if self._thread_root_id is None:
+            return
+        await record_thread_reply(
+            self._session,
+            root_message_id=self._thread_root_id,
+            channel_id=self._channel_id,
+            sender_type=SenderType.AGENT,
+            sender_id=self._agent_id,
+            at=at,
+        )
+
     async def add_message(
         self,
         *,
@@ -317,6 +352,7 @@ class ChatChannelMessageWriter:
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
@@ -368,6 +404,8 @@ class ChatChannelMessageWriter:
             meta["input_tokens"] = input_tokens
         if output_tokens:
             meta["output_tokens"] = output_tokens
+        if cache_creation_input_tokens:
+            meta["cache_creation_input_tokens"] = cache_creation_input_tokens
         if cache_read_input_tokens:
             meta["cache_read_input_tokens"] = cache_read_input_tokens
         if thinking:
@@ -395,7 +433,10 @@ class ChatChannelMessageWriter:
         )
         self._session.add(chat_msg)
         await self._record_active_tokens(
-            input_tokens, output_tokens, cache_read_input_tokens
+            input_tokens,
+            output_tokens,
+            cache_creation_input_tokens,
+            cache_read_input_tokens,
         )
         # Compaction summaries are context artifacts, not conversation activity.
         if role != "summary":
@@ -405,6 +446,8 @@ class ChatChannelMessageWriter:
                 at=chat_msg.created_at,
                 is_root=self._thread_root_id is None,
             )
+        if self._thread_root_id is not None and kind in AGENT_THREAD_REPLY_KINDS:
+            await self._record_thread_reply(at=chat_msg.created_at)
         await self._session.commit()
         await self._session.refresh(chat_msg)
 
@@ -450,6 +493,10 @@ class ChatChannelMessageWriter:
             at=chat_msg.created_at,
             is_root=self._thread_root_id is None,
         )
+        # The placeholder IS the reply row (finalized in place), so it counts
+        # here; a discarded placeholder gives the count back.
+        if self._thread_root_id is not None:
+            await self._record_thread_reply(at=chat_msg.created_at)
         await self._session.commit()
         await self._session.refresh(chat_msg)
         return AgentMessage(
@@ -467,6 +514,7 @@ class ChatChannelMessageWriter:
         content: str,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
         thinking: list[dict] | None = None,
@@ -483,6 +531,7 @@ class ChatChannelMessageWriter:
                 content=content,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
+                cache_creation_input_tokens=cache_creation_input_tokens,
                 cache_read_input_tokens=cache_read_input_tokens,
                 model=model,
                 thinking=thinking,
@@ -508,13 +557,18 @@ class ChatChannelMessageWriter:
             meta["input_tokens"] = input_tokens
         if output_tokens:
             meta["output_tokens"] = output_tokens
+        if cache_creation_input_tokens:
+            meta["cache_creation_input_tokens"] = cache_creation_input_tokens
         if cache_read_input_tokens:
             meta["cache_read_input_tokens"] = cache_read_input_tokens
         if thinking:
             meta["thinking"] = thinking
         chat_msg.message_metadata = meta
         await self._record_active_tokens(
-            input_tokens, output_tokens, cache_read_input_tokens
+            input_tokens,
+            output_tokens,
+            cache_creation_input_tokens,
+            cache_read_input_tokens,
         )
         await self._session.commit()
         await self._session.refresh(chat_msg)
@@ -527,9 +581,50 @@ class ChatChannelMessageWriter:
             model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_creation_input_tokens=cache_creation_input_tokens,
             cache_read_input_tokens=cache_read_input_tokens,
             created_at=chat_msg.created_at,
         )
+
+    async def _load_thread_context_rows(self, conditions: list) -> list[ChatMessage]:
+        """Root message, that thread's own replies, and what preceded it.
+
+        Ambient rows stop at the root's timestamp so the window stays a single
+        story: what led to the topic, then the topic, then the branch. Channel
+        talk that happened after the thread opened belongs to the channel.
+        """
+        root = (
+            await self._session.execute(
+                select(ChatMessage).where(*conditions, ChatMessage.id == self._thread_root_id)
+            )
+        ).scalar_one_or_none()
+
+        ambient_conditions = [*conditions, ChatMessage.root_id.is_(None)]
+        if root is not None:
+            ambient_conditions.append(ChatMessage.created_at < root.created_at)
+        ambient_result = await self._session.execute(
+            select(ChatMessage)
+            .where(*ambient_conditions)
+            .order_by(ChatMessage.created_at.desc())
+            .limit(THREAD_AMBIENT_CHANNEL_LIMIT)
+        )
+        rows = list(ambient_result.scalars().all())
+        rows.reverse()
+
+        if root is not None:
+            rows.append(root)
+
+        replies_result = await self._session.execute(
+            select(ChatMessage)
+            .where(*conditions, ChatMessage.root_id == self._thread_root_id)
+            .order_by(ChatMessage.created_at.desc())
+            .limit(THREAD_REPLY_CONTEXT_LIMIT)
+        )
+        replies = list(replies_result.scalars().all())
+        replies.reverse()
+        rows.extend(replies)
+
+        return rows
 
     async def load_context_messages(
         self,
@@ -566,14 +661,23 @@ class ChatChannelMessageWriter:
         if manual_reset_at is not None:
             conditions.append(ChatMessage.created_at > manual_reset_at)
 
-        result = await self._session.execute(
-            select(ChatMessage)
-            .where(*conditions)
-            .order_by(ChatMessage.created_at.desc())
-            .limit(50)
-        )
-        rows = [m for m in result.scalars().all() if m.id not in compacted_ids]
-        rows.reverse()
+        # A branch is its own conversation: a threaded turn reads its thread,
+        # a channel turn reads the channel. Loading both flat let sibling
+        # threads bleed into each other, in time order, with nothing marking
+        # which branch a line came from.
+        if self._thread_root_id is None:
+            result = await self._session.execute(
+                select(ChatMessage)
+                .where(*conditions, ChatMessage.root_id.is_(None))
+                .order_by(ChatMessage.created_at.desc())
+                .limit(CHANNEL_CONTEXT_LIMIT)
+            )
+            rows = list(result.scalars().all())
+            rows.reverse()
+        else:
+            rows = await self._load_thread_context_rows(conditions)
+
+        rows = [m for m in rows if m.id not in compacted_ids]
 
         resolver = SenderResolver(self._session)
         refs = [(m.sender_type, m.sender_id) for m in rows if m.sender_id]

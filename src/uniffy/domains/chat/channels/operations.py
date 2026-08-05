@@ -404,6 +404,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         except Exception:
             logger.warning(f"Failed to index channel {channel.id}")
 
+        await self._publish_channel_created(channel.id)
+
         return channel
 
     async def create_dm(
@@ -658,6 +660,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await invalidate_cached_channel(channel.id)
 
         await self._refresh_channel_live_state(channel)
+        await self._publish_channel_updated(channel)
 
         return channel
 
@@ -1511,15 +1514,66 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         except Exception as exc:
             logger.warning(f"Failed to publish member event for channel {channel_id}: {exc}")
 
+    async def _publish_channel_created(self, channel_id: UUID) -> None:
+        """Announce a new channel to everyone in it, the creator included.
+
+        Every member's other sessions learn about the channel here; without it
+        a channel only appears after a reload, and the creator's own second
+        device never hears about it at all.
+        """
+        try:
+            from uniffy.domains.chat.streaming.events import CHANNEL_CREATED
+            from uniffy.domains.chat.streaming.publisher import (
+                publish_channel_event_to_members,
+            )
+
+            recipients = await self._get_all_member_ids(channel_id)
+            await publish_channel_event_to_members(
+                recipients,
+                CHANNEL_CREATED,
+                {"channel_id": str(channel_id)},
+                channel_id=channel_id,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to publish channel-created for {channel_id}: {exc}")
+
+    async def _publish_channel_updated(self, channel: ChatChannel) -> None:
+        """Announce a metadata edit (name, description, icon) to every member."""
+        try:
+            from uniffy.domains.chat.streaming.events import CHANNEL_UPDATED
+            from uniffy.domains.chat.streaming.publisher import (
+                publish_channel_event_to_members,
+            )
+
+            recipients = await self._get_all_member_ids(channel.id)
+            await publish_channel_event_to_members(
+                recipients,
+                CHANNEL_UPDATED,
+                {
+                    "channel_id": str(channel.id),
+                    "is_archived": channel.is_archived,
+                    "is_deleted": channel.is_deleted,
+                },
+                channel_id=channel.id,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to publish channel-updated for {channel.id}: {exc}")
+
     async def _publish_members_changed(
         self,
         channel_id: UUID,
         affected_user_ids: list[UUID],
         *,
         added: bool,
+        agents_affected: bool = False,
     ) -> None:
-        """Publish one batched MEMBERS_ADDED / MEMBERS_REMOVED event."""
-        if not affected_user_ids:
+        """Publish one batched MEMBERS_ADDED / MEMBERS_REMOVED event.
+
+        Agents carry no `user_id`, so an agent-only batch has nothing to put in
+        `user_ids` - it still fans out, because the roster and member count on
+        every member's screen changed all the same.
+        """
+        if not affected_user_ids and not agents_affected:
             return
         try:
             from uniffy.domains.chat.streaming.events import (
@@ -1881,6 +1935,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         except Exception:
             logger.warning(f"Failed to index agent chat {channel.id}")
 
+        await self._publish_channel_created(channel.id)
+
         return channel
 
     async def rename_agent_chat(
@@ -1911,6 +1967,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await invalidate_cached_channel(channel.id)
 
         await self._refresh_channel_live_state(channel)
+        await self._publish_channel_updated(channel)
 
         return channel
 
@@ -2102,6 +2159,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                     if m.subject_type == SubjectType.USER and m.user_id is not None
                 ],
                 added=True,
+                agents_affected=any(m.subject_type == SubjectType.AGENT for m in added),
             )
 
             await self._post_membership_system_message(
@@ -2186,6 +2244,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 channel_id,
                 removed_user_ids,
                 added=False,
+                agents_affected=any(t == SubjectType.AGENT for (t, _sid) in removable),
             )
 
             await self._post_membership_system_message(
