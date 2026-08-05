@@ -8,6 +8,7 @@ const _failedAvatars = new Set<string>();
 import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 import { SUBJECT_TYPE, type Subject, type SubjectAvatarSize } from '@/components/subject/types';
 import { getAvatarGradientStyle, getInitials } from '@/components/subject/utils';
+import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
 import { usePresence } from '@/features/presence/hooks/usePresence';
 
 const SIZE_CLASSES: Record<SubjectAvatarSize, string> = {
@@ -64,6 +65,18 @@ export function SubjectAvatar({
     );
     const shouldShowPresence =
         showPresence && subject.type === SUBJECT_TYPE.USER;
+
+    if (subject.type === SUBJECT_TYPE.AGENT) {
+        return (
+            <AgentAvatar
+                avatarKey={subject.avatarUrl}
+                avatarEmoji={subject.avatarEmoji}
+                agentName={subject.name}
+                size={size}
+                className={cn(bordered && 'border-2 border-card', className)}
+            />
+        );
+    }
 
     if (subject.type === SUBJECT_TYPE.GROUP) {
         if (subject.kind === 'team') {

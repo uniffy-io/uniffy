@@ -22,6 +22,7 @@ from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
+from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.chat.message import SenderType as ChatSenderType
 from uniffy.core.types import SubjectType
 from uniffy.db.session import open_session
@@ -36,7 +37,7 @@ from uniffy.domains.agents.currency import convert as convert_currency
 from uniffy.domains.agents.currency import get_display_currency
 from uniffy.domains.agents.memories.bridge import is_personal_bridge_enabled
 from uniffy.domains.agents.memories.recall import (
-    attach_recall_block,
+    attach_to_trigger_turn,
     build_memory_recall,
     build_recall_query,
     render_recall_block,
@@ -75,6 +76,7 @@ from uniffy.domains.agents.runtime.prompt import (
     build_chat_context_section,
     build_memory_block,
     build_system_prompt,
+    build_thread_turn_note,
     skill_passes_activation,
     to_skill_prompt_entry,
 )
@@ -121,6 +123,7 @@ MAX_TOOL_ITERATIONS = 10
 # load-call loop.
 MAX_LOAD_ONLY_ITERATIONS = 3
 READ_TOOL_POOL_SIZE = 5
+THREAD_ROOT_PREVIEW_CHARS = 160
 
 
 async def _recorded_completion(
@@ -706,7 +709,7 @@ class RuntimeOperations:
             context_messages=context_messages,
             content=content,
         )
-        recall_promoted = bool(recall_block and attach_recall_block(llm_messages, recall_block))
+        recall_promoted = bool(recall_block and attach_to_trigger_turn(llm_messages, recall_block))
 
         # 12. Store user message with enriched content (file text baked in
         # so the LLM retains file context on subsequent turns).
@@ -1540,7 +1543,13 @@ class RuntimeOperations:
             context_messages=context_messages,
             content=content,
         )
-        recall_promoted = bool(recall_block and attach_recall_block(llm_messages, recall_block))
+        recall_promoted = bool(recall_block and attach_to_trigger_turn(llm_messages, recall_block))
+
+        # Same treatment for the thread orientation, and for the same reason:
+        # it names one branch, so it must not enter the cached system prefix.
+        thread_note = await self._build_thread_turn_note(destination)
+        if thread_note:
+            attach_to_trigger_turn(llm_messages, thread_note)
 
         if rerun_anchor is None:
             # 11. Store user message with enriched content (file text baked in
@@ -2545,13 +2554,29 @@ class RuntimeOperations:
                 participant_agents=agent_names,
                 trigger_user_name=trigger_user_name or "the requester",
                 trigger_rule=destination.trigger_rule,
-                in_thread=destination.thread_root_id is not None,
             )
         except Exception:
             logger.opt(exception=True).warning(
                 "Failed to build chat_context block; continuing without it"
             )
             return None
+
+    async def _build_thread_turn_note(self, destination) -> str | None:
+        """Ephemeral thread orientation for the trigger turn, or None off-thread."""
+        if not isinstance(destination, ChatDestination) or destination.thread_root_id is None:
+            return None
+
+        root = await self._session.get(ChatMessage, destination.thread_root_id)
+        if root is None:
+            return None
+
+        info = await SenderResolver(self._session).resolve_one(root.sender_type, root.sender_id)
+        author = info.display_name if info else None
+
+        text = " ".join((root.content or "").split())
+        if len(text) > THREAD_ROOT_PREVIEW_CHARS:
+            text = text[:THREAD_ROOT_PREVIEW_CHARS].rstrip() + "..."
+        return build_thread_turn_note(author, text or None)
 
     async def _create_run_log(
         self,
