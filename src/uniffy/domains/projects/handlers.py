@@ -1,6 +1,7 @@
 import json
 import secrets
 from datetime import UTC, datetime
+from typing import NamedTuple
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -159,6 +160,30 @@ async def _hydrate_project_tags(
     return {pid: bulk.get(urn, []) for urn, pid in urn_to_id.items()}
 
 
+class _ProjectRollups(NamedTuple):
+    """Per-project counts keyed by project id, both defaulting to zero."""
+
+    tasks: dict[UUID, tuple[int, int]]
+    members: dict[UUID, int]
+
+    def for_project(self, project_id: UUID) -> tuple[int, int, int]:
+        total, completed = self.tasks.get(project_id, (0, 0))
+        return total, completed, self.members.get(project_id, 0)
+
+
+async def _load_project_rollups(
+    session: AsyncSession,
+    organization_id: UUID,
+    project_ids: list[UUID],
+) -> _ProjectRollups:
+    return _ProjectRollups(
+        tasks=await queries.get_task_counts_for_projects(session, project_ids),
+        members=await queries.get_member_counts_for_projects(
+            session, organization_id, project_ids
+        ),
+    )
+
+
 async def _resolve_project_effective_policy(
     session: AsyncSession,
     organization_id: UUID,
@@ -261,6 +286,8 @@ class ProjectsHandlers:
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
                     session, organization_id, project,
                 )
+                rollups = await _load_project_rollups(session, organization_id, [project.id])
+                task_total, task_done, members = rollups.for_project(project.id)
 
                 return GetProjectResponse(
                     project=project_to_proto(
@@ -271,6 +298,9 @@ class ProjectsHandlers:
                         tags=tags_by_id.get(project.id),
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        task_count=task_total,
+                        completed_task_count=task_done,
+                        member_count=members,
                     )
                 )
         except ConnectError:
@@ -329,6 +359,8 @@ class ProjectsHandlers:
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
                     session, organization_id, project,
                 )
+                rollups = await _load_project_rollups(session, organization_id, [project.id])
+                task_total, task_done, members = rollups.for_project(project.id)
                 return UpdateProjectResponse(
                     project=project_to_proto(
                         project,
@@ -338,6 +370,9 @@ class ProjectsHandlers:
                         tags=tags_by_id.get(project.id),
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        task_count=task_total,
+                        completed_task_count=task_done,
+                        member_count=members,
                     )
                 )
         except ConnectError:
@@ -401,6 +436,7 @@ class ProjectsHandlers:
                 fields_map = await queries.get_fields_for_projects(session, project_ids)
                 views_map = await queries.get_views_for_projects(session, project_ids)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, project_ids)
+                rollups = await _load_project_rollups(session, organization_id, project_ids)
 
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
@@ -417,6 +453,7 @@ class ProjectsHandlers:
                         default_mode,
                         default_baseline,
                     )
+                    task_total, task_done, members = rollups.for_project(project.id)
                     project_protos.append(
                         project_to_proto(
                             project,
@@ -426,6 +463,9 @@ class ProjectsHandlers:
                             tags=tags_by_id.get(project.id),
                             effective_access_mode=eff_mode,
                             effective_baseline_role=eff_baseline,
+                            task_count=task_total,
+                            completed_task_count=task_done,
+                            member_count=members,
                         )
                     )
 

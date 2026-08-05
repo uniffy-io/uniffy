@@ -135,6 +135,9 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
       ])
     ),
     tagIds: proto.tags.map((t) => t.id),
+    taskCount: proto.taskCount,
+    completedTaskCount: proto.completedTaskCount,
+    memberCount: proto.memberCount,
   };
 }
 

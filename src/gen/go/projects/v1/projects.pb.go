@@ -288,8 +288,16 @@ type Project struct {
 	TypeFieldSchemas map[string]*TypeFieldSchema `protobuf:"bytes,18,rep,name=type_field_schemas,json=typeFieldSchemas,proto3" json:"type_field_schemas,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	BaselineRole     *v1.ContentRole             `protobuf:"varint,19,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	Tags             []*v11.Tag                  `protobuf:"bytes,20,rep,name=tags,proto3" json:"tags,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Rollups so a project list can render progress without fetching every
+	// project's tasks. Counts cover live top-level tasks only (no subtasks,
+	// no soft-deleted rows).
+	TaskCount          int32 `protobuf:"varint,21,opt,name=task_count,json=taskCount,proto3" json:"task_count,omitempty"`
+	CompletedTaskCount int32 `protobuf:"varint,22,opt,name=completed_task_count,json=completedTaskCount,proto3" json:"completed_task_count,omitempty"`
+	// Explicit “ContentMember“ grants; excludes the owner and anyone who
+	// only reaches the project through an “OPEN_TO_ORG“ baseline.
+	MemberCount   int32 `protobuf:"varint,23,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Project) Reset() {
@@ -460,6 +468,27 @@ func (x *Project) GetTags() []*v11.Tag {
 		return x.Tags
 	}
 	return nil
+}
+
+func (x *Project) GetTaskCount() int32 {
+	if x != nil {
+		return x.TaskCount
+	}
+	return 0
+}
+
+func (x *Project) GetCompletedTaskCount() int32 {
+	if x != nil {
+		return x.CompletedTaskCount
+	}
+	return 0
+}
+
+func (x *Project) GetMemberCount() int32 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
 }
 
 type Task struct {
@@ -5257,7 +5286,7 @@ var File_projects_v1_projects_proto protoreflect.FileDescriptor
 
 const file_projects_v1_projects_proto_rawDesc = "" +
 	"\n" +
-	"\x1aprojects/v1/projects.proto\x12\vprojects.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xea\a\n" +
+	"\x1aprojects/v1/projects.proto\x12\vprojects.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xde\b\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -5283,7 +5312,11 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x04slug\x18\x11 \x01(\tR\x04slug\x12X\n" +
 	"\x12type_field_schemas\x18\x12 \x03(\v2*.projects.v1.Project.TypeFieldSchemasEntryR\x10typeFieldSchemas\x12@\n" +
 	"\rbaseline_role\x18\x13 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01\x12 \n" +
-	"\x04tags\x18\x14 \x03(\v2\f.tags.v1.TagR\x04tags\x1aa\n" +
+	"\x04tags\x18\x14 \x03(\v2\f.tags.v1.TagR\x04tags\x12\x1d\n" +
+	"\n" +
+	"task_count\x18\x15 \x01(\x05R\ttaskCount\x120\n" +
+	"\x14completed_task_count\x18\x16 \x01(\x05R\x12completedTaskCount\x12!\n" +
+	"\fmember_count\x18\x17 \x01(\x05R\vmemberCount\x1aa\n" +
 	"\x15TypeFieldSchemasEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
 	"\x05value\x18\x02 \x01(\v2\x1c.projects.v1.TypeFieldSchemaR\x05value:\x028\x01B\r\n" +
