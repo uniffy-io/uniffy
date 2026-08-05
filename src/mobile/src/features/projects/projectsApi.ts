@@ -14,6 +14,16 @@ import {
   MoveTaskRequestSchema,
   UpdateProjectRequestSchema,
   UpdateTaskRequestSchema,
+  CompleteSprintRequestSchema,
+  CreateSprintRequestSchema,
+  DeleteSprintRequestSchema,
+  ListSprintsRequestSchema,
+  StartSprintRequestSchema,
+  UpdateSprintRequestSchema,
+  BulkUpdateTasksRequestSchema,
+  CreateFieldRequestSchema,
+  UpdateFieldRequestSchema,
+  DeleteFieldRequestSchema,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { transport } from "@core/api/transport";
 
@@ -51,6 +61,36 @@ export const projectsApi = {
 
   moveTask: (request: MessageInitShape<typeof MoveTaskRequestSchema>) => client.moveTask(request),
 
+  bulkUpdateTasks: (request: MessageInitShape<typeof BulkUpdateTasksRequestSchema>) =>
+    client.bulkUpdateTasks(request),
+
+  createField: (request: MessageInitShape<typeof CreateFieldRequestSchema>) =>
+    client.createField(request),
+
+  updateField: (request: MessageInitShape<typeof UpdateFieldRequestSchema>) =>
+    client.updateField(request),
+
+  deleteField: (request: MessageInitShape<typeof DeleteFieldRequestSchema>) =>
+    client.deleteField(request),
+
   listActivities: (request: MessageInitShape<typeof ListActivitiesRequestSchema>) =>
     client.listActivities(request),
+
+  listSprints: (request: MessageInitShape<typeof ListSprintsRequestSchema>) =>
+    client.listSprints(request),
+
+  createSprint: (request: MessageInitShape<typeof CreateSprintRequestSchema>) =>
+    client.createSprint(request),
+
+  updateSprint: (request: MessageInitShape<typeof UpdateSprintRequestSchema>) =>
+    client.updateSprint(request),
+
+  startSprint: (request: MessageInitShape<typeof StartSprintRequestSchema>) =>
+    client.startSprint(request),
+
+  completeSprint: (request: MessageInitShape<typeof CompleteSprintRequestSchema>) =>
+    client.completeSprint(request),
+
+  deleteSprint: (request: MessageInitShape<typeof DeleteSprintRequestSchema>) =>
+    client.deleteSprint(request),
 };

@@ -3,6 +3,7 @@ import type {
   Task,
   TaskActivity,
   FieldDefinition,
+  Sprint,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { ActivityAction } from "@uniffy/proto/projects/v1/projects_pb";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
@@ -18,6 +19,8 @@ export interface SerializedFieldDefinition {
   id: string;
   name: string;
   options: PlainSelectOption[];
+  /** Kept raw so an edit to `options` can preserve any other config keys. */
+  configJson: string;
 }
 
 export interface SerializedProject {
@@ -34,7 +37,9 @@ export interface SerializedProject {
   baselineRole?: number;
   userRole: number;
   visibility: "PRIVATE" | "ORGANIZATION";
-  memberIds: string[];
+  taskCount: number;
+  completedTaskCount: number;
+  memberCount: number;
   fieldDefinitions: SerializedFieldDefinition[];
   createdAt?: string;
   updatedAt?: string;
@@ -65,12 +70,32 @@ export interface SerializedTask {
   subtaskCompleted: number;
   estimatedMinutes?: number;
   timeSpentMinutes?: number;
+  recurrenceRule?: string;
   userRole: number;
   outgoingReferences: string[];
   fieldValues: { [key: string]: string };
-  tags: string[];
+  tags: SerializedTaskTag[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface SerializedTaskTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface SerializedSprint {
+  id: string;
+  projectId: string;
+  name: string;
+  goal: string;
+  status: "planned" | "active" | "closed";
+  startDate: string | null;
+  endDate: string | null;
+  sortOrder: number;
+  taskCount: number;
+  completedTaskCount: number;
 }
 
 export interface SerializedActivity {
@@ -91,8 +116,17 @@ export interface ProjectStats {
   progress: number;
 }
 
-const STATUS_FIELD_ID = "field_status";
+export const STATUS_FIELD_ID = "field_status";
 const PRIORITY_FIELD_ID = "field_priority";
+
+/**
+ * The server keys behaviour off these exact option ids, not off labels or sort
+ * order: `status_done` drives `completed_at`, parent auto-completion, blocker
+ * enforcement and recurrence spawning; `status_todo` is the status every new
+ * task gets; `status_in_progress` is where a parent lands when a subtask is
+ * reopened. Renaming and recolouring them is safe, deleting them is not.
+ */
+export const PROTECTED_STATUS_IDS = ["status_todo", "status_in_progress", "status_done"];
 
 const DEFAULT_STATUS_OPTIONS: PlainSelectOption[] = [
   { id: "status_todo", label: "To Do", color: "#6b7280", sortOrder: 0 },
@@ -147,7 +181,24 @@ function fieldDefinitionToPlain(field: FieldDefinition): SerializedFieldDefiniti
       // Malformed config from server - leave options empty
     }
   }
-  return { id: field.id, name: field.name, options };
+  return { id: field.id, name: field.name, options, configJson: field.configJson };
+}
+
+/** Replaces just the `options` key, so nothing else the server stores is lost. */
+export function buildFieldConfigJson(
+  field: SerializedFieldDefinition,
+  options: PlainSelectOption[],
+): string {
+  let config: Record<string, unknown> = {};
+  if (field.configJson) {
+    try {
+      const parsed = JSON.parse(field.configJson);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) config = parsed;
+    } catch {
+      // Malformed config from server - start from just the options
+    }
+  }
+  return JSON.stringify({ ...config, options });
 }
 
 export function projectToPlain(project: Project): SerializedProject {
@@ -165,7 +216,9 @@ export function projectToPlain(project: Project): SerializedProject {
     baselineRole: project.baselineRole,
     userRole: project.userRole,
     visibility: project.accessMode === AccessMode.OPEN_TO_ORG ? "ORGANIZATION" : "PRIVATE",
-    memberIds: [],
+    taskCount: project.taskCount,
+    completedTaskCount: project.completedTaskCount,
+    memberCount: project.memberCount,
     fieldDefinitions: project.fieldDefinitions.map(fieldDefinitionToPlain),
     createdAt: tsToIso(project.createdAt),
     updatedAt: tsToIso(project.updatedAt),
@@ -198,12 +251,28 @@ export function taskToPlain(task: Task): SerializedTask {
     subtaskCompleted: task.subtaskCompleted,
     estimatedMinutes: task.estimatedMinutes,
     timeSpentMinutes: task.timeSpentMinutes,
+    recurrenceRule: task.recurrenceRule,
     userRole: task.userRole,
     outgoingReferences: task.outgoingReferences,
     fieldValues: task.fieldValues,
-    tags: task.tags.map((t) => t.name),
+    tags: task.tags.map((t) => ({ id: t.id, name: t.name, color: t.color })),
     createdAt: tsToIso(task.createdAt),
     updatedAt: tsToIso(task.updatedAt),
+  };
+}
+
+export function sprintToPlain(sprint: Sprint): SerializedSprint {
+  return {
+    id: sprint.id,
+    projectId: sprint.projectId,
+    name: sprint.name,
+    goal: sprint.goal,
+    status: (sprint.status as SerializedSprint["status"]) || "planned",
+    startDate: sprint.startDate ?? null,
+    endDate: sprint.endDate ?? null,
+    sortOrder: sprint.sortOrder,
+    taskCount: sprint.taskCount,
+    completedTaskCount: sprint.completedTaskCount,
   };
 }
 
@@ -220,13 +289,27 @@ export function activityToPlain(activity: TaskActivity): SerializedActivity {
   };
 }
 
+function statsFrom(total: number, done: number): ProjectStats {
+  return {
+    total,
+    done,
+    inProgress: total - done,
+    progress: total === 0 ? 0 : Math.round((done / total) * 100),
+  };
+}
+
+/**
+ * Rollups the server already counted - the list screen renders progress for
+ * every project without fetching each one's task list.
+ */
+export function projectStats(project: SerializedProject): ProjectStats {
+  return statsFrom(project.taskCount, project.completedTaskCount);
+}
+
+/** Same shape from a loaded task list, so an open project stays live as tasks change. */
 export function computeProjectStats(tasks: SerializedTask[]): ProjectStats {
   const top = tasks.filter((t) => !t.parentId);
-  const total = top.length;
-  const done = top.filter((t) => !!t.completedAt).length;
-  const inProgress = total - done;
-  const progress = total === 0 ? 0 : Math.round((done / total) * 100);
-  return { total, done, inProgress, progress };
+  return statsFrom(top.length, top.filter((t) => !!t.completedAt).length);
 }
 
 function fieldOptions(

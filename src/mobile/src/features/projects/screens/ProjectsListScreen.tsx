@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   Platform,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import {
-  Funnel,
   Plus,
   DotsThree,
   Kanban,
@@ -37,13 +38,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
+import { confirmDestructive } from "@shared/lib/confirmDestructive";
+import { bucketForContent } from "@shared/permissions/contentRoles";
+import type { ContentBucket } from "@shared/permissions/contentRoles";
 import { useTheme } from "@shared/hooks/useTheme";
+import { useAuth } from "@core/providers/AuthContext";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
-import { useProjectsList, useProjectTasks } from "@features/projects/useProjects";
+import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
+import { useProjectsList } from "@features/projects/useProjects";
 import { useDeleteProject } from "@features/projects/useProjectMutations";
 import type { SerializedProject } from "@features/projects/projectsSerializer";
-import { computeProjectStats } from "@features/projects/projectsSerializer";
+import { projectStats } from "@features/projects/projectsSerializer";
 
 const ICON_MAP: Record<string, React.ComponentType<IconProps>> = {
   kanban: Kanban,
@@ -76,25 +82,42 @@ function ProjectIconComponent({
   return <Icon size={size} color={color} weight="duotone" />;
 }
 
-function ProjectCard({
+type ProjectScope = "all" | ContentBucket;
+
+// Web narrows to personal/organization only, which leaves a project someone
+// shared directly with you reachable from "All" alone. The extra segment keeps
+// every project in reach without changing what the shared buckets mean.
+const SCOPES: { key: ProjectScope; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "personal", label: "Mine" },
+  { key: "shared", label: "Shared" },
+  { key: "organization", label: "Org" },
+];
+
+function projectSheetSubtitle(project: SerializedProject): string {
+  const { done, total } = projectStats(project);
+  const tasks = `${done}/${total} task${total === 1 ? "" : "s"}`;
+  if (project.memberCount === 0) return tasks;
+  return `${tasks} - ${project.memberCount} member${project.memberCount === 1 ? "" : "s"}`;
+}
+
+const ProjectCard = React.memo(function ProjectCard({
   project,
   onPress,
   onMore,
 }: {
   project: SerializedProject;
-  onPress: () => void;
-  onMore: () => void;
+  onPress: (project: SerializedProject) => void;
+  onMore: (project: SerializedProject) => void;
 }) {
   const T = useTheme();
-  const tasksQuery = useProjectTasks(project.id);
-  const tasks = tasksQuery.data ?? [];
-  const stats = computeProjectStats(tasks);
+  const stats = projectStats(project);
   const projectColor = project.color || T.accent;
 
   return (
     <TouchableOpacity
       style={[styles.projectCard, { backgroundColor: T.surface, borderColor: T.border }]}
-      onPress={onPress}
+      onPress={() => onPress(project)}
       activeOpacity={0.8}
     >
       <View style={styles.projectTop}>
@@ -115,14 +138,17 @@ function ProjectCard({
                 <Text style={[styles.visibilityText, { color: T.textDim }]}>Private</Text>
               </View>
             )}
-            {project.memberIds.length > 0 && (
+            {project.memberCount > 0 && (
               <Text style={[styles.memberCount, { color: T.textDim }]}>
-                {project.memberIds.length} member{project.memberIds.length !== 1 ? "s" : ""}
+                {project.memberCount} member{project.memberCount !== 1 ? "s" : ""}
               </Text>
             )}
           </View>
         </View>
-        <TouchableOpacity onPress={onMore} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity
+          onPress={() => onMore(project)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <DotsThree size={20} color={T.textDim} weight="bold" />
         </TouchableOpacity>
       </View>
@@ -147,11 +173,11 @@ function ProjectCard({
 
       <View style={styles.taskStats}>
         <View style={styles.taskStat}>
-          <CheckCircle size={11} color="#22c55e" weight="fill" />
+          <CheckCircle size={11} color={T.green} weight="fill" />
           <Text style={[styles.taskStatNum, { color: T.text }]}>{stats.done} done</Text>
         </View>
         <View style={styles.taskStat}>
-          <View style={[styles.dot, { backgroundColor: "#3b82f6" }]} />
+          <View style={[styles.dot, { backgroundColor: T.blue }]} />
           <Text style={[styles.taskStatNum, { color: T.text }]}>{stats.inProgress} open</Text>
         </View>
         <Text style={[styles.taskStatNum, { color: T.textDim, marginLeft: "auto" }]}>
@@ -160,20 +186,65 @@ function ProjectCard({
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 export function ProjectsListScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const [sheetProject, setSheetProject] = useState<SerializedProject | null>(null);
+  const [scope, setScope] = useState<ProjectScope>("all");
 
+  const { user } = useAuth();
   const projectsQuery = useProjectsList();
   const deleteProject = useDeleteProject();
-  const projects = projectsQuery.data ?? [];
+  const toggleBookmark = useToggleBookmark();
+  const sheetIsBookmarked = useIsBookmarked(sheetProject?.urn ?? "").data ?? false;
+  const allProjects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
+  const currentUserId = user?.id ?? "";
+
+  const projects = useMemo(() => {
+    if (scope === "all") return allProjects;
+    return allProjects.filter(
+      (p) =>
+        bucketForContent({
+          ownerId: p.ownerId,
+          accessMode: p.accessMode,
+          currentUserId,
+        }) === scope,
+    );
+  }, [allProjects, scope, currentUserId]);
 
   const onRefresh = useCallback(() => {
     projectsQuery.refetch();
   }, [projectsQuery]);
+
+  const openProject = useCallback((project: SerializedProject) => {
+    router.push(`/projects/${project.id}` as any);
+  }, []);
+
+  const copyReferenceLink = useCallback(async (project: SerializedProject) => {
+    await Clipboard.setStringAsync(project.urn);
+    Alert.alert("Copied", "Reference link copied to clipboard.");
+  }, []);
+
+  // Seeds a new note that opens with the project already @-mentioned, so the
+  // note and the project reference each other from the first save.
+  const openProjectNote = useCallback((project: SerializedProject) => {
+    router.push({
+      pathname: "/notes/edit" as any,
+      params: {
+        initialTitle: `${project.name} notes`,
+        initialContent: `[[[${project.name}|${project.urn}]]]\n\n`,
+      },
+    });
+  }, []);
+
+  const renderProject = useCallback(
+    ({ item }: { item: SerializedProject }) => (
+      <ProjectCard project={item} onPress={openProject} onMore={setSheetProject} />
+    ),
+    [openProject],
+  );
 
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
@@ -185,19 +256,38 @@ export function ProjectsListScreen() {
         color={T.accent}
         icon="projects"
         rightActions={
-          <>
-            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Funnel size={18} color={T.text} weight="duotone" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              onPress={() => router.push("/projects/create" as any)}
-            >
-              <Plus size={21} color={T.accent} weight="bold" />
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            onPress={() => router.push("/projects/create" as any)}
+          >
+            <Plus size={21} color={T.accent} weight="bold" />
+          </TouchableOpacity>
         }
       />
+
+      <View style={[styles.scopeRow, { backgroundColor: T.bg, borderBottomColor: T.border }]}>
+        {SCOPES.map((option) => {
+          const isActive = scope === option.key;
+          return (
+            <TouchableOpacity
+              key={option.key}
+              style={[
+                styles.scopeChip,
+                {
+                  backgroundColor: isActive ? T.accentSoft : "transparent",
+                  borderColor: isActive ? T.accent : T.border,
+                },
+              ]}
+              onPress={() => setScope(option.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.scopeText, { color: isActive ? T.accent : T.textDim }]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       {projectsQuery.isLoading && !projectsQuery.data ? (
         <View style={styles.loadingContainer}>
@@ -218,30 +308,36 @@ export function ProjectsListScreen() {
             />
           }
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <View style={[styles.emptyIconWrap, { backgroundColor: T.accentSoft }]}>
-                <Kanban size={36} color={T.accent} weight="duotone" />
+            allProjects.length > 0 ? (
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyIconWrap, { backgroundColor: T.accentSoft }]}>
+                  <Kanban size={36} color={T.accent} weight="duotone" />
+                </View>
+                <Text style={[styles.emptyTitle, { color: T.textBright }]}>Nothing here</Text>
+                <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
+                  No projects in this view. Switch to All to see the rest.
+                </Text>
               </View>
-              <Text style={[styles.emptyTitle, { color: T.textBright }]}>No projects yet</Text>
-              <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
-                Create your first project to track work
-              </Text>
-              <TouchableOpacity
-                style={[styles.emptyCta, { backgroundColor: T.accent }]}
-                activeOpacity={0.8}
-                onPress={() => router.push("/projects/create" as any)}
-              >
-                <Text style={styles.emptyCtaText}>Create project</Text>
-              </TouchableOpacity>
-            </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyIconWrap, { backgroundColor: T.accentSoft }]}>
+                  <Kanban size={36} color={T.accent} weight="duotone" />
+                </View>
+                <Text style={[styles.emptyTitle, { color: T.textBright }]}>No projects yet</Text>
+                <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
+                  Create your first project to track work
+                </Text>
+                <TouchableOpacity
+                  style={[styles.emptyCta, { backgroundColor: T.accent }]}
+                  activeOpacity={0.8}
+                  onPress={() => router.push("/projects/create" as any)}
+                >
+                  <Text style={styles.emptyCtaText}>Create project</Text>
+                </TouchableOpacity>
+              </View>
+            )
           }
-          renderItem={({ item }) => (
-            <ProjectCard
-              project={item}
-              onPress={() => router.push(`/projects/${item.id}` as any)}
-              onMore={() => setSheetProject(item)}
-            />
-          )}
+          renderItem={renderProject}
         />
       )}
 
@@ -249,7 +345,7 @@ export function ProjectsListScreen() {
         visible={!!sheetProject}
         onClose={() => setSheetProject(null)}
         title={sheetProject?.name ?? ""}
-        subtitle={sheetProject ? `${sheetProject.memberIds.length} members` : ""}
+        subtitle={sheetProject ? projectSheetSubtitle(sheetProject) : ""}
         icon="projects"
         iconColor={sheetProject?.color || T.accent}
         actions={[
@@ -269,17 +365,30 @@ export function ProjectsListScreen() {
           {
             icon: "at-sign",
             label: "Copy reference link",
-            sublabel: sheetProject ? `@${sheetProject.name.replace(/ /g, "-")}` : "",
-            onPress: () => setSheetProject(null),
+            sublabel: sheetProject?.urn ?? "",
+            onPress: () => {
+              const target = sheetProject;
+              setSheetProject(null);
+              if (target) void copyReferenceLink(target);
+            },
           },
-          { icon: "star", label: "Add to favorites", onPress: () => setSheetProject(null) },
+          {
+            icon: "star",
+            label: sheetIsBookmarked ? "Remove from favorites" : "Add to favorites",
+            onPress: () => {
+              const target = sheetProject;
+              setSheetProject(null);
+              if (target) toggleBookmark.mutate(target.urn);
+            },
+          },
           {
             icon: "edit-3",
-            label: "Create project notes",
+            label: "Create project note",
             color: T.accent,
             onPress: () => {
+              const target = sheetProject;
               setSheetProject(null);
-              router.push("/notes/edit" as any);
+              if (target) openProjectNote(target);
             },
           },
           {
@@ -287,9 +396,14 @@ export function ProjectsListScreen() {
             label: "Delete project",
             isDanger: true,
             onPress: () => {
-              const pid = sheetProject?.id;
+              const target = sheetProject;
               setSheetProject(null);
-              if (pid) deleteProject.mutate(pid);
+              if (!target) return;
+              confirmDestructive({
+                title: "Delete project",
+                message: `"${target.name}" and its ${target.taskCount} task${target.taskCount === 1 ? "" : "s"} will be moved to the trash.`,
+                onConfirm: () => deleteProject.mutate(target.id),
+              });
             },
           },
         ]}
@@ -301,6 +415,20 @@ export function ProjectsListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
+  scopeRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  scopeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  scopeText: { fontSize: 13, fontFamily: FONT.medium },
   projectCard: {
     borderRadius: 14,
     padding: 14,

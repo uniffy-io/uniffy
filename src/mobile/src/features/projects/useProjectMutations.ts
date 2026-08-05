@@ -90,6 +90,10 @@ export function useCreateTask() {
       startDate?: string;
       dueDate?: string;
       parentId?: string;
+      taskType?: string;
+      sprintId?: string;
+      estimatedMinutes?: number;
+      tagIds?: string[];
     }) =>
       projectsApi.createTask({
         organizationId: organizationId!,
@@ -102,6 +106,10 @@ export function useCreateTask() {
         startDate: args.startDate,
         dueDate: args.dueDate,
         parentId: args.parentId,
+        taskType: args.taskType,
+        sprintId: args.sprintId,
+        estimatedMinutes: args.estimatedMinutes,
+        tagIds: args.tagIds ?? [],
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
@@ -126,6 +134,13 @@ export function useUpdateTask() {
       startDate?: string | null;
       dueDate?: string | null;
       sortOrder?: number;
+      taskType?: string;
+      sprintId?: string | null;
+      parentId?: string | null;
+      blockedByTaskIds?: string[];
+      estimatedMinutes?: number | null;
+      timeSpentMinutes?: number | null;
+      tagIds?: string[];
     }) =>
       projectsApi.updateTask({
         organizationId: organizationId!,
@@ -138,10 +153,22 @@ export function useUpdateTask() {
         startDate: args.startDate !== undefined ? (args.startDate ?? "") : undefined,
         dueDate: args.dueDate !== undefined ? (args.dueDate ?? "") : undefined,
         sortOrder: args.sortOrder,
+        taskType: args.taskType,
+        // Clearing a relation sends "" - the field must be present for the
+        // server to see the change, and absent to leave it untouched.
+        sprintId: args.sprintId !== undefined ? (args.sprintId ?? "") : undefined,
+        parentId: args.parentId !== undefined ? (args.parentId ?? "") : undefined,
+        blockedByTaskIds: args.blockedByTaskIds,
+        estimatedMinutes:
+          args.estimatedMinutes !== undefined ? (args.estimatedMinutes ?? 0) : undefined,
+        timeSpentMinutes:
+          args.timeSpentMinutes !== undefined ? (args.timeSpentMinutes ?? 0) : undefined,
+        tagIds: args.tagIds ? { ids: args.tagIds } : undefined,
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["task", organizationId, variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ["task-activities", organizationId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
   });
@@ -157,6 +184,43 @@ export function useDeleteTask() {
         organizationId: organizationId!,
         taskId: args.taskId,
         permanent: false,
+      }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export function useUpdateField() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { projectId: string; fieldId: string; configJson: string }) =>
+      projectsApi.updateField({
+        organizationId: organizationId!,
+        projectId: args.projectId,
+        fieldId: args.fieldId,
+        configJson: args.configJson,
+      }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["project", organizationId, variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export function useBulkUpdateTasks() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { projectId: string; taskIds: string[]; status?: string }) =>
+      projectsApi.bulkUpdateTasks({
+        organizationId: organizationId!,
+        taskIds: args.taskIds,
+        status: args.status,
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });

@@ -5,6 +5,7 @@ import {
   projectToPlain,
   taskToPlain,
   activityToPlain,
+  sprintToPlain,
 } from "@features/projects/projectsSerializer";
 
 export function useProjectsList() {
@@ -69,6 +70,23 @@ export function useTask(taskId: string | undefined) {
       return taskToPlain(response.task);
     },
     enabled: !!organizationId && !!taskId,
+  });
+}
+
+export function useProjectSprints(projectId: string | undefined) {
+  const { organizationId } = useAuth();
+
+  return useQuery({
+    queryKey: ["sprints", organizationId, projectId],
+    queryFn: async () => {
+      const response = await projectsApi.listSprints({
+        organizationId: organizationId!,
+        projectId: projectId!,
+        includeClosed: true,
+      });
+      return response.sprints.map(sprintToPlain);
+    },
+    enabled: !!organizationId && !!projectId,
   });
 }
 
