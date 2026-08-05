@@ -23,8 +23,8 @@ eggs/
 lib/
 lib64/
 # The Python `lib/` rule above also matches the mobile app's source dir; keep it tracked.
-!/src/mobile/lib/
-!/src/mobile/lib/**
+!/src/mobile/src/shared/lib/
+!/src/mobile/src/shared/lib/**
 parts/
 sdist/
 var/
