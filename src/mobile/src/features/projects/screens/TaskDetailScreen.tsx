@@ -15,6 +15,8 @@ import {
   CaretRight,
   Warning,
   ArrowsClockwise,
+  Eye,
+  EyeSlash,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -29,6 +31,7 @@ import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
 import { useDirectory } from "@shared/permissions/usePermissions";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
+import { useAuth } from "@core/providers/AuthContext";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
 import { TagPickerSheet } from "@features/tags/components/TagPickerSheet";
 import { OptionPickerSheet } from "@features/projects/components/OptionPickerSheet";
@@ -36,8 +39,10 @@ import { TaskTypePickerSheet } from "@features/projects/components/TaskTypePicke
 import { SprintPickerSheet } from "@features/projects/components/SprintPickerSheet";
 import { TaskPickerSheet } from "@features/projects/components/TaskPickerSheet";
 import { TimeInputSheet } from "@features/projects/components/TimeInputSheet";
+import { RecurrenceSheet } from "@features/projects/components/RecurrenceSheet";
 import { getTaskTypeConfig, getHierarchyRuleViolation } from "@features/projects/taskTypes";
 import { formatMinutes } from "@features/projects/timeFormatting";
+import { parseRecurrence, describeRecurrence } from "@features/projects/taskRecurrence";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
@@ -47,8 +52,13 @@ import {
   useProjectTasks,
   useProjectSprints,
   useTaskActivities,
+  useTaskWatchers,
 } from "@features/projects/useProjects";
-import { useUpdateTask, useDeleteTask } from "@features/projects/useProjectMutations";
+import {
+  useUpdateTask,
+  useDeleteTask,
+  useToggleTaskWatcher,
+} from "@features/projects/useProjectMutations";
 import {
   getStatusOptions,
   getPriorityOptions,
@@ -58,7 +68,8 @@ import {
 import type { SerializedTask } from "@features/projects/projectsSerializer";
 
 type EditableField = "status" | "priority" | null;
-type DetailSheet = "type" | "sprint" | "parent" | "estimate" | "spent" | "tags" | "blockers" | null;
+type DetailSheet =
+  "type" | "sprint" | "parent" | "estimate" | "spent" | "tags" | "blockers" | "repeat" | null;
 
 /** Every task under `rootId`, plus `rootId` itself. */
 function collectDescendantIds(tasks: SerializedTask[], rootId: string): string[] {
@@ -99,8 +110,12 @@ export function TaskDetailScreen() {
   const sprintsQuery = useProjectSprints(task?.projectId);
   const sprints = sprintsQuery.data ?? [];
   const directory = useDirectory();
+  const { user } = useAuth();
+  const currentUserId = user?.id;
+  const watchersQuery = useTaskWatchers(id);
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const toggleWatcher = useToggleTaskWatcher();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<EditableField>(null);
   const [assigneesOpen, setAssigneesOpen] = useState(false);
@@ -118,6 +133,10 @@ export function TaskDetailScreen() {
   }
 
   if (!task) return null;
+
+  const watcherIds = watchersQuery.data?.watcherIds ?? [];
+  const isWatching = !!currentUserId && watcherIds.includes(currentUserId);
+  const recurrence = parseRecurrence(task.recurrenceRule);
 
   const statusOptions = project ? getStatusOptions(project) : [];
   const priorityOptions = project ? getPriorityOptions(project) : [];
@@ -209,6 +228,16 @@ export function TaskDetailScreen() {
             />
             <ShareButton contentType={ContentType.TASK} contentId={task.id} color={projectColor} />
             <TouchableOpacity
+              onPress={() => toggleWatcher.mutate(task.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              {isWatching ? (
+                <Eye size={20} color={projectColor} weight="fill" />
+              ) : (
+                <EyeSlash size={20} color={T.text} weight="regular" />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={() => setSheetOpen(true)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
@@ -246,12 +275,20 @@ export function TaskDetailScreen() {
               <Text style={[styles.badgeText, { color: T.red }]}>Blocked</Text>
             </View>
           )}
-          {/* Recurrence is authored on the web app; surface it so a repeating
-              task does not look like a one-off here. */}
-          {task.recurrenceRule ? (
+          {recurrence ? (
             <View style={[styles.badge, { backgroundColor: T.surfaceHover }]}>
               <ArrowsClockwise size={10} color={T.textDim} weight="bold" />
-              <Text style={[styles.badgeText, { color: T.textDim }]}>Repeats</Text>
+              <Text style={[styles.badgeText, { color: T.textDim }]}>
+                {describeRecurrence(recurrence)}
+              </Text>
+            </View>
+          ) : null}
+          {watchersQuery.data && watchersQuery.data.count > 0 ? (
+            <View style={[styles.badge, { backgroundColor: T.surfaceHover }]}>
+              <Eye size={10} color={T.textDim} weight="fill" />
+              <Text style={[styles.badgeText, { color: T.textDim }]}>
+                {watchersQuery.data.count}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -340,6 +377,22 @@ export function TaskDetailScreen() {
                 numberOfLines={1}
               >
                 {parentTask?.title ?? "None"}
+              </Text>
+              <CaretRight size={13} color={T.textDim} weight="bold" />
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.metaRow, { borderBottomColor: T.border }]}
+            onPress={() => setSheet("repeat")}
+            activeOpacity={0.6}
+          >
+            <Text style={[styles.metaLabel, { color: T.textDim }]}>Repeat</Text>
+            <View style={styles.metaValue}>
+              <Text
+                style={[styles.metaText, { color: recurrence ? T.textBright : T.textDim }]}
+                numberOfLines={1}
+              >
+                {recurrence ? describeRecurrence(recurrence) : "Never"}
               </Text>
               <CaretRight size={13} color={T.textDim} weight="bold" />
             </View>
@@ -649,6 +702,14 @@ export function TaskDetailScreen() {
         selectedType={task.taskType}
         accentColor={projectColor}
         onSelect={(taskType) => patch({ taskType })}
+      />
+
+      <RecurrenceSheet
+        visible={sheet === "repeat"}
+        onClose={() => setSheet(null)}
+        rule={task.recurrenceRule}
+        accentColor={projectColor}
+        onSave={(recurrenceRule) => patch({ recurrenceRule })}
       />
 
       <SprintPickerSheet

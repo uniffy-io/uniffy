@@ -70,6 +70,10 @@ export interface Project {
   completedTaskCount: number;
   /** Explicit `ContentMember` grants; excludes the owner and org-baseline access. */
   memberCount: number;
+  /** Portfolio rollups over EVERY live task, subtasks included - unlike the two counts above. */
+  overdueTaskCount: number;
+  estimatedMinutes: number;
+  spentMinutes: number;
 }
 
 export interface Task {

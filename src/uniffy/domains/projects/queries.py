@@ -3,6 +3,7 @@
 import re
 from collections import defaultdict
 from datetime import UTC, datetime
+from typing import NamedTuple
 from uuid import UUID
 
 from sqlalchemy import and_, case, delete, func, or_, select
@@ -134,6 +135,58 @@ async def get_task_counts_for_projects(
     )
 
     return {row.project_id: (row.total, row.completed) for row in result.all()}
+
+
+class ProjectWorkload(NamedTuple):
+    """Whole-tree rollups: an overdue subtask counts, and so does its time."""
+
+    overdue: int
+    estimated_minutes: int
+    spent_minutes: int
+
+
+async def get_workload_for_projects(
+    session: AsyncSession,
+    project_ids: list[UUID],
+) -> dict[UUID, ProjectWorkload]:
+    if not project_ids:
+        return {}
+
+    # ``due_date`` is a plain YYYY-MM-DD string, so a string comparison is both
+    # exact and index-friendly - no per-row date parsing.
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+
+    result = await session.execute(
+        select(
+            Task.project_id,
+            func.count(
+                case(
+                    (
+                        and_(
+                            Task.completed_at.is_(None),
+                            Task.due_date.is_not(None),
+                            Task.due_date < today,
+                        ),
+                        1,
+                    )
+                )
+            ).label("overdue"),
+            func.coalesce(func.sum(Task.estimated_minutes), 0).label("estimated"),
+            func.coalesce(func.sum(Task.time_spent_minutes), 0).label("spent"),
+        )
+        .where(
+            and_(
+                Task.project_id.in_(project_ids),
+                Task.is_deleted == False,  # noqa: E712
+            )
+        )
+        .group_by(Task.project_id)
+    )
+
+    return {
+        row.project_id: ProjectWorkload(row.overdue, int(row.estimated), int(row.spent))
+        for row in result.all()
+    }
 
 
 async def get_member_counts_for_projects(

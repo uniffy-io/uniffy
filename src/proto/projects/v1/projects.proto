@@ -136,6 +136,12 @@ message Project {
   // Explicit ``ContentMember`` grants; excludes the owner and anyone who
   // only reaches the project through an ``OPEN_TO_ORG`` baseline.
   int32 member_count = 23;
+  // Portfolio rollups. Unlike the two counts above these cover every live task
+  // in the project, subtasks included: a subtask can be overdue on its own, and
+  // time spent only adds up if the whole tree contributes.
+  int32 overdue_task_count = 24;
+  int32 estimated_minutes = 25;
+  int32 spent_minutes = 26;
 }
 
 message Task {

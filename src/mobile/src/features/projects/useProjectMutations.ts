@@ -141,6 +141,7 @@ export function useUpdateTask() {
       estimatedMinutes?: number | null;
       timeSpentMinutes?: number | null;
       tagIds?: string[];
+      recurrenceRule?: string | null;
     }) =>
       projectsApi.updateTask({
         organizationId: organizationId!,
@@ -164,6 +165,7 @@ export function useUpdateTask() {
         timeSpentMinutes:
           args.timeSpentMinutes !== undefined ? (args.timeSpentMinutes ?? 0) : undefined,
         tagIds: args.tagIds ? { ids: args.tagIds } : undefined,
+        recurrenceRule: args.recurrenceRule !== undefined ? (args.recurrenceRule ?? "") : undefined,
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -216,15 +218,56 @@ export function useBulkUpdateTasks() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { projectId: string; taskIds: string[]; status?: string }) =>
+    mutationFn: (args: {
+      projectId: string;
+      taskIds: string[];
+      status?: string;
+      priority?: string;
+      // Replaces the assignee set. The server ignores an empty list, so this
+      // cannot be used to clear assignees.
+      assigneeIds?: string[];
+    }) =>
       projectsApi.bulkUpdateTasks({
         organizationId: organizationId!,
         taskIds: args.taskIds,
         status: args.status,
+        priority: args.priority,
+        assigneeIds: args.assigneeIds,
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export function useDeleteTasks() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { projectId: string; taskIds: string[] }) =>
+      projectsApi.deleteTasks({
+        organizationId: organizationId!,
+        taskIds: args.taskIds,
+        permanent: false,
+      }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export function useToggleTaskWatcher() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      projectsApi.toggleTaskWatcher({ organizationId: organizationId!, taskId }),
+    onSuccess: (_data, taskId) => {
+      queryClient.invalidateQueries({ queryKey: ["task-watchers", organizationId, taskId] });
     },
   });
 }

@@ -24,6 +24,10 @@ import {
   CreateFieldRequestSchema,
   UpdateFieldRequestSchema,
   DeleteFieldRequestSchema,
+  DeleteTasksRequestSchema,
+  ToggleTaskWatcherRequestSchema,
+  ListTaskWatchersRequestSchema,
+  BulkCheckTaskWatchersRequestSchema,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { transport } from "@core/api/transport";
 
@@ -72,6 +76,18 @@ export const projectsApi = {
 
   deleteField: (request: MessageInitShape<typeof DeleteFieldRequestSchema>) =>
     client.deleteField(request),
+
+  deleteTasks: (request: MessageInitShape<typeof DeleteTasksRequestSchema>) =>
+    client.deleteTasks(request),
+
+  toggleTaskWatcher: (request: MessageInitShape<typeof ToggleTaskWatcherRequestSchema>) =>
+    client.toggleTaskWatcher(request),
+
+  listTaskWatchers: (request: MessageInitShape<typeof ListTaskWatchersRequestSchema>) =>
+    client.listTaskWatchers(request),
+
+  bulkCheckTaskWatchers: (request: MessageInitShape<typeof BulkCheckTaskWatchersRequestSchema>) =>
+    client.bulkCheckTaskWatchers(request),
 
   listActivities: (request: MessageInitShape<typeof ListActivitiesRequestSchema>) =>
     client.listActivities(request),

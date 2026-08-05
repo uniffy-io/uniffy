@@ -32,6 +32,7 @@ import {
   Star,
   Buildings,
   Lock,
+  ChartBar,
 } from "phosphor-react-native";
 import type { IconProps } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -256,12 +257,20 @@ export function ProjectsListScreen() {
         color={T.accent}
         icon="projects"
         rightActions={
-          <TouchableOpacity
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            onPress={() => router.push("/projects/create" as any)}
-          >
-            <Plus size={21} color={T.accent} weight="bold" />
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              onPress={() => router.push("/projects/portfolio" as any)}
+            >
+              <ChartBar size={20} color={T.text} weight="duotone" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              onPress={() => router.push("/projects/create" as any)}
+            >
+              <Plus size={21} color={T.accent} weight="bold" />
+            </TouchableOpacity>
+          </>
         }
       />
 

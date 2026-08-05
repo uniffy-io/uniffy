@@ -295,9 +295,15 @@ type Project struct {
 	CompletedTaskCount int32 `protobuf:"varint,22,opt,name=completed_task_count,json=completedTaskCount,proto3" json:"completed_task_count,omitempty"`
 	// Explicit “ContentMember“ grants; excludes the owner and anyone who
 	// only reaches the project through an “OPEN_TO_ORG“ baseline.
-	MemberCount   int32 `protobuf:"varint,23,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MemberCount int32 `protobuf:"varint,23,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
+	// Portfolio rollups. Unlike the two counts above these cover every live task
+	// in the project, subtasks included: a subtask can be overdue on its own, and
+	// time spent only adds up if the whole tree contributes.
+	OverdueTaskCount int32 `protobuf:"varint,24,opt,name=overdue_task_count,json=overdueTaskCount,proto3" json:"overdue_task_count,omitempty"`
+	EstimatedMinutes int32 `protobuf:"varint,25,opt,name=estimated_minutes,json=estimatedMinutes,proto3" json:"estimated_minutes,omitempty"`
+	SpentMinutes     int32 `protobuf:"varint,26,opt,name=spent_minutes,json=spentMinutes,proto3" json:"spent_minutes,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Project) Reset() {
@@ -487,6 +493,27 @@ func (x *Project) GetCompletedTaskCount() int32 {
 func (x *Project) GetMemberCount() int32 {
 	if x != nil {
 		return x.MemberCount
+	}
+	return 0
+}
+
+func (x *Project) GetOverdueTaskCount() int32 {
+	if x != nil {
+		return x.OverdueTaskCount
+	}
+	return 0
+}
+
+func (x *Project) GetEstimatedMinutes() int32 {
+	if x != nil {
+		return x.EstimatedMinutes
+	}
+	return 0
+}
+
+func (x *Project) GetSpentMinutes() int32 {
+	if x != nil {
+		return x.SpentMinutes
 	}
 	return 0
 }
@@ -5286,7 +5313,7 @@ var File_projects_v1_projects_proto protoreflect.FileDescriptor
 
 const file_projects_v1_projects_proto_rawDesc = "" +
 	"\n" +
-	"\x1aprojects/v1/projects.proto\x12\vprojects.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xde\b\n" +
+	"\x1aprojects/v1/projects.proto\x12\vprojects.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xde\t\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -5316,7 +5343,10 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\n" +
 	"task_count\x18\x15 \x01(\x05R\ttaskCount\x120\n" +
 	"\x14completed_task_count\x18\x16 \x01(\x05R\x12completedTaskCount\x12!\n" +
-	"\fmember_count\x18\x17 \x01(\x05R\vmemberCount\x1aa\n" +
+	"\fmember_count\x18\x17 \x01(\x05R\vmemberCount\x12,\n" +
+	"\x12overdue_task_count\x18\x18 \x01(\x05R\x10overdueTaskCount\x12+\n" +
+	"\x11estimated_minutes\x18\x19 \x01(\x05R\x10estimatedMinutes\x12#\n" +
+	"\rspent_minutes\x18\x1a \x01(\x05R\fspentMinutes\x1aa\n" +
 	"\x15TypeFieldSchemasEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
 	"\x05value\x18\x02 \x01(\v2\x1c.projects.v1.TypeFieldSchemaR\x05value:\x028\x01B\r\n" +

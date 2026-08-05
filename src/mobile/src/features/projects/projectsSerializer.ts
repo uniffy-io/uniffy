@@ -40,6 +40,9 @@ export interface SerializedProject {
   taskCount: number;
   completedTaskCount: number;
   memberCount: number;
+  overdueTaskCount: number;
+  estimatedMinutes: number;
+  spentMinutes: number;
   fieldDefinitions: SerializedFieldDefinition[];
   createdAt?: string;
   updatedAt?: string;
@@ -219,6 +222,9 @@ export function projectToPlain(project: Project): SerializedProject {
     taskCount: project.taskCount,
     completedTaskCount: project.completedTaskCount,
     memberCount: project.memberCount,
+    overdueTaskCount: project.overdueTaskCount,
+    estimatedMinutes: project.estimatedMinutes,
+    spentMinutes: project.spentMinutes,
     fieldDefinitions: project.fieldDefinitions.map(fieldDefinitionToPlain),
     createdAt: tsToIso(project.createdAt),
     updatedAt: tsToIso(project.updatedAt),
@@ -304,6 +310,29 @@ function statsFrom(total: number, done: number): ProjectStats {
  */
 export function projectStats(project: SerializedProject): ProjectStats {
   return statsFrom(project.taskCount, project.completedTaskCount);
+}
+
+export type ProjectHealth = "not_started" | "on_track" | "at_risk" | "behind";
+
+export const PROJECT_HEALTH_LABELS: Record<ProjectHealth, string> = {
+  not_started: "Not started",
+  on_track: "On track",
+  at_risk: "At risk",
+  behind: "Behind",
+};
+
+/** Same rules and thresholds as web's PortfolioPage, so a project reads the
+ *  same on both clients. */
+export function projectHealth(project: SerializedProject): ProjectHealth {
+  const { taskCount, completedTaskCount, overdueTaskCount, estimatedMinutes, spentMinutes } =
+    project;
+  if (taskCount === 0) return "not_started";
+  if (completedTaskCount === 0 && overdueTaskCount === 0) return "not_started";
+  if (overdueTaskCount >= 3) return "behind";
+  if (estimatedMinutes > 0 && spentMinutes > estimatedMinutes) return "behind";
+  if (overdueTaskCount >= 1) return "at_risk";
+  if (estimatedMinutes > 0 && spentMinutes > estimatedMinutes * 0.8) return "at_risk";
+  return "on_track";
 }
 
 /** Same shape from a loaded task list, so an open project stays live as tasks change. */

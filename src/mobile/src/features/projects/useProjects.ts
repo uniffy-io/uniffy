@@ -90,6 +90,25 @@ export function useProjectSprints(projectId: string | undefined) {
   });
 }
 
+export function useTaskWatchers(taskId: string | undefined) {
+  const { organizationId } = useAuth();
+
+  return useQuery({
+    queryKey: ["task-watchers", organizationId, taskId],
+    queryFn: async () => {
+      const response = await projectsApi.listTaskWatchers({
+        organizationId: organizationId!,
+        taskId: taskId!,
+      });
+      return {
+        watcherIds: response.watcherUserIds,
+        count: response.watcherCount,
+      };
+    },
+    enabled: !!organizationId && !!taskId,
+  });
+}
+
 export function useTaskActivities(taskId: string | undefined) {
   const { organizationId } = useAuth();
 

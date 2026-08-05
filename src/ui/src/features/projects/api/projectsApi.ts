@@ -138,6 +138,9 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
     taskCount: proto.taskCount,
     completedTaskCount: proto.completedTaskCount,
     memberCount: proto.memberCount,
+    overdueTaskCount: proto.overdueTaskCount,
+    estimatedMinutes: proto.estimatedMinutes,
+    spentMinutes: proto.spentMinutes,
   };
 }
 

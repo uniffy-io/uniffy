@@ -160,15 +160,35 @@ async def _hydrate_project_tags(
     return {pid: bulk.get(urn, []) for urn, pid in urn_to_id.items()}
 
 
+class _ProjectCounts(NamedTuple):
+    """Everything `project_to_proto` needs beyond the row itself."""
+
+    task_total: int
+    task_done: int
+    members: int
+    overdue: int
+    estimated_minutes: int
+    spent_minutes: int
+
+
 class _ProjectRollups(NamedTuple):
-    """Per-project counts keyed by project id, both defaulting to zero."""
+    """Per-project counts keyed by project id, all defaulting to zero."""
 
     tasks: dict[UUID, tuple[int, int]]
     members: dict[UUID, int]
+    workload: dict[UUID, queries.ProjectWorkload]
 
-    def for_project(self, project_id: UUID) -> tuple[int, int, int]:
+    def for_project(self, project_id: UUID) -> _ProjectCounts:
         total, completed = self.tasks.get(project_id, (0, 0))
-        return total, completed, self.members.get(project_id, 0)
+        work = self.workload.get(project_id)
+        return _ProjectCounts(
+            task_total=total,
+            task_done=completed,
+            members=self.members.get(project_id, 0),
+            overdue=work.overdue if work else 0,
+            estimated_minutes=work.estimated_minutes if work else 0,
+            spent_minutes=work.spent_minutes if work else 0,
+        )
 
 
 async def _load_project_rollups(
@@ -181,6 +201,7 @@ async def _load_project_rollups(
         members=await queries.get_member_counts_for_projects(
             session, organization_id, project_ids
         ),
+        workload=await queries.get_workload_for_projects(session, project_ids),
     )
 
 
@@ -287,7 +308,7 @@ class ProjectsHandlers:
                     session, organization_id, project,
                 )
                 rollups = await _load_project_rollups(session, organization_id, [project.id])
-                task_total, task_done, members = rollups.for_project(project.id)
+                counts = rollups.for_project(project.id)
 
                 return GetProjectResponse(
                     project=project_to_proto(
@@ -298,9 +319,12 @@ class ProjectsHandlers:
                         tags=tags_by_id.get(project.id),
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
-                        task_count=task_total,
-                        completed_task_count=task_done,
-                        member_count=members,
+                        task_count=counts.task_total,
+                        completed_task_count=counts.task_done,
+                        member_count=counts.members,
+                        overdue_task_count=counts.overdue,
+                        estimated_minutes=counts.estimated_minutes,
+                        spent_minutes=counts.spent_minutes,
                     )
                 )
         except ConnectError:
@@ -360,7 +384,7 @@ class ProjectsHandlers:
                     session, organization_id, project,
                 )
                 rollups = await _load_project_rollups(session, organization_id, [project.id])
-                task_total, task_done, members = rollups.for_project(project.id)
+                counts = rollups.for_project(project.id)
                 return UpdateProjectResponse(
                     project=project_to_proto(
                         project,
@@ -370,9 +394,12 @@ class ProjectsHandlers:
                         tags=tags_by_id.get(project.id),
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
-                        task_count=task_total,
-                        completed_task_count=task_done,
-                        member_count=members,
+                        task_count=counts.task_total,
+                        completed_task_count=counts.task_done,
+                        member_count=counts.members,
+                        overdue_task_count=counts.overdue,
+                        estimated_minutes=counts.estimated_minutes,
+                        spent_minutes=counts.spent_minutes,
                     )
                 )
         except ConnectError:
@@ -453,7 +480,7 @@ class ProjectsHandlers:
                         default_mode,
                         default_baseline,
                     )
-                    task_total, task_done, members = rollups.for_project(project.id)
+                    counts = rollups.for_project(project.id)
                     project_protos.append(
                         project_to_proto(
                             project,
@@ -463,9 +490,12 @@ class ProjectsHandlers:
                             tags=tags_by_id.get(project.id),
                             effective_access_mode=eff_mode,
                             effective_baseline_role=eff_baseline,
-                            task_count=task_total,
-                            completed_task_count=task_done,
-                            member_count=members,
+                            task_count=counts.task_total,
+                            completed_task_count=counts.task_done,
+                            member_count=counts.members,
+                            overdue_task_count=counts.overdue,
+                            estimated_minutes=counts.estimated_minutes,
+                            spent_minutes=counts.spent_minutes,
                         )
                     )
 

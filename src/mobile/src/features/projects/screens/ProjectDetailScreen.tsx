@@ -19,6 +19,10 @@ import {
   MagnifyingGlass,
   Funnel,
   X,
+  CheckCircle,
+  Users,
+  Flag,
+  Trash,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -32,8 +36,14 @@ import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
+import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
 import { useProject, useProjectTasks } from "@features/projects/useProjects";
-import { useDeleteProject } from "@features/projects/useProjectMutations";
+import {
+  useDeleteProject,
+  useBulkUpdateTasks,
+  useDeleteTasks,
+} from "@features/projects/useProjectMutations";
+import { OptionPickerSheet } from "@features/projects/components/OptionPickerSheet";
 import {
   getStatusOptions,
   getPriorityOptions,
@@ -73,13 +83,19 @@ function TaskCard({
   allTasks,
   priorityOptions,
   statusColor,
+  selected,
+  selectionColor,
   onPress,
+  onLongPress,
 }: {
   task: SerializedTask;
   allTasks: SerializedTask[];
   priorityOptions: PlainSelectOption[];
   statusColor: string;
+  selected: boolean;
+  selectionColor: string;
   onPress: () => void;
+  onLongPress: () => void;
 }) {
   const T = useTheme();
   const isDone = !!task.completedAt;
@@ -93,8 +109,11 @@ function TaskCard({
       style={[
         styles.taskCard,
         { backgroundColor: T.bg, borderColor: T.border, opacity: isDone ? 0.7 : 1 },
+        selected && { borderColor: selectionColor, backgroundColor: selectionColor + "14" },
       ]}
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={250}
       activeOpacity={0.8}
     >
       <View style={styles.taskTags}>
@@ -155,10 +174,14 @@ export function ProjectBoardScreen() {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<TaskFilters>(NO_TASK_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkSheet, setBulkSheet] = useState<"status" | "priority" | "assignees" | null>(null);
 
   const projectQuery = useProject(id);
   const tasksQuery = useProjectTasks(id);
   const deleteProject = useDeleteProject();
+  const bulkUpdateTasks = useBulkUpdateTasks();
+  const deleteTasks = useDeleteTasks();
 
   const project = projectQuery.data;
   const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
@@ -181,6 +204,27 @@ export function ProjectBoardScreen() {
     visibleTasks
       .filter((t) => t.status === statusId && (narrowed || !t.parentId))
       .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const selecting = selectedIds.length > 0;
+
+  const toggleSelected = (taskId: string) =>
+    setSelectedIds((prev) =>
+      prev.includes(taskId) ? prev.filter((t) => t !== taskId) : [...prev, taskId],
+    );
+
+  // A tap opens the task normally, but once a long-press has started a
+  // selection it extends that selection instead.
+  const openOrSelect = (taskId: string) => {
+    if (selecting) toggleSelected(taskId);
+    else router.push(`/projects/task/${taskId}` as any);
+  };
+
+  const runBulk = (changes: { status?: string; priority?: string; assigneeIds?: string[] }) => {
+    bulkUpdateTasks.mutate(
+      { projectId: id, taskIds: selectedIds, ...changes },
+      { onSuccess: () => setSelectedIds([]) },
+    );
+  };
 
   const columns = useMemo(
     () =>
@@ -349,16 +393,32 @@ export function ProjectBoardScreen() {
                   const isDone = !!task.completedAt;
                   const isBlocked = task.blockedByTaskIds.length > 0;
                   const RowTypeIcon = getTaskTypeConfig(task.taskType).Icon;
+                  const isSelected = selectedIds.includes(task.id);
                   return (
                     <TouchableOpacity
                       key={task.id}
                       style={[
                         styles.listRow,
                         { borderBottomColor: T.border, borderLeftColor: col.color },
+                        isSelected && { backgroundColor: projectColor + "14" },
                       ]}
-                      onPress={() => router.push(`/projects/task/${task.id}` as any)}
+                      onPress={() => openOrSelect(task.id)}
+                      onLongPress={() => toggleSelected(task.id)}
+                      delayLongPress={250}
                       activeOpacity={0.8}
                     >
+                      {selecting && (
+                        <TouchableOpacity
+                          onPress={() => toggleSelected(task.id)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          {isSelected ? (
+                            <CheckCircle size={20} color={projectColor} weight="fill" />
+                          ) : (
+                            <View style={[styles.selectRing, { borderColor: T.textDim }]} />
+                          )}
+                        </TouchableOpacity>
+                      )}
                       <View style={{ flex: 1, gap: 4 }}>
                         <View style={styles.taskTitleRow}>
                           <RowTypeIcon size={14} color={T.textDim} weight="duotone" />
@@ -464,7 +524,10 @@ export function ProjectBoardScreen() {
                     allTasks={tasks}
                     priorityOptions={priorityOptions}
                     statusColor={col.color}
-                    onPress={() => router.push(`/projects/task/${task.id}` as any)}
+                    selected={selectedIds.includes(task.id)}
+                    selectionColor={projectColor}
+                    onPress={() => openOrSelect(task.id)}
+                    onLongPress={() => toggleSelected(task.id)}
                   />
                 ))}
 
@@ -486,6 +549,104 @@ export function ProjectBoardScreen() {
           })}
         </ScrollView>
       ) : null}
+
+      {selecting && (
+        <View
+          style={[
+            styles.bulkBar,
+            { backgroundColor: T.bg, borderTopColor: T.border, paddingBottom: insets.bottom || 12 },
+          ]}
+        >
+          <View style={styles.bulkHeader}>
+            <Text style={[styles.bulkCount, { color: T.textBright }]}>
+              {selectedIds.length} selected
+            </Text>
+            <TouchableOpacity
+              onPress={() => setSelectedIds([])}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={[styles.bulkCancel, { color: projectColor }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.bulkActions}>
+            <TouchableOpacity
+              style={styles.bulkAction}
+              onPress={() => setBulkSheet("status")}
+              activeOpacity={0.7}
+            >
+              <CheckCircle size={19} color={T.text} weight="duotone" />
+              <Text style={[styles.bulkActionText, { color: T.text }]}>Status</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bulkAction}
+              onPress={() => setBulkSheet("priority")}
+              activeOpacity={0.7}
+            >
+              <Flag size={19} color={T.text} weight="duotone" />
+              <Text style={[styles.bulkActionText, { color: T.text }]}>Priority</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bulkAction}
+              onPress={() => setBulkSheet("assignees")}
+              activeOpacity={0.7}
+            >
+              <Users size={19} color={T.text} weight="duotone" />
+              <Text style={[styles.bulkActionText, { color: T.text }]}>Assign</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bulkAction}
+              activeOpacity={0.7}
+              onPress={() =>
+                confirmDestructive({
+                  title: "Delete tasks",
+                  message: `${selectedIds.length} task${selectedIds.length === 1 ? "" : "s"} will be moved to the trash.`,
+                  onConfirm: () =>
+                    deleteTasks.mutate(
+                      { projectId: id, taskIds: selectedIds },
+                      { onSuccess: () => setSelectedIds([]) },
+                    ),
+                })
+              }
+            >
+              <Trash size={19} color={T.red} weight="duotone" />
+              <Text style={[styles.bulkActionText, { color: T.red }]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      <OptionPickerSheet
+        visible={bulkSheet === "status"}
+        onClose={() => setBulkSheet(null)}
+        title={`Set status for ${selectedIds.length}`}
+        options={statusOptions}
+        selectedId={undefined}
+        accentColor={projectColor}
+        onSelect={(status) => runBulk({ status })}
+      />
+
+      <OptionPickerSheet
+        visible={bulkSheet === "priority"}
+        onClose={() => setBulkSheet(null)}
+        title={`Set priority for ${selectedIds.length}`}
+        options={priorityOptions}
+        selectedId={undefined}
+        accentColor={projectColor}
+        onSelect={(priority) => runBulk({ priority })}
+      />
+
+      <SubjectPickerSheet
+        visible={bulkSheet === "assignees"}
+        onClose={() => setBulkSheet(null)}
+        title={`Assign ${selectedIds.length} task${selectedIds.length === 1 ? "" : "s"}`}
+        selectedIds={[]}
+        accentColor={projectColor}
+        busy={bulkUpdateTasks.isPending}
+        onToggle={(subjectId) => {
+          runBulk({ assigneeIds: [subjectId] });
+          setBulkSheet(null);
+        }}
+      />
 
       <TaskFilterSheet
         visible={filterOpen}
@@ -511,6 +672,13 @@ export function ProjectBoardScreen() {
             label: "Edit project",
             onPress: () =>
               router.push({ pathname: "/projects/create" as any, params: { projectId: id } }),
+          },
+          {
+            icon: "users",
+            label: "Workload",
+            sublabel: "Tasks and time per assignee",
+            onPress: () =>
+              router.push({ pathname: "/projects/workload" as any, params: { projectId: id } }),
           },
           {
             icon: "settings",
@@ -588,6 +756,23 @@ const styles = StyleSheet.create({
   narrowedText: { fontSize: 12, fontFamily: FONT.regular },
   narrowedReset: { fontSize: 13, fontFamily: FONT.semibold },
   noMatches: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center", padding: 32 },
+  bulkBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    gap: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  bulkHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  bulkCount: { fontSize: 14, fontFamily: FONT.semibold },
+  bulkCancel: { fontSize: 14, fontFamily: FONT.semibold },
+  bulkActions: { flexDirection: "row", justifyContent: "space-around" },
+  bulkAction: { alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 4 },
+  bulkActionText: { fontSize: 11, fontFamily: FONT.medium },
+  selectRing: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5 },
   column: {
     width: 260,
     borderRadius: 14,
