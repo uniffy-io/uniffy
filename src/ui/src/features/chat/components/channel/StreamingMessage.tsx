@@ -13,6 +13,12 @@ interface StreamingMessageProps {
 const FAST_INTERVAL_MS = 25;
 const SLOW_INTERVAL_MS = 80;
 const FAST_THRESHOLD_CHARS = 200;
+// One word per tick caps the reveal near 180 chars/s, slower than every
+// current model streams, so the backlog would otherwise grow without bound
+// on long replies. Each tick therefore reveals at least the slice that keeps
+// the remaining backlog drainable inside this budget.
+const LIVE_CATCHUP_MS = 1200;
+const SETTLED_CATCHUP_MS = 400;
 
 function StreamingMessageInner({ content, streaming }: StreamingMessageProps) {
     // Show whatever content is present at mount immediately; only animate the
@@ -50,7 +56,8 @@ function StreamingMessageInner({ content, streaming }: StreamingMessageProps) {
                         ? FAST_INTERVAL_MS
                         : SLOW_INTERVAL_MS;
 
-                if (timestamp - lastTickAtRef.current < interval) {
+                const sinceLastTick = timestamp - lastTickAtRef.current;
+                if (sinceLastTick < interval) {
                     rafRef.current = requestAnimationFrame(tick);
                     return;
                 }
@@ -68,6 +75,18 @@ function StreamingMessageInner({ content, streaming }: StreamingMessageProps) {
                 if (next === current) {
                     // Force forward progress so an empty advance can't loop rAF.
                     next = Math.min(target.length, current + 1);
+                }
+
+                // Scale by real elapsed time: on a large document a single
+                // markdown re-render can outlast several frame budgets, and a
+                // nominal-interval step would let the backlog outrun the reveal
+                // again. Clamped so a long pause (hidden tab, first tick) does
+                // not dump the whole backlog in one step.
+                const elapsedMs = Math.min(200, sinceLastTick);
+                const catchupMs = streamingRef.current ? LIVE_CATCHUP_MS : SETTLED_CATCHUP_MS;
+                const paced = current + Math.ceil((remainingChars * elapsedMs) / catchupMs);
+                if (paced > next) {
+                    next = Math.min(target.length, paced);
                 }
 
                 visibleLenRef.current = next;

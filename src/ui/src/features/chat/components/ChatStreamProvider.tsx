@@ -44,6 +44,29 @@ let _activeController: AbortController | null = null;
 const MAX_BACKOFF_MS = 30_000;
 const INITIAL_BACKOFF_MS = 1_000;
 
+/** Pull the authoritative channel row and fold it into the sidebar.
+ *
+ *  Lifecycle events carry an id, not a channel: hydrating through GetChannel
+ *  gives every session the same row the channel list would have loaded,
+ *  including the per-user fields (role, membership, agent retirement) a
+ *  broadcast payload cannot carry.
+ */
+function hydrateChannel(
+  organizationId: string,
+  channelId: string,
+  dispatch: AppDispatch,
+  mode: 'add' | 'update',
+): void {
+  chatApi
+    .getChannel({ organizationId, channelId })
+    .then((res) => {
+      if (!res.channel) return;
+      const plain = channelToPlain(res.channel);
+      dispatch(mode === 'add' ? addChannel(plain) : updateChannel(plain));
+    })
+    .catch(() => {});
+}
+
 function handleChannelEvent(
   event: StreamUserChatEventsResponse,
   activeChannelId: string | null,
@@ -57,6 +80,22 @@ function handleChannelEvent(
   const channelId = ce.channelId;
 
   if (handleCallStreamEvent(ce, dispatch)) return;
+
+  // Channel lifecycle applies to every session of every member, whatever
+  // channel each one happens to be looking at.
+  if (ce.eventType === ChatEventType.CHANNEL_CREATED) {
+    hydrateChannel(organizationId, channelId, dispatch, 'add');
+    return;
+  }
+
+  if (ce.eventType === ChatEventType.CHANNEL_UPDATED) {
+    if (ce.payload.case === 'channelUpdated' && ce.payload.value?.isArchived) {
+      dispatch(removeChannel(channelId));
+      return;
+    }
+    hydrateChannel(organizationId, channelId, dispatch, 'update');
+    return;
+  }
 
   // Member events apply globally, not just the active channel.
   if (ce.eventType === ChatEventType.MEMBER_JOINED) {
@@ -121,11 +160,15 @@ function handleChannelEvent(
             }
           })
           .catch(() => {});
+        return;
       }
     }
+    // Somebody else joined a channel this session already knows about: the
+    // roster and member count moved, so refresh them wherever the user is.
     if (activeChannelId && channelId === activeChannelId) {
       dispatch(fetchMembers(activeChannelId));
     }
+    hydrateChannel(organizationId, channelId, dispatch, 'update');
     return;
   }
 
@@ -140,6 +183,7 @@ function handleChannelEvent(
     if (activeChannelId && channelId === activeChannelId) {
       dispatch(fetchMembers(activeChannelId));
     }
+    hydrateChannel(organizationId, channelId, dispatch, 'update');
     return;
   }
 
@@ -193,17 +237,6 @@ function handleChannelEvent(
     case ChatEventType.MESSAGE_DELETED: {
       if (ce.payload.case === 'messageDeleted' && ce.payload.value) {
         dispatch(deleteMessage({ channelId: activeChannelId, messageId: ce.payload.value.messageId }));
-      }
-      break;
-    }
-    case ChatEventType.CHANNEL_UPDATED: {
-      if (ce.payload.case === 'channelUpdated' && ce.payload.value) {
-        const updated = ce.payload.value;
-        if (updated.isArchived) {
-          dispatch(removeChannel(updated.id));
-        } else {
-          dispatch(updateChannel(channelToPlain(updated)));
-        }
       }
       break;
     }

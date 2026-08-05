@@ -43,6 +43,7 @@ class ChatEventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CHAT_EVENT_TYPE_CALL_HOST_CHANGED: _ClassVar[ChatEventType]
     CHAT_EVENT_TYPE_AGENT_THINKING_DELTA: _ClassVar[ChatEventType]
     CHAT_EVENT_TYPE_MEMBER_UPDATED: _ClassVar[ChatEventType]
+    CHAT_EVENT_TYPE_CHANNEL_CREATED: _ClassVar[ChatEventType]
 
 class UserChatEventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -82,6 +83,7 @@ CHAT_EVENT_TYPE_CALL_RING: ChatEventType
 CHAT_EVENT_TYPE_CALL_HOST_CHANGED: ChatEventType
 CHAT_EVENT_TYPE_AGENT_THINKING_DELTA: ChatEventType
 CHAT_EVENT_TYPE_MEMBER_UPDATED: ChatEventType
+CHAT_EVENT_TYPE_CHANNEL_CREATED: ChatEventType
 USER_CHAT_EVENT_TYPE_UNSPECIFIED: UserChatEventType
 USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED: UserChatEventType
 USER_CHAT_EVENT_TYPE_THREAD_ACTIVITY: UserChatEventType

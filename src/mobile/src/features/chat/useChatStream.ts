@@ -322,6 +322,36 @@ function applyUserEvent(
 function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEvent) {
   const channelId = ce.channelId;
   const msgKey = messagesKey(orgId, channelId);
+  const channelsKey = ["chat", "channels", orgId];
+  const channelKey = ["chat", "channel", orgId, channelId];
+
+  // Channel lifecycle reaches every member's session whatever channel is on
+  // screen, and CHANNEL_CREATED carries no payload at all, so these key off
+  // the event type rather than the payload case.
+  switch (ce.eventType) {
+    case ChatEventType.CHANNEL_CREATED:
+      void queryClient.invalidateQueries({ queryKey: channelsKey });
+      return;
+    case ChatEventType.CHANNEL_UPDATED: {
+      // Archive and delete both arrive as is_archived, and the row is then
+      // gone for this member: only the list has anything left to show.
+      const removed = ce.payload.case === "channelUpdated" && ce.payload.value.isArchived;
+      if (!removed) void queryClient.invalidateQueries({ queryKey: channelKey });
+      void queryClient.invalidateQueries({ queryKey: channelsKey });
+      return;
+    }
+    case ChatEventType.MEMBERS_ADDED:
+    case ChatEventType.MEMBERS_REMOVED:
+      // An agent-only change carries no user_ids, so the roster and the member
+      // count refresh off the event type alone. The list refetch is what makes
+      // the channel appear or disappear when the changed member is this user.
+      void queryClient.invalidateQueries({ queryKey: ["chat", "members", orgId, channelId] });
+      void queryClient.invalidateQueries({ queryKey: channelKey });
+      void queryClient.invalidateQueries({ queryKey: channelsKey });
+      return;
+    default:
+      break;
+  }
 
   switch (ce.payload.case) {
     case "message": {
@@ -345,7 +375,7 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       // Refetch fills in what the event lacks (attachments) and keeps the
       // channel list ordering fresh.
       void queryClient.invalidateQueries({ queryKey: msgKey });
-      void queryClient.invalidateQueries({ queryKey: ["chat", "channels", orgId] });
+      void queryClient.invalidateQueries({ queryKey: channelsKey });
       break;
     }
     case "messageDeleted": {
@@ -437,13 +467,8 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       void queryClient.invalidateQueries({ queryKey: approvalsKey(orgId, channelId) });
       break;
     case "member":
-    case "membersChanged":
       void queryClient.invalidateQueries({ queryKey: ["chat", "members", orgId, channelId] });
-      void queryClient.invalidateQueries({ queryKey: ["chat", "channels", orgId] });
-      break;
-    case "channelUpdated":
-      void queryClient.invalidateQueries({ queryKey: ["chat", "channel", orgId, channelId] });
-      void queryClient.invalidateQueries({ queryKey: ["chat", "channels", orgId] });
+      void queryClient.invalidateQueries({ queryKey: channelsKey });
       break;
     case "threadUpdated":
       void queryClient.invalidateQueries({ queryKey: ["chat", "threads", orgId] });
