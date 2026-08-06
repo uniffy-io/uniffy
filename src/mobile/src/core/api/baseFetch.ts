@@ -18,6 +18,13 @@ export const SENTINEL_BASE_URL = "http://uniffy.invalid/api";
 export const DEFAULT_RPC_TIMEOUT_MS = 10_000;
 export const SLOW_RPC_TIMEOUT_MS = 60_000;
 
+// Image generation runs to a 300s server-side budget, so the slow tier would
+// abort it two thirds of the way through. The client would report a failure the
+// server never sees, having already charged the spend. Its own tier rather than
+// a wider slow tier, which uploads and bulk file ops share and should keep
+// failing fast.
+export const IMAGE_RPC_TIMEOUT_MS = 320_000;
+
 export function serverRewritingFetch(baseFetch: typeof globalThis.fetch): typeof globalThis.fetch {
   const swap = (url: string): string =>
     url.startsWith(SENTINEL_BASE_URL) ? getApiBaseUrl() + url.slice(SENTINEL_BASE_URL.length) : url;

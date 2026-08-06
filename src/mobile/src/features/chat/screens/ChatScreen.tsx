@@ -33,6 +33,8 @@ import {
   X,
   Gauge,
   Phone,
+  ThumbsUp,
+  ThumbsDown,
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -52,6 +54,7 @@ import { AgentMessageBody, isSpecialAgentKind } from "@features/agents/component
 import { ThinkingPane } from "@features/agents/components/ThinkingPane";
 import { AgentApprovalCard } from "@features/agents/components/AgentApprovalCard";
 import { AgentContextSheet } from "@features/agents/components/AgentContextSheet";
+import { memorySubjectForChannel } from "@features/agents/memorySerializer";
 import { AgentModelSheet } from "@features/chat/components/AgentModelSheet";
 import { ChannelDetailsSheet } from "@features/chat/components/ChannelDetailsSheet";
 import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
@@ -91,7 +94,14 @@ import {
   useLeaveChannel,
 } from "@features/chat/useChatMutations";
 import { useDirectory } from "@shared/permissions/usePermissions";
-import { useAgents, useAgentModels, useStopAgentRun } from "@features/agents/useAgents";
+import {
+  useAgents,
+  useAgentModels,
+  useAgentTools,
+  useStopAgentRun,
+  useSubmitAgentReplyFeedback,
+} from "@features/agents/useAgents";
+import { persistedThinkingBlocks, type ThinkingBlockView } from "@features/agents/thinkingBlocks";
 import {
   useChatStream,
   typingKey,
@@ -102,6 +112,7 @@ import {
 } from "@features/chat/useChatStream";
 import { useComposerAttachments } from "@features/chat/useComposerAttachments";
 import { useChannelAgentConfig } from "@features/chat/useChannelAgentConfig";
+import { useChatPermissions } from "@features/chat/useChatPermissions";
 import { useDraftSync } from "@features/chat/useDraftSync";
 import { useScreenFocusRef } from "@shared/hooks/useScreenFocusRef";
 import { chatApi } from "@features/chat/chatApi";
@@ -120,6 +131,17 @@ const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "👀", "🙏"];
 const REPLY_PREVIEW_MAX_CHARS = 150;
 const REPLY_BODY_GAP = 5;
 type SelectionRange = { start: number; end: number };
+
+/** One transcript row: a message, or a folded run of that agent's tool calls. */
+type MessageRowItem = {
+  message: SerializedMessage;
+  /** Consecutive tool calls from one agent, oldest first, rendered as one pane. */
+  toolRun?: SerializedMessage[];
+};
+
+function isAgentToolCall(message: SerializedMessage): boolean {
+  return message.senderType === "AGENT" && message.metadata?.kind === "tool_call";
+}
 
 const EMOJI_RE = /\p{Emoji_Presentation}|\p{Emoji}\uFE0F/gu;
 
@@ -158,7 +180,25 @@ export function ChatConversationScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const barSpace = bottomBarBlockHeight(insets.bottom);
-  const [footerHeight, setFooterHeight] = useState(0);
+
+  // The RESTING height of the composer block, and deliberately only that.
+  //
+  // The list's bottom inset and its negative margin are both pinned to this, so
+  // neither changes when the composer grows - a focused action row, a reply
+  // banner, an attachment strip, a draft wrapping onto a fifth line. The flex
+  // box hands the list whatever height the footer leaves it, and an inverted
+  // list pinned at offset 0 keeps its content glued to the frame's bottom edge,
+  // so the transcript rides up on its own with no cell moving inside the
+  // content container.
+  //
+  // Insetting the CONTENT to match instead re-lays out every mounted cell and
+  // fires an onLayout for each, which is why a long transcript stuttered where
+  // a short one looked fine. Growth is a viewport change, not a content change.
+  const [restingFooterHeight, setRestingFooterHeight] = useState(0);
+  const noteFooterHeight = useCallback((height: number) => {
+    const rounded = Math.round(height);
+    setRestingFooterHeight((prev) => (prev === 0 || rounded < prev ? rounded : prev));
+  }, []);
   const { user, organizationId } = useAuth();
   const { pendingReference, clearPendingReference, openAt } = useUniffy();
   const queryClient = useQueryClient();
@@ -188,6 +228,10 @@ export function ChatConversationScreen() {
   const categoriesQuery = useCategories();
   const directory = useDirectory();
   const agentsQuery = useAgents();
+  // Fills the label store the tool panes subscribe to; nothing here renders it.
+  useAgentTools();
+  const submitReplyFeedback = useSubmitAgentReplyFeedback(channelId);
+  const { canManageChat } = useChatPermissions();
 
   const [draft, setDraft] = useState("");
   const mentionsRef = useRef<MentionEntry[]>([]);
@@ -215,6 +259,27 @@ export function ChatConversationScreen() {
 
   const allMessages = useMemo(() => messagesQuery.data ?? [], [messagesQuery.data]);
   const channel = channelQuery.data;
+
+  // Mirrors the backend gate on compacting/resetting an agent's context: a DM
+  // member may do it freely, every other channel type needs an elevated role.
+  const canModerateChannel = useMemo(() => {
+    if (!channel) return false;
+    if (channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM") return true;
+    if (canManageChat) return true;
+    return channel.currentUserRole === "OWNER" || channel.currentUserRole === "ADMIN";
+  }, [channel, canManageChat]);
+
+  const memorySubject = useMemo(
+    () => memorySubjectForChannel(channel, channelId),
+    [channel, channelId],
+  );
+  // Channel memory only exists where an agent can act, so the entry point
+  // follows agent membership rather than showing on every conversation.
+  const hasAgentMemory =
+    !!channel &&
+    (channel.isAgentDm || (membersQuery.data ?? []).some((m) => m.subjectType === "AGENT"));
+  const isMemoryModerator =
+    canManageChat || channel?.currentUserRole === "OWNER" || channel?.currentUserRole === "ADMIN";
 
   // Tool results are absorbed into their tool-call card; only orphans render.
   const toolResultsById = useMemo(() => {
@@ -250,6 +315,46 @@ export function ChatConversationScreen() {
   const toolResultFor = useCallback(
     (toolCallId: string) => toolResultsById.get(toolCallId),
     [toolResultsById],
+  );
+
+  // A run of consecutive tool calls from one agent is one activity pane rather
+  // than one row per call. The transcript is newest-first, so a run is walked
+  // backwards and anchored on its OLDEST row - that is the one whose header
+  // renders at the top of the group.
+  const rows = useMemo(() => {
+    const out: MessageRowItem[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      if (!isAgentToolCall(message)) {
+        out.push({ message });
+        continue;
+      }
+      let oldest = i;
+      while (
+        oldest + 1 < messages.length &&
+        isAgentToolCall(messages[oldest + 1]) &&
+        messages[oldest + 1].senderId === message.senderId
+      ) {
+        oldest++;
+      }
+      out.push({ message: messages[oldest], toolRun: messages.slice(i, oldest + 1).reverse() });
+      i = oldest;
+    }
+    return out;
+  }, [messages]);
+
+  // Only used to attribute an agent context reset, which stamps a user id but
+  // not always a name.
+  const resolveUserName = useCallback(
+    (userId: string) => {
+      if (!userId) return undefined;
+      if (userId === user?.id) return "you";
+      return (
+        directory.byId.get(userId)?.name ??
+        membersQuery.data?.find((m) => m.subjectId === userId)?.displayName
+      );
+    },
+    [user?.id, directory.byId, membersQuery.data],
   );
 
   const humanSenderIds = useMemo(
@@ -534,7 +639,7 @@ export function ChatConversationScreen() {
   // older side), so an expanding tool payload explodes upward and a collapse
   // strands the viewport. Shifting the offset by the payload height keeps the
   // card header anchored: expand unfolds downward, collapse folds back up.
-  const listRef = useRef<FlatList<SerializedMessage>>(null);
+  const listRef = useRef<FlatList<MessageRowItem>>(null);
   const scrollOffsetRef = useRef(0);
   const adjustScrollForDetails = useCallback((delta: number) => {
     requestAnimationFrame(() => {
@@ -548,71 +653,110 @@ export function ChatConversationScreen() {
   // Scroll a quoted message into view. Silently a no-op when the target sits in
   // a page the transcript has not loaded yet - there is no id-addressable fetch
   // for a single older message, only the page walk that onEndReached drives.
+  // Re-sending the rating already showing clears it, matching the web thumbs.
+  const rateReply = useCallback(
+    (message: SerializedMessage, rating: "up" | "down") => {
+      submitReplyFeedback.mutate({
+        messageId: message.id,
+        rating: message.feedbackRating === rating ? "" : rating,
+      });
+    },
+    [submitReplyFeedback],
+  );
+
+  // Every per-row handler is stable and takes the message, so a screen re-render
+  // hands MessageRow the same function identities and its memo holds. Inline
+  // closures here would defeat it and re-parse every visible message's markdown.
+  const openActions = useCallback((message: SerializedMessage) => setActionMessage(message), []);
+  const openThreadFor = useCallback(
+    (message: SerializedMessage) => openThread(message.id),
+    [openThread],
+  );
+
   const jumpToMessage = useCallback(
     (messageId: string | undefined) => {
       if (!messageId) return;
-      const index = messages.findIndex((m) => m.id === messageId);
+      const index = rows.findIndex(
+        (row) => row.message.id === messageId || row.toolRun?.some((m) => m.id === messageId),
+      );
       if (index < 0) return;
       listRef.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true });
     },
-    [messages],
+    [rows],
+  );
+
+  const jumpToReplyContext = useCallback(
+    (message: SerializedMessage) => jumpToMessage(message.replyContext?.id),
+    [jumpToMessage],
   );
 
   const renderItem = useCallback(
-    ({ item, index }: { item: SerializedMessage; index: number }) => {
-      const older = messages[index + 1];
-      const newDay = !older || !isSameDay(item.createdAtSeconds, older.createdAtSeconds);
+    ({ item, index }: { item: MessageRowItem; index: number }) => {
+      const message = item.message;
+      const older = rows[index + 1]?.message;
+      const newDay = !older || !isSameDay(message.createdAtSeconds, older.createdAtSeconds);
       const showHeader =
         newDay ||
-        older.senderId !== item.senderId ||
-        item.createdAtSeconds - older.createdAtSeconds > GROUP_WINDOW_SECONDS;
+        older.senderId !== message.senderId ||
+        message.createdAtSeconds - older.createdAtSeconds > GROUP_WINDOW_SECONDS;
       // System notices have nothing to quote, and a message still in flight has
       // no server id for the reply to point at.
-      const canSwipeReply = item.senderType !== "SYSTEM" && item.metadata?.optimistic !== "1";
+      const canSwipeReply = message.senderType !== "SYSTEM" && message.metadata?.optimistic !== "1";
+      const holdsUnreadAnchor =
+        message.id === firstUnreadId || !!item.toolRun?.some((m) => m.id === firstUnreadId);
       return (
         <View>
-          {newDay ? <DaySeparator label={formatDayLabel(item.createdAtSeconds)} T={T} /> : null}
-          {item.id === firstUnreadId ? <UnreadDivider T={T} /> : null}
+          {newDay ? <DaySeparator label={formatDayLabel(message.createdAtSeconds)} T={T} /> : null}
+          {holdsUnreadAnchor ? <UnreadDivider T={T} /> : null}
           <SwipeToReply
             T={T}
             enabled={canSwipeReply}
             hasAvatar={showHeader}
-            onReply={() => startReply(item)}
+            onReply={() => startReply(message)}
           >
             <MessageRow
-              message={item}
+              message={message}
+              toolRun={item.toolRun}
               T={T}
               organizationId={organizationId ?? ""}
               showHeader={showHeader}
               hideReplyContext={hideReplyContext}
-              isOwn={item.senderId === user?.id}
+              isOwn={message.senderId === user?.id}
               senderPresence={
-                item.senderType === "USER" ? (presenceByUser[item.senderId] ?? "offline") : null
+                message.senderType === "USER"
+                  ? (presenceByUser[message.senderId] ?? "offline")
+                  : null
               }
               agentActive={agentRunning}
-              thinking={item.senderType === "AGENT" ? thinkingByMessage?.[item.id] : undefined}
+              thinking={
+                message.senderType === "AGENT" ? thinkingByMessage?.[message.id] : undefined
+              }
               agentEmoji={
-                item.senderType === "AGENT"
-                  ? (agentById.get(item.senderId)?.avatarEmoji ?? null)
+                message.senderType === "AGENT"
+                  ? (agentById.get(message.senderId)?.avatarEmoji ?? null)
                   : null
               }
               agentName={
-                item.senderType === "AGENT" ? (agentById.get(item.senderId)?.name ?? null) : null
+                message.senderType === "AGENT"
+                  ? (agentById.get(message.senderId)?.name ?? null)
+                  : null
               }
               toolResultFor={toolResultFor}
-              onLongPress={() => setActionMessage(item)}
-              onPressFailed={() => promptFailedSend(item)}
-              onPressThread={() => openThread(item.id)}
-              onPressReplyContext={() => jumpToMessage(item.replyContext?.id)}
-              onToggleReaction={(emoji) => handleReact(item, emoji)}
+              resolveUserName={resolveUserName}
+              onLongPress={openActions}
+              onPressFailed={promptFailedSend}
+              onPressThread={openThreadFor}
+              onPressReplyContext={jumpToReplyContext}
+              onToggleReaction={handleReact}
               onDetailsToggled={adjustScrollForDetails}
+              onRateReply={rateReply}
             />
           </SwipeToReply>
         </View>
       );
     },
     [
-      messages,
+      rows,
       T,
       user?.id,
       organizationId,
@@ -623,12 +767,15 @@ export function ChatConversationScreen() {
       thinkingByMessage,
       agentById,
       toolResultFor,
-      openThread,
+      resolveUserName,
+      openActions,
+      openThreadFor,
       adjustScrollForDetails,
       presenceByUser,
       hideReplyContext,
       startReply,
-      jumpToMessage,
+      jumpToReplyContext,
+      rateReply,
     ],
   );
 
@@ -742,17 +889,17 @@ export function ChatConversationScreen() {
       ) : (
         <FlatList
           ref={listRef}
-          style={[styles.list, { marginBottom: -(footerHeight + barSpace) }]}
-          data={messages}
+          style={[styles.list, { marginBottom: -(restingFooterHeight + barSpace) }]}
+          data={rows}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.message.id}
           onScroll={(e) => (scrollOffsetRef.current = e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
           inverted
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.listContent,
-            { paddingTop: footerHeight + barSpace + 12, paddingBottom: insets.top + 12 },
+            { paddingTop: restingFooterHeight + barSpace + 12, paddingBottom: insets.top + 12 },
           ]}
           keyboardShouldPersistTaps="handled"
           // interactive is iOS-only and degrades to no dismissal at all on
@@ -768,6 +915,12 @@ export function ChatConversationScreen() {
           }
           onEndReached={() => void messagesQuery.loadOlder()}
           onEndReachedThreshold={0.4}
+          // Messages are markdown, so a mounted row is expensive to build.
+          // Holding ten screens of them either way (the default) makes every
+          // relayout - the keyboard's most of all - drag a crowd along.
+          windowSize={11}
+          initialNumToRender={14}
+          maxToRenderPerBatch={8}
           ListFooterComponent={
             messagesQuery.isLoadingOlder ? (
               <View style={styles.loadOlderWrap}>
@@ -780,7 +933,7 @@ export function ChatConversationScreen() {
 
       <View
         style={{ marginBottom: barSpace }}
-        onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
+        onLayout={(e) => noteFooterHeight(e.nativeEvent.layout.height)}
       >
         {(approvalsQuery.data ?? []).map((approval) => (
           <AgentApprovalCard
@@ -964,6 +1117,8 @@ export function ChatConversationScreen() {
             setDetailsOpen(false);
             setContextAgentId(agentId);
           }}
+          memorySubject={hasAgentMemory ? memorySubject : undefined}
+          isMemoryModerator={isMemoryModerator}
           onMoveToCategory={(categoryId) => moveChannelToCategory.mutate({ channelId, categoryId })}
           onArchive={() => {
             setDetailsOpen(false);
@@ -985,9 +1140,7 @@ export function ChatConversationScreen() {
           visible={modelSheetOpen}
           T={T}
           channelId={channelId}
-          agentId={dmAgentId}
-          agentPrimaryModel={agentById.get(dmAgentId)?.primaryModel ?? ""}
-          agentProviderKeyId={agentById.get(dmAgentId)?.primaryProviderKeyId ?? ""}
+          agent={dmAgent}
           onClose={() => setModelSheetOpen(false)}
         />
       ) : null}
@@ -1002,6 +1155,7 @@ export function ChatConversationScreen() {
             agentById.get(contextAgentId)?.name ??
             membersQuery.data?.find((m) => m.subjectId === contextAgentId)?.displayName
           }
+          canMutate={canModerateChannel}
           onClose={() => setContextAgentId(null)}
         />
       ) : null}
@@ -1144,8 +1298,54 @@ function UnreadDivider({ T }: { T: ThemeColors }) {
   );
 }
 
-function MessageRow({
+/** Thumbs on a finished agent reply; tapping the active one clears the rating. */
+function ReplyFeedbackRow({
+  T,
+  rating,
+  onRate,
+}: {
+  T: ThemeColors;
+  rating: "up" | "down" | "";
+  onRate: (next: "up" | "down") => void;
+}) {
+  return (
+    <View style={styles.feedbackRow}>
+      <TouchableOpacity
+        onPress={() => onRate("up")}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityLabel="Helpful reply"
+      >
+        <ThumbsUp
+          size={15}
+          color={rating === "up" ? T.green : T.textDim}
+          weight={rating === "up" ? "fill" : "regular"}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => onRate("down")}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityLabel="Unhelpful reply"
+      >
+        <ThumbsDown
+          size={15}
+          color={rating === "down" ? T.red : T.textDim}
+          weight={rating === "down" ? "fill" : "regular"}
+        />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+/**
+ * Memoized because the screen re-renders on every poll, stream event and layout
+ * change, and an unmemoized row re-parses its markdown each time - with a
+ * screenful mounted that is what turned opening the keyboard into a stutter.
+ * Every callback prop is stable and takes the message, so the memo actually
+ * holds.
+ */
+const MessageRow = React.memo(function MessageRow({
   message,
+  toolRun,
   T,
   organizationId,
   showHeader,
@@ -1156,15 +1356,18 @@ function MessageRow({
   agentEmoji,
   agentName,
   toolResultFor,
+  resolveUserName,
   onLongPress,
   onPressFailed,
   onPressThread,
   onPressReplyContext,
   onToggleReaction,
   onDetailsToggled,
+  onRateReply,
   senderPresence,
 }: {
   message: SerializedMessage;
+  toolRun?: SerializedMessage[];
   T: ThemeColors;
   organizationId: string;
   showHeader: boolean;
@@ -1175,12 +1378,14 @@ function MessageRow({
   agentEmoji?: string | null;
   agentName?: string | null;
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
-  onLongPress: () => void;
-  onPressFailed: () => void;
-  onPressThread: () => void;
-  onPressReplyContext: () => void;
-  onToggleReaction: (emoji: string) => void;
+  resolveUserName?: (userId: string) => string | undefined;
+  onLongPress: (message: SerializedMessage) => void;
+  onPressFailed: (message: SerializedMessage) => void;
+  onPressThread: (message: SerializedMessage) => void;
+  onPressReplyContext: (message: SerializedMessage) => void;
+  onToggleReaction: (message: SerializedMessage, emoji: string) => void;
   onDetailsToggled?: (heightDelta: number) => void;
+  onRateReply: (message: SerializedMessage, rating: "up" | "down") => void;
   senderPresence?: string | null;
 }) {
   const { display } = useMemo(() => parseMentions(message.content), [message.content]);
@@ -1215,7 +1420,20 @@ function MessageRow({
   const failed = message.metadata?.failed === "1";
   const pending = message.metadata?.optimistic === "1" && !failed;
   const agentSpecial = isAgent && isSpecialAgentKind(message);
+  // The runtime drops the flag when it finalizes the row, so its absence is
+  // what marks a reply as finished and rateable.
+  const streamingReply = !!message.metadata?.streaming;
   const jumbo = useMemo(() => !agentSpecial && isEmojiOnly(display), [agentSpecial, display]);
+
+  // The runtime persists reasoning onto the row, so a reply keeps its pane after
+  // a reload; the stream cache only holds replies watched as they arrived, and
+  // wins while their blocks are still landing.
+  const persisted = useMemo(
+    () => persistedThinkingBlocks(message.metadata?.thinking),
+    [message.metadata?.thinking],
+  );
+  const thinkingBlocks: readonly ThinkingBlockView[] =
+    thinking && thinking.length > 0 ? thinking : persisted;
 
   if (isSystem) {
     return <SystemMessage content={message.content} />;
@@ -1223,12 +1441,12 @@ function MessageRow({
 
   return (
     <Pressable
-      onLongPress={pending || failed ? undefined : onLongPress}
+      onLongPress={pending || failed ? undefined : () => onLongPress(message)}
       // A row covers the full width, and keyboardShouldPersistTaps="handled"
       // treats a tap it catches as handled - so without this the keyboard only
       // closes on the gaps between messages, and a wall of agent replies leaves
       // no gap to hit.
-      onPress={failed ? onPressFailed : () => Keyboard.dismiss()}
+      onPress={failed ? () => onPressFailed(message) : () => Keyboard.dismiss()}
       delayLongPress={250}
       style={[styles.msgRow, !showHeader && styles.msgRowGrouped]}
     >
@@ -1271,7 +1489,7 @@ function MessageRow({
             <View style={styles.replyContextHead}>
               <TouchableOpacity
                 style={styles.replyContextJump}
-                onPress={onPressReplyContext}
+                onPress={() => onPressReplyContext(message)}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={`Go to the message from ${message.replyContext.senderName}`}
@@ -1315,10 +1533,10 @@ function MessageRow({
             ) : null}
           </View>
         ) : null}
-        {isAgent && !agentSpecial && thinking && thinking.length > 0 ? (
+        {isAgent && !agentSpecial && thinkingBlocks.length > 0 ? (
           <ThinkingPane
-            blocks={thinking}
-            live={agentActive && thinking.some((b) => !b.done)}
+            blocks={thinkingBlocks}
+            live={agentActive && thinkingBlocks.some((b) => !b.done)}
             answerStarted={message.content.length > 0 || !agentActive}
             T={T}
           />
@@ -1326,9 +1544,11 @@ function MessageRow({
         {agentSpecial ? (
           <AgentMessageBody
             message={message}
+            toolRun={toolRun}
             T={T}
             agentActive={agentActive}
             toolResultFor={toolResultFor}
+            resolveUserName={resolveUserName}
             onDetailsToggled={onDetailsToggled}
           />
         ) : jumbo ? (
@@ -1337,6 +1557,13 @@ function MessageRow({
           <View style={pending ? styles.pendingBody : undefined}>
             <MarkdownRenderer content={message.content} />
           </View>
+        ) : null}
+        {isAgent && !agentSpecial && !streamingReply && message.content.length > 0 ? (
+          <ReplyFeedbackRow
+            T={T}
+            rating={message.feedbackRating}
+            onRate={(rating) => onRateReply(message, rating)}
+          />
         ) : null}
         {message.attachments.length > 0 ? (
           <MessageAttachments
@@ -1357,7 +1584,7 @@ function MessageRow({
         {message.replyCount > 0 ? (
           <TouchableOpacity
             style={[styles.threadChip, { backgroundColor: T.accentSoft }]}
-            onPress={onPressThread}
+            onPress={() => onPressThread(message)}
             activeOpacity={0.7}
           >
             <ChatText size={12} color={T.accent} weight="duotone" />
@@ -1378,7 +1605,7 @@ function MessageRow({
                     borderColor: r.currentUserReacted ? T.accent : T.border,
                   },
                 ]}
-                onPress={() => onToggleReaction(r.emoji)}
+                onPress={() => onToggleReaction(message, r.emoji)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.reactionEmoji}>{r.emoji}</Text>
@@ -1397,7 +1624,7 @@ function MessageRow({
       </View>
     </Pressable>
   );
-}
+});
 
 function MessageActionSheet({
   message,
@@ -1548,6 +1775,7 @@ const styles = StyleSheet.create({
   agentTagText: { fontSize: 9, fontFamily: FONT.bold, letterSpacing: 0.4 },
   msgTime: { fontSize: 11, fontFamily: FONT.regular },
   editedTag: { fontSize: 11, fontFamily: FONT.regular },
+  feedbackRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 6 },
   jumboEmoji: { fontSize: 40, lineHeight: 48, paddingVertical: 2 },
   pendingBody: { opacity: 0.55 },
   failedRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 },

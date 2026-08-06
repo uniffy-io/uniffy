@@ -3,21 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "rea
 import { CaretDown, CaretUp, CheckCircle } from "phosphor-react-native";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
-
-export type ThinkingBlockView = {
-  blockId: string;
-  content: string;
-  elapsedMs: number;
-  done: boolean;
-};
-
-export function formatThinkingDuration(elapsedMs: number): string {
-  const totalSeconds = Math.max(1, Math.round(elapsedMs / 1000));
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-}
+import { formatThinkingDuration, type ThinkingBlockView } from "@features/agents/thinkingBlocks";
 
 // Thinking renders as plain text; bold markers from provider summaries would
 // otherwise show as raw asterisks.

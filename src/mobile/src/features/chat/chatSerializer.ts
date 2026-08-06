@@ -13,6 +13,7 @@ import type {
   ReactionGroup as ProtoReactionGroup,
   ThreadInboxItem as ProtoThreadInboxItem,
   ChatChannelCategory as ProtoChatChannelCategory,
+  AgentChatFolder as ProtoAgentChatFolder,
   PendingAgentApproval as ProtoPendingAgentApproval,
   ChatDraft as ProtoChatDraft,
 } from "@uniffy/proto/chat/v1/chat_pb";
@@ -58,6 +59,8 @@ export interface SerializedChannel {
   customName: string | null;
   agentId: string | null;
   categoryId: string | null;
+  /** Per-user agent-chat folder holding this channel; null = unfiled. */
+  agentFolderId: string | null;
   messageCount: number;
   memberCount: number;
   lastMessageAtSeconds: number;
@@ -91,6 +94,8 @@ export interface SerializedMessage {
   reactions: SerializedReaction[];
   senderName: string;
   senderAvatarUrl: string | null;
+  /** The caller's own thumbs rating on an agent reply; history reads only. */
+  feedbackRating: "up" | "down" | "";
   /** Populated by a separate BatchListAttachments fetch, not the message proto. */
   attachments: SerializedAttachment[];
 }
@@ -210,6 +215,7 @@ export function channelToPlain(proto: ProtoChatChannel): SerializedChannel {
     customName,
     agentId: proto.agentId || null,
     categoryId: proto.categoryId || null,
+    agentFolderId: proto.agentFolderId || null,
     messageCount: proto.messageCount,
     memberCount: proto.memberCount,
     lastMessageAtSeconds: tsToSeconds(proto.lastMessageAt) || tsToSeconds(proto.lastRootMessageAt),
@@ -265,6 +271,8 @@ export function messageToPlain(proto: ProtoChatMessage): SerializedMessage {
     // name by senderId and this fallback only covers the pre-load gap.
     senderName: proto.senderName || (senderType === "AGENT" ? "Agent" : "Unknown"),
     senderAvatarUrl: proto.senderAvatarUrl || null,
+    feedbackRating:
+      proto.feedbackRating === "up" || proto.feedbackRating === "down" ? proto.feedbackRating : "",
     attachments: [],
   };
 }
@@ -293,6 +301,17 @@ export interface SerializedCategory {
 }
 
 export function categoryToPlain(proto: ProtoChatChannelCategory): SerializedCategory {
+  return { id: proto.id, name: proto.name, position: proto.position };
+}
+
+/** Per-user grouping for agent chats. Unlike categories these are not org-wide. */
+export interface SerializedAgentFolder {
+  id: string;
+  name: string;
+  position: number;
+}
+
+export function agentFolderToPlain(proto: ProtoAgentChatFolder): SerializedAgentFolder {
   return { id: proto.id, name: proto.name, position: proto.position };
 }
 

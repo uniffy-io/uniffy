@@ -24,6 +24,7 @@ import {
   CaretRight,
   ChatText,
   FolderPlus,
+  FolderSimple,
   X,
   Check,
   MagnifyingGlass,
@@ -45,6 +46,7 @@ import {
   useThreadsInbox,
   useBrowseChannels,
   useCategories,
+  useAgentFolders,
 } from "@features/chat/useChat";
 import {
   useJoinChannel,
@@ -52,8 +54,14 @@ import {
   useCreateDm,
   useUpdateCategory,
   useDeleteCategory,
+  useCreateAgentFolder,
+  useRenameAgentFolder,
+  useDeleteAgentFolder,
+  useSetAgentChatFolder,
 } from "@features/chat/useChatMutations";
 import { useChatStream } from "@features/chat/useChatStream";
+import { useAgents, useCreateAgentChat } from "@features/agents/useAgents";
+import type { SerializedAgent } from "@features/agents/agentSerializer";
 import { useActiveCall } from "@features/calls/useCallsState";
 import { useDirectory } from "@shared/permissions/usePermissions";
 import { usePresences } from "@shared/presence/usePresence";
@@ -64,6 +72,7 @@ import {
   type SerializedChannel,
   type SerializedThreadInboxItem,
   type SerializedCategory,
+  type SerializedAgentFolder,
 } from "@features/chat/chatSerializer";
 
 type Tab = "all" | "threads" | "unreads";
@@ -94,6 +103,7 @@ export function ChatListScreen() {
 
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [newDmOpen, setNewDmOpen] = useState(false);
+  const [newAgentChatOpen, setNewAgentChatOpen] = useState(false);
 
   useChatStream();
   const { channels, isLoading, isFetching, refetch } = useChannels();
@@ -104,10 +114,19 @@ export function ChatListScreen() {
   const joinChannel = useJoinChannel();
   const createCategory = useCreateCategory();
   const createDm = useCreateDm();
+  const createAgentChat = useCreateAgentChat();
+  const agentFolders = useAgentFolders();
+  const createAgentFolder = useCreateAgentFolder();
+  const renameAgentFolder = useRenameAgentFolder();
+  const deleteAgentFolder = useDeleteAgentFolder();
+  const setAgentChatFolder = useSetAgentChatFolder();
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
 
   const [renameCategoryTarget, setRenameCategoryTarget] = useState<SerializedCategory | null>(null);
+  const [newAgentFolderOpen, setNewAgentFolderOpen] = useState(false);
+  const [renameFolderTarget, setRenameFolderTarget] = useState<SerializedAgentFolder | null>(null);
+  const [moveChatTarget, setMoveChatTarget] = useState<SerializedChannel | null>(null);
 
   const promptCategoryActions = useCallback(
     (category: SerializedCategory) => {
@@ -141,6 +160,48 @@ export function ChatListScreen() {
     for (const c of agentChatList) if (!byId.has(c.id)) byId.set(c.id, c);
     return [...byId.values()].sort((a, b) => b.lastMessageAtSeconds - a.lastMessageAtSeconds);
   }, [channels, agentChatList]);
+
+  const folders = useMemo(() => agentFolders.data ?? [], [agentFolders.data]);
+  const agentChatsByFolder = useMemo(() => {
+    const byFolder = new Map<string, SerializedChannel[]>();
+    const unfiled: SerializedChannel[] = [];
+    const known = new Set(folders.map((f) => f.id));
+    for (const c of agentChats) {
+      // A folder deleted on another device leaves a dangling id behind; those
+      // chats belong at the root rather than in an invisible group.
+      if (c.agentFolderId && known.has(c.agentFolderId)) {
+        const list = byFolder.get(c.agentFolderId);
+        if (list) list.push(c);
+        else byFolder.set(c.agentFolderId, [c]);
+      } else {
+        unfiled.push(c);
+      }
+    }
+    return { byFolder, unfiled };
+  }, [agentChats, folders]);
+
+  const promptFolderActions = useCallback(
+    (folder: SerializedAgentFolder) => {
+      Alert.alert(folder.name, undefined, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Rename", onPress: () => setRenameFolderTarget(folder) },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert("Delete folder", "The chats inside move back to Agent Chats.", [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete",
+                style: "destructive",
+                onPress: () => deleteAgentFolder.mutate(folder.id),
+              },
+            ]),
+        },
+      ]);
+    },
+    [deleteAgentFolder],
+  );
 
   const { uncategorized, dms } = useMemo(() => {
     const reg: SerializedChannel[] = [];
@@ -415,10 +476,43 @@ export function ChatListScreen() {
             count={agentChats.length}
             collapsed={!!collapsed.agents}
             onToggle={() => toggle("agents")}
+            hasContent={agentChats.length > 0 || folders.length > 0}
             T={T}
+            onAddFolder={() => setNewAgentFolderOpen(true)}
+            onAdd={() => setNewAgentChatOpen(true)}
           >
-            {agentChats.map((c) => (
-              <ChannelRow key={c.id} channel={c} T={T} onPress={() => openChannel(c.id)} />
+            {folders.map((folder) => {
+              const folderChats = agentChatsByFolder.byFolder.get(folder.id) ?? [];
+              return (
+                <FolderGroup
+                  key={folder.id}
+                  T={T}
+                  folder={folder}
+                  count={folderChats.length}
+                  collapsed={!!collapsed[`folder-${folder.id}`]}
+                  onToggle={() => toggle(`folder-${folder.id}`)}
+                  onLongPress={() => promptFolderActions(folder)}
+                >
+                  {folderChats.map((c) => (
+                    <ChannelRow
+                      key={c.id}
+                      channel={c}
+                      T={T}
+                      onPress={() => openChannel(c.id)}
+                      onLongPress={() => setMoveChatTarget(c)}
+                    />
+                  ))}
+                </FolderGroup>
+              );
+            })}
+            {agentChatsByFolder.unfiled.map((c) => (
+              <ChannelRow
+                key={c.id}
+                channel={c}
+                T={T}
+                onPress={() => openChannel(c.id)}
+                onLongPress={() => setMoveChatTarget(c)}
+              />
             ))}
           </CategorySection>
 
@@ -474,6 +568,74 @@ export function ChatListScreen() {
         }}
       />
 
+      <CategoryNameModal
+        visible={newAgentFolderOpen}
+        T={T}
+        pending={createAgentFolder.isPending}
+        title="New agent folder"
+        cta="Create folder"
+        placeholder="Folder name"
+        onClose={() => setNewAgentFolderOpen(false)}
+        onSubmit={(name) =>
+          createAgentFolder.mutate(name, { onSuccess: () => setNewAgentFolderOpen(false) })
+        }
+      />
+
+      <CategoryNameModal
+        key={renameFolderTarget?.id ?? "rename-folder"}
+        visible={!!renameFolderTarget}
+        T={T}
+        pending={renameAgentFolder.isPending}
+        title="Rename folder"
+        cta="Rename"
+        placeholder="Folder name"
+        initialName={renameFolderTarget?.name}
+        onClose={() => setRenameFolderTarget(null)}
+        onSubmit={(name) => {
+          if (!renameFolderTarget) return;
+          renameAgentFolder.mutate(
+            { folderId: renameFolderTarget.id, name },
+            { onSuccess: () => setRenameFolderTarget(null) },
+          );
+        }}
+      />
+
+      <MoveAgentChatModal
+        key={moveChatTarget?.id ?? "move-chat"}
+        visible={!!moveChatTarget}
+        T={T}
+        folders={folders}
+        currentFolderId={moveChatTarget?.agentFolderId ?? null}
+        pending={setAgentChatFolder.isPending}
+        onClose={() => setMoveChatTarget(null)}
+        onPick={(folderId) => {
+          if (!moveChatTarget) return;
+          setAgentChatFolder.mutate(
+            { channelId: moveChatTarget.id, folderId },
+            { onSuccess: () => setMoveChatTarget(null) },
+          );
+        }}
+        onNewFolder={() => {
+          setMoveChatTarget(null);
+          setNewAgentFolderOpen(true);
+        }}
+      />
+
+      <NewAgentChatModal
+        visible={newAgentChatOpen}
+        T={T}
+        pendingId={createAgentChat.isPending ? (createAgentChat.variables ?? null) : null}
+        onClose={() => setNewAgentChatOpen(false)}
+        onPick={(agentId) =>
+          createAgentChat.mutate(agentId, {
+            onSuccess: (channelId) => {
+              setNewAgentChatOpen(false);
+              if (channelId) openChannel(channelId);
+            },
+          })
+        }
+      />
+
       <NewDmModal
         visible={newDmOpen}
         T={T}
@@ -499,6 +661,7 @@ function CategoryNameModal({
   title,
   cta,
   initialName,
+  placeholder = "Category name",
   onClose,
   onSubmit,
 }: {
@@ -508,6 +671,7 @@ function CategoryNameModal({
   title: string;
   cta: string;
   initialName?: string;
+  placeholder?: string;
   onClose: () => void;
   onSubmit: (name: string) => void;
 }) {
@@ -522,7 +686,7 @@ function CategoryNameModal({
       <TextInput
         value={name}
         onChangeText={setName}
-        placeholder="Category name"
+        placeholder={placeholder}
         placeholderTextColor={T.textDim}
         autoFocus
         style={[
@@ -543,6 +707,178 @@ function CategoryNameModal({
           {pending ? "Saving..." : cta}
         </Text>
       </TouchableOpacity>
+    </BottomSheet>
+  );
+}
+
+function MoveAgentChatModal({
+  visible,
+  T,
+  folders,
+  currentFolderId,
+  pending,
+  onClose,
+  onPick,
+  onNewFolder,
+}: {
+  visible: boolean;
+  T: ThemeColors;
+  folders: SerializedAgentFolder[];
+  currentFolderId: string | null;
+  pending: boolean;
+  onClose: () => void;
+  /** Omitted folder id moves the chat back to the unfiled root. */
+  onPick: (folderId?: string) => void;
+  onNewFolder: () => void;
+}) {
+  return (
+    <BottomSheet visible={visible} onClose={onClose} style={styles.sheet}>
+      <View style={styles.sheetHeader}>
+        <FolderSimple size={20} color={T.accent} weight="duotone" />
+        <Text style={[styles.sheetTitle, { color: T.textBright }]}>Move to folder</Text>
+      </View>
+      <ScrollView keyboardShouldPersistTaps="handled">
+        <FolderPickRow
+          T={T}
+          label="Agent Chats"
+          sublabel="No folder"
+          selected={!currentFolderId}
+          disabled={pending}
+          onPress={() => onPick(undefined)}
+        />
+        {folders.map((folder) => (
+          <FolderPickRow
+            key={folder.id}
+            T={T}
+            label={folder.name}
+            selected={currentFolderId === folder.id}
+            disabled={pending}
+            onPress={() => onPick(folder.id)}
+          />
+        ))}
+        <TouchableOpacity style={styles.newFolderRow} onPress={onNewFolder} activeOpacity={0.7}>
+          <FolderPlus size={17} color={T.accent} weight="duotone" />
+          <Text style={[styles.newFolderText, { color: T.accent }]}>New folder</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </BottomSheet>
+  );
+}
+
+function FolderPickRow({
+  T,
+  label,
+  sublabel,
+  selected,
+  disabled,
+  onPress,
+}: {
+  T: ThemeColors;
+  label: string;
+  sublabel?: string;
+  selected: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.folderRow, { borderTopColor: T.border }]}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.7}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.dmName, { color: T.textBright }]} numberOfLines={1}>
+          {label}
+        </Text>
+        {sublabel ? <Text style={[styles.dmEmail, { color: T.textDim }]}>{sublabel}</Text> : null}
+      </View>
+      {selected ? <Check size={16} color={T.accent} weight="bold" /> : null}
+    </TouchableOpacity>
+  );
+}
+
+/** Always starts a fresh chat; several chats with the same agent is supported. */
+function NewAgentChatModal({
+  visible,
+  T,
+  pendingId,
+  onClose,
+  onPick,
+}: {
+  visible: boolean;
+  T: ThemeColors;
+  pendingId: string | null;
+  onClose: () => void;
+  onPick: (agentId: string) => void;
+}) {
+  const agentsQuery = useAgents();
+  const [search, setSearch] = useState("");
+  const agents = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (agentsQuery.data ?? [])
+      .filter((a: SerializedAgent) => !q || a.name.toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [agentsQuery.data, search]);
+
+  return (
+    <BottomSheet visible={visible} onClose={onClose} style={[styles.sheet, styles.dmSheet]}>
+      <View style={styles.sheetHeader}>
+        <Text style={[styles.sheetTitle, { color: T.textBright }]}>New agent chat</Text>
+        <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <X size={18} color={T.textDim} weight="bold" />
+        </TouchableOpacity>
+      </View>
+      <View style={[styles.searchBox, { backgroundColor: T.bg, borderColor: T.border }]}>
+        <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search agents"
+          placeholderTextColor={T.textDim}
+          style={[styles.searchInput, { color: T.textBright }]}
+        />
+      </View>
+      <FlatList
+        data={agents}
+        keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        style={styles.dmList}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[styles.dmRow, { borderBottomColor: T.border }]}
+            onPress={() => onPick(item.id)}
+            disabled={pendingId !== null}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.agentIcon, { backgroundColor: T.accentSoft }]}>
+              {item.avatarEmoji ? (
+                <Text style={styles.agentEmoji}>{item.avatarEmoji}</Text>
+              ) : (
+                <Robot size={18} color={T.accent} weight="fill" />
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.dmName, { color: T.textBright }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {item.description ? (
+                <Text style={[styles.dmEmail, { color: T.textDim }]} numberOfLines={1}>
+                  {item.description}
+                </Text>
+              ) : null}
+            </View>
+            {pendingId === item.id ? <ActivityIndicator size="small" color={T.accent} /> : null}
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={
+          <View style={styles.sectionEmpty}>
+            <Text style={[styles.sectionEmptyText, { color: T.textDim }]}>
+              {agentsQuery.isLoading ? "Loading..." : "No agents available"}
+            </Text>
+          </View>
+        }
+      />
     </BottomSheet>
   );
 }
@@ -675,6 +1011,8 @@ function CategorySection({
   onToggle,
   onLongPress,
   onAdd,
+  onAddFolder,
+  hasContent,
   T,
   children,
 }: {
@@ -684,6 +1022,9 @@ function CategorySection({
   onToggle: () => void;
   onLongPress?: () => void;
   onAdd?: () => void;
+  onAddFolder?: () => void;
+  /** Overrides the count-based check when the body holds more than the counted rows. */
+  hasContent?: boolean;
   T: ThemeColors;
   children: React.ReactNode;
 }) {
@@ -702,21 +1043,79 @@ function CategorySection({
           ) : (
             <CaretDown size={13} color={T.textDim} weight="bold" />
           )}
-          <Text style={[styles.sectionLabel, { color: T.textDim }]}>{label}</Text>
+          <Text style={[styles.sectionLabel, { color: T.textDim }]} numberOfLines={1}>
+            {label}
+          </Text>
           <Text style={[styles.sectionCount, { color: T.textDim }]}>{count}</Text>
         </TouchableOpacity>
-        {onAdd ? (
-          <TouchableOpacity onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Plus size={15} color={T.textDim} weight="bold" />
-          </TouchableOpacity>
-        ) : null}
+        <View style={styles.sectionActions}>
+          {onAddFolder ? (
+            <TouchableOpacity
+              onPress={onAddFolder}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="New folder"
+            >
+              <FolderPlus size={16} color={T.textDim} weight="bold" />
+            </TouchableOpacity>
+          ) : null}
+          {onAdd ? (
+            <TouchableOpacity onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Plus size={15} color={T.textDim} weight="bold" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
       {!collapsed ? (
-        count === 0 ? (
-          <Text style={[styles.sectionEmptyInline, { color: T.textDim }]}>Nothing here yet</Text>
-        ) : (
+        (hasContent ?? count > 0) ? (
           children
+        ) : (
+          <Text style={[styles.sectionEmptyInline, { color: T.textDim }]}>Nothing here yet</Text>
         )
+      ) : null}
+    </View>
+  );
+}
+
+/** A folder nests inside its section, so it indents rather than reading as a peer. */
+function FolderGroup({
+  T,
+  folder,
+  count,
+  collapsed,
+  onToggle,
+  onLongPress,
+  children,
+}: {
+  T: ThemeColors;
+  folder: SerializedAgentFolder;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  onLongPress: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <View>
+      <TouchableOpacity
+        style={styles.folderHeader}
+        onPress={onToggle}
+        onLongPress={onLongPress}
+        delayLongPress={300}
+        activeOpacity={0.6}
+      >
+        {collapsed ? (
+          <CaretRight size={12} color={T.textDim} weight="bold" />
+        ) : (
+          <CaretDown size={12} color={T.textDim} weight="bold" />
+        )}
+        <FolderSimple size={15} color={T.accent} weight="duotone" />
+        <Text style={[styles.folderLabel, { color: T.text }]} numberOfLines={1}>
+          {folder.name}
+        </Text>
+        <Text style={[styles.sectionCount, { color: T.textDim }]}>{count}</Text>
+      </TouchableOpacity>
+      {!collapsed && count > 0 ? (
+        <View style={[styles.folderChildren, { borderLeftColor: T.border }]}>{children}</View>
       ) : null}
     </View>
   );
@@ -798,12 +1197,14 @@ function ChannelRow({
   channel,
   T,
   onPress,
+  onLongPress,
   presence,
   peer,
 }: {
   channel: SerializedChannel;
   T: ThemeColors;
   onPress: () => void;
+  onLongPress?: () => void;
   presence?: string | null;
   peer?: { name: string; avatarUrl?: string } | null;
 }) {
@@ -813,6 +1214,8 @@ function ChannelRow({
     <TouchableOpacity
       style={[styles.row, { borderBottomColor: T.border }]}
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={300}
       activeOpacity={0.7}
     >
       <View style={[styles.rowIcon, { backgroundColor: peer ? "transparent" : T.accentSoft }]}>
@@ -975,6 +1378,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1 },
+  sectionActions: { flexDirection: "row", alignItems: "center", gap: 14 },
+  folderHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingLeft: 24,
+    paddingRight: 16,
+    paddingVertical: 9,
+  },
+  folderLabel: { fontSize: 13, fontFamily: FONT.semibold, flex: 1 },
+  folderChildren: { marginLeft: 30, borderLeftWidth: StyleSheet.hairlineWidth },
   sectionLabel: {
     fontSize: 12,
     fontFamily: FONT.bold,
@@ -1090,6 +1504,23 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  agentIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  agentEmoji: { fontSize: 18 },
+  folderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  newFolderRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14 },
+  newFolderText: { fontSize: 14, fontFamily: FONT.medium },
   dmName: { fontSize: 15, fontFamily: FONT.medium },
   dmEmail: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
   dmCheckbox: {

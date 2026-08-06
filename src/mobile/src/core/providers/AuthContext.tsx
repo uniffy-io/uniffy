@@ -32,6 +32,7 @@ type AuthTokens = {
   refreshToken: string;
   organizationId?: string;
   organizationRole?: string;
+  domainAdminDomains?: readonly number[];
   assetCookie?: string;
 };
 
@@ -39,6 +40,8 @@ interface AuthState {
   user: CurrentUser | null;
   organizationId: string | null;
   organizationRole: string | null;
+  /** `common.v1.DomainType` values the user is a domain admin for. */
+  domainAdminDomains: number[];
   isAuthenticated: boolean;
   isRehydrating: boolean;
 }
@@ -49,8 +52,14 @@ type AuthAction =
       user: CurrentUser;
       organizationId: string | null;
       organizationRole: string | null;
+      domainAdminDomains: number[];
     }
-  | { type: "SET_ORGANIZATION"; organizationId: string; organizationRole: string | null }
+  | {
+      type: "SET_ORGANIZATION";
+      organizationId: string;
+      organizationRole: string | null;
+      domainAdminDomains: number[];
+    }
   | { type: "SET_REHYDRATING"; value: boolean }
   | { type: "LOGOUT" };
 
@@ -62,6 +71,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         user: action.user,
         organizationId: action.organizationId,
         organizationRole: action.organizationRole,
+        domainAdminDomains: action.domainAdminDomains,
         isAuthenticated: true,
         isRehydrating: false,
       };
@@ -70,6 +80,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         ...state,
         organizationId: action.organizationId,
         organizationRole: action.organizationRole,
+        domainAdminDomains: action.domainAdminDomains,
       };
     case "SET_REHYDRATING":
       return { ...state, isRehydrating: action.value };
@@ -78,6 +89,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         user: null,
         organizationId: null,
         organizationRole: null,
+        domainAdminDomains: [],
         isAuthenticated: false,
         isRehydrating: false,
       };
@@ -158,6 +170,7 @@ async function handleAuthResponse(
     user: toCurrentUser(user),
     organizationId: response.organizationId ?? null,
     organizationRole: response.organizationRole ?? null,
+    domainAdminDomains: [...(response.domainAdminDomains ?? [])],
   });
 }
 
@@ -168,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: null,
     organizationId: null,
     organizationRole: null,
+    domainAdminDomains: [],
     isAuthenticated: false,
     isRehydrating: true,
   });
@@ -214,6 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             user: toCurrentUser(user),
             organizationId: orgId,
             organizationRole: response.organizationRole ?? null,
+            domainAdminDomains: [...response.domainAdminDomains],
           });
           return;
         } catch (err) {
@@ -349,6 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       type: "SET_ORGANIZATION",
       organizationId: orgId,
       organizationRole: result.organizationRole ?? null,
+      domainAdminDomains: [...result.domainAdminDomains],
     });
   }, []);
 

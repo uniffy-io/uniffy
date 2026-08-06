@@ -5,13 +5,14 @@ import { useAuth } from "@core/providers/AuthContext";
 import { chatApi } from "@features/chat/chatApi";
 import { filesApi } from "@features/files/filesApi";
 import { STREAM_HEALTH_KEY } from "@features/chat/useChatStream";
-import { draftsKey } from "@features/chat/useChatMutations";
+import { draftsKey, agentFoldersKey } from "@features/chat/useChatMutations";
 import {
   channelToPlain,
   messageToPlain,
   memberToPlain,
   threadInboxItemToPlain,
   categoryToPlain,
+  agentFolderToPlain,
   approvalToPlain,
   draftToPlain,
   draftKey,
@@ -20,6 +21,7 @@ import {
   type SerializedMember,
   type SerializedThreadInboxItem,
   type SerializedCategory,
+  type SerializedAgentFolder,
   type SerializedPendingApproval,
   type SerializedDraft,
 } from "@features/chat/chatSerializer";
@@ -187,6 +189,20 @@ export function useCategories() {
       const res = await chatApi.listCategories({ organizationId: organizationId! });
       const categories: SerializedCategory[] = res.categories.map(categoryToPlain);
       return categories.sort((a, b) => a.position - b.position);
+    },
+  });
+}
+
+/** Per-user folders grouping agent chats. Private to the caller, unlike categories. */
+export function useAgentFolders() {
+  const { organizationId } = useAuth();
+  return useQuery({
+    queryKey: agentFoldersKey(organizationId),
+    enabled: !!organizationId,
+    queryFn: async () => {
+      const res = await chatApi.listAgentFolders({ organizationId: organizationId! });
+      const folders: SerializedAgentFolder[] = res.folders.map(agentFolderToPlain);
+      return folders.sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
     },
   });
 }

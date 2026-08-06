@@ -20,6 +20,7 @@ import Animated, {
   Extrapolation,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import { useTheme } from "@shared/hooks/useTheme";
 
 type BottomSheetProps = {
@@ -52,6 +53,7 @@ export function BottomSheet({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
+  const { height: keyboardOffset } = useReanimatedKeyboardAnimation();
 
   // Kept mounted across the exit so the sheet can animate out; Modal would
   // otherwise tear it down the moment `visible` flips.
@@ -102,7 +104,15 @@ export function BottomSheet({
       }
     });
 
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
+  // A sheet lives in its own modal window, which the global KeyboardSpacer
+  // never reaches, and KeyboardProvider turns off Android's native resize - so
+  // without this a focused input sits behind the keyboard. The sheet is
+  // bottom-anchored, so bottom padding grows it upward and carries the content
+  // clear instead of sliding the whole surface off the top.
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    paddingBottom: (padBottom ? insets.bottom + 8 : 0) + Math.max(0, -keyboardOffset.value),
+  }));
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateY.value, [0, sheetHeight], [1, 0], Extrapolation.CLAMP),
   }));
@@ -119,13 +129,7 @@ export function BottomSheet({
         </Animated.View>
 
         <Animated.View
-          style={[
-            styles.sheet,
-            { backgroundColor: T.surface },
-            padBottom && { paddingBottom: insets.bottom + 8 },
-            style,
-            sheetStyle,
-          ]}
+          style={[styles.sheet, { backgroundColor: T.surface }, style, sheetStyle]}
           onLayout={(e) => onSheetLayout(e.nativeEvent.layout.height)}
         >
           <GestureDetector gesture={pan}>
