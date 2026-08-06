@@ -129,7 +129,9 @@ const PRIORITY_FIELD_ID = "field_priority";
  * task gets; `status_in_progress` is where a parent lands when a subtask is
  * reopened. Renaming and recolouring them is safe, deleting them is not.
  */
-export const PROTECTED_STATUS_IDS = ["status_todo", "status_in_progress", "status_done"];
+export const DONE_STATUS_ID = "status_done";
+
+export const PROTECTED_STATUS_IDS = ["status_todo", "status_in_progress", DONE_STATUS_ID];
 
 const DEFAULT_STATUS_OPTIONS: PlainSelectOption[] = [
   { id: "status_todo", label: "To Do", color: "#6b7280", sortOrder: 0 },

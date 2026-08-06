@@ -7,8 +7,6 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
 } from "react-native";
 import {
@@ -19,6 +17,8 @@ import {
   ArrowBendUpLeft,
   Smiley,
 } from "phosphor-react-native";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@shared/components/Avatar";
 import { BottomSheet } from "@shared/components/BottomSheet";
@@ -89,6 +89,13 @@ function CommentsSheet({
 }) {
   const T = useTheme();
   const insets = useSafeAreaInsets();
+  // The sheet already clears the keyboard; the composer's own safe-area padding
+  // would then sit between the input and the keyboard as a gap, so it drops
+  // while the keyboard is up.
+  const keyboard = useReanimatedKeyboardAnimation();
+  const composerPad = useAnimatedStyle(() => ({
+    paddingBottom: -keyboard.height.value > 0 ? 8 : 8 + (insets.bottom || 4),
+  }));
   const { user } = useAuth();
   const thread = useComments(contentType, contentId);
   const { create, update, remove, setResolved, toggleReaction } = useCommentMutations(
@@ -162,13 +169,7 @@ function CommentsSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose} style={styles.sheet} padBottom={false}>
-      {/* The composer has to clear the keyboard, and a sheet is one of the
-          few places a KeyboardAvoidingView is still the right tool - the global
-          KeyboardSpacer only reaches the shell, not a separate modal window. */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.fill}
-      >
+      <View style={styles.fill}>
         <View style={[styles.sheetHeader, { borderBottomColor: T.border }]}>
           <View style={styles.sheetHeaderRow}>
             <Text style={[styles.sheetTitle, { color: T.textBright }]}>
@@ -222,14 +223,11 @@ function CommentsSheet({
           </View>
         )}
 
-        <View
+        <Animated.View
           style={[
             styles.composer,
-            {
-              backgroundColor: T.surface,
-              borderTopColor: T.border,
-              paddingBottom: 8 + (insets.bottom || 4),
-            },
+            { backgroundColor: T.surface, borderTopColor: T.border },
+            composerPad,
           ]}
         >
           <TextInput
@@ -251,8 +249,8 @@ function CommentsSheet({
           >
             <PaperPlaneRight size={18} color={draft.trim() ? "#fff" : T.textDim} weight="fill" />
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+        </Animated.View>
+      </View>
     </BottomSheet>
   );
 }

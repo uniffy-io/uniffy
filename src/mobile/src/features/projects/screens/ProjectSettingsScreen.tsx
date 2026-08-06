@@ -38,6 +38,7 @@ import {
   buildFieldConfigJson,
   STATUS_FIELD_ID,
   PROTECTED_STATUS_IDS,
+  DONE_STATUS_ID,
 } from "@features/projects/projectsSerializer";
 import { StatusEditorSheet, STATUS_COLORS } from "@features/projects/components/StatusEditorSheet";
 import { OptionPickerSheet } from "@features/projects/components/OptionPickerSheet";
@@ -75,7 +76,7 @@ export function ProjectSettingsScreen() {
     () => [...(statusField?.options ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     [statusField],
   );
-  const missingDoneStatus = statuses.length > 0 && !statuses.some((s) => s.id === "status_done");
+  const missingDoneStatus = statuses.length > 0 && !statuses.some((s) => s.id === DONE_STATUS_ID);
   const canManage = project ? roleCanManage(project.userRole) : false;
 
   const bottomPad =
