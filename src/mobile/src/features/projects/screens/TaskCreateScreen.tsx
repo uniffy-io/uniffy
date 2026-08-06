@@ -191,11 +191,9 @@ export function CreateTaskScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {isSaving ? (
-              <ActivityIndicator size="small" color={projectColor} />
+              <ActivityIndicator size="small" color={T.accent} />
             ) : (
-              <Text style={[styles.saveBtn, { color: canSave ? projectColor : T.textDim }]}>
-                Save
-              </Text>
+              <Text style={[styles.saveBtn, { color: canSave ? T.accent : T.textDim }]}>Save</Text>
             )}
           </TouchableOpacity>
         }
@@ -431,7 +429,7 @@ export function CreateTaskScreen() {
               value={startDate}
               onChange={setStartDate}
               placeholder="No start date"
-              accentColor={projectColor}
+              accentColor={T.accent}
             />
           </View>
           <View style={{ flex: 1, gap: 6 }}>
@@ -440,7 +438,7 @@ export function CreateTaskScreen() {
               value={dueDate}
               onChange={setDueDate}
               placeholder="No due date"
-              accentColor={projectColor}
+              accentColor={T.accent}
             />
           </View>
         </View>
@@ -451,7 +449,7 @@ export function CreateTaskScreen() {
         onClose={() => setAssigneesOpen(false)}
         title="Assignees"
         selectedIds={assigneeIds}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onToggle={(userId) =>
           setAssigneeIds((prev) =>
             prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
@@ -463,7 +461,7 @@ export function CreateTaskScreen() {
         visible={sheet === "type"}
         onClose={() => setSheet(null)}
         selectedType={taskType}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSelect={setTaskType}
       />
 
@@ -472,7 +470,7 @@ export function CreateTaskScreen() {
         onClose={() => setSheet(null)}
         sprints={sprints}
         selectedId={sprintId ?? undefined}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSelect={setSprintId}
       />
 
@@ -481,7 +479,7 @@ export function CreateTaskScreen() {
         onClose={() => setSheet(null)}
         title="Estimated time"
         minutes={estimatedMinutes ?? undefined}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSave={setEstimatedMinutes}
       />
 

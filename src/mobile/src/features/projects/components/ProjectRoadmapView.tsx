@@ -88,27 +88,23 @@ export function ProjectRoadmapView({
   return (
     <View style={styles.fill}>
       <View style={[styles.zoomRow, { borderBottomColor: T.border }]}>
-        {(["week", "month"] as ZoomLevel[]).map((level) => {
-          const active = zoom === level;
-          return (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.zoomBtn,
-                {
-                  backgroundColor: active ? accentColor + "18" : T.pageBg,
-                  borderColor: active ? accentColor : T.border,
-                },
-              ]}
-              onPress={() => setZoom(level)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.zoomText, { color: active ? accentColor : T.textDim }]}>
-                {level === "week" ? "Week" : "Month"}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        <View style={[styles.zoomToggle, { backgroundColor: T.pageBg, borderColor: T.border }]}>
+          {(["week", "month"] as ZoomLevel[]).map((level) => {
+            const active = zoom === level;
+            return (
+              <TouchableOpacity
+                key={level}
+                style={[styles.zoomBtn, active && { backgroundColor: accentColor }]}
+                onPress={() => setZoom(level)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.zoomText, { color: active ? "#fff" : T.textDim }]}>
+                  {level === "week" ? "Week" : "Month"}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       <ScrollView
@@ -235,13 +231,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  zoomBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  zoomToggle: {
+    flexDirection: "row",
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
-  zoomText: { fontSize: 12, fontFamily: FONT.medium },
+  zoomBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  zoomText: { fontSize: 13, fontFamily: FONT.medium },
   gantt: { flexDirection: "row" },
   labelsColumn: { width: LABEL_WIDTH, borderRightWidth: StyleSheet.hairlineWidth },
   labelHeaderCell: {

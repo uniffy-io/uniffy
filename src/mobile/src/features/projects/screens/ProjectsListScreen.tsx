@@ -282,15 +282,18 @@ export function ProjectsListScreen() {
               key={option.key}
               style={[
                 styles.scopeChip,
-                {
-                  backgroundColor: isActive ? T.accentSoft : "transparent",
-                  borderColor: isActive ? T.accent : T.border,
-                },
+                isActive
+                  ? { backgroundColor: T.accent }
+                  : {
+                      backgroundColor: T.surface,
+                      borderColor: T.border,
+                      borderWidth: StyleSheet.hairlineWidth,
+                    },
               ]}
               onPress={() => setScope(option.key)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.scopeText, { color: isActive ? T.accent : T.textDim }]}>
+              <Text style={[styles.scopeText, { color: isActive ? "#fff" : T.textDim }]}>
                 {option.label}
               </Text>
             </TouchableOpacity>
@@ -432,10 +435,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   scopeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
   scopeText: { fontSize: 13, fontFamily: FONT.medium },
   projectCard: {

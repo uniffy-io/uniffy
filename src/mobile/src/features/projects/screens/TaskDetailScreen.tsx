@@ -221,18 +221,14 @@ export function TaskDetailScreen() {
         icon="projects"
         rightActions={
           <>
-            <CommentButton
-              contentType={ContentType.TASK}
-              contentId={task.id}
-              color={projectColor}
-            />
-            <ShareButton contentType={ContentType.TASK} contentId={task.id} color={projectColor} />
+            <CommentButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
+            <ShareButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
             <TouchableOpacity
               onPress={() => toggleWatcher.mutate(task.id)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               {isWatching ? (
-                <Eye size={20} color={projectColor} weight="fill" />
+                <Eye size={20} color={T.accent} weight="fill" />
               ) : (
                 <EyeSlash size={20} color={T.text} weight="regular" />
               )}
@@ -456,7 +452,7 @@ export function TaskDetailScreen() {
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionLabel, { color: T.textDim }]}>TAGS</Text>
             <TouchableOpacity onPress={() => setSheet("tags")} activeOpacity={0.7}>
-              <Text style={[styles.sectionAction, { color: projectColor }]}>Edit</Text>
+              <Text style={[styles.sectionAction, { color: T.accent }]}>Edit</Text>
             </TouchableOpacity>
           </View>
           {task.tags.length > 0 ? (
@@ -483,7 +479,7 @@ export function TaskDetailScreen() {
                   updateTask.mutate({ taskId: task.id, projectId: task.projectId, startDate: date })
                 }
                 placeholder="No start date"
-                accentColor={projectColor}
+                accentColor={T.accent}
               />
             </View>
             <View style={{ flex: 1, gap: 4 }}>
@@ -494,7 +490,7 @@ export function TaskDetailScreen() {
                   updateTask.mutate({ taskId: task.id, projectId: task.projectId, dueDate: date })
                 }
                 placeholder="No due date"
-                accentColor={projectColor}
+                accentColor={T.accent}
               />
             </View>
           </View>
@@ -513,7 +509,7 @@ export function TaskDetailScreen() {
               BLOCKED BY{blockers.length > 0 ? ` - ${blockers.length}` : ""}
             </Text>
             <TouchableOpacity onPress={() => setSheet("blockers")} activeOpacity={0.7}>
-              <Text style={[styles.sectionAction, { color: projectColor }]}>Edit</Text>
+              <Text style={[styles.sectionAction, { color: T.accent }]}>Edit</Text>
             </TouchableOpacity>
           </View>
           {blockers.length === 0 ? (
@@ -676,7 +672,7 @@ export function TaskDetailScreen() {
         options={editing === "priority" ? priorityOptions : statusOptions}
         selectedId={editing === "priority" ? task.priority : task.status}
         allowNone={editing === "priority"}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSelect={(optionId) =>
           updateTask.mutate({
             taskId: task.id,
@@ -692,7 +688,7 @@ export function TaskDetailScreen() {
         title="Assignees"
         selectedIds={task.assigneeIds}
         onToggle={toggleAssignee}
-        accentColor={projectColor}
+        accentColor={T.accent}
         busy={updateTask.isPending}
       />
 
@@ -700,7 +696,7 @@ export function TaskDetailScreen() {
         visible={sheet === "type"}
         onClose={() => setSheet(null)}
         selectedType={task.taskType}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSelect={(taskType) => patch({ taskType })}
       />
 
@@ -708,7 +704,7 @@ export function TaskDetailScreen() {
         visible={sheet === "repeat"}
         onClose={() => setSheet(null)}
         rule={task.recurrenceRule}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSave={(recurrenceRule) => patch({ recurrenceRule })}
       />
 
@@ -717,7 +713,7 @@ export function TaskDetailScreen() {
         onClose={() => setSheet(null)}
         sprints={sprints}
         selectedId={task.sprintId}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSelect={(sprintId) => patch({ sprintId })}
       />
 
@@ -729,7 +725,7 @@ export function TaskDetailScreen() {
         excludeIds={descendantIds}
         selectedIds={task.parentId ? [task.parentId] : []}
         allowNone
-        accentColor={projectColor}
+        accentColor={T.accent}
         onToggle={(parentId) => patch({ parentId })}
       />
 
@@ -741,7 +737,7 @@ export function TaskDetailScreen() {
         excludeIds={[task.id]}
         selectedIds={task.blockedByTaskIds}
         multi
-        accentColor={projectColor}
+        accentColor={T.accent}
         onToggle={toggleBlocker}
       />
 
@@ -750,7 +746,7 @@ export function TaskDetailScreen() {
         onClose={() => setSheet(null)}
         title="Estimated time"
         minutes={task.estimatedMinutes}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSave={(estimatedMinutes) => patch({ estimatedMinutes })}
       />
 
@@ -759,7 +755,7 @@ export function TaskDetailScreen() {
         onClose={() => setSheet(null)}
         title="Time spent"
         minutes={task.timeSpentMinutes}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSave={(timeSpentMinutes) => patch({ timeSpentMinutes })}
       />
 

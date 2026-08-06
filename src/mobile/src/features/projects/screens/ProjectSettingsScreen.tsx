@@ -168,7 +168,7 @@ export function ProjectSettingsScreen() {
         subtitle={project.name}
         color={projectColor}
         icon="projects"
-        rightActions={busy ? <ActivityIndicator size="small" color={projectColor} /> : undefined}
+        rightActions={busy ? <ActivityIndicator size="small" color={T.accent} /> : undefined}
       />
 
       <ScrollView
@@ -376,7 +376,7 @@ export function ProjectSettingsScreen() {
         options={statuses.filter((s) => s.id !== migrateFrom?.id)}
         selectedId={undefined}
         onSelect={migrateAndDelete}
-        accentColor={projectColor}
+        accentColor={T.accent}
       />
 
       <ShareSheet
@@ -384,7 +384,7 @@ export function ProjectSettingsScreen() {
         onClose={() => setShareOpen(false)}
         contentType={ContentType.PROJECT}
         contentId={project.id}
-        color={projectColor}
+        color={T.accent}
       />
     </View>
   );

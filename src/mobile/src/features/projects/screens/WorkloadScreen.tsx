@@ -91,7 +91,7 @@ export function WorkloadScreen() {
 
       {tasksQuery.isLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={projectColor} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : (
         <ScrollView

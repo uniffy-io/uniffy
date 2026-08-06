@@ -273,13 +273,16 @@ export function ProjectBoardScreen() {
 
   if (!project) return null;
 
+  // The project's own color identifies the project - the header tile, the icon
+  // on its card - while every interactive surface stays on the app accent, the
+  // way the other domains do it.
   const projectColor = project.color || T.accent;
 
   const dragOverlay = draggedTask ? (
     <TaskDragPreview
       task={draggedTask}
       priorityOptions={priorityOptions}
-      accentColor={projectColor}
+      accentColor={T.accent}
       style={drag.previewStyle}
     />
   ) : null;
@@ -296,12 +299,12 @@ export function ProjectBoardScreen() {
             <CommentButton
               contentType={ContentType.PROJECT}
               contentId={project.id}
-              color={projectColor}
+              color={T.accent}
             />
             <ShareButton
               contentType={ContentType.PROJECT}
               contentId={project.id}
-              color={projectColor}
+              color={T.accent}
             />
             <TouchableOpacity
               onPress={() => setSheetOpen(true)}
@@ -327,11 +330,18 @@ export function ProjectBoardScreen() {
                 key={view}
                 style={[
                   styles.viewTab,
-                  isActive && { borderBottomColor: projectColor, borderBottomWidth: 2 },
+                  isActive
+                    ? { backgroundColor: T.accent }
+                    : {
+                        backgroundColor: T.surface,
+                        borderColor: T.border,
+                        borderWidth: StyleSheet.hairlineWidth,
+                      },
                 ]}
                 onPress={() => setActiveView(view)}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.viewTabText, { color: isActive ? projectColor : T.textDim }]}>
+                <Text style={[styles.viewTabText, { color: isActive ? "#fff" : T.textDim }]}>
                   {view}
                 </Text>
               </TouchableOpacity>
@@ -366,8 +376,8 @@ export function ProjectBoardScreen() {
           style={[
             styles.filterBtn,
             {
-              backgroundColor: filterCount > 0 ? projectColor + "18" : T.pageBg,
-              borderColor: filterCount > 0 ? projectColor : T.border,
+              backgroundColor: filterCount > 0 ? T.accent + "18" : T.pageBg,
+              borderColor: filterCount > 0 ? T.accent : T.border,
             },
           ]}
           onPress={() => setFilterOpen(true)}
@@ -375,11 +385,11 @@ export function ProjectBoardScreen() {
         >
           <Funnel
             size={16}
-            color={filterCount > 0 ? projectColor : T.textDim}
+            color={filterCount > 0 ? T.accent : T.textDim}
             weight={filterCount > 0 ? "fill" : "duotone"}
           />
           {filterCount > 0 && (
-            <Text style={[styles.filterCount, { color: projectColor }]}>{filterCount}</Text>
+            <Text style={[styles.filterCount, { color: T.accent }]}>{filterCount}</Text>
           )}
         </TouchableOpacity>
         {canEdit && inColumnView && (
@@ -387,8 +397,8 @@ export function ProjectBoardScreen() {
             style={[
               styles.filterBtn,
               {
-                backgroundColor: selecting ? projectColor + "18" : T.pageBg,
-                borderColor: selecting ? projectColor : T.border,
+                backgroundColor: selecting ? T.accent + "18" : T.pageBg,
+                borderColor: selecting ? T.accent : T.border,
               },
             ]}
             onPress={() => (selecting ? clearSelection() : setSelectionMode(true))}
@@ -396,7 +406,7 @@ export function ProjectBoardScreen() {
           >
             <CheckCircle
               size={16}
-              color={selecting ? projectColor : T.textDim}
+              color={selecting ? T.accent : T.textDim}
               weight={selecting ? "fill" : "duotone"}
             />
           </TouchableOpacity>
@@ -415,7 +425,7 @@ export function ProjectBoardScreen() {
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={[styles.narrowedReset, { color: projectColor }]}>Reset</Text>
+            <Text style={[styles.narrowedReset, { color: T.accent }]}>Reset</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -425,7 +435,7 @@ export function ProjectBoardScreen() {
           columns={columns}
           tasksFor={tasksFor}
           priorityOptions={priorityOptions}
-          accentColor={projectColor}
+          accentColor={T.accent}
           bottomPad={bottomPad}
           narrowed={narrowed}
           noMatches={narrowed && visibleTasks.length === 0}
@@ -448,7 +458,7 @@ export function ProjectBoardScreen() {
           allTasks={tasks}
           tasksFor={tasksFor}
           priorityOptions={priorityOptions}
-          accentColor={projectColor}
+          accentColor={T.accent}
           bottomPad={bottomPad}
           selecting={selecting}
           selectedIds={selectedIds}
@@ -468,7 +478,7 @@ export function ProjectBoardScreen() {
         <ProjectRoadmapView
           tasks={visibleTasks}
           statusOptions={statusOptions}
-          accentColor={projectColor}
+          accentColor={T.accent}
           bottomPad={bottomPad}
           onOpenTask={openTask}
         />
@@ -478,7 +488,7 @@ export function ProjectBoardScreen() {
           tasks={visibleTasks}
           statusOptions={statusOptions}
           priorityOptions={priorityOptions}
-          accentColor={projectColor}
+          accentColor={T.accent}
           bottomPad={bottomPad}
           canEdit={canEdit}
           onOpenTask={openTask}
@@ -489,7 +499,7 @@ export function ProjectBoardScreen() {
           tasks={visibleTasks}
           statusOptions={statusOptions}
           priorityOptions={priorityOptions}
-          accentColor={projectColor}
+          accentColor={T.accent}
           navInset={navSpace}
           onOpenTask={openTask}
         />
@@ -513,7 +523,7 @@ export function ProjectBoardScreen() {
               onPress={clearSelection}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={[styles.bulkCancel, { color: projectColor }]}>Done</Text>
+              <Text style={[styles.bulkCancel, { color: T.accent }]}>Done</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.bulkActions}>
@@ -573,7 +583,7 @@ export function ProjectBoardScreen() {
         title={`Set status for ${selectedIds.length}`}
         options={statusOptions}
         selectedId={undefined}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSelect={(status) => runBulk({ status })}
       />
 
@@ -583,7 +593,7 @@ export function ProjectBoardScreen() {
         title={`Set priority for ${selectedIds.length}`}
         options={priorityOptions}
         selectedId={undefined}
-        accentColor={projectColor}
+        accentColor={T.accent}
         onSelect={(priority) => runBulk({ priority })}
       />
 
@@ -592,7 +602,7 @@ export function ProjectBoardScreen() {
         onClose={() => setBulkSheet(null)}
         title={`Assign ${selectedIds.length} task${selectedIds.length === 1 ? "" : "s"}`}
         selectedIds={[]}
-        accentColor={projectColor}
+        accentColor={T.accent}
         busy={bulkUpdateTasks.isPending}
         onToggle={(subjectId) => {
           runBulk({ assigneeIds: [subjectId] });
@@ -608,7 +618,7 @@ export function ProjectBoardScreen() {
         tasks={tasks}
         statusOptions={statusOptions}
         priorityOptions={priorityOptions}
-        accentColor={projectColor}
+        accentColor={T.accent}
       />
 
       <ActionSheet
@@ -668,13 +678,15 @@ const styles = StyleSheet.create({
   viewTabs: { borderBottomWidth: StyleSheet.hairlineWidth },
   // Without flexGrow: 0 the row claims the rest of the column, not just its own height.
   viewTabsScroll: { flexGrow: 0 },
-  viewTabsContent: { flexDirection: "row", paddingHorizontal: 16 },
+  viewTabsContent: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   viewTab: {
-    paddingVertical: 10,
-    paddingHorizontal: 7,
-    marginBottom: -1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  viewTabText: { fontSize: 14, fontFamily: FONT.medium },
+  viewTabText: { fontSize: 13, fontFamily: FONT.medium },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
