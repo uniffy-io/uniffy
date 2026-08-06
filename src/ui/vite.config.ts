@@ -106,6 +106,18 @@ export default defineConfig(({ command, mode }) => {
     },
   },
   optimizeDeps: {
+    // Vite's initial scan only crawls the eager module graph, so deps reachable
+    // solely through a lazy route or a web worker get discovered mid-session.
+    // Re-optimizing rewrites the chunk hashes under node_modules/.vite/deps,
+    // which strands any lazy import already in flight ("Failed to fetch
+    // dynamically imported module"). Pre-bundle the late-discovered ones.
+    include: [
+      // Only pulled in by the notes editor route.
+      '@milkdown/kit/prose/model',
+      '@milkdown/kit/prose/view',
+      // Imported from FileWorker.worker.ts; worker graphs are never scanned.
+      'jszip',
+    ],
     esbuildOptions: {
       resolveExtensions: ['.ts', '.tsx', '.js', '.jsx'],
     },
