@@ -115,6 +115,7 @@ export default defineConfig(({ command, mode }) => {
       // Only pulled in by the notes editor route.
       '@milkdown/kit/prose/model',
       '@milkdown/kit/prose/view',
+      '@milkdown/kit/prose/inputrules',
       // Imported from FileWorker.worker.ts; worker graphs are never scanned.
       'jszip',
     ],

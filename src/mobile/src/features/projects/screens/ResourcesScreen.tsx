@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { Avatar } from "@shared/components/Avatar";
-import { useDirectory } from "@shared/permissions/usePermissions";
+import { useDirectory } from "@shared/directory/useDirectory";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
@@ -62,7 +62,7 @@ function buildBuckets(tasks: SerializedTask[]): Bucket[] {
   });
 }
 
-export function WorkloadScreen() {
+export function ResourcesScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const T = useTheme();
   const insets = useSafeAreaInsets();
@@ -83,7 +83,7 @@ export function WorkloadScreen() {
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
-        title="Workload"
+        title="Resources"
         subtitle={project?.name}
         color={projectColor}
         icon="projects"

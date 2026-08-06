@@ -48,7 +48,7 @@ export function PortfolioScreen() {
         done: acc.done + p.completedTaskCount,
         overdue: acc.overdue + p.overdueTaskCount,
         estimated: acc.estimated + p.estimatedMinutes,
-        spent: acc.spent + p.spentMinutes,
+        spent: acc.spent + p.timeSpentMinutes,
       }),
       { tasks: 0, done: 0, overdue: 0, estimated: 0, spent: 0 },
     );
@@ -160,7 +160,7 @@ function PortfolioRow({ project }: { project: SerializedProject }) {
   const color = healthColor(health, T);
   const projectColor = project.color || T.accent;
   const overBudget =
-    project.estimatedMinutes > 0 && project.spentMinutes > project.estimatedMinutes;
+    project.estimatedMinutes > 0 && project.timeSpentMinutes > project.estimatedMinutes;
 
   return (
     <TouchableOpacity
@@ -201,7 +201,7 @@ function PortfolioRow({ project }: { project: SerializedProject }) {
         )}
         {project.estimatedMinutes > 0 && (
           <Text style={[styles.rowMetaText, { color: overBudget ? T.red : T.textDim }]}>
-            {formatMinutes(project.spentMinutes)} / {formatMinutes(project.estimatedMinutes)}
+            {formatMinutes(project.timeSpentMinutes)} / {formatMinutes(project.estimatedMinutes)}
           </Text>
         )}
       </View>

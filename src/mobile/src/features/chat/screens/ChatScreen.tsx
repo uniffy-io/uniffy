@@ -90,7 +90,7 @@ import {
   useMoveChannelToCategory,
   useLeaveChannel,
 } from "@features/chat/useChatMutations";
-import { useDirectory } from "@shared/permissions/usePermissions";
+import { useDirectory } from "@shared/directory/useDirectory";
 import { useAgents, useAgentModels, useStopAgentRun } from "@features/agents/useAgents";
 import {
   useChatStream,

@@ -112,7 +112,7 @@ def project_to_proto(
     member_count: int = 0,
     overdue_task_count: int = 0,
     estimated_minutes: int = 0,
-    spent_minutes: int = 0,
+    time_spent_minutes: int = 0,
 ) -> ProtoProject:
     type_schemas_proto: dict[str, ProtoTypeFieldSchema] = {}
     if project.type_field_schemas:
@@ -151,7 +151,7 @@ def project_to_proto(
         member_count=member_count,
         overdue_task_count=overdue_task_count,
         estimated_minutes=estimated_minutes,
-        spent_minutes=spent_minutes,
+        time_spent_minutes=time_spent_minutes,
     )
 
     if resolved_baseline is not None:

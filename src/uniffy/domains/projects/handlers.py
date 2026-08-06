@@ -168,26 +168,24 @@ class _ProjectCounts(NamedTuple):
     members: int
     overdue: int
     estimated_minutes: int
-    spent_minutes: int
+    time_spent_minutes: int
 
 
 class _ProjectRollups(NamedTuple):
     """Per-project counts keyed by project id, all defaulting to zero."""
 
-    tasks: dict[UUID, tuple[int, int]]
+    tasks: dict[UUID, queries.ProjectTaskRollup]
     members: dict[UUID, int]
-    workload: dict[UUID, queries.ProjectWorkload]
 
     def for_project(self, project_id: UUID) -> _ProjectCounts:
-        total, completed = self.tasks.get(project_id, (0, 0))
-        work = self.workload.get(project_id)
+        task = self.tasks.get(project_id)
         return _ProjectCounts(
-            task_total=total,
-            task_done=completed,
+            task_total=task.total if task else 0,
+            task_done=task.completed if task else 0,
             members=self.members.get(project_id, 0),
-            overdue=work.overdue if work else 0,
-            estimated_minutes=work.estimated_minutes if work else 0,
-            spent_minutes=work.spent_minutes if work else 0,
+            overdue=task.overdue if task else 0,
+            estimated_minutes=task.estimated_minutes if task else 0,
+            time_spent_minutes=task.time_spent_minutes if task else 0,
         )
 
 
@@ -197,11 +195,12 @@ async def _load_project_rollups(
     project_ids: list[UUID],
 ) -> _ProjectRollups:
     return _ProjectRollups(
-        tasks=await queries.get_task_counts_for_projects(session, project_ids),
+        tasks=await queries.get_task_rollups_for_projects(
+            session, organization_id, project_ids
+        ),
         members=await queries.get_member_counts_for_projects(
             session, organization_id, project_ids
         ),
-        workload=await queries.get_workload_for_projects(session, project_ids),
     )
 
 
@@ -324,7 +323,7 @@ class ProjectsHandlers:
                         member_count=counts.members,
                         overdue_task_count=counts.overdue,
                         estimated_minutes=counts.estimated_minutes,
-                        spent_minutes=counts.spent_minutes,
+                        time_spent_minutes=counts.time_spent_minutes,
                     )
                 )
         except ConnectError:
@@ -399,7 +398,7 @@ class ProjectsHandlers:
                         member_count=counts.members,
                         overdue_task_count=counts.overdue,
                         estimated_minutes=counts.estimated_minutes,
-                        spent_minutes=counts.spent_minutes,
+                        time_spent_minutes=counts.time_spent_minutes,
                     )
                 )
         except ConnectError:
@@ -495,7 +494,7 @@ class ProjectsHandlers:
                             member_count=counts.members,
                             overdue_task_count=counts.overdue,
                             estimated_minutes=counts.estimated_minutes,
-                            spent_minutes=counts.spent_minutes,
+                            time_spent_minutes=counts.time_spent_minutes,
                         )
                     )
 

@@ -1,4 +1,6 @@
 import React from "react";
+import { formatDateShort } from "@shared/lib/dateFormatting";
+import { isTaskOverdue } from "@features/projects/taskFilters";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { CalendarBlank, ArrowElbowDownRight } from "phosphor-react-native";
 import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
@@ -18,7 +20,7 @@ const BADGE_LABEL: Record<NodeState, string | null> = {
   neutral: null,
 };
 
-export function GraphTaskNode({
+export const GraphTaskNode = React.memo(function GraphTaskNode({
   node,
   projectSlug,
   statusColor,
@@ -41,6 +43,7 @@ export function GraphTaskNode({
   onPress: () => void;
 }) {
   const T = useTheme();
+  const dueOverdue = !!node.dueDate && !node.completed && isTaskOverdue(node.dueDate);
   const TypeIcon = getTaskTypeConfig(node.taskType).Icon;
   const badge = BADGE_LABEL[node.state];
 
@@ -108,8 +111,10 @@ export function GraphTaskNode({
           )}
           {node.dueDate && (
             <>
-              <CalendarBlank size={10} color={T.textDim} weight="duotone" />
-              <Text style={[styles.meta, { color: T.textDim }]}>{node.dueDate}</Text>
+              <CalendarBlank size={10} color={dueOverdue ? T.red : T.textDim} weight="duotone" />
+              <Text style={[styles.meta, { color: dueOverdue ? T.red : T.textDim }]}>
+                {formatDateShort(node.dueDate)}
+              </Text>
             </>
           )}
         </View>
@@ -119,7 +124,7 @@ export function GraphTaskNode({
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   node: {

@@ -29,6 +29,8 @@ export type ThemeColors = {
   pink: string;
   yellow: string;
   cyan: string;
+  /** Groups, wherever they sit beside people (pickers, share rows, avatars). */
+  group: string;
   pageBg: string;
 };
 
@@ -67,6 +69,7 @@ export const DARK: ThemeColors = {
   pink: BRAND.pink,
   yellow: "#FAB005",
   cyan: "#22B8CF",
+  group: "#8b5cf6",
   pageBg: BRAND.midnight,
 };
 
@@ -88,6 +91,7 @@ export const LIGHT: ThemeColors = {
   pink: "#d63bbd",
   yellow: "#F08C00",
   cyan: "#1098AD",
+  group: "#7c3aed",
   pageBg: BRAND.white,
 };
 
@@ -115,6 +119,23 @@ export const CATEGORY_COLORS = [
   { hex: "#F59E0B", label: "Amber" },
   { hex: "#14B8A6", label: "Teal" },
   { hex: "#64748B", label: "Gray" },
+];
+
+/**
+ * Swatches offered when naming a board column. Deliberately matches the web
+ * status palette so the same status reads the same colour on both clients.
+ */
+export const STATUS_PALETTE = [
+  "#6b7280",
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#f97316",
+  "#14b8a6",
 ];
 
 export const NAV_HEIGHT = 60;

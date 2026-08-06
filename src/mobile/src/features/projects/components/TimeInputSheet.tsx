@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TextInput, StyleSheet } from "react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { SheetHeader } from "@shared/components/SheetHeader";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { formatMinutes, parseTimeInput } from "@features/projects/timeFormatting";
@@ -24,13 +25,15 @@ export function TimeInputSheet({
   const accent = accentColor || T.accent;
   const [value, setValue] = useState("");
 
-  // Reset to the current value each time the sheet opens rather than holding a
-  // stale draft from a previous task.
-  const [openedFor, setOpenedFor] = useState<number | undefined>(undefined);
-  if (visible && openedFor !== minutes) {
-    setOpenedFor(minutes);
+  // Seeded on the way in and not touched again until the sheet closes: keying
+  // the reseed off `minutes` would let a background refetch of the task discard
+  // what the user is typing.
+  const [open, setOpen] = useState(false);
+  if (visible && !open) {
+    setOpen(true);
     setValue(minutes ? formatMinutes(minutes) : "");
   }
+  if (!visible && open) setOpen(false);
 
   const trimmed = value.trim();
   const parsed = trimmed ? parseTimeInput(trimmed) : null;
@@ -44,16 +47,11 @@ export function TimeInputSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: T.textBright }]}>{title}</Text>
-        <TouchableOpacity
-          onPress={save}
-          disabled={invalid}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={[styles.save, { color: invalid ? T.textDim : accent }]}>Save</Text>
-        </TouchableOpacity>
-      </View>
+      <SheetHeader
+        title={title}
+        accentColor={accent}
+        actions={[{ label: "Save", onPress: save, disabled: invalid }]}
+      />
 
       <View style={styles.body}>
         <TextInput
@@ -87,15 +85,6 @@ export function TimeInputSheet({
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  title: { fontSize: 16, fontFamily: FONT.bold },
-  save: { fontSize: 15, fontFamily: FONT.semibold },
   body: { paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
   input: {
     borderRadius: 10,

@@ -63,7 +63,11 @@ function computeNodeState(
   tasksMap: Map<string, SerializedTask>,
 ): NodeState {
   if (task.completedAt) return "completed";
-  if (task.blockedByTaskIds.some((bid) => !tasksMap.get(bid)?.completedAt)) return "blocked";
+  // A blocker outside the graph is unknown, not open: treating a missing lookup
+  // as incomplete paints a free task "blocked" with no edge to explain it.
+  if (task.blockedByTaskIds.some((bid) => tasksMap.has(bid) && !tasksMap.get(bid)!.completedAt)) {
+    return "blocked";
+  }
   if (blockerSet.has(task.id)) return "blocker";
   if (task.blockedByTaskIds.length > 0) return "free";
   return "neutral";

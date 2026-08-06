@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
+import { formatCompactAge } from "@shared/lib/dateFormatting";
 import {
   View,
   Text,
@@ -55,12 +56,11 @@ import {
 } from "@features/chat/useChatMutations";
 import { useChatStream } from "@features/chat/useChatStream";
 import { useActiveCall } from "@features/calls/useCallsState";
-import { useDirectory } from "@shared/permissions/usePermissions";
+import { useDirectory } from "@shared/directory/useDirectory";
 import { usePresences } from "@shared/presence/usePresence";
 import { useAuth } from "@core/providers/AuthContext";
 import { PresenceDot } from "@shared/presence/PresenceDot";
 import {
-  formatChannelActivity,
   type SerializedChannel,
   type SerializedThreadInboxItem,
   type SerializedCategory,
@@ -848,7 +848,7 @@ function ChannelRow({
         ) : null}
         {channel.lastMessageAtSeconds ? (
           <Text style={[styles.rowTime, { color: hasUnread ? T.accent : T.textDim }]}>
-            {formatChannelActivity(channel.lastMessageAtSeconds)}
+            {formatCompactAge(channel.lastMessageAtSeconds)}
           </Text>
         ) : null}
         {channel.hasDraft || hasUnread ? (

@@ -1,26 +1,19 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
-import {
-  Plus,
-  Warning,
-  ArrowsClockwise,
-  CheckCircle,
-  CaretDown,
-  CaretRight,
-} from "phosphor-react-native";
+import { Plus, ArrowsClockwise, CheckCircle, CaretDown, CaretRight } from "phosphor-react-native";
 import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { getTaskTypeConfig } from "@features/projects/taskTypes";
 import { formatMinutes } from "@features/projects/timeFormatting";
-import { TaskPriorityBadge } from "@features/projects/components/TaskPriorityBadge";
+import { TaskMetaChips, TaskDueDate } from "@features/projects/components/TaskMetaChips";
 import { DraggableTask } from "@features/projects/components/DraggableTask";
 import { DragShift } from "@features/projects/components/DragShift";
 import type { BoardColumn } from "@features/projects/components/ProjectBoardView";
 import type { TaskDragController } from "@features/projects/useTaskDrag";
 import type { SerializedTask, PlainSelectOption } from "@features/projects/projectsSerializer";
 
-function TaskRow({
+const TaskRow = React.memo(function TaskRow({
   task,
   statusColor,
   priorityOptions,
@@ -36,12 +29,11 @@ function TaskRow({
   accentColor: string;
   selecting: boolean;
   selected: boolean;
-  onPress: () => void;
-  onToggleSelect: () => void;
+  onPress: (taskId: string) => void;
+  onToggleSelect: (taskId: string) => void;
 }) {
   const T = useTheme();
   const isDone = !!task.completedAt;
-  const isBlocked = task.blockedByTaskIds.length > 0;
   const TypeIcon = getTaskTypeConfig(task.taskType).Icon;
 
   return (
@@ -51,12 +43,12 @@ function TaskRow({
         { backgroundColor: T.pageBg, borderBottomColor: T.border, borderLeftColor: statusColor },
         selected && { backgroundColor: accentColor + "14" },
       ]}
-      onPress={onPress}
+      onPress={() => onPress(task.id)}
       activeOpacity={0.8}
     >
       {selecting && (
         <TouchableOpacity
-          onPress={onToggleSelect}
+          onPress={() => onToggleSelect(task.id)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           {selected ? (
@@ -90,34 +82,19 @@ function TaskRow({
           ) : null}
         </View>
         <View style={styles.rowMeta}>
-          {task.priority ? (
-            <TaskPriorityBadge priority={task.priority} options={priorityOptions} />
-          ) : null}
-          {isBlocked && (
-            <View style={[styles.chip, { backgroundColor: T.red + "18" }]}>
-              <Warning size={9} color={T.red} weight="bold" />
-              <Text style={[styles.chipText, { color: T.red }]}>Blocked</Text>
-            </View>
-          )}
-          {task.tags.map((tag) => (
-            <View key={tag.id} style={[styles.chip, { backgroundColor: tag.color + "22" }]}>
-              <Text style={[styles.chipText, { color: tag.color }]}>{tag.name}</Text>
-            </View>
-          ))}
+          <TaskMetaChips task={task} priorityOptions={priorityOptions} />
           {task.estimatedMinutes ? (
             <Text style={[styles.rowMetaText, { color: T.textDim }]}>
               {formatMinutes(task.estimatedMinutes)}
             </Text>
           ) : null}
-          {task.dueDate ? (
-            <Text style={[styles.rowMetaText, { color: T.textDim }]}>{task.dueDate}</Text>
-          ) : null}
+          <TaskDueDate task={task} showIcon={false} />
         </View>
       </View>
       <SubjectAvatarStack subjectIds={task.assigneeIds} size={22} />
     </TouchableOpacity>
   );
-}
+});
 
 export function ProjectTableView({
   columns,
@@ -184,6 +161,10 @@ export function ProjectTableView({
               offset={drag.groupOffsetFor(col.key)}
               animate={dragging}
               onLayout={(event) => drag.registerGroup(col.key, event)}
+              onUnmount={() => {
+                drag.unregisterGroup(col.key);
+                drag.unregisterList(col.key);
+              }}
             >
               {/* One header, two jobs: it folds the group away normally, and
                   takes the whole group once selection mode is on - which is the
@@ -219,6 +200,7 @@ export function ProjectTableView({
                         animate={dragging}
                         lifted={drag.draggingId === task.id}
                         onLayout={(event) => drag.registerItem(col.key, task.id, event)}
+                        onUnmount={() => drag.unregisterItem(task.id)}
                       >
                         <TaskRow
                           task={task}
@@ -227,8 +209,8 @@ export function ProjectTableView({
                           accentColor={accentColor}
                           selecting={selecting}
                           selected={selectedIds.includes(task.id)}
-                          onPress={() => onOpen(task.id)}
-                          onToggleSelect={() => onToggleSelect(task.id)}
+                          onPress={onOpen}
+                          onToggleSelect={onToggleSelect}
                         />
                       </DraggableTask>
                     ))}

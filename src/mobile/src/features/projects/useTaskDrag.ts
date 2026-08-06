@@ -121,6 +121,21 @@ export function useTaskDrag(params: {
     itemRects.current.set(taskId, { statusId, rect: { ...event.nativeEvent.layout } });
   }, []);
 
+  // A group that stops rendering - a status filtered away by a search, a row
+  // that scrolls out of a windowed list - keeps its last rect otherwise, and a
+  // hit test happily lands a card in a column that is no longer on screen.
+  const unregisterGroup = useCallback((statusId: string) => {
+    groupRects.current.delete(statusId);
+  }, []);
+
+  const unregisterList = useCallback((statusId: string) => {
+    listRects.current.delete(statusId);
+  }, []);
+
+  const unregisterItem = useCallback((taskId: string) => {
+    itemRects.current.delete(taskId);
+  }, []);
+
   const contentRectFor = useCallback((taskId: string): Rect | null => {
     const item = itemRects.current.get(taskId);
     if (!item) return null;
@@ -302,8 +317,11 @@ export function useTaskDrag(params: {
           previewY.value = event.absoluteY;
           runOnJS(move)(event.absoluteX, event.absoluteY);
         })
-        .onEnd(() => {
-          runOnJS(finish)(true);
+        // A gesture that goes to FAILED or CANCELLED still ends, and reports it
+        // through `success`. Committing on every end would write a move the
+        // finger never released on - an incoming call mid-drag is enough.
+        .onEnd((_event, success) => {
+          runOnJS(finish)(success);
         })
         // Also runs when the gesture is interrupted, so a cancelled drag can
         // never leave a card stranded under the finger.
@@ -454,6 +472,9 @@ export function useTaskDrag(params: {
     registerGroup,
     registerList,
     registerItem,
+    unregisterGroup,
+    unregisterList,
+    unregisterItem,
     containerProps,
     verticalScrollProps,
     horizontalScrollProps,

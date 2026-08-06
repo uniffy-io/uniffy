@@ -1,11 +1,12 @@
 import React, { useMemo } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { Check, Clock } from "phosphor-react-native";
+import { ScrollView } from "react-native";
+import { Clock } from "phosphor-react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { SheetHeader } from "@shared/components/SheetHeader";
+import { SheetSection, SheetChip } from "@shared/components/SheetSection";
 import { Avatar } from "@shared/components/Avatar";
 import { useTheme } from "@shared/hooks/useTheme";
-import { useDirectory } from "@shared/permissions/usePermissions";
-import { FONT } from "@theme/typography";
+import { useDirectory } from "@shared/directory/useDirectory";
 import { activeFilterCount, toggleValue, NO_TASK_FILTERS } from "@features/projects/taskFilters";
 import type { TaskFilters } from "@features/projects/taskFilters";
 import type {
@@ -13,51 +14,6 @@ import type {
   SerializedTaskTag,
   PlainSelectOption,
 } from "@features/projects/projectsSerializer";
-
-function Chip({
-  label,
-  color,
-  selected,
-  onPress,
-  children,
-}: {
-  label: string;
-  color: string;
-  selected: boolean;
-  onPress: () => void;
-  children?: React.ReactNode;
-}) {
-  const T = useTheme();
-  return (
-    <TouchableOpacity
-      style={[
-        styles.chip,
-        {
-          backgroundColor: selected ? color + "22" : T.pageBg,
-          borderColor: selected ? color : T.border,
-        },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      {children}
-      <Text style={[styles.chipText, { color: selected ? color : T.text }]} numberOfLines={1}>
-        {label}
-      </Text>
-      {selected && <Check size={12} color={color} weight="bold" />}
-    </TouchableOpacity>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  const T = useTheme();
-  return (
-    <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: T.textDim }]}>{title}</Text>
-      <View style={styles.chipWrap}>{children}</View>
-    </View>
-  );
-}
 
 /**
  * Assignee and tag facets come from the tasks on screen rather than the org
@@ -103,133 +59,100 @@ export function TaskFilterSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: T.textBright }]}>Filter tasks</Text>
-        <View style={styles.headerActions}>
-          {count > 0 && (
-            <TouchableOpacity
-              onPress={() => onChange(NO_TASK_FILTERS)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={[styles.clear, { color: T.textDim }]}>Clear all</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={[styles.done, { color: accent }]}>Done</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <SheetHeader
+        title="Filter tasks"
+        accentColor={accent}
+        actions={[
+          ...(count > 0
+            ? [
+                {
+                  label: "Clear all",
+                  onPress: () => onChange(NO_TASK_FILTERS),
+                  tone: "muted" as const,
+                },
+              ]
+            : []),
+          { label: "Done", onPress: onClose },
+        ]}
+      />
 
       <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
-        <Section title="Status">
+        <SheetSection title="Status">
           {statusOptions.map((opt) => (
-            <Chip
+            <SheetChip
               key={opt.id}
               label={opt.label}
-              color={opt.color}
+              tint={opt.color}
               selected={filters.statusIds.includes(opt.id)}
               onPress={() =>
                 onChange({ ...filters, statusIds: toggleValue(filters.statusIds, opt.id) })
               }
             />
           ))}
-        </Section>
+        </SheetSection>
 
-        <Section title="Priority">
+        <SheetSection title="Priority">
           {priorityOptions.map((opt) => (
-            <Chip
+            <SheetChip
               key={opt.id}
               label={opt.label}
-              color={opt.color}
+              tint={opt.color}
               selected={filters.priorityIds.includes(opt.id)}
               onPress={() =>
                 onChange({ ...filters, priorityIds: toggleValue(filters.priorityIds, opt.id) })
               }
             />
           ))}
-        </Section>
+        </SheetSection>
 
         {assigneeIds.length > 0 && (
-          <Section title="Assignee">
+          <SheetSection title="Assignee">
             {assigneeIds.map((id) => {
               const subject = byId.get(id);
               return (
-                <Chip
+                <SheetChip
                   key={id}
                   label={subject?.name ?? "Unknown"}
-                  color={accent}
+                  tint={accent}
                   selected={filters.assigneeIds.includes(id)}
                   onPress={() =>
                     onChange({ ...filters, assigneeIds: toggleValue(filters.assigneeIds, id) })
                   }
                 >
                   <Avatar name={subject?.name ?? "?"} avatarUrl={subject?.avatarUrl} size={18} />
-                </Chip>
+                </SheetChip>
               );
             })}
-          </Section>
+          </SheetSection>
         )}
 
         {tags.length > 0 && (
-          <Section title="Tags">
+          <SheetSection title="Tags">
             {tags.map((tag) => (
-              <Chip
+              <SheetChip
                 key={tag.id}
                 label={tag.name}
-                color={tag.color}
+                tint={tag.color}
                 selected={filters.tagIds.includes(tag.id)}
                 onPress={() =>
                   onChange({ ...filters, tagIds: toggleValue(filters.tagIds, tag.id) })
                 }
               />
             ))}
-          </Section>
+          </SheetSection>
         )}
 
-        <Section title="Due">
-          <Chip
+        <SheetSection title="Due">
+          <SheetChip
             label="Overdue only"
-            color={T.red}
+            tint={T.red}
             selected={filters.overdueOnly}
             onPress={() => onChange({ ...filters, overdueOnly: !filters.overdueOnly })}
           >
             <Clock size={13} color={filters.overdueOnly ? T.red : T.textDim} weight="duotone" />
-          </Chip>
-        </Section>
+          </SheetChip>
+        </SheetSection>
       </ScrollView>
     </BottomSheet>
   );
 }
-
-const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 16 },
-  title: { fontSize: 16, fontFamily: FONT.bold },
-  clear: { fontSize: 14, fontFamily: FONT.regular },
-  done: { fontSize: 15, fontFamily: FONT.semibold },
-  section: { paddingHorizontal: 16, paddingBottom: 14, gap: 8 },
-  sectionTitle: {
-    fontSize: 11,
-    fontFamily: FONT.semibold,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 9,
-    borderWidth: StyleSheet.hairlineWidth,
-    maxWidth: "100%",
-  },
-  chipText: { fontSize: 13, fontFamily: FONT.medium, flexShrink: 1 },
-});

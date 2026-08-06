@@ -130,24 +130,30 @@ export function ProjectGraphView({
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
 
-  // A pinch runs both handlers at once, and either one re-rendering the screen
+  // Pan and pinch run simultaneously, and either one re-rendering the screen
   // would let the effect below animate the transform back to the last committed
-  // one mid-gesture. While a finger is down the gesture owns the transform.
-  const interacting = useRef(false);
-  const setInteracting = useCallback((value: boolean) => {
-    interacting.current = value;
+  // one mid-gesture. Counted rather than flagged: lifting one finger of a pinch
+  // ends that gesture while the pan keeps running, and a boolean would hand the
+  // transform back to the effect with a finger still down.
+  const activeGestures = useRef(0);
+  const beginGesture = useCallback(() => {
+    activeGestures.current += 1;
+  }, []);
+  const endGesture = useCallback(() => {
+    activeGestures.current = Math.max(0, activeGestures.current - 1);
   }, []);
 
   useEffect(() => {
-    if (interacting.current) return;
+    if (activeGestures.current > 0) return;
     scale.value = withTiming(view.scale, { duration: SETTLE_MS });
     tx.value = withTiming(view.x, { duration: SETTLE_MS });
     ty.value = withTiming(view.y, { duration: SETTLE_MS });
   }, [view, scale, tx, ty]);
 
+  // The gesture count is decremented by onFinalize, which always runs after
+  // onEnd - committing must not clear it, or the surviving gesture is dropped.
   const commit = useCallback(
     (next: ViewTransform) => {
-      interacting.current = false;
       setUserView(next);
     },
     [setUserView],
@@ -164,7 +170,7 @@ export function ProjectGraphView({
     .minDistance(4)
     .averageTouches(true)
     .onStart(() => {
-      runOnJS(setInteracting)(true);
+      runOnJS(beginGesture)();
     })
     .onChange((event) => {
       tx.value += event.changeX;
@@ -173,15 +179,15 @@ export function ProjectGraphView({
     .onEnd(() => {
       runOnJS(commit)({ scale: scale.value, x: tx.value, y: ty.value });
     })
-    // Also runs when the gesture is interrupted, so an aborted pinch can never
+    // Also runs when the gesture is interrupted, so an aborted pan can never
     // leave the transform locked away from the effect above.
     .onFinalize(() => {
-      runOnJS(setInteracting)(false);
+      runOnJS(endGesture)();
     });
 
   const pinch = Gesture.Pinch()
     .onStart(() => {
-      runOnJS(setInteracting)(true);
+      runOnJS(beginGesture)();
     })
     .onChange((event) => {
       const next = Math.min(Math.max(scale.value * event.scaleChange, MIN_ZOOM), MAX_ZOOM);
@@ -198,7 +204,7 @@ export function ProjectGraphView({
     // Also runs when the gesture is interrupted, so an aborted pinch can never
     // leave the transform locked away from the effect above.
     .onFinalize(() => {
-      runOnJS(setInteracting)(false);
+      runOnJS(endGesture)();
     });
 
   const canvasStyle = useAnimatedStyle(() => ({

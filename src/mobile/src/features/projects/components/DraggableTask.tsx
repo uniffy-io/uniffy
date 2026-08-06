@@ -1,10 +1,9 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { GestureDetector } from "react-native-gesture-handler";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import type { LayoutChangeEvent } from "react-native";
 import type { GestureType } from "react-native-gesture-handler";
 
-const SHIFT_MS = 160;
+import { DragShift } from "@features/projects/components/DragShift";
 
 /**
  * A task card that can be picked up, and that slides aside when another card is
@@ -18,6 +17,7 @@ export function DraggableTask({
   animate,
   lifted,
   onLayout,
+  onUnmount,
   children,
 }: {
   gesture: GestureType;
@@ -25,23 +25,20 @@ export function DraggableTask({
   animate: boolean;
   lifted: boolean;
   onLayout: (event: LayoutChangeEvent) => void;
+  onUnmount?: () => void;
   children: React.ReactNode;
 }) {
-  const shift = useSharedValue(0);
-
-  useEffect(() => {
-    shift.value = animate ? withTiming(offset, { duration: SHIFT_MS }) : 0;
-  }, [animate, offset, shift]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: shift.value }],
-  }));
-
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View onLayout={onLayout} style={[animatedStyle, lifted && { opacity: 0 }]}>
+      <DragShift
+        offset={offset}
+        animate={animate}
+        style={lifted ? { opacity: 0 } : undefined}
+        onLayout={onLayout}
+        onUnmount={onUnmount}
+      >
         {children}
-      </Animated.View>
+      </DragShift>
     </GestureDetector>
   );
 }

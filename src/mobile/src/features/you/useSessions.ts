@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@core/auth/authApi";
 import { useAuth } from "@core/providers/AuthContext";
-import { formatRelativeTimeFromIso } from "@features/notes/noteSerializer";
+import { formatRelativeTime } from "@shared/lib/dateFormatting";
 import type { SessionInfo } from "@uniffy/proto/auth/v1/auth_pb";
 
 export type SerializedSession = Omit<SessionInfo, "$typeName">;
@@ -17,7 +17,7 @@ export function useSessions() {
       const response = await authApi.listSessions();
       return response.sessions.map((s) => ({
         ...s,
-        lastActivityFormatted: formatRelativeTimeFromIso(s.lastActivity),
+        lastActivityFormatted: formatRelativeTime(s.lastActivity),
       }));
     },
   });

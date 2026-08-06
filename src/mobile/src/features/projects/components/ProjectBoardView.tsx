@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
-import { Plus, Warning, CalendarBlank, CheckCircle } from "phosphor-react-native";
+import { Plus, CheckCircle } from "phosphor-react-native";
 import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { getTaskTypeConfig } from "@features/projects/taskTypes";
-import { TaskPriorityBadge } from "@features/projects/components/TaskPriorityBadge";
+import { TaskMetaChips, TaskDueDate } from "@features/projects/components/TaskMetaChips";
 import { DraggableTask } from "@features/projects/components/DraggableTask";
 import { DragShift } from "@features/projects/components/DragShift";
 import type { TaskDragController } from "@features/projects/useTaskDrag";
@@ -20,9 +20,24 @@ export interface BoardColumn {
   color: string;
 }
 
-function TaskCard({
+/** Subtask tallies keyed by parent id, so a card never scans the task list. */
+type SubtaskCounts = Map<string, { total: number; done: number }>;
+
+function countSubtasks(tasks: SerializedTask[]): SubtaskCounts {
+  const counts: SubtaskCounts = new Map();
+  for (const task of tasks) {
+    if (!task.parentId) continue;
+    const entry = counts.get(task.parentId) ?? { total: 0, done: 0 };
+    entry.total += 1;
+    if (task.completedAt) entry.done += 1;
+    counts.set(task.parentId, entry);
+  }
+  return counts;
+}
+
+const TaskCard = React.memo(function TaskCard({
   task,
-  allTasks,
+  subtaskCounts,
   priorityOptions,
   selecting,
   selected,
@@ -31,19 +46,20 @@ function TaskCard({
   onToggleSelect,
 }: {
   task: SerializedTask;
-  allTasks: SerializedTask[];
+  subtaskCounts: SubtaskCounts;
   priorityOptions: PlainSelectOption[];
   selecting: boolean;
   selected: boolean;
   selectionColor: string;
-  onPress: () => void;
-  onToggleSelect: () => void;
+  onPress: (taskId: string) => void;
+  onToggleSelect: (taskId: string) => void;
 }) {
   const T = useTheme();
   const isDone = !!task.completedAt;
   const isBlocked = task.blockedByTaskIds.length > 0;
-  const subtasks = allTasks.filter((t) => t.parentId === task.id);
-  const subtasksDone = subtasks.filter((t) => t.completedAt).length;
+  const subtasks = subtaskCounts.get(task.id);
+  const subtaskTotal = subtasks?.total ?? 0;
+  const subtasksDone = subtasks?.done ?? 0;
   const TypeIcon = getTaskTypeConfig(task.taskType).Icon;
 
   return (
@@ -53,14 +69,14 @@ function TaskCard({
         { backgroundColor: T.bg, borderColor: T.border, opacity: isDone ? 0.7 : 1 },
         selected && { borderColor: selectionColor, backgroundColor: selectionColor + "14" },
       ]}
-      onPress={onPress}
+      onPress={() => onPress(task.id)}
       activeOpacity={0.8}
     >
       <View style={styles.taskTitleRow}>
         {selecting ? (
           <TouchableOpacity
             style={styles.titleIcon}
-            onPress={onToggleSelect}
+            onPress={() => onToggleSelect(task.id)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {selected ? (
@@ -88,34 +104,16 @@ function TaskCard({
           the card, the badges qualify it. */}
       {(task.priority || isBlocked || task.tags.length > 0) && (
         <View style={styles.taskTags}>
-          {task.priority ? (
-            <TaskPriorityBadge priority={task.priority} options={priorityOptions} />
-          ) : null}
-          {isBlocked && (
-            <View style={[styles.chip, { backgroundColor: T.red + "18" }]}>
-              <Warning size={9} color={T.red} weight="bold" />
-              <Text style={[styles.chipText, { color: T.red }]}>Blocked</Text>
-            </View>
-          )}
-          {task.tags.map((tag) => (
-            <View key={tag.id} style={[styles.chip, { backgroundColor: tag.color + "22" }]}>
-              <Text style={[styles.chipText, { color: tag.color }]}>{tag.name}</Text>
-            </View>
-          ))}
+          <TaskMetaChips task={task} priorityOptions={priorityOptions} />
         </View>
       )}
 
       <View style={styles.taskFooter}>
         <View style={styles.taskFooterLeft}>
-          {task.dueDate ? (
-            <View style={styles.dueDateRow}>
-              <CalendarBlank size={11} color={T.textDim} weight="duotone" />
-              <Text style={[styles.dueDateText, { color: T.textDim }]}>{task.dueDate}</Text>
-            </View>
-          ) : null}
-          {subtasks.length > 0 && (
+          <TaskDueDate task={task} />
+          {subtaskTotal > 0 && (
             <Text style={[styles.subtaskCount, { color: T.textDim }]}>
-              {subtasksDone}/{subtasks.length}
+              {subtasksDone}/{subtaskTotal}
             </Text>
           )}
         </View>
@@ -123,7 +121,7 @@ function TaskCard({
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 export function ProjectBoardView({
   columns,
@@ -159,6 +157,7 @@ export function ProjectBoardView({
 }) {
   const T = useTheme();
   const dragging = drag.draggingId !== null;
+  const subtaskCounts = useMemo(() => countSubtasks(allTasks), [allTasks]);
 
   return (
     <View style={styles.fill} {...drag.containerProps}>
@@ -207,16 +206,17 @@ export function ProjectBoardView({
                       animate={dragging}
                       lifted={drag.draggingId === task.id}
                       onLayout={(event) => drag.registerItem(col.key, task.id, event)}
+                      onUnmount={() => drag.unregisterItem(task.id)}
                     >
                       <TaskCard
                         task={task}
-                        allTasks={allTasks}
+                        subtaskCounts={subtaskCounts}
                         priorityOptions={priorityOptions}
                         selecting={selecting}
                         selected={selectedIds.includes(task.id)}
                         selectionColor={accentColor}
-                        onPress={() => onOpen(task.id)}
-                        onToggleSelect={() => onToggleSelect(task.id)}
+                        onPress={onOpen}
+                        onToggleSelect={onToggleSelect}
                       />
                     </DraggableTask>
                   ))}

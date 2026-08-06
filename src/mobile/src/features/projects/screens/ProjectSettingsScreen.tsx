@@ -21,12 +21,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@shared/components/DomainHeader";
+import { ScreenError } from "@shared/components/ScreenError";
 import { ShareSheet } from "@shared/permissions/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import { roleCanManage } from "@shared/permissions/contentRoles";
 import { useTheme } from "@shared/hooks/useTheme";
-import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
+import { BOTTOM_NAV_HEIGHT, STATUS_PALETTE } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useProject, useProjectTasks } from "@features/projects/useProjects";
 import {
@@ -40,7 +41,7 @@ import {
   PROTECTED_STATUS_IDS,
   DONE_STATUS_ID,
 } from "@features/projects/projectsSerializer";
-import { StatusEditorSheet, STATUS_COLORS } from "@features/projects/components/StatusEditorSheet";
+import { StatusEditorSheet } from "@features/projects/components/StatusEditorSheet";
 import { OptionPickerSheet } from "@features/projects/components/OptionPickerSheet";
 import type { PlainSelectOption } from "@features/projects/projectsSerializer";
 
@@ -156,7 +157,16 @@ export function ProjectSettingsScreen() {
     );
   }
 
-  if (!project) return null;
+  if (!project) {
+    return (
+      <ScreenError
+        title="Project settings"
+        icon="projects"
+        color={T.accent}
+        onRetry={() => projectQuery.refetch()}
+      />
+    );
+  }
 
   const projectColor = project.color || T.accent;
   const busy = updateField.isPending || bulkUpdateTasks.isPending;
@@ -201,7 +211,13 @@ export function ProjectSettingsScreen() {
           )}
 
           <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>
-            {statuses.length === 0 && (
+            {!statusField && (
+              <Text style={[styles.emptyText, { color: T.textDim }]}>
+                This project has no status field, so there is nothing to edit here. It has to be
+                restored on the web app before statuses can be added.
+              </Text>
+            )}
+            {statusField && statuses.length === 0 && (
               <Text style={[styles.emptyText, { color: T.textDim }]}>
                 This project has no statuses defined yet.
               </Text>
@@ -276,7 +292,7 @@ export function ProjectSettingsScreen() {
               );
             })}
 
-            {canManage && (
+            {canManage && statusField && (
               <TouchableOpacity
                 style={[styles.addRow, { borderColor: T.border }]}
                 onPress={() => setEditTarget({ mode: "add" })}
@@ -365,7 +381,7 @@ export function ProjectSettingsScreen() {
         onClose={() => setEditTarget(null)}
         title={editTarget?.mode === "edit" ? "Edit status" : "New status"}
         initialLabel={editTarget?.mode === "edit" ? editTarget.option.label : ""}
-        initialColor={editTarget?.mode === "edit" ? editTarget.option.color : STATUS_COLORS[0]}
+        initialColor={editTarget?.mode === "edit" ? editTarget.option.color : STATUS_PALETTE[0]}
         onSave={saveStatus}
       />
 

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import {
   View,
   Text,
@@ -128,13 +129,6 @@ export function ChannelDetailsSheet({
       { text: "For 8 hours", onPress: () => onMute(now + 8 * 3600) },
       { text: "For 24 hours", onPress: () => onMute(now + 24 * 3600) },
       { text: "Until I turn it off", onPress: () => onMute(null) },
-    ]);
-  };
-
-  const confirmDestructive = (title: string, action: () => void) => {
-    Alert.alert(title, "This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Confirm", style: "destructive", onPress: action },
     ]);
   };
 
@@ -301,14 +295,12 @@ export function ChannelDetailsSheet({
             {canManage && m.subjectId !== currentUserId ? (
               <TouchableOpacity
                 onPress={() =>
-                  Alert.alert("Remove member", `Remove ${m.displayName} from the channel?`, [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Remove",
-                      style: "destructive",
-                      onPress: () => onRemoveMember({ kind: m.subjectType, id: m.subjectId }),
-                    },
-                  ])
+                  confirmDestructive({
+                    title: "Remove member",
+                    message: `Remove ${m.displayName} from the channel?`,
+                    confirmLabel: "Remove",
+                    onConfirm: () => onRemoveMember({ kind: m.subjectType, id: m.subjectId }),
+                  })
                 }
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
@@ -333,14 +325,27 @@ export function ChannelDetailsSheet({
               T={T}
               icon={<Archive size={17} color={T.text} weight="duotone" />}
               label="Archive channel"
-              onPress={() => confirmDestructive("Archive channel", onArchive)}
+              onPress={() =>
+                confirmDestructive({
+                  title: "Archive channel",
+                  message: "This cannot be undone.",
+                  confirmLabel: "Archive",
+                  onConfirm: onArchive,
+                })
+              }
             />
             <ActionRow
               T={T}
               icon={<Trash size={17} color={T.red} weight="duotone" />}
               label="Delete channel"
               danger
-              onPress={() => confirmDestructive("Delete channel", onDelete)}
+              onPress={() =>
+                confirmDestructive({
+                  title: "Delete channel",
+                  message: "This cannot be undone.",
+                  onConfirm: onDelete,
+                })
+              }
             />
           </>
         ) : null}
@@ -351,10 +356,12 @@ export function ChannelDetailsSheet({
             label="Leave channel"
             danger
             onPress={() =>
-              Alert.alert("Leave channel", `Leave #${channel.name}?`, [
-                { text: "Cancel", style: "cancel" },
-                { text: "Leave", style: "destructive", onPress: onLeave },
-              ])
+              confirmDestructive({
+                title: "Leave channel",
+                message: `Leave #${channel.name}?`,
+                confirmLabel: "Leave",
+                onConfirm: onLeave,
+              })
             }
           />
         ) : null}

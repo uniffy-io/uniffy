@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { Check, X } from "phosphor-react-native";
+import { Text, ScrollView, StyleSheet } from "react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { SheetHeader } from "@shared/components/SheetHeader";
+import { SheetSearchBar } from "@shared/components/SheetSearchBar";
+import { SheetRow } from "@shared/components/SheetRow";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { getTaskTypeConfig } from "@features/projects/taskTypes";
@@ -61,68 +63,37 @@ export function TaskPickerSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: T.textBright }]}>{title}</Text>
-        {multi && (
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={[styles.done, { color: accent }]}>Done</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <SheetHeader
+        title={title}
+        accentColor={accent}
+        actions={multi ? [{ label: "Done", onPress: onClose }] : undefined}
+      />
 
-      <View style={[styles.searchBar, { backgroundColor: T.pageBg, borderColor: T.border }]}>
-        <TextInput
-          style={[styles.searchInput, { color: T.textBright }]}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search tasks"
-          placeholderTextColor={T.textDim}
-          autoCorrect={false}
-          returnKeyType="done"
-        />
-        {query.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setQuery("")}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <X size={15} color={T.textDim} weight="bold" />
-          </TouchableOpacity>
-        )}
-      </View>
+      <SheetSearchBar value={query} onChangeText={setQuery} placeholder="Search tasks" />
 
       <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
         {allowNone && (
-          <TouchableOpacity
-            style={[styles.row, { borderBottomColor: T.border }]}
+          <SheetRow
+            title="None"
+            muted
+            selected={selectedIds.length === 0}
+            accentColor={accent}
             onPress={() => choose(null)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.rowTitle, { color: T.textDim, flex: 1 }]}>None</Text>
-            {selectedIds.length === 0 && <Check size={18} color={accent} weight="bold" />}
-          </TouchableOpacity>
+          />
         )}
 
         {results.map((task) => {
           const { Icon, label } = getTaskTypeConfig(task.taskType);
-          const isSelected = selectedIds.includes(task.id);
           return (
-            <TouchableOpacity
+            <SheetRow
               key={task.id}
-              style={[styles.row, { borderBottomColor: T.border }]}
+              title={task.title}
+              subtitle={`${label} - #${task.number}`}
+              leading={<Icon size={16} color={T.textDim} weight="duotone" />}
+              selected={selectedIds.includes(task.id)}
+              accentColor={accent}
               onPress={() => choose(task.id)}
-              activeOpacity={0.7}
-            >
-              <Icon size={16} color={T.textDim} weight="duotone" />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.rowTitle, { color: T.textBright }]} numberOfLines={1}>
-                  {task.title}
-                </Text>
-                <Text style={[styles.rowMeta, { color: T.textDim }]}>
-                  {label} - #{task.number}
-                </Text>
-              </View>
-              {isSelected && <Check size={18} color={accent} weight="bold" />}
-            </TouchableOpacity>
+            />
           );
         })}
 
@@ -135,36 +106,5 @@ export function TaskPickerSheet({
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  title: { fontSize: 16, fontFamily: FONT.bold },
-  done: { fontSize: 15, fontFamily: FONT.semibold },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  searchInput: { flex: 1, fontSize: 15, fontFamily: FONT.regular, padding: 0 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  rowTitle: { fontSize: 15, fontFamily: FONT.medium },
-  rowMeta: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
   empty: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center", padding: 20 },
 });

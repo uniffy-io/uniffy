@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import type { LayoutChangeEvent, StyleProp, ViewStyle } from "react-native";
 
@@ -17,6 +17,7 @@ export function DragShift({
   animate,
   style,
   onLayout,
+  onUnmount,
   children,
 }: {
   offset: number;
@@ -27,6 +28,8 @@ export function DragShift({
    * layout positions, so it is the one whose offset the drag can trust.
    */
   onLayout?: (event: LayoutChangeEvent) => void;
+  /** Drops the measurement again, so a hit test cannot match a view that is gone. */
+  onUnmount?: () => void;
   children: React.ReactNode;
 }) {
   const shift = useSharedValue(0);
@@ -34,6 +37,14 @@ export function DragShift({
   useEffect(() => {
     shift.value = animate ? withTiming(offset, { duration: SHIFT_MS }) : 0;
   }, [animate, offset, shift]);
+
+  // Held in a ref so the cleanup below stays mount-scoped: depending on the
+  // callback directly would fire it on every re-render that reallocates it.
+  const unmountRef = useRef(onUnmount);
+  useEffect(() => {
+    unmountRef.current = onUnmount;
+  }, [onUnmount]);
+  useEffect(() => () => unmountRef.current?.(), []);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: shift.value }],

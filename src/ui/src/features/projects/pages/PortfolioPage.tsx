@@ -4,12 +4,11 @@ import { Briefcase, Clock, WarningCircle } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
-import { isOverdue } from "@/shared/utils/dateFormatting";
-import { selectProjects, selectAllTasks } from "@/features/projects/store/projectsSlice";
-import { fetchProjects, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
+import { selectProjects } from "@/features/projects/store/projectsSlice";
+import { fetchProjects } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
-import type { Task } from "@/features/projects/types";
+import type { Project } from "@/features/projects/types";
 
 interface ProjectStats {
   totalTasks: number;
@@ -39,29 +38,20 @@ const HEALTH_CONFIG: Record<HealthStatus, { label: string; className: string }> 
   not_started: { label: "Not Started", className: "bg-muted text-muted-foreground" },
 };
 
-function computeProjectStats(tasks: Task[]): ProjectStats {
-  let totalTasks = 0;
-  let completedTasks = 0;
-  let overdueTasks = 0;
-  let totalEstimated = 0;
-  let totalSpent = 0;
-
-  for (const task of tasks) {
-    if (task.parentId) continue;
-    totalTasks++;
-    if (task.completedAt) completedTasks++;
-    if (!task.completedAt && task.dueDate && isOverdue(task.dueDate)) overdueTasks++;
-    if (task.estimatedMinutes) totalEstimated += task.estimatedMinutes;
-    if (task.timeSpentMinutes) totalSpent += task.timeSpentMinutes;
-  }
-
+/**
+ * Read off the project row rather than recomputed from tasks: the server sums
+ * the whole tree in one query, so the numbers match the mobile app and stay
+ * exact past the task-list page size.
+ */
+function projectStats(project: Project): ProjectStats {
   return {
-    totalTasks,
-    completedTasks,
-    completionPct: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
-    overdueTasks,
-    totalEstimated,
-    totalSpent,
+    totalTasks: project.taskCount,
+    completedTasks: project.completedTaskCount,
+    completionPct:
+      project.taskCount > 0 ? Math.round((project.completedTaskCount / project.taskCount) * 100) : 0,
+    overdueTasks: project.overdueTaskCount,
+    totalEstimated: project.estimatedMinutes,
+    totalSpent: project.timeSpentMinutes,
   };
 }
 
@@ -70,31 +60,15 @@ export function PortfolioPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const projects = useAppSelector(selectProjects);
-  const allTasks = useAppSelector(selectAllTasks);
 
   useEffect(() => {
     dispatch(fetchProjects());
   }, [dispatch]);
 
-  useEffect(() => {
-    for (const project of projects) {
-      dispatch(fetchProjectTasks(project.id));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when project list changes
-  }, [projects.length, dispatch]);
-
-  const projectCards = useMemo(() => {
-    const tasksByProject: Record<string, Task[]> = {};
-    for (const task of allTasks) {
-      if (!tasksByProject[task.projectId]) tasksByProject[task.projectId] = [];
-      tasksByProject[task.projectId].push(task);
-    }
-
-    return projects.map((project) => ({
-      project,
-      stats: computeProjectStats(tasksByProject[project.id] ?? []),
-    }));
-  }, [projects, allTasks]);
+  const projectCards = useMemo(
+    () => projects.map((project) => ({ project, stats: projectStats(project) })),
+    [projects],
+  );
 
   if (projects.length === 0) {
     return (

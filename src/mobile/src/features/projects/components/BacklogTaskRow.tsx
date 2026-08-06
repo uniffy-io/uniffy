@@ -1,14 +1,15 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { ArrowRight, ArrowsClockwise, CheckCircle, CalendarBlank } from "phosphor-react-native";
+import { ArrowRight, ArrowsClockwise, CheckCircle } from "phosphor-react-native";
 import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { getTaskTypeConfig } from "@features/projects/taskTypes";
 import { getOptionById } from "@features/projects/projectsSerializer";
+import { TaskMetaChips, TaskDueDate } from "@features/projects/components/TaskMetaChips";
 import type { SerializedTask, PlainSelectOption } from "@features/projects/projectsSerializer";
 
-export function BacklogTaskRow({
+export const BacklogTaskRow = React.memo(function BacklogTaskRow({
   task,
   projectSlug,
   statusOptions,
@@ -23,19 +24,18 @@ export function BacklogTaskRow({
   priorityOptions: PlainSelectOption[];
   /** False when the project has nowhere else to put the task. */
   canMove: boolean;
-  onPress: () => void;
-  onMove: () => void;
+  onPress: (taskId: string) => void;
+  onMove: (task: SerializedTask) => void;
 }) {
   const T = useTheme();
   const TypeIcon = getTaskTypeConfig(task.taskType).Icon;
   const status = getOptionById(statusOptions, task.status);
-  const priority = getOptionById(priorityOptions, task.priority);
   const isDone = !!task.completedAt;
 
   return (
     <TouchableOpacity
       style={[styles.row, { borderBottomColor: T.border }]}
-      onPress={onPress}
+      onPress={() => onPress(task.id)}
       activeOpacity={0.7}
     >
       <View style={styles.body}>
@@ -62,16 +62,7 @@ export function BacklogTaskRow({
         </View>
 
         <View style={styles.metaLine}>
-          {priority && (
-            <View style={[styles.chip, { backgroundColor: priority.color + "18" }]}>
-              <Text style={[styles.chipText, { color: priority.color }]}>{priority.label}</Text>
-            </View>
-          )}
-          {status && (
-            <View style={[styles.chip, { backgroundColor: status.color + "18" }]}>
-              <Text style={[styles.chipText, { color: status.color }]}>{status.label}</Text>
-            </View>
-          )}
+          <TaskMetaChips task={task} priorityOptions={priorityOptions} statusOption={status} />
           {task.subtaskTotal > 0 && (
             <View style={styles.metaItem}>
               <CheckCircle
@@ -84,12 +75,7 @@ export function BacklogTaskRow({
               </Text>
             </View>
           )}
-          {task.dueDate && (
-            <View style={styles.metaItem}>
-              <CalendarBlank size={11} color={T.textDim} weight="duotone" />
-              <Text style={[styles.metaText, { color: T.textDim }]}>{task.dueDate}</Text>
-            </View>
-          )}
+          <TaskDueDate task={task} />
           <View style={styles.metaEnd}>
             <SubjectAvatarStack subjectIds={task.assigneeIds} size={18} max={2} />
           </View>
@@ -98,7 +84,7 @@ export function BacklogTaskRow({
 
       {canMove && (
         <TouchableOpacity
-          onPress={onMove}
+          onPress={() => onMove(task)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={styles.moveBtn}
         >
@@ -107,7 +93,7 @@ export function BacklogTaskRow({
       )}
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   row: {

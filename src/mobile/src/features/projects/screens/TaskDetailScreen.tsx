@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import {
   DotsThree,
-  ArrowUp,
   Check,
   CaretRight,
   Warning,
@@ -21,6 +20,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@shared/components/DomainHeader";
+import { ScreenError } from "@shared/components/ScreenError";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { CommentButton } from "@shared/comments/CommentsSheet";
 import { ShareButton } from "@shared/permissions/ShareSheet";
@@ -29,7 +29,7 @@ import { ActionSheet } from "@shared/components/ActionSheet";
 import { Avatar } from "@shared/components/Avatar";
 import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
-import { useDirectory } from "@shared/permissions/usePermissions";
+import { useDirectory } from "@shared/directory/useDirectory";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import { useAuth } from "@core/providers/AuthContext";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
@@ -39,9 +39,11 @@ import { TaskTypePickerSheet } from "@features/projects/components/TaskTypePicke
 import { SprintPickerSheet } from "@features/projects/components/SprintPickerSheet";
 import { TaskPickerSheet } from "@features/projects/components/TaskPickerSheet";
 import { TimeInputSheet } from "@features/projects/components/TimeInputSheet";
+import { TaskPriorityBadge } from "@features/projects/components/TaskPriorityBadge";
 import { RecurrenceSheet } from "@features/projects/components/RecurrenceSheet";
 import { getTaskTypeConfig, getHierarchyRuleViolation } from "@features/projects/taskTypes";
 import { formatMinutes } from "@features/projects/timeFormatting";
+import { formatRelativeTime } from "@shared/lib/dateFormatting";
 import { parseRecurrence, describeRecurrence } from "@features/projects/taskRecurrence";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
@@ -64,6 +66,8 @@ import {
   getPriorityOptions,
   getOptionById,
   activityActionLabel,
+  DONE_STATUS_ID,
+  TODO_STATUS_ID,
 } from "@features/projects/projectsSerializer";
 import type { SerializedTask } from "@features/projects/projectsSerializer";
 
@@ -73,25 +77,24 @@ type DetailSheet =
 
 /** Every task under `rootId`, plus `rootId` itself. */
 function collectDescendantIds(tasks: SerializedTask[], rootId: string): string[] {
+  const childrenOf = new Map<string, string[]>();
+  for (const task of tasks) {
+    if (!task.parentId) continue;
+    const siblings = childrenOf.get(task.parentId);
+    if (siblings) siblings.push(task.id);
+    else childrenOf.set(task.parentId, [task.id]);
+  }
+
   const ids = [rootId];
+  const seen = new Set(ids);
   for (let i = 0; i < ids.length; i++) {
-    for (const t of tasks) {
-      if (t.parentId === ids[i] && !ids.includes(t.id)) ids.push(t.id);
+    for (const childId of childrenOf.get(ids[i]) ?? []) {
+      if (seen.has(childId)) continue;
+      seen.add(childId);
+      ids.push(childId);
     }
   }
   return ids;
-}
-
-function formatRelativeTime(iso: string | undefined): string {
-  if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 export function TaskDetailScreen() {
@@ -104,7 +107,7 @@ export function TaskDetailScreen() {
   const projectQuery = useProject(task?.projectId);
   const project = projectQuery.data;
   const tasksQuery = useProjectTasks(task?.projectId);
-  const allTasks = tasksQuery.data ?? [];
+  const allTasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
   const activitiesQuery = useTaskActivities(id);
   const activities = activitiesQuery.data ?? [];
   const sprintsQuery = useProjectSprints(task?.projectId);
@@ -124,6 +127,15 @@ export function TaskDetailScreen() {
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
+  // Re-parenting onto a descendant would create a cycle, so the whole subtree
+  // is off-limits as a parent - not just the task itself. Memoised above the
+  // early returns: this runs on every keystroke in the title field otherwise.
+  const taskId = task?.id;
+  const descendantIds = useMemo(
+    () => (taskId ? collectDescendantIds(allTasks, taskId) : []),
+    [allTasks, taskId],
+  );
+
   if (taskQuery.isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
@@ -132,7 +144,16 @@ export function TaskDetailScreen() {
     );
   }
 
-  if (!task) return null;
+  if (!task) {
+    return (
+      <ScreenError
+        title="Task"
+        icon="projects"
+        color={T.accent}
+        onRetry={() => taskQuery.refetch()}
+      />
+    );
+  }
 
   const watcherIds = watchersQuery.data?.watcherIds ?? [];
   const isWatching = !!currentUserId && watcherIds.includes(currentUserId);
@@ -161,16 +182,15 @@ export function TaskDetailScreen() {
     !!task.timeSpentMinutes &&
     task.timeSpentMinutes > task.estimatedMinutes;
 
-  // Re-parenting onto a descendant would create a cycle, so the whole subtree
-  // is off-limits as a parent - not just the task itself.
-  const descendantIds = collectDescendantIds(allTasks, task.id);
-
   function toggleSubtask(sub: SerializedTask) {
     const isNowDone = !sub.completedAt;
+    // The canonical ids, not the ends of the list: a project can add a status
+    // after Done or reorder one in front of To Do, and ticking a box would then
+    // write a status the server never treats as completion.
     updateTask.mutate({
       taskId: sub.id,
       projectId: task!.projectId,
-      status: isNowDone ? statusOptions[statusOptions.length - 1]?.id : statusOptions[0]?.id,
+      status: isNowDone ? DONE_STATUS_ID : TODO_STATUS_ID,
     });
   }
 
@@ -254,17 +274,7 @@ export function TaskDetailScreen() {
               <Text style={[styles.badgeText, { color: statusOpt.color }]}>{statusOpt.label}</Text>
             </View>
           )}
-          {priorityOpt && (
-            <View style={[styles.badge, { backgroundColor: priorityOpt.color + "18" }]}>
-              {(priorityOpt.label.toLowerCase().includes("high") ||
-                priorityOpt.label.toLowerCase().includes("urgent")) && (
-                <ArrowUp size={10} color={priorityOpt.color} weight="bold" />
-              )}
-              <Text style={[styles.badgeText, { color: priorityOpt.color }]}>
-                {priorityOpt.label}
-              </Text>
-            </View>
-          )}
+          {priorityOpt && <TaskPriorityBadge priority={task.priority} options={priorityOptions} />}
           {task.blockedByTaskIds.length > 0 && (
             <View style={[styles.badge, { backgroundColor: T.red + "18" }]}>
               <Warning size={10} color={T.red} weight="bold" />

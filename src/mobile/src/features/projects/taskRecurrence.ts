@@ -49,7 +49,11 @@ export function parseRecurrence(rule: string | undefined): RecurrenceConfig | nu
 }
 
 export function serializeRecurrence(config: RecurrenceConfig): string {
-  return JSON.stringify(config);
+  // "biweekly" already means every two weeks, so it carries no interval of its
+  // own. Normalising on the way out stops a value left over from "weekly" being
+  // stored on a rule whose description can never reflect it.
+  const normalised = config.pattern === "biweekly" ? { ...config, interval: 2 } : config;
+  return JSON.stringify(normalised);
 }
 
 function ordinal(n: number): string {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import {
   Kanban,
@@ -39,7 +39,7 @@ import {
   closeDetailPanel,
   selectTask,
 } from "@/features/projects/store/projectsUiSlice";
-import { selectCurrentProject, selectTasksForProject, selectProjects } from "@/features/projects/store/projectsSlice";
+import { selectCurrentProject, selectProjects } from "@/features/projects/store/projectsSlice";
 import { ProjectsEmptyState } from "@/features/projects/components/ProjectsEmptyState";
 import {
   CollapsibleSidebarRail,
@@ -52,7 +52,6 @@ const PROJECTS_SECTIONS: SidebarSection[] = [
   { id: "organization", icon: Buildings, label: "Organization" },
 ];
 
-const EMPTY_TASKS: ReturnType<ReturnType<typeof selectTasksForProject>> = [];
 
 export function ProjectsLayout() {
   const dispatch = useAppDispatch();
@@ -64,11 +63,6 @@ export function ProjectsLayout() {
   const viewMode = useAppSelector(selectViewMode);
   const currentProject = useAppSelector(selectCurrentProject);
   const currentProjectId = currentProject?.id;
-  const selectTasks = useMemo(
-    () => currentProjectId ? selectTasksForProject(currentProjectId) : () => EMPTY_TASKS,
-    [currentProjectId],
-  );
-  const tasks = useAppSelector(selectTasks);
   const isCreateTaskModalOpen = useAppSelector((state) => state.projectsUi.isCreateTaskModalOpen);
   const isCreateProjectModalOpen = useAppSelector((state) => state.projectsUi.isCreateProjectModalOpen);
   const editProjectId = useAppSelector(selectEditProjectId);
@@ -169,7 +163,7 @@ export function ProjectsLayout() {
         >
           {currentProject ? (
             <div className={cn("h-full overflow-hidden bg-card flex flex-col", showCollapsedRail && "ml-12")}>
-              <ProjectHeader project={currentProject} taskCount={tasks.length} />
+              <ProjectHeader project={currentProject} taskCount={currentProject.taskCount} />
               <div className="flex-1 overflow-hidden">
                 {viewMode === "table" && <TableView />}
                 {viewMode === "board" && <BoardView />}

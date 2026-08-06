@@ -33,7 +33,8 @@ import type {
 
 export function ProjectBacklogView({
   project,
-  tasks: allTasks,
+  tasks: visibleTasks,
+  allTasks,
   statusOptions,
   priorityOptions,
   accentColor,
@@ -43,6 +44,12 @@ export function ProjectBacklogView({
 }: {
   project: SerializedProject;
   tasks: SerializedTask[];
+  /**
+   * Every task in the project, search and filters ignored. Sprint membership is
+   * a property of the sprint, not of what is on screen, so closing a sprint has
+   * to carry over the tasks a filter is hiding as well.
+   */
+  allTasks: SerializedTask[];
   statusOptions: PlainSelectOption[];
   priorityOptions: PlainSelectOption[];
   accentColor: string;
@@ -71,7 +78,8 @@ export function ProjectBacklogView({
 
   // Sprint planning is done in terms of top-level work; a subtask rides with
   // its parent rather than being planned on its own.
-  const tasks = useMemo(() => allTasks.filter((t) => !t.parentId), [allTasks]);
+  const tasks = useMemo(() => visibleTasks.filter((t) => !t.parentId), [visibleTasks]);
+  const plannableTasks = useMemo(() => allTasks.filter((t) => !t.parentId), [allTasks]);
   const sprints = useMemo(() => sprintsQuery.data ?? [], [sprintsQuery.data]);
 
   const activeSprint = sprints.find((s) => s.status === "active");
@@ -226,8 +234,8 @@ export function ProjectBacklogView({
                 statusOptions={statusOptions}
                 priorityOptions={priorityOptions}
                 canMove={canEdit && openSprintIds.size > 0}
-                onPress={() => onOpenTask(task.id)}
-                onMove={() => setMovingTask(task)}
+                onPress={onOpenTask}
+                onMove={setMovingTask}
               />
             ))
           )}
@@ -323,7 +331,9 @@ export function ProjectBacklogView({
           visible
           onClose={() => setCompletingId(null)}
           sprint={completing}
-          incompleteTasks={tasksIn(completing.id).filter((t) => t.status !== DONE_STATUS_ID)}
+          incompleteTasks={plannableTasks.filter(
+            (t) => t.sprintId === completing.id && t.status !== DONE_STATUS_ID,
+          )}
           plannedSprints={plannedSprints.filter((s) => s.id !== completing.id)}
           projectSlug={project.slug}
           accentColor={accentColor}

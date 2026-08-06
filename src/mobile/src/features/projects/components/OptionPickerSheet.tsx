@@ -1,9 +1,9 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { Check } from "phosphor-react-native";
+import { View, ScrollView, StyleSheet } from "react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { SheetHeader } from "@shared/components/SheetHeader";
+import { SheetRow } from "@shared/components/SheetRow";
 import { useTheme } from "@shared/hooks/useTheme";
-import { FONT } from "@theme/typography";
 import type { PlainSelectOption } from "@features/projects/projectsSerializer";
 
 /** Single-select over a project's status or priority options. */
@@ -36,34 +36,27 @@ export function OptionPickerSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: T.textBright }]}>{title}</Text>
-      </View>
+      <SheetHeader title={title} accentColor={accent} />
       <ScrollView style={{ maxHeight: 360 }}>
         {allowNone && (
-          <TouchableOpacity
-            style={[styles.row, { borderBottomColor: T.border }]}
+          <SheetRow
+            title="None"
+            muted
+            leading={<View style={[styles.dot, { backgroundColor: T.border }]} />}
+            selected={!selectedId}
+            accentColor={accent}
             onPress={() => choose("")}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.dot, { backgroundColor: T.border }]} />
-            <Text style={[styles.rowText, { color: T.textDim }]}>None</Text>
-            {!selectedId && <Check size={18} color={accent} weight="bold" />}
-          </TouchableOpacity>
+          />
         )}
         {options.map((option) => (
-          <TouchableOpacity
+          <SheetRow
             key={option.id}
-            style={[styles.row, { borderBottomColor: T.border }]}
+            title={option.label}
+            leading={<View style={[styles.dot, { backgroundColor: option.color }]} />}
+            selected={selectedId === option.id}
+            accentColor={accent}
             onPress={() => choose(option.id)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.dot, { backgroundColor: option.color }]} />
-            <Text style={[styles.rowText, { color: T.textBright }]} numberOfLines={1}>
-              {option.label}
-            </Text>
-            {selectedId === option.id && <Check size={18} color={accent} weight="bold" />}
-          </TouchableOpacity>
+          />
         ))}
       </ScrollView>
     </BottomSheet>
@@ -71,16 +64,5 @@ export function OptionPickerSheet({
 }
 
 const styles = StyleSheet.create({
-  headerRow: { paddingHorizontal: 16, paddingVertical: 10 },
-  title: { fontSize: 16, fontFamily: FONT.bold },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
   dot: { width: 12, height: 12, borderRadius: 6 },
-  rowText: { fontSize: 15, fontFamily: FONT.medium, flex: 1 },
 });

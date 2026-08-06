@@ -7,6 +7,7 @@ import type {
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { ActivityAction } from "@uniffy/proto/projects/v1/projects_pb";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
+import type { ThemeColors } from "@theme/theme";
 
 export interface PlainSelectOption {
   id: string;
@@ -42,7 +43,7 @@ export interface SerializedProject {
   memberCount: number;
   overdueTaskCount: number;
   estimatedMinutes: number;
-  spentMinutes: number;
+  timeSpentMinutes: number;
   fieldDefinitions: SerializedFieldDefinition[];
   createdAt?: string;
   updatedAt?: string;
@@ -130,8 +131,10 @@ const PRIORITY_FIELD_ID = "field_priority";
  * reopened. Renaming and recolouring them is safe, deleting them is not.
  */
 export const DONE_STATUS_ID = "status_done";
+export const TODO_STATUS_ID = "status_todo";
+const IN_PROGRESS_STATUS_ID = "status_in_progress";
 
-export const PROTECTED_STATUS_IDS = ["status_todo", "status_in_progress", DONE_STATUS_ID];
+export const PROTECTED_STATUS_IDS = [TODO_STATUS_ID, IN_PROGRESS_STATUS_ID, DONE_STATUS_ID];
 
 const DEFAULT_STATUS_OPTIONS: PlainSelectOption[] = [
   { id: "status_todo", label: "To Do", color: "#6b7280", sortOrder: 0 },
@@ -226,7 +229,7 @@ export function projectToPlain(project: Project): SerializedProject {
     memberCount: project.memberCount,
     overdueTaskCount: project.overdueTaskCount,
     estimatedMinutes: project.estimatedMinutes,
-    spentMinutes: project.spentMinutes,
+    timeSpentMinutes: project.timeSpentMinutes,
     fieldDefinitions: project.fieldDefinitions.map(fieldDefinitionToPlain),
     createdAt: tsToIso(project.createdAt),
     updatedAt: tsToIso(project.updatedAt),
@@ -317,23 +320,23 @@ export function projectStats(project: SerializedProject): ProjectStats {
 export type ProjectHealth = "not_started" | "on_track" | "at_risk" | "behind";
 
 export const PROJECT_HEALTH_LABELS: Record<ProjectHealth, string> = {
-  not_started: "Not started",
-  on_track: "On track",
-  at_risk: "At risk",
+  not_started: "Not Started",
+  on_track: "On Track",
+  at_risk: "At Risk",
   behind: "Behind",
 };
 
 /** Same rules and thresholds as web's PortfolioPage, so a project reads the
  *  same on both clients. */
 export function projectHealth(project: SerializedProject): ProjectHealth {
-  const { taskCount, completedTaskCount, overdueTaskCount, estimatedMinutes, spentMinutes } =
+  const { taskCount, completedTaskCount, overdueTaskCount, estimatedMinutes, timeSpentMinutes } =
     project;
   if (taskCount === 0) return "not_started";
   if (completedTaskCount === 0 && overdueTaskCount === 0) return "not_started";
   if (overdueTaskCount >= 3) return "behind";
-  if (estimatedMinutes > 0 && spentMinutes > estimatedMinutes) return "behind";
+  if (estimatedMinutes > 0 && timeSpentMinutes > estimatedMinutes) return "behind";
   if (overdueTaskCount >= 1) return "at_risk";
-  if (estimatedMinutes > 0 && spentMinutes > estimatedMinutes * 0.8) return "at_risk";
+  if (estimatedMinutes > 0 && timeSpentMinutes > estimatedMinutes * 0.8) return "at_risk";
   return "on_track";
 }
 
@@ -373,4 +376,17 @@ export function getOptionById(
 
 export function visibilityStringToProto(visibility: string): AccessMode {
   return visibility === "ORGANIZATION" ? AccessMode.OPEN_TO_ORG : AccessMode.OWNER_ONLY;
+}
+
+export const SPRINT_STATUS_LABEL: Record<SerializedSprint["status"], string> = {
+  planned: "Planned",
+  active: "Active",
+  closed: "Closed",
+};
+
+/** Active reads as go, closed as spent, planned as upcoming. */
+export function sprintStatusTint(T: ThemeColors, status: SerializedSprint["status"]): string {
+  if (status === "active") return T.green;
+  if (status === "closed") return T.textDim;
+  return T.blue;
 }

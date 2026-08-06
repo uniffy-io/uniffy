@@ -30,6 +30,9 @@ export function useCreateProject() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
+    onError: (error) => {
+      Alert.alert("Could not create project", serverMessage(error, "The project was not created"));
+    },
   });
 }
 
@@ -59,6 +62,9 @@ export function useUpdateProject() {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["project", organizationId, variables.projectId] });
     },
+    onError: (error) => {
+      Alert.alert("Could not save project", serverMessage(error, "The changes were not saved"));
+    },
   });
 }
 
@@ -75,6 +81,9 @@ export function useDeleteProject() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (error) => {
+      Alert.alert("Could not delete project", serverMessage(error, "The project was not deleted"));
     },
   });
 }
@@ -119,6 +128,9 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
+    onError: (error) => {
+      Alert.alert("Could not create task", serverMessage(error, "The task was not created"));
+    },
   });
 }
 
@@ -129,7 +141,8 @@ export function useUpdateTask() {
   return useMutation({
     mutationFn: (args: {
       taskId: string;
-      projectId?: string;
+      /** Not sent to the server - it scopes which task list gets invalidated. */
+      projectId: string;
       title?: string;
       description?: string;
       status?: string;
@@ -172,10 +185,13 @@ export function useUpdateTask() {
         recurrenceRule: args.recurrenceRule !== undefined ? (args.recurrenceRule ?? "") : undefined,
       }),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: ["task", organizationId, variables.taskId] });
       queryClient.invalidateQueries({ queryKey: ["task-activities", organizationId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (error) => {
+      Alert.alert("Could not save task", serverMessage(error, "The changes were not saved"));
     },
   });
 }
@@ -195,6 +211,9 @@ export function useDeleteTask() {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
+    onError: (error) => {
+      Alert.alert("Could not delete task", serverMessage(error, "The task was not deleted"));
+    },
   });
 }
 
@@ -213,6 +232,9 @@ export function useUpdateField() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["project", organizationId, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (error) => {
+      Alert.alert("Could not save field", serverMessage(error, "The changes were not saved"));
     },
   });
 }
@@ -242,6 +264,9 @@ export function useBulkUpdateTasks() {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
+    onError: (error) => {
+      Alert.alert("Could not update tasks", serverMessage(error, "The tasks were not updated"));
+    },
   });
 }
 
@@ -260,6 +285,9 @@ export function useDeleteTasks() {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
+    onError: (error) => {
+      Alert.alert("Could not delete tasks", serverMessage(error, "The tasks were not deleted"));
+    },
   });
 }
 
@@ -272,6 +300,9 @@ export function useToggleTaskWatcher() {
       projectsApi.toggleTaskWatcher({ organizationId: organizationId!, taskId }),
     onSuccess: (_data, taskId) => {
       queryClient.invalidateQueries({ queryKey: ["task-watchers", organizationId, taskId] });
+    },
+    onError: (error) => {
+      Alert.alert("Could not update watchers", serverMessage(error, "The change was not saved"));
     },
   });
 }
@@ -308,15 +339,20 @@ export function useMoveTasks() {
   return useMutation({
     mutationFn: async (args: { projectId: string; moves: TaskMove[] }) => {
       // MoveTask takes one task at a time; only a respaced column ever sends
-      // more than one, and those writes are independent of each other.
-      for (const move of args.moves) {
-        await projectsApi.moveTask({
-          organizationId: organizationId!,
-          taskId: move.taskId,
-          status: move.status,
-          sortOrder: move.sortOrder,
-        });
-      }
+      // more than one, and those writes are independent of each other. Issued
+      // together rather than in sequence: a 200-task respace over LTE is 200
+      // round trips, and a failure part-way through a serial loop would leave
+      // the column half-respaced with no signal.
+      await Promise.all(
+        args.moves.map((move) =>
+          projectsApi.moveTask({
+            organizationId: organizationId!,
+            taskId: move.taskId,
+            status: move.status,
+            sortOrder: move.sortOrder,
+          }),
+        ),
+      );
     },
     onMutate: async (args) => {
       const key = ["tasks", organizationId, args.projectId];

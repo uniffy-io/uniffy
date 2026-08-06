@@ -86,20 +86,22 @@ export function computeCriticalPath(
     currentId = nextId;
   }
 
-  const downstreamCounts = new Map<string, number>();
-  for (const id of activeIds) {
-    const visited = new Set<string>();
-    const queue = [...(forward.get(id) ?? [])];
-    while (queue.length > 0) {
-      const next = queue.shift()!;
-      if (visited.has(next)) continue;
-      visited.add(next);
-      for (const child of forward.get(next) ?? []) {
-        if (!visited.has(child)) queue.push(child);
-      }
+  // Every edge runs from a lower depth to a higher one, so walking the nodes in
+  // decreasing depth means a node's children are already resolved when it is
+  // reached: one pass unioning child sets, rather than a fresh search per node.
+  const byDepthDesc = [...activeIds].sort((a, b) => depth.get(b)! - depth.get(a)!);
+  const descendants = new Map<string, Set<string>>();
+  for (const id of byDepthDesc) {
+    const reachable = new Set<string>();
+    for (const child of forward.get(id) ?? []) {
+      reachable.add(child);
+      for (const further of descendants.get(child) ?? []) reachable.add(further);
     }
-    downstreamCounts.set(id, visited.size);
+    descendants.set(id, reachable);
   }
+
+  const downstreamCounts = new Map<string, number>();
+  for (const [id, reachable] of descendants) downstreamCounts.set(id, reachable.size);
 
   return { pathNodeIds, pathEdges, pathLength: pathNodeIds.size, downstreamCounts };
 }

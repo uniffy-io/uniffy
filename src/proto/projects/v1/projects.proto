@@ -141,7 +141,8 @@ message Project {
   // time spent only adds up if the whole tree contributes.
   int32 overdue_task_count = 24;
   int32 estimated_minutes = 25;
-  int32 spent_minutes = 26;
+  // Named to match Task.time_spent_minutes - one concept, one field name.
+  int32 time_spent_minutes = 26;
 }
 
 message Task {

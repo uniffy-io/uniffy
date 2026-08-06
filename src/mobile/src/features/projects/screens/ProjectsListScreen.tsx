@@ -16,25 +16,10 @@ import {
   DotsThree,
   Kanban,
   CheckCircle,
-  Megaphone,
-  Wrench,
-  Rocket,
-  Lightning,
-  Globe,
-  ShoppingCart,
-  GraduationCap,
-  Palette,
-  Bug,
-  Target,
-  Trophy,
-  Cube,
-  Heart,
-  Star,
   Buildings,
   Lock,
   ChartBar,
 } from "phosphor-react-native";
-import type { IconProps } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { DomainHeader } from "@shared/components/DomainHeader";
@@ -51,37 +36,7 @@ import { useProjectsList } from "@features/projects/useProjects";
 import { useDeleteProject } from "@features/projects/useProjectMutations";
 import type { SerializedProject } from "@features/projects/projectsSerializer";
 import { projectStats } from "@features/projects/projectsSerializer";
-
-const ICON_MAP: Record<string, React.ComponentType<IconProps>> = {
-  kanban: Kanban,
-  megaphone: Megaphone,
-  wrench: Wrench,
-  rocket: Rocket,
-  lightning: Lightning,
-  globe: Globe,
-  cart: ShoppingCart,
-  graduation: GraduationCap,
-  palette: Palette,
-  bug: Bug,
-  target: Target,
-  trophy: Trophy,
-  cube: Cube,
-  heart: Heart,
-  star: Star,
-};
-
-function ProjectIconComponent({
-  icon,
-  color,
-  size,
-}: {
-  icon: string;
-  color: string;
-  size: number;
-}) {
-  const Icon = ICON_MAP[icon] || Kanban;
-  return <Icon size={size} color={color} weight="duotone" />;
-}
+import { ProjectIcon } from "@features/projects/components/ProjectIcon";
 
 type ProjectScope = "all" | ContentBucket;
 
@@ -123,7 +78,7 @@ const ProjectCard = React.memo(function ProjectCard({
     >
       <View style={styles.projectTop}>
         <View style={[styles.projectIcon, { backgroundColor: projectColor + "20" }]}>
-          <ProjectIconComponent icon={project.icon} color={projectColor} size={16} />
+          <ProjectIcon icon={project.icon} color={projectColor} size={16} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.projectName, { color: T.textBright }]}>{project.name}</Text>

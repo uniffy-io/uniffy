@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { Check } from "phosphor-react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { SheetHeader } from "@shared/components/SheetHeader";
+import { SheetSection, SheetChip } from "@shared/components/SheetSection";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import {
@@ -33,13 +34,15 @@ export function RecurrenceSheet({
     () => parseRecurrence(rule) ?? defaultRecurrence(),
   );
 
-  // Reseed from the task each time the sheet opens rather than keeping the
-  // draft from whichever task was edited last.
-  const [openedFor, setOpenedFor] = useState<string | null>(null);
-  if (visible && openedFor !== (rule ?? "")) {
-    setOpenedFor(rule ?? "");
+  // Seeded on the way in and not touched again until the sheet closes: keying
+  // the reseed off `rule` would let a background refetch of the task discard
+  // whatever the user is part-way through choosing.
+  const [open, setOpen] = useState(false);
+  if (visible && !open) {
+    setOpen(true);
     setConfig(parseRecurrence(rule) ?? defaultRecurrence());
   }
+  if (!visible && open) setOpen(false);
 
   const weekly = config.pattern === "weekly" || config.pattern === "biweekly";
 
@@ -56,60 +59,40 @@ export function RecurrenceSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: T.textBright }]}>Repeat</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => {
+      <SheetHeader
+        title="Repeat"
+        accentColor={accent}
+        actions={[
+          {
+            label: "Don't repeat",
+            tone: "muted",
+            onPress: () => {
               onSave(null);
               onClose();
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={[styles.clear, { color: T.textDim }]}>Don&apos;t repeat</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
+            },
+          },
+          {
+            label: "Save",
+            onPress: () => {
               onSave(serializeRecurrence(config));
               onClose();
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={[styles.save, { color: accent }]}>Save</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            },
+          },
+        ]}
+      />
 
       <ScrollView style={{ maxHeight: 440 }} keyboardShouldPersistTaps="handled">
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: T.textDim }]}>Pattern</Text>
-          <View style={styles.chipWrap}>
-            {RECURRENCE_PATTERNS.map((option) => {
-              const selected = config.pattern === option.value;
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: selected ? accent + "22" : T.pageBg,
-                      borderColor: selected ? accent : T.border,
-                    },
-                  ]}
-                  onPress={() =>
-                    setConfig({ ...config, pattern: option.value as RecurrencePattern })
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.chipText, { color: selected ? accent : T.text }]}>
-                    {option.label}
-                  </Text>
-                  {selected && <Check size={12} color={accent} weight="bold" />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+        <SheetSection title="Pattern">
+          {RECURRENCE_PATTERNS.map((option) => (
+            <SheetChip
+              key={option.value}
+              label={option.label}
+              tint={accent}
+              selected={config.pattern === option.value}
+              onPress={() => setConfig({ ...config, pattern: option.value as RecurrencePattern })}
+            />
+          ))}
+        </SheetSection>
 
         {config.pattern !== "biweekly" && (
           <View style={styles.section}>
@@ -200,17 +183,6 @@ export function RecurrenceSheet({
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 16 },
-  title: { fontSize: 16, fontFamily: FONT.bold },
-  clear: { fontSize: 14, fontFamily: FONT.regular },
-  save: { fontSize: 15, fontFamily: FONT.semibold },
   section: { paddingHorizontal: 16, paddingBottom: 14, gap: 8 },
   sectionTitle: {
     fontSize: 11,
@@ -219,16 +191,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 9,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  chipText: { fontSize: 13, fontFamily: FONT.medium },
   dayChip: {
     width: 40,
     paddingVertical: 8,

@@ -12,18 +12,69 @@ export function bucketForContent(params: {
   return params.ownerId === params.currentUserId ? "personal" : "shared";
 }
 
-// BLOCKED sits above OWNER in the enum but denies everything, so it is checked
-// explicitly rather than by comparing ordinals.
-function atLeast(role: ContentRole | number, floor: ContentRole): boolean {
-  if (role === ContentRole.BLOCKED) return false;
-  return role >= floor;
+/**
+ * BLOCKED sits above OWNER in the proto enum but denies everything, so the
+ * ordering is declared here rather than read off the enum's numeric values.
+ * Mirrors the web app's `shared/utils/contentRoles.ts`; both are advisory - the
+ * backend is the gate.
+ */
+const ROLE_ORDINAL: Record<number, number> = {
+  [ContentRole.UNSPECIFIED]: -2,
+  [ContentRole.BLOCKED]: -1,
+  [ContentRole.VIEWER]: 1,
+  [ContentRole.COMMENTER]: 2,
+  [ContentRole.EDITOR]: 3,
+  [ContentRole.ADMIN]: 4,
+  [ContentRole.OWNER]: 5,
+};
+
+type Role = ContentRole | number | null | undefined;
+
+function ordinal(role: Role): number {
+  if (role === null || role === undefined) return -2;
+  return ROLE_ORDINAL[role] ?? -2;
 }
 
-export function roleCanEdit(role: ContentRole | number): boolean {
-  return atLeast(role, ContentRole.EDITOR);
+export function roleCanView(role: Role): boolean {
+  return ordinal(role) >= ROLE_ORDINAL[ContentRole.VIEWER];
+}
+
+export function roleCanComment(role: Role): boolean {
+  return ordinal(role) >= ROLE_ORDINAL[ContentRole.COMMENTER];
+}
+
+export function roleCanEdit(role: Role): boolean {
+  return ordinal(role) >= ROLE_ORDINAL[ContentRole.EDITOR];
+}
+
+export function roleCanDelete(role: Role): boolean {
+  return ordinal(role) >= ROLE_ORDINAL[ContentRole.ADMIN];
 }
 
 /** Members, access mode and field definitions all require ADMIN on the server. */
-export function roleCanManage(role: ContentRole | number): boolean {
-  return atLeast(role, ContentRole.ADMIN);
+export function roleCanManage(role: Role): boolean {
+  return ordinal(role) >= ROLE_ORDINAL[ContentRole.ADMIN];
+}
+
+export function roleCanTransfer(role: Role): boolean {
+  return ordinal(role) >= ROLE_ORDINAL[ContentRole.OWNER];
+}
+
+export function roleLabel(role: Role): string {
+  switch (role) {
+    case ContentRole.OWNER:
+      return "Owner";
+    case ContentRole.ADMIN:
+      return "Admin";
+    case ContentRole.EDITOR:
+      return "Editor";
+    case ContentRole.COMMENTER:
+      return "Commenter";
+    case ContentRole.VIEWER:
+      return "Viewer";
+    case ContentRole.BLOCKED:
+      return "Blocked";
+    default:
+      return "No access";
+  }
 }

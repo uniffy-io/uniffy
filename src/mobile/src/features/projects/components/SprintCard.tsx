@@ -6,18 +6,16 @@ import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import { FONT } from "@theme/typography";
 import { formatMinutes } from "@features/projects/timeFormatting";
 import { BacklogTaskRow } from "@features/projects/components/BacklogTaskRow";
-import { DONE_STATUS_ID } from "@features/projects/projectsSerializer";
+import {
+  DONE_STATUS_ID,
+  SPRINT_STATUS_LABEL,
+  sprintStatusTint,
+} from "@features/projects/projectsSerializer";
 import type {
   SerializedSprint,
   SerializedTask,
   PlainSelectOption,
 } from "@features/projects/projectsSerializer";
-
-const STATUS_LABEL: Record<SerializedSprint["status"], string> = {
-  planned: "Planned",
-  active: "Active",
-  closed: "Closed",
-};
 
 export function SprintCard({
   sprint,
@@ -70,8 +68,7 @@ export function SprintCard({
           ? `Until ${sprint.endDate}`
           : null;
 
-  const statusTint =
-    sprint.status === "active" ? T.green : sprint.status === "closed" ? T.textDim : T.blue;
+  const statusTint = sprintStatusTint(T, sprint.status);
 
   return (
     <View style={[styles.card, { backgroundColor: T.bg, borderColor: T.border }]}>
@@ -91,7 +88,7 @@ export function SprintCard({
           </Text>
           <View style={[styles.statusPill, { backgroundColor: statusTint + "22" }]}>
             <Text style={[styles.statusText, { color: statusTint }]}>
-              {STATUS_LABEL[sprint.status]}
+              {SPRINT_STATUS_LABEL[sprint.status]}
             </Text>
           </View>
         </View>
@@ -177,8 +174,8 @@ export function SprintCard({
               statusOptions={statusOptions}
               priorityOptions={priorityOptions}
               canMove={canMoveTasks}
-              onPress={() => onOpenTask(task.id)}
-              onMove={() => onMoveTask(task)}
+              onPress={onOpenTask}
+              onMove={onMoveTask}
             />
           ))
         ))}

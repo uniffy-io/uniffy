@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Avatar } from "@shared/components/Avatar";
 import { useTheme } from "@shared/hooks/useTheme";
-import { useDirectory } from "@shared/permissions/usePermissions";
+import { useDirectory } from "@shared/directory/useDirectory";
 import { FONT } from "@theme/typography";
 
 /**

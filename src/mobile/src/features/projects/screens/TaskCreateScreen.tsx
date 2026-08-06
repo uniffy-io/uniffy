@@ -118,7 +118,9 @@ export function CreateTaskScreen() {
   }, [task]);
 
   const isSaving = createTask.isPending || updateTask.isPending;
-  const canSave = title.trim().length > 0 && !isSaving && (isEditing ? !!taskId : !!projectId);
+  // The project is known up front when creating and arrives with the task when
+  // editing, and either way the save cannot be scoped without it.
+  const canSave = title.trim().length > 0 && !isSaving && !!projectId && (!isEditing || !!taskId);
 
   const typeConfig = getTaskTypeConfig(taskType);
   const TypeIcon = typeConfig.Icon;
@@ -129,11 +131,12 @@ export function CreateTaskScreen() {
   const hierarchyWarning = getHierarchyRuleViolation(taskType, parentType);
 
   function handleSave() {
-    if (!canSave) return;
+    if (!canSave || !projectId) return;
     if (isEditing && taskId) {
       updateTask.mutate(
         {
           taskId,
+          projectId,
           title: title.trim(),
           description: descriptionRef.current.trim(),
           status: selectedStatus || undefined,
@@ -151,7 +154,7 @@ export function CreateTaskScreen() {
     } else {
       createTask.mutate(
         {
-          projectId: projectId!,
+          projectId,
           title: title.trim(),
           description: descriptionRef.current.trim() || undefined,
           status: selectedStatus || undefined,

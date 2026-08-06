@@ -807,6 +807,8 @@ class TaskOperations(BaseContentOperations[Task]):
             number=task_number,
             task_type=task_type,
             sprint_id=kwargs.get("sprint_id"),
+            estimated_minutes=kwargs.get("estimated_minutes"),
+            time_spent_minutes=kwargs.get("time_spent_minutes"),
             # Creating straight into the done column has to stamp completion the
             # same way moving a task there does; otherwise the task reads as
             # open everywhere completion is measured by ``completed_at``.

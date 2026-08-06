@@ -5,7 +5,7 @@ import { FONT } from "@theme/typography";
 import { getOptionById } from "@features/projects/projectsSerializer";
 import type { PlainSelectOption } from "@features/projects/projectsSerializer";
 
-export function TaskPriorityBadge({
+export const TaskPriorityBadge = React.memo(function TaskPriorityBadge({
   priority,
   options,
 }: {
@@ -15,8 +15,9 @@ export function TaskPriorityBadge({
   const option = getOptionById(options, priority);
   if (!option) return null;
 
-  const label = option.label.toLowerCase();
-  const urgent = label.includes("high") || label.includes("urgent");
+  // Keyed on the option id, not the label: labels are renameable, so matching on
+  // text would drop the arrow the moment a project calls High something else.
+  const urgent = priority === "priority_high" || priority === "priority_urgent";
 
   return (
     <View style={[styles.badge, { backgroundColor: option.color + "18" }]}>
@@ -24,7 +25,7 @@ export function TaskPriorityBadge({
       <Text style={[styles.text, { color: option.color }]}>{option.label}</Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   badge: {

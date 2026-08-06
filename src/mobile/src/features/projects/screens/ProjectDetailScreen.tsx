@@ -22,6 +22,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@shared/components/DomainHeader";
+import { ScreenError } from "@shared/components/ScreenError";
 import { CommentButton } from "@shared/comments/CommentsSheet";
 import { ShareButton } from "@shared/permissions/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -271,7 +272,16 @@ export function ProjectBoardScreen() {
     );
   }
 
-  if (!project) return null;
+  if (!project) {
+    return (
+      <ScreenError
+        title="Project"
+        icon="projects"
+        color={T.accent}
+        onRetry={() => projectQuery.refetch()}
+      />
+    );
+  }
 
   // The project's own color identifies the project - the header tile, the icon
   // on its card - while every interactive surface stays on the app accent, the
@@ -486,6 +496,7 @@ export function ProjectBoardScreen() {
         <ProjectBacklogView
           project={project}
           tasks={visibleTasks}
+          allTasks={tasks}
           statusOptions={statusOptions}
           priorityOptions={priorityOptions}
           accentColor={T.accent}
@@ -639,11 +650,11 @@ export function ProjectBoardScreen() {
           },
           {
             icon: "users",
-            label: "Workload",
+            label: "Resources",
             sublabel: "Tasks and time per assignee",
             onPress: () =>
               navigateFromMenu(() =>
-                router.push({ pathname: "/projects/workload" as any, params: { projectId: id } }),
+                router.push({ pathname: "/projects/resources" as any, params: { projectId: id } }),
               ),
           },
           {

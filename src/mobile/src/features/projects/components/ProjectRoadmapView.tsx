@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-nati
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { getOptionById } from "@features/projects/projectsSerializer";
+import { parseCalendarDate, startOfToday, formatMonthDay } from "@shared/lib/dateFormatting";
 import type { SerializedTask, PlainSelectOption } from "@features/projects/projectsSerializer";
 
 type ZoomLevel = "week" | "month";
@@ -11,8 +12,6 @@ const DAY_WIDTH_WEEK = 48;
 const DAY_WIDTH_MONTH = 20;
 const ROW_HEIGHT = 40;
 const LABEL_WIDTH = 130;
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function addDays(date: Date, days: number): Date {
   const d = new Date(date);
@@ -24,24 +23,19 @@ function diffDays(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function formatShortDate(date: Date): string {
-  return `${MONTHS[date.getMonth()]} ${date.getDate()}`;
-}
-
 function getTimelineRange(tasks: SerializedTask[], zoom: ZoomLevel): { start: Date; days: number } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = startOfToday();
 
   let earliest = new Date(today);
   let latest = addDays(today, zoom === "week" ? 14 : 60);
 
   for (const task of tasks) {
     if (task.startDate) {
-      const d = new Date(task.startDate);
+      const d = parseCalendarDate(task.startDate);
       if (d < earliest) earliest = new Date(d);
     }
     if (task.dueDate) {
-      const d = new Date(task.dueDate);
+      const d = parseCalendarDate(task.dueDate);
       if (d > latest) latest = new Date(d);
     }
   }
@@ -75,15 +69,18 @@ export function ProjectRoadmapView({
   );
   const timelineWidth = totalDays * dayWidth;
 
-  const headerDates: { label: string; left: number }[] = [];
-  for (let i = 0; i < totalDays; i++) {
-    const d = addDays(timelineStart, i);
-    if (zoom === "week" || d.getDate() === 1 || i === 0) {
-      headerDates.push({ label: formatShortDate(d), left: i * dayWidth });
+  const headerDates = useMemo(() => {
+    const labels: { label: string; left: number }[] = [];
+    for (let i = 0; i < totalDays; i++) {
+      const d = addDays(timelineStart, i);
+      if (zoom === "week" || d.getDate() === 1 || i === 0) {
+        labels.push({ label: formatMonthDay(d), left: i * dayWidth });
+      }
     }
-  }
+    return labels;
+  }, [timelineStart, totalDays, dayWidth, zoom]);
 
-  const todayOffset = diffDays(timelineStart, new Date()) * dayWidth;
+  const todayOffset = diffDays(timelineStart, startOfToday()) * dayWidth;
 
   return (
     <View style={styles.fill}>
@@ -155,15 +152,16 @@ export function ProjectRoadmapView({
                 let barWidth = 0;
 
                 if (hasStart && hasEnd) {
-                  const startOffset = diffDays(timelineStart, new Date(task.startDate!));
-                  const endOffset = diffDays(timelineStart, new Date(task.dueDate!));
+                  const startOffset = diffDays(timelineStart, parseCalendarDate(task.startDate!));
+                  const endOffset = diffDays(timelineStart, parseCalendarDate(task.dueDate!));
                   barLeft = startOffset * dayWidth;
                   barWidth = Math.max((endOffset - startOffset + 1) * dayWidth, dayWidth);
                 } else if (hasStart) {
-                  barLeft = diffDays(timelineStart, new Date(task.startDate!)) * dayWidth;
+                  barLeft = diffDays(timelineStart, parseCalendarDate(task.startDate!)) * dayWidth;
                   barWidth = dayWidth * 3;
                 } else if (hasEnd) {
-                  barLeft = (diffDays(timelineStart, new Date(task.dueDate!)) - 2) * dayWidth;
+                  barLeft =
+                    (diffDays(timelineStart, parseCalendarDate(task.dueDate!)) - 2) * dayWidth;
                   barWidth = dayWidth * 3;
                 }
 

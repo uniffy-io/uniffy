@@ -1,21 +1,10 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { SheetHeader } from "@shared/components/SheetHeader";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
-
-export const STATUS_COLORS = [
-  "#6b7280",
-  "#3b82f6",
-  "#22c55e",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#ec4899",
-  "#06b6d4",
-  "#f97316",
-  "#14b8a6",
-];
+import { STATUS_PALETTE } from "@theme/theme";
 
 /** Creates a status when `initialLabel` is empty, edits one otherwise. */
 export function StatusEditorSheet({
@@ -37,15 +26,15 @@ export function StatusEditorSheet({
   const [label, setLabel] = useState(initialLabel);
   const [color, setColor] = useState(initialColor);
 
-  // Reseed whenever the sheet reopens against a different status, so an edit
-  // never starts from the previous row's draft.
-  const [openedFor, setOpenedFor] = useState<string | null>(null);
-  const openKey = `${title}:${initialLabel}:${initialColor}`;
-  if (visible && openedFor !== openKey) {
-    setOpenedFor(openKey);
+  // Seeded on the way in and not touched again until the sheet closes, so an
+  // edit starts from the row it was opened on and nothing later overwrites it.
+  const [open, setOpen] = useState(false);
+  if (visible && !open) {
+    setOpen(true);
     setLabel(initialLabel);
     setColor(initialColor);
   }
+  if (!visible && open) setOpen(false);
 
   const trimmed = label.trim();
 
@@ -57,16 +46,7 @@ export function StatusEditorSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: T.textBright }]}>{title}</Text>
-        <TouchableOpacity
-          onPress={save}
-          disabled={!trimmed}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={[styles.save, { color: trimmed ? T.accent : T.textDim }]}>Save</Text>
-        </TouchableOpacity>
-      </View>
+      <SheetHeader title={title} actions={[{ label: "Save", onPress: save, disabled: !trimmed }]} />
 
       <View style={styles.body}>
         <TextInput
@@ -84,7 +64,7 @@ export function StatusEditorSheet({
         />
 
         <View style={styles.colorRow}>
-          {STATUS_COLORS.map((c) => (
+          {STATUS_PALETTE.map((c) => (
             <TouchableOpacity
               key={c}
               style={[
@@ -103,15 +83,6 @@ export function StatusEditorSheet({
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  title: { fontSize: 16, fontFamily: FONT.bold },
-  save: { fontSize: 15, fontFamily: FONT.semibold },
   body: { paddingHorizontal: 16, paddingBottom: 16, gap: 14 },
   input: {
     borderRadius: 10,

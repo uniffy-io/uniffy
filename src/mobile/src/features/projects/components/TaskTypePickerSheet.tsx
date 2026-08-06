@@ -1,9 +1,9 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { Check } from "phosphor-react-native";
+import { View, ScrollView, StyleSheet } from "react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { SheetHeader } from "@shared/components/SheetHeader";
+import { SheetRow } from "@shared/components/SheetRow";
 import { useTheme } from "@shared/hooks/useTheme";
-import { FONT } from "@theme/typography";
 import { TASK_TYPES } from "@features/projects/taskTypes";
 
 export function TaskTypePickerSheet({
@@ -24,49 +24,32 @@ export function TaskTypePickerSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: T.textBright }]}>Task type</Text>
-      </View>
+      <SheetHeader title="Task type" accentColor={accent} />
       <ScrollView style={{ maxHeight: 400 }}>
-        {TASK_TYPES.map(({ value, label, Icon, description }) => {
-          const isSelected = selectedType === value;
-          return (
-            <TouchableOpacity
-              key={value}
-              style={[styles.row, { borderBottomColor: T.border }]}
-              onPress={() => {
-                onSelect(value);
-                onClose();
-              }}
-              activeOpacity={0.7}
-            >
+        {TASK_TYPES.map(({ value, label, Icon, description }) => (
+          <SheetRow
+            key={value}
+            title={label}
+            subtitle={description}
+            leading={
               <View style={[styles.iconWrap, { backgroundColor: accent + "18" }]}>
                 <Icon size={17} color={accent} weight="duotone" />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.label, { color: T.textBright }]}>{label}</Text>
-                <Text style={[styles.description, { color: T.textDim }]}>{description}</Text>
-              </View>
-              {isSelected && <Check size={18} color={accent} weight="bold" />}
-            </TouchableOpacity>
-          );
-        })}
+            }
+            selected={selectedType === value}
+            accentColor={accent}
+            onPress={() => {
+              onSelect(value);
+              onClose();
+            }}
+          />
+        ))}
       </ScrollView>
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  headerRow: { paddingHorizontal: 16, paddingVertical: 10 },
-  title: { fontSize: 16, fontFamily: FONT.bold },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
   iconWrap: {
     width: 32,
     height: 32,
@@ -74,6 +57,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  label: { fontSize: 15, fontFamily: FONT.medium },
-  description: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
 });
