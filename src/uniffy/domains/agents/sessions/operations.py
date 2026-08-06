@@ -177,9 +177,7 @@ class SessionOperations:
         if kind not in VALID_SESSION_KINDS:
             raise ValidationError("kind", f"Must be one of: {', '.join(VALID_SESSION_KINDS)}")
 
-        await AgentOperations(self._session).get_by_id(
-            user_id, organization_id, agent_id
-        )
+        await AgentOperations(self._session).get_by_id(user_id, organization_id, agent_id)
 
         agent_session = AgentSession(
             organization_id=organization_id,
@@ -228,6 +226,7 @@ class SessionOperations:
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
         tool_name: str | None = None,
@@ -263,6 +262,7 @@ class SessionOperations:
             content=content,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_creation_input_tokens=cache_creation_input_tokens,
             cache_read_input_tokens=cache_read_input_tokens,
             model=model,
             tool_name=tool_name,
@@ -276,7 +276,9 @@ class SessionOperations:
         )
         self._session.add(message)
 
-        agent_session.total_input_tokens += input_tokens
+        agent_session.total_input_tokens += (
+            input_tokens + cache_creation_input_tokens + cache_read_input_tokens
+        )
         agent_session.total_output_tokens += output_tokens
         agent_session.message_count += 1
         agent_session.updated_at = datetime.now(UTC)
@@ -358,9 +360,7 @@ class SessionOperations:
         messages = list(result.scalars().all())
         return messages, total
 
-    async def _latest_active_prompt_tokens(
-        self, session_id: UUID
-    ) -> tuple[int, int, int]:
+    async def _latest_active_prompt_tokens(self, session_id: UUID) -> tuple[int, int, int]:
         """Return `(prompt, output, cache_read)` tokens for the latest assistant turn.
 
         `prompt` is the FULL size (uncached input + cache hits) since both
@@ -371,6 +371,7 @@ class SessionOperations:
             select(
                 AgentMessage.input_tokens,
                 AgentMessage.output_tokens,
+                AgentMessage.cache_creation_input_tokens,
                 AgentMessage.cache_read_input_tokens,
             )
             .where(
@@ -386,8 +387,9 @@ class SessionOperations:
             return 0, 0, 0
         uncached_input = int(row[0] or 0)
         output = int(row[1] or 0)
-        cache_read = int(row[2] or 0)
-        return uncached_input + cache_read, output, cache_read
+        cache_creation = int(row[2] or 0)
+        cache_read = int(row[3] or 0)
+        return uncached_input + cache_creation + cache_read, output, cache_read
 
     async def get_session_context(
         self,
@@ -690,8 +692,7 @@ class SessionOperations:
             await queue.enqueue_job("compact_session", str(session_id))
         except Exception:
             logger.opt(exception=True).warning(
-                "compact_session enqueue failed",
-                session_id=str(session_id)
+                "compact_session enqueue failed", session_id=str(session_id)
             )
             return False
         return True
@@ -821,9 +822,7 @@ class SessionOperations:
         if msg.sender_type != SenderType.AGENT:
             raise ValidationError("sender", "feedback is only supported on agent messages")
 
-        await ChatAccessChecker(self._session).check_access(
-            user_id, organization_id, channel
-        )
+        await ChatAccessChecker(self._session).check_access(user_id, organization_id, channel)
 
         feedback = await self._upsert_feedback(
             target_column="chat_message_id",
@@ -899,9 +898,7 @@ class SessionOperations:
         if not message_ids:
             return {}
         result = await self._session.execute(
-            select(
-                AgentMessageFeedback.agents_message_id, AgentMessageFeedback.rating
-            ).where(
+            select(AgentMessageFeedback.agents_message_id, AgentMessageFeedback.rating).where(
                 AgentMessageFeedback.user_id == user_id,
                 AgentMessageFeedback.agents_message_id.in_(message_ids),
             )
@@ -915,9 +912,7 @@ class SessionOperations:
         if not chat_message_ids:
             return {}
         result = await self._session.execute(
-            select(
-                AgentMessageFeedback.chat_message_id, AgentMessageFeedback.rating
-            ).where(
+            select(AgentMessageFeedback.chat_message_id, AgentMessageFeedback.rating).where(
                 AgentMessageFeedback.user_id == user_id,
                 AgentMessageFeedback.chat_message_id.in_(chat_message_ids),
             )

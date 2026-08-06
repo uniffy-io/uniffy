@@ -1,4 +1,4 @@
-"""Built-in search and people tools for agents."""
+"""Built-in workspace search tools for agents."""
 
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
@@ -35,35 +35,6 @@ async def _execute_search_query(ctx: ToolContext, args: dict) -> ToolResult:
     return ToolResult(success=True, data="\n".join(lines))
 
 
-async def _execute_list_members(ctx: ToolContext, args: dict) -> ToolResult:
-    """List organization members."""
-    from uniffy.domains.organizations.operations import OrganizationOperations
-
-    search_query = args.get("query")
-    limit = min(args.get("limit", 20), 50)
-
-    ops = OrganizationOperations(ctx.session)
-    members_with_users, total = await ops.list_members(
-        org_id=ctx.organization_id,
-        page=1,
-        page_size=limit,
-        search=search_query,
-    )
-
-    if not members_with_users:
-        return ToolResult(success=True, data="No members found.")
-
-    lines = [f"Found {total} members (showing {len(members_with_users)}):"]
-    for member, user in members_with_users:
-        role = member.role.value if hasattr(member.role, "value") else str(member.role)
-        urn = f"urn:uniffy:content:USER:{user.id}"
-        lines.append(f"- [[[{user.full_name}|{urn}]]] ({user.email}) - {role}")
-
-    return ToolResult(success=True, data="\n".join(lines))
-
-
-# -- Tool definitions --------------------------------------------------------
-
 search_query = ToolDefinition(
     name="search.query",
     display_name="Search Content",
@@ -99,27 +70,4 @@ search_query = ToolDefinition(
     timeout_seconds=30,
 )
 
-list_members = ToolDefinition(
-    name="people.list_members",
-    display_name="List Members",
-    group="People",
-    description="List organization members. Optionally search by name or email.",
-    parameter_schema={
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string",
-                "description": "Optional search query to filter by name or email.",
-            },
-            "limit": {
-                "type": "integer",
-                "description": "Maximum results (default 20, max 50).",
-            },
-        },
-    },
-    executor=_execute_list_members,
-    read_only=True,
-)
-
 SEARCH_TOOLS: list[ToolDefinition] = [search_query]
-PEOPLE_TOOLS: list[ToolDefinition] = [list_members]

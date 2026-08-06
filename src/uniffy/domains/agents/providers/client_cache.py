@@ -2,8 +2,10 @@
 
 Keyed by ``ProviderKey.id``. A cache hit skips the Fernet decrypt AND the provider
 construction, preserving the Anthropic/OpenAI SDK ``httpx`` connection pools across
-turns. TTL 1 hour, size cap 256. Cross-pod invalidation lands via the
-``provider_keys:invalidate:{key_id}`` pubsub channel.
+turns. TTL 1 hour; the size cap (``PROVIDER_CLIENT_LRU_SIZE``) must sit above the
+deployment's live key count or every turn pays the decrypt + construction again.
+Cross-pod invalidation lands via the ``provider_keys:invalidate:{key_id}`` pubsub
+channel.
 
 The LRU is in-process only: the encrypted credential never leaves PG and the
 decrypted material never enters Valkey.
@@ -14,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import os
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -38,7 +41,7 @@ if TYPE_CHECKING:
 
 
 _TTL_SECONDS = 3600
-_MAX_SIZE = 256
+_MAX_SIZE = int(os.getenv("PROVIDER_CLIENT_LRU_SIZE", "5000"))
 _INVALIDATE_PATTERN = "provider_keys:invalidate:*"
 _RECONNECT_BACKOFF_SECONDS = 5.0
 _POLL_TIMEOUT_SECONDS = 1.0

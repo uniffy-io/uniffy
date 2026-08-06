@@ -7,6 +7,7 @@ interface DailyUsageEntry {
     runs: number;
     inputTokens: number;
     outputTokens: number;
+    cacheCreationInputTokens: number;
     cacheReadInputTokens: number;
     cost: string;
     imageCount: number;
@@ -17,6 +18,8 @@ interface ModelUsageEntry {
     runs: number;
     inputTokens: number;
     outputTokens: number;
+    cacheReadInputTokens: number;
+    cacheCreationInputTokens: number;
     cost: string;
     imageCount: number;
 }
@@ -27,6 +30,8 @@ interface AgentUsageEntry {
     runs: number;
     inputTokens: number;
     outputTokens: number;
+    cacheReadInputTokens: number;
+    cacheCreationInputTokens: number;
 }
 
 interface ToolUsageEntry {
@@ -41,6 +46,8 @@ interface ProviderKeyUsageEntry {
     runs: number;
     inputTokens: number;
     outputTokens: number;
+    cacheReadInputTokens: number;
+    cacheCreationInputTokens: number;
 }
 
 interface CronTaskUsageEntry {
@@ -52,6 +59,8 @@ interface CronTaskUsageEntry {
     failures: number;
     inputTokens: number;
     outputTokens: number;
+    cacheReadInputTokens: number;
+    cacheCreationInputTokens: number;
 }
 
 export interface UsageStats {
@@ -59,6 +68,7 @@ export interface UsageStats {
     totalInputTokens: number;
     totalOutputTokens: number;
     totalCacheReadInputTokens: number;
+    totalCacheCreationInputTokens: number;
     totalSessions: number;
     avgDurationMs: number;
     totalCost: string;
@@ -79,6 +89,8 @@ export interface UsageStats {
     cronTotalFailures: number;
     cronTotalInputTokens: number;
     cronTotalOutputTokens: number;
+    cronTotalCacheReadInputTokens: number;
+    cronTotalCacheCreationInputTokens: number;
 }
 
 export const fetchUsageStats = createAsyncThunk<
@@ -101,6 +113,9 @@ export const fetchUsageStats = createAsyncThunk<
             totalInputTokens: Number(response.totalInputTokens),
             totalOutputTokens: Number(response.totalOutputTokens),
             totalCacheReadInputTokens: Number(response.totalCacheReadInputTokens),
+            totalCacheCreationInputTokens: Number(
+                response.totalCacheCreationInputTokens
+            ),
             totalSessions: Number(response.totalSessions),
             avgDurationMs: response.avgDurationMs,
             totalCost: response.totalCost || '0',
@@ -116,6 +131,7 @@ export const fetchUsageStats = createAsyncThunk<
                 inputTokens: Number(d.inputTokens),
                 outputTokens: Number(d.outputTokens),
                 cacheReadInputTokens: Number(d.cacheReadInputTokens),
+                cacheCreationInputTokens: Number(d.cacheCreationInputTokens),
                 cost: d.cost || '0',
                 imageCount: Number(d.imageCount),
             })),
@@ -126,6 +142,8 @@ export const fetchUsageStats = createAsyncThunk<
                 outputTokens: Number(m.outputTokens),
                 cost: m.cost || '0',
                 imageCount: Number(m.imageCount),
+                cacheReadInputTokens: Number(m.cacheReadInputTokens),
+                cacheCreationInputTokens: Number(m.cacheCreationInputTokens),
             })),
             agentUsage: response.agentUsage.map((a) => ({
                 agentId: a.agentId,
@@ -133,6 +151,8 @@ export const fetchUsageStats = createAsyncThunk<
                 runs: Number(a.runs),
                 inputTokens: Number(a.inputTokens),
                 outputTokens: Number(a.outputTokens),
+                cacheReadInputTokens: Number(a.cacheReadInputTokens),
+                cacheCreationInputTokens: Number(a.cacheCreationInputTokens),
             })),
             toolUsage: response.toolUsage.map((t) => ({
                 toolName: t.toolName,
@@ -145,6 +165,8 @@ export const fetchUsageStats = createAsyncThunk<
                 runs: Number(p.runs),
                 inputTokens: Number(p.inputTokens),
                 outputTokens: Number(p.outputTokens),
+                cacheReadInputTokens: Number(p.cacheReadInputTokens),
+                cacheCreationInputTokens: Number(p.cacheCreationInputTokens),
             })),
             cronUsage: response.cronUsage.map((c) => ({
                 cronTaskId: c.cronTaskId,
@@ -155,12 +177,20 @@ export const fetchUsageStats = createAsyncThunk<
                 failures: Number(c.failures),
                 inputTokens: Number(c.inputTokens),
                 outputTokens: Number(c.outputTokens),
+                cacheReadInputTokens: Number(c.cacheReadInputTokens),
+                cacheCreationInputTokens: Number(c.cacheCreationInputTokens),
             })),
             cronTotalRuns: Number(response.cronTotalRuns),
             cronTotalSuccesses: Number(response.cronTotalSuccesses),
             cronTotalFailures: Number(response.cronTotalFailures),
             cronTotalInputTokens: Number(response.cronTotalInputTokens),
             cronTotalOutputTokens: Number(response.cronTotalOutputTokens),
+            cronTotalCacheReadInputTokens: Number(
+                response.cronTotalCacheReadInputTokens
+            ),
+            cronTotalCacheCreationInputTokens: Number(
+                response.cronTotalCacheCreationInputTokens
+            ),
         };
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch usage stats');

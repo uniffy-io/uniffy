@@ -62,6 +62,8 @@ def validate_image_params(
         members = model.image_enums.get(knob)
         if members and value not in members:
             raise ValueError(f"{knob} {value!r} not supported by model {model_id!r}")
+    if params.get("background") == "transparent" and params.get("output_format") == "jpeg":
+        raise ValueError("transparent backgrounds require PNG or WebP output")
 
 
 def clamp_image_params(
@@ -110,9 +112,7 @@ def resolve_image_params(
         **(override_params or {}),
         **(call_params or {}),
     }
-    merged = clamp_image_params(
-        merged, max_resolution=max_resolution, max_quality=max_quality
-    )
+    merged = clamp_image_params(merged, max_resolution=max_resolution, max_quality=max_quality)
     if not merged:
         return {}
 
@@ -130,6 +130,8 @@ def resolve_image_params(
             )
             continue
         kept[knob] = value
+    if kept.get("background") == "transparent" and kept.get("output_format") == "jpeg":
+        kept["output_format"] = "png"
     return kept
 
 
@@ -142,4 +144,6 @@ def strip_unsupported_image_params(provider: str, model_id: str, params: dict) -
         except ValueError:
             continue
         kept[knob] = value
+    if kept.get("background") == "transparent" and kept.get("output_format") == "jpeg":
+        kept["output_format"] = "png"
     return kept

@@ -71,6 +71,10 @@ const (
 	ChatEventType_CHAT_EVENT_TYPE_AGENT_THINKING_DELTA ChatEventType = 31
 	// A member's channel role changed; payload is MemberPayload with the new role.
 	ChatEventType_CHAT_EVENT_TYPE_MEMBER_UPDATED ChatEventType = 32
+	// A channel the recipient belongs to was created. Carries the id only:
+	// recipients hydrate through GetChannel so every client applies the same
+	// row the channel list would have loaded.
+	ChatEventType_CHAT_EVENT_TYPE_CHANNEL_CREATED ChatEventType = 33
 )
 
 // Enum value maps for ChatEventType.
@@ -105,6 +109,7 @@ var (
 		30: "CHAT_EVENT_TYPE_CALL_HOST_CHANGED",
 		31: "CHAT_EVENT_TYPE_AGENT_THINKING_DELTA",
 		32: "CHAT_EVENT_TYPE_MEMBER_UPDATED",
+		33: "CHAT_EVENT_TYPE_CHANNEL_CREATED",
 	}
 	ChatEventType_value = map[string]int32{
 		"CHAT_EVENT_TYPE_UNSPECIFIED":                  0,
@@ -136,6 +141,7 @@ var (
 		"CHAT_EVENT_TYPE_CALL_HOST_CHANGED":            30,
 		"CHAT_EVENT_TYPE_AGENT_THINKING_DELTA":         31,
 		"CHAT_EVENT_TYPE_MEMBER_UPDATED":               32,
+		"CHAT_EVENT_TYPE_CHANNEL_CREATED":              33,
 	}
 )
 
@@ -2485,7 +2491,7 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\tsender_id\x18\x04 \x01(\tR\bsenderId\x12\x1f\n" +
 	"\vsender_name\x18\x05 \x01(\tR\n" +
 	"senderName\x12\x18\n" +
-	"\apreview\x18\x06 \x01(\tR\apreview*\xd0\b\n" +
+	"\apreview\x18\x06 \x01(\tR\apreview*\xf5\b\n" +
 	"\rChatEventType\x12\x1f\n" +
 	"\x1bCHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fCHAT_EVENT_TYPE_MESSAGE_CREATED\x10\x01\x12#\n" +
@@ -2516,7 +2522,8 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x19CHAT_EVENT_TYPE_CALL_RING\x10\x1d\x12%\n" +
 	"!CHAT_EVENT_TYPE_CALL_HOST_CHANGED\x10\x1e\x12(\n" +
 	"$CHAT_EVENT_TYPE_AGENT_THINKING_DELTA\x10\x1f\x12\"\n" +
-	"\x1eCHAT_EVENT_TYPE_MEMBER_UPDATED\x10 *\xb1\x02\n" +
+	"\x1eCHAT_EVENT_TYPE_MEMBER_UPDATED\x10 \x12#\n" +
+	"\x1fCHAT_EVENT_TYPE_CHANNEL_CREATED\x10!*\xb1\x02\n" +
 	"\x11UserChatEventType\x12$\n" +
 	" USER_CHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12-\n" +
 	")USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED\x10\x01\x12(\n" +

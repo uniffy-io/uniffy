@@ -8,7 +8,7 @@ import {
   selectActiveThreadId,
   selectActiveThreadMessages,
 } from '@/features/chat/store/chatThreadsSlice';
-import { fetchThreadMessages, sendMessage } from '@/features/chat/store/chatThunks';
+import { fetchThreadMessages, sendMessage, stopAgentRun } from '@/features/chat/store/chatThunks';
 import { selectTypingInThread, evictExpiredTyping } from '@/features/chat/store/chatMessagesSlice';
 import { useDraftSync } from '@/features/chat/hooks/useDraftSync';
 import { MessageItem } from '@/features/chat/components/channel/MessageItem';
@@ -124,6 +124,11 @@ export function ThreadPanel() {
     dispatch(clearReplyToMessage());
   }, [dispatch]);
 
+  const handleStopAgent = useCallback((agentId: string) => {
+    if (!rootMessage) return;
+    dispatch(stopAgentRun({ channelId: rootMessage.channelId, agentId }));
+  }, [rootMessage, dispatch]);
+
   if (!activeThreadId) {
     return null;
   }
@@ -217,7 +222,7 @@ export function ThreadPanel() {
        </div>
       </div>
 
-      <TypingIndicator typingUsers={threadTyping} />
+      <TypingIndicator typingUsers={threadTyping} onStopAgent={handleStopAgent} />
 
       <MessageCompose
         // Remount per thread so one thread's text never leaks into another.

@@ -73,6 +73,129 @@ async def bump_channel_message_stats(
         )
 
 
+# Agent rows a reader sees as an answer in the thread. Tool cards, tool results
+# and compaction summaries are machinery, so they never move the reply counter.
+AGENT_THREAD_REPLY_KINDS = frozenset({"final", "agent_error", "skill_draft"})
+
+
+def counts_as_thread_reply(message: ChatMessage) -> bool:
+    """Whether a row moves its thread's reply counter."""
+    if message.root_id is None:
+        return False
+    if message.sender_type != SenderType.AGENT:
+        return True
+    return (message.message_metadata or {}).get("kind") in AGENT_THREAD_REPLY_KINDS
+
+
+async def record_thread_reply(
+    session: AsyncSession,
+    *,
+    root_message_id: UUID,
+    channel_id: UUID,
+    sender_type: SenderType,
+    sender_id: UUID,
+    at: datetime,
+    root_message: ChatMessage | None = None,
+) -> None:
+    """Count one reply into a thread and record its sender as a participant.
+
+    Agents participate as AGENT subjects with no `user_id`, so the follow rows -
+    a user-inbox concept - are written for human senders only. Caller owns the
+    commit.
+    """
+    is_agent = sender_type == SenderType.AGENT
+    subject_type = SubjectType.AGENT if is_agent else SubjectType.USER
+
+    result = await session.execute(
+        select(ChatThread).where(ChatThread.root_message_id == root_message_id)
+    )
+    thread = result.scalar_one_or_none()
+
+    if not thread:
+        session.add(
+            ChatThread(
+                root_message_id=root_message_id,
+                channel_id=channel_id,
+                created_at=at,
+            )
+        )
+        await session.flush()
+        session.add(
+            ChatThreadStats(
+                root_message_id=root_message_id,
+                reply_count=1,
+                last_reply_at=at,
+            )
+        )
+
+        if (
+            root_message is not None
+            and root_message.sender_id != sender_id
+            and root_message.sender_type == SenderType.USER
+        ):
+            session.add(
+                ChatThreadFollow(
+                    root_message_id=root_message_id,
+                    subject_type=SubjectType.USER,
+                    subject_id=root_message.sender_id,
+                    user_id=root_message.sender_id,
+                    created_at=at,
+                )
+            )
+    else:
+        await session.execute(
+            update(ChatThreadStats)
+            .where(ChatThreadStats.root_message_id == root_message_id)
+            .values(
+                reply_count=ChatThreadStats.reply_count + 1,
+                last_reply_at=at,
+            )
+        )
+
+    await session.execute(
+        pg_insert(ChatThreadParticipant)
+        .values(
+            root_message_id=root_message_id,
+            subject_type=subject_type,
+            subject_id=sender_id,
+            user_id=None if is_agent else sender_id,
+            created_at=at,
+        )
+        .on_conflict_do_nothing(index_elements=["root_message_id", "subject_type", "subject_id"])
+    )
+
+    if is_agent:
+        return
+
+    await session.execute(
+        pg_insert(ChatThreadFollow)
+        .values(
+            root_message_id=root_message_id,
+            subject_type=SubjectType.USER,
+            subject_id=sender_id,
+            user_id=sender_id,
+            created_at=at,
+        )
+        .on_conflict_do_nothing(index_elements=["root_message_id", "subject_type", "subject_id"])
+    )
+
+
+async def drop_thread_reply(session: AsyncSession, root_message_id: UUID) -> None:
+    """Take one counted reply back off a thread (deletion, discarded placeholder).
+
+    Participant rows are append-only, so only the counter moves. Caller owns the
+    commit.
+    """
+    await session.execute(
+        update(ChatThreadStats)
+        .where(
+            ChatThreadStats.root_message_id == root_message_id,
+            ChatThreadStats.reply_count > 0,
+        )
+        .values(reply_count=ChatThreadStats.reply_count - 1)
+    )
+
+
 class ChatMessageOperations:
     """Message CRUD with two-phase transaction and thread auto-creation."""
 
@@ -110,7 +233,7 @@ class ChatMessageOperations:
             if agent_deleted.scalar_one_or_none() is not False:
                 raise ValidationError("channel", "This agent was deleted")
 
-        # Hold the loaded root row and thread it to _handle_thread_reply to avoid a re-fetch.
+        # Hold the loaded root row and thread it to record_thread_reply to avoid a re-fetch.
         root_msg: ChatMessage | None = None
         if root_id:
             root_msg = await self._get_message_by_id(root_id)
@@ -161,7 +284,15 @@ class ChatMessageOperations:
 
         await bump_channel_message_stats(self.session, channel_id, at=now, is_root=root_id is None)
         if root_id is not None:
-            await self._handle_thread_reply(root_id, channel_id, user_id, now, root_msg)
+            await record_thread_reply(
+                self.session,
+                root_message_id=root_id,
+                channel_id=channel_id,
+                sender_type=SenderType.USER,
+                sender_id=user_id,
+                at=now,
+                root_message=root_msg,
+            )
 
         await self.session.commit()
         await self.session.refresh(message)
@@ -1069,11 +1200,8 @@ class ChatMessageOperations:
                 .where(ChatChannelStats.channel_id == channel_id)
                 .values(message_count=ChatChannelStats.message_count - 1)
             )
-            await self.session.execute(
-                update(ChatThreadStats)
-                .where(ChatThreadStats.root_message_id == msg.root_id)
-                .values(reply_count=ChatThreadStats.reply_count - 1)
-            )
+            if counts_as_thread_reply(msg):
+                await drop_thread_reply(self.session, msg.root_id)
 
         await self.session.commit()
 
@@ -1212,84 +1340,6 @@ class ChatMessageOperations:
             channel_id, [m.id for m in messages]
         )
         return messages
-
-    async def _handle_thread_reply(
-        self,
-        root_id: UUID,
-        channel_id: UUID,
-        sender_id: UUID,
-        now: datetime,
-        root_msg: ChatMessage,
-    ) -> None:
-        result = await self.session.execute(
-            select(ChatThread).where(ChatThread.root_message_id == root_id)
-        )
-        thread = result.scalar_one_or_none()
-
-        if not thread:
-            thread = ChatThread(
-                root_message_id=root_id,
-                channel_id=channel_id,
-                created_at=now,
-            )
-            self.session.add(thread)
-            await self.session.flush()
-
-            stats = ChatThreadStats(
-                root_message_id=root_id,
-                reply_count=1,
-                last_reply_at=now,
-            )
-            self.session.add(stats)
-
-            # Auto-follow root author (USER only; agent participation is via AgentChatBridge).
-            if (
-                root_msg.sender_id != sender_id
-                and root_msg.sender_type == SenderType.USER
-            ):
-                self.session.add(
-                    ChatThreadFollow(
-                        root_message_id=root_id,
-                        subject_type=SubjectType.USER,
-                        subject_id=root_msg.sender_id,
-                        user_id=root_msg.sender_id,
-                        created_at=now,
-                    )
-                )
-        else:
-            await self.session.execute(
-                update(ChatThreadStats)
-                .where(ChatThreadStats.root_message_id == root_id)
-                .values(
-                    reply_count=ChatThreadStats.reply_count + 1,
-                    last_reply_at=now,
-                )
-            )
-
-        # Sender is always a USER from this path; agent participation goes via AgentChatBridge.
-        await self.session.execute(
-            pg_insert(ChatThreadParticipant)
-            .values(
-                root_message_id=root_id,
-                subject_type=SubjectType.USER,
-                subject_id=sender_id,
-                user_id=sender_id,
-                created_at=now,
-            )
-            .on_conflict_do_nothing(index_elements=["root_message_id", "subject_type", "subject_id"])
-        )
-
-        await self.session.execute(
-            pg_insert(ChatThreadFollow)
-            .values(
-                root_message_id=root_id,
-                subject_type=SubjectType.USER,
-                subject_id=sender_id,
-                user_id=sender_id,
-                created_at=now,
-            )
-            .on_conflict_do_nothing(index_elements=["root_message_id", "subject_type", "subject_id"])
-        )
 
     async def _require_message_action(
         self,

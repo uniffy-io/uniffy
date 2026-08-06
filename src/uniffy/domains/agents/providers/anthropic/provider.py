@@ -105,6 +105,7 @@ class AnthropicProvider(LLMProvider):
         stream: bool = False,
         cache_key: str | None = None,
         params: dict | None = None,
+        safety_identifier: str | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request to the Anthropic API.
 
@@ -127,6 +128,7 @@ class AnthropicProvider(LLMProvider):
             Result or streaming iterator.
 
         """
+        del safety_identifier
         kwargs = self._build_request_kwargs(
             messages=messages,
             model=model,
@@ -300,9 +302,7 @@ class AnthropicProvider(LLMProvider):
             cache_creation_input_tokens=int(
                 getattr(response.usage, "cache_creation_input_tokens", 0) or 0
             ),
-            cache_read_input_tokens=int(
-                getattr(response.usage, "cache_read_input_tokens", 0) or 0
-            ),
+            cache_read_input_tokens=int(getattr(response.usage, "cache_read_input_tokens", 0) or 0),
             tool_calls=tool_calls,
             thinking_blocks=thinking_blocks,
             stop_reason=response.stop_reason or "end_turn",
@@ -355,20 +355,20 @@ class AnthropicProvider(LLMProvider):
                 final_message = await stream.get_final_message()
                 usage = final_message.usage
                 cache_read = int(getattr(usage, "cache_read_input_tokens", 0) or 0)
+                cache_creation = int(getattr(usage, "cache_creation_input_tokens", 0) or 0)
                 yield StreamEvent(
                     type=EventType.MODEL_CALL_END,
                     model=final_message.model,
                     input_tokens=usage.input_tokens,
                     output_tokens=usage.output_tokens,
+                    cache_creation_input_tokens=cache_creation,
                     cache_read_input_tokens=cache_read,
                     result=CompletionResult(
                         content=accumulated_content,
                         model=final_message.model,
                         input_tokens=usage.input_tokens,
                         output_tokens=usage.output_tokens,
-                        cache_creation_input_tokens=int(
-                            getattr(usage, "cache_creation_input_tokens", 0) or 0
-                        ),
+                        cache_creation_input_tokens=cache_creation,
                         cache_read_input_tokens=cache_read,
                         tool_calls=tool_calls,
                         thinking_blocks=thinking_blocks,
@@ -377,7 +377,7 @@ class AnthropicProvider(LLMProvider):
                 )
         except Exception as e:
             logger.error(f"Anthropic streaming error: {e}")
-            yield StreamEvent(type=EventType.ERROR, error=str(e))
+            yield StreamEvent(type=EventType.ERROR, error=str(e), error_exception=e)
 
     @staticmethod
     def _open_block(content_block) -> _OpenBlock | None:
@@ -395,13 +395,9 @@ class AnthropicProvider(LLMProvider):
     def _block_start_event(block: _OpenBlock) -> StreamEvent:
         match block.kind:
             case "text":
-                return StreamEvent(
-                    type=EventType.TEXT_BLOCK_START, block_id=block.block_id
-                )
+                return StreamEvent(type=EventType.TEXT_BLOCK_START, block_id=block.block_id)
             case "thinking":
-                return StreamEvent(
-                    type=EventType.THINKING_BLOCK_START, block_id=block.block_id
-                )
+                return StreamEvent(type=EventType.THINKING_BLOCK_START, block_id=block.block_id)
             case _:
                 return StreamEvent(
                     type=EventType.TOOL_CALL_START,
@@ -449,9 +445,7 @@ class AnthropicProvider(LLMProvider):
     ) -> StreamEvent:
         match block.kind:
             case "text":
-                return StreamEvent(
-                    type=EventType.TEXT_BLOCK_END, block_id=block.block_id
-                )
+                return StreamEvent(type=EventType.TEXT_BLOCK_END, block_id=block.block_id)
             case "thinking":
                 if block.thinking or block.signature:
                     thinking_blocks.append({

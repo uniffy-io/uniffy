@@ -15,6 +15,9 @@ if TYPE_CHECKING:
     from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 
 
+VISIBLE_REFUSAL_MESSAGE = "I can't help with that request."
+
+
 @dataclass(frozen=True)
 class ModelInfo:
     """Static model metadata sourced from the catalog.
@@ -73,6 +76,7 @@ class CompletionResult:
     output_tokens: int = 0
     cache_creation_input_tokens: int = 0
     cache_read_input_tokens: int = 0
+    thinking_tokens: int = 0
     tool_calls: list[ToolCall] = field(default_factory=list)
     thinking_blocks: list[dict] = field(default_factory=list)
     stop_reason: str = "end_turn"
@@ -85,6 +89,16 @@ class CompletionResult:
             + int(self.cache_creation_input_tokens or 0)
             + int(self.cache_read_input_tokens or 0)
         )
+
+
+def ensure_visible_terminal(result: CompletionResult) -> CompletionResult:
+    if (
+        not result.content
+        and not result.tool_calls
+        and result.stop_reason in {"refusal", "safety", "content_filter"}
+    ):
+        result.content = VISIBLE_REFUSAL_MESSAGE
+    return result
 
 
 class EventType(StrEnum):
@@ -145,10 +159,12 @@ class StreamEvent:
     tool_result: str = ""
     input_tokens: int = 0
     output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
     cache_read_input_tokens: int = 0
     thinking_tokens: int = 0
     result: CompletionResult | None = None
     error: str = ""
+    error_exception: BaseException | None = None
     description: str = ""
     from_provider_key_id: str = ""
     to_provider_key_id: str = ""
@@ -204,18 +220,9 @@ class LLMProvider(ABC):
         stream: bool = False,
         cache_key: str | None = None,
         params: dict | None = None,
+        safety_identifier: str | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
-        """Send a chat completion request.
-
-        `cache_key` enables cache-affinity routing on providers that
-        support it (OpenAI maps it to `prompt_cache_key`); Anthropic and
-        Google cache transparently and ignore the value.
-
-        `params` carries validated normalized knob values (temperature,
-        top_p, max_tokens, reasoning_effort, provider_options) that each
-        provider maps onto its native request shape. `None` = provider
-        defaults.
-        """
+        """Send a completion using normalized parameters and optional cache affinity."""
 
     async def generate_image(
         self,
@@ -224,12 +231,7 @@ class LLMProvider(ABC):
         model: str,
         params: dict | None = None,
     ) -> tuple[bytes, str]:
-        """Generate an image from a text prompt; returns `(bytes, mime_type)`.
-
-        `params` carries validated normalized knobs (`aspect_ratio`,
-        `resolution`, `quality`, ...) that each provider maps onto its native
-        request shape; providers speak pixels or ratios, never both.
-        """
+        """Generate image bytes and their MIME type using normalized parameters."""
         raise NotImplementedError("This provider does not support image generation")
 
     def image_billing_size(self, model: str, params: dict) -> str:

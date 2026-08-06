@@ -93,7 +93,7 @@ class GetUsageStatsRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., days: _Optional[int] = ..., interval: _Optional[str] = ...) -> None: ...
 
 class GetUsageStatsResponse(_message.Message):
-    __slots__ = ("total_runs", "total_input_tokens", "total_output_tokens", "total_sessions", "avg_duration_ms", "daily_usage", "model_usage", "agent_usage", "tool_usage", "provider_key_usage", "cron_usage", "cron_total_runs", "cron_total_successes", "cron_total_failures", "cron_total_input_tokens", "cron_total_output_tokens", "total_cache_read_input_tokens", "total_cost", "total_thinking_tokens", "total_image_count", "total_retries", "total_cancelled", "total_deadline_exceeded", "display_currency")
+    __slots__ = ("total_runs", "total_input_tokens", "total_output_tokens", "total_sessions", "avg_duration_ms", "daily_usage", "model_usage", "agent_usage", "tool_usage", "provider_key_usage", "cron_usage", "cron_total_runs", "cron_total_successes", "cron_total_failures", "cron_total_input_tokens", "cron_total_output_tokens", "total_cache_read_input_tokens", "total_cost", "total_thinking_tokens", "total_image_count", "total_retries", "total_cancelled", "total_deadline_exceeded", "display_currency", "total_cache_creation_input_tokens", "cron_total_cache_read_input_tokens", "cron_total_cache_creation_input_tokens")
     TOTAL_RUNS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
@@ -118,6 +118,9 @@ class GetUsageStatsResponse(_message.Message):
     TOTAL_CANCELLED_FIELD_NUMBER: _ClassVar[int]
     TOTAL_DEADLINE_EXCEEDED_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_CURRENCY_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_CACHE_CREATION_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CRON_TOTAL_CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CRON_TOTAL_CACHE_CREATION_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     total_runs: int
     total_input_tokens: int
     total_output_tokens: int
@@ -142,10 +145,13 @@ class GetUsageStatsResponse(_message.Message):
     total_cancelled: int
     total_deadline_exceeded: int
     display_currency: str
-    def __init__(self, total_runs: _Optional[int] = ..., total_input_tokens: _Optional[int] = ..., total_output_tokens: _Optional[int] = ..., total_sessions: _Optional[int] = ..., avg_duration_ms: _Optional[int] = ..., daily_usage: _Optional[_Iterable[_Union[DailyUsage, _Mapping]]] = ..., model_usage: _Optional[_Iterable[_Union[ModelUsage, _Mapping]]] = ..., agent_usage: _Optional[_Iterable[_Union[AgentUsageInfo, _Mapping]]] = ..., tool_usage: _Optional[_Iterable[_Union[ToolUsage, _Mapping]]] = ..., provider_key_usage: _Optional[_Iterable[_Union[ProviderKeyUsage, _Mapping]]] = ..., cron_usage: _Optional[_Iterable[_Union[CronTaskUsage, _Mapping]]] = ..., cron_total_runs: _Optional[int] = ..., cron_total_successes: _Optional[int] = ..., cron_total_failures: _Optional[int] = ..., cron_total_input_tokens: _Optional[int] = ..., cron_total_output_tokens: _Optional[int] = ..., total_cache_read_input_tokens: _Optional[int] = ..., total_cost: _Optional[str] = ..., total_thinking_tokens: _Optional[int] = ..., total_image_count: _Optional[int] = ..., total_retries: _Optional[int] = ..., total_cancelled: _Optional[int] = ..., total_deadline_exceeded: _Optional[int] = ..., display_currency: _Optional[str] = ...) -> None: ...
+    total_cache_creation_input_tokens: int
+    cron_total_cache_read_input_tokens: int
+    cron_total_cache_creation_input_tokens: int
+    def __init__(self, total_runs: _Optional[int] = ..., total_input_tokens: _Optional[int] = ..., total_output_tokens: _Optional[int] = ..., total_sessions: _Optional[int] = ..., avg_duration_ms: _Optional[int] = ..., daily_usage: _Optional[_Iterable[_Union[DailyUsage, _Mapping]]] = ..., model_usage: _Optional[_Iterable[_Union[ModelUsage, _Mapping]]] = ..., agent_usage: _Optional[_Iterable[_Union[AgentUsageInfo, _Mapping]]] = ..., tool_usage: _Optional[_Iterable[_Union[ToolUsage, _Mapping]]] = ..., provider_key_usage: _Optional[_Iterable[_Union[ProviderKeyUsage, _Mapping]]] = ..., cron_usage: _Optional[_Iterable[_Union[CronTaskUsage, _Mapping]]] = ..., cron_total_runs: _Optional[int] = ..., cron_total_successes: _Optional[int] = ..., cron_total_failures: _Optional[int] = ..., cron_total_input_tokens: _Optional[int] = ..., cron_total_output_tokens: _Optional[int] = ..., total_cache_read_input_tokens: _Optional[int] = ..., total_cost: _Optional[str] = ..., total_thinking_tokens: _Optional[int] = ..., total_image_count: _Optional[int] = ..., total_retries: _Optional[int] = ..., total_cancelled: _Optional[int] = ..., total_deadline_exceeded: _Optional[int] = ..., display_currency: _Optional[str] = ..., total_cache_creation_input_tokens: _Optional[int] = ..., cron_total_cache_read_input_tokens: _Optional[int] = ..., cron_total_cache_creation_input_tokens: _Optional[int] = ...) -> None: ...
 
 class DailyUsage(_message.Message):
-    __slots__ = ("date", "runs", "input_tokens", "output_tokens", "cache_read_input_tokens", "cost", "image_count")
+    __slots__ = ("date", "runs", "input_tokens", "output_tokens", "cache_read_input_tokens", "cost", "image_count", "cache_creation_input_tokens")
     DATE_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
@@ -153,6 +159,7 @@ class DailyUsage(_message.Message):
     CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     COST_FIELD_NUMBER: _ClassVar[int]
     IMAGE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    CACHE_CREATION_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     date: str
     runs: int
     input_tokens: int
@@ -160,37 +167,46 @@ class DailyUsage(_message.Message):
     cache_read_input_tokens: int
     cost: str
     image_count: int
-    def __init__(self, date: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., cost: _Optional[str] = ..., image_count: _Optional[int] = ...) -> None: ...
+    cache_creation_input_tokens: int
+    def __init__(self, date: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., cost: _Optional[str] = ..., image_count: _Optional[int] = ..., cache_creation_input_tokens: _Optional[int] = ...) -> None: ...
 
 class ModelUsage(_message.Message):
-    __slots__ = ("model", "runs", "input_tokens", "output_tokens", "cost", "image_count")
+    __slots__ = ("model", "runs", "input_tokens", "output_tokens", "cost", "image_count", "cache_read_input_tokens", "cache_creation_input_tokens")
     MODEL_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     COST_FIELD_NUMBER: _ClassVar[int]
     IMAGE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_CREATION_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     model: str
     runs: int
     input_tokens: int
     output_tokens: int
     cost: str
     image_count: int
-    def __init__(self, model: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cost: _Optional[str] = ..., image_count: _Optional[int] = ...) -> None: ...
+    cache_read_input_tokens: int
+    cache_creation_input_tokens: int
+    def __init__(self, model: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cost: _Optional[str] = ..., image_count: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., cache_creation_input_tokens: _Optional[int] = ...) -> None: ...
 
 class AgentUsageInfo(_message.Message):
-    __slots__ = ("agent_id", "agent_name", "runs", "input_tokens", "output_tokens")
+    __slots__ = ("agent_id", "agent_name", "runs", "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
     AGENT_NAME_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_CREATION_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     agent_id: str
     agent_name: str
     runs: int
     input_tokens: int
     output_tokens: int
-    def __init__(self, agent_id: _Optional[str] = ..., agent_name: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ...) -> None: ...
+    cache_read_input_tokens: int
+    cache_creation_input_tokens: int
+    def __init__(self, agent_id: _Optional[str] = ..., agent_name: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., cache_creation_input_tokens: _Optional[int] = ...) -> None: ...
 
 class ToolUsage(_message.Message):
     __slots__ = ("tool_name", "call_count")
@@ -201,23 +217,27 @@ class ToolUsage(_message.Message):
     def __init__(self, tool_name: _Optional[str] = ..., call_count: _Optional[int] = ...) -> None: ...
 
 class ProviderKeyUsage(_message.Message):
-    __slots__ = ("provider_key_id", "key_label", "provider", "runs", "input_tokens", "output_tokens")
+    __slots__ = ("provider_key_id", "key_label", "provider", "runs", "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
     PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
     KEY_LABEL_FIELD_NUMBER: _ClassVar[int]
     PROVIDER_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_CREATION_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     provider_key_id: str
     key_label: str
     provider: str
     runs: int
     input_tokens: int
     output_tokens: int
-    def __init__(self, provider_key_id: _Optional[str] = ..., key_label: _Optional[str] = ..., provider: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ...) -> None: ...
+    cache_read_input_tokens: int
+    cache_creation_input_tokens: int
+    def __init__(self, provider_key_id: _Optional[str] = ..., key_label: _Optional[str] = ..., provider: _Optional[str] = ..., runs: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., cache_creation_input_tokens: _Optional[int] = ...) -> None: ...
 
 class CronTaskUsage(_message.Message):
-    __slots__ = ("cron_task_id", "task_name", "agent_name", "total_runs", "successes", "failures", "input_tokens", "output_tokens")
+    __slots__ = ("cron_task_id", "task_name", "agent_name", "total_runs", "successes", "failures", "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
     CRON_TASK_ID_FIELD_NUMBER: _ClassVar[int]
     TASK_NAME_FIELD_NUMBER: _ClassVar[int]
     AGENT_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -226,6 +246,8 @@ class CronTaskUsage(_message.Message):
     FAILURES_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_CREATION_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     cron_task_id: str
     task_name: str
     agent_name: str
@@ -234,7 +256,9 @@ class CronTaskUsage(_message.Message):
     failures: int
     input_tokens: int
     output_tokens: int
-    def __init__(self, cron_task_id: _Optional[str] = ..., task_name: _Optional[str] = ..., agent_name: _Optional[str] = ..., total_runs: _Optional[int] = ..., successes: _Optional[int] = ..., failures: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ...) -> None: ...
+    cache_read_input_tokens: int
+    cache_creation_input_tokens: int
+    def __init__(self, cron_task_id: _Optional[str] = ..., task_name: _Optional[str] = ..., agent_name: _Optional[str] = ..., total_runs: _Optional[int] = ..., successes: _Optional[int] = ..., failures: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., cache_creation_input_tokens: _Optional[int] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
     __slots__ = ("organization_id", "session_id", "content", "file_ids", "user_timezone", "chat_context", "invoked_skill_id")
@@ -425,18 +449,20 @@ class StreamModelCallStartEvent(_message.Message):
     def __init__(self, model: _Optional[str] = ...) -> None: ...
 
 class StreamModelCallEndEvent(_message.Message):
-    __slots__ = ("model", "input_tokens", "output_tokens", "cache_read_input_tokens", "thinking_tokens")
+    __slots__ = ("model", "input_tokens", "output_tokens", "cache_read_input_tokens", "thinking_tokens", "cache_creation_input_tokens")
     MODEL_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     THINKING_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_CREATION_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     model: str
     input_tokens: int
     output_tokens: int
     cache_read_input_tokens: int
     thinking_tokens: int
-    def __init__(self, model: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., thinking_tokens: _Optional[int] = ...) -> None: ...
+    cache_creation_input_tokens: int
+    def __init__(self, model: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., thinking_tokens: _Optional[int] = ..., cache_creation_input_tokens: _Optional[int] = ...) -> None: ...
 
 class StreamTextBlockStartEvent(_message.Message):
     __slots__ = ("block_id", "message_id", "sequence")

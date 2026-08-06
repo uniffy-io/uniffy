@@ -156,7 +156,7 @@ def render_recall_block(recall: MemoryRecall) -> str | None:
     return "\n".join(lines)
 
 
-def attach_recall_block(llm_messages: list[dict], block: str) -> bool:
+def attach_to_trigger_turn(llm_messages: list[dict], block: str) -> bool:
     """Append the block to the newest human user turn, in place.
 
     Skips tool-result carrier messages (role user, tool_result blocks).

@@ -13,7 +13,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
-from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -137,8 +137,11 @@ class PeopleOperations:
         page: int = 1,
         page_size: int = DEFAULT_PAGE_SIZE,
         search: str | None = None,
+        job_title: str | None = None,
         department: str | None = None,
+        role_filter: OrganizationRole | None = None,
         team_id: UUID | None = None,
+        manager_user_id: UUID | None = None,
         include_inactive: bool = False,
     ) -> tuple[list[DirectoryRow], int]:
         page = max(1, page)
@@ -174,6 +177,15 @@ class PeopleOperations:
 
         if department:
             base_query = base_query.where(PeopleProfile.department == department)
+
+        if job_title:
+            base_query = base_query.where(PeopleProfile.job_title.ilike(f"%{job_title}%"))
+
+        if role_filter is not None:
+            base_query = base_query.where(OrganizationMember.role == role_filter)
+
+        if manager_user_id is not None:
+            base_query = base_query.where(PeopleProfile.manager_user_id == manager_user_id)
 
         if team_id is not None:
             base_query = base_query.where(

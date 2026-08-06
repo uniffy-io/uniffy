@@ -64,6 +64,10 @@ enum ChatEventType {
   CHAT_EVENT_TYPE_AGENT_THINKING_DELTA = 31;
   // A member's channel role changed; payload is MemberPayload with the new role.
   CHAT_EVENT_TYPE_MEMBER_UPDATED = 32;
+  // A channel the recipient belongs to was created. Carries the id only:
+  // recipients hydrate through GetChannel so every client applies the same
+  // row the channel list would have loaded.
+  CHAT_EVENT_TYPE_CHANNEL_CREATED = 33;
 }
 
 // ChatEvent is a single channel-level event delivered through the unified stream.

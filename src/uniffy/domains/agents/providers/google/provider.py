@@ -9,6 +9,7 @@ from google.genai import types
 from loguru import logger
 
 from uniffy.domains.agents.providers.base import (
+    VISIBLE_REFUSAL_MESSAGE,
     CompletionResult,
     EventType,
     LLMProvider,
@@ -167,6 +168,7 @@ class GoogleProvider(LLMProvider):
         stream: bool = False,
         cache_key: str | None = None,
         params: dict | None = None,
+        safety_identifier: str | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request to the Google Gemini API.
 
@@ -212,7 +214,7 @@ class GoogleProvider(LLMProvider):
             Result or streaming iterator.
 
         """
-        del cache_key  # Google ignores; see docstring.
+        del cache_key, safety_identifier
         google_contents = convert_messages_to_google(messages)
         config = self._build_config(
             model=model,
@@ -341,11 +343,12 @@ class GoogleProvider(LLMProvider):
                             )
                         )
 
-        stop_reason = "tool_use" if tool_calls else "end_turn"
+        blocked = bool(_google_block_reason(response))
+        if not content and not tool_calls and blocked:
+            content = VISIBLE_REFUSAL_MESSAGE
+        stop_reason = _google_stop_reason(response, tool_calls, blocked=blocked)
 
-        prompt_tokens, cached_tokens, output_tokens = _split_google_usage(
-            response.usage_metadata
-        )
+        prompt_tokens, cached_tokens, output_tokens = _split_google_usage(response.usage_metadata)
 
         return CompletionResult(
             content=content,
@@ -378,6 +381,7 @@ class GoogleProvider(LLMProvider):
             output_tokens = 0
             thinking_block_id = ""
             text_block_id = ""
+            blocked = False
 
             stream = await self._client.aio.models.generate_content_stream(
                 model=model,
@@ -387,6 +391,7 @@ class GoogleProvider(LLMProvider):
             yield StreamEvent(type=EventType.MODEL_CALL_START, model=model)
 
             async for chunk in stream:
+                blocked = blocked or bool(_google_block_reason(chunk))
                 if chunk.usage_metadata:
                     prompt_tokens, cached_tokens, output_tokens = _split_google_usage(
                         chunk.usage_metadata
@@ -465,14 +470,20 @@ class GoogleProvider(LLMProvider):
                             tool_args=tc.input,
                         )
 
+            if not accumulated_content and not tool_calls and blocked:
+                text_block_id = uuid.uuid4().hex[:12]
+                accumulated_content = VISIBLE_REFUSAL_MESSAGE
+                yield StreamEvent(type=EventType.TEXT_BLOCK_START, block_id=text_block_id)
+                yield StreamEvent(
+                    type=EventType.TEXT_BLOCK_DELTA,
+                    block_id=text_block_id,
+                    delta=accumulated_content,
+                )
+
             if thinking_block_id:
-                yield StreamEvent(
-                    type=EventType.THINKING_BLOCK_END, block_id=thinking_block_id
-                )
+                yield StreamEvent(type=EventType.THINKING_BLOCK_END, block_id=thinking_block_id)
             if text_block_id:
-                yield StreamEvent(
-                    type=EventType.TEXT_BLOCK_END, block_id=text_block_id
-                )
+                yield StreamEvent(type=EventType.TEXT_BLOCK_END, block_id=text_block_id)
 
             yield StreamEvent(
                 type=EventType.MODEL_CALL_END,
@@ -487,12 +498,61 @@ class GoogleProvider(LLMProvider):
                     output_tokens=output_tokens,
                     cache_read_input_tokens=cached_tokens,
                     tool_calls=tool_calls,
-                    stop_reason="tool_use" if tool_calls else "end_turn",
+                    stop_reason=(
+                        "tool_use" if tool_calls else ("refusal" if blocked else "end_turn")
+                    ),
                 ),
             )
         except Exception as e:
             logger.error(f"Google streaming error: {e}")
-            yield StreamEvent(type=EventType.ERROR, error=str(e))
+            yield StreamEvent(type=EventType.ERROR, error=str(e), error_exception=e)
+
+
+def _enum_token(value: object) -> str:
+    if value is None:
+        return ""
+    name = getattr(value, "name", None)
+    if name:
+        return str(name).upper()
+    raw = getattr(value, "value", value)
+    return str(raw).rsplit(".", 1)[-1].upper()
+
+
+def _google_block_reason(response: Any) -> str:
+    feedback = getattr(response, "prompt_feedback", None)
+    reason = _enum_token(getattr(feedback, "block_reason", None))
+    if reason and reason not in {"0", "BLOCK_REASON_UNSPECIFIED", "UNSPECIFIED"}:
+        return reason
+    candidates = getattr(response, "candidates", None) or []
+    if not candidates:
+        return ""
+    finish = _enum_token(getattr(candidates[0], "finish_reason", None))
+    if finish in {
+        "SAFETY",
+        "RECITATION",
+        "BLOCKLIST",
+        "PROHIBITED_CONTENT",
+        "SPII",
+        "IMAGE_SAFETY",
+    }:
+        return finish
+    return ""
+
+
+def _google_stop_reason(
+    response: Any,
+    tool_calls: list[ToolCall],
+    *,
+    blocked: bool,
+) -> str:
+    if tool_calls:
+        return "tool_use"
+    if blocked:
+        return "refusal"
+    candidates = getattr(response, "candidates", None) or []
+    if candidates and _enum_token(getattr(candidates[0], "finish_reason", None)) == "MAX_TOKENS":
+        return "max_tokens"
+    return "end_turn"
 
 
 def _split_google_usage(usage_metadata) -> tuple[int, int, int]:
@@ -516,28 +576,3 @@ def _split_google_usage(usage_metadata) -> tuple[int, int, int]:
     cached_tokens = int(getattr(usage_metadata, "cached_content_token_count", 0) or 0)
     cached_tokens = min(cached_tokens, prompt_tokens)
     return prompt_tokens, cached_tokens, candidates_tokens
-
-    @staticmethod
-    def _determine_stop_reason(response: Any, tool_calls: list[ToolCall]) -> str:
-        """Determine the stop reason from the response.
-
-        Parameters
-        ----------
-        response : Any
-            The generate_content response.
-        tool_calls : list[ToolCall]
-            Extracted tool calls.
-
-        Returns
-        -------
-        str
-            Stop reason ("end_turn", "tool_use", "max_tokens").
-
-        """
-        if tool_calls:
-            return "tool_use"
-        if response.candidates:
-            finish = response.candidates[0].finish_reason
-            if finish and str(finish) == "MAX_TOKENS":
-                return "max_tokens"
-        return "end_turn"

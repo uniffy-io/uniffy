@@ -240,7 +240,6 @@ def build_chat_context_section(
     participant_agents: list[str],
     trigger_user_name: str,
     trigger_rule: str | None,
-    in_thread: bool,
 ) -> str:
     """Assemble the chat-channel orientation block for the system prompt.
 
@@ -269,7 +268,7 @@ def build_chat_context_section(
     else:
         lines.append("You are alone in this conversation with the requester.")
 
-    trigger_desc = _describe_trigger_rule(trigger_rule, in_thread)
+    trigger_desc = _describe_trigger_rule(trigger_rule)
     lines.append(f"This turn was triggered by {trigger_user_name} via {trigger_desc}.")
     lines.append(
         "Conversation history below is prefixed with each speaker's name in "
@@ -278,6 +277,27 @@ def build_chat_context_section(
     )
 
     return "\n".join(lines)
+
+
+def build_thread_turn_note(root_author: str | None, root_preview: str | None) -> str:
+    """Name the branch a threaded turn belongs to and bound its history.
+
+    Rides the trigger user turn, NOT the system prompt: the whole system block
+    is one cache breakpoint, so per-thread text there would split the cached
+    tools+system prefix into one entry per thread. It is also carried
+    separately from the trigger-rule sentence because the detector matches the
+    strongest rule (a 1:1 DM stays "dm"), so thread membership would otherwise
+    never reach the model there.
+    """
+    parts = ["(You are replying inside a thread of this conversation."]
+    if root_preview:
+        parts.append(f'It was opened by {root_author or "someone"} with: "{root_preview}"')
+    parts.append(
+        "The history above is that thread and what led up to it; other threads "
+        "and later channel messages are not shown. Keep your answer scoped to "
+        "this thread.)"
+    )
+    return " ".join(parts)
 
 
 def _describe_surface(channel_type: str) -> str:
@@ -291,10 +311,8 @@ def _describe_surface(channel_type: str) -> str:
     return mapping.get(channel_type, "a chat channel")
 
 
-def _describe_trigger_rule(rule: str | None, in_thread: bool) -> str:
+def _describe_trigger_rule(rule: str | None) -> str:
     """Short human-readable name for a detector rule token."""
-    if in_thread and rule in (None, "thread"):
-        return "a reply in a thread you're following"
     mapping = {
         "dm": "a direct message",
         "mention": "an @-mention in a channel message",

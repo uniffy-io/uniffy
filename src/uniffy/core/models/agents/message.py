@@ -34,6 +34,7 @@ class AgentMessage(SQLModel, table=True):
     )
     input_tokens: int = Field(default=0, nullable=False)
     output_tokens: int = Field(default=0, nullable=False)
+    cache_creation_input_tokens: int = Field(default=0, nullable=False)
     cache_read_input_tokens: int = Field(default=0, nullable=False)
     model: str | None = Field(
         default=None,

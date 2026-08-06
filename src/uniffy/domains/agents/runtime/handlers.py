@@ -15,6 +15,7 @@ import json
 import os
 import time
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -76,6 +77,10 @@ from uniffy.domains.agents.runtime.file_loader import (
     _load_files,
 )
 from uniffy.domains.agents.runtime.image_regenerate import regenerate_image
+from uniffy.domains.agents.runtime.settings import (
+    ResolvedRuntimeSettings,
+    get_runtime_settings,
+)
 from uniffy.domains.agents.runtime.usage import UsageOperations
 from uniffy.domains.agents.sessions.operations import SessionOperations
 from uniffy.domains.auth.context import get_user_id_from_context
@@ -89,6 +94,7 @@ from uniffy.observability.metrics import (
 logger = logger.bind(component="agents.runtime.handlers")
 
 SUBSCRIBE_WALL_BUDGET_SECONDS = 120.0
+SUBSCRIBE_TRANSPORT_GRACE_SECONDS = 10.0
 # How long each XREAD round waits for new events before yielding control
 # back to the loop. Each blocking round pins one streams-pool connection
 # for that duration, so smaller values let a pod multiplex more
@@ -140,15 +146,32 @@ def _stamp_run_id(event: AgentStreamEvent, run_id: UUID) -> AgentStreamEvent:
 def _synthetic_error_event(run_id: UUID, error_text: str) -> AgentStreamEvent:
     """Build an AgentStreamEvent error envelope for terminal cases."""
     return _stamp_run_id(
-        runtime_stream_event_to_proto(
-            StreamEvent(type=EventType.ERROR, error=error_text)
-        ),
+        runtime_stream_event_to_proto(StreamEvent(type=EventType.ERROR, error=error_text)),
         run_id,
     )
 
 
+def _remaining_subscribe_budget(
+    state: dict[str, Any],
+    settings: ResolvedRuntimeSettings,
+) -> float:
+    full_budget = settings.send_deadline_seconds + SUBSCRIBE_TRANSPORT_GRACE_SECONDS
+    started_at = state.get("started_at")
+    if not isinstance(started_at, str):
+        return full_budget
+    try:
+        started = datetime.fromisoformat(started_at)
+    except ValueError:
+        return full_budget
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=UTC)
+    elapsed = (datetime.now(UTC) - started).total_seconds()
+    return max(0.0, full_budget - max(0.0, elapsed))
+
+
 async def _subscribe_runtime_events(
     run_id: UUID,
+    wall_budget_seconds: float | None = None,
 ) -> AsyncIterator[StreamEvent]:
     """Drain the per-run Valkey stream as decoded domain events.
 
@@ -160,7 +183,8 @@ async def _subscribe_runtime_events(
     """
     stream_key = run_stream_key(run_id)
     last_id = "0"
-    deadline = time.monotonic() + SUBSCRIBE_WALL_BUDGET_SECONDS
+    budget = SUBSCRIBE_WALL_BUDGET_SECONDS if wall_budget_seconds is None else wall_budget_seconds
+    deadline = time.monotonic() + max(0.0, budget)
 
     while True:
         remaining = deadline - time.monotonic()
@@ -183,9 +207,7 @@ async def _subscribe_runtime_events(
             last_id = message_id
             event_blob = payload.get("event")
             if not isinstance(event_blob, dict):
-                logger.warning(
-                    f"Stream entry without event payload (run={run_id}, id={message_id})"
-                )
+                logger.warning(f"Stream entry without event payload (run={run_id}, id={message_id})")
                 continue
             try:
                 event = runtime_stream_event_from_json(event_blob)
@@ -227,7 +249,7 @@ class RuntimeHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Message content cannot be empty")
 
         try:
-            run_id, files_payload = await self._preflight_and_enqueue(
+            run_id, files_payload, runtime_settings = await self._preflight_and_enqueue(
                 user_id=user_id,
                 organization_id=org_id,
                 session_id=session_id,
@@ -256,7 +278,10 @@ class RuntimeHandlers:
             assistant_message = None
             model_used = ""
 
-            async for event in _subscribe_runtime_events(run_id):
+            async for event in _subscribe_runtime_events(
+                run_id,
+                runtime_settings.send_deadline_seconds + SUBSCRIBE_TRANSPORT_GRACE_SECONDS,
+            ):
                 if event.type is EventType.MESSAGE_STORED:
                     if user_message is None and event.message.role == "user":
                         user_message = event.message
@@ -316,7 +341,7 @@ class RuntimeHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Message content cannot be empty")
 
         try:
-            run_id, _ = await self._preflight_and_enqueue(
+            run_id, _, runtime_settings = await self._preflight_and_enqueue(
                 user_id=user_id,
                 organization_id=org_id,
                 session_id=session_id,
@@ -341,19 +366,20 @@ class RuntimeHandlers:
         yield StreamSendMessageResponse(event=_header_event(run_id))
 
         try:
-            async for event in _subscribe_runtime_events(run_id):
+            async for event in _subscribe_runtime_events(
+                run_id,
+                runtime_settings.send_deadline_seconds + SUBSCRIBE_TRANSPORT_GRACE_SECONDS,
+            ):
                 yield StreamSendMessageResponse(
                     event=_stamp_run_id(runtime_stream_event_to_proto(event), run_id),
                 )
-        except (asyncio.CancelledError, GeneratorExit):
+        except asyncio.CancelledError, GeneratorExit:
             logger.info(f"stream_send_message cancelled by client (run={run_id})")
             raise
         except ConnectError:
             raise
         except Exception as exc:
-            logger.exception(
-                f"Error in stream_send_message subscribe loop (run={run_id}): {exc}"
-            )
+            logger.exception(f"Error in stream_send_message subscribe loop (run={run_id}): {exc}")
             yield StreamSendMessageResponse(
                 event=_synthetic_error_event(run_id, "Internal server error"),
             )
@@ -408,6 +434,7 @@ class RuntimeHandlers:
                     organization_id=org_id,
                 )
                 session_id = agent_session.id
+                runtime_settings = await get_runtime_settings(session, org_id)
 
             run_id = generate_id()
             await set_run_state(
@@ -448,19 +475,20 @@ class RuntimeHandlers:
         yield RerunFromMessageResponse(event=_header_event(run_id))
 
         try:
-            async for event in _subscribe_runtime_events(run_id):
+            async for event in _subscribe_runtime_events(
+                run_id,
+                runtime_settings.send_deadline_seconds + SUBSCRIBE_TRANSPORT_GRACE_SECONDS,
+            ):
                 yield RerunFromMessageResponse(
                     event=_stamp_run_id(runtime_stream_event_to_proto(event), run_id),
                 )
-        except (asyncio.CancelledError, GeneratorExit):
+        except asyncio.CancelledError, GeneratorExit:
             logger.info(f"rerun_from_message cancelled by client (run={run_id})")
             raise
         except ConnectError:
             raise
         except Exception as exc:
-            logger.exception(
-                f"Error in rerun_from_message subscribe loop (run={run_id}): {exc}"
-            )
+            logger.exception(f"Error in rerun_from_message subscribe loop (run={run_id}): {exc}")
             yield RerunFromMessageResponse(
                 event=_synthetic_error_event(run_id, "Internal server error"),
             )
@@ -496,22 +524,31 @@ class RuntimeHandlers:
         if state.get("organization_id") != str(org_id):
             raise ConnectError(Code.PERMISSION_DENIED, "not your run")
 
+        async with open_session() as session:
+            runtime_settings = await get_runtime_settings(session, org_id)
+        if not runtime_settings.resume_enabled:
+            raise ConnectError(
+                Code.FAILED_PRECONDITION,
+                "run resume is disabled for this organization",
+            )
+
         yield SubscribeToRunResponse(event=_header_event(run_id))
 
         try:
-            async for event in _subscribe_runtime_events(run_id):
+            async for event in _subscribe_runtime_events(
+                run_id,
+                _remaining_subscribe_budget(state, runtime_settings),
+            ):
                 yield SubscribeToRunResponse(
                     event=_stamp_run_id(runtime_stream_event_to_proto(event), run_id),
                 )
-        except (asyncio.CancelledError, GeneratorExit):
+        except asyncio.CancelledError, GeneratorExit:
             logger.info(f"subscribe_to_run cancelled by client (run={run_id})")
             raise
         except ConnectError:
             raise
         except Exception as exc:
-            logger.exception(
-                f"Error in subscribe_to_run loop (run={run_id}): {exc}"
-            )
+            logger.exception(f"Error in subscribe_to_run loop (run={run_id}): {exc}")
             yield SubscribeToRunResponse(
                 event=_synthetic_error_event(run_id, "Internal server error"),
             )
@@ -553,7 +590,7 @@ class RuntimeHandlers:
         organization_id: UUID,
         session_id: UUID,
         request: SendMessageRequest | StreamSendMessageRequest,
-    ) -> tuple[UUID, list[dict[str, Any]] | None]:
+    ) -> tuple[UUID, list[dict[str, Any]] | None, ResolvedRuntimeSettings]:
         """Run synchronous preflight checks and enqueue ``run_agent_session``.
 
         Returns the freshly minted ``run_id`` and the JSON-safe files
@@ -582,6 +619,7 @@ class RuntimeHandlers:
                 user_id=user_id,
                 organization_id=organization_id,
             )
+            runtime_settings = await get_runtime_settings(session, organization_id)
 
             files: list[FileContext] | None = None
             if request.file_ids:
@@ -624,12 +662,10 @@ class RuntimeHandlers:
             )
         except Exception as exc:
             AGENT_RUN_ENQUEUE_FAILURES_TOTAL.inc()
-            logger.exception(
-                f"Failed to enqueue run_agent_session (run={run_id}): {exc}"
-            )
+            logger.exception(f"Failed to enqueue run_agent_session (run={run_id}): {exc}")
             raise ConnectError(Code.UNAVAILABLE, "Agent runtime queue unavailable")
 
-        return run_id, files_payload
+        return run_id, files_payload, runtime_settings
 
     async def respond_to_confirmation(
         self,
@@ -658,9 +694,7 @@ class RuntimeHandlers:
 
         try:
             async with open_session() as session:
-                await OrganizationOperations(session).require_org_member(
-                    user_id, organization_id
-                )
+                await OrganizationOperations(session).require_org_member(user_id, organization_id)
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
 
@@ -671,9 +705,7 @@ class RuntimeHandlers:
 
         actor = state.get("actor_user_id")
         if actor != str(user_id):
-            raise ConnectError(
-                Code.PERMISSION_DENIED, "only the run's initiator can respond"
-            )
+            raise ConnectError(Code.PERMISSION_DENIED, "only the run's initiator can respond")
 
         accepted = await store.respond(
             session_id,
@@ -751,13 +783,9 @@ class RuntimeHandlers:
             try:
                 patch = json.loads(request.params_patch)
             except json.JSONDecodeError as exc:
-                raise ConnectError(
-                    Code.INVALID_ARGUMENT, "params_patch is not valid JSON"
-                ) from exc
+                raise ConnectError(Code.INVALID_ARGUMENT, "params_patch is not valid JSON") from exc
             if not isinstance(patch, dict):
-                raise ConnectError(
-                    Code.INVALID_ARGUMENT, "params_patch must be a JSON object"
-                )
+                raise ConnectError(Code.INVALID_ARGUMENT, "params_patch must be a JSON object")
 
         try:
             new_id, metadata = await regenerate_image(

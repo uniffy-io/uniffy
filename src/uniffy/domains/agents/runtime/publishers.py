@@ -31,6 +31,7 @@ from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.chat.thread import ChatThreadStats
 from uniffy.core.valkey.streams import (
     RUN_STATE_TTL_SECONDS,
     RUN_STREAM_DEFAULT_MAXLEN,
@@ -41,7 +42,12 @@ from uniffy.core.valkey.streams import (
 )
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.converters import runtime_stream_event_to_json
-from uniffy.domains.chat.messages.operations import bump_channel_message_stats
+from uniffy.domains.chat.messages.operations import (
+    bump_channel_message_stats,
+    counts_as_thread_reply,
+    drop_thread_reply,
+    record_thread_reply,
+)
 from uniffy.domains.chat.streaming import events as chat_evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 
@@ -274,6 +280,36 @@ class ChatStreamPublisher:
             ),
             channel_id=msg.channel_id,
         )
+        if event_type == chat_evt.MESSAGE_CREATED and counts_as_thread_reply(msg):
+            await self._publish_thread_updated(msg.root_id)
+
+    async def _publish_thread_updated(self, root_message_id: UUID) -> None:
+        """Fan the thread's new reply count so root-message footers stay live.
+
+        Columns are selected rather than loaded through the identity map: the
+        counter is moved with a Core UPDATE, so a cached ORM row would report
+        the pre-reply count.
+        """
+        row = (
+            await self._session.execute(
+                select(ChatThreadStats.reply_count, ChatThreadStats.last_reply_at).where(
+                    ChatThreadStats.root_message_id == root_message_id
+                )
+            )
+        ).one_or_none()
+        if row is None:
+            return
+        await publish_channel_event_to_members(
+            self._member_ids,
+            chat_evt.THREAD_UPDATED,
+            chat_evt.build_thread_updated_payload(
+                root_message_id=root_message_id,
+                reply_count=row[0],
+                last_reply_at=row[1] or datetime.now(UTC),
+                latest_participant_id=self._agent_id,
+            ),
+            channel_id=self._channel_id,
+        )
 
     async def write_agent_error_message(self, error_text: str) -> None:
         """Persist + fan a ``metadata.kind="agent_error"`` chat row."""
@@ -303,6 +339,7 @@ class ChatStreamPublisher:
             at=row.created_at,
             is_root=self._thread_root_id is None,
         )
+        await self._record_thread_reply(at=row.created_at)
         await self._session.commit()
         await self._session.refresh(row)
         await self._publish_message_created(row.id)
@@ -350,6 +387,7 @@ class ChatStreamPublisher:
             at=row.created_at,
             is_root=self._thread_root_id is None,
         )
+        await self._record_thread_reply(at=row.created_at)
         await self._session.commit()
         await self._session.refresh(row)
 
@@ -363,8 +401,15 @@ class ChatStreamPublisher:
 
     async def discard_empty_placeholders(self) -> None:
         """Public hook for a cancelled run: drop empty assistant placeholders
-        while keeping any partial text already streamed."""
+        while keeping any partial text already streamed.
+
+        Commits before the thread fan-out so subscribers never read a count the
+        database has not settled on yet.
+        """
         await self._clear_streaming_placeholders()
+        if self._thread_root_id is not None:
+            await self._session.commit()
+            await self._publish_thread_updated(self._thread_root_id)
 
     async def mark_run_stopped(self) -> None:
         """Flag the trigger user message so the UI shows its reply was stopped.
@@ -400,6 +445,19 @@ class ChatStreamPublisher:
             channel_id=self._channel_id,
         )
 
+    async def _record_thread_reply(self, *, at: datetime) -> None:
+        """Move the thread counter + participants for an in-thread agent row."""
+        if self._thread_root_id is None:
+            return
+        await record_thread_reply(
+            self._session,
+            root_message_id=self._thread_root_id,
+            channel_id=self._channel_id,
+            sender_type=SenderType.AGENT,
+            sender_id=self._agent_id,
+            at=at,
+        )
+
     async def _clear_streaming_placeholders(self) -> None:
         """Drop empty assistant placeholders left over by an aborted run."""
         result = await self._session.execute(
@@ -412,6 +470,8 @@ class ChatStreamPublisher:
             )
         )
         for row in result.scalars().all():
+            if self._thread_root_id is not None:
+                await drop_thread_reply(self._session, self._thread_root_id)
             await self._session.delete(row)
         await self._session.flush()
 

@@ -7,23 +7,16 @@ from uniffy.domains.agents.tools.builtin.files import FILES_TOOLS
 from uniffy.domains.agents.tools.builtin.images import IMAGES_TOOLS
 from uniffy.domains.agents.tools.builtin.memory import MEMORY_TOOLS
 from uniffy.domains.agents.tools.builtin.notes import NOTES_TOOLS
+from uniffy.domains.agents.tools.builtin.people import PEOPLE_TOOLS
 from uniffy.domains.agents.tools.builtin.projects import PROJECT_TOOLS, TASK_TOOLS
 from uniffy.domains.agents.tools.builtin.rooms import ROOMS_TOOLS
-from uniffy.domains.agents.tools.builtin.search import PEOPLE_TOOLS, SEARCH_TOOLS
+from uniffy.domains.agents.tools.builtin.search import SEARCH_TOOLS
 from uniffy.domains.agents.tools.builtin.skills import SKILL_TOOLS
 from uniffy.domains.agents.tools.builtin.system import SYSTEM_TOOLS
 from uniffy.domains.agents.tools.registry import ToolRegistry
 
 
 def register_all(registry: ToolRegistry) -> None:
-    """Register all built-in tools on the given registry.
-
-    Parameters
-    ----------
-    registry : ToolRegistry
-        The registry to populate.
-
-    """
     for tool in NOTES_TOOLS:
         registry.register(tool)
     for tool in FILES_TOOLS:

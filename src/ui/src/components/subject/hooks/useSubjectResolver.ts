@@ -5,7 +5,7 @@ import type { SerializedMemberInfo, SerializedGroupInfo } from '@/features/admin
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
 import { subjectKindFromGroupKind } from '@/components/subject/utils';
 
-/** Resolves IDs against admin.members/groups; unresolved IDs get a truncated-ID fallback Subject. */
+/** Resolves IDs against admin.members/groups/agents; unresolved IDs get a truncated-ID fallback Subject. */
 export function useSubjectResolver(ids: string[]): {
     subjects: Subject[];
     loading: boolean;
@@ -14,6 +14,10 @@ export function useSubjectResolver(ids: string[]): {
     const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
     const membersLoading = useAppSelector((state) => state.admin.membersLoading);
     const membersFetched = useAppSelector((state) => state.admin.membersFetched);
+    // Agents share the id space with users and appear wherever they act
+    // (thread participants, channel rosters). Read-only: whichever surface owns
+    // the agent list fetches it, so an id nobody loaded stays on the fallback.
+    const agents = useAppSelector((state) => state.agents.agents);
     const groups = useAppSelector((state) => state.admin.groups) as SerializedGroupInfo[];
     const groupsLoading = useAppSelector((state) => state.admin.groupsLoading);
     const groupsFetched = useAppSelector((state) => state.admin.groupsFetched);
@@ -58,6 +62,16 @@ export function useSubjectResolver(ids: string[]): {
                     avatarUrl: member.avatarUrl || undefined,
                 };
             }
+            const agent = agents[id];
+            if (agent) {
+                return {
+                    id: agent.id,
+                    type: SUBJECT_TYPE.AGENT,
+                    name: agent.name,
+                    avatarUrl: agent.avatarKey || undefined,
+                    avatarEmoji: agent.avatarEmoji || undefined,
+                };
+            }
             const group = groupMap[id];
             if (group) {
                 return {
@@ -75,7 +89,7 @@ export function useSubjectResolver(ids: string[]): {
                 name: id.slice(-6),
             };
         });
-    }, [ids, memberMap, groupMap]);
+    }, [ids, memberMap, groupMap, agents]);
 
     return { subjects, loading: membersLoading || groupsLoading };
 }

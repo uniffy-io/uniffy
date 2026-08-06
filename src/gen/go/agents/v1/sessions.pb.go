@@ -332,9 +332,11 @@ type MessageInfo struct {
 	InvokedSkillName string `protobuf:"bytes,21,opt,name=invoked_skill_name,json=invokedSkillName,proto3" json:"invoked_skill_name,omitempty"`
 	// JSON array of persisted reasoning blocks
 	// [{block_id, content, elapsed_ms}]; "" when the turn had none
-	ThinkingJson  string `protobuf:"bytes,22,opt,name=thinking_json,json=thinkingJson,proto3" json:"thinking_json,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ThinkingJson             string `protobuf:"bytes,22,opt,name=thinking_json,json=thinkingJson,proto3" json:"thinking_json,omitempty"`
+	CacheReadInputTokens     int32  `protobuf:"varint,23,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	CacheCreationInputTokens int32  `protobuf:"varint,24,opt,name=cache_creation_input_tokens,json=cacheCreationInputTokens,proto3" json:"cache_creation_input_tokens,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *MessageInfo) Reset() {
@@ -519,6 +521,20 @@ func (x *MessageInfo) GetThinkingJson() string {
 		return x.ThinkingJson
 	}
 	return ""
+}
+
+func (x *MessageInfo) GetCacheReadInputTokens() int32 {
+	if x != nil {
+		return x.CacheReadInputTokens
+	}
+	return 0
+}
+
+func (x *MessageInfo) GetCacheCreationInputTokens() int32 {
+	if x != nil {
+		return x.CacheCreationInputTokens
+	}
+	return 0
 }
 
 type CreateSessionRequest struct {
@@ -1305,7 +1321,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\ais_test\x18\x0f \x01(\bR\x06isTestB\x0f\n" +
 	"\r_display_nameB\x11\n" +
 	"\x0f_model_overrideB\x12\n" +
-	"\x10_last_model_used\"\xcf\a\n" +
+	"\x10_last_model_used\"\xc5\b\n" +
 	"\vMessageInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1334,7 +1350,9 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\rwas_cancelled\x18\x13 \x01(\bR\fwasCancelled\x12'\n" +
 	"\x0ffeedback_rating\x18\x14 \x01(\tR\x0efeedbackRating\x12,\n" +
 	"\x12invoked_skill_name\x18\x15 \x01(\tR\x10invokedSkillName\x12#\n" +
-	"\rthinking_json\x18\x16 \x01(\tR\fthinkingJsonB\n" +
+	"\rthinking_json\x18\x16 \x01(\tR\fthinkingJson\x125\n" +
+	"\x17cache_read_input_tokens\x18\x17 \x01(\x05R\x14cacheReadInputTokens\x12=\n" +
+	"\x1bcache_creation_input_tokens\x18\x18 \x01(\x05R\x18cacheCreationInputTokensB\n" +
 	"\n" +
 	"\b_contentB\b\n" +
 	"\x06_modelB\f\n" +

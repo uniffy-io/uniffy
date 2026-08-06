@@ -4,6 +4,7 @@ Idempotent via `SET NX agent_run_lock:{run_id}` (5 min TTL); duplicate enqueues
 become a no-op.
 """
 
+import asyncio
 import time
 from datetime import datetime
 from typing import Any
@@ -28,6 +29,7 @@ from uniffy.domains.agents.runtime.destinations import SessionDestination
 from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.publishers import RunStreamPublisher
+from uniffy.domains.agents.runtime.settings import get_runtime_settings
 from uniffy.domains.agents.sessions.operations import SessionOperations
 from uniffy.observability.metrics import (
     AGENT_RUN_ACTIVE,
@@ -152,6 +154,7 @@ async def run_agent_session(
             )
 
             runtime_ops = RuntimeOperations(session)
+            runtime_settings = await get_runtime_settings(session, oid)
             destination = SessionDestination(session_id=sid)
             done_seen = False
             cancelled = False
@@ -172,34 +175,44 @@ async def run_agent_session(
                     user_timezone=user_timezone,
                     invoked_skill_id=UUID(invoked_skill_id) if invoked_skill_id else None,
                 )
-            async for event in event_stream:
-                await publisher.publish(event)
-                if event.type is EventType.DONE:
-                    done_seen = True
-                    break
-                # Polling between events keeps the cancel window tight (one HGET per event).
-                if await is_cancel_requested(rid):
-                    cancelled = True
-                    cancelled_msg = await session_ops.add_cancelled_placeholder(
-                        session_id=sid,
-                    )
-                    await publisher.publish(
-                        StreamEvent(
-                            type=EventType.MESSAGE_STORED, message=cancelled_msg
-                        )
-                    )
-                    await publisher.publish(
-                        StreamEvent(type=EventType.ERROR, error="cancelled")
-                    )
-                    await set_run_state(
-                        run_id=rid,
-                        user_id=uid,
-                        organization_id=oid,
-                        session_id=sid,
-                        status="cancelled",
-                        last_seq=publisher.last_seq,
-                    )
-                    break
+            try:
+                async with asyncio.timeout(runtime_settings.send_deadline_seconds):
+                    async for event in event_stream:
+                        await publisher.publish(event)
+                        if event.type is EventType.DONE:
+                            done_seen = True
+                            break
+                        # Polling between events keeps the cancel window tight (one HGET per event).
+                        if await is_cancel_requested(rid):
+                            cancelled = True
+                            cancelled_msg = await session_ops.add_cancelled_placeholder(
+                                session_id=sid,
+                            )
+                            await publisher.publish(
+                                StreamEvent(type=EventType.MESSAGE_STORED, message=cancelled_msg)
+                            )
+                            await publisher.publish(
+                                StreamEvent(type=EventType.ERROR, error="cancelled")
+                            )
+                            await set_run_state(
+                                run_id=rid,
+                                user_id=uid,
+                                organization_id=oid,
+                                session_id=sid,
+                                status="cancelled",
+                                last_seq=publisher.last_seq,
+                            )
+                            break
+            except TimeoutError:
+                logger.warning(f"run_agent_session deadline exceeded for run={run_id}")
+                await publisher.publish(
+                    StreamEvent(type=EventType.ERROR, error="agent_deadline_exceeded")
+                )
+                return {
+                    "status": "error",
+                    "error": "agent_deadline_exceeded",
+                    "run_id": run_id,
+                }
 
         if (done_seen or cancelled) and valkey is not None:
             try:
@@ -210,8 +223,7 @@ async def run_agent_session(
                 )
             except Exception:
                 logger.warning(
-                    f"run_agent_session: failed to schedule delete_run_stream "
-                    f"for run={run_id}"
+                    f"run_agent_session: failed to schedule delete_run_stream for run={run_id}"
                 )
 
         if cancelled:
@@ -224,10 +236,7 @@ async def run_agent_session(
         try:
             await publisher.publish(StreamEvent(type=EventType.ERROR, error=error_text))
         except Exception:
-            logger.exception(
-                f"run_agent_session: failed to publish error event for "
-                f"run={run_id}"
-            )
+            logger.exception(f"run_agent_session: failed to publish error event for run={run_id}")
         try:
             await set_run_state(
                 run_id=rid,
@@ -239,10 +248,7 @@ async def run_agent_session(
                 error=error_text,
             )
         except Exception:
-            logger.exception(
-                f"run_agent_session: failed to write error state for "
-                f"run={run_id}"
-            )
+            logger.exception(f"run_agent_session: failed to write error state for run={run_id}")
         raise
     finally:
         try:

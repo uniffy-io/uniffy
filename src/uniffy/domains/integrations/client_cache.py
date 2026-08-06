@@ -2,8 +2,10 @@
 
 Keyed by ``IntegrationConnection.id``. A hit skips the decrypt AND the client
 construction, preserving the pyqwest connection pool and circuit-breaker state
-across tool calls. TTL 1 hour, size cap 256. Cross-pod invalidation lands via
-the ``integration_connections:invalidate:{connection_id}`` pubsub channel.
+across tool calls. TTL 1 hour; the size cap (``INTEGRATION_CLIENT_LRU_SIZE``)
+must sit above the deployment's live connection count or every tool call pays
+the decrypt + construction again. Cross-pod invalidation lands via the
+``integration_connections:invalidate:{connection_id}`` pubsub channel.
 
 The LRU is in-process only: the encrypted credential never leaves PG and the
 decrypted material never enters Valkey.
@@ -14,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import os
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -33,7 +36,7 @@ if TYPE_CHECKING:
     from uniffy.domains.integrations.http import IntegrationHttpClient
 
 _TTL_SECONDS = 3600
-_MAX_SIZE = 256
+_MAX_SIZE = int(os.getenv("INTEGRATION_CLIENT_LRU_SIZE", "5000"))
 _INVALIDATE_PATTERN = "integration_connections:invalidate:*"
 _RECONNECT_BACKOFF_SECONDS = 5.0
 _POLL_TIMEOUT_SECONDS = 1.0

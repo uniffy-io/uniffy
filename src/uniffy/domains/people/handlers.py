@@ -26,13 +26,10 @@ from uniffy.domains.people import teams as team_ops
 from uniffy.domains.people.access import ViewerRelation, relation_for
 from uniffy.domains.people.cache import (
     cached_org_chart,
-    get_cached_person,
-    set_cached_person,
 )
 from uniffy.domains.people.chart import build_org_chart_payload
 from uniffy.domains.people.converters import (
     SOURCE_KIND_FROM_PROTO,
-    build_person_payload,
     chart_payload_to_proto,
     identity_source_to_proto,
     policy_to_proto,
@@ -55,7 +52,7 @@ from uniffy.domains.people.policy import (
     load_profile_policy,
     save_profile_policy,
 )
-from uniffy.domains.people.teams import teams_for_users
+from uniffy.domains.people.reader import PeopleReader, load_person_payload
 
 logger = logger.bind(component="people.handlers")
 
@@ -158,25 +155,6 @@ async def _require_single_active_source(
         )
 
 
-async def _load_person_payload(session: AsyncSession, org_id: UUID, target_id: UUID) -> dict:
-    payload = await get_cached_person(org_id, target_id)
-    if payload is not None:
-        return payload
-    ops = PeopleOperations(session)
-    member, user, profile = await ops.get_person(org_id, target_id)
-    counts = await ops.count_direct_reports(org_id, [target_id])
-    teams = await teams_for_users(session, org_id, [target_id])
-    payload = build_person_payload(
-        member,
-        user,
-        profile,
-        teams=teams.get(target_id, []),
-        direct_report_count=counts.get(target_id, 0),
-    )
-    await set_cached_person(org_id, target_id, payload)
-    return payload
-
-
 class PeopleHandlers:
     """Handlers for PeopleService RPC methods."""
 
@@ -190,19 +168,9 @@ class PeopleHandlers:
 
         try:
             async with open_session() as session:
-                org_ops = OrganizationOperations(session)
-                membership = await org_ops.require_org_member(user_id, org_id)
-                is_admin = _is_admin(membership)
-
-                policy = await load_profile_policy(session, org_id)
-                if not policy.directory_enabled and not is_admin:
-                    raise PermissionDeniedError("People directory is disabled")
-
                 include_inactive = (
                     request.include_inactive if request.HasField("include_inactive") else False
                 )
-                if include_inactive and not is_admin:
-                    raise PermissionDeniedError("Listing inactive members", "directory")
 
                 page = 1
                 page_size = DEFAULT_PAGE_SIZE
@@ -212,9 +180,9 @@ class PeopleHandlers:
                         max(1, request.pagination.page_size or DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE
                     )
 
-                ops = PeopleOperations(session)
-                rows, total = await ops.list_directory(
-                    org_id,
+                page_result = await PeopleReader(session).list_people(
+                    actor_user_id=user_id,
+                    organization_id=org_id,
                     page=page,
                     page_size=page_size,
                     search=request.search if request.HasField("search") else None,
@@ -222,34 +190,25 @@ class PeopleHandlers:
                     team_id=UUID(request.team_id) if request.HasField("team_id") else None,
                     include_inactive=include_inactive,
                 )
-
-                user_ids = [user.id for _, user, _ in rows]
-                counts = await ops.count_direct_reports(org_id, user_ids)
-                teams = await teams_for_users(session, org_id, user_ids)
-
-                people = []
-                for member, user, profile in rows:
-                    payload = build_person_payload(
-                        member,
-                        user,
-                        profile,
-                        teams=teams.get(user.id, []),
-                        direct_report_count=counts.get(user.id, 0),
+                people = [
+                    profile_to_proto(
+                        payload,
+                        relation=relation_for(
+                            user_id,
+                            UUID(payload["user_id"]),
+                            is_admin=page_result.is_admin,
+                        ),
                     )
-                    people.append(
-                        profile_to_proto(
-                            payload,
-                            relation=relation_for(user_id, user.id, is_admin=is_admin),
-                        )
-                    )
+                    for payload in page_result.people
+                ]
 
             return pb.ListPeopleResponse(
                 people=people,
                 pagination=common.PaginationResponse(
                     page=page,
                     page_size=page_size,
-                    total_count=total,
-                    total_pages=(total + page_size - 1) // page_size,
+                    total_count=page_result.total,
+                    total_pages=(page_result.total + page_size - 1) // page_size,
                 ),
             )
         except ConnectError:
@@ -275,13 +234,13 @@ class PeopleHandlers:
         try:
             target_id = UUID(request.user_id)
             async with open_session() as session:
-                org_ops = OrganizationOperations(session)
-                membership = await org_ops.require_org_member(user_id, org_id)
-                is_admin = _is_admin(membership)
-
                 # Deliberately not gated on directory_enabled - mention hover
                 # cards and user chips must keep working when it is off.
-                payload = await _load_person_payload(session, org_id, target_id)
+                payload, is_admin = await PeopleReader(session).get_person(
+                    actor_user_id=user_id,
+                    organization_id=org_id,
+                    target_user_id=target_id,
+                )
 
             return pb.GetPersonResponse(
                 person=profile_to_proto(
@@ -317,7 +276,7 @@ class PeopleHandlers:
                 await OrganizationOperations(session).require_org_member(user_id, org_id)
                 ops = PeopleOperations(session)
                 await ops.update_my_profile(org_id, user_id, changes)
-                payload = await _load_person_payload(session, org_id, user_id)
+                payload = await load_person_payload(session, org_id, user_id)
             return pb.UpdateMyProfileResponse(
                 person=profile_to_proto(payload, relation=ViewerRelation.SELF)
             )
@@ -352,7 +311,7 @@ class PeopleHandlers:
                 )
                 ops = PeopleOperations(session)
                 await ops.update_person_profile(org_id, user_id, target_id, changes)
-                payload = await _load_person_payload(session, org_id, target_id)
+                payload = await load_person_payload(session, org_id, target_id)
             return pb.UpdatePersonProfileResponse(
                 person=profile_to_proto(
                     payload,
@@ -390,7 +349,7 @@ class PeopleHandlers:
                 )
                 ops = PeopleOperations(session)
                 await ops.set_manager(org_id, user_id, target_id, manager_id)
-                payload = await _load_person_payload(session, org_id, target_id)
+                payload = await load_person_payload(session, org_id, target_id)
             return pb.SetManagerResponse(
                 person=profile_to_proto(
                     payload,
