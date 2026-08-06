@@ -4,8 +4,8 @@ Completion is measured off completed_at rather than off the status id. Tasks
 created straight into status_done never had it stamped, so without this backfill
 they read as open in every rollup and progress bar.
 
-Revision ID: 078
-Revises: 077
+Revision ID: 079
+Revises: 078
 Create Date: 2026-08-06
 """
 
@@ -13,8 +13,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "078"
-down_revision: str | None = "077"
+revision: str = "079"
+down_revision: str | None = "078"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
