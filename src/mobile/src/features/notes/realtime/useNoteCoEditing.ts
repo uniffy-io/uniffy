@@ -5,9 +5,15 @@ import { diffStrings } from "@features/notes/realtime/textDiff";
 import { useNoteRealtimeSession } from "@features/notes/realtime/useNoteRealtimeSession";
 import type { DocSession } from "@shared/realtime/useDocSession";
 
-const PUSH_DEBOUNCE_MS = 250;
-const IDLE_APPLY_MS = 1500;
-const IDLE_RETRY_MS = 500;
+const PUSH_DEBOUNCE_MS = 120;
+// Remote merges render continuously; the window only coalesces bursts so the
+// input is not rebuilt per keystroke of a fast-typing peer.
+const APPLY_COALESCE_MS = 200;
+// Rebuilding the controlled TextInput while the local user is mid-typing drops
+// the keystrokes that sit between the native event and the JS rebuild - there
+// is no delta API, every apply replaces the whole native buffer. Hold applies
+// until this much silence; blur and teardown still force-apply.
+const TYPING_IDLE_MS = 900;
 
 export interface NoteCoEditing {
   session: DocSession | null;
@@ -37,10 +43,10 @@ interface Controller {
  * `Y.Text("markdown")`.
  *
  * Local edits push as minimal deltas diffed against the user's LAST LOCAL
- * string - diffing against the merged doc view would delete concurrent peer
- * inserts. Remote merges refresh the visible input only while the user is
- * idle; while they type, peer edits accumulate in the CRDT and land on the
- * next pause. Both sides' inserts survive either way.
+ * string, transformed onto the live doc when peers moved it. Remote merges
+ * rebuild the visible input as soon as the local user pauses typing, with the
+ * local caret mapped across each change. Both sides' inserts survive
+ * concurrent typing.
  */
 export function useNoteCoEditing(
   opts: { noteId: string | undefined; enabled: boolean } & CoEditingCallbacks,
@@ -66,21 +72,49 @@ export function useNoteCoEditing(
     const ytext = getMarkdownYText(session.ydoc);
     let cancelled = false;
     let lastPushed: string | null = null;
-    let lastLocalEditAt = 0;
     let pendingPush: string | null = null;
     let pushTimer: ReturnType<typeof setTimeout> | null = null;
     let remotePending = false;
     let remoteTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastLocalInputAt = 0;
 
+    // `lastPushed` mirrors the string the INPUT is based on, not the merged
+    // doc. Pushing a diff computed against a base the doc has moved past
+    // would treat every peer insert as a local delete and wipe it.
     const doPush = (canonical: string) => {
       const prev = lastPushed ?? "";
-      const delta = diffStrings(prev, canonical);
-      if (!delta) return;
+      if (canonical === prev) return;
+      const dLocal = diffStrings(prev, canonical);
+      if (!dLocal) return;
+      const current = ytext.toString();
+      let index = dLocal.index;
+      let deleteCount = dLocal.deleteCount;
+      if (current !== prev) {
+        // Remote edits landed since the input last rebased; transform the
+        // local delta onto the live doc instead of trusting stale indices.
+        const dRemote = diffStrings(prev, current);
+        if (dRemote) {
+          const remoteEnd = dRemote.index + dRemote.deleteCount;
+          const localEnd = dLocal.index + dLocal.deleteCount;
+          if (index >= remoteEnd) {
+            index += dRemote.insert.length - dRemote.deleteCount;
+          } else if (localEnd > dRemote.index) {
+            // Overlapping regions: never delete peer text on a guess - keep
+            // the local insert and land it right after the remote edit.
+            deleteCount = 0;
+            index = dRemote.index + dRemote.insert.length;
+          }
+        }
+        // The input still lags the doc; queue a rebase.
+        remotePending = true;
+      }
+      index = Math.min(index, ytext.length);
       session.ydoc.transact(() => {
-        if (delta.deleteCount > 0) ytext.delete(delta.index, delta.deleteCount);
-        if (delta.insert.length > 0) ytext.insert(delta.index, delta.insert);
+        if (deleteCount > 0) ytext.delete(index, Math.min(deleteCount, ytext.length - index));
+        if (dLocal.insert.length > 0) ytext.insert(index, dLocal.insert);
       }, session.sessionId);
       lastPushed = canonical;
+      if (remotePending) scheduleApply();
     };
 
     const flush = () => {
@@ -96,7 +130,7 @@ export function useNoteCoEditing(
     };
 
     const schedule = (canonical: string) => {
-      lastLocalEditAt = Date.now();
+      lastLocalInputAt = Date.now();
       pendingPush = canonical;
       if (pushTimer) clearTimeout(pushTimer);
       pushTimer = setTimeout(() => {
@@ -115,10 +149,6 @@ export function useNoteCoEditing(
         remoteTimer = null;
       }
       if (!remotePending || cancelled) return;
-      if (Date.now() - lastLocalEditAt < IDLE_APPLY_MS) {
-        remoteTimer = setTimeout(applyNow, IDLE_RETRY_MS);
-        return;
-      }
       remotePending = false;
       // Commit in-flight keystrokes before reading the merged doc, so the
       // rebuild below cannot silently drop them.
@@ -130,14 +160,33 @@ export function useNoteCoEditing(
       }
     };
 
+    const armApply = (delay: number) => {
+      remoteTimer = setTimeout(() => {
+        remoteTimer = null;
+        if (cancelled) return;
+        const sinceLocal = Date.now() - lastLocalInputAt;
+        if (sinceLocal < TYPING_IDLE_MS) {
+          armApply(TYPING_IDLE_MS - sinceLocal);
+          return;
+        }
+        applyNow();
+      }, delay);
+    };
+
+    const scheduleApply = () => {
+      if (remoteTimer || cancelled) return;
+      armApply(APPLY_COALESCE_MS);
+    };
+
     const observer = (event: YTextEvent) => {
       if (event.transaction.origin === session.sessionId) return;
       remotePending = true;
-      applyNow();
+      scheduleApply();
     };
 
     controllerRef.current = { schedule, flush, applyNow };
 
+    let observing = false;
     void session.whenSynced.then(() => {
       if (cancelled) return;
       const serverText = ytext.toString();
@@ -152,12 +201,13 @@ export function useNoteCoEditing(
         callbacksRef.current.applyRemote(serverText);
       }
       ytext.observe(observer);
+      observing = true;
       setLive(true);
     });
 
     return () => {
       cancelled = true;
-      ytext.unobserve(observer);
+      if (observing) ytext.unobserve(observer);
       if (remoteTimer) clearTimeout(remoteTimer);
       // A pending local delta still lands in the doc; the multiplexer ships it
       // before the session tears down (this cleanup runs first).

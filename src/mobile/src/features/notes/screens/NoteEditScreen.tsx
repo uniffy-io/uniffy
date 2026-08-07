@@ -298,6 +298,7 @@ export function NoteEditorScreen() {
       if (newDisplay === oldDisplay) return;
       applyingRemoteRef.current = true;
       initFromCanonical(canonical);
+      bodyStateRef.current = newDisplay;
       if (bodyFocusedRef.current) {
         const delta = diffStrings(oldDisplay, newDisplay);
         if (delta) {
@@ -321,6 +322,19 @@ export function NoteEditorScreen() {
     getLoadedCanonical: () => loadedRef.current?.content ?? null,
     applyRemote,
   });
+
+  // Keystrokes queue their push HERE, synchronously with the native event. A
+  // remote rebuild can land between the event and React's post-render effect;
+  // scheduling in the effect alone let that rebuild overwrite a not-yet-queued
+  // keystroke and the character was lost before it ever reached the doc.
+  const handleBodyChange = useCallback(
+    (text: string) => {
+      setBody(text);
+      bodyStateRef.current = text;
+      if (coEdit.live) coEdit.scheduleLocalPush(toCanonical(text, mentionsRef.current));
+    },
+    [setBody, coEdit, mentionsRef],
+  );
 
   // The title lives outside the Y doc; it rides UpdateNote (metadata-only
   // writes do not bump the note version, so they cannot clobber realtime saves).
@@ -820,7 +834,7 @@ export function NoteEditorScreen() {
               so the caret stays aligned. */}
           <TextInput
             ref={bodyRef}
-            onChangeText={setBody}
+            onChangeText={handleBodyChange}
             onSelectionChange={onMentionSelectionChange}
             onFocus={() => {
               bodyFocusedRef.current = true;
