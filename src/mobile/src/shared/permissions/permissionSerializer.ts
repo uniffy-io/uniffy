@@ -52,15 +52,6 @@ const ACCESS_PROTO: Record<AccessModeName, AccessMode> = {
   OPEN_TO_ORG: AccessMode.OPEN_TO_ORG,
 };
 
-const ROLE_RANK: Record<RoleName, number> = {
-  BLOCKED: -1,
-  VIEWER: 1,
-  COMMENTER: 2,
-  EDITOR: 3,
-  ADMIN: 4,
-  OWNER: 5,
-};
-
 export const ROLE_LABEL: Record<RoleName, string> = {
   VIEWER: "Viewer",
   COMMENTER: "Commenter",
@@ -97,14 +88,6 @@ export function roleToProto(role: RoleName): ContentRole {
 
 export function accessModeToProto(mode: AccessModeName): AccessMode {
   return ACCESS_PROTO[mode];
-}
-
-export function canManage(role: RoleName | null): boolean {
-  return !!role && ROLE_RANK[role] >= ROLE_RANK.ADMIN;
-}
-
-export function isOwner(role: RoleName | null): boolean {
-  return role === "OWNER";
 }
 
 export function memberToPlain(proto: ProtoMember): SerializedMember {

@@ -9,17 +9,33 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
+import { CaretRight, Plus, Warning } from "phosphor-react-native";
 import { MentionTextInput } from "@shared/mentions/MentionTextInput";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
+import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
+import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
+import { TagPickerSheet } from "@features/tags/components/TagPickerSheet";
+import { TaskTypePickerSheet } from "@features/projects/components/TaskTypePickerSheet";
+import { SprintPickerSheet } from "@features/projects/components/SprintPickerSheet";
+import { TimeInputSheet } from "@features/projects/components/TimeInputSheet";
+import { getTaskTypeConfig, getHierarchyRuleViolation } from "@features/projects/taskTypes";
+import { formatMinutes } from "@features/projects/timeFormatting";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
-import { useProject, useTask } from "@features/projects/useProjects";
+import {
+  useProject,
+  useTask,
+  useProjectSprints,
+  useProjectTasks,
+} from "@features/projects/useProjects";
 import { useCreateTask, useUpdateTask } from "@features/projects/useProjectMutations";
 import { getStatusOptions, getPriorityOptions } from "@features/projects/projectsSerializer";
+
+type CreateSheet = "type" | "sprint" | "estimate" | "tags" | null;
 
 export function CreateTaskScreen() {
   const {
@@ -42,6 +58,12 @@ export function CreateTaskScreen() {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
 
+  const sprintsQuery = useProjectSprints(projectId);
+  const sprints = sprintsQuery.data ?? [];
+  // Only needed to resolve the parent's type for the hierarchy hint; the list
+  // is already cached by whichever project screen got here.
+  const allProjectTasks = useProjectTasks(projectId).data ?? [];
+
   const statusOptions = project ? getStatusOptions(project) : [];
   const priorityOptions = project ? getPriorityOptions(project) : [];
   const projectColor = project?.color || T.accent;
@@ -55,6 +77,13 @@ export function CreateTaskScreen() {
   const [selectedPriority, setSelectedPriority] = useState<string>("");
   const [startDate, setStartDate] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState<string | null>(null);
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const [assigneesOpen, setAssigneesOpen] = useState(false);
+  const [taskType, setTaskType] = useState("task");
+  const [sprintId, setSprintId] = useState<string | null>(null);
+  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
+  const [sheet, setSheet] = useState<CreateSheet>(null);
 
   // Default the status once the project's options load (create mode only).
   // Guarded so this render-time adjustment settles after one pass.
@@ -72,6 +101,11 @@ export function CreateTaskScreen() {
     setSelectedPriority(task.priority ?? "");
     setStartDate(task.startDate);
     setDueDate(task.dueDate);
+    setAssigneeIds(task.assigneeIds);
+    setTaskType(task.taskType || "task");
+    setSprintId(task.sprintId ?? null);
+    setTagIds(task.tags.map((t) => t.id));
+    setEstimatedMinutes(task.estimatedMinutes ?? null);
   }
 
   // The description is an uncontrolled ref; seed it once off the render path.
@@ -84,33 +118,54 @@ export function CreateTaskScreen() {
   }, [task]);
 
   const isSaving = createTask.isPending || updateTask.isPending;
-  const canSave = title.trim().length > 0 && !isSaving && (isEditing ? !!taskId : !!projectId);
+  // The project is known up front when creating and arrives with the task when
+  // editing, and either way the save cannot be scoped without it.
+  const canSave = title.trim().length > 0 && !isSaving && !!projectId && (!isEditing || !!taskId);
+
+  const typeConfig = getTaskTypeConfig(taskType);
+  const TypeIcon = typeConfig.Icon;
+  const selectedSprint = sprints.find((s) => s.id === sprintId);
+  const parentType = task?.parentId
+    ? (allProjectTasks.find((t) => t.id === task.parentId)?.taskType ?? null)
+    : null;
+  const hierarchyWarning = getHierarchyRuleViolation(taskType, parentType);
 
   function handleSave() {
-    if (!canSave) return;
+    if (!canSave || !projectId) return;
     if (isEditing && taskId) {
       updateTask.mutate(
         {
           taskId,
+          projectId,
           title: title.trim(),
           description: descriptionRef.current.trim(),
           status: selectedStatus || undefined,
           priority: selectedPriority || undefined,
+          assigneeIds,
           startDate,
           dueDate,
+          taskType,
+          sprintId,
+          tagIds,
+          estimatedMinutes,
         },
         { onSuccess: () => router.back() },
       );
     } else {
       createTask.mutate(
         {
-          projectId: projectId!,
+          projectId,
           title: title.trim(),
           description: descriptionRef.current.trim() || undefined,
           status: selectedStatus || undefined,
           priority: selectedPriority || undefined,
+          assigneeIds,
           startDate: startDate ?? undefined,
           dueDate: dueDate ?? undefined,
+          taskType,
+          sprintId: sprintId ?? undefined,
+          tagIds,
+          estimatedMinutes: estimatedMinutes ?? undefined,
         },
         { onSuccess: () => router.back() },
       );
@@ -139,11 +194,9 @@ export function CreateTaskScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {isSaving ? (
-              <ActivityIndicator size="small" color={projectColor} />
+              <ActivityIndicator size="small" color={T.accent} />
             ) : (
-              <Text style={[styles.saveBtn, { color: canSave ? projectColor : T.textDim }]}>
-                Save
-              </Text>
+              <Text style={[styles.saveBtn, { color: canSave ? T.accent : T.textDim }]}>Save</Text>
             )}
           </TouchableOpacity>
         }
@@ -252,6 +305,108 @@ export function CreateTaskScreen() {
           </View>
         )}
 
+        <View style={styles.pairRow}>
+          <View style={{ flex: 1, gap: 6 }}>
+            <Text style={[styles.label, { color: T.textDim }]}>Type</Text>
+            <TouchableOpacity
+              style={[styles.pickerRow, { backgroundColor: T.surface, borderColor: T.border }]}
+              onPress={() => setSheet("type")}
+              activeOpacity={0.7}
+            >
+              <TypeIcon size={15} color={T.textDim} weight="duotone" />
+              <Text style={[styles.pickerValue, { color: T.textBright }]} numberOfLines={1}>
+                {typeConfig.label}
+              </Text>
+              <CaretRight size={14} color={T.textDim} weight="bold" />
+            </TouchableOpacity>
+          </View>
+          <View style={{ flex: 1, gap: 6 }}>
+            <Text style={[styles.label, { color: T.textDim }]}>Estimate</Text>
+            <TouchableOpacity
+              style={[styles.pickerRow, { backgroundColor: T.surface, borderColor: T.border }]}
+              onPress={() => setSheet("estimate")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[styles.pickerValue, { color: estimatedMinutes ? T.textBright : T.textDim }]}
+                numberOfLines={1}
+              >
+                {estimatedMinutes ? formatMinutes(estimatedMinutes) : "None"}
+              </Text>
+              <CaretRight size={14} color={T.textDim} weight="bold" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {hierarchyWarning && (
+          <View style={[styles.warningCard, { backgroundColor: T.orange + "18" }]}>
+            <Warning size={14} color={T.orange} weight="fill" />
+            <Text style={[styles.warningText, { color: T.orange }]}>{hierarchyWarning}</Text>
+          </View>
+        )}
+
+        <View style={{ gap: 6 }}>
+          <Text style={[styles.label, { color: T.textDim }]}>Sprint</Text>
+          <TouchableOpacity
+            style={[styles.pickerRow, { backgroundColor: T.surface, borderColor: T.border }]}
+            onPress={() => setSheet("sprint")}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[styles.pickerValue, { color: selectedSprint ? T.textBright : T.textDim }]}
+              numberOfLines={1}
+            >
+              {selectedSprint?.name ?? "Backlog"}
+            </Text>
+            <CaretRight size={14} color={T.textDim} weight="bold" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ gap: 6 }}>
+          <Text style={[styles.label, { color: T.textDim }]}>Tags</Text>
+          <TouchableOpacity
+            style={[styles.pickerRow, { backgroundColor: T.surface, borderColor: T.border }]}
+            onPress={() => setSheet("tags")}
+            activeOpacity={0.7}
+          >
+            {tagIds.length > 0 ? (
+              <Text style={[styles.pickerValue, { color: T.textBright }]}>
+                {tagIds.length} tag{tagIds.length === 1 ? "" : "s"}
+              </Text>
+            ) : (
+              <>
+                <Plus size={15} color={T.textDim} weight="bold" />
+                <Text style={[styles.pickerValue, { color: T.textDim }]}>No tags</Text>
+              </>
+            )}
+            <CaretRight size={14} color={T.textDim} weight="bold" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ gap: 6 }}>
+          <Text style={[styles.label, { color: T.textDim }]}>Assignees</Text>
+          <TouchableOpacity
+            style={[styles.pickerRow, { backgroundColor: T.surface, borderColor: T.border }]}
+            onPress={() => setAssigneesOpen(true)}
+            activeOpacity={0.7}
+          >
+            {assigneeIds.length > 0 ? (
+              <>
+                <SubjectAvatarStack subjectIds={assigneeIds} size={24} max={5} />
+                <Text style={[styles.pickerValue, { color: T.textBright }]}>
+                  {assigneeIds.length} assigned
+                </Text>
+              </>
+            ) : (
+              <>
+                <Plus size={15} color={T.textDim} weight="bold" />
+                <Text style={[styles.pickerValue, { color: T.textDim }]}>Unassigned</Text>
+              </>
+            )}
+            <CaretRight size={14} color={T.textDim} weight="bold" />
+          </TouchableOpacity>
+        </View>
+
         <View style={{ gap: 6 }}>
           <Text style={[styles.label, { color: T.textDim }]}>Description</Text>
           <MentionTextInput
@@ -277,7 +432,7 @@ export function CreateTaskScreen() {
               value={startDate}
               onChange={setStartDate}
               placeholder="No start date"
-              accentColor={projectColor}
+              accentColor={T.accent}
             />
           </View>
           <View style={{ flex: 1, gap: 6 }}>
@@ -286,11 +441,61 @@ export function CreateTaskScreen() {
               value={dueDate}
               onChange={setDueDate}
               placeholder="No due date"
-              accentColor={projectColor}
+              accentColor={T.accent}
             />
           </View>
         </View>
       </ScrollView>
+
+      <SubjectPickerSheet
+        visible={assigneesOpen}
+        onClose={() => setAssigneesOpen(false)}
+        title="Assignees"
+        selectedIds={assigneeIds}
+        accentColor={T.accent}
+        onToggle={(userId) =>
+          setAssigneeIds((prev) =>
+            prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+          )
+        }
+      />
+
+      <TaskTypePickerSheet
+        visible={sheet === "type"}
+        onClose={() => setSheet(null)}
+        selectedType={taskType}
+        accentColor={T.accent}
+        onSelect={setTaskType}
+      />
+
+      <SprintPickerSheet
+        visible={sheet === "sprint"}
+        onClose={() => setSheet(null)}
+        sprints={sprints}
+        selectedId={sprintId ?? undefined}
+        accentColor={T.accent}
+        onSelect={setSprintId}
+      />
+
+      <TimeInputSheet
+        visible={sheet === "estimate"}
+        onClose={() => setSheet(null)}
+        title="Estimated time"
+        minutes={estimatedMinutes ?? undefined}
+        accentColor={T.accent}
+        onSave={setEstimatedMinutes}
+      />
+
+      <TagPickerSheet
+        visible={sheet === "tags"}
+        onClose={() => setSheet(null)}
+        selectedIds={tagIds}
+        onToggle={(tagId) =>
+          setTagIds((prev) =>
+            prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId],
+          )
+        }
+      />
     </View>
   );
 }
@@ -322,5 +527,24 @@ const styles = StyleSheet.create({
   },
   pillDot: { width: 6, height: 6, borderRadius: 3 },
   pillText: { fontSize: 13, fontFamily: FONT.medium },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  pickerValue: { flex: 1, fontSize: 15, fontFamily: FONT.regular },
+  pairRow: { flexDirection: "row", gap: 12 },
+  warningCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 11,
+    borderRadius: 10,
+  },
+  warningText: { flex: 1, fontSize: 12, fontFamily: FONT.regular, lineHeight: 17 },
   datesRow: { flexDirection: "row", gap: 12 },
 });

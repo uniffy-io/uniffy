@@ -10,26 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { MentionTextInput } from "@shared/mentions/MentionTextInput";
-import {
-  Kanban,
-  Megaphone,
-  Wrench,
-  Rocket,
-  Lightning,
-  Globe,
-  ShoppingCart,
-  GraduationCap,
-  Palette,
-  Bug,
-  Target,
-  Trophy,
-  Cube,
-  Heart,
-  Star,
-  Lock,
-  Buildings,
-} from "phosphor-react-native";
-import type { IconProps } from "phosphor-react-native";
+import { Lock, Buildings } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
@@ -38,24 +19,7 @@ import { BOTTOM_NAV_HEIGHT, CATEGORY_COLORS } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useProject } from "@features/projects/useProjects";
 import { useCreateProject, useUpdateProject } from "@features/projects/useProjectMutations";
-
-const ICON_OPTIONS: { name: string; Component: React.ComponentType<IconProps> }[] = [
-  { name: "kanban", Component: Kanban },
-  { name: "rocket", Component: Rocket },
-  { name: "megaphone", Component: Megaphone },
-  { name: "wrench", Component: Wrench },
-  { name: "lightning", Component: Lightning },
-  { name: "globe", Component: Globe },
-  { name: "target", Component: Target },
-  { name: "bug", Component: Bug },
-  { name: "palette", Component: Palette },
-  { name: "star", Component: Star },
-  { name: "trophy", Component: Trophy },
-  { name: "cube", Component: Cube },
-  { name: "heart", Component: Heart },
-  { name: "cart", Component: ShoppingCart },
-  { name: "graduation", Component: GraduationCap },
-];
+import { PROJECT_ICONS } from "@features/projects/components/ProjectIcon";
 
 export function CreateProjectScreen() {
   const T = useTheme();
@@ -191,7 +155,7 @@ export function CreateProjectScreen() {
         <View style={{ gap: 8 }}>
           <Text style={[styles.label, { color: T.textDim }]}>Icon</Text>
           <View style={styles.iconGrid}>
-            {ICON_OPTIONS.map(({ name: iconName, Component }) => {
+            {PROJECT_ICONS.map(({ name: iconName, Component }) => {
               const isActive = selectedIcon === iconName;
               return (
                 <TouchableOpacity

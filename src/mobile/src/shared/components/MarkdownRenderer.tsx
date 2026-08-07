@@ -595,7 +595,10 @@ type MarkdownRendererProps = {
   onHeadingLayout?: (headingIndex: number, y: number) => void;
 };
 
-export function MarkdownRenderer({
+// Memoized: parsing runs on every render and a chat transcript mounts a
+// screenful of these, so an unchanged body must not be re-tokenized because
+// something else on the screen moved.
+export const MarkdownRenderer = React.memo(function MarkdownRenderer({
   content,
   onMentionPress,
   onHeadingLayout,
@@ -653,7 +656,7 @@ export function MarkdownRenderer({
   }
 
   return <>{elements}</>;
-}
+});
 
 const styles = StyleSheet.create({
   inlineRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 4 },

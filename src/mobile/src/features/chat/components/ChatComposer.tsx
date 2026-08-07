@@ -133,12 +133,18 @@ export function ChatComposer({
     progress.value = reducedMotion ? target : withTiming(target, { duration: COLLAPSE_MS });
   }, [expanded, reducedMotion, progress]);
 
-  // Height and opacity only - the card holds a GlassSurface, and an animated
-  // transform on any ancestor of a GlassView silently degrades it to a plain
-  // view (expo/expo#41024). The row is a sibling of that surface, not a parent.
+  // The row's height flips in one step rather than animating: it is a layout
+  // fact, and the screen measures this card to inset the message list, so an
+  // animated height re-measured the composer - and pushed the transcript - on
+  // every frame of the open. That churn is what made the expansion stutter.
+  // The fade and lift carry the motion instead, entirely on the UI thread.
+  //
+  // Transforms are safe here only because the row is a SIBLING of the card's
+  // GlassSurface: an animated transform on any ancestor of a GlassView
+  // silently degrades it to a plain view (expo/expo#41024).
   const actionsStyle = useAnimatedStyle(() => ({
-    height: ACTIONS_HEIGHT * progress.value,
     opacity: progress.value,
+    transform: [{ translateY: (1 - progress.value) * 8 }],
   }));
 
   return (
@@ -208,7 +214,7 @@ export function ChatComposer({
       />
 
       <Animated.View
-        style={[styles.actions, actionsStyle]}
+        style={[styles.actions, { height: expanded ? ACTIONS_HEIGHT : 0 }, actionsStyle]}
         pointerEvents={expanded ? "auto" : "none"}
         accessibilityElementsHidden={!expanded}
         importantForAccessibility={expanded ? "auto" : "no-hide-descendants"}

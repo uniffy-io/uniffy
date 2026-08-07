@@ -1,13 +1,9 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 import { useAuth } from "@core/providers/AuthContext";
 import { notesApi } from "@features/notes/notesApi";
-import {
-  noteToPlain,
-  formatRelativeTime,
-  stripMarkdown,
-  bucketForNote,
-} from "@features/notes/noteSerializer";
+import { noteToPlain, stripMarkdown, bucketForNote } from "@features/notes/noteSerializer";
 import type { SerializedNote } from "@features/notes/noteSerializer";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 
@@ -53,7 +49,7 @@ function noteToTreeNode(note: SerializedNote): TreeNode {
     ownerInfo: note.ownerInfo,
     isShared: note.sharedWith != null && note.sharedWith.length > 0,
     snippet: isFolder || isCanvas ? undefined : stripMarkdown(note.content || "").slice(0, 120),
-    editedAt: note.updatedAt ? formatRelativeTime(note.updatedAt.seconds) : "just now",
+    editedAt: note.updatedAt ? formatRelativeSeconds(note.updatedAt.seconds) : "just now",
     tags: note.tags.length > 0 ? note.tags.map((t) => t.name) : undefined,
     refCount: isFolder ? undefined : note.outgoingReferences.length,
   };

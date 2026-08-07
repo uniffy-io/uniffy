@@ -5,6 +5,7 @@ import {
   projectToPlain,
   taskToPlain,
   activityToPlain,
+  sprintToPlain,
 } from "@features/projects/projectsSerializer";
 
 export function useProjectsList() {
@@ -67,6 +68,42 @@ export function useTask(taskId: string | undefined) {
       });
       if (!response.task) throw new Error("Task not found");
       return taskToPlain(response.task);
+    },
+    enabled: !!organizationId && !!taskId,
+  });
+}
+
+export function useProjectSprints(projectId: string | undefined) {
+  const { organizationId } = useAuth();
+
+  return useQuery({
+    queryKey: ["sprints", organizationId, projectId],
+    queryFn: async () => {
+      const response = await projectsApi.listSprints({
+        organizationId: organizationId!,
+        projectId: projectId!,
+        includeClosed: true,
+      });
+      return response.sprints.map(sprintToPlain);
+    },
+    enabled: !!organizationId && !!projectId,
+  });
+}
+
+export function useTaskWatchers(taskId: string | undefined) {
+  const { organizationId } = useAuth();
+
+  return useQuery({
+    queryKey: ["task-watchers", organizationId, taskId],
+    queryFn: async () => {
+      const response = await projectsApi.listTaskWatchers({
+        organizationId: organizationId!,
+        taskId: taskId!,
+      });
+      return {
+        watcherIds: response.watcherUserIds,
+        count: response.watcherCount,
+      };
     },
     enabled: !!organizationId && !!taskId,
   });

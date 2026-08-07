@@ -22,7 +22,7 @@ import { FONT } from "@theme/typography";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { useNotesTrash } from "@features/notes/useNotes";
 import type { SerializedNote } from "@features/notes/noteSerializer";
-import { formatRelativeTime } from "@features/notes/noteSerializer";
+import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 import { useRestoreNote, useEmptyNotesTrash } from "@features/notes/useNoteMutations";
 
 type SheetNote = { id: string; title: string } | null;
@@ -103,7 +103,7 @@ export function NotesTrashScreen() {
                 </Text>
                 {item.deletedAt ? (
                   <Text style={[styles.rowMeta, { color: T.textDim }]}>
-                    Deleted {formatRelativeTime(item.deletedAt.seconds)}
+                    Deleted {formatRelativeSeconds(item.deletedAt.seconds)}
                   </Text>
                 ) : null}
               </View>

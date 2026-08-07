@@ -313,8 +313,8 @@ export function HomeScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.projectName, { color: T.textBright }]}>{project.name}</Text>
                   <Text style={[styles.projectMeta, { color: T.textDim }]}>
-                    {project.memberIds.length}{" "}
-                    {project.memberIds.length === 1 ? "member" : "members"}
+                    {project.completedTaskCount}/{project.taskCount}{" "}
+                    {project.taskCount === 1 ? "task" : "tasks"}
                   </Text>
                 </View>
                 <CaretRight size={14} color={T.textDim} weight="regular" />

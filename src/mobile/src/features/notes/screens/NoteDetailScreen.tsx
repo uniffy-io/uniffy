@@ -35,8 +35,8 @@ import { countWords, parseHeadings, parseOutgoingMentions } from "@features/note
 import { NoteOutline } from "@features/notes/components/NoteOutline";
 import { useAuth } from "@core/providers/AuthContext";
 import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
-import { formatRelativeTime } from "@features/notes/noteSerializer";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
+import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 
 // Leaves the jumped-to heading just below the top edge rather than flush on it.
 const HEADING_JUMP_MARGIN = 12;
@@ -100,7 +100,7 @@ export function NoteDetailScreen() {
   }
 
   const authorName = note.ownerInfo?.name || auth.user?.fullName || "Unknown";
-  const editedAt = note.updatedAt ? formatRelativeTime(note.updatedAt.seconds) : "just now";
+  const editedAt = note.updatedAt ? formatRelativeSeconds(note.updatedAt.seconds) : "just now";
   const backlinks = backlinksQuery.data ?? [];
   // A canvas keeps serialized board JSON in `content`. Rendering it as markdown
   // would dump raw JSON, and opening it in the markdown editor would corrupt the

@@ -59,6 +59,7 @@ function getPhosphorIcon(name: string): React.ComponentType<any> {
     user: Ph.User,
     buildings: Ph.Buildings,
     stack: Ph.Stack,
+    settings: Ph.GearSix,
   };
   return map[name] ?? Ph.DotsThree;
 }

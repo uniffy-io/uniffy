@@ -2,7 +2,6 @@ export type {
   Project,
   Task,
   Sprint,
-  ProjectSummary,
   TypeFieldSchema,
   CreateProjectRequest,
   UpdateProjectRequest,

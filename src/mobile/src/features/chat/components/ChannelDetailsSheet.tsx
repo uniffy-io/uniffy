@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import {
   View,
   Text,
@@ -21,6 +22,9 @@ import {
   X,
   Check,
   FolderSimple,
+  Brain,
+  CaretUp,
+  CaretDown,
   BellSlash,
   Bell,
   MagnifyingGlass,
@@ -32,6 +36,8 @@ import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import type { ChatMemberSubject } from "@features/chat/useChatMutations";
 import { usePresences } from "@shared/presence/usePresence";
+import { AgentMemoryPanel } from "@features/agents/components/AgentMemoryPanel";
+import type { MemorySubject } from "@features/agents/memorySerializer";
 import type {
   SerializedChannel,
   SerializedMember,
@@ -73,6 +79,8 @@ export function ChannelDetailsSheet({
   onDelete,
   onLeave,
   onShowAgentContext,
+  memorySubject,
+  isMemoryModerator = false,
 }: {
   visible: boolean;
   T: ThemeColors;
@@ -93,11 +101,15 @@ export function ChannelDetailsSheet({
   onDelete: () => void;
   onLeave: () => void;
   onShowAgentContext?: (agentId: string) => void;
+  /** Set only where an agent can act; absent hides the memory section entirely. */
+  memorySubject?: MemorySubject;
+  isMemoryModerator?: boolean;
 }) {
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [addingMembers, setAddingMembers] = useState(false);
   const [pickingCategory, setPickingCategory] = useState(false);
+  const [memoryExpanded, setMemoryExpanded] = useState(false);
 
   const memberUserIds = useMemo(
     () => (visible ? members.filter((m) => m.subjectType === "USER").map((m) => m.subjectId) : []),
@@ -131,16 +143,13 @@ export function ChannelDetailsSheet({
     ]);
   };
 
-  const confirmDestructive = (title: string, action: () => void) => {
-    Alert.alert(title, "This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Confirm", style: "destructive", onPress: action },
-    ]);
-  };
-
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View style={[styles.typeIcon, { backgroundColor: T.accentSoft }]}>
             <TypeIcon size={20} color={T.accent} weight="duotone" />
@@ -301,14 +310,12 @@ export function ChannelDetailsSheet({
             {canManage && m.subjectId !== currentUserId ? (
               <TouchableOpacity
                 onPress={() =>
-                  Alert.alert("Remove member", `Remove ${m.displayName} from the channel?`, [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Remove",
-                      style: "destructive",
-                      onPress: () => onRemoveMember({ kind: m.subjectType, id: m.subjectId }),
-                    },
-                  ])
+                  confirmDestructive({
+                    title: "Remove member",
+                    message: `Remove ${m.displayName} from the channel?`,
+                    confirmLabel: "Remove",
+                    onConfirm: () => onRemoveMember({ kind: m.subjectType, id: m.subjectId }),
+                  })
                 }
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
@@ -318,8 +325,35 @@ export function ChannelDetailsSheet({
           </View>
         ))}
 
-        {canManage || (!isDm && selfMember) ? (
+        {memorySubject || canManage || (!isDm && selfMember) ? (
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACTIONS</Text>
+        ) : null}
+        {memorySubject ? (
+          <>
+            <TouchableOpacity
+              style={[styles.actionRow, { borderTopColor: T.border }]}
+              onPress={() => setMemoryExpanded((open) => !open)}
+              activeOpacity={0.7}
+            >
+              <Brain size={17} color={T.text} weight="duotone" />
+              <Text style={[styles.actionLabel, { color: T.text }]}>Agent memory</Text>
+              {memoryExpanded ? (
+                <CaretUp size={14} color={T.textDim} weight="bold" />
+              ) : (
+                <CaretDown size={14} color={T.textDim} weight="bold" />
+              )}
+            </TouchableOpacity>
+            {memoryExpanded ? (
+              <View style={styles.memoryPanel}>
+                <AgentMemoryPanel
+                  T={T}
+                  subject={memorySubject}
+                  isModerator={canManage || isMemoryModerator}
+                  enabled={visible && memoryExpanded}
+                />
+              </View>
+            ) : null}
+          </>
         ) : null}
         {canManage ? (
           <>
@@ -333,14 +367,27 @@ export function ChannelDetailsSheet({
               T={T}
               icon={<Archive size={17} color={T.text} weight="duotone" />}
               label="Archive channel"
-              onPress={() => confirmDestructive("Archive channel", onArchive)}
+              onPress={() =>
+                confirmDestructive({
+                  title: "Archive channel",
+                  message: "This cannot be undone.",
+                  confirmLabel: "Archive",
+                  onConfirm: onArchive,
+                })
+              }
             />
             <ActionRow
               T={T}
               icon={<Trash size={17} color={T.red} weight="duotone" />}
               label="Delete channel"
               danger
-              onPress={() => confirmDestructive("Delete channel", onDelete)}
+              onPress={() =>
+                confirmDestructive({
+                  title: "Delete channel",
+                  message: "This cannot be undone.",
+                  onConfirm: onDelete,
+                })
+              }
             />
           </>
         ) : null}
@@ -351,10 +398,12 @@ export function ChannelDetailsSheet({
             label="Leave channel"
             danger
             onPress={() =>
-              Alert.alert("Leave channel", `Leave #${channel.name}?`, [
-                { text: "Cancel", style: "cancel" },
-                { text: "Leave", style: "destructive", onPress: onLeave },
-              ])
+              confirmDestructive({
+                title: "Leave channel",
+                message: `Leave #${channel.name}?`,
+                confirmLabel: "Leave",
+                onConfirm: onLeave,
+              })
             }
           />
         ) : null}
@@ -472,7 +521,11 @@ function AddMembersModal({
           style={[styles.searchInput, { color: T.textBright }]}
         />
       </View>
-      <ScrollView style={styles.pickerList} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.pickerList}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {candidates.map((s) => {
           const active = selected.has(s.id);
           const isAgent = s.kind === "AGENT";
@@ -648,6 +701,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   actionLabel: { flex: 1, fontSize: 14, fontFamily: FONT.medium },
+  memoryPanel: { paddingBottom: 8 },
   bottomPad: { height: 12 },
   pickerHeader: {
     flexDirection: "row",

@@ -182,10 +182,12 @@ function renderStyledBody(body: string, T: ThemeColors, caret: number): React.Re
 export function NoteEditorScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
-  const { noteId, parentId, accessMode } = useLocalSearchParams<{
+  const { noteId, parentId, accessMode, initialTitle, initialContent } = useLocalSearchParams<{
     noteId?: string;
     parentId?: string;
     accessMode?: string;
+    initialTitle?: string;
+    initialContent?: string;
   }>();
   const { organizationId } = useAuth();
   const { openAt } = useUniffy();
@@ -238,17 +240,32 @@ export function NoteEditorScreen() {
     else if (isFolder) router.replace(`/notes/folder/${noteId}` as any);
   }, [isCanvas, isFolder, noteId]);
 
-  // Populate fields when editing an existing note
+  // Populate fields when editing an existing note, or seed them when a caller
+  // pre-fills a new one (a project note opens with the project @-mentioned).
   const loadedRef = useRef<{ title: string; content: string } | null>(null);
   useEffect(() => {
-    if (isCanvas || isFolder) return;
-    if (isEditMode && noteQuery.data && !initialized) {
+    if (initialized || isCanvas || isFolder) return;
+    if (isEditMode) {
+      if (!noteQuery.data) return;
       setTitle(noteQuery.data.title);
       initFromCanonical(noteQuery.data.content);
       loadedRef.current = { title: noteQuery.data.title, content: noteQuery.data.content };
       setInitialized(true);
+      return;
     }
-  }, [isEditMode, noteQuery.data, initialized, initFromCanonical, isCanvas, isFolder]);
+    if (initialTitle) setTitle(initialTitle);
+    if (initialContent) initFromCanonical(initialContent);
+    setInitialized(true);
+  }, [
+    isEditMode,
+    noteQuery.data,
+    initialized,
+    initFromCanonical,
+    initialTitle,
+    initialContent,
+    isCanvas,
+    isFolder,
+  ]);
 
   const headerTopPad = (Platform.OS === "web" ? 20 : insets.top) + 12;
   const bottomPad =

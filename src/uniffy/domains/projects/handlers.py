@@ -1,6 +1,7 @@
 import json
 import secrets
 from datetime import UTC, datetime
+from typing import NamedTuple
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -159,6 +160,50 @@ async def _hydrate_project_tags(
     return {pid: bulk.get(urn, []) for urn, pid in urn_to_id.items()}
 
 
+class _ProjectCounts(NamedTuple):
+    """Everything `project_to_proto` needs beyond the row itself."""
+
+    task_total: int
+    task_done: int
+    members: int
+    overdue: int
+    estimated_minutes: int
+    time_spent_minutes: int
+
+
+class _ProjectRollups(NamedTuple):
+    """Per-project counts keyed by project id, all defaulting to zero."""
+
+    tasks: dict[UUID, queries.ProjectTaskRollup]
+    members: dict[UUID, int]
+
+    def for_project(self, project_id: UUID) -> _ProjectCounts:
+        task = self.tasks.get(project_id)
+        return _ProjectCounts(
+            task_total=task.total if task else 0,
+            task_done=task.completed if task else 0,
+            members=self.members.get(project_id, 0),
+            overdue=task.overdue if task else 0,
+            estimated_minutes=task.estimated_minutes if task else 0,
+            time_spent_minutes=task.time_spent_minutes if task else 0,
+        )
+
+
+async def _load_project_rollups(
+    session: AsyncSession,
+    organization_id: UUID,
+    project_ids: list[UUID],
+) -> _ProjectRollups:
+    return _ProjectRollups(
+        tasks=await queries.get_task_rollups_for_projects(
+            session, organization_id, project_ids
+        ),
+        members=await queries.get_member_counts_for_projects(
+            session, organization_id, project_ids
+        ),
+    )
+
+
 async def _resolve_project_effective_policy(
     session: AsyncSession,
     organization_id: UUID,
@@ -261,6 +306,8 @@ class ProjectsHandlers:
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
                     session, organization_id, project,
                 )
+                rollups = await _load_project_rollups(session, organization_id, [project.id])
+                counts = rollups.for_project(project.id)
 
                 return GetProjectResponse(
                     project=project_to_proto(
@@ -271,6 +318,12 @@ class ProjectsHandlers:
                         tags=tags_by_id.get(project.id),
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        task_count=counts.task_total,
+                        completed_task_count=counts.task_done,
+                        member_count=counts.members,
+                        overdue_task_count=counts.overdue,
+                        estimated_minutes=counts.estimated_minutes,
+                        time_spent_minutes=counts.time_spent_minutes,
                     )
                 )
         except ConnectError:
@@ -329,6 +382,8 @@ class ProjectsHandlers:
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
                     session, organization_id, project,
                 )
+                rollups = await _load_project_rollups(session, organization_id, [project.id])
+                counts = rollups.for_project(project.id)
                 return UpdateProjectResponse(
                     project=project_to_proto(
                         project,
@@ -338,6 +393,12 @@ class ProjectsHandlers:
                         tags=tags_by_id.get(project.id),
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        task_count=counts.task_total,
+                        completed_task_count=counts.task_done,
+                        member_count=counts.members,
+                        overdue_task_count=counts.overdue,
+                        estimated_minutes=counts.estimated_minutes,
+                        time_spent_minutes=counts.time_spent_minutes,
                     )
                 )
         except ConnectError:
@@ -401,6 +462,7 @@ class ProjectsHandlers:
                 fields_map = await queries.get_fields_for_projects(session, project_ids)
                 views_map = await queries.get_views_for_projects(session, project_ids)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, project_ids)
+                rollups = await _load_project_rollups(session, organization_id, project_ids)
 
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
@@ -417,6 +479,7 @@ class ProjectsHandlers:
                         default_mode,
                         default_baseline,
                     )
+                    counts = rollups.for_project(project.id)
                     project_protos.append(
                         project_to_proto(
                             project,
@@ -426,6 +489,12 @@ class ProjectsHandlers:
                             tags=tags_by_id.get(project.id),
                             effective_access_mode=eff_mode,
                             effective_baseline_role=eff_baseline,
+                            task_count=counts.task_total,
+                            completed_task_count=counts.task_done,
+                            member_count=counts.members,
+                            overdue_task_count=counts.overdue,
+                            estimated_minutes=counts.estimated_minutes,
+                            time_spent_minutes=counts.time_spent_minutes,
                         )
                     )
 
