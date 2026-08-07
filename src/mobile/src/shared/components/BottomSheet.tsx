@@ -19,8 +19,8 @@ import Animated, {
   withTiming,
   Extrapolation,
 } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@shared/hooks/useTheme";
 
 type BottomSheetProps = {
@@ -53,7 +53,11 @@ export function BottomSheet({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
-  const { height: keyboardOffset } = useReanimatedKeyboardAnimation();
+  // A modal is its own window, so the shell's KeyboardSpacer never reaches it.
+  // Every sheet holding an input would otherwise need its own handling, and on
+  // Android an RN KeyboardAvoidingView is inert because KeyboardProvider turns
+  // off native window resizing.
+  const keyboard = useReanimatedKeyboardAnimation();
 
   // Kept mounted across the exit so the sheet can animate out; Modal would
   // otherwise tear it down the moment `visible` flips.
@@ -104,14 +108,12 @@ export function BottomSheet({
       }
     });
 
-  // A sheet lives in its own modal window, which the global KeyboardSpacer
-  // never reaches, and KeyboardProvider turns off Android's native resize - so
-  // without this a focused input sits behind the keyboard. The sheet is
-  // bottom-anchored, so bottom padding grows it upward and carries the content
-  // clear instead of sliding the whole surface off the top.
+  const basePad = padBottom ? insets.bottom + 8 : 0;
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
-    paddingBottom: (padBottom ? insets.bottom + 8 : 0) + Math.max(0, -keyboardOffset.value),
+    // The keyboard covers the safe area it would otherwise clear, so this is a
+    // max rather than a sum - the same rule the shell's KeyboardSpacer follows.
+    paddingBottom: Math.max(basePad, -keyboard.height.value),
   }));
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateY.value, [0, sheetHeight], [1, 0], Extrapolation.CLAMP),

@@ -28,7 +28,7 @@ import { useNote, useNoteBacklinks } from "@features/notes/useNotes";
 import { useDeleteNote } from "@features/notes/useNoteMutations";
 import { useAuth } from "@core/providers/AuthContext";
 import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
-import { formatRelativeTime } from "@features/notes/noteSerializer";
+import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 
 export function NoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -72,7 +72,7 @@ export function NoteDetailScreen() {
   }
 
   const authorName = note.ownerInfo?.name || auth.user?.fullName || "Unknown";
-  const editedAt = note.updatedAt ? formatRelativeTime(note.updatedAt.seconds) : "just now";
+  const editedAt = note.updatedAt ? formatRelativeSeconds(note.updatedAt.seconds) : "just now";
   const backlinks = backlinksQuery.data ?? [];
 
   return (

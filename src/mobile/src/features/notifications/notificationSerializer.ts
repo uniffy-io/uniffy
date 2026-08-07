@@ -1,4 +1,5 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 import type { Notification as ProtoNotification } from "@uniffy/proto/notifications/v1/notifications_pb";
 import { NotificationType } from "@uniffy/proto/notifications/v1/notifications_pb";
 
@@ -23,19 +24,6 @@ export interface SerializedNotification {
 function tsToSeconds(ts: Timestamp | undefined): number {
   if (!ts) return 0;
   return typeof ts.seconds === "bigint" ? Number(ts.seconds) : ts.seconds;
-}
-
-function relativeTime(seconds: number): string {
-  if (!seconds) return "";
-  const diffMs = Date.now() - seconds * 1000;
-  const min = Math.floor(diffMs / 60000);
-  if (min < 1) return "Just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d ago`;
-  return new Date(seconds * 1000).toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
 const MENTION_RE = /\[\[\[([^|]+)\|[^\]]+\]\]\]/g;
@@ -111,7 +99,7 @@ export function notificationToPlain(proto: ProtoNotification): SerializedNotific
     actorAvatarUrl: proto.actorAvatarUrl || null,
     isRead: proto.isRead,
     createdAtSeconds,
-    timeLabel: relativeTime(createdAtSeconds),
+    timeLabel: formatRelativeSeconds(createdAtSeconds),
     sourceUrn: proto.sourceUrn,
     route: routeForNotification(proto),
     iconKind: meta.kind,

@@ -128,6 +128,21 @@ message Project {
   map<string, TypeFieldSchema> type_field_schemas = 18;
   optional common.v1.ContentRole baseline_role = 19;
   repeated tags.v1.Tag tags = 20;
+  // Rollups so a project list can render progress without fetching every
+  // project's tasks. Counts cover live top-level tasks only (no subtasks,
+  // no soft-deleted rows).
+  int32 task_count = 21;
+  int32 completed_task_count = 22;
+  // Explicit ``ContentMember`` grants; excludes the owner and anyone who
+  // only reaches the project through an ``OPEN_TO_ORG`` baseline.
+  int32 member_count = 23;
+  // Portfolio rollups. Unlike the two counts above these cover every live task
+  // in the project, subtasks included: a subtask can be overdue on its own, and
+  // time spent only adds up if the whole tree contributes.
+  int32 overdue_task_count = 24;
+  int32 estimated_minutes = 25;
+  // Named to match Task.time_spent_minutes - one concept, one field name.
+  int32 time_spent_minutes = 26;
 }
 
 message Task {

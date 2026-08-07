@@ -65,6 +65,15 @@ export interface Project {
   slug: string;
   typeFieldSchemas: Record<string, TypeFieldSchema>;
   tagIds: string[];
+  /** Server rollups over live top-level tasks - lets a project list render progress without its tasks. */
+  taskCount: number;
+  completedTaskCount: number;
+  /** Explicit `ContentMember` grants; excludes the owner and org-baseline access. */
+  memberCount: number;
+  /** Portfolio rollups over EVERY live task, subtasks included - unlike the two counts above. */
+  overdueTaskCount: number;
+  estimatedMinutes: number;
+  timeSpentMinutes: number;
 }
 
 export interface Task {
@@ -105,14 +114,6 @@ export interface Task {
   tagIds: string[];
 }
 
-export interface ProjectSummary {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  taskCount: number;
-  memberCount: number;
-}
 
 export interface CreateProjectRequest {
   name: string;

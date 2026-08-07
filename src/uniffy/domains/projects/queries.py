@@ -2,15 +2,19 @@
 
 import re
 from collections import defaultdict
+from datetime import UTC, datetime
+from typing import NamedTuple
 from uuid import UUID
 
-from sqlalchemy import and_, case, delete, func, select
+from sqlalchemy import and_, case, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.models.shared import ContentRole, ContentType
 
 
 async def get_fields_for_project(
@@ -75,7 +79,11 @@ async def get_subtask_counts(
     session: AsyncSession,
     parent_ids: list[UUID],
 ) -> dict[UUID, tuple[int, int]]:
-    """Returns parent_id -> (total, completed)."""
+    """Returns parent_id -> (total, completed).
+
+    Completion is read off ``completed_at`` rather than off the status id, so
+    this agrees with the project rollups and with what the clients render.
+    """
     if not parent_ids:
         return {}
 
@@ -83,7 +91,7 @@ async def get_subtask_counts(
         select(
             Task.parent_id,
             func.count().label("total"),
-            func.count(case((Task.status == "status_done", 1))).label("completed"),
+            func.count(case((Task.completed_at.is_not(None), 1))).label("completed"),
         )
         .where(
             and_(
@@ -96,6 +104,103 @@ async def get_subtask_counts(
     rows = result.all()
 
     return {row.parent_id: (row.total, row.completed) for row in rows}
+
+
+class ProjectTaskRollup(NamedTuple):
+    """Per-project task numbers.
+
+    ``total`` and ``completed`` count top-level tasks only, so they match the
+    progress bar the clients draw - counting subtasks would let one heavily
+    decomposed task outweigh the rest. The overdue count and the time sums span
+    the whole tree, because an overdue subtask is overdue work either way.
+    """
+
+    total: int
+    completed: int
+    overdue: int
+    estimated_minutes: int
+    time_spent_minutes: int
+
+
+async def get_task_rollups_for_projects(
+    session: AsyncSession,
+    organization_id: UUID,
+    project_ids: list[UUID],
+) -> dict[UUID, ProjectTaskRollup]:
+    if not project_ids:
+        return {}
+
+    # ``due_date`` is a plain YYYY-MM-DD string, so a string comparison is exact
+    # without per-row date parsing.
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    top_level = Task.parent_id.is_(None)
+
+    result = await session.execute(
+        select(
+            Task.project_id,
+            func.count(case((top_level, 1))).label("total"),
+            func.count(
+                case((and_(top_level, Task.completed_at.is_not(None)), 1))
+            ).label("completed"),
+            func.count(
+                case(
+                    (
+                        and_(
+                            Task.completed_at.is_(None),
+                            Task.due_date.is_not(None),
+                            Task.due_date < today,
+                        ),
+                        1,
+                    )
+                )
+            ).label("overdue"),
+            func.coalesce(func.sum(Task.estimated_minutes), 0).label("estimated"),
+            func.coalesce(func.sum(Task.time_spent_minutes), 0).label("spent"),
+        )
+        .where(
+            and_(
+                Task.organization_id == organization_id,
+                Task.project_id.in_(project_ids),
+                Task.is_deleted == False,  # noqa: E712
+            )
+        )
+        .group_by(Task.project_id)
+    )
+
+    return {
+        row.project_id: ProjectTaskRollup(
+            row.total, row.completed, row.overdue, int(row.estimated), int(row.spent)
+        )
+        for row in result.all()
+    }
+
+
+async def get_member_counts_for_projects(
+    session: AsyncSession,
+    organization_id: UUID,
+    project_ids: list[UUID],
+) -> dict[UUID, int]:
+    if not project_ids:
+        return {}
+
+    now = datetime.now(UTC)
+    result = await session.execute(
+        select(ContentMember.content_id, func.count().label("total"))
+        .where(
+            and_(
+                ContentMember.organization_id == organization_id,
+                ContentMember.content_type == ContentType.PROJECT,
+                ContentMember.content_id.in_(project_ids),
+                # A BLOCKED row is an explicit deny, and an expired grant confers
+                # nothing - neither is a member.
+                ContentMember.role != ContentRole.BLOCKED,
+                or_(ContentMember.expires_at.is_(None), ContentMember.expires_at > now),
+            )
+        )
+        .group_by(ContentMember.content_id)
+    )
+
+    return {row.content_id: row.total for row in result.all()}
 
 
 async def get_activities_for_task(

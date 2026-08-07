@@ -783,13 +783,15 @@ class TaskOperations(BaseContentOperations[Task]):
         current_max = max_sort_order.scalar() or 0
         new_sort_order = current_max + 65536
 
+        initial_status = kwargs.get("status", "status_todo")
+
         task = Task(
             project_id=project_id,
             organization_id=organization_id,
             owner_id=user_id,
             title=title,
             description=description,
-            status=kwargs.get("status", "status_todo"),
+            status=initial_status,
             priority=kwargs.get("priority", "priority_medium"),
             assignee_ids=kwargs.get("assignee_ids"),
             start_date=kwargs.get("start_date"),
@@ -805,6 +807,12 @@ class TaskOperations(BaseContentOperations[Task]):
             number=task_number,
             task_type=task_type,
             sprint_id=kwargs.get("sprint_id"),
+            estimated_minutes=kwargs.get("estimated_minutes"),
+            time_spent_minutes=kwargs.get("time_spent_minutes"),
+            # Creating straight into the done column has to stamp completion the
+            # same way moving a task there does; otherwise the task reads as
+            # open everywhere completion is measured by ``completed_at``.
+            completed_at=datetime.now(UTC) if initial_status == "status_done" else None,
         )
         self.session.add(task)
         await self.session.flush()

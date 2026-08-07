@@ -77,7 +77,7 @@ ACTIVITY_ACTION_TYPE_CHANGED: ActivityAction
 ACTIVITY_ACTION_SPRINT_CHANGED: ActivityAction
 
 class Project(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "icon", "color", "access_mode", "field_definitions", "views", "default_view_id", "created_at", "updated_at", "deleted_at", "urn", "user_role", "slug", "type_field_schemas", "baseline_role", "tags")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "icon", "color", "access_mode", "field_definitions", "views", "default_view_id", "created_at", "updated_at", "deleted_at", "urn", "user_role", "slug", "type_field_schemas", "baseline_role", "tags", "task_count", "completed_task_count", "member_count", "overdue_task_count", "estimated_minutes", "time_spent_minutes")
     class TypeFieldSchemasEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -105,6 +105,12 @@ class Project(_message.Message):
     TYPE_FIELD_SCHEMAS_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
+    TASK_COUNT_FIELD_NUMBER: _ClassVar[int]
+    COMPLETED_TASK_COUNT_FIELD_NUMBER: _ClassVar[int]
+    MEMBER_COUNT_FIELD_NUMBER: _ClassVar[int]
+    OVERDUE_TASK_COUNT_FIELD_NUMBER: _ClassVar[int]
+    ESTIMATED_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    TIME_SPENT_MINUTES_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -125,7 +131,13 @@ class Project(_message.Message):
     type_field_schemas: _containers.MessageMap[str, TypeFieldSchema]
     baseline_role: _common_pb2.ContentRole
     tags: _containers.RepeatedCompositeFieldContainer[_tags_pb2.Tag]
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., field_definitions: _Optional[_Iterable[_Union[FieldDefinition, _Mapping]]] = ..., views: _Optional[_Iterable[_Union[ViewConfig, _Mapping]]] = ..., default_view_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., slug: _Optional[str] = ..., type_field_schemas: _Optional[_Mapping[str, TypeFieldSchema]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ...) -> None: ...
+    task_count: int
+    completed_task_count: int
+    member_count: int
+    overdue_task_count: int
+    estimated_minutes: int
+    time_spent_minutes: int
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon: _Optional[str] = ..., color: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., field_definitions: _Optional[_Iterable[_Union[FieldDefinition, _Mapping]]] = ..., views: _Optional[_Iterable[_Union[ViewConfig, _Mapping]]] = ..., default_view_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., urn: _Optional[str] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., slug: _Optional[str] = ..., type_field_schemas: _Optional[_Mapping[str, TypeFieldSchema]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ..., task_count: _Optional[int] = ..., completed_task_count: _Optional[int] = ..., member_count: _Optional[int] = ..., overdue_task_count: _Optional[int] = ..., estimated_minutes: _Optional[int] = ..., time_spent_minutes: _Optional[int] = ...) -> None: ...
 
 class Task(_message.Message):
     __slots__ = ("id", "project_id", "organization_id", "owner_id", "title", "description", "status", "priority", "assignee_ids", "start_date", "due_date", "completed_at", "parent_id", "blocked_by_task_ids", "is_milestone", "recurrence_rule", "sort_order", "field_values", "outgoing_references", "created_at", "updated_at", "deleted_at", "urn", "number", "task_type", "sprint_id", "user_role", "subtask_total", "subtask_completed", "estimated_minutes", "time_spent_minutes", "tags")

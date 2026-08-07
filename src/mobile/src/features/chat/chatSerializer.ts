@@ -1,4 +1,5 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { formatCompactAge } from "@shared/lib/dateFormatting";
 import {
   ChannelType as ProtoChannelType,
   ChannelRole as ProtoChannelRole,
@@ -184,20 +185,6 @@ export function formatMessageTime(seconds: number): string {
   return `${day} ${time}`;
 }
 
-/** Compact label for channel-list "last activity" column. */
-export function formatChannelActivity(seconds: number): string {
-  if (!seconds) return "";
-  const diffMs = Date.now() - seconds * 1000;
-  const min = Math.floor(diffMs / 60000);
-  if (min < 1) return "now";
-  if (min < 60) return `${min}m`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d`;
-  return new Date(seconds * 1000).toLocaleDateString([], { month: "short", day: "numeric" });
-}
-
 export function channelToPlain(proto: ProtoChatChannel): SerializedChannel {
   const customName = proto.customName || null;
   return {
@@ -326,7 +313,7 @@ export function threadInboxItemToPlain(proto: ProtoThreadInboxItem): SerializedT
     latestReplyPreview: proto.latestReply?.content || null,
     replyCount: proto.replyCount,
     lastReplyAtSeconds,
-    activityLabel: formatChannelActivity(lastReplyAtSeconds),
+    activityLabel: formatCompactAge(lastReplyAtSeconds),
     hasUnread: proto.hasUnread,
   };
 }

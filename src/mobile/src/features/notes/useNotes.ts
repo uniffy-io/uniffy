@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@core/providers/AuthContext";
 import { notesApi } from "@features/notes/notesApi";
 import { bookmarksApi } from "@features/bookmarks/bookmarksApi";
-import { noteToPlain, formatRelativeTime, stripMarkdown } from "@features/notes/noteSerializer";
+import { noteToPlain, stripMarkdown } from "@features/notes/noteSerializer";
+import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 import type { SerializedNote } from "@features/notes/noteSerializer";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 
@@ -15,7 +16,7 @@ export type NoteListItem = SerializedNote & {
 function deriveListItem(note: SerializedNote): NoteListItem {
   const snippet = stripMarkdown(note.content || "").slice(0, 120);
 
-  const editedAt = note.updatedAt ? formatRelativeTime(note.updatedAt.seconds) : "just now";
+  const editedAt = note.updatedAt ? formatRelativeSeconds(note.updatedAt.seconds) : "just now";
 
   return {
     ...note,

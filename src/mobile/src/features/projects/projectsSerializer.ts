@@ -3,9 +3,11 @@ import type {
   Task,
   TaskActivity,
   FieldDefinition,
+  Sprint,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { ActivityAction } from "@uniffy/proto/projects/v1/projects_pb";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
+import type { ThemeColors } from "@theme/theme";
 
 export interface PlainSelectOption {
   id: string;
@@ -18,6 +20,8 @@ export interface SerializedFieldDefinition {
   id: string;
   name: string;
   options: PlainSelectOption[];
+  /** Kept raw so an edit to `options` can preserve any other config keys. */
+  configJson: string;
 }
 
 export interface SerializedProject {
@@ -34,7 +38,12 @@ export interface SerializedProject {
   baselineRole?: number;
   userRole: number;
   visibility: "PRIVATE" | "ORGANIZATION";
-  memberIds: string[];
+  taskCount: number;
+  completedTaskCount: number;
+  memberCount: number;
+  overdueTaskCount: number;
+  estimatedMinutes: number;
+  timeSpentMinutes: number;
   fieldDefinitions: SerializedFieldDefinition[];
   createdAt?: string;
   updatedAt?: string;
@@ -65,12 +74,32 @@ export interface SerializedTask {
   subtaskCompleted: number;
   estimatedMinutes?: number;
   timeSpentMinutes?: number;
+  recurrenceRule?: string;
   userRole: number;
   outgoingReferences: string[];
   fieldValues: { [key: string]: string };
-  tags: string[];
+  tags: SerializedTaskTag[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface SerializedTaskTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface SerializedSprint {
+  id: string;
+  projectId: string;
+  name: string;
+  goal: string;
+  status: "planned" | "active" | "closed";
+  startDate: string | null;
+  endDate: string | null;
+  sortOrder: number;
+  taskCount: number;
+  completedTaskCount: number;
 }
 
 export interface SerializedActivity {
@@ -91,8 +120,21 @@ export interface ProjectStats {
   progress: number;
 }
 
-const STATUS_FIELD_ID = "field_status";
+export const STATUS_FIELD_ID = "field_status";
 const PRIORITY_FIELD_ID = "field_priority";
+
+/**
+ * The server keys behaviour off these exact option ids, not off labels or sort
+ * order: `status_done` drives `completed_at`, parent auto-completion, blocker
+ * enforcement and recurrence spawning; `status_todo` is the status every new
+ * task gets; `status_in_progress` is where a parent lands when a subtask is
+ * reopened. Renaming and recolouring them is safe, deleting them is not.
+ */
+export const DONE_STATUS_ID = "status_done";
+export const TODO_STATUS_ID = "status_todo";
+const IN_PROGRESS_STATUS_ID = "status_in_progress";
+
+export const PROTECTED_STATUS_IDS = [TODO_STATUS_ID, IN_PROGRESS_STATUS_ID, DONE_STATUS_ID];
 
 const DEFAULT_STATUS_OPTIONS: PlainSelectOption[] = [
   { id: "status_todo", label: "To Do", color: "#6b7280", sortOrder: 0 },
@@ -147,7 +189,24 @@ function fieldDefinitionToPlain(field: FieldDefinition): SerializedFieldDefiniti
       // Malformed config from server - leave options empty
     }
   }
-  return { id: field.id, name: field.name, options };
+  return { id: field.id, name: field.name, options, configJson: field.configJson };
+}
+
+/** Replaces just the `options` key, so nothing else the server stores is lost. */
+export function buildFieldConfigJson(
+  field: SerializedFieldDefinition,
+  options: PlainSelectOption[],
+): string {
+  let config: Record<string, unknown> = {};
+  if (field.configJson) {
+    try {
+      const parsed = JSON.parse(field.configJson);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) config = parsed;
+    } catch {
+      // Malformed config from server - start from just the options
+    }
+  }
+  return JSON.stringify({ ...config, options });
 }
 
 export function projectToPlain(project: Project): SerializedProject {
@@ -165,7 +224,12 @@ export function projectToPlain(project: Project): SerializedProject {
     baselineRole: project.baselineRole,
     userRole: project.userRole,
     visibility: project.accessMode === AccessMode.OPEN_TO_ORG ? "ORGANIZATION" : "PRIVATE",
-    memberIds: [],
+    taskCount: project.taskCount,
+    completedTaskCount: project.completedTaskCount,
+    memberCount: project.memberCount,
+    overdueTaskCount: project.overdueTaskCount,
+    estimatedMinutes: project.estimatedMinutes,
+    timeSpentMinutes: project.timeSpentMinutes,
     fieldDefinitions: project.fieldDefinitions.map(fieldDefinitionToPlain),
     createdAt: tsToIso(project.createdAt),
     updatedAt: tsToIso(project.updatedAt),
@@ -198,12 +262,28 @@ export function taskToPlain(task: Task): SerializedTask {
     subtaskCompleted: task.subtaskCompleted,
     estimatedMinutes: task.estimatedMinutes,
     timeSpentMinutes: task.timeSpentMinutes,
+    recurrenceRule: task.recurrenceRule,
     userRole: task.userRole,
     outgoingReferences: task.outgoingReferences,
     fieldValues: task.fieldValues,
-    tags: task.tags.map((t) => t.name),
+    tags: task.tags.map((t) => ({ id: t.id, name: t.name, color: t.color })),
     createdAt: tsToIso(task.createdAt),
     updatedAt: tsToIso(task.updatedAt),
+  };
+}
+
+export function sprintToPlain(sprint: Sprint): SerializedSprint {
+  return {
+    id: sprint.id,
+    projectId: sprint.projectId,
+    name: sprint.name,
+    goal: sprint.goal,
+    status: (sprint.status as SerializedSprint["status"]) || "planned",
+    startDate: sprint.startDate ?? null,
+    endDate: sprint.endDate ?? null,
+    sortOrder: sprint.sortOrder,
+    taskCount: sprint.taskCount,
+    completedTaskCount: sprint.completedTaskCount,
   };
 }
 
@@ -220,13 +300,50 @@ export function activityToPlain(activity: TaskActivity): SerializedActivity {
   };
 }
 
+function statsFrom(total: number, done: number): ProjectStats {
+  return {
+    total,
+    done,
+    inProgress: total - done,
+    progress: total === 0 ? 0 : Math.round((done / total) * 100),
+  };
+}
+
+/**
+ * Rollups the server already counted - the list screen renders progress for
+ * every project without fetching each one's task list.
+ */
+export function projectStats(project: SerializedProject): ProjectStats {
+  return statsFrom(project.taskCount, project.completedTaskCount);
+}
+
+export type ProjectHealth = "not_started" | "on_track" | "at_risk" | "behind";
+
+export const PROJECT_HEALTH_LABELS: Record<ProjectHealth, string> = {
+  not_started: "Not Started",
+  on_track: "On Track",
+  at_risk: "At Risk",
+  behind: "Behind",
+};
+
+/** Same rules and thresholds as web's PortfolioPage, so a project reads the
+ *  same on both clients. */
+export function projectHealth(project: SerializedProject): ProjectHealth {
+  const { taskCount, completedTaskCount, overdueTaskCount, estimatedMinutes, timeSpentMinutes } =
+    project;
+  if (taskCount === 0) return "not_started";
+  if (completedTaskCount === 0 && overdueTaskCount === 0) return "not_started";
+  if (overdueTaskCount >= 3) return "behind";
+  if (estimatedMinutes > 0 && timeSpentMinutes > estimatedMinutes) return "behind";
+  if (overdueTaskCount >= 1) return "at_risk";
+  if (estimatedMinutes > 0 && timeSpentMinutes > estimatedMinutes * 0.8) return "at_risk";
+  return "on_track";
+}
+
+/** Same shape from a loaded task list, so an open project stays live as tasks change. */
 export function computeProjectStats(tasks: SerializedTask[]): ProjectStats {
   const top = tasks.filter((t) => !t.parentId);
-  const total = top.length;
-  const done = top.filter((t) => !!t.completedAt).length;
-  const inProgress = total - done;
-  const progress = total === 0 ? 0 : Math.round((done / total) * 100);
-  return { total, done, inProgress, progress };
+  return statsFrom(top.length, top.filter((t) => !!t.completedAt).length);
 }
 
 function fieldOptions(
@@ -259,4 +376,17 @@ export function getOptionById(
 
 export function visibilityStringToProto(visibility: string): AccessMode {
   return visibility === "ORGANIZATION" ? AccessMode.OPEN_TO_ORG : AccessMode.OWNER_ONLY;
+}
+
+export const SPRINT_STATUS_LABEL: Record<SerializedSprint["status"], string> = {
+  planned: "Planned",
+  active: "Active",
+  closed: "Closed",
+};
+
+/** Active reads as go, closed as spent, planned as upcoming. */
+export function sprintStatusTint(T: ThemeColors, status: SerializedSprint["status"]): string {
+  if (status === "active") return T.green;
+  if (status === "closed") return T.textDim;
+  return T.blue;
 }

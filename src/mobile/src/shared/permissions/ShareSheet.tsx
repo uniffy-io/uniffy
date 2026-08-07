@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import {
   ShareNetwork,
@@ -26,17 +25,19 @@ import { useTheme } from "@shared/hooks/useTheme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/AuthContext";
-import { useMembers, useDirectory, useMemberMutations } from "@shared/permissions/usePermissions";
+import { useMembers, useMemberMutations } from "@shared/permissions/usePermissions";
+import { useDirectory } from "@shared/directory/useDirectory";
+import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import {
   ACCESS_MODE_META,
   ASSIGNABLE_ROLES,
   ROLE_LABEL,
-  canManage,
-  isOwner as isOwnerRole,
+  roleToProto,
   type AccessModeName,
   type RoleName,
   type SerializedMember,
 } from "@shared/permissions/permissionSerializer";
+import { roleCanManage, roleCanTransfer } from "@shared/permissions/contentRoles";
 import type { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
 const ACCESS_ICON: Record<AccessModeName, typeof Lock> = {
@@ -103,8 +104,11 @@ export function ShareSheet({
 
   const policy = membersQuery.data?.policy ?? null;
   const members = useMemo(() => membersQuery.data?.members ?? [], [membersQuery.data]);
-  const manage = canManage(policy?.callerRole ?? null) || policy?.ownerId === user?.id;
-  const callerIsOwner = policy?.ownerId === user?.id || isOwnerRole(policy?.callerRole ?? null);
+  // The predicates work on the proto enum, which is the shape the backend gates
+  // on; the serializer's role names are a display concern.
+  const callerRole = policy?.callerRole ? roleToProto(policy.callerRole) : null;
+  const manage = roleCanManage(callerRole) || policy?.ownerId === user?.id;
+  const callerIsOwner = policy?.ownerId === user?.id || roleCanTransfer(callerRole);
   const accessMode = policy?.accessMode ?? "OWNER_ONLY";
 
   const memberIds = useMemo(() => new Set(members.map((m) => m.subjectId)), [members]);
@@ -255,18 +259,12 @@ export function ShareSheet({
               }}
               onTransfer={() => {
                 setExpandedId(null);
-                Alert.alert(
-                  "Transfer ownership",
-                  `Make ${resolveName(m.subjectId)} the owner? You will become an admin.`,
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Transfer",
-                      style: "destructive",
-                      onPress: () => transferOwnership.mutate(m.subjectId),
-                    },
-                  ],
-                );
+                confirmDestructive({
+                  title: "Transfer ownership",
+                  message: `Make ${resolveName(m.subjectId)} the owner? You will become an admin.`,
+                  confirmLabel: "Transfer",
+                  onConfirm: () => transferOwnership.mutate(m.subjectId),
+                });
               }}
             />
           ))}
@@ -309,8 +307,8 @@ export function ShareSheet({
                   activeOpacity={0.7}
                 >
                   {s.kind === "GROUP" ? (
-                    <View style={[styles.groupAvatar, { backgroundColor: "#8b5cf622" }]}>
-                      <UsersThree size={16} color="#8b5cf6" weight="fill" />
+                    <View style={[styles.groupAvatar, { backgroundColor: T.group + "22" }]}>
+                      <UsersThree size={16} color={T.group} weight="fill" />
                     </View>
                   ) : (
                     <Avatar name={s.name} avatarUrl={s.avatarUrl} size={32} />
@@ -368,8 +366,8 @@ function MemberRow({
     <View style={[styles.memberRow, { borderBottomColor: T.border }]}>
       <View style={styles.memberMain}>
         {member.subjectType === "GROUP" ? (
-          <View style={[styles.groupAvatar, { backgroundColor: "#8b5cf622" }]}>
-            <UsersThree size={16} color="#8b5cf6" weight="fill" />
+          <View style={[styles.groupAvatar, { backgroundColor: T.group + "22" }]}>
+            <UsersThree size={16} color={T.group} weight="fill" />
           </View>
         ) : (
           <Avatar name={name} avatarUrl={avatarUrl} size={34} />
