@@ -22,6 +22,10 @@ export function draftsKey(orgId: string | null) {
   return ["chat", "drafts", orgId];
 }
 
+export function agentFoldersKey(orgId: string | null) {
+  return ["chat", "agentFolders", orgId];
+}
+
 export function upsertDraftInCache(
   queryClient: QueryClient,
   orgId: string | null,
@@ -86,6 +90,7 @@ export function useSendMessage(channelId: string) {
         reactions: [],
         senderName: user?.fullName || user?.username || "You",
         senderAvatarUrl: user?.avatarUrl || null,
+        feedbackRating: "",
         attachments: [],
       };
       queryClient.setQueryData<SerializedMessage[]>(key, (old) => [optimistic, ...(old ?? [])]);
@@ -398,6 +403,57 @@ export function useCreateCategory() {
       queryClient.invalidateQueries({ queryKey: ["chat", "categories", organizationId] });
     },
   });
+}
+
+function useAgentFolderMutation<TArgs>(
+  mutationFn: (args: TArgs) => Promise<unknown>,
+  { touchesChannels = false }: { touchesChannels?: boolean } = {},
+) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: agentFoldersKey(organizationId) });
+      if (touchesChannels) {
+        queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+        queryClient.invalidateQueries({ queryKey: ["chat", "agentChats", organizationId] });
+      }
+    },
+  });
+}
+
+export function useCreateAgentFolder() {
+  const { organizationId } = useAuth();
+  return useAgentFolderMutation((name: string) =>
+    chatApi.createAgentFolder({ organizationId: organizationId!, name }),
+  );
+}
+
+export function useRenameAgentFolder() {
+  const { organizationId } = useAuth();
+  return useAgentFolderMutation((args: { folderId: string; name: string }) =>
+    chatApi.renameAgentFolder({ organizationId: organizationId!, ...args }),
+  );
+}
+
+/** The chats inside are kept; they move back to the unfiled root. */
+export function useDeleteAgentFolder() {
+  const { organizationId } = useAuth();
+  return useAgentFolderMutation(
+    (folderId: string) => chatApi.deleteAgentFolder({ organizationId: organizationId!, folderId }),
+    { touchesChannels: true },
+  );
+}
+
+export function useSetAgentChatFolder() {
+  const { organizationId } = useAuth();
+  return useAgentFolderMutation(
+    (args: { channelId: string; folderId?: string }) =>
+      chatApi.setAgentChatFolder({ organizationId: organizationId!, ...args }),
+    { touchesChannels: true },
+  );
 }
 
 export function useJoinChannel() {

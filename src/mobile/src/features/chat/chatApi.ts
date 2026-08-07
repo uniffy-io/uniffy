@@ -49,6 +49,11 @@ import {
   UpdateCategoryRequestSchema,
   DeleteCategoryRequestSchema,
   MoveChannelToCategoryRequestSchema,
+  ListAgentFoldersRequestSchema,
+  CreateAgentFolderRequestSchema,
+  RenameAgentFolderRequestSchema,
+  DeleteAgentFolderRequestSchema,
+  SetAgentChatFolderRequestSchema,
 } from "@uniffy/proto/chat/v1/chat_pb";
 import { transport } from "@core/api/transport";
 
@@ -156,4 +161,14 @@ export const chatApi = {
     client.deleteCategory(req),
   moveChannelToCategory: (req: MessageInitShape<typeof MoveChannelToCategoryRequestSchema>) =>
     client.moveChannelToCategory(req),
+  listAgentFolders: (req: MessageInitShape<typeof ListAgentFoldersRequestSchema>) =>
+    client.listAgentFolders(req),
+  createAgentFolder: (req: MessageInitShape<typeof CreateAgentFolderRequestSchema>) =>
+    client.createAgentFolder(req),
+  renameAgentFolder: (req: MessageInitShape<typeof RenameAgentFolderRequestSchema>) =>
+    client.renameAgentFolder(req),
+  deleteAgentFolder: (req: MessageInitShape<typeof DeleteAgentFolderRequestSchema>) =>
+    client.deleteAgentFolder(req),
+  setAgentChatFolder: (req: MessageInitShape<typeof SetAgentChatFolderRequestSchema>) =>
+    client.setAgentChatFolder(req),
 };

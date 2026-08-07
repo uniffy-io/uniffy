@@ -22,6 +22,9 @@ import {
   X,
   Check,
   FolderSimple,
+  Brain,
+  CaretUp,
+  CaretDown,
   BellSlash,
   Bell,
   MagnifyingGlass,
@@ -33,6 +36,8 @@ import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import type { ChatMemberSubject } from "@features/chat/useChatMutations";
 import { usePresences } from "@shared/presence/usePresence";
+import { AgentMemoryPanel } from "@features/agents/components/AgentMemoryPanel";
+import type { MemorySubject } from "@features/agents/memorySerializer";
 import type {
   SerializedChannel,
   SerializedMember,
@@ -74,6 +79,8 @@ export function ChannelDetailsSheet({
   onDelete,
   onLeave,
   onShowAgentContext,
+  memorySubject,
+  isMemoryModerator = false,
 }: {
   visible: boolean;
   T: ThemeColors;
@@ -94,11 +101,15 @@ export function ChannelDetailsSheet({
   onDelete: () => void;
   onLeave: () => void;
   onShowAgentContext?: (agentId: string) => void;
+  /** Set only where an agent can act; absent hides the memory section entirely. */
+  memorySubject?: MemorySubject;
+  isMemoryModerator?: boolean;
 }) {
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [addingMembers, setAddingMembers] = useState(false);
   const [pickingCategory, setPickingCategory] = useState(false);
+  const [memoryExpanded, setMemoryExpanded] = useState(false);
 
   const memberUserIds = useMemo(
     () => (visible ? members.filter((m) => m.subjectType === "USER").map((m) => m.subjectId) : []),
@@ -134,7 +145,11 @@ export function ChannelDetailsSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View style={[styles.typeIcon, { backgroundColor: T.accentSoft }]}>
             <TypeIcon size={20} color={T.accent} weight="duotone" />
@@ -310,8 +325,35 @@ export function ChannelDetailsSheet({
           </View>
         ))}
 
-        {canManage || (!isDm && selfMember) ? (
+        {memorySubject || canManage || (!isDm && selfMember) ? (
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACTIONS</Text>
+        ) : null}
+        {memorySubject ? (
+          <>
+            <TouchableOpacity
+              style={[styles.actionRow, { borderTopColor: T.border }]}
+              onPress={() => setMemoryExpanded((open) => !open)}
+              activeOpacity={0.7}
+            >
+              <Brain size={17} color={T.text} weight="duotone" />
+              <Text style={[styles.actionLabel, { color: T.text }]}>Agent memory</Text>
+              {memoryExpanded ? (
+                <CaretUp size={14} color={T.textDim} weight="bold" />
+              ) : (
+                <CaretDown size={14} color={T.textDim} weight="bold" />
+              )}
+            </TouchableOpacity>
+            {memoryExpanded ? (
+              <View style={styles.memoryPanel}>
+                <AgentMemoryPanel
+                  T={T}
+                  subject={memorySubject}
+                  isModerator={canManage || isMemoryModerator}
+                  enabled={visible && memoryExpanded}
+                />
+              </View>
+            ) : null}
+          </>
         ) : null}
         {canManage ? (
           <>
@@ -479,7 +521,11 @@ function AddMembersModal({
           style={[styles.searchInput, { color: T.textBright }]}
         />
       </View>
-      <ScrollView style={styles.pickerList} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.pickerList}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {candidates.map((s) => {
           const active = selected.has(s.id);
           const isAgent = s.kind === "AGENT";
@@ -655,6 +701,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   actionLabel: { flex: 1, fontSize: 14, fontFamily: FONT.medium },
+  memoryPanel: { paddingBottom: 8 },
   bottomPad: { height: 12 },
   pickerHeader: {
     flexDirection: "row",

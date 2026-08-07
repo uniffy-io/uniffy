@@ -1,16 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@core/providers/AuthContext";
 import { chatApi } from "@features/chat/chatApi";
+import { parseModelParamValues, type ModelParamValues } from "@features/agents/modelParamsSchema";
 
 export interface SerializedChannelAgentConfig {
   modelOverride: string;
+  modelParams: ModelParamValues;
+  imageParams: ModelParamValues;
+}
+
+/** Absent field = leave unchanged; "" / empty params = clear the override. */
+export interface ChannelAgentConfigPatch {
+  modelOverride?: string;
+  modelParams?: ModelParamValues;
+  imageParams?: ModelParamValues;
 }
 
 export function channelAgentConfigKey(orgId: string | null, channelId: string, agentId: string) {
   return ["chat", "agentConfig", orgId, channelId, agentId];
 }
 
-/** Per-(channel, agent) model override; "" = agent default. */
+const EMPTY_CONFIG: SerializedChannelAgentConfig = {
+  modelOverride: "",
+  modelParams: {},
+  imageParams: {},
+};
+
+/** Per-(channel, agent) model and parameter overrides; "" = agent default. */
 export function useChannelAgentConfig(channelId: string, agentId: string, enabled = true) {
   const { organizationId } = useAuth();
 
@@ -25,9 +41,34 @@ export function useChannelAgentConfig(channelId: string, agentId: string, enable
       });
       return {
         modelOverride: res.config?.modelOverride ?? "",
+        modelParams: parseModelParamValues(res.config?.modelParamsOverride ?? ""),
+        imageParams: parseModelParamValues(res.config?.imageParamsOverride ?? ""),
       };
     },
   });
+}
+
+/** The wire fields are optional strings: absent = unchanged, "" = clear. */
+function toWirePatch(patch: ChannelAgentConfigPatch): {
+  modelOverride?: string;
+  modelParamsOverride?: string;
+  imageParamsOverride?: string;
+} {
+  const wire: {
+    modelOverride?: string;
+    modelParamsOverride?: string;
+    imageParamsOverride?: string;
+  } = {};
+  if (patch.modelOverride !== undefined) wire.modelOverride = patch.modelOverride;
+  if (patch.modelParams !== undefined) {
+    wire.modelParamsOverride =
+      Object.keys(patch.modelParams).length > 0 ? JSON.stringify(patch.modelParams) : "";
+  }
+  if (patch.imageParams !== undefined) {
+    wire.imageParamsOverride =
+      Object.keys(patch.imageParams).length > 0 ? JSON.stringify(patch.imageParams) : "";
+  }
+  return wire;
 }
 
 /**
@@ -40,19 +81,24 @@ export function useUpdateChannelAgentConfig(channelId: string, agentId: string) 
   const key = channelAgentConfigKey(organizationId, channelId, agentId);
 
   return useMutation({
-    mutationFn: (patch: { modelOverride?: string }) =>
+    mutationFn: (patch: ChannelAgentConfigPatch) =>
       chatApi.updateChannelAgentConfig({
         organizationId: organizationId!,
         channelId,
         agentId,
-        modelOverride: patch.modelOverride,
+        ...toWirePatch(patch),
       }),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<SerializedChannelAgentConfig>(key);
-      queryClient.setQueryData<SerializedChannelAgentConfig>(key, (old) => ({
-        modelOverride: patch.modelOverride ?? old?.modelOverride ?? "",
-      }));
+      queryClient.setQueryData<SerializedChannelAgentConfig>(key, (old) => {
+        const base = old ?? EMPTY_CONFIG;
+        return {
+          modelOverride: patch.modelOverride ?? base.modelOverride,
+          modelParams: patch.modelParams ?? base.modelParams,
+          imageParams: patch.imageParams ?? base.imageParams,
+        };
+      });
       return { previous };
     },
     onError: (_err, _patch, ctx) => {
@@ -65,6 +111,8 @@ export function useUpdateChannelAgentConfig(channelId: string, agentId: string) 
     onSuccess: (res) => {
       queryClient.setQueryData<SerializedChannelAgentConfig>(key, {
         modelOverride: res.config?.modelOverride ?? "",
+        modelParams: parseModelParamValues(res.config?.modelParamsOverride ?? ""),
+        imageParams: parseModelParamValues(res.config?.imageParamsOverride ?? ""),
       });
     },
   });

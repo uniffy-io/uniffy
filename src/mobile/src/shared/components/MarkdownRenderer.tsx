@@ -590,7 +590,13 @@ type MarkdownRendererProps = {
   onMentionPress?: (urn: string, label: string) => void;
 };
 
-export function MarkdownRenderer({ content, onMentionPress }: MarkdownRendererProps) {
+// Memoized: parsing runs on every render and a chat transcript mounts a
+// screenful of these, so an unchanged body must not be re-tokenized because
+// something else on the screen moved.
+export const MarkdownRenderer = React.memo(function MarkdownRenderer({
+  content,
+  onMentionPress,
+}: MarkdownRendererProps) {
   const T = useTheme();
   const lines = content.split("\n");
   const elements: React.ReactNode[] = [];
@@ -630,7 +636,7 @@ export function MarkdownRenderer({ content, onMentionPress }: MarkdownRendererPr
   }
 
   return <>{elements}</>;
-}
+});
 
 const styles = StyleSheet.create({
   inlineRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 4 },

@@ -11,6 +11,12 @@ export interface SerializedAgent {
   isDefault: boolean;
   primaryModel: string;
   primaryProviderKeyId: string;
+  imageModel: string;
+  imageProviderKeyId: string;
+  enabledTools: string[];
+  /** Raw JSON blobs; parse with `parseModelParamValues` at the point of use. */
+  modelParams: string;
+  imageParams: string;
 }
 
 /** First line of the soul prompt, used as a short description. */
@@ -30,6 +36,11 @@ export function agentToPlain(proto: AgentInfo): SerializedAgent {
     isDefault: proto.isDefault,
     primaryModel: proto.primaryModel,
     primaryProviderKeyId: proto.primaryProviderKeyId,
+    imageModel: proto.imageModel || "",
+    imageProviderKeyId: proto.imageProviderKeyId || "",
+    enabledTools: [...proto.enabledTools],
+    modelParams: proto.modelParams || "",
+    imageParams: proto.imageParams || "",
   };
 }
 

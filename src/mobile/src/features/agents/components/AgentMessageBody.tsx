@@ -1,14 +1,6 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Platform,
-} from "react-native";
-import {
-  Wrench,
   CheckCircle,
   XCircle,
   Warning,
@@ -21,23 +13,24 @@ import {
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import type { SerializedMessage } from "@features/chat/chatSerializer";
-
-const MONO_FONT = Platform.select({ ios: "Menlo", default: "monospace" });
+import { parseImageMeta } from "@features/agents/imageMeta";
+import { internalToolName, toolActionLabel, useToolLabels } from "@features/agents/toolLabels";
+import { GeneratedImageCard } from "@features/agents/components/GeneratedImageCard";
+import {
+  DetailsCaret,
+  MonoBlock,
+  MONO_FONT,
+  DETAILS_GAP,
+} from "@features/agents/components/AgentDetailsBlock";
+import { ToolActivityPane, type ToolStep } from "@features/agents/components/ToolActivityPane";
 
 const ERROR_RESULT_RE = /^(Error|Permission denied|Not found|Validation error)/i;
+
+const IMAGE_TOOL_HINT = "Image generation can take up to 5 minutes - hang tight.";
 
 function meta(message: SerializedMessage, key: string): string | undefined {
   const value = message.metadata?.[key];
   return value && value.length > 0 ? value : undefined;
-}
-
-// Tool names are "{domain}-{action}" (e.g. notes-read_note); drop the domain
-// prefix so titles read as the action alone.
-function humanizeToolName(toolName: string): string {
-  const separator = toolName.search(/[.-]/);
-  const action = separator >= 0 ? toolName.slice(separator + 1) : toolName;
-  const verb = action.replace(/_/g, " ");
-  return verb.charAt(0).toUpperCase() + verb.slice(1);
 }
 
 /** Agent message kinds that render a special body instead of markdown. */
@@ -50,21 +43,30 @@ export function AgentMessageBody({
   message,
   T,
   agentActive,
+  toolRun,
   toolResultFor,
+  resolveUserName,
   onDetailsToggled,
 }: {
   message: SerializedMessage;
   T: ThemeColors;
   agentActive: boolean;
+  /** A folded run of consecutive tool calls, oldest first; absent for a lone call. */
+  toolRun?: SerializedMessage[];
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
+  resolveUserName?: (userId: string) => string | undefined;
   onDetailsToggled?: (heightDelta: number) => void;
 }) {
+  // Every label below resolves through the catalog cache, which fills after a
+  // cached transcript has already rendered.
+  useToolLabels();
+
   const kind = message.metadata?.kind ?? "final";
   switch (kind) {
     case "tool_call":
       return (
-        <ToolCallRow
-          message={message}
+        <AgentToolActivityPane
+          toolMessages={toolRun && toolRun.length > 0 ? toolRun : [message]}
           T={T}
           agentActive={agentActive}
           toolResultFor={toolResultFor}
@@ -72,11 +74,13 @@ export function AgentMessageBody({
         />
       );
     case "tool_result":
+      // A result whose call row is present is absorbed into the run pane (the
+      // list drops it); this only renders an orphan.
       return <ToolResultRow message={message} T={T} onDetailsToggled={onDetailsToggled} />;
     case "summary":
       return <SummaryRow message={message} T={T} />;
     case "context_reset":
-      return <ContextResetRow message={message} T={T} />;
+      return <ContextResetRow message={message} T={T} resolveUserName={resolveUserName} />;
     case "agent_error":
       return <AgentErrorRow message={message} T={T} onDetailsToggled={onDetailsToggled} />;
     case "confirmation_resolved":
@@ -92,125 +96,97 @@ export function AgentMessageBody({
   }
 }
 
-function DetailsCaret({ T, open }: { T: ThemeColors; open: boolean }) {
-  return (
-    <View style={styles.caret}>
-      {open ? (
-        <CaretUp size={12} color={T.textDim} weight="bold" />
-      ) : (
-        <CaretDown size={12} color={T.textDim} weight="bold" />
-      )}
-    </View>
-  );
-}
-
-// Expanded payloads render fully inline and scroll with the conversation: a
-// nested ScrollView never receives scroll gestures inside the inverted chat
-// list on Android. The cap keeps a giant payload from bloating the list.
-const MONO_CHAR_LIMIT = 20000;
-
-// Matches the pane's row gap: expanded details add this on top of their own
-// measured height, so the inverted-list scroll compensation stays exact.
-const CARD_GAP = 6;
-
-function MonoBlock({ T, text }: { T: ThemeColors; text: string }) {
-  const truncated = text.length > MONO_CHAR_LIMIT;
-  return (
-    <View style={[styles.monoBlock, { backgroundColor: T.bg, borderColor: T.border }]}>
-      <Text style={[styles.monoText, { color: T.text }]}>
-        {truncated ? text.slice(0, MONO_CHAR_LIMIT) : text}
-      </Text>
-      {truncated ? (
-        <Text style={[styles.monoTruncatedNote, { color: T.textDim }]}>Output truncated</Text>
-      ) : null}
-    </View>
-  );
-}
-
-function ToolCallRow({
-  message,
+/**
+ * Binds a run of tool-call rows to the activity pane: each call pairs with its
+ * result row for status, timing and payload, and a generated image hangs its
+ * card off the run.
+ */
+function AgentToolActivityPane({
+  toolMessages,
   T,
   agentActive,
   toolResultFor,
   onDetailsToggled,
 }: {
-  message: SerializedMessage;
+  toolMessages: SerializedMessage[];
   T: ThemeColors;
   agentActive: boolean;
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
   onDetailsToggled?: (heightDelta: number) => void;
 }) {
-  const [showDetails, setShowDetails] = useState(false);
-  const detailsHeightRef = useRef(0);
-  const toolName = meta(message, "tool_name") ?? "tool";
-  const toolArgs = meta(message, "tool_args");
-  const toolCallId = meta(message, "tool_call_id");
-  const resultMsg = toolCallId ? toolResultFor(toolCallId) : undefined;
+  const steps = useMemo<ToolStep[]>(
+    () =>
+      toolMessages.map((message) => {
+        const toolName = meta(message, "tool_name") ?? "tool";
+        const toolCallId = meta(message, "tool_call_id");
+        const resultMsg = toolCallId ? toolResultFor(toolCallId) : undefined;
+        const result = resultMsg?.content || (resultMsg && meta(resultMsg, "tool_result")) || "";
+        const failed = !!resultMsg && ERROR_RESULT_RE.test(result);
+        const running = !resultMsg && agentActive;
+        const interrupted = !resultMsg && !agentActive;
+        const isImage = internalToolName(toolName).includes("image");
+        return {
+          id: message.id,
+          toolName,
+          label: toolActionLabel(toolName),
+          args: meta(message, "tool_args"),
+          result: result || undefined,
+          status: running
+            ? "running"
+            : interrupted
+              ? "interrupted"
+              : failed
+                ? "failed"
+                : "completed",
+          durationSecs: resultMsg
+            ? Math.max(0, resultMsg.createdAtSeconds - message.createdAtSeconds)
+            : undefined,
+          hint: running && isImage ? IMAGE_TOOL_HINT : undefined,
+        };
+      }),
+    [toolMessages, agentActive, toolResultFor],
+  );
 
-  const result = resultMsg?.content || (resultMsg && meta(resultMsg, "tool_result")) || "";
-  const failed = !!resultMsg && ERROR_RESULT_RE.test(result);
-  const running = !resultMsg && agentActive;
-  const interrupted = !resultMsg && !agentActive;
+  // A generated image carries its resolved params on the result row; they are
+  // what the regenerate menu patches, and the model never saw most of them.
+  // Parsing that metadata is JSON work on the render path of a screen that
+  // re-renders on every stream event.
+  const imageResults = useMemo(
+    () =>
+      toolMessages.flatMap((message) => {
+        const toolCallId = meta(message, "tool_call_id");
+        const resultMsg = toolCallId ? toolResultFor(toolCallId) : undefined;
+        const imageMeta = resultMsg ? parseImageMeta(resultMsg.metadata?.tool_meta) : null;
+        return imageMeta && resultMsg ? [{ messageId: resultMsg.id, meta: imageMeta }] : [];
+      }),
+    [toolMessages, toolResultFor],
+  );
 
-  const hasArgs = !!toolArgs && toolArgs !== "{}" && toolArgs !== "None";
-  const hasResult = result.trim().length > 0;
-
-  const hasDetails = hasArgs || hasResult;
-
-  const label = running
-    ? `Running ${humanizeToolName(toolName).toLowerCase()}...`
-    : interrupted
-      ? `${humanizeToolName(toolName)} interrupted`
-      : `${humanizeToolName(toolName)} ${failed ? "failed" : "completed"}`;
+  const live = steps.some((step) => step.status === "running");
 
   return (
     <View style={styles.toolPane}>
-      <TouchableOpacity
-        style={styles.toolHeader}
-        onPress={() => {
-          if (showDetails) {
-            const height = detailsHeightRef.current;
-            detailsHeightRef.current = 0;
-            if (height > 0) onDetailsToggled?.(-(height + CARD_GAP));
-          }
-          setShowDetails(!showDetails);
-        }}
-        disabled={!hasDetails}
-        activeOpacity={0.6}
-      >
-        {running ? (
-          <ActivityIndicator size={14} color={T.textDim} />
-        ) : failed ? (
-          <XCircle size={15} color={T.red} weight="fill" />
-        ) : resultMsg ? (
-          <CheckCircle size={15} color={T.green} weight="fill" />
-        ) : (
-          <Wrench size={15} color={T.textDim} weight="duotone" />
-        )}
-        <Text style={[styles.toolLabel, { color: T.textDim }]} numberOfLines={2}>
-          {label}
-        </Text>
-        {hasDetails ? <DetailsCaret T={T} open={showDetails} /> : null}
-      </TouchableOpacity>
-      {showDetails ? (
-        <View
-          style={[styles.toolBody, { borderLeftColor: T.border }]}
-          onLayout={(e) => {
-            const height = e.nativeEvent.layout.height;
-            if (detailsHeightRef.current === 0 && height > 0) {
-              onDetailsToggled?.(height + CARD_GAP);
-            }
-            detailsHeightRef.current = height;
-          }}
-        >
-          {hasArgs ? <MonoBlock T={T} text={toolArgs!} /> : null}
-          {hasResult ? <MonoBlock T={T} text={result} /> : null}
-        </View>
-      ) : null}
+      <ToolActivityPane
+        T={T}
+        steps={steps}
+        live={live}
+        answerStarted={!live}
+        onDetailsToggled={onDetailsToggled}
+      />
+      {imageResults.map(({ messageId, meta: imageMeta }) => (
+        <GeneratedImageCard
+          key={messageId}
+          T={T}
+          meta={imageMeta}
+          channelId={toolMessages[0].channelId}
+          messageId={messageId}
+        />
+      ))}
     </View>
   );
 }
 
+/** An orphan tool result whose call row never arrived; a single settled step. */
 function ToolResultRow({
   message,
   T,
@@ -220,59 +196,44 @@ function ToolResultRow({
   T: ThemeColors;
   onDetailsToggled?: (heightDelta: number) => void;
 }) {
-  const [showDetails, setShowDetails] = useState(false);
-  const detailsHeightRef = useRef(0);
   const toolName = meta(message, "tool_name") ?? "tool";
   const result = message.content || meta(message, "tool_result") || "";
-  const failed = ERROR_RESULT_RE.test(result);
-
-  const hasResult = result.trim().length > 0;
+  const steps: ToolStep[] = [
+    {
+      id: message.id,
+      toolName,
+      label: toolActionLabel(toolName),
+      result: result || undefined,
+      status: ERROR_RESULT_RE.test(result) ? "failed" : "completed",
+    },
+  ];
 
   return (
     <View style={styles.toolPane}>
-      <TouchableOpacity
-        style={styles.toolHeader}
-        onPress={() => {
-          if (showDetails) {
-            const height = detailsHeightRef.current;
-            detailsHeightRef.current = 0;
-            if (height > 0) onDetailsToggled?.(-(height + CARD_GAP));
-          }
-          setShowDetails(!showDetails);
-        }}
-        disabled={!hasResult}
-        activeOpacity={0.6}
-      >
-        {failed ? (
-          <XCircle size={15} color={T.red} weight="fill" />
-        ) : (
-          <CheckCircle size={15} color={T.green} weight="fill" />
-        )}
-        <Text style={[styles.toolLabel, { color: T.textDim }]} numberOfLines={2}>
-          {humanizeToolName(toolName)} {failed ? "failed" : "completed"}
-        </Text>
-        {hasResult ? <DetailsCaret T={T} open={showDetails} /> : null}
-      </TouchableOpacity>
-      {showDetails ? (
-        <View
-          style={[styles.toolBody, { borderLeftColor: T.border }]}
-          onLayout={(e) => {
-            const height = e.nativeEvent.layout.height;
-            if (detailsHeightRef.current === 0 && height > 0) {
-              onDetailsToggled?.(height + CARD_GAP);
-            }
-            detailsHeightRef.current = height;
-          }}
-        >
-          <MonoBlock T={T} text={result} />
-        </View>
-      ) : null}
+      <ToolActivityPane
+        T={T}
+        steps={steps}
+        live={false}
+        answerStarted
+        onDetailsToggled={onDetailsToggled}
+      />
     </View>
   );
 }
 
+/** The rolled-up message ids arrive as a JSON array in the string-valued map. */
+function compactedCount(raw: string | undefined): number {
+  const trimmed = raw?.trim();
+  if (!trimmed || !trimmed.startsWith("[") || !trimmed.endsWith("]")) return 0;
+  return trimmed
+    .slice(1, -1)
+    .split(",")
+    .filter((entry) => entry.trim().length > 0).length;
+}
+
 function SummaryRow({ message, T }: { message: SerializedMessage; T: ThemeColors }) {
   const [expanded, setExpanded] = useState(false);
+  const rolledUp = compactedCount(message.metadata?.compacted_msg_ids);
   return (
     <View>
       <TouchableOpacity
@@ -281,7 +242,10 @@ function SummaryRow({ message, T }: { message: SerializedMessage; T: ThemeColors
         activeOpacity={0.7}
       >
         <FileText size={14} color={T.textDim} weight="duotone" />
-        <Text style={[styles.summaryLabel, { color: T.textDim }]}>Conversation summary</Text>
+        <Text style={[styles.summaryLabel, { color: T.textDim }]}>
+          Conversation summary
+          {rolledUp > 0 ? ` (${rolledUp} messages rolled up)` : ""}
+        </Text>
         {expanded ? (
           <CaretUp size={10} color={T.textDim} weight="bold" />
         ) : (
@@ -295,8 +259,20 @@ function SummaryRow({ message, T }: { message: SerializedMessage; T: ThemeColors
   );
 }
 
-function ContextResetRow({ message, T }: { message: SerializedMessage; T: ThemeColors }) {
-  const name = meta(message, "reset_by_name") ?? "someone";
+function ContextResetRow({
+  message,
+  T,
+  resolveUserName,
+}: {
+  message: SerializedMessage;
+  T: ThemeColors;
+  resolveUserName?: (userId: string) => string | undefined;
+}) {
+  const resetByUserId = meta(message, "reset_by_user_id") ?? "";
+  const name =
+    meta(message, "reset_by_name") ??
+    (resetByUserId ? resolveUserName?.(resetByUserId) : undefined) ??
+    "someone";
   return (
     <View style={styles.resetRow}>
       <View style={[styles.resetLine, { backgroundColor: T.border }]} />
@@ -334,7 +310,7 @@ function AgentErrorRow({
           if (showRaw) {
             const height = detailsHeightRef.current;
             detailsHeightRef.current = 0;
-            if (height > 0) onDetailsToggled?.(-(height + CARD_GAP));
+            if (height > 0) onDetailsToggled?.(-(height + DETAILS_GAP));
           }
           setShowRaw(!showRaw);
         }}
@@ -353,7 +329,7 @@ function AgentErrorRow({
           onLayout={(e) => {
             const height = e.nativeEvent.layout.height;
             if (detailsHeightRef.current === 0 && height > 0) {
-              onDetailsToggled?.(height + CARD_GAP);
+              onDetailsToggled?.(height + DETAILS_GAP);
             }
             detailsHeightRef.current = height;
           }}
@@ -377,7 +353,7 @@ function ConfirmationResolvedRow({ message, T }: { message: SerializedMessage; T
         <XCircle size={14} color={T.red} weight="fill" />
       )}
       <Text style={[styles.resolvedText, { color: T.textDim }]}>
-        {approved ? "Approved" : "Denied"}: {humanizeToolName(toolName)}
+        {approved ? "Approved" : "Denied"}: {toolActionLabel(toolName)}
       </Text>
     </View>
   );
@@ -418,22 +394,11 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   cardHeaderText: { flex: 1 },
   toolPane: { alignSelf: "stretch", marginBottom: 4, gap: 6 },
-  toolHeader: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 2 },
-  toolLabel: { flex: 1, fontSize: 13, fontFamily: FONT.regular, lineHeight: 18 },
-  toolBody: { borderLeftWidth: 2, paddingLeft: 10, gap: 6 },
   cardTitle: { fontSize: 13, fontFamily: FONT.medium, lineHeight: 18 },
   cardMono: { fontSize: 11, fontFamily: MONO_FONT, marginTop: 1 },
-  caret: { paddingTop: 2 },
-  monoBlock: {
-    borderRadius: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 8,
-  },
-  monoTruncatedNote: { fontSize: 10, fontFamily: FONT.medium, marginTop: 6 },
-  monoText: { fontSize: 11, fontFamily: MONO_FONT, lineHeight: 16 },
   errorLabel: { fontSize: 10, fontFamily: FONT.bold, letterSpacing: 0.6, marginBottom: 1 },
   summaryHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  summaryLabel: { fontSize: 11, fontFamily: FONT.medium, letterSpacing: 0.4 },
+  summaryLabel: { fontSize: 11, fontFamily: FONT.medium, letterSpacing: 0.4, flexShrink: 1 },
   summaryBody: {
     fontSize: 12,
     fontFamily: FONT.regular,

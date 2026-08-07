@@ -16,12 +16,18 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
+// Compaction rolls history down to this share of the window, and the backend
+// refuses to run on a conversation this short - both mirror the runtime.
+const COMPACTION_TARGET_RATIO = 0.4;
+const MIN_COMPACTABLE_MESSAGES = 5;
+
 export function AgentContextSheet({
   visible,
   T,
   channelId,
   agentId,
   agentName,
+  canMutate = true,
   onClose,
 }: {
   visible: boolean;
@@ -29,6 +35,8 @@ export function AgentContextSheet({
   channelId: string;
   agentId: string;
   agentName?: string;
+  /** Compact and reset are moderation actions; without them the sheet is read-only. */
+  canMutate?: boolean;
   onClose: () => void;
 }) {
   const statsQuery = useChannelAgentContext(channelId, agentId, visible);
@@ -42,6 +50,14 @@ export function AgentContextSheet({
       : stats && stats.usedPercent >= 70
         ? T.yellow
         : T.green;
+
+  const canCompact = (stats?.activeMessages ?? 0) > MIN_COMPACTABLE_MESSAGES;
+  const freeableTokens = stats
+    ? Math.max(
+        0,
+        stats.activeTokens - Math.round(stats.contextWindowTokens * COMPACTION_TARGET_RATIO),
+      )
+    : 0;
 
   const confirmReset = () => {
     Alert.alert(
@@ -67,6 +83,10 @@ export function AgentContextSheet({
         <View style={styles.loading}>
           <ActivityIndicator size="small" color={T.accent} />
         </View>
+      ) : stats.contextWindowTokens === 0 ? (
+        <Text style={[styles.notice, { color: T.textDim }]}>
+          No model configured for this agent yet.
+        </Text>
       ) : (
         <>
           <View style={styles.meterBlock}>
@@ -112,28 +132,53 @@ export function AgentContextSheet({
             />
           ) : null}
 
-          <TouchableOpacity
-            style={[styles.action, { backgroundColor: T.bg, borderColor: T.border }]}
-            onPress={() => compact.mutate()}
-            disabled={compact.isPending || stats.activeMessages === 0}
-            activeOpacity={0.7}
+          <Text
+            style={[
+              styles.compactionHint,
+              { color: stats.tokensUntilCompaction > 0 ? T.textDim : T.yellow },
+            ]}
           >
-            <ArrowsInLineVertical size={17} color={T.accent} weight="duotone" />
-            <Text style={[styles.actionLabel, { color: T.textBright }]}>
-              {compact.isPending ? "Compacting..." : "Compact conversation"}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.action, { backgroundColor: T.bg, borderColor: T.border }]}
-            onPress={confirmReset}
-            disabled={reset.isPending}
-            activeOpacity={0.7}
-          >
-            <ArrowCounterClockwise size={17} color={T.red} weight="duotone" />
-            <Text style={[styles.actionLabel, { color: T.red }]}>
-              {reset.isPending ? "Resetting..." : "Reset conversation"}
-            </Text>
-          </TouchableOpacity>
+            {stats.tokensUntilCompaction > 0
+              ? `${formatTokens(stats.tokensUntilCompaction)} tokens until auto-compaction`
+              : "Auto-compaction will run on the next message"}
+          </Text>
+
+          {canMutate ? (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.action,
+                  { backgroundColor: T.bg, borderColor: T.border },
+                  canCompact ? null : styles.actionDisabled,
+                ]}
+                onPress={() => compact.mutate()}
+                disabled={compact.isPending || !canCompact}
+                activeOpacity={0.7}
+              >
+                <ArrowsInLineVertical size={17} color={T.accent} weight="duotone" />
+                <Text style={[styles.actionLabel, { color: T.textBright }]}>
+                  {compact.isPending
+                    ? "Compacting..."
+                    : !canCompact
+                      ? "Nothing to compact yet"
+                      : freeableTokens > 0
+                        ? `Compact conversation (~${formatTokens(freeableTokens)} freeable)`
+                        : "Force compact"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.action, { backgroundColor: T.bg, borderColor: T.border }]}
+                onPress={confirmReset}
+                disabled={reset.isPending}
+                activeOpacity={0.7}
+              >
+                <ArrowCounterClockwise size={17} color={T.red} weight="duotone" />
+                <Text style={[styles.actionLabel, { color: T.red }]}>
+                  {reset.isPending ? "Resetting..." : "Reset conversation"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
         </>
       )}
     </BottomSheet>
@@ -158,6 +203,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", gap: 8, paddingBottom: 12 },
   title: { fontSize: 16, fontFamily: FONT.semibold, flexShrink: 1 },
   loading: { paddingVertical: 32, alignItems: "center" },
+  notice: { fontSize: 13, fontFamily: FONT.regular, paddingVertical: 20 },
+  compactionHint: { fontSize: 12, fontFamily: FONT.regular, paddingTop: 12 },
   meterBlock: { paddingBottom: 14 },
   meterLabels: { flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 6 },
   meterPercent: { fontSize: 22, fontFamily: FONT.bold },
@@ -185,5 +232,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     marginTop: 10,
   },
+  actionDisabled: { opacity: 0.5 },
   actionLabel: { fontSize: 14, fontFamily: FONT.medium },
 });
