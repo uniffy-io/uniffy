@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { useTheme } from "@shared/hooks/useTheme";
 import { Avatar } from "@shared/components/Avatar";
 import type { DocSession } from "@shared/realtime/useDocSession";
+import type { RealtimeStatus } from "@shared/realtime/protocol";
 
 type PeerIdentity = {
   key: string;
@@ -13,7 +14,6 @@ type PeerIdentity = {
 type AwarenessUserPayload = {
   id?: string | null;
   name?: string;
-  avatarUrl?: string | null;
   hasAvatar?: boolean;
 };
 
@@ -34,14 +34,23 @@ function readPeers(session: DocSession): PeerIdentity[] {
     peers.push({
       key,
       name: user.name,
-      avatarUrl: user.hasAvatar && user.avatarUrl ? user.avatarUrl : null,
+      // Never render a wire-supplied URL: the awareness relay is blind, so a
+      // hostile peer could point it anywhere and the Avatar fetch would ship
+      // the viewer's asset credential there. Derive from the asserted id.
+      avatarUrl: user.hasAvatar && user.id ? `/api/avatars/${user.id}/sm?_v=2` : null,
     });
   }
   return peers;
 }
 
 /** Live/offline dot plus the deduped stack of peers in the same note doc. */
-export function RealtimePeers({ session }: { session: DocSession | null }) {
+export function RealtimePresence({
+  session,
+  status,
+}: {
+  session: DocSession | null;
+  status: RealtimeStatus;
+}) {
   const T = useTheme();
   const [peers, setPeers] = useState<PeerIdentity[]>(() => (session ? readPeers(session) : []));
   // Render-time reset on session swap so a new doc never shows the old doc's peers.
@@ -62,8 +71,8 @@ export function RealtimePeers({ session }: { session: DocSession | null }) {
 
   if (!session) return null;
 
-  const live = session.status === "connected";
-  const dotColor = session.status === "connecting" ? T.yellow : live ? T.green : T.red;
+  const live = status === "connected";
+  const dotColor = status === "connecting" ? T.yellow : live ? T.green : T.red;
   const visible = peers.slice(0, MAX_VISIBLE_PEERS);
 
   return (

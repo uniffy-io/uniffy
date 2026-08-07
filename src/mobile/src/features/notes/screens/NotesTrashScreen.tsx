@@ -51,14 +51,10 @@ export function NotesTrashScreen() {
   const isEmpty = notes.length === 0;
 
   const confirmEmpty = () => {
-    Alert.alert(
-      "Empty trash",
-      "Permanently delete every note in the trash? This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Empty trash", style: "destructive", onPress: () => emptyTrash.mutate() },
-      ],
-    );
+    Alert.alert("Empty trash", "Permanently delete your trashed notes? This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Empty trash", style: "destructive", onPress: () => emptyTrash.mutate() },
+    ]);
   };
 
   return (

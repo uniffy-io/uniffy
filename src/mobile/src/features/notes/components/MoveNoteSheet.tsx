@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from "react-native";
-import { Buildings, FolderSimple, LockSimple, Check } from "phosphor-react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { FolderSimple, Check } from "phosphor-react-native";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { useTheme } from "@shared/hooks/useTheme";
@@ -8,6 +8,8 @@ import { FONT } from "@theme/typography";
 import { useNotesTree } from "@features/notes/useNotesTree";
 import type { TreeNode } from "@features/notes/useNotesTree";
 import { useMoveNote } from "@features/notes/useNoteMutations";
+import { SpacePicker, type NoteSpace } from "@features/notes/components/SpacePicker";
+import { confirmOrgMove } from "@features/notes/orgMoveConfirm";
 
 export type MoveTarget = {
   noteId: string;
@@ -15,8 +17,6 @@ export type MoveTarget = {
   currentAccessMode: AccessMode;
   currentParentId: string | null;
 };
-
-type Space = "personal" | "organization";
 
 type FolderOption = { id: string; title: string; depth: number };
 
@@ -45,7 +45,7 @@ export function MoveNoteSheet({
   const notesTree = useNotesTree();
   const moveNote = useMoveNote();
 
-  const [space, setSpace] = useState<Space>(
+  const [space, setSpace] = useState<NoteSpace>(
     target?.currentAccessMode === AccessMode.OPEN_TO_ORG ? "organization" : "personal",
   );
   const [folderId, setFolderId] = useState<string | null>(target?.currentParentId ?? null);
@@ -82,14 +82,7 @@ export function MoveNoteSheet({
 
   const handleMove = () => {
     if (accessModeChanged && targetAccessMode === AccessMode.OPEN_TO_ORG) {
-      Alert.alert(
-        "Move to Organization",
-        "Everyone in the organization will be able to see this note, along with anything it references - attached files, mentioned notes and inline media.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Move to Organization", onPress: performMove },
-        ],
-      );
+      confirmOrgMove(performMove);
       return;
     }
     performMove();
@@ -104,38 +97,13 @@ export function MoveNoteSheet({
         <Text style={[styles.subtitle, { color: T.textDim }]}>Pick a destination</Text>
       </View>
 
-      <View style={styles.spaceRow}>
-        {(
-          [
-            { key: "personal" as Space, label: "Personal", Icon: LockSimple },
-            { key: "organization" as Space, label: "Organization", Icon: Buildings },
-          ] as const
-        ).map(({ key, label, Icon }) => {
-          const active = space === key;
-          return (
-            <TouchableOpacity
-              key={key}
-              style={[
-                styles.spaceBtn,
-                {
-                  borderColor: active ? T.accent : T.border,
-                  backgroundColor: active ? T.accentSoft : T.surface,
-                },
-              ]}
-              onPress={() => {
-                setSpace(key);
-                setFolderId(null);
-              }}
-              activeOpacity={0.7}
-            >
-              <Icon size={18} color={active ? T.accent : T.textDim} weight="duotone" />
-              <Text style={[styles.spaceLabel, { color: active ? T.accent : T.textDim }]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <SpacePicker
+        value={space}
+        onSelect={(next) => {
+          setSpace(next);
+          setFolderId(null);
+        }}
+      />
 
       <ScrollView style={styles.folderList} showsVerticalScrollIndicator={false}>
         <FolderRow
@@ -204,18 +172,6 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12, gap: 2 },
   title: { fontSize: 17, fontFamily: FONT.semibold },
   subtitle: { fontSize: 13, fontFamily: FONT.regular },
-  spaceRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingBottom: 14 },
-  spaceBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    paddingVertical: 11,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  spaceLabel: { fontSize: 14, fontFamily: FONT.medium },
   folderList: { maxHeight: 260 },
   folderRow: {
     flexDirection: "row",

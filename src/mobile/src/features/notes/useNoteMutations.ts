@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { useAuth } from "@core/providers/AuthContext";
@@ -7,8 +8,9 @@ import type { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import type { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 
 // The tree, graph and trash queries are keyed on their own prefixes, which do
-// not start with "notes", so a single invalidate never reaches them. Every note
-// mutation goes through here to keep all of them in step.
+// not start with "notes", so a single invalidate never reaches them. Every
+// structural mutation (create, delete, restore, move, empty-trash) goes
+// through here to keep all of them in step.
 function invalidateNoteQueries(queryClient: QueryClient, orgId: string | null, noteId?: string) {
   queryClient.invalidateQueries({ queryKey: ["notes"] });
   queryClient.invalidateQueries({ queryKey: ["notes-tree"] });
@@ -18,6 +20,19 @@ function invalidateNoteQueries(queryClient: QueryClient, orgId: string | null, n
     queryClient.invalidateQueries({ queryKey: ["note", orgId, noteId] });
     queryClient.invalidateQueries({ queryKey: ["note-backlinks", orgId, noteId] });
   }
+}
+
+// Content and metadata saves fire at typing cadence (1s title debounce, 2s
+// autosave). The list-shaped queries stay mounted beneath the editor, so a
+// full invalidate would refetch the 500-note tree per save; mark them stale
+// and let their next mount/focus refetch instead. The note itself refreshes
+// immediately.
+function invalidateNoteSave(queryClient: QueryClient, orgId: string | null, noteId: string) {
+  queryClient.invalidateQueries({ queryKey: ["note", orgId, noteId] });
+  queryClient.invalidateQueries({ queryKey: ["note-backlinks", orgId, noteId] });
+  queryClient.invalidateQueries({ queryKey: ["notes"], refetchType: "none" });
+  queryClient.invalidateQueries({ queryKey: ["notes-tree"], refetchType: "none" });
+  queryClient.invalidateQueries({ queryKey: ["notes-graph"], refetchType: "none" });
 }
 
 export function useCreateNote() {
@@ -71,7 +86,12 @@ export function useUpdateNote() {
         icon: args.icon,
       }),
     onSuccess: (_data, variables) => {
-      invalidateNoteQueries(queryClient, organizationId, variables.noteId);
+      // Reparenting reshapes the tree; a title/content/tag/icon save does not.
+      if (variables.parentId !== undefined) {
+        invalidateNoteQueries(queryClient, organizationId, variables.noteId);
+      } else {
+        invalidateNoteSave(queryClient, organizationId, variables.noteId);
+      }
     },
   });
 }
@@ -146,8 +166,15 @@ export function useMoveNote() {
         });
       }
     },
-    onSuccess: (_data, variables) => {
+    // A cross-space move is two calls; the first can succeed while the second
+    // fails (e.g. the server refuses a cycle another client created). Settled
+    // instead of success so the cache refreshes to whatever actually landed,
+    // and the failure is surfaced instead of silently showing pre-move state.
+    onSettled: (_data, error, variables) => {
       invalidateNoteQueries(queryClient, organizationId, variables.noteId);
+      if (error) {
+        Alert.alert("Move failed", "The item could not be moved. It may have changed elsewhere.");
+      }
     },
   });
 }
@@ -180,7 +207,7 @@ export function useAutosave(noteId: string | undefined, orgId: string | null) {
       }),
     onSuccess: () => {
       setLastSaved(Date.now());
-      invalidateNoteQueries(queryClient, orgId, noteId);
+      if (noteId) invalidateNoteSave(queryClient, orgId, noteId);
     },
   });
 
@@ -227,6 +254,18 @@ export function useAutosave(noteId: string | undefined, orgId: string | null) {
     }
   }, [performAutosave]);
 
+  // Drops the armed save without sending it. The editor calls this when the
+  // realtime session takes over content; a stale full-document UpdateNote
+  // firing after that would graft old text over newer CRDT edits.
+  const cancel = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    pendingRef.current = null;
+    lastHashRef.current = null;
+  }, []);
+
   // Cleanup on unmount: flush pending autosave
   useEffect(() => {
     return () => {
@@ -236,5 +275,5 @@ export function useAutosave(noteId: string | undefined, orgId: string | null) {
     };
   }, []);
 
-  return { scheduleAutosave, flush, isSaving, lastSaved };
+  return { scheduleAutosave, flush, cancel, isSaving, lastSaved };
 }

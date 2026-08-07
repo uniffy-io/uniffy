@@ -7,7 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { Buildings, FolderPlus, LockSimple, NotePencil } from "phosphor-react-native";
+import { FolderPlus, NotePencil } from "phosphor-react-native";
 import { router } from "expo-router";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
@@ -15,6 +15,7 @@ import { BottomSheet } from "@shared/components/BottomSheet";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { useCreateNote } from "@features/notes/useNoteMutations";
+import { SpacePicker } from "@features/notes/components/SpacePicker";
 
 type CreateNoteSheetProps = {
   visible: boolean;
@@ -40,6 +41,14 @@ export function CreateNoteSheet({
   const [space, setSpace] = useState<AccessMode>(accessMode);
   const [folderName, setFolderName] = useState("");
   const [namingFolder, setNamingFolder] = useState(false);
+
+  // The sheet stays mounted between opens; re-seed from the prop on each open
+  // so switching the list's space filter is reflected in the picker.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) setSpace(accessMode);
+  }
 
   const effectiveMode = lockSpace ? accessMode : space;
 
@@ -77,35 +86,12 @@ export function CreateNoteSheet({
       </View>
 
       {!lockSpace && (
-        <View style={styles.spaceRow}>
-          {(
-            [
-              { mode: AccessMode.OWNER_ONLY, label: "Personal", Icon: LockSimple },
-              { mode: AccessMode.OPEN_TO_ORG, label: "Organization", Icon: Buildings },
-            ] as const
-          ).map(({ mode, label, Icon }) => {
-            const active = space === mode;
-            return (
-              <TouchableOpacity
-                key={label}
-                style={[
-                  styles.spaceBtn,
-                  {
-                    borderColor: active ? T.accent : T.border,
-                    backgroundColor: active ? T.accentSoft : T.surface,
-                  },
-                ]}
-                onPress={() => setSpace(mode)}
-                activeOpacity={0.7}
-              >
-                <Icon size={18} color={active ? T.accent : T.textDim} weight="duotone" />
-                <Text style={[styles.spaceLabel, { color: active ? T.accent : T.textDim }]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <SpacePicker
+          value={space === AccessMode.OPEN_TO_ORG ? "organization" : "personal"}
+          onSelect={(next) =>
+            setSpace(next === "organization" ? AccessMode.OPEN_TO_ORG : AccessMode.OWNER_ONLY)
+          }
+        />
       )}
 
       {namingFolder ? (
@@ -184,18 +170,6 @@ function OptionRow({
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
   title: { fontSize: 17, fontFamily: FONT.semibold },
-  spaceRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingBottom: 8 },
-  spaceBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    paddingVertical: 11,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  spaceLabel: { fontSize: 14, fontFamily: FONT.medium },
   options: { paddingHorizontal: 12, paddingTop: 6, paddingBottom: 8 },
   optionRow: {
     flexDirection: "row",

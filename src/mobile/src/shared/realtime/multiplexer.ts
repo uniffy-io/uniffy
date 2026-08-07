@@ -524,13 +524,34 @@ class RealtimeMultiplexer {
     if (this.listenersAttached) return;
     this.listenersAttached = true;
     AppState.addEventListener("change", (state) => {
+      if (state === "background") {
+        // A pocketed device must not keep the radio busy with resync probes
+        // and awareness keep-alives; the socket may stay open, but periodic
+        // traffic stops until the app is foregrounded again.
+        this.stopResyncTimer();
+        this.stopAwarenessKeepaliveTimer();
+        return;
+      }
       if (state !== "active") return;
       if (this.docs.size === 0) return;
-      if (!this.wsConnected && !this.wsConnecting) this.forceReconnect();
+      if (!this.wsConnected && !this.wsConnecting) {
+        this.forceReconnect();
+      } else if (this.wsConnected) {
+        this.startResyncTimer();
+        this.startAwarenessKeepaliveTimer();
+        // Catch up in one round: peers GC'd our awareness while suspended,
+        // and the doc may have moved without us.
+        for (const entry of this.docs.values()) {
+          this.sendInitialSync(entry);
+          this.sendLocalAwareness(entry);
+        }
+      }
     });
     addOnlineListener((online) => {
       if (online) {
-        if (this.docs.size > 0) this.forceReconnect();
+        if (this.docs.size > 0 && !this.wsConnected && !this.wsConnecting) {
+          this.forceReconnect();
+        }
         return;
       }
       this.emitStatusAll("offline");

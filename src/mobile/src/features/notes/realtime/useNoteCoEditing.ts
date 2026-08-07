@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { YTextEvent } from "yjs";
-import { getMarkdownYText } from "@features/notes/realtime/noteYText";
+import { getMarkdownYText } from "@features/notes/realtime/markdown";
 import { diffStrings } from "@features/notes/realtime/textDiff";
 import { useNoteRealtimeSession } from "@features/notes/realtime/useNoteRealtimeSession";
 import type { DocSession } from "@shared/realtime/useDocSession";
+import type { RealtimeStatus } from "@shared/realtime/protocol";
 
 const PUSH_DEBOUNCE_MS = 120;
 // Remote merges render continuously; the window only coalesces bursts so the
@@ -17,6 +18,7 @@ const TYPING_IDLE_MS = 900;
 
 export interface NoteCoEditing {
   session: DocSession | null;
+  status: RealtimeStatus;
   /** Realtime owns content persistence once the first sync lands. */
   live: boolean;
   scheduleLocalPush(canonical: string): void;
@@ -49,17 +51,31 @@ interface Controller {
  * concurrent typing.
  */
 export function useNoteCoEditing(
-  opts: { noteId: string | undefined; enabled: boolean } & CoEditingCallbacks,
+  opts: {
+    noteId: string | undefined;
+    enabled: boolean;
+    readOnly?: boolean;
+  } & CoEditingCallbacks,
 ): NoteCoEditing {
-  const session = useNoteRealtimeSession({ noteId: opts.noteId, enabled: opts.enabled });
+  const controllerRef = useRef<Controller | null>(null);
+  // Flush in-flight local edits while the doc and socket are still live; the
+  // controller effect's own cleanup runs after the detach and is too late.
+  const onBeforeDetach = useCallback(() => {
+    controllerRef.current?.flush();
+  }, []);
+
+  const { session, status } = useNoteRealtimeSession({
+    noteId: opts.noteId,
+    enabled: opts.enabled,
+    readOnly: opts.readOnly,
+    onBeforeDetach,
+  });
   const [live, setLive] = useState(false);
 
   const callbacksRef = useRef<CoEditingCallbacks>(opts);
   useEffect(() => {
     callbacksRef.current = opts;
   });
-
-  const controllerRef = useRef<Controller | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -192,13 +208,18 @@ export function useNoteCoEditing(
       const serverText = ytext.toString();
       const local = callbacksRef.current.getLocalCanonical();
       const loaded = callbacksRef.current.getLoadedCanonical();
-      lastPushed = serverText;
       if (loaded !== null && local !== loaded) {
-        // The user typed before the handshake finished; merge those edits in
-        // rather than overwriting them with the server text.
+        // The user typed before the handshake finished. Diff against the
+        // RPC-loaded base their input actually grew from - seeding from the
+        // server text would turn every character a peer added since that
+        // load into a local delete and broadcast it.
+        lastPushed = loaded;
         doPush(local);
-      } else if (serverText !== local) {
-        callbacksRef.current.applyRemote(serverText);
+      } else {
+        lastPushed = serverText;
+        if (serverText !== local) {
+          callbacksRef.current.applyRemote(serverText);
+        }
       }
       ytext.observe(observer);
       observing = true;
@@ -209,8 +230,8 @@ export function useNoteCoEditing(
       cancelled = true;
       if (observing) ytext.unobserve(observer);
       if (remoteTimer) clearTimeout(remoteTimer);
-      // A pending local delta still lands in the doc; the multiplexer ships it
-      // before the session tears down (this cleanup runs first).
+      // The pre-detach hook already flushed while the doc was live; this
+      // covers effect re-runs where the session survives.
       flush();
       controllerRef.current = null;
     };
@@ -226,5 +247,5 @@ export function useNoteCoEditing(
     controllerRef.current?.applyNow();
   }, []);
 
-  return { session, live, scheduleLocalPush, flushLocalPush, applyPendingRemote };
+  return { session, status, live, scheduleLocalPush, flushLocalPush, applyPendingRemote };
 }

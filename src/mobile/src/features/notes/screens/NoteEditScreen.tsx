@@ -49,7 +49,8 @@ import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { useMentionInput, toCanonical, parseMentions } from "@shared/mentions/useMentionInput";
 import { useScreenFocused } from "@shared/hooks/useScreenFocused";
 import { useNoteCoEditing } from "@features/notes/realtime/useNoteCoEditing";
-import { RealtimePeers } from "@features/notes/realtime/RealtimePeers";
+import { RealtimePresence } from "@features/notes/realtime/RealtimePresence";
+import { roleCanEdit } from "@shared/permissions/contentRoles";
 import { diffStrings } from "@features/notes/realtime/textDiff";
 import { useInsertFileReference } from "@features/mentions/useInsertFileReference";
 import {
@@ -315,13 +316,26 @@ export function NoteEditorScreen() {
   );
 
   const isFocused = useScreenFocused();
+  // A VIEWER can still land here (the edit action renders on view access);
+  // read-only suppresses SYNC write frames, which the server would otherwise
+  // answer by 4403-closing the whole socket on the first keystroke.
+  const canEditNote = noteQuery.data ? roleCanEdit(noteQuery.data.userRole) : true;
   const coEdit = useNoteCoEditing({
     noteId: isEditMode ? noteId : undefined,
     enabled: isEditMode && initialized && !isCanvas && !isFolder && isFocused,
+    readOnly: !canEditNote,
     getLocalCanonical: () => toCanonical(bodyStateRef.current, mentionsRef.current),
     getLoadedCanonical: () => loadedRef.current?.content ?? null,
     applyRemote,
   });
+
+  // The pre-sync keystrokes armed the legacy autosave; once realtime owns
+  // content that timer must not fire a stale full-document UpdateNote, which
+  // the server would graft over newer CRDT edits.
+  const autosaveCancel = autosave.cancel;
+  useEffect(() => {
+    if (coEdit.live) autosaveCancel();
+  }, [coEdit.live, autosaveCancel]);
 
   // Keystrokes queue their push HERE, synchronously with the native event. A
   // remote rebuild can land between the event and React's post-render effect;
@@ -374,7 +388,7 @@ export function NoteEditorScreen() {
     unmountFlushRef.current = () => {
       if (!isEditMode || !noteId || !organizationId) return;
       if (!coEdit.live) return;
-      if (coEdit.session?.status === "connected") return;
+      if (coEdit.status === "connected") return;
       const canonical = toCanonical(bodyStateRef.current, mentionsRef.current);
       if (loadedRef.current && canonical === loadedRef.current.content) return;
       notesApi.updateNote({ noteId, organizationId, content: canonical }).catch(() => {});
@@ -597,8 +611,12 @@ export function NoteEditorScreen() {
     replaceSelection(insert, selection.start + insert.length);
   }, [body, selection, replaceSelection]);
 
-  // Compute canonical body for preview
-  const canonicalBody = useMemo(() => getCanonicalBody(), [getCanonicalBody]);
+  // Only the preview renders the canonical form; computing it per keystroke
+  // while the preview is closed is a whole-document regex pass for nothing.
+  const canonicalBody = useMemo(
+    () => (previewMode ? getCanonicalBody() : ""),
+    [previewMode, getCanonicalBody],
+  );
 
   const togglePreview = useCallback(() => {
     if (!previewMode) {
@@ -750,9 +768,9 @@ export function NoteEditorScreen() {
             {!isEditMode
               ? "New note"
               : coEdit.live
-                ? coEdit.session?.status === "connected"
+                ? coEdit.status === "connected"
                   ? "Live"
-                  : coEdit.session?.status === "connecting"
+                  : coEdit.status === "connecting"
                     ? "Syncing"
                     : "Offline"
                 : autosave.isSaving
@@ -763,7 +781,7 @@ export function NoteEditorScreen() {
           </Text>
           <Text style={[styles.wordCount, { color: T.textDim }]}>{wordCount} words</Text>
         </View>
-        <RealtimePeers session={coEdit.session} />
+        <RealtimePresence session={coEdit.session} status={coEdit.status} />
         <TouchableOpacity
           onPress={togglePreview}
           style={[

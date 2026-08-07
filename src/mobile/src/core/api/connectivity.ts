@@ -40,10 +40,17 @@ export function installConnectivityHooks(): void {
   const netInfo = loadNetInfo();
   if (!netInfo) return;
   try {
+    // NetInfo re-emits on every state detail change (reachability confirms,
+    // wifi/cellular handoffs); listeners like the realtime multiplexer
+    // force-reconnect on "online", so only notify on actual transitions -
+    // matching the web's online/offline event semantics.
+    let lastOnline: boolean | null = null;
     netInfo.addEventListener((state) => {
       // Only a definitive false is offline: null means "unknown", and marking
       // unknown as offline would pause every query on startup.
       const online = state.isConnected !== false;
+      if (online === lastOnline) return;
+      lastOnline = online;
       onlineManager.setOnline(online);
       for (const listener of onlineListeners) listener(online);
     });

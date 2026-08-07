@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type * as Y from "yjs";
-import { getMarkdownYText } from "@features/notes/realtime/noteYText";
+import { getMarkdownYText } from "@features/notes/realtime/markdown";
 
 /**
  * Live read of the canonical `Y.Text("markdown")`. Returns `fallback` until
  * the doc has confirmed content (first sync or non-empty text), so a cold
  * attach never flashes an empty note over fetched content.
  */
-export function useLiveMarkdown(
+export function useRealtimeMarkdownContent(
   ydoc: Y.Doc | null,
   fallback: string,
   options: { whenSynced?: Promise<void> | null; debounceMs?: number } = {},

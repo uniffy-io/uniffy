@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Alert, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type {
   FlatList,
   NativeScrollEvent,
@@ -24,6 +24,7 @@ import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { useMoveNote } from "@features/notes/useNoteMutations";
+import { confirmOrgMove } from "@features/notes/orgMoveConfirm";
 import type { TreeNode } from "@features/notes/useNotesTree";
 
 export type DragNote = {
@@ -99,10 +100,12 @@ type DragApi = {
   onListScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
 };
 
-type DragState = { draggingId: string | null; activeDropId: string | null };
-
 const DragApiContext = createContext<DragApi | null>(null);
-const DragStateContext = createContext<DragState>({ draggingId: null, activeDropId: null });
+// Split contexts: rows care which note lifted, drop targets care which folder
+// is hovered. One combined context re-rendered every mounted row on every
+// hover-target change mid-drag.
+const DraggingIdContext = createContext<string | null>(null);
+const ActiveDropIdContext = createContext<string | null>(null);
 
 function useNoteDragApi(): DragApi {
   const api = useContext(DragApiContext);
@@ -267,14 +270,7 @@ export function NoteDragProvider({ children }: { children: React.ReactNode }) {
           parentId: folder.id,
         });
       if (plan.confirmOrg) {
-        Alert.alert(
-          "Move to Organization",
-          "Everyone in the organization will be able to see this note, along with anything it references - attached files, mentioned notes and inline media.",
-          [
-            { text: "Cancel", style: "cancel" },
-            { text: "Move to Organization", onPress: doMove },
-          ],
-        );
+        confirmOrgMove(doMove);
         return;
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -341,11 +337,6 @@ export function NoteDragProvider({ children }: { children: React.ReactNode }) {
     ],
   );
 
-  const state = useMemo(
-    () => ({ draggingId: dragNote?.id ?? null, activeDropId }),
-    [dragNote, activeDropId],
-  );
-
   const ghostStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: ghostX.value - containerX.value - 16 },
@@ -355,34 +346,36 @@ export function NoteDragProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <DragApiContext.Provider value={api}>
-      <DragStateContext.Provider value={state}>
-        <View ref={containerRef} collapsable={false} style={styles.fill}>
-          {children}
-          {dragNote ? (
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.ghost,
-                { backgroundColor: T.surface, borderColor: T.accent },
-                ghostStyle,
-              ]}
-            >
-              {dragNote.isFolder ? (
-                <FolderSimple size={16} color={T.accent} weight="fill" />
-              ) : dragNote.iconValue ? (
-                <Text style={styles.ghostEmoji}>{dragNote.iconValue}</Text>
-              ) : dragNote.isCanvas ? (
-                <Graph size={16} color={T.accent} weight="duotone" />
-              ) : (
-                <NotePencil size={16} color={T.accent} weight="fill" />
-              )}
-              <Text style={[styles.ghostTitle, { color: T.textBright }]} numberOfLines={1}>
-                {dragNote.title || "Untitled"}
-              </Text>
-            </Animated.View>
-          ) : null}
-        </View>
-      </DragStateContext.Provider>
+      <DraggingIdContext.Provider value={dragNote?.id ?? null}>
+        <ActiveDropIdContext.Provider value={activeDropId}>
+          <View ref={containerRef} collapsable={false} style={styles.fill}>
+            {children}
+            {dragNote ? (
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.ghost,
+                  { backgroundColor: T.surface, borderColor: T.accent },
+                  ghostStyle,
+                ]}
+              >
+                {dragNote.isFolder ? (
+                  <FolderSimple size={16} color={T.accent} weight="fill" />
+                ) : dragNote.iconValue ? (
+                  <Text style={styles.ghostEmoji}>{dragNote.iconValue}</Text>
+                ) : dragNote.isCanvas ? (
+                  <Graph size={16} color={T.accent} weight="duotone" />
+                ) : (
+                  <NotePencil size={16} color={T.accent} weight="fill" />
+                )}
+                <Text style={[styles.ghostTitle, { color: T.textBright }]} numberOfLines={1}>
+                  {dragNote.title || "Untitled"}
+                </Text>
+              </Animated.View>
+            ) : null}
+          </View>
+        </ActiveDropIdContext.Provider>
+      </DraggingIdContext.Provider>
     </DragApiContext.Provider>
   );
 }
@@ -397,7 +390,7 @@ export function DraggableNote({
   style?: StyleProp<ViewStyle>;
 }) {
   const { ghostX, ghostY, beginDrag, updateDrag, finishDrag, cancelDrag } = useNoteDragApi();
-  const { draggingId } = useContext(DragStateContext);
+  const draggingId = useContext(DraggingIdContext);
 
   // Until the hold elapses the pan stays inactive, so taps reach the row and a
   // moving finger lets the list's scroll gesture win.
@@ -439,7 +432,7 @@ export function FolderDropTarget({
   style?: StyleProp<ViewStyle>;
 }) {
   const { registerTarget, unregisterTarget } = useNoteDragApi();
-  const { activeDropId } = useContext(DragStateContext);
+  const activeDropId = useContext(ActiveDropIdContext);
   const ref = useRef<View | null>(null);
 
   const spec = useMemo(

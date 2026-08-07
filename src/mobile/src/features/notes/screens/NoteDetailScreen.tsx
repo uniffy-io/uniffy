@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -39,8 +39,8 @@ import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 import { useScreenFocused } from "@shared/hooks/useScreenFocused";
 import { useNoteRealtimeSession } from "@features/notes/realtime/useNoteRealtimeSession";
-import { useLiveMarkdown } from "@features/notes/realtime/useLiveMarkdown";
-import { RealtimePeers } from "@features/notes/realtime/RealtimePeers";
+import { useRealtimeMarkdownContent } from "@features/notes/realtime/useMarkdownContent";
+import { RealtimePresence } from "@features/notes/realtime/RealtimePresence";
 
 // Leaves the jumped-to heading just below the top edge rather than flush on it.
 const HEADING_JUMP_MARGIN = 12;
@@ -84,7 +84,7 @@ export function NoteDetailScreen() {
   // Focus-gated because the edit screen stacks on top and attaches the same
   // doc; two attaches of one docName throw in the multiplexer.
   const isFocused = useScreenFocused();
-  const rtSession = useNoteRealtimeSession({
+  const rt = useNoteRealtimeSession({
     noteId: id,
     enabled:
       isFocused &&
@@ -93,10 +93,33 @@ export function NoteDetailScreen() {
       nodeType !== NodeType.CANVAS,
     readOnly: true,
   });
-  const liveContent = useLiveMarkdown(rtSession?.ydoc ?? null, noteQuery.data?.content || "", {
-    whenSynced: rtSession?.whenSynced ?? null,
-    debounceMs: 150,
-  });
+  const liveContent = useRealtimeMarkdownContent(
+    rt.session?.ydoc ?? null,
+    noteQuery.data?.content || "",
+    { whenSynced: rt.session?.whenSynced ?? null, debounceMs: 150 },
+  );
+
+  // A canvas keeps serialized board JSON in `content`. Rendering it as markdown
+  // would dump raw JSON, and opening it in the markdown editor would corrupt the
+  // board on the first keystroke, so both paths are closed off here.
+  const isCanvas = noteQuery.data?.nodeType === NodeType.CANVAS;
+  // Peer edits stream into the doc; every markdown consumer below reads the
+  // live text so the whole screen tracks the session, not the last fetch.
+  const content = isCanvas ? noteQuery.data?.content || "" : liveContent;
+  // Live peer typing re-renders this screen at the read debounce; the full
+  // document parses must not re-run on unrelated renders too.
+  const headings = useMemo(() => (isCanvas ? [] : parseHeadings(content)), [isCanvas, content]);
+  const outgoing = useMemo(
+    () => (isCanvas ? [] : parseOutgoingMentions(content)),
+    [isCanvas, content],
+  );
+  const statistics = useMemo(
+    () => `${countWords(content)} words · ${content.length} characters`,
+    [content],
+  );
+  const onHeadingLayout = useCallback((index: number, y: number) => {
+    headingOffsetsRef.current.set(index, y);
+  }, []);
 
   if (noteQuery.isLoading) {
     return (
@@ -125,14 +148,6 @@ export function NoteDetailScreen() {
   const authorName = note.ownerInfo?.name || auth.user?.fullName || "Unknown";
   const editedAt = note.updatedAt ? formatRelativeSeconds(note.updatedAt.seconds) : "just now";
   const backlinks = backlinksQuery.data ?? [];
-  // A canvas keeps serialized board JSON in `content`. Rendering it as markdown
-  // would dump raw JSON, and opening it in the markdown editor would corrupt the
-  // board on the first keystroke, so both paths are closed off here.
-  const isCanvas = note.nodeType === NodeType.CANVAS;
-  // Peer edits stream into the doc; every markdown consumer below reads the
-  // live text so the whole screen tracks the session, not the last fetch.
-  const content = isCanvas ? note.content || "" : liveContent;
-  const headings = isCanvas ? [] : parseHeadings(content);
 
   // Heading offsets arrive from MarkdownRenderer relative to the body wrapper,
   // so a jump adds the wrapper's own offset within the scroll content.
@@ -145,7 +160,6 @@ export function NoteDetailScreen() {
     });
   };
 
-  const outgoing = isCanvas ? [] : parseOutgoingMentions(content);
   const selectedTagIds = note.tags.map((t) => t.id);
 
   const toggleTag = (tagId: string) => {
@@ -163,7 +177,7 @@ export function NoteDetailScreen() {
         icon="notes"
         rightActions={
           <>
-            <RealtimePeers session={rtSession} />
+            <RealtimePresence session={rt.session} status={rt.status} />
             <CommentButton contentType={ContentType.NOTE} contentId={note.id} color={T.accent} />
             <TouchableOpacity
               onPress={() => toggleBookmark.mutate(noteUrn)}
@@ -259,10 +273,7 @@ export function NoteDetailScreen() {
           {isCanvas ? (
             <CanvasPlaceholder T={T} />
           ) : (
-            <MarkdownRenderer
-              content={content}
-              onHeadingLayout={(index, y) => headingOffsetsRef.current.set(index, y)}
-            />
+            <MarkdownRenderer content={content} onHeadingLayout={onHeadingLayout} />
           )}
         </View>
 
@@ -330,13 +341,7 @@ export function NoteDetailScreen() {
               T={T}
             />
           ) : null}
-          {!isCanvas && (
-            <PropertyRow
-              label="Statistics"
-              value={`${countWords(content)} words · ${content.length} characters`}
-              T={T}
-            />
-          )}
+          {!isCanvas && <PropertyRow label="Statistics" value={statistics} T={T} />}
         </View>
       </ScrollView>
 

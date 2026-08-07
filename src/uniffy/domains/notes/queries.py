@@ -137,12 +137,19 @@ async def permanent_delete_recursive(
 async def empty_trash(
     session: AsyncSession,
     organization_id: UUID,
+    owner_id: UUID,
 ) -> int:
-    """Hard-delete every soft-deleted note in the org; returns the count."""
+    """Hard-delete the owner's soft-deleted notes; returns the count.
+
+    Scoped to the caller's own notes: the trash list shows what the user can
+    see, and there is no admin god-mode that may destroy other members'
+    content (permissions.md core principle).
+    """
     result = await session.execute(
         select(Note).where(
             and_(
                 Note.organization_id == organization_id,
+                Note.owner_id == owner_id,
                 Note.is_deleted == True,  # noqa: E712
             )
         )
