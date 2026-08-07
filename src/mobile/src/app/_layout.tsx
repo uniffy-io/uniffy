@@ -186,6 +186,7 @@ function RootLayoutNav() {
           <Stack.Screen name="notes/index" />
           <Stack.Screen name="notes/[id]" />
           <Stack.Screen name="notes/edit" />
+          <Stack.Screen name="notes/trash" />
           <Stack.Screen name="files/index" />
           <Stack.Screen name="files/[id]" />
           <Stack.Screen name="files/trash" />

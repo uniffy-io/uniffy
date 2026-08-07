@@ -17,7 +17,6 @@ export interface SerializedNote {
   accessMode: number;
   baselineRole?: number;
   userRole: number;
-  visibility: number;
   parentId?: string;
   isDeleted: boolean;
   version: number;
@@ -38,29 +37,26 @@ export interface SerializedNote {
         role: number;
       }[]
     | null;
-  tags: string[];
+  tags: SerializedNoteTag[];
   metadata: { [key: string]: string };
 }
 
-// Notes predate the unified access model in the mobile UI; the tree groups by
-// the older private/group/organization scopes, so map the access mode onto them.
-export const NoteVisibility = {
-  PRIVATE: 1,
-  GROUP: 2,
-  ORGANIZATION: 3,
-} as const;
+export interface SerializedNoteTag {
+  id: string;
+  name: string;
+  color: string;
+}
 
-function accessModeToVisibility(mode: number): number {
-  switch (mode) {
-    case AccessMode.OWNER_ONLY:
-      return NoteVisibility.PRIVATE;
-    case AccessMode.EXPLICIT_MEMBERS:
-      return NoteVisibility.GROUP;
-    case AccessMode.OPEN_TO_ORG:
-      return NoteVisibility.ORGANIZATION;
-    default:
-      return NoteVisibility.PRIVATE;
-  }
+export type ContentBucket = "personal" | "shared" | "organization";
+
+// Mirrors bucketForContent in the web app
+// (src/ui/src/shared/utils/contentRoles.ts). Keep the two in step: anything
+// open to the org is organization content, and everything else splits on
+// ownership, so a note shared WITH me reads as shared while one I own and
+// shared out stays personal.
+export function bucketForNote(accessMode: number, ownerId: string, userId: string): ContentBucket {
+  if (accessMode === AccessMode.OPEN_TO_ORG) return "organization";
+  return ownerId === userId ? "personal" : "shared";
 }
 
 function tsToPlain(ts?: { seconds: bigint; nanos: number }): PlainTimestamp | undefined {
@@ -80,7 +76,6 @@ export function noteToPlain(note: Note): SerializedNote {
     accessMode: note.accessMode ?? 0,
     baselineRole: note.baselineRole,
     userRole: note.userRole,
-    visibility: accessModeToVisibility(note.accessMode ?? 0),
     parentId: note.parentId,
     isDeleted: note.isDeleted,
     version: Number(note.version),
@@ -104,7 +99,7 @@ export function noteToPlain(note: Note): SerializedNote {
             role: s.role,
           }))
         : null,
-    tags: note.tags.map((t) => t.name),
+    tags: note.tags.map((t) => ({ id: t.id, name: t.name, color: t.color || "#7C5CFC" })),
     metadata: note.metadata,
   };
 }

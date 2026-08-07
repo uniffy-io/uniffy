@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Keyboard,
   Modal,
   Pressable,
   StyleSheet,
@@ -58,6 +59,21 @@ export function BottomSheet({
   const [mounted, setMounted] = useState(visible);
   const [sheetHeight, setSheetHeight] = useState(windowHeight);
   const translateY = useSharedValue(windowHeight);
+  // Keyboard height comes from the core Keyboard module and lands in plain
+  // state rather than a shared value: a sheet needs no frame-by-frame keyboard
+  // tracking, and this keeps keyboard-controller out of the modal window
+  // entirely (it already rebuilds its own animation callback per modal).
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKeyboardInset(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardInset(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -102,7 +118,9 @@ export function BottomSheet({
       }
     });
 
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateY.value, [0, sheetHeight], [1, 0], Extrapolation.CLAMP),
   }));
@@ -121,7 +139,17 @@ export function BottomSheet({
         <Animated.View
           style={[
             styles.sheet,
-            { backgroundColor: T.surface },
+            {
+              backgroundColor: T.surface,
+              // A Modal is its own window, so the shell's KeyboardSpacer cannot
+              // reach it and KeyboardProvider has turned off Android's native
+              // resize. Lifting the sheet by the keyboard height is what keeps a
+              // focused input visible here.
+              bottom: keyboardInset,
+              // Shrinking the cap alongside the lift keeps a tall sheet
+              // scrollable instead of running off the top of the screen.
+              maxHeight: windowHeight * 0.8 - keyboardInset,
+            },
             padBottom && { paddingBottom: insets.bottom + 8 },
             style,
             sheetStyle,

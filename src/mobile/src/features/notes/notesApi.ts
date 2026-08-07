@@ -4,9 +4,12 @@ import {
   NotesService,
   CreateNoteRequestSchema,
   DeleteNoteRequestSchema,
+  EmptyTrashRequestSchema,
   GetBacklinksRequestSchema,
   GetNoteRequestSchema,
   ListNotesRequestSchema,
+  MoveNoteRequestSchema,
+  RestoreNoteRequestSchema,
   UpdateNoteRequestSchema,
 } from "@uniffy/proto/notes/v1/notes_pb";
 import { transport } from "@core/api/transport";
@@ -30,4 +33,12 @@ export const notesApi = {
 
   getBacklinks: (request: MessageInitShape<typeof GetBacklinksRequestSchema>) =>
     client.getBacklinks(request),
+
+  restoreNote: (request: MessageInitShape<typeof RestoreNoteRequestSchema>) =>
+    client.restoreNote(request),
+
+  emptyTrash: (request: MessageInitShape<typeof EmptyTrashRequestSchema>) =>
+    client.emptyTrash(request),
+
+  moveNote: (request: MessageInitShape<typeof MoveNoteRequestSchema>) => client.moveNote(request),
 };

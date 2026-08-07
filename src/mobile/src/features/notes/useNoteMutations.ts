@@ -1,21 +1,47 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { useAuth } from "@core/providers/AuthContext";
 import { notesApi } from "@features/notes/notesApi";
+import type { AccessMode } from "@uniffy/proto/common/v1/common_pb";
+import type { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
+
+// The tree, graph and trash queries are keyed on their own prefixes, which do
+// not start with "notes", so a single invalidate never reaches them. Every note
+// mutation goes through here to keep all of them in step.
+function invalidateNoteQueries(queryClient: QueryClient, orgId: string | null, noteId?: string) {
+  queryClient.invalidateQueries({ queryKey: ["notes"] });
+  queryClient.invalidateQueries({ queryKey: ["notes-tree"] });
+  queryClient.invalidateQueries({ queryKey: ["notes-graph"] });
+  queryClient.invalidateQueries({ queryKey: ["notes-trash"] });
+  if (noteId) {
+    queryClient.invalidateQueries({ queryKey: ["note", orgId, noteId] });
+    queryClient.invalidateQueries({ queryKey: ["note-backlinks", orgId, noteId] });
+  }
+}
 
 export function useCreateNote() {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { title: string; content: string }) =>
+    mutationFn: (args: {
+      title: string;
+      content: string;
+      parentId?: string;
+      accessMode?: AccessMode;
+      nodeType?: NodeType;
+    }) =>
       notesApi.createNote({
         organizationId: organizationId!,
         title: args.title,
         content: args.content,
+        parentId: args.parentId,
+        accessMode: args.accessMode,
+        nodeType: args.nodeType,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
+    onSuccess: (data) => {
+      invalidateNoteQueries(queryClient, organizationId, data.note?.id);
     },
   });
 }
@@ -25,16 +51,27 @@ export function useUpdateNote() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { noteId: string; title?: string; content?: string }) =>
+    mutationFn: (args: {
+      noteId: string;
+      title?: string;
+      content?: string;
+      /** Empty string detaches the note from its folder. */
+      parentId?: string;
+      /** Replacement set. Omit to leave tags untouched, [] to clear them. */
+      tagIds?: string[];
+      icon?: { iconType: string; value: string };
+    }) =>
       notesApi.updateNote({
         noteId: args.noteId,
         organizationId: organizationId!,
         title: args.title,
         content: args.content,
+        parentId: args.parentId,
+        tagIds: args.tagIds !== undefined ? { ids: args.tagIds } : undefined,
+        icon: args.icon,
       }),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
-      queryClient.invalidateQueries({ queryKey: ["note", organizationId, variables.noteId] });
+      invalidateNoteQueries(queryClient, organizationId, variables.noteId);
     },
   });
 }
@@ -49,8 +86,68 @@ export function useDeleteNote() {
         noteId,
         organizationId: organizationId!,
       }),
+    onSuccess: (_data, noteId) => {
+      invalidateNoteQueries(queryClient, organizationId, noteId);
+    },
+  });
+}
+
+export function useRestoreNote() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (noteId: string) =>
+      notesApi.restoreNote({ noteId, organizationId: organizationId! }),
+    onSuccess: (_data, noteId) => {
+      invalidateNoteQueries(queryClient, organizationId, noteId);
+    },
+  });
+}
+
+export function useEmptyNotesTrash() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => notesApi.emptyTrash({ organizationId: organizationId! }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      invalidateNoteQueries(queryClient, organizationId);
+    },
+  });
+}
+
+// A move can change the space, the parent folder, or both. Access mode lives on
+// MoveNote and the parent on UpdateNote, so a cross-space move into a folder is
+// two calls in that order - reparenting first would briefly place the note in a
+// folder it has no business being in.
+export function useMoveNote() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: {
+      noteId: string;
+      targetAccessMode?: AccessMode;
+      parentId?: string;
+    }) => {
+      if (args.targetAccessMode !== undefined) {
+        await notesApi.moveNote({
+          noteId: args.noteId,
+          organizationId: organizationId!,
+          targetAccessMode: args.targetAccessMode,
+        });
+      }
+      if (args.parentId !== undefined) {
+        await notesApi.updateNote({
+          noteId: args.noteId,
+          organizationId: organizationId!,
+          parentId: args.parentId,
+        });
+      }
+    },
+    onSuccess: (_data, variables) => {
+      invalidateNoteQueries(queryClient, organizationId, variables.noteId);
     },
   });
 }
@@ -83,10 +180,7 @@ export function useAutosave(noteId: string | undefined, orgId: string | null) {
       }),
     onSuccess: () => {
       setLastSaved(Date.now());
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
-      if (noteId) {
-        queryClient.invalidateQueries({ queryKey: ["note", orgId, noteId] });
-      }
+      invalidateNoteQueries(queryClient, orgId, noteId);
     },
   });
 

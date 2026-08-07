@@ -8,6 +8,8 @@ import type { Domain } from "@core/types";
 
 const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
 
+const HEADING_RE = /^#{1,6}\s+\S/;
+
 const MONO_FONT = Platform.select({ ios: "Menlo", default: "monospace" });
 
 const CONTENT_TYPE_TO_DOMAIN: Record<string, Domain> = {
@@ -588,13 +590,21 @@ export function MentionLine({
 type MarkdownRendererProps = {
   content: string;
   onMentionPress?: (urn: string, label: string) => void;
+  /** Reports each heading's y within this renderer's parent, in the same order
+   * parseHeadings returns them, so an outline can scroll to one. */
+  onHeadingLayout?: (headingIndex: number, y: number) => void;
 };
 
-export function MarkdownRenderer({ content, onMentionPress }: MarkdownRendererProps) {
+export function MarkdownRenderer({
+  content,
+  onMentionPress,
+  onHeadingLayout,
+}: MarkdownRendererProps) {
   const T = useTheme();
   const lines = content.split("\n");
   const elements: React.ReactNode[] = [];
   let i = 0;
+  let headingIndex = 0;
 
   while (i < lines.length) {
     const line = lines[i];
@@ -625,7 +635,20 @@ export function MarkdownRenderer({ content, onMentionPress }: MarkdownRendererPr
       continue;
     }
 
-    elements.push(renderMarkdownLine(line, T, i, onMentionPress));
+    const rendered = renderMarkdownLine(line, T, i, onMentionPress);
+
+    // Headings are counted here, after the code-fence and table branches have
+    // consumed their lines, so the ordinals line up with parseHeadings.
+    if (HEADING_RE.test(line)) {
+      const ordinal = headingIndex++;
+      elements.push(
+        <View key={`h-${i}`} onLayout={(e) => onHeadingLayout?.(ordinal, e.nativeEvent.layout.y)}>
+          {rendered}
+        </View>,
+      );
+    } else {
+      elements.push(rendered);
+    }
     i++;
   }
 

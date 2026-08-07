@@ -5,6 +5,7 @@ import { bookmarksApi } from "@features/bookmarks/bookmarksApi";
 import { noteToPlain, formatRelativeTime, stripMarkdown } from "@features/notes/noteSerializer";
 import type { SerializedNote } from "@features/notes/noteSerializer";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
+import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 
 export type NoteListItem = SerializedNote & {
   snippet: string;
@@ -13,7 +14,10 @@ export type NoteListItem = SerializedNote & {
 };
 
 function deriveListItem(note: SerializedNote): NoteListItem {
-  const snippet = stripMarkdown(note.content || "").slice(0, 120);
+  // A canvas keeps board JSON in `content`; running it through stripMarkdown
+  // spills raw JSON into the snippet.
+  const isCanvas = note.nodeType === NodeType.CANVAS;
+  const snippet = isCanvas ? "" : stripMarkdown(note.content || "").slice(0, 120);
 
   const editedAt = note.updatedAt ? formatRelativeTime(note.updatedAt.seconds) : "just now";
 
@@ -45,7 +49,11 @@ export function useNotesList(filter: string) {
       }
 
       const response = await notesApi.listNotes(params);
-      const notes = response.notes.map((n) => deriveListItem(noteToPlain(n)));
+      // ListNotes has no node-type filter, and a folder is structure rather
+      // than content - it has no business in a recency list.
+      const notes = response.notes
+        .map((n) => deriveListItem(noteToPlain(n)))
+        .filter((n) => n.nodeType !== NodeType.FOLDER);
 
       if (filter === "Favorites") {
         const bookmarksResponse = await bookmarksApi.listBookmarks({
@@ -56,6 +64,46 @@ export function useNotesList(filter: string) {
       }
 
       return notes;
+    },
+    enabled: !!organizationId,
+  });
+}
+
+const TRASH_PAGE_SIZE = 100;
+const TRASH_MAX_PAGES = 10;
+
+// ListNotes has no deleted-only filter: `includeDeleted` widens the set rather
+// than narrowing it, so the trash has to be sieved out of the full list. A
+// single page would hide deleted notes behind live ones, hence the paging loop.
+export function useNotesTrash() {
+  const { organizationId } = useAuth();
+
+  return useQuery({
+    queryKey: ["notes-trash", organizationId],
+    queryFn: async () => {
+      const deleted: SerializedNote[] = [];
+      let page = 1;
+      let totalPages = 1;
+
+      while (page <= totalPages && page <= TRASH_MAX_PAGES) {
+        const response = await notesApi.listNotes({
+          organizationId: organizationId!,
+          page,
+          pageSize: TRASH_PAGE_SIZE,
+          includeDeleted: true,
+          excludeContent: true,
+          sortBy: "updated_at",
+          sortOrder: "desc",
+        });
+        totalPages = response.totalPages;
+        for (const note of response.notes) {
+          const plain = noteToPlain(note);
+          if (plain.isDeleted) deleted.push(plain);
+        }
+        page++;
+      }
+
+      return deleted;
     },
     enabled: !!organizationId,
   });

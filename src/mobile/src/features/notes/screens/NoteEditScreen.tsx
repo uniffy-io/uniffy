@@ -40,6 +40,7 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useNote } from "@features/notes/useNotes";
+import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { useCreateNote, useAutosave } from "@features/notes/useNoteMutations";
 import { useAuth } from "@core/providers/AuthContext";
 import { useUniffy } from "@core/providers/UniffyContext";
@@ -181,7 +182,11 @@ function renderStyledBody(body: string, T: ThemeColors, caret: number): React.Re
 export function NoteEditorScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
-  const { noteId } = useLocalSearchParams<{ noteId?: string }>();
+  const { noteId, parentId, accessMode } = useLocalSearchParams<{
+    noteId?: string;
+    parentId?: string;
+    accessMode?: string;
+  }>();
   const { organizationId } = useAuth();
   const { openAt } = useUniffy();
   const { attach: attachFile, uploading: attachUploading } = useInsertFileReference();
@@ -222,16 +227,28 @@ export function NoteEditorScreen() {
   const scrollFraction = (offset: number, contentH: number) =>
     Math.min(1, Math.max(0, offset / Math.max(1, contentH - viewportH.current)));
 
+  // A canvas stores board JSON in `content` and a folder has no body at all;
+  // either one loaded here would let the first keystroke autosave markdown over
+  // a node that is not a markdown note.
+  const isCanvas = noteQuery.data?.nodeType === NodeType.CANVAS;
+  const isFolder = noteQuery.data?.nodeType === NodeType.FOLDER;
+  useEffect(() => {
+    if (!noteId) return;
+    if (isCanvas) router.replace(`/notes/${noteId}` as any);
+    else if (isFolder) router.replace(`/notes/folder/${noteId}` as any);
+  }, [isCanvas, isFolder, noteId]);
+
   // Populate fields when editing an existing note
   const loadedRef = useRef<{ title: string; content: string } | null>(null);
   useEffect(() => {
+    if (isCanvas || isFolder) return;
     if (isEditMode && noteQuery.data && !initialized) {
       setTitle(noteQuery.data.title);
       initFromCanonical(noteQuery.data.content);
       loadedRef.current = { title: noteQuery.data.title, content: noteQuery.data.content };
       setInitialized(true);
     }
-  }, [isEditMode, noteQuery.data, initialized, initFromCanonical]);
+  }, [isEditMode, noteQuery.data, initialized, initFromCanonical, isCanvas, isFolder]);
 
   const headerTopPad = (Platform.OS === "web" ? 20 : insets.top) + 12;
   const bottomPad =
@@ -259,6 +276,8 @@ export function NoteEditorScreen() {
         const response = await createNote.mutateAsync({
           title: title || "Untitled",
           content: canonicalBody,
+          parentId,
+          accessMode: accessMode ? Number(accessMode) : undefined,
         });
         const newId = response.note?.id;
         if (newId) {
@@ -270,7 +289,7 @@ export function NoteEditorScreen() {
         router.back();
       }
     }
-  }, [isEditMode, autosave, createNote, title, getCanonicalBody]);
+  }, [isEditMode, autosave, createNote, title, getCanonicalBody, parentId, accessMode]);
 
   const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
 
