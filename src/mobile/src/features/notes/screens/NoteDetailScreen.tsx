@@ -37,6 +37,10 @@ import { useAuth } from "@core/providers/AuthContext";
 import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
+import { useScreenFocused } from "@shared/hooks/useScreenFocused";
+import { useNoteRealtimeSession } from "@features/notes/realtime/useNoteRealtimeSession";
+import { useLiveMarkdown } from "@features/notes/realtime/useLiveMarkdown";
+import { RealtimePeers } from "@features/notes/realtime/RealtimePeers";
 
 // Leaves the jumped-to heading just below the top edge rather than flush on it.
 const HEADING_JUMP_MARGIN = 12;
@@ -75,6 +79,25 @@ export function NoteDetailScreen() {
     }
   }, [nodeType, id]);
 
+  // Live view: read-only doc attach (this screen never writes, and the flag
+  // hard-guards VIEWER roles against the server's 4403 write-frame kill).
+  // Focus-gated because the edit screen stacks on top and attaches the same
+  // doc; two attaches of one docName throw in the multiplexer.
+  const isFocused = useScreenFocused();
+  const rtSession = useNoteRealtimeSession({
+    noteId: id,
+    enabled:
+      isFocused &&
+      nodeType !== undefined &&
+      nodeType !== NodeType.FOLDER &&
+      nodeType !== NodeType.CANVAS,
+    readOnly: true,
+  });
+  const liveContent = useLiveMarkdown(rtSession?.ydoc ?? null, noteQuery.data?.content || "", {
+    whenSynced: rtSession?.whenSynced ?? null,
+    debounceMs: 150,
+  });
+
   if (noteQuery.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
@@ -106,7 +129,10 @@ export function NoteDetailScreen() {
   // would dump raw JSON, and opening it in the markdown editor would corrupt the
   // board on the first keystroke, so both paths are closed off here.
   const isCanvas = note.nodeType === NodeType.CANVAS;
-  const headings = isCanvas ? [] : parseHeadings(note.content || "");
+  // Peer edits stream into the doc; every markdown consumer below reads the
+  // live text so the whole screen tracks the session, not the last fetch.
+  const content = isCanvas ? note.content || "" : liveContent;
+  const headings = isCanvas ? [] : parseHeadings(content);
 
   // Heading offsets arrive from MarkdownRenderer relative to the body wrapper,
   // so a jump adds the wrapper's own offset within the scroll content.
@@ -119,7 +145,7 @@ export function NoteDetailScreen() {
     });
   };
 
-  const outgoing = isCanvas ? [] : parseOutgoingMentions(note.content || "");
+  const outgoing = isCanvas ? [] : parseOutgoingMentions(content);
   const selectedTagIds = note.tags.map((t) => t.id);
 
   const toggleTag = (tagId: string) => {
@@ -137,6 +163,7 @@ export function NoteDetailScreen() {
         icon="notes"
         rightActions={
           <>
+            <RealtimePeers session={rtSession} />
             <CommentButton contentType={ContentType.NOTE} contentId={note.id} color={T.accent} />
             <TouchableOpacity
               onPress={() => toggleBookmark.mutate(noteUrn)}
@@ -233,7 +260,7 @@ export function NoteDetailScreen() {
             <CanvasPlaceholder T={T} />
           ) : (
             <MarkdownRenderer
-              content={note.content || ""}
+              content={content}
               onHeadingLayout={(index, y) => headingOffsetsRef.current.set(index, y)}
             />
           )}
@@ -306,7 +333,7 @@ export function NoteDetailScreen() {
           {!isCanvas && (
             <PropertyRow
               label="Statistics"
-              value={`${countWords(note.content || "")} words · ${(note.content || "").length} characters`}
+              value={`${countWords(content)} words · ${content.length} characters`}
               T={T}
             />
           )}
