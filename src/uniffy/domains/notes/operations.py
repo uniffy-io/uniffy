@@ -749,17 +749,18 @@ class NoteOperations(BaseContentOperations[Note]):
         user_id: UUID,
         organization_id: UUID,
     ) -> int:
-        """Permanently delete every soft-deleted note in the org."""
+        """Permanently delete the caller's soft-deleted notes."""
         # Capture ids first so search cleanup can run after the rows are gone.
         trash_ids_result = await self.session.execute(
             select(Note.id).where(
                 Note.organization_id == organization_id,
+                Note.owner_id == user_id,
                 Note.is_deleted == True,  # noqa: E712
             )
         )
         trash_ids = list(trash_ids_result.scalars().all())
 
-        count = await queries.empty_trash(self.session, organization_id)
+        count = await queries.empty_trash(self.session, organization_id, user_id)
 
         tag_ops = TagOperations(self.session)
         for nid in trash_ids:

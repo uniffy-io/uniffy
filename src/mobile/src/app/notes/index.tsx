@@ -1,2 +1,2 @@
-export { NotesUnderConstructionScreen as default } from "@features/notes/screens/NotesUnderConstructionScreen";
-export * from "@features/notes/screens/NotesUnderConstructionScreen";
+export { NotesListScreen as default } from "@features/notes/screens/NotesListScreen";
+export * from "@features/notes/screens/NotesListScreen";

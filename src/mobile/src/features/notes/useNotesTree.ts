@@ -1,8 +1,9 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 import { useAuth } from "@core/providers/AuthContext";
 import { notesApi } from "@features/notes/notesApi";
-import { noteToPlain, stripMarkdown, NoteVisibility } from "@features/notes/noteSerializer";
+import { noteToPlain, stripMarkdown, bucketForNote } from "@features/notes/noteSerializer";
 import type { SerializedNote } from "@features/notes/noteSerializer";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 
@@ -10,10 +11,13 @@ export interface TreeNode {
   id: string;
   title: string;
   type: "note" | "folder";
+  /** Canvas boards are notes structurally, but their body is board JSON, so no
+   * surface may open them in the markdown editor. */
+  isCanvas: boolean;
   icon?: { type: string; value: string };
   children?: TreeNode[];
   parentId?: string;
-  visibility: number;
+  accessMode: number;
   updatedAt?: { seconds: number; nanos: number };
   ownerInfo?: { id: string; name: string; email: string };
   isShared?: boolean;
@@ -32,19 +36,21 @@ export interface TreeSection {
 
 function noteToTreeNode(note: SerializedNote): TreeNode {
   const isFolder = note.nodeType === NodeType.FOLDER;
+  const isCanvas = note.nodeType === NodeType.CANVAS;
   return {
     id: note.id,
     title: note.title,
     type: isFolder ? "folder" : "note",
+    isCanvas,
     icon: note.icon,
     parentId: note.parentId,
-    visibility: note.visibility,
+    accessMode: note.accessMode,
     updatedAt: note.updatedAt,
     ownerInfo: note.ownerInfo,
     isShared: note.sharedWith != null && note.sharedWith.length > 0,
-    snippet: isFolder ? undefined : stripMarkdown(note.content || "").slice(0, 120),
+    snippet: isFolder || isCanvas ? undefined : stripMarkdown(note.content || "").slice(0, 120),
     editedAt: note.updatedAt ? formatRelativeSeconds(note.updatedAt.seconds) : "just now",
-    tags: note.tags.length > 0 ? note.tags : undefined,
+    tags: note.tags.length > 0 ? note.tags.map((t) => t.name) : undefined,
     refCount: isFolder ? undefined : note.outgoingReferences.length,
   };
 }
@@ -95,28 +101,15 @@ function organizeSections(notes: SerializedNote[], userId: string): TreeSection[
   for (const note of notes) {
     if (note.isDeleted) continue;
 
-    switch (note.visibility) {
-      case NoteVisibility.PRIVATE:
-        if (note.ownerId === userId) {
-          personal.push(note);
-        } else {
-          shared.push(note);
-        }
-        break;
-      case NoteVisibility.GROUP:
-        if (note.ownerId === userId) {
-          organization.push(note);
-        } else {
-          shared.push(note);
-        }
-        break;
-      case NoteVisibility.ORGANIZATION:
+    switch (bucketForNote(note.accessMode, note.ownerId, userId)) {
+      case "organization":
         organization.push(note);
         break;
+      case "shared":
+        shared.push(note);
+        break;
       default:
-        if (note.ownerId === userId) {
-          personal.push(note);
-        }
+        personal.push(note);
     }
   }
 
@@ -145,6 +138,35 @@ function organizeSections(notes: SerializedNote[], userId: string): TreeSection[
   }
 
   return sections;
+}
+
+export type Breadcrumb = { id: string; title: string };
+
+function findTrail(nodes: TreeNode[], targetId: string, trail: Breadcrumb[]): Breadcrumb[] | null {
+  for (const node of nodes) {
+    const next = [...trail, { id: node.id, title: node.title || "Untitled" }];
+    if (node.id === targetId) return next;
+    if (node.children?.length) {
+      const found = findTrail(node.children, targetId, next);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// Ancestor folders of a note, nearest-root first, excluding the note itself.
+// Empty when the note sits at a section root or the tree has not loaded.
+export function useNoteBreadcrumb(noteId: string | undefined): Breadcrumb[] {
+  const { data } = useNotesTree();
+
+  return useMemo(() => {
+    if (!noteId || !data) return [];
+    for (const section of data) {
+      const trail = findTrail(section.nodes, noteId, []);
+      if (trail) return trail.slice(0, -1);
+    }
+    return [];
+  }, [data, noteId]);
 }
 
 export function useNotesTree() {

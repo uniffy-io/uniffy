@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Keyboard,
   Modal,
   Pressable,
   StyleSheet,
@@ -19,7 +20,6 @@ import Animated, {
   withTiming,
   Extrapolation,
 } from "react-native-reanimated";
-import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@shared/hooks/useTheme";
 
@@ -53,17 +53,27 @@ export function BottomSheet({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
-  // A modal is its own window, so the shell's KeyboardSpacer never reaches it.
-  // Every sheet holding an input would otherwise need its own handling, and on
-  // Android an RN KeyboardAvoidingView is inert because KeyboardProvider turns
-  // off native window resizing.
-  const keyboard = useReanimatedKeyboardAnimation();
 
   // Kept mounted across the exit so the sheet can animate out; Modal would
   // otherwise tear it down the moment `visible` flips.
   const [mounted, setMounted] = useState(visible);
   const [sheetHeight, setSheetHeight] = useState(windowHeight);
   const translateY = useSharedValue(windowHeight);
+  // Keyboard height comes from the core Keyboard module and lands in plain
+  // state rather than a shared value: a sheet needs no frame-by-frame keyboard
+  // tracking, and this keeps keyboard-controller out of the modal window
+  // entirely (it already rebuilds its own animation callback per modal).
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKeyboardInset(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardInset(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -108,12 +118,8 @@ export function BottomSheet({
       }
     });
 
-  const basePad = padBottom ? insets.bottom + 8 : 0;
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
-    // The keyboard covers the safe area it would otherwise clear, so this is a
-    // max rather than a sum - the same rule the shell's KeyboardSpacer follows.
-    paddingBottom: Math.max(basePad, -keyboard.height.value),
   }));
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateY.value, [0, sheetHeight], [1, 0], Extrapolation.CLAMP),
@@ -131,7 +137,23 @@ export function BottomSheet({
         </Animated.View>
 
         <Animated.View
-          style={[styles.sheet, { backgroundColor: T.surface }, style, sheetStyle]}
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: T.surface,
+              // A Modal is its own window, so the shell's KeyboardSpacer cannot
+              // reach it and KeyboardProvider has turned off Android's native
+              // resize. Lifting the sheet by the keyboard height is what keeps a
+              // focused input visible here.
+              bottom: keyboardInset,
+              // Shrinking the cap alongside the lift keeps a tall sheet
+              // scrollable instead of running off the top of the screen.
+              maxHeight: windowHeight * 0.8 - keyboardInset,
+            },
+            padBottom && { paddingBottom: insets.bottom + 8 },
+            style,
+            sheetStyle,
+          ]}
           onLayout={(e) => onSheetLayout(e.nativeEvent.layout.height)}
         >
           <GestureDetector gesture={pan}>

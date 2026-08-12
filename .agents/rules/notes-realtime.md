@@ -10,6 +10,9 @@ paths:
   - "src/ui/src/features/notes/**/*.tsx"
   - "src/ui/src/features/realtime/**/*.ts"
   - "src/ui/src/features/realtime/**/*.tsx"
+  - "src/mobile/src/shared/realtime/**/*.ts"
+  - "src/mobile/src/features/notes/realtime/**/*.ts"
+  - "src/mobile/src/features/notes/realtime/**/*.tsx"
 ---
 
 # Notes Domain + Realtime Collaboration (Yjs / pycrdt)
@@ -260,4 +263,4 @@ Origin-replica dedup (backend): every fanout payload carries `origin_replica_id`
 - **Schema migrations:** the snapshot table key is `(content_type, content_id)`. Other domains plug in without touching the schema - per-domain columns tend to drift. Notes-specific things (version bump, outgoing_references, inline tags, search reindex) live in `NoteOperations.realtime_save` rather than in `core/realtime/*`.
 - **Snapshot job IDs hash the payload bytes (not just the key)** - see §7. Static `_job_id`s freeze persistence for `WORKER_KEEP_RESULT` seconds.
 - **Vite dev proxy** has `'/api/realtime'` configured with `ws: true` ahead of the generic `'/api'` entry. The order matters.
-- **Mobile (Expo) clients** are out of v1 scope - the mobile app keeps the legacy autosave path via `UpdateNote` (`AutosaveNote` is retired everywhere). When mobile ships realtime, RN's WebSocket supports the `Authorization` header directly; the server already accepts both carriers.
+- **Mobile (Expo) client** ships its own port of the multiplexed transport: generic layer in `src/mobile/src/shared/realtime/` (`multiplex.ts` byte-compatible framing via lib0 string helpers, `multiplexer.ts`, `useDocSession.ts`), notes wiring in `src/mobile/src/features/notes/realtime/`. Deltas from the web: the bearer rides the `Authorization` header (NOT the subprotocol; `extract_bearer_from_auth_header` server-side), org id is passed into `attach()` from the auth context, AppState/NetInfo replace the window listeners, and there is no IDB persistence, no UndoManager, and no caret broadcast (presence identity only). The editor binding (`useNoteCoEditing.ts`) diffs local edits against the user's LAST LOCAL canonical string (never the merged view) and applies remote merges to the `TextInput` only while the user is idle. The legacy `UpdateNote` autosave survives ONLY as the unsynced/offline fallback - once a session syncs, realtime owns content for the rest of the mount, and running both would double-write (server graft + CRDT replay). `lib0/webcrypto` is shimmed in `metro.config.js` (its react-native entry needs isomorphic-webcrypto, whose native deps would force a dev-client rebuild).

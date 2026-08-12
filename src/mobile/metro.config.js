@@ -29,7 +29,15 @@ config.resolver.nodeModulesPaths = [
 // Generated proto files use ".js" extensions in imports (ES module convention).
 // Tell Metro to resolve ".js" imports to ".ts" files as well.
 config.resolver.sourceExts = [...(config.resolver.sourceExts || []), "mjs"];
+
+// lib0's react-native condition requires isomorphic-webcrypto (native deps ->
+// dev-client rebuild). Only lib0/random reaches it here, so shim the module.
+const lib0WebcryptoShim = path.resolve(projectRoot, "metro-shims/lib0-webcrypto.cjs");
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === "lib0/webcrypto") {
+    return { type: "sourceFile", filePath: lib0WebcryptoShim };
+  }
   if (moduleName.endsWith(".js")) {
     const tsName = moduleName.replace(/\.js$/, ".ts");
     try {
