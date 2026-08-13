@@ -11,7 +11,7 @@ TITLE_CAP = 500
 BODY_CAP = 10_000
 FILE_CAP = 50_000
 
-_MENTION_RE = re.compile(r"\[\[\[([^|\]]{0,200})\|urn:[^\]]*\]\]\]")
+_MENTION_RE = re.compile(r"\[\[\[([^\[\]|]{0,200})\|urn:[^\]]*\]\]\]")
 _MAX_MENTION_PASSES = 5
 
 

@@ -11,7 +11,7 @@ import { FONT } from "@theme/typography";
 
 type ThemeColors = ReturnType<typeof useTheme>;
 
-const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+const MENTION_RE = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
 // Mirrors _format_call_duration: "Xh YYm" | "Xm YYs" | "Xs".
 const DURATION_RE = /(\d+h \d{2}m|\d+m \d{2}s|\d+s)/;
 

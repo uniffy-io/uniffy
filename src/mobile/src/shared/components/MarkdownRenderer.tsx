@@ -6,7 +6,7 @@ import { FONT } from "@theme/typography";
 import { ReferenceChip } from "@shared/mentions/ReferenceChip";
 import type { Domain } from "@core/types";
 
-const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+const MENTION_RE = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
 
 const HEADING_RE = /^#{1,6}\s+\S/;
 

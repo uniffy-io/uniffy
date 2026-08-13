@@ -22,7 +22,7 @@ SKILL_RATIONALE_MAX = 2000
 
 # Stripped on the way in; newline and tab survive so markdown formatting holds.
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-_MENTION = re.compile(r"\[\[\[[^\]]*?\|urn:[^\]]*?\]\]\]")
+_MENTION = re.compile(r"\[\[\[[^\[\]|]*?\|urn:[^\]]*?\]\]\]")
 # Structural delimiters that would break out of a prompt section; never valid
 # inside skill markdown, so their presence is treated as an injection attempt.
 _HARD_INJECTION = re.compile(

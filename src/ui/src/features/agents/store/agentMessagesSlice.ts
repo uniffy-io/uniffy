@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
+import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
 import type { SerializedMessage } from '@/features/agents/store/agentMessagesThunks';
 import {
     editAgentMessage,
@@ -150,7 +151,7 @@ export const agentMessagesSlice = createSlice({
                 const mentions = fileIds
                     .map((id) => {
                         const meta = state.fileMetadataCache[id];
-                        const label = meta?.filename ?? `file-${id.slice(0, 8)}`;
+                        const label = sanitizeMentionLabel(meta?.filename ?? `file-${id.slice(0, 8)}`);
                         return `[[[${label}|urn:uniffy:content:FILE:${id}]]]`;
                     })
                     .join('\n');

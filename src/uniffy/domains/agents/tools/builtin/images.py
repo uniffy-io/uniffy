@@ -10,6 +10,7 @@ from loguru import logger
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.content.references import sanitize_mention_label
 from uniffy.domains.agents.providers.catalog import (
     get_image_parameter_schema,
     resolve_image_params,
@@ -343,7 +344,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     except Exception:
         logger.opt(exception=True).warning("Image alert fan-out failed")
 
-    mention = f"[[[{filename}|{file_urn}]]]"
+    mention = f"[[[{sanitize_mention_label(filename)}|{file_urn}]]]"
 
     return ToolResult(
         success=True,

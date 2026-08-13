@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
+import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
 
 interface UseTextareaMentionOptions {
     textareaRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -79,7 +80,7 @@ export function useTextareaMention({
 
     const handleSelect = useCallback(
         (result: SearchResultItem) => {
-            const mentionString = `[[[${result.title}|${result.urn}]]]`;
+            const mentionString = `[[[${sanitizeMentionLabel(result.title)}|${result.urn}]]]`;
             const startIndex = mentionStartRef.current;
             if (startIndex === -1) return;
 

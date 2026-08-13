@@ -13,7 +13,7 @@ import { openViewerWithFetch } from '@/features/files/store/viewerThunks';
 import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
 
 // Rewrite [[[label|urn]]] as markdown links so react-markdown processes them.
-const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+const MENTION_RE = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
 
 function preprocessMentions(content: string): string {
   return content.replace(MENTION_RE, '[@$1]($2)');

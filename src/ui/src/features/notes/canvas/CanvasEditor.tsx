@@ -65,6 +65,7 @@ import type {
   MindMapNodeData,
 } from '@/features/notes/canvas/types';
 import { cn } from '@/shared/utils/cn';
+import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setCanvasCursorsMode } from '@/features/notes/store/editorSlice';
@@ -1126,7 +1127,7 @@ function CanvasEditorInner({
           return updated;
         });
       } else {
-        const mentionMarkdown = `[[[${result.title}|${result.urn}]]]`;
+        const mentionMarkdown = `[[[${sanitizeMentionLabel(result.title)}|${result.urn}]]]`;
         const newNode: TextCanvasNode = {
           id: generateNodeId(),
           type: 'text',

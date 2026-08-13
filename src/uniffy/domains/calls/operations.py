@@ -17,6 +17,7 @@ from sqlalchemy.orm.attributes import set_committed_value
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calls import (
     Call,
@@ -72,7 +73,8 @@ def _format_call_duration(seconds: int) -> str:
 
 
 def _user_mention(user_id: UUID, display_name: str) -> str:
-    return f"[[[{display_name or 'Someone'}|urn:uniffy:content:USER:{user_id}]]]"
+    label = sanitize_mention_label(display_name or "Someone")
+    return f"[[[{label}|urn:uniffy:content:USER:{user_id}]]]"
 
 
 _CHANNEL_TYPE_TO_CALL_TYPE = {

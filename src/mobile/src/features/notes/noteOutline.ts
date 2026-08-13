@@ -31,7 +31,7 @@ export function parseHeadings(content: string): Heading[] {
 // [[[label|urn]]] is the mention format shared with the backend and the web app
 // (see .agents/rules/architecture.md). Deduplicated by URN, first label wins.
 export function parseOutgoingMentions(content: string): OutgoingMention[] {
-  const mentionRegex = /\[\[\[([^\]|]+)\|([^\]]+)\]\]\]/g;
+  const mentionRegex = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
   const mentions: OutgoingMention[] = [];
   const seen = new Set<string>();
   let match;

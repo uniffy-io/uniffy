@@ -251,7 +251,7 @@ def extract_urns_from_content(content: str) -> list[str]:
     if not content:
         return []
 
-    pattern = r"\[\[\[.*?\|(urn:uniffy:content:\w+:[a-f0-9-]+)\]\]\]"
+    pattern = r"\[\[\[[^\[\]|]*?\|(urn:uniffy:content:\w+:[a-f0-9-]+)\]\]\]"
     matches = re.findall(pattern, content, re.IGNORECASE)
 
     seen = set()

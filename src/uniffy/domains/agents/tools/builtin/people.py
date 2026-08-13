@@ -2,6 +2,7 @@
 
 from uuid import UUID
 
+from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.domains.agents.tools.builtin.args import clamp_int, parse_uuid
@@ -38,12 +39,12 @@ def _uuid_arg(args: dict, name: str) -> tuple[UUID | None, str | None]:
 
 def _person_mention(person: dict) -> str:
     urn = f"urn:uniffy:content:USER:{person['user_id']}"
-    return f"[[[{person['display_name']}|{urn}]]]"
+    return f"[[[{sanitize_mention_label(person['display_name'])}|{urn}]]]"
 
 
 def _team_mention(team: dict) -> str:
     urn = f"urn:uniffy:content:TEAM:{team['group_id']}"
-    return f"[[[{team['name']}|{urn}]]]"
+    return f"[[[{sanitize_mention_label(team['name'])}|{urn}]]]"
 
 
 def _person_summary(person: dict) -> str:
