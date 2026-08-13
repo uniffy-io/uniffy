@@ -7,7 +7,7 @@ import { cn } from '@/shared/utils/cn';
 // user mentions. They render as a single self-contained capsule rather than the
 // generic markdown path so the actor, duration, and roster read as one unit.
 
-const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+const MENTION_RE = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
 // Mirrors _format_call_duration: "Xh YYm" | "Xm YYs" | "Xs".
 const DURATION_RE = /(\d+h \d{2}m|\d+m \d{2}s|\d+s)/;
 

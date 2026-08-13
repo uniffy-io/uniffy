@@ -10,6 +10,7 @@ from uniffy.core.auth.permissions.audit import (
 )
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.defaults import (
+    modes_at_least_as_open,
     resolve_access_policy,
     resolve_content_defaults,
     resolve_effective_policy,
@@ -67,6 +68,7 @@ __all__ = [
     "invalidate_visible_sets_for_user",
     "invalidate_visible_sets_for_user_global",
     "max_role",
+    "modes_at_least_as_open",
     "record_access_mode_changed",
     "record_baseline_role_changed",
     "record_member_added",

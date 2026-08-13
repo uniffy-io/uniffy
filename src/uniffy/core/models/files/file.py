@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import BigInteger, Column, DateTime
+from sqlalchemy import BigInteger, Column, DateTime, Index
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -42,6 +42,8 @@ class File(SQLModel, table=True):
     """Uploaded file row. Org-scoped, supports versioning and folder placement."""
 
     __tablename__ = "files_files"
+    # Serves the per-folder COUNT/SUM aggregate behind folder mention stats.
+    __table_args__ = (Index("ix_files_files_folder_id_is_deleted", "folder_id", "is_deleted"),)
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)

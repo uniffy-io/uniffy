@@ -7,6 +7,8 @@ export type MessageDensity = 'comfortable' | 'compact';
 export interface MessageAttachment {
   id: string;
   fileId: string;
+  /** File the attachment was copied from; the message text mentions THIS id. */
+  sourceFileId?: string;
   filename: string;
   mimeType: string;
   sizeBytes: number;

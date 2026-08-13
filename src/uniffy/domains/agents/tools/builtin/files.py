@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import select
 
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
+from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.extraction import UnsupportedFormatError, can_extract, extract_text
 from uniffy.core.models.files.folder import Folder
@@ -422,7 +423,10 @@ async def _execute_read_file_content(ctx: ToolContext, args: dict) -> ToolResult
 
         return ToolResult(
             success=True,
-            data=f"Content of [[[{file.filename}|{file.urn}]]]{page_info}:\n\n{text}",
+            data=(
+                f"Content of [[[{sanitize_mention_label(file.filename)}|{file.urn}]]]"
+                f"{page_info}:\n\n{text}"
+            ),
         )
 
     # Fall back to on-demand extraction
@@ -454,7 +458,10 @@ async def _execute_read_file_content(ctx: ToolContext, args: dict) -> ToolResult
 
         return ToolResult(
             success=True,
-            data=f"Content of [[[{file.filename}|{file.urn}]]]{page_info}:\n\n{text}",
+            data=(
+                f"Content of [[[{sanitize_mention_label(file.filename)}|{file.urn}]]]"
+                f"{page_info}:\n\n{text}"
+            ),
         )
 
     return ToolResult(

@@ -1,4 +1,4 @@
-"""Per-recipient projector for org-wide tag events on ``tags:{org_id}``."""
+"""Per-recipient projector for org-wide tag and restricted mention events."""
 
 from typing import Any
 from uuid import UUID
@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from uniffy.core.auth.cache import get_or_load_effective_role
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.content.references import parse_urn
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import ContentRole, ContentType
 from uniffy.db import open_session
@@ -17,7 +18,7 @@ logger = logger.bind(component="notifications.tag_relay")
 
 
 class TagEventRelay:
-    """Per-recipient filter / projector for tag events."""
+    """Per-recipient filter / projector for tag events and restricted chip state."""
 
     def __init__(self, user_id: UUID, organization_id: UUID) -> None:
         self.user_id = user_id
@@ -111,6 +112,20 @@ class TagEventRelay:
         if urn_status is not None:
             changes["urn_status"] = urn_status
         return [changes]
+
+    async def allows_mention_state(self, payload: dict[str, Any]) -> bool:
+        """Recipient gate for ``restricted`` mention-state events; fails closed."""
+        parsed = parse_urn(payload.get("urn") or "")
+        if parsed is None:
+            return False
+        content_type, content_id = parsed
+        try:
+            return await self._can_view_content(content_type, content_id)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "mention-state recipient gate failed; dropping event"
+            )
+            return False
 
     def _project_tag_deleted(self, body: dict[str, Any]) -> list[dict[str, str]]:
         tag_id_raw = body.get("tag_id") or ""
@@ -310,6 +325,24 @@ async def _load_minimal_policy(
             select(Agent.owner_id, Agent.access_mode, Agent.baseline_role).where(
                 Agent.id == content_id,
                 Agent.organization_id == organization_id,
+            )
+        )
+    elif content_type == ContentType.FOLDER:
+        from uniffy.core.models.files.folder import Folder
+
+        result = await session.execute(
+            select(Folder.owner_id, Folder.access_mode, Folder.baseline_role).where(
+                Folder.id == content_id,
+                Folder.organization_id == organization_id,
+            )
+        )
+    elif content_type == ContentType.ROOM:
+        from uniffy.core.models.rooms.room import Room
+
+        result = await session.execute(
+            select(Room.owner_id, Room.access_mode, Room.baseline_role).where(
+                Room.id == content_id,
+                Room.organization_id == organization_id,
             )
         )
     else:

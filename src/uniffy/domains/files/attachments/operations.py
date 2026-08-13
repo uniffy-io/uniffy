@@ -230,6 +230,7 @@ class AttachmentOperations:
         attachment = Attachment(
             organization_id=organization_id,
             file_id=file_to_link.id,
+            source_file_id=source_file.id,
             content_type=content_type,
             content_id=content_id,
             attached_by_user_id=user_id,
@@ -335,6 +336,42 @@ class AttachmentOperations:
         )
 
         return [(row[0], row[1], row[2]) for row in result.all()]
+
+    async def viewable_source_file_ids(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        attachments: list[Attachment],
+    ) -> set[UUID]:
+        """Subset of the attachments' ``source_file_id``s this reader may view.
+
+        ``source_file_id`` points at the ORIGINAL file, which is checked against
+        the attacher's access at write time and never the reader's - echoing it
+        unconditionally tells a reader the id of a file they cannot open. One
+        query for the whole page keeps the batched list path batched.
+        """
+        source_ids = {a.source_file_id for a in attachments if a.source_file_id}
+        if not source_ids:
+            return set()
+
+        access_filter = await self._access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.FILE,
+            content_id_column=File.id,
+            owner_id_column=File.owner_id,
+            access_mode_column=File.access_mode,
+            baseline_role_column=File.baseline_role,
+        )
+        rows = await self._session.execute(
+            select(File.id).where(
+                File.id.in_(source_ids),
+                File.organization_id == organization_id,
+                File.is_deleted == False,  # noqa: E712
+                access_filter,
+            )
+        )
+        return set(rows.scalars().all())
 
     async def batch_list_attachments(
         self,

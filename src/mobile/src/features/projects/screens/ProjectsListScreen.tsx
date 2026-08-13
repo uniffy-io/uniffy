@@ -25,6 +25,7 @@ import { router } from "expo-router";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
+import { sanitizeMentionLabel } from "@shared/mentions/mentionLabel";
 import { bucketForContent } from "@shared/permissions/contentRoles";
 import type { ContentBucket } from "@shared/permissions/contentRoles";
 import { useTheme } from "@shared/hooks/useTheme";
@@ -190,7 +191,7 @@ export function ProjectsListScreen() {
       pathname: "/notes/edit" as any,
       params: {
         initialTitle: `${project.name} notes`,
-        initialContent: `[[[${project.name}|${project.urn}]]]\n\n`,
+        initialContent: `[[[${sanitizeMentionLabel(project.name)}|${project.urn}]]]\n\n`,
       },
     });
   }, []);

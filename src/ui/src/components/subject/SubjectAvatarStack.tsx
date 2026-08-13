@@ -31,8 +31,10 @@ export function SubjectAvatarStack({
     const visible = subjects.slice(0, maxDisplay);
     const overflow = subjects.length - maxDisplay;
 
+    // Spans, not divs: this stack renders inside mention previews that live in
+    // chat/note paragraphs, and a div inside <p> is invalid HTML.
     return (
-        <div className={cn('flex -space-x-1.5', className)}>
+        <span className={cn('flex -space-x-1.5', className)}>
             {visible.map((subject) => (
                 <SubjectAvatar
                     key={subject.id}
@@ -42,15 +44,15 @@ export function SubjectAvatarStack({
                 />
             ))}
             {overflow > 0 && (
-                <div
+                <span
                     className={cn(
                         'rounded-full bg-muted flex items-center justify-center font-medium text-muted-foreground border-2 border-card shrink-0',
                         OVERFLOW_SIZE_CLASSES[size]
                     )}
                 >
                     +{overflow}
-                </div>
+                </span>
             )}
-        </div>
+        </span>
     );
 }

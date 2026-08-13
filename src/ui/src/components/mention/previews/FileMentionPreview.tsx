@@ -87,11 +87,6 @@ export function FileMentionPreview({
         />
       )}
 
-      {/* Gradient wash when no thumbnail */}
-      {!mediaForward && (
-        <span className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-blue-500/10 via-blue-500/5 to-transparent pointer-events-none" />
-      )}
-
       {/* Header. With a thumbnail this is a caption, so it loses the icon badge
           (the image already says what the file is) and stays on one line. */}
       <span

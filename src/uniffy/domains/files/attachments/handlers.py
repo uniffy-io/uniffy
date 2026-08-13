@@ -82,7 +82,13 @@ class AttachmentsHandlersMixin:
 
                 await session.commit()
 
-                return AttachFileResponse(attachment=attachment_to_proto(attachment, file, owner))
+                # The caller supplied the source id and passed the access check
+                # on it inside attach_file, so echoing it back reveals nothing.
+                return AttachFileResponse(
+                    attachment=attachment_to_proto(
+                        attachment, file, owner, include_source_file_id=True
+                    )
+                )
 
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
@@ -158,9 +164,20 @@ class AttachmentsHandlersMixin:
                     content_type=content_type,
                     content_id=content_id,
                 )
+                viewable_sources = await ops.viewable_source_file_ids(
+                    user_id, organization_id, [a for a, _, _ in attachments]
+                )
 
                 return ListAttachmentsResponse(
-                    attachments=[attachment_to_proto(a, f, o) for a, f, o in attachments],
+                    attachments=[
+                        attachment_to_proto(
+                            a,
+                            f,
+                            o,
+                            include_source_file_id=a.source_file_id in viewable_sources,
+                        )
+                        for a, f, o in attachments
+                    ],
                     total_count=len(attachments),
                 )
 
@@ -207,10 +224,23 @@ class AttachmentsHandlersMixin:
                     content_ids=content_ids,
                 )
 
+                viewable_sources = await ops.viewable_source_file_ids(
+                    user_id,
+                    organization_id,
+                    [a for rows in grouped.values() for a, _, _ in rows],
+                )
                 groups = [
                     BatchListAttachmentsGroup(
                         content_id=str(cid),
-                        attachments=[attachment_to_proto(a, f, o) for a, f, o in rows],
+                        attachments=[
+                            attachment_to_proto(
+                                a,
+                                f,
+                                o,
+                                include_source_file_id=a.source_file_id in viewable_sources,
+                            )
+                            for a, f, o in rows
+                        ],
                     )
                     for cid, rows in grouped.items()
                 ]

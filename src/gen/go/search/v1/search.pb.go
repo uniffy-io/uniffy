@@ -127,9 +127,13 @@ type SearchRequest struct {
 	// Client ranking context: listed types float to the top in this order.
 	// Applied within match-strength buckets, so a weak (typo/partial) match
 	// never outranks a full match via its type alone.
-	TypePriority  []SearchResultType `protobuf:"varint,11,rep,packed,name=type_priority,json=typePriority,proto3,enum=search.v1.SearchResultType" json:"type_priority,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TypePriority []SearchResultType `protobuf:"varint,11,rep,packed,name=type_priority,json=typePriority,proto3,enum=search.v1.SearchResultType" json:"type_priority,omitempty"`
+	// Match against titles/names only, skipping content, description, and tags.
+	// Mention pickers use this so a shared email domain or body text does not
+	// pull in every document; general search leaves it off.
+	NameMatchesOnly bool `protobuf:"varint,12,opt,name=name_matches_only,json=nameMatchesOnly,proto3" json:"name_matches_only,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SearchRequest) Reset() {
@@ -237,6 +241,13 @@ func (x *SearchRequest) GetTypePriority() []SearchResultType {
 		return x.TypePriority
 	}
 	return nil
+}
+
+func (x *SearchRequest) GetNameMatchesOnly() bool {
+	if x != nil {
+		return x.NameMatchesOnly
+	}
+	return false
 }
 
 type SearchResponse struct {
@@ -1036,7 +1047,7 @@ var File_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_search_v1_search_proto_rawDesc = "" +
 	"\n" +
-	"\x16search/v1/search.proto\x12\tsearch.v1\"\xb1\x04\n" +
+	"\x16search/v1/search.proto\x12\tsearch.v1\"\xdd\x04\n" +
 	"\rSearchRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12>\n" +
@@ -1050,7 +1061,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x10metadata_filters\x18\t \x03(\v2-.search.v1.SearchRequest.MetadataFiltersEntryR\x0fmetadataFilters\x12\x16\n" +
 	"\x06offset\x18\n" +
 	" \x01(\x05R\x06offset\x12@\n" +
-	"\rtype_priority\x18\v \x03(\x0e2\x1b.search.v1.SearchResultTypeR\ftypePriority\x1aB\n" +
+	"\rtype_priority\x18\v \x03(\x0e2\x1b.search.v1.SearchResultTypeR\ftypePriority\x12*\n" +
+	"\x11name_matches_only\x18\f \x01(\bR\x0fnameMatchesOnly\x1aB\n" +
 	"\x14MetadataFiltersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"d\n" +

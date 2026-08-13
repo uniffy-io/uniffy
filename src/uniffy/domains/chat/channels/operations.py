@@ -19,6 +19,7 @@ from uniffy.core.auth.permissions import (
     role_can_view,
 )
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import (
     NotFoundError,
     PermissionDeniedError,
@@ -750,7 +751,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
             resolver = SenderResolver(self.session)
             info = await resolver.resolve_one(SenderType.USER, actor_user_id)
-            actor = f"[[[{info.display_name}|urn:uniffy:content:USER:{actor_user_id}]]]"
+            actor_label = sanitize_mention_label(info.display_name)
+            actor = f"[[[{actor_label}|urn:uniffy:content:USER:{actor_user_id}]]]"
             kind = "public" if channel.channel_type == ChannelType.PUBLIC else "private"
             msg_ops = ChatMessageOperations(self.session)
             await msg_ops.send_message(
@@ -2284,7 +2286,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
             def mention(sender_type: SenderType, subject_id: UUID) -> str:
                 info = infos.get(subject_id)
-                name = info.display_name if info else "Someone"
+                name = sanitize_mention_label(info.display_name if info else "Someone")
                 urn_type = "USER" if sender_type == SenderType.USER else "AGENT"
                 return f"[[[{name}|urn:uniffy:content:{urn_type}:{subject_id}]]]"
 
@@ -2325,7 +2327,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             user_result = await self.session.execute(
                 select(User.full_name).where(User.id == user_id)
             )
-            user_name = user_result.scalar_one_or_none() or "Someone"
+            user_name = sanitize_mention_label(user_result.scalar_one_or_none() or "Someone")
 
             mention = f"[[[{user_name}|urn:uniffy:content:USER:{user_id}]]]"
             content = f"{mention} joined the channel"

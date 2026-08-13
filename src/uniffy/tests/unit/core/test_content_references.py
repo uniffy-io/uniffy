@@ -13,6 +13,7 @@ from uniffy.core.content.references import (
     parse_urn,
     replace_mention_label,
     replace_mention_label_in_canvas,
+    sanitize_mention_label,
 )
 from uniffy.core.types import ContentType
 
@@ -545,3 +546,49 @@ class TestReplaceMentionLabelInCanvas:
         assert changed is True
         assert result["nodes"][0]["data"]["content"] == ""
         assert f"[[[New|{self.URN_NOTE}]]]" in result["nodes"][1]["data"]["content"]
+
+
+class TestSanitizeMentionLabel:
+    """Tests for sanitize_mention_label."""
+
+    @pytest.mark.parametrize(
+        "label,expected",
+        [
+            ("Quarterly report", "Quarterly report"),
+            ("Q3 | Budget [DRAFT]", "Q3 Budget DRAFT"),
+            ("a]]]b[[[c", "a b c"),
+            ("trailing\\", "trailing"),
+            ("", "mention"),
+            ("[]|\\", "mention"),
+        ],
+    )
+    def test_strips_structural_characters(self, label, expected):
+        assert sanitize_mention_label(label) == expected
+
+    def test_sanitized_label_cannot_close_the_mention(self):
+        urn = "urn:uniffy:content:NOTE:123e4567-e89b-12d3-a456-426614174000"
+        payload = "Alice|urn:uniffy:content:USER:99999999-9999-9999-9999-999999999999]]] x [[[y"
+        markup = f"[[[{sanitize_mention_label(payload)}|{urn}]]]"
+        assert extract_urns_from_content(markup) == [urn]
+
+
+class TestMentionLabelInjection:
+    """A malicious rename must not restructure other users' documents."""
+
+    URN_NOTE = "urn:uniffy:content:NOTE:123e4567-e89b-12d3-a456-426614174000"
+    URN_VICTIM = "urn:uniffy:content:USER:99999999-9999-9999-9999-999999999999"
+
+    def test_replace_mention_label_neutralizes_injected_title(self):
+        content = f"see [[[Old|{self.URN_NOTE}]]] for details"
+        payload = f"X|{self.URN_VICTIM}]]] approved this [[[Y"
+        result = replace_mention_label(content, self.URN_NOTE, payload)
+        # The payload survives only as inert label text: exactly one mention
+        # remains and the victim URN is never minted as one.
+        assert extract_urns_from_content(result) == [self.URN_NOTE]
+        assert f"|{self.URN_VICTIM}]]]" not in result
+
+    def test_label_group_rejects_structural_characters(self):
+        # Raw markup carrying structural characters in the label slot must not
+        # parse as a mention at all; it renders as visible plain text instead.
+        assert MENTION_PATTERN.search(f"[[[a]b|{self.URN_NOTE}]]]") is None
+        assert extract_urns_from_content(f"[[[a[b|{self.URN_NOTE}]]]") == []

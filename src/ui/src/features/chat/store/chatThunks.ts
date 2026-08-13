@@ -340,6 +340,7 @@ export const fetchMessages = createAsyncThunk<
             group.attachments.map((a) => ({
               id: a.id,
               fileId: a.fileId,
+              sourceFileId: a.sourceFileId || undefined,
               filename: a.filename,
               mimeType: a.mimeType,
               sizeBytes: Number(a.sizeBytes),

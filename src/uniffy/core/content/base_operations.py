@@ -260,8 +260,9 @@ class BaseContentOperations[TModel](ABC):
         self,
         model: TModel,
         skip_member_lookup: bool = False,
-    ) -> None:
-        """Index or re-index a content item in search.
+    ) -> dict[str, str] | None:
+        """Index or re-index a content item in search; returns the metadata
+        written so callers can publish it without recomputing.
 
         ``skip_member_lookup=True`` on create() avoids the member round-trip
         when no members exist yet.
@@ -285,6 +286,7 @@ class BaseContentOperations[TModel](ABC):
             model.organization_id, model,
         )
 
+        metadata = await self._get_search_metadata_async(model)
         await self.search_indexer.index(
             urn=build_content_urn(self.content_type, model.id),
             organization_id=model.organization_id,
@@ -302,8 +304,9 @@ class BaseContentOperations[TModel](ABC):
             blocked_group_ids=blocked_group_ids if blocked_group_ids else None,
             attendee_user_ids=await self._get_search_attendee_user_ids(model),
             tags=await self._get_search_tags_async(model),
-            metadata=await self._get_search_metadata_async(model),
+            metadata=metadata,
         )
+        return metadata
 
     async def _get_member_id_lists(
         self,

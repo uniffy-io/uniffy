@@ -61,7 +61,7 @@ interface ParsedMention {
 
 /** Parse mentions from markdown content using [[[label|urn]]] pattern */
 function parseMentionsFromContent(content: string): ParsedMention[] {
-  const mentionRegex = /\[\[\[([^\]|]+)\|([^\]]+)\]\]\]/g;
+  const mentionRegex = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
   const mentions: ParsedMention[] = [];
   const seenUrns = new Set<string>();
 

@@ -70,8 +70,8 @@ function TagContentRow({ item }: TagContentRowProps) {
                 aria-busy="true"
                 className={cn(
                     'flex items-center gap-3 rounded-md px-2 py-2',
-                    'border bg-gradient-to-r',
-                    config.theme.gradient,
+                    'border',
+                    config.theme.badgeBg,
                     config.theme.border,
                 )}
             >
@@ -96,11 +96,10 @@ function TagContentRow({ item }: TagContentRowProps) {
             to={urnToPath(item.urn)}
             className={cn(
                 'flex items-center gap-3 rounded-md px-2 py-2',
-                'border transition-all duration-150',
-                'bg-gradient-to-r hover:shadow-sm',
-                config.theme.gradient,
+                'border transition-colors duration-150',
+                config.theme.badgeBg,
                 config.theme.border,
-                config.theme.glow,
+                config.theme.borderHover,
             )}
         >
             <span

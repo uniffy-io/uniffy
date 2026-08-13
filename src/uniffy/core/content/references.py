@@ -6,7 +6,25 @@ from uuid import UUID
 from uniffy.core.types import ContentType
 
 # ``[[[label|urn]]]`` mentions, with backslash escapes some editors emit.
-MENTION_PATTERN = re.compile(r"\\?\[\\?\[\\?\[(.+?)\\?\|(.+?)\\?\]\\?\]\\?\]")
+# The label group excludes the structural characters so an interpolated title
+# can never close the mention early and restructure the surrounding markup.
+MENTION_PATTERN = re.compile(r"\\?\[\\?\[\\?\[([^\[\]|]+?)\\?\|(.+?)\\?\]\\?\]\\?\]")
+
+_LABEL_UNSAFE_RE = re.compile(r"[\[\]|\\]+")
+
+
+def sanitize_mention_label(label: str) -> str:
+    """Strip the characters that would let a label escape its slot.
+
+    The stored label is display fallback only (chips render the resolved live
+    title), so the strip is lossless for users while making it impossible for
+    an attacker-controlled title to mint mentions its author never wrote.
+    Every ``[[[label|urn]]]`` writer routes labels through here.
+    """
+    cleaned = _LABEL_UNSAFE_RE.sub(" ", label or "")
+    cleaned = " ".join(cleaned.split())
+    return cleaned or "mention"
+
 
 # Inline file URLs: /api/files, /api/media, /media-stream, /api/thumbnails over (org, file) uuids.
 _UUID_RE = r"[0-9a-fA-F-]{36}"
@@ -234,6 +252,10 @@ def replace_mention_label(content: str, target_urn: str, new_label: str) -> str:
     """Rewrite the label in every mention of ``target_urn`` while preserving escaping."""
     if not content or not target_urn:
         return content
+
+    # Rename fanout writes into other users' documents; a raw title here would
+    # inject markup with zero victim interaction.
+    new_label = sanitize_mention_label(new_label)
 
     def _replacer(match: re.Match) -> str:
         urn = match.group(2)

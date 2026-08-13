@@ -189,6 +189,20 @@ function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveS
       break;
     case UrnType.NOTE:
       state.noteNodeType = m['node_type'] || undefined;
+      if (m['child_count']) state.noteChildCount = parseInt(m['child_count'], 10) || 0;
+      break;
+    case UrnType.FOLDER:
+      if (m['file_count']) state.folderFileCount = parseInt(m['file_count'], 10) || 0;
+      if (m['folder_count']) state.folderSubfolderCount = parseInt(m['folder_count'], 10) || 0;
+      if (m['total_size']) state.folderTotalSize = parseInt(m['total_size'], 10) || 0;
+      break;
+    case UrnType.ROOM:
+      state.roomType = m['room_type'] || undefined;
+      if (m['capacity']) state.roomCapacity = parseInt(m['capacity'], 10) || 0;
+      state.roomBuilding = m['building'] || undefined;
+      state.roomFloor = m['floor'] || undefined;
+      state.roomLocation = m['location'] || undefined;
+      state.roomAmenities = m['amenities'] || undefined;
       break;
     case UrnType.PROJECT:
       if (m['completed_tasks']) state.projectCompletedTasks = parseInt(m['completed_tasks'], 10) || 0;

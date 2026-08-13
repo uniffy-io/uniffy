@@ -1,4 +1,5 @@
 import { buildUrn, UrnType } from '@/shared/utils/urn';
+import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
 
 /**
  * Blockquote plus an attribution line ending in a live file mention. Pastes into
@@ -14,6 +15,6 @@ export function buildQuoteMarkdown(
         .split('\n')
         .map((line) => `> ${line.trimEnd()}`.trimEnd())
         .join('\n');
-    const mention = `[[[${filename}|${buildUrn(UrnType.FILE, fileId)}]]]`;
+    const mention = `[[[${sanitizeMentionLabel(filename)}|${buildUrn(UrnType.FILE, fileId)}]]]`;
     return `${quoted}\n>\n> ${mention}, p. ${page}`;
 }

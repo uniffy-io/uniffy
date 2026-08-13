@@ -227,12 +227,22 @@
   color: hsl(var(--foreground)) !important;
 }
 
-/* Text spans OUTSIDE of code blocks - don't touch .cm-editor spans (syntax highlighting)
-   or mention expanded cards (they manage their own colors) */
-.crepe-editor > span:not(.mention-expanded-card),
-.crepe-editor .ProseMirror > p span:not(.mention-expanded-card):not(.mention-expanded-card *),
-.crepe-editor .milkdown-list-item-block span:not(.cm-editor span):not(.mention-expanded-card):not(.mention-expanded-card *) {
+/* Text spans OUTSIDE of code blocks - don't touch .cm-editor spans (syntax highlighting),
+   mention expanded cards, or people mention tokens (they manage their own colors) */
+.crepe-editor > span:not(.mention-expanded-card):not(.mention-token),
+.crepe-editor .ProseMirror > p span:not(.mention-expanded-card):not(.mention-expanded-card *):not(.mention-token),
+.crepe-editor .milkdown-list-item-block span:not(.cm-editor span):not(.mention-expanded-card):not(.mention-expanded-card *):not(.mention-token) {
   color: hsl(var(--foreground)) !important;
+}
+
+/* Pills never break internally; an expanded card flips the wrapper to inline
+   so the block-level card splits the paragraph's line boxes cleanly instead of
+   wrapping as one giant inline word. */
+.crepe-editor .mention-wrapper {
+  display: inline-block;
+}
+.crepe-editor .mention-wrapper:has(.mention-expanded-card) {
+  display: inline;
 }
 
 /* Mention expanded cards: fully isolate from editor typography overrides */

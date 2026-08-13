@@ -44,6 +44,11 @@ import {
   DOMAIN_TO_CONTENT_TYPE,
   type MentionEntry,
 } from "@shared/mentions/useMentionInput";
+import { sanitizeMentionLabel } from "@shared/mentions/mentionLabel";
+import { MentionSuggestionsBar } from "@features/mentions/MentionSuggestionsBar";
+import { useMentionTypeahead } from "@features/mentions/useMentionTypeahead";
+import { applyMentionPick } from "@features/mentions/applyMentionPick";
+import type { SerializedSearchResult } from "@features/search/searchSerializer";
 import type { SerializedMessage } from "@features/chat/chatSerializer";
 
 const GROUP_WINDOW_SECONDS = 300;
@@ -73,6 +78,9 @@ export function ChatThreadScreen() {
   const mentionsRef = useRef<MentionEntry[]>([]);
   const selectionRef = useRef({ start: 0, end: 0 });
   const inputRef = useRef<TextInput>(null);
+  // Cursor mirrored into state so the @-typeahead recomputes per keystroke.
+  const [cursor, setCursor] = useState(0);
+  const mentionTypeahead = useMentionTypeahead(draft, cursor);
   const attachments = useComposerAttachments();
   const screenFocused = useScreenFocusRef();
 
@@ -105,14 +113,29 @@ export function ChatThreadScreen() {
     setTimeout(() => inputRef.current?.focus(), 30);
   }, []);
 
+  const pickMentionSuggestion = useCallback(
+    (item: SerializedSearchResult) => {
+      const token = mentionTypeahead.token;
+      if (!token) return;
+      const pick = applyMentionPick(draft, token, item);
+      mentionsRef.current.push(pick.mention);
+      setDraft(pick.text);
+      selectionRef.current = { start: pick.cursor, end: pick.cursor };
+      setCursor(pick.cursor);
+      setTimeout(() => inputRef.current?.setSelection(pick.cursor, pick.cursor), 30);
+    },
+    [draft, mentionTypeahead.token],
+  );
+
   // A reference picked in the @ overlay is inserted at the cursor as @label.
   // Focus-guarded: the parent channel screen beneath has the same effect.
   useEffect(() => {
     if (!pendingReference || !screenFocused.current) return;
     const contentType = DOMAIN_TO_CONTENT_TYPE[pendingReference.domain] ?? "NOTE";
     const urn = `urn:uniffy:content:${contentType}:${pendingReference.id}`;
-    mentionsRef.current.push({ label: pendingReference.label, urn });
-    insertAtCursor(`@${pendingReference.label} `, true);
+    const label = sanitizeMentionLabel(pendingReference.label);
+    mentionsRef.current.push({ label, urn });
+    insertAtCursor(`@${label} `, true);
     clearPendingReference();
     setTimeout(() => inputRef.current?.focus(), 50);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -245,12 +268,23 @@ export function ChatThreadScreen() {
         />
       )}
 
+      {mentionTypeahead.token ? (
+        <MentionSuggestionsBar
+          results={mentionTypeahead.results}
+          isLoading={mentionTypeahead.isLoading}
+          onPick={pickMentionSuggestion}
+        />
+      ) : null}
+
       <ChatComposer
         T={T}
         inputRef={inputRef}
         draft={draft}
         onChangeDraft={setDraft}
-        onSelectionChange={(e) => (selectionRef.current = e.nativeEvent.selection)}
+        onSelectionChange={(e) => {
+          selectionRef.current = e.nativeEvent.selection;
+          setCursor(e.nativeEvent.selection.start);
+        }}
         placeholder="Reply in thread"
         canSend={canSend}
         onSend={handleSend}

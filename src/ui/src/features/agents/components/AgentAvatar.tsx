@@ -64,9 +64,10 @@ export function AgentAvatar({
     const fallback = avatarEmoji || null;
 
     // Same identity treatment as user avatars: deterministic gradient keyed
-    // by name (see components/subject/utils.ts), initials on top.
+    // by name (see components/subject/utils.ts), initials on top. A span, not
+    // a div, so the avatar stays valid HTML inside paragraph-hosted previews.
     return (
-        <div
+        <span
             className={cn(
                 "rounded-full flex items-center justify-center font-medium text-white shrink-0",
                 sizeClass,
@@ -82,6 +83,6 @@ export function AgentAvatar({
                     ? getInitials(agentName)
                     : <Robot size={ICON_SIZES[size]} />
             )}
-        </div>
+        </span>
     );
 }

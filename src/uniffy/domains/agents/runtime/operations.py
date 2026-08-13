@@ -15,6 +15,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.memory import MemoryScope
@@ -399,7 +400,7 @@ def _file_urn(file_id: str) -> str:
 
 
 def _file_mention(f: FileContext) -> str:
-    return f"[[[{f.filename}|{_file_urn(f.file_id)}]]]"
+    return f"[[[{sanitize_mention_label(f.filename)}|{_file_urn(f.file_id)}]]]"
 
 
 def _build_stored_content(

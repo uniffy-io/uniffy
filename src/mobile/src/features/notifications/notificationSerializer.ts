@@ -26,7 +26,7 @@ function tsToSeconds(ts: Timestamp | undefined): number {
   return typeof ts.seconds === "bigint" ? Number(ts.seconds) : ts.seconds;
 }
 
-const MENTION_RE = /\[\[\[([^|]+)\|[^\]]+\]\]\]/g;
+const MENTION_RE = /\[\[\[([^[\]|]+)\|[^\]]+\]\]\]/g;
 
 function stripMentions(text: string): string {
   return text.replace(MENTION_RE, (_, label) => `@${label}`);

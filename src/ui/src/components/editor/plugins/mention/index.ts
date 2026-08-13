@@ -8,6 +8,7 @@ import type { Root } from 'react-dom/client';
 import React from 'react';
 import { Provider } from 'react-redux';
 import { MentionChip, MentionDisplayBridge } from '@/components/mention';
+import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
 import { getStoreRef } from '@/app/storeRef';
 import type { AppDispatch } from '@/app/store';
 import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
@@ -101,7 +102,7 @@ export const mentionNode = $node('mention', () => ({
   },
 }));
 
-const MENTION_REGEX = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+const MENTION_REGEX = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
 
 interface MentionNode extends UnistNode {
   type: 'mention';
@@ -116,7 +117,7 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
     const toMarkdownExtension = {
       handlers: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mention: (node: any) => `[[[${node.label}|${node.urn}]]]`,
+        mention: (node: any) => `[[[${sanitizeMentionLabel(node.label)}|${node.urn}]]]`,
       },
     };
 
@@ -206,6 +207,7 @@ class MentionNodeView implements NodeView {
   getPos: () => number | undefined;
   root: Root;
   destroyed: boolean;
+  selected = false;
 
   constructor(node: Node, view: EditorView, getPos: () => number | undefined) {
     this.node = node;
@@ -216,7 +218,6 @@ class MentionNodeView implements NodeView {
     this.dom = document.createElement('span');
     this.dom.className = 'mention-wrapper';
     this.dom.style.cursor = 'pointer';
-    this.dom.style.display = 'inline-block';
     this.dom.contentEditable = 'false';
 
     // Capture-phase mousedown intercepts before ProseMirror's own selection handling.
@@ -299,7 +300,7 @@ class MentionNodeView implements NodeView {
     this.view.dispatch(tr);
   };
 
-  render(selected = false) {
+  render() {
     if (this.destroyed) return;
 
     const { urn, label } = this.node.attrs as { urn: string; label: string };
@@ -308,7 +309,7 @@ class MentionNodeView implements NodeView {
     const mentionElement = React.createElement(MentionChip, {
       urn,
       label,
-      selected,
+      selected: this.selected,
       onReplaceWithMedia: this.handleReplaceWithMedia,
     });
 
@@ -335,12 +336,14 @@ class MentionNodeView implements NodeView {
 
   selectNode() {
     this.dom.classList.add('ProseMirror-selectednode');
-    this.render(true);
+    this.selected = true;
+    this.render();
   }
 
   deselectNode() {
     this.dom.classList.remove('ProseMirror-selectednode');
-    this.render(false);
+    this.selected = false;
+    this.render();
   }
 
   destroy() {

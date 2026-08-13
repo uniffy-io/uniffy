@@ -263,7 +263,7 @@ export function SearchResultsList({
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-2 mx-1.5 rounded-lg text-left',
                       'transition-all duration-150 relative',
-                      isSelected ? cn('bg-muted/80', theme.glow) : 'hover:bg-muted/40'
+                      isSelected ? 'bg-muted/80' : 'hover:bg-muted/40'
                     )}
                     style={{ width: 'calc(100% - 12px)' }}
                   >

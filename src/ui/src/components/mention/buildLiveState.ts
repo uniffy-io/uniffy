@@ -41,6 +41,18 @@ export function buildLiveStateFromMetadata(
   if (metadata.file_size) state.fileSize = parseInt(metadata.file_size, 10) || undefined;
 
   if (metadata.node_type) state.noteNodeType = metadata.node_type;
+  if (metadata.child_count) state.noteChildCount = parseInt(metadata.child_count, 10) || 0;
+
+  if (metadata.file_count) state.folderFileCount = parseInt(metadata.file_count, 10) || 0;
+  if (metadata.folder_count) state.folderSubfolderCount = parseInt(metadata.folder_count, 10) || 0;
+  if (metadata.total_size) state.folderTotalSize = parseInt(metadata.total_size, 10) || 0;
+
+  if (metadata.room_type) state.roomType = metadata.room_type;
+  if (metadata.capacity) state.roomCapacity = parseInt(metadata.capacity, 10) || 0;
+  if (metadata.building) state.roomBuilding = metadata.building;
+  if (metadata.floor) state.roomFloor = metadata.floor;
+  if (metadata.location) state.roomLocation = metadata.location;
+  if (metadata.amenities) state.roomAmenities = metadata.amenities;
 
   if (metadata.parent_label) state.parentLabel = metadata.parent_label;
 

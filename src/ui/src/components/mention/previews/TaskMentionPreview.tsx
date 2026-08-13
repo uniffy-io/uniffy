@@ -62,10 +62,6 @@ export function TaskMentionPreview({
 
   return (
     <>
-
-      {/* Teal gradient wash (task URN color) */}
-      <span className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-teal-500/10 via-teal-500/5 to-transparent pointer-events-none" />
-
       {/* Task identifier row */}
       <span className="block relative px-4 pr-10 pt-3 pb-1.5 pl-5">
         <span className="flex items-center justify-between gap-2">

@@ -1,14 +1,15 @@
 import { useCallback, useMemo } from 'react';
 import { CaretUp } from '@phosphor-icons/react';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
-import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 import {
   TaskMentionPreview,
   CalendarMentionPreview,
   ProjectMentionPreview,
   FileMentionPreview,
+  FolderMentionPreview,
   NoteMentionPreview,
+  RoomMentionPreview,
   UserMentionPreview,
   ChatMentionPreview,
   ChatMessageMentionPreview,
@@ -38,7 +39,6 @@ export function MentionExpandedCard({
   onEmbed,
 }: MentionExpandedCardProps) {
   const parsed = parseUrn(urn);
-  const glow = getContentTypeConfig(parsed.type).theme.glow;
 
   const handleCopyLink = useCallback(() => {
     navigator.clipboard.writeText(urn);
@@ -68,8 +68,12 @@ export function MentionExpandedCard({
         return <ProjectMentionPreview {...previewProps} />;
       case UrnType.FILE:
         return <FileMentionPreview {...previewProps} onEmbed={onEmbed} />;
+      case UrnType.FOLDER:
+        return <FolderMentionPreview {...previewProps} />;
       case UrnType.NOTE:
         return <NoteMentionPreview {...previewProps} />;
+      case UrnType.ROOM:
+        return <RoomMentionPreview {...previewProps} />;
       case UrnType.USER:
         return <UserMentionPreview {...previewProps} />;
       case UrnType.CHAT:
@@ -88,17 +92,16 @@ export function MentionExpandedCard({
   return (
     <span
       className={cn(
-        'mention-expanded-card not-prose relative block',
-        'w-80 my-2',
-        'bg-card/95 backdrop-blur-xl',
+        'mention-expanded-card not-prose group/card relative block',
+        'w-full max-w-md my-2',
+        'bg-card',
         'text-card-foreground',
-        'rounded-xl shadow-md',
-        glow,
-        'border border-border/50',
+        'rounded-lg shadow-xs',
+        'border border-border',
         'overflow-hidden',
         'cursor-pointer',
-        'transition-all duration-200',
-        'hover:shadow-lg',
+        'transition-shadow duration-200',
+        'hover:shadow-sm',
       )}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest('button, a')) return;
@@ -111,7 +114,7 @@ export function MentionExpandedCard({
       <button
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onCollapse(); }}
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+        className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 transition-opacity"
         title="Collapse to chip"
       >
         <CaretUp size={12} weight="bold" />

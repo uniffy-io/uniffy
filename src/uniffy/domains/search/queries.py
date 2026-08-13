@@ -6,7 +6,7 @@ Permission filtering combines `access_mode` / `baseline_role` with explicit
 
 import contextlib
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -100,7 +100,9 @@ class SearchResult:
         updated_at = None
         if hit.get("updated_at"):
             with contextlib.suppress(ValueError, TypeError):
-                updated_at = datetime.fromtimestamp(hit["updated_at"])
+                # Aware UTC, so isoformat() carries an offset - a bare timestamp
+                # string gets parsed as LOCAL time by `new Date()` in the browser.
+                updated_at = datetime.fromtimestamp(hit["updated_at"], UTC)
 
         formatted = hit.get("_formatted") or {}
         metadata = hit.get("metadata") or {}
@@ -174,6 +176,7 @@ async def execute_search(
     metadata_filters: dict[str, str] | None = None,
     limit: int = 20,
     offset: int = 0,
+    name_matches_only: bool = False,
 ) -> tuple[list[SearchResult], int]:
     client = get_meilisearch_client()
 
@@ -185,6 +188,7 @@ async def execute_search(
         type_filters=type_filters,
         tag_filters=tag_filters,
         my_content_only=my_content_only,
+        attributes_to_search_on=["title"] if name_matches_only else None,
         owner_filter=owner_filter,
         metadata_filters=metadata_filters,
         limit=limit,

@@ -43,7 +43,7 @@ SEARCH_RESULT_TYPE_AGENT_FOLDER: SearchResultType
 SEARCH_RESULT_TYPE_TEAM: SearchResultType
 
 class SearchRequest(_message.Message):
-    __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter", "metadata_filters", "offset", "type_priority")
+    __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter", "metadata_filters", "offset", "type_priority", "name_matches_only")
     class MetadataFiltersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -62,6 +62,7 @@ class SearchRequest(_message.Message):
     METADATA_FILTERS_FIELD_NUMBER: _ClassVar[int]
     OFFSET_FIELD_NUMBER: _ClassVar[int]
     TYPE_PRIORITY_FIELD_NUMBER: _ClassVar[int]
+    NAME_MATCHES_ONLY_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     query: str
     type_filters: _containers.RepeatedScalarFieldContainer[SearchResultType]
@@ -73,7 +74,8 @@ class SearchRequest(_message.Message):
     metadata_filters: _containers.ScalarMap[str, str]
     offset: int
     type_priority: _containers.RepeatedScalarFieldContainer[SearchResultType]
-    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ..., tag_filters: _Optional[_Iterable[str]] = ..., project_filters: _Optional[_Iterable[str]] = ..., my_content_only: _Optional[bool] = ..., owner_filter: _Optional[str] = ..., metadata_filters: _Optional[_Mapping[str, str]] = ..., offset: _Optional[int] = ..., type_priority: _Optional[_Iterable[_Union[SearchResultType, str]]] = ...) -> None: ...
+    name_matches_only: bool
+    def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ..., tag_filters: _Optional[_Iterable[str]] = ..., project_filters: _Optional[_Iterable[str]] = ..., my_content_only: _Optional[bool] = ..., owner_filter: _Optional[str] = ..., metadata_filters: _Optional[_Mapping[str, str]] = ..., offset: _Optional[int] = ..., type_priority: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., name_matches_only: _Optional[bool] = ...) -> None: ...
 
 class SearchResponse(_message.Message):
     __slots__ = ("items", "total_count")

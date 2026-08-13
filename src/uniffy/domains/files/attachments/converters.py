@@ -49,8 +49,14 @@ def attachment_to_proto(
     attachment: Attachment,
     file: File,
     owner: User | None = None,
+    include_source_file_id: bool = False,
 ) -> ProtoAttachment:
-    """Convert an Attachment row plus its linked file into a proto message."""
+    """Convert an Attachment row plus its linked file into a proto message.
+
+    ``source_file_id`` identifies the original the copy was made from, which the
+    reader may have no access to, so it is emitted only when the caller has
+    established that they do (default deny).
+    """
     proto = ProtoAttachment(
         id=str(attachment.id),
         organization_id=str(attachment.organization_id),
@@ -64,6 +70,9 @@ def attachment_to_proto(
         mime_type=file.mime_type,
         size_bytes=file.size_bytes,
     )
+
+    if attachment.source_file_id and include_source_file_id:
+        proto.source_file_id = str(attachment.source_file_id)
 
     if owner:
         proto.owner_info.CopyFrom(

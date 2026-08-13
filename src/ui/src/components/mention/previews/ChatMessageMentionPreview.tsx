@@ -41,8 +41,6 @@ export function ChatMessageMentionPreview({
 
   return (
     <>
-      <span className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-violet-500/10 via-violet-500/5 to-transparent pointer-events-none" />
-
       {/* Header: avatar (initials) + sender name + parent channel + timestamp */}
       <span className="block relative px-4 pr-10 pt-3 pb-1.5 pl-5">
         <span className="flex items-start gap-3">

@@ -2,8 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { TextInput } from "react-native";
 import { useUniffy } from "@core/providers/UniffyContext";
 import { useScreenFocusRef } from "@shared/hooks/useScreenFocusRef";
+import { sanitizeMentionLabel } from "@shared/mentions/mentionLabel";
 
-export const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+export const MENTION_RE = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
 
 export type MentionEntry = { label: string; urn: string };
 
@@ -31,7 +32,8 @@ export function toCanonical(display: string, mentions: MentionEntry[]): string {
   let result = display;
   const sorted = [...mentions].sort((a, b) => b.label.length - a.label.length);
   for (const { label, urn } of sorted) {
-    result = result.replaceAll(`@${label}`, `[[[${label}|${urn}]]]`);
+    // Match on what the composer shows, emit a label that cannot escape its slot.
+    result = result.replaceAll(`@${label}`, `[[[${sanitizeMentionLabel(label)}|${urn}]]]`);
   }
   return result;
 }
@@ -78,9 +80,10 @@ export function useMentionInput(initialCanonical?: string) {
     if (pendingReference && screenFocused.current) {
       const contentType = DOMAIN_TO_CONTENT_TYPE[pendingReference.domain] || "NOTE";
       const urn = `urn:uniffy:content:${contentType}:${pendingReference.id}`;
-      mentionsRef.current.push({ label: pendingReference.label, urn });
+      const label = sanitizeMentionLabel(pendingReference.label);
+      mentionsRef.current.push({ label, urn });
 
-      const mention = `@${pendingReference.label}`;
+      const mention = `@${label}`;
       const pos = cursorPosRef.current;
       const before = displayText.substring(0, pos);
       const after = displayText.substring(pos);

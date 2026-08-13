@@ -44,8 +44,6 @@ export function TagMentionPreview({
 
   return (
     <>
-      <span className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
-
       <span className="block relative px-4 pr-10 pt-3 pb-1 pl-5">
         <span className="flex items-center gap-2.5">
           <span className={`grid place-items-center shrink-0 w-7 h-7 rounded-md border ${palette.bg} ${palette.text} ${palette.border}`}>

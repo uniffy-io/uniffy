@@ -39,7 +39,7 @@ export interface GraphData {
 
 /** Parse [[[label|urn]]] mentions from markdown. */
 export function parseMentionsFromContent(content: string): Array<{ label: string; urn: string }> {
-  const mentionRegex = /\[\[\[([^\]|]+)\|([^\]]+)\]\]\]/g;
+  const mentionRegex = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
   const mentions: Array<{ label: string; urn: string }> = [];
   const seenUrns = new Set<string>();
 

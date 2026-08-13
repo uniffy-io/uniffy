@@ -23,6 +23,7 @@ const userAgentInterceptor: Interceptor = (next) => async (req) => {
 // refresh-on-401: the RefreshToken RPC itself must never recurse into refresh.
 export const publicTransport = createConnectTransport({
   baseUrl: SENTINEL_BASE_URL,
+  useBinaryFormat: true,
   interceptors: [userAgentInterceptor],
   fetch: serverRewritingFetch(globalThis.fetch),
   defaultTimeoutMs: DEFAULT_RPC_TIMEOUT_MS,

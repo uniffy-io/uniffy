@@ -53,6 +53,7 @@ class SearchOperations:
         limit: int = 20,
         offset: int = 0,
         type_priority: list[str] | None = None,
+        name_matches_only: bool = False,
     ) -> tuple[list[SearchResult], int]:
         await self._require_org_member(user_id, organization_id)
 
@@ -76,6 +77,7 @@ class SearchOperations:
             metadata_filters=metadata_filters,
             limit=window if window else limit,
             offset=0 if window else offset,
+            name_matches_only=name_matches_only,
         )
 
         # Tag entity rows are indexed OPEN_TO_ORG so Meili lets every org

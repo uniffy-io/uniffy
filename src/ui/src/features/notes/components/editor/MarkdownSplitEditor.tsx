@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
 import { EditorView, keymap } from '@codemirror/view';
 import { EditorState, Compartment } from '@codemirror/state';
 import { basicSetup } from 'codemirror';
@@ -85,7 +86,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
       if (!ch || /\s/.test(ch)) break;
       to += 1;
     }
-    const label = result.title || 'Untitled';
+    const label = sanitizeMentionLabel(result.title || 'Untitled');
     const insertion = `[[[${label}|${result.urn}]]] `;
     view.dispatch({
       changes: { from: popup.triggerFrom, to, insert: insertion },

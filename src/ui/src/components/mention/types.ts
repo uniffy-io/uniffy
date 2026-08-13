@@ -53,6 +53,22 @@ export interface MentionLiveState {
   noteIsBeingEdited?: boolean;
   noteEditorName?: string;
   noteNodeType?: string;
+  /** Direct child notes; only present for FOLDER node_type notes. */
+  noteChildCount?: number;
+
+  // FOLDER (direct-children stats, denormalized at index time)
+  folderFileCount?: number;
+  folderSubfolderCount?: number;
+  folderTotalSize?: number;
+
+  // ROOM
+  roomType?: string;
+  roomCapacity?: number;
+  roomBuilding?: string;
+  roomFloor?: string;
+  roomLocation?: string;
+  /** Pre-joined display string, capped server-side. */
+  roomAmenities?: string;
 
   // PROJECT
   projectCompletedTasks?: number;
