@@ -11,8 +11,6 @@ from loguru import logger
 from uniffy_proto.auth.v1.mfa_pb2 import (
     AdminResetMfaRequest,
     AdminResetMfaResponse,
-    ApprovePlatformPeerResetRequest,
-    ApprovePlatformPeerResetResponse,
     BeginEnrollmentRequest,
     BeginEnrollmentResponse,
     ConfirmEnrollmentRequest,
@@ -21,19 +19,10 @@ from uniffy_proto.auth.v1.mfa_pb2 import (
     DisableMfaResponse,
     GetMfaStatusRequest,
     GetMfaStatusResponse,
-    ListPlatformPeerResetsRequest,
-    ListPlatformPeerResetsResponse,
-    PlatformResetMfaRequest,
-    PlatformResetMfaResponse,
     RegenerateRecoveryCodesRequest,
     RegenerateRecoveryCodesResponse,
-    RequestPlatformPeerResetRequest,
-    RequestPlatformPeerResetResponse,
     VerifyMfaRequest,
     VerifyMfaResponse,
-)
-from uniffy_proto.auth.v1.mfa_pb2 import (
-    PendingPeerReset as PendingPeerResetProto,
 )
 
 from uniffy.core.converters import datetime_to_timestamp, domain_type_to_proto
@@ -290,109 +279,6 @@ class MfaHandlers:
             raise ConnectError(Code.NOT_FOUND, str(exc))
         except Exception as exc:
             logger.exception(f"AdminResetMfa failed: {exc}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def platform_reset_mfa(
-        self,
-        request: PlatformResetMfaRequest,
-        ctx: RequestContext,
-    ) -> PlatformResetMfaResponse:
-        actor_id = get_user_id_from_context(ctx)
-        try:
-            async with open_session() as session:
-                ops = MfaOperations(session)
-                await ops.platform_reset_mfa(
-                    actor_user_id=actor_id,
-                    target_user_id=UUID(request.target_user_id),
-                    reason=request.reason,
-                )
-                return PlatformResetMfaResponse(success=True)
-        except PermissionDeniedError as exc:
-            raise ConnectError(Code.PERMISSION_DENIED, str(exc))
-        except NotFoundError as exc:
-            raise ConnectError(Code.NOT_FOUND, str(exc))
-        except Exception as exc:
-            logger.exception(f"PlatformResetMfa failed: {exc}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def request_platform_peer_reset(
-        self,
-        request: RequestPlatformPeerResetRequest,
-        ctx: RequestContext,
-    ) -> RequestPlatformPeerResetResponse:
-        actor_id = get_user_id_from_context(ctx)
-        try:
-            async with open_session() as session:
-                ops = MfaOperations(session)
-                request_id, expires_at = await ops.request_platform_peer_reset(
-                    actor_user_id=actor_id,
-                    target_user_id=UUID(request.target_user_id),
-                    reason=request.reason,
-                )
-                response = RequestPlatformPeerResetResponse(
-                    request_id=str(request_id),
-                )
-                response.expires_at.CopyFrom(datetime_to_timestamp(expires_at))
-                return response
-        except PermissionDeniedError as exc:
-            raise ConnectError(Code.PERMISSION_DENIED, str(exc))
-        except NotFoundError as exc:
-            raise ConnectError(Code.NOT_FOUND, str(exc))
-        except Exception as exc:
-            logger.exception(f"RequestPlatformPeerReset failed: {exc}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def list_platform_peer_resets(
-        self,
-        request: ListPlatformPeerResetsRequest,
-        ctx: RequestContext,
-    ) -> ListPlatformPeerResetsResponse:
-        del request
-        actor_id = get_user_id_from_context(ctx)
-        try:
-            async with open_session() as session:
-                ops = MfaOperations(session)
-                pending = await ops.list_platform_peer_resets(actor_id)
-        except PermissionDeniedError as exc:
-            raise ConnectError(Code.PERMISSION_DENIED, str(exc))
-        except Exception as exc:
-            logger.exception(f"ListPlatformPeerResets failed: {exc}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-        response = ListPlatformPeerResetsResponse()
-        for p in pending:
-            row = PendingPeerResetProto(
-                request_id=str(p.request_id),
-                requester_user_id=str(p.requester_user_id),
-                requester_email=p.requester_email,
-                target_user_id=str(p.target_user_id),
-                target_email=p.target_email,
-                reason=p.reason,
-            )
-            row.created_at.CopyFrom(datetime_to_timestamp(p.created_at))
-            row.expires_at.CopyFrom(datetime_to_timestamp(p.expires_at))
-            response.requests.append(row)
-        return response
-
-    async def approve_platform_peer_reset(
-        self,
-        request: ApprovePlatformPeerResetRequest,
-        ctx: RequestContext,
-    ) -> ApprovePlatformPeerResetResponse:
-        actor_id = get_user_id_from_context(ctx)
-        try:
-            async with open_session() as session:
-                ops = MfaOperations(session)
-                await ops.approve_platform_peer_reset(
-                    actor_user_id=actor_id,
-                    request_id=UUID(request.request_id),
-                )
-                return ApprovePlatformPeerResetResponse(success=True)
-        except PermissionDeniedError as exc:
-            raise ConnectError(Code.PERMISSION_DENIED, str(exc))
-        except NotFoundError as exc:
-            raise ConnectError(Code.NOT_FOUND, str(exc))
-        except Exception as exc:
-            logger.exception(f"ApprovePlatformPeerReset failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
 

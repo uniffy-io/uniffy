@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { friendlyErrorMessage } from '@/config';
 import { supportSessionsApi } from '@/features/platform/api/supportSessionsApi';
-import { SupportSessionScope } from '@uniffy/proto/superadmin/v1/support_session_pb';
+import { SupportSessionScope } from '@uniffy/proto/support/v1/support_consent_pb';
 
 interface Props {
     organizationId: string;

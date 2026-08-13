@@ -134,7 +134,7 @@ class TestTransitionGuard:
 
 class TestConverters:
     def test_scope_round_trip(self) -> None:
-        from uniffy_proto.superadmin.v1.support_session_pb2 import (
+        from uniffy_proto.support.v1.support_consent_pb2 import (
             SupportSessionScope as ScopeProto,
         )
 
@@ -148,7 +148,7 @@ class TestConverters:
         )
 
     def test_scope_unspecified_defaults_to_read_only(self) -> None:
-        from uniffy_proto.superadmin.v1.support_session_pb2 import (
+        from uniffy_proto.support.v1.support_consent_pb2 import (
             SupportSessionScope as ScopeProto,
         )
 
@@ -158,14 +158,14 @@ class TestConverters:
         )
 
     def test_state_unspecified_returns_none(self) -> None:
-        from uniffy_proto.superadmin.v1.support_session_pb2 import (
+        from uniffy_proto.support.v1.support_consent_pb2 import (
             SupportSessionState as StateProto,
         )
 
         assert state_from_proto(StateProto.SUPPORT_SESSION_STATE_UNSPECIFIED) is None
 
     def test_state_round_trip(self) -> None:
-        from uniffy_proto.superadmin.v1.support_session_pb2 import (
+        from uniffy_proto.support.v1.support_consent_pb2 import (
             SupportSessionState as StateProto,
         )
 

@@ -1,4 +1,4 @@
-"""RPC handlers for ``superadmin.v1.SupportService``."""
+"""RPC handlers for the operator and tenant halves of support sessions."""
 
 from __future__ import annotations
 
@@ -9,20 +9,22 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.superadmin.v1.support_session_pb2 import (
-    ApproveSessionRequest,
-    ApproveSessionResponse,
-    GetOrgConsentModeRequest,
-    GetOrgConsentModeResponse,
     ListAllSessionsRequest,
     ListAllSessionsResponse,
     ListMySessionsRequest,
     ListMySessionsResponse,
+    RequestSessionRequest,
+    RequestSessionResponse,
+)
+from uniffy_proto.support.v1.support_consent_pb2 import (
+    ApproveSessionRequest,
+    ApproveSessionResponse,
+    GetOrgConsentModeRequest,
+    GetOrgConsentModeResponse,
     ListOrgSessionsRequest,
     ListOrgSessionsResponse,
     RejectSessionRequest,
     RejectSessionResponse,
-    RequestSessionRequest,
-    RequestSessionResponse,
     RevokeSessionRequest,
     RevokeSessionResponse,
     SetOrgConsentModeRequest,
@@ -64,11 +66,13 @@ def _map_domain_error(exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, ValueError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
-    logger.exception("Unhandled error in SupportService handler")
+    logger.exception("Unhandled error in support session handler")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 
 class SupportSessionHandlers:
+    """Operator-side RPCs, mounted under ``superadmin.v1.SupportService``."""
+
     async def request_session(
         self, request: RequestSessionRequest, ctx: RequestContext
     ) -> RequestSessionResponse:
@@ -89,6 +93,58 @@ class SupportSessionHandlers:
         except Exception as exc:
             raise _map_domain_error(exc) from exc
         return RequestSessionResponse(session=session_to_proto(view))
+
+    async def list_my_sessions(
+        self, request: ListMySessionsRequest, ctx: RequestContext
+    ) -> ListMySessionsResponse:
+        actor_id = get_user_id_from_context(ctx)
+        try:
+            async with open_session() as session:
+                page = await SupportSessionOperations(session).list_my_sessions(
+                    actor_user_id=actor_id,
+                    page=request.page,
+                    page_size=request.page_size,
+                    include_inactive=request.include_inactive,
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+        return ListMySessionsResponse(
+            sessions=[session_to_proto(v) for v in page.sessions],
+            total_count=page.total_count,
+            page=page.page,
+            page_size=page.page_size,
+        )
+
+    async def list_all_sessions(
+        self, request: ListAllSessionsRequest, ctx: RequestContext
+    ) -> ListAllSessionsResponse:
+        actor_id = get_user_id_from_context(ctx)
+        state = state_from_proto(request.state)
+        try:
+            async with open_session() as session:
+                page = await SupportSessionOperations(session).list_all_sessions(
+                    actor_user_id=actor_id,
+                    page=request.page,
+                    page_size=request.page_size,
+                    state=state,
+                    search=request.search,
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+        return ListAllSessionsResponse(
+            sessions=[session_to_proto(v) for v in page.sessions],
+            total_count=page.total_count,
+            page=page.page,
+            page_size=page.page_size,
+        )
+
+
+class SupportConsentHandlers:
+    """Tenant-side RPCs, mounted under ``support.v1.SupportConsentService``."""
 
     async def approve_session(
         self, request: ApproveSessionRequest, ctx: RequestContext
@@ -143,29 +199,6 @@ class SupportSessionHandlers:
             raise _map_domain_error(exc) from exc
         return RevokeSessionResponse(session=session_to_proto(view))
 
-    async def list_my_sessions(
-        self, request: ListMySessionsRequest, ctx: RequestContext
-    ) -> ListMySessionsResponse:
-        actor_id = get_user_id_from_context(ctx)
-        try:
-            async with open_session() as session:
-                page = await SupportSessionOperations(session).list_my_sessions(
-                    actor_user_id=actor_id,
-                    page=request.page,
-                    page_size=request.page_size,
-                    include_inactive=request.include_inactive,
-                )
-        except ConnectError:
-            raise
-        except Exception as exc:
-            raise _map_domain_error(exc) from exc
-        return ListMySessionsResponse(
-            sessions=[session_to_proto(v) for v in page.sessions],
-            total_count=page.total_count,
-            page=page.page,
-            page_size=page.page_size,
-        )
-
     async def list_org_sessions(
         self, request: ListOrgSessionsRequest, ctx: RequestContext
     ) -> ListOrgSessionsResponse:
@@ -185,31 +218,6 @@ class SupportSessionHandlers:
         except Exception as exc:
             raise _map_domain_error(exc) from exc
         return ListOrgSessionsResponse(
-            sessions=[session_to_proto(v) for v in page.sessions],
-            total_count=page.total_count,
-            page=page.page,
-            page_size=page.page_size,
-        )
-
-    async def list_all_sessions(
-        self, request: ListAllSessionsRequest, ctx: RequestContext
-    ) -> ListAllSessionsResponse:
-        actor_id = get_user_id_from_context(ctx)
-        state = state_from_proto(request.state)
-        try:
-            async with open_session() as session:
-                page = await SupportSessionOperations(session).list_all_sessions(
-                    actor_user_id=actor_id,
-                    page=request.page,
-                    page_size=request.page_size,
-                    state=state,
-                    search=request.search,
-                )
-        except ConnectError:
-            raise
-        except Exception as exc:
-            raise _map_domain_error(exc) from exc
-        return ListAllSessionsResponse(
             sessions=[session_to_proto(v) for v in page.sessions],
             total_count=page.total_count,
             page=page.page,

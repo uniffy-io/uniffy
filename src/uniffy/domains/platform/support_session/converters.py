@@ -1,23 +1,23 @@
-"""Proto <-> domain mapping for ``superadmin.v1.SupportService``."""
+"""Proto <-> domain mapping for support session views and enums."""
 
 from __future__ import annotations
 
 from datetime import datetime
 
 from google.protobuf.timestamp_pb2 import Timestamp
-from uniffy_proto.superadmin.v1.support_session_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb2 import (
     SupportConsentMode as SupportConsentModeProto,
 )
-from uniffy_proto.superadmin.v1.support_session_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb2 import (
     SupportConsentModeView as SupportConsentModeViewProto,
 )
-from uniffy_proto.superadmin.v1.support_session_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb2 import (
     SupportSession as SupportSessionProto,
 )
-from uniffy_proto.superadmin.v1.support_session_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb2 import (
     SupportSessionScope as SupportSessionScopeProto,
 )
-from uniffy_proto.superadmin.v1.support_session_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb2 import (
     SupportSessionState as SupportSessionStateProto,
 )
 

@@ -11,11 +11,11 @@ import { useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { friendlyErrorMessage } from '@/config';
-import { supportSessionsApi } from '@/features/platform/api/supportSessionsApi';
+import { supportConsentApi } from '@/features/admin/api/supportConsentApi';
 import {
     SupportConsentMode,
     type SupportConsentModeView,
-} from '@uniffy/proto/superadmin/v1/support_session_pb';
+} from '@uniffy/proto/support/v1/support_consent_pb';
 
 function modeLabel(mode: SupportConsentMode): string {
     switch (mode) {
@@ -50,7 +50,7 @@ export function SupportAccessPage() {
         if (!organizationId) return;
         setLoading(true);
         try {
-            const response = await supportSessionsApi.getOrgConsentMode({
+            const response = await supportConsentApi.getOrgConsentMode({
                 organizationId,
             });
             setView(response.view ?? null);
@@ -70,7 +70,7 @@ export function SupportAccessPage() {
         if (!organizationId) return;
         setSubmitting(true);
         try {
-            const response = await supportSessionsApi.setOrgConsentMode({
+            const response = await supportConsentApi.setOrgConsentMode({
                 organizationId,
                 mode,
             });

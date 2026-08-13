@@ -12,9 +12,9 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { formatProtoDateTime } from '@/shared/utils/dateFormatting';
 import { friendlyErrorMessage } from '@/config';
-import { supportSessionsApi } from '@/features/platform/api/supportSessionsApi';
+import { supportConsentApi } from '@/features/admin/api/supportConsentApi';
 import { ReasonDialog } from '@/components/ui/reason-dialog';
-import type { SupportSession } from '@uniffy/proto/superadmin/v1/support_session_pb';
+import type { SupportSession } from '@uniffy/proto/support/v1/support_consent_pb';
 
 interface Props {
     session: SupportSession;
@@ -47,7 +47,7 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
     const handleApprove = async () => {
         setSubmitting(true);
         try {
-            await supportSessionsApi.approve({ sessionId: session.id });
+            await supportConsentApi.approve({ sessionId: session.id });
             toast.success('Support session approved');
             onChanged();
             onClose();
@@ -64,7 +64,7 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
     const submitReject = async (reason: string) => {
         setSubmitting(true);
         try {
-            await supportSessionsApi.reject({ sessionId: session.id, reason });
+            await supportConsentApi.reject({ sessionId: session.id, reason });
             toast.success('Support session rejected');
             setRejectOpen(false);
             onChanged();
