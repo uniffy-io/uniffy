@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { searchApi } from '@/features/search/api/searchApi';
+import { isCanceledError } from '@/shared/utils/rpcErrors';
 import type { SearchResultItem, SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 import {
     parseSearchQuery,
@@ -14,6 +15,8 @@ interface UseSearchOptions {
     typeFilters?: SearchResultType[];
     /** Ranking context sent to the backend: listed types float to the top in this order. */
     typePriority?: SearchResultType[];
+    /** Match titles/names only (mention pickers); skips content, description, tags. */
+    nameMatchesOnly?: boolean;
     limit?: number;
 }
 
@@ -61,7 +64,8 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
-        abortControllerRef.current = new AbortController();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
         setIsLoading(true);
         setError(null);
@@ -76,30 +80,37 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
                 }
             }
 
-            const response = await searchApi.search({
-                organizationId,
-                query: searchText,
-                typeFilters: typeFilters.length > 0 ? typeFilters : [],
-                tagFilters: filters.tags.length > 0 ? filters.tags : [],
-                projectFilters: filters.projects.length > 0 ? filters.projects : [],
-                myContentOnly: filters.myContentOnly,
-                typePriority: options?.typePriority ?? [],
-                limit: options?.limit || 20,
-            });
+            const response = await searchApi.search(
+                {
+                    organizationId,
+                    query: searchText,
+                    typeFilters: typeFilters.length > 0 ? typeFilters : [],
+                    tagFilters: filters.tags.length > 0 ? filters.tags : [],
+                    projectFilters: filters.projects.length > 0 ? filters.projects : [],
+                    myContentOnly: filters.myContentOnly,
+                    typePriority: options?.typePriority ?? [],
+                    nameMatchesOnly: options?.nameMatchesOnly ?? false,
+                    limit: options?.limit || 20,
+                },
+                { signal: controller.signal },
+            );
 
             setResults(response.items);
             setTotalCount(response.totalCount);
         } catch (err) {
-            if (err instanceof Error && err.name === 'AbortError') {
+            if (isCanceledError(err)) {
                 return;
             }
             setError(err instanceof Error ? err.message : 'Search failed');
             setResults([]);
             setTotalCount(0);
         } finally {
-            setIsLoading(false);
+            // A superseded request must not clear the spinner for the one that replaced it.
+            if (abortControllerRef.current === controller) {
+                setIsLoading(false);
+            }
         }
-    }, [organizationId, options?.typeFilters, options?.typePriority, options?.limit]);
+    }, [organizationId, options?.typeFilters, options?.typePriority, options?.nameMatchesOnly, options?.limit]);
 
     useEffect(() => {
         if (debounceRef.current) {

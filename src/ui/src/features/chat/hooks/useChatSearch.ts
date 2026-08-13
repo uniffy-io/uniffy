@@ -54,13 +54,16 @@ export function useChatSearch(): UseChatSearchResult {
         if (filters?.channelId) metadataFilters.channel_id = filters.channelId;
         if (filters?.senderId) metadataFilters.sender_id = filters.senderId;
 
-        const response = await searchApi.search({
-          organizationId,
-          query: query.trim(),
-          typeFilters: [SearchResultType.CHAT_MESSAGE],
-          metadataFilters: Object.keys(metadataFilters).length > 0 ? metadataFilters : undefined,
-          limit: 50,
-        });
+        const response = await searchApi.search(
+          {
+            organizationId,
+            query: query.trim(),
+            typeFilters: [SearchResultType.CHAT_MESSAGE],
+            metadataFilters: Object.keys(metadataFilters).length > 0 ? metadataFilters : undefined,
+            limit: 50,
+          },
+          { signal: controller.signal },
+        );
 
         if (!controller.signal.aborted) {
           setResults([...response.items]);
