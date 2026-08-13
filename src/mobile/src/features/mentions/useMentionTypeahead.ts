@@ -81,9 +81,7 @@ export function useMentionTypeahead(text: string, cursor: number) {
         const contentItems = (content?.items ?? [])
           .map(searchResultToPlain)
           .filter(
-            (r) =>
-              !peopleUrns.has(r.urn) &&
-              (r.domain !== null || PEOPLE_TYPES.includes(r.type)),
+            (r) => !peopleUrns.has(r.urn) && (r.domain !== null || PEOPLE_TYPES.includes(r.type)),
           );
 
         setResults([...peopleItems, ...contentItems]);
