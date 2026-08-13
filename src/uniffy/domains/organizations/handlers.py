@@ -12,10 +12,6 @@ from uniffy_proto.common.v1.common_pb2 import (
 from uniffy_proto.organizations.v1.organizations_pb2 import (
     AddMemberRequest,
     AddMemberResponse,
-    CreateOrganizationRequest,
-    CreateOrganizationResponse,
-    DeleteOrganizationRequest,
-    DeleteOrganizationResponse,
     GetOrganizationOverviewRequest,
     GetOrganizationOverviewResponse,
     GetOrganizationRequest,
@@ -41,8 +37,6 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     ListMembersResponse,
     ListMyOrganizationsRequest,
     ListMyOrganizationsResponse,
-    ListOrganizationsRequest,
-    ListOrganizationsResponse,
     RemoveMemberRequest,
     RemoveMemberResponse,
     ResendInvitationRequest,
@@ -132,56 +126,6 @@ class OrganizationsHandlers:
             logger.exception(f"Error listing user organizations: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    async def list_organizations(
-        self,
-        request: ListOrganizationsRequest,
-        ctx: RequestContext,
-    ) -> ListOrganizationsResponse:
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async with open_session() as session:
-                from uniffy.domains.users.operations import UserOperations as _UserOps
-
-                user_ops = _UserOps(session)
-                await user_ops.require_system_admin(user_id)
-
-                ops = OrganizationOperations(session)
-
-                page = 1
-                page_size = 20
-                if request.HasField("pagination"):
-                    page = request.pagination.page if request.pagination.page > 0 else 1
-                    page_size = (
-                        request.pagination.page_size if request.pagination.page_size > 0 else 20
-                    )
-
-                orgs_with_counts, total = await ops.list_all(
-                    page=page,
-                    page_size=page_size,
-                    query_str=request.search if request.HasField("search") else None,
-                )
-
-                total_pages = (total + page_size - 1) // page_size
-
-                return ListOrganizationsResponse(
-                    organizations=[
-                        organization_detail_to_proto(org, member_count, group_count)
-                        for org, member_count, group_count in orgs_with_counts
-                    ],
-                    pagination=PaginationResponse(
-                        page=page,
-                        page_size=page_size,
-                        total_count=total,
-                        total_pages=total_pages,
-                    ),
-                )
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except Exception as e:
-            logger.exception(f"Error listing organizations: {e}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
     async def get_organization(
         self,
         request: GetOrganizationRequest,
@@ -197,13 +141,7 @@ class OrganizationsHandlers:
         try:
             async with open_session() as session:
                 ops = OrganizationOperations(session)
-
-                from uniffy.domains.users.operations import UserOperations as _UserOps
-
-                user_ops = _UserOps(session)
-                user = await user_ops.get_by_id(user_id)
-                if not user.is_system_admin:
-                    await ops.require_org_member(user_id, org_id)
+                await ops.require_org_member(user_id, org_id)
 
                 overview = await ops.get_overview(org_id)
                 org = overview["organization"]
@@ -223,49 +161,6 @@ class OrganizationsHandlers:
             logger.exception(f"Error getting organization: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    async def create_organization(
-        self,
-        request: CreateOrganizationRequest,
-        ctx: RequestContext,
-    ) -> CreateOrganizationResponse:
-        user_id = get_user_id_from_context(ctx)
-
-        if not request.name or not request.slug:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Name and slug are required")
-
-        try:
-            async with open_session() as session:
-                from uniffy.domains.users.operations import UserOperations as _UserOps
-
-                user_ops = _UserOps(session)
-                await user_ops.require_system_admin(user_id)
-
-                ops = OrganizationOperations(session)
-
-                existing = await ops.get_by_slug(request.slug)
-                if existing:
-                    raise ConnectError(Code.ALREADY_EXISTS, "Organization slug already exists")
-
-                owner_id = user_id
-                if request.HasField("owner_user_id"):
-                    owner_id = UUID(request.owner_user_id)
-
-                org = await ops.create(
-                    name=request.name,
-                    slug=request.slug,
-                    owner_user_id=owner_id,
-                    actor_user_id=user_id,
-                )
-
-                return CreateOrganizationResponse(organization=org_info_to_proto(org))
-        except ConnectError:
-            raise
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except Exception as e:
-            logger.exception(f"Error creating organization: {e}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
     async def update_organization(
         self,
         request: UpdateOrganizationRequest,
@@ -281,13 +176,7 @@ class OrganizationsHandlers:
         try:
             async with open_session() as session:
                 ops = OrganizationOperations(session)
-
-                from uniffy.domains.users.operations import UserOperations as _UserOps
-
-                user_ops = _UserOps(session)
-                user = await user_ops.get_by_id(user_id)
-                if not user.is_system_admin:
-                    await ops.require_org_admin(user_id, org_id)
+                await ops.require_org_admin(user_id, org_id)
 
                 org = await ops.update(
                     org_id=org_id,
@@ -304,37 +193,6 @@ class OrganizationsHandlers:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
             logger.exception(f"Error updating organization: {e}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def delete_organization(
-        self,
-        request: DeleteOrganizationRequest,
-        ctx: RequestContext,
-    ) -> DeleteOrganizationResponse:
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
-        try:
-            async with open_session() as session:
-                from uniffy.domains.users.operations import UserOperations as _UserOps
-
-                user_ops = _UserOps(session)
-                await user_ops.require_system_admin(user_id)
-
-                ops = OrganizationOperations(session)
-                await ops.delete(org_id, actor_user_id=user_id)
-
-                return DeleteOrganizationResponse(success=True)
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except Exception as e:
-            logger.exception(f"Error deleting organization: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_organization_overview(

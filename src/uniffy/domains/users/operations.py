@@ -1,9 +1,6 @@
-import hashlib
-import os
 from uuid import UUID
 
-from sqlalchemy import delete as sql_delete
-from sqlalchemy import func, or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
@@ -11,7 +8,6 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
-from uniffy.core.realtime.publisher import publish_token_revoke
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.core.valkey.cache import cache_invalidate_by_tag
 from uniffy.domains.users.avatars import (
@@ -20,22 +16,11 @@ from uniffy.domains.users.avatars import (
 from uniffy.domains.users.avatars import (
     upload_avatar as s3_upload_avatar,
 )
-from uniffy.domains.users.search import UserSearchIndexer
-
-
-def _email_hash(email: str | None) -> str | None:
-    """SHA-256 of the lower-cased email; identifies a value without storing
-    it in the audit payload.
-    """
-    if not email:
-        return None
-    return hashlib.sha256(email.strip().lower().encode("utf-8")).hexdigest()
 
 
 class UserOperations:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-        self._user_indexer = UserSearchIndexer(session)
 
     async def get_by_id(self, user_id: UUID) -> User:
         result = await self._session.execute(select(User).where(User.id == user_id))
@@ -43,14 +28,6 @@ class UserOperations:
         if not user:
             raise NotFoundError("User", str(user_id))
         return user
-
-    async def get_by_email(self, email: str) -> User | None:
-        from uniffy.domains.auth.passwords import normalize_email
-
-        result = await self._session.execute(
-            select(User).where(User.email == normalize_email(email))
-        )
-        return result.scalar_one_or_none()
 
     async def _profile_org_id(self, user_id: UUID) -> UUID | None:
         """Most recent active membership; ``None`` when the user has no orgs."""
@@ -97,232 +74,6 @@ class UserOperations:
             await cache_invalidate_by_tag(f"user:{user_id}")
 
         return user
-
-    async def admin_update(
-        self,
-        user_id: UUID,
-        full_name: str | None = None,
-        username: str | None = None,
-        email: str | None = None,
-        is_active: bool | None = None,
-        is_system_admin: bool | None = None,
-        hashed_password: str | None = None,
-        actor_user_id: UUID | None = None,
-    ) -> User:
-        user = await self.get_by_id(user_id)
-
-        searchable_changed = any([
-            full_name is not None,
-            username is not None,
-            email is not None,
-        ])
-
-        was_deactivated = is_active is False and user.is_active is True
-        was_activated = is_active is True and user.is_active is False
-        previous_email = user.email
-
-        if full_name is not None:
-            user.full_name = full_name
-        if username is not None:
-            user.username = username
-        if email is not None:
-            from uniffy.domains.auth.passwords import normalize_email
-
-            user.email = normalize_email(email)
-        if is_active is not None:
-            user.is_active = is_active
-            # Bumping token_version on deactivation revokes every existing token.
-            if was_deactivated:
-                user.token_version += 1
-                user.cache_key_seed = os.urandom(32)
-        if is_system_admin is not None:
-            user.is_system_admin = is_system_admin
-        if hashed_password is not None:
-            user.hashed_password = hashed_password
-            user.token_version += 1
-            user.cache_key_seed = os.urandom(32)
-
-        token_revoked = was_deactivated or hashed_password is not None
-
-        admin_org_id = (
-            await self._profile_org_id(actor_user_id) if actor_user_id else None
-        )
-
-        if was_activated:
-            await write_audit_event(
-                self._session,
-                organization_id=admin_org_id,
-                actor_user_id=actor_user_id,
-                action=Action.USER_ACTIVATED,
-                resource_type="USER",
-                resource_id=user_id,
-            )
-        if was_deactivated:
-            await write_audit_event(
-                self._session,
-                organization_id=admin_org_id,
-                actor_user_id=actor_user_id,
-                action=Action.USER_DEACTIVATED,
-                resource_type="USER",
-                resource_id=user_id,
-            )
-        if email is not None and email != previous_email:
-            await write_audit_event(
-                self._session,
-                organization_id=admin_org_id,
-                actor_user_id=actor_user_id,
-                action=Action.USER_EMAIL_CHANGED,
-                resource_type="USER",
-                resource_id=user_id,
-                details={
-                    "previous_email_hash": _email_hash(previous_email),
-                    "new_email_hash": _email_hash(email),
-                },
-            )
-        if hashed_password is not None:
-            await write_audit_event(
-                self._session,
-                organization_id=admin_org_id,
-                actor_user_id=actor_user_id,
-                action=Action.AUTH_PASSWORD_CHANGED,
-                resource_type="USER",
-                resource_id=user_id,
-                details={
-                    "initiator": "admin" if actor_user_id != user_id else "self",
-                },
-            )
-
-        await self._session.commit()
-        await self._session.refresh(user)
-
-        if was_deactivated:
-            await self._user_indexer.remove_completely(user.id)
-            await self._session.commit()
-        elif searchable_changed:
-            await self._user_indexer.index_for_all_organizations(user)
-            await self._session.commit()
-
-        await invalidate_user_profile(user_id)
-
-        if was_deactivated or was_activated:
-            # Org-admin / domain-admin / role verdicts are Valkey-cached for
-            # minutes and keyed by user tag; an activation flip only takes
-            # effect once they are dropped.
-            from uniffy.core.auth.cache import invalidate_user
-
-            await invalidate_user(user_id)
-
-        if token_revoked:
-            from uniffy.domains.auth.revocation import mark_token_version_revoked
-
-            await mark_token_version_revoked(user_id, user.token_version)
-            await publish_token_revoke(user_id, user.token_version)
-
-        return user
-
-    async def admin_create(
-        self,
-        email: str,
-        username: str,
-        hashed_password: str,
-        full_name: str | None = None,
-        is_system_admin: bool = False,
-        actor_user_id: UUID | None = None,
-    ) -> User:
-        from uniffy.domains.auth.passwords import normalize_email
-
-        user = User(
-            email=normalize_email(email),
-            username=username,
-            hashed_password=hashed_password,
-            full_name=full_name,
-            is_active=True,
-            is_system_admin=is_system_admin,
-            email_verified=False,
-        )
-        self._session.add(user)
-        await self._session.commit()
-        await self._session.refresh(user)
-
-        admin_org_id = (
-            await self._profile_org_id(actor_user_id) if actor_user_id else None
-        )
-        await write_audit_event(
-            self._session,
-            organization_id=admin_org_id,
-            actor_user_id=actor_user_id,
-            action=Action.USER_INVITED,
-            resource_type="USER",
-            resource_id=user.id,
-            details={
-                "email_hash": _email_hash(email),
-                "is_system_admin": is_system_admin,
-            },
-        )
-        await self._session.commit()
-        return user
-
-    async def delete(self, user_id: UUID, actor_user_id: UUID | None = None) -> bool:
-        user = await self.get_by_id(user_id)
-
-        await self._user_indexer.remove_completely(user.id)
-
-        await self._session.execute(
-            sql_delete(OrganizationMember).where(OrganizationMember.user_id == user_id)
-        )
-
-        admin_org_id = (
-            await self._profile_org_id(actor_user_id) if actor_user_id else None
-        )
-        await write_audit_event(
-            self._session,
-            organization_id=admin_org_id,
-            actor_user_id=actor_user_id,
-            action=Action.USER_DELETED,
-            resource_type="USER",
-            resource_id=user_id,
-            details={"email_hash": _email_hash(user.email)},
-        )
-
-        await self._session.delete(user)
-        await self._session.commit()
-
-        await invalidate_user_profile(user_id)
-
-        return True
-
-    async def list_all(
-        self,
-        page: int = 1,
-        page_size: int = 20,
-        query_str: str | None = None,
-        include_inactive: bool = False,
-    ) -> tuple[list[User], int]:
-        query = select(User)
-
-        if not include_inactive:
-            query = query.where(User.is_active.is_(True))
-
-        if query_str:
-            pattern = f"%{query_str}%"
-            query = query.where(
-                or_(
-                    User.email.ilike(pattern),
-                    User.username.ilike(pattern),
-                    User.full_name.ilike(pattern),
-                )
-            )
-
-        count_query = select(func.count()).select_from(query.subquery())
-        total = (await self._session.execute(count_query)).scalar() or 0
-
-        query = query.order_by(User.created_at.desc())
-        query = query.offset((page - 1) * page_size).limit(page_size)
-
-        result = await self._session.execute(query)
-        users = list(result.scalars().all())
-
-        return users, total
 
     async def upload_avatar(
         self,

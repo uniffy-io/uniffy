@@ -1,6 +1,6 @@
 """Audit emissions for the organizations domain.
 
-Covers create / update / delete on the org row plus add_member /
+Covers create / update on the org row plus add_member /
 update_member_role / remove_member and the settings JSONB merge path.
 DB calls are mocked.
 """
@@ -76,26 +76,6 @@ async def test_update_with_no_changes_skips_audit() -> None:
         await ops.update(org_id=org.id, actor_user_id=generate_id())
 
     assert _audit_rows(session) == []
-
-
-async def test_delete_emits_organization_deleted() -> None:
-    org = _make_org()
-    session = MagicMock()
-    session.execute = AsyncMock(return_value=MagicMock(all=lambda: []))
-    session.add = MagicMock()
-    session.delete = AsyncMock()
-    session.commit = AsyncMock()
-
-    ops = OrganizationOperations(session)
-    with patch.object(
-        OrganizationOperations, "get_by_id", AsyncMock(return_value=org)
-    ):
-        await ops.delete(org.id, actor_user_id=generate_id())
-
-    rows = _audit_rows(session)
-    deleted = [r for r in rows if r.action == Action.ORGANIZATION_DELETED]
-    assert len(deleted) == 1
-    assert deleted[0].details["name"] == "Acme"
 
 
 async def test_add_member_emits_member_added() -> None:

@@ -6,12 +6,6 @@ import type { UserProfile } from '@uniffy/proto/users/v1/users_pb';
 const usersClient = createClient(UsersService, unaryTransport);
 
 export const usersApi = {
-    getUser: async (userId: string): Promise<UserProfile> => {
-        const response = await usersClient.getUser({ userId });
-        if (!response.user) throw new Error('user missing in GetUser response');
-        return response.user;
-    },
-
     updateMyProfile: async (fields: {
         pronouns?: string;
         accentColor?: string;
