@@ -9,6 +9,7 @@ import { createAuthInterceptor } from "@core/api/authInterceptor";
 // here - stream consumers own reconnection (see authInterceptor).
 export const streamTransport = createConnectTransport({
   baseUrl: SENTINEL_BASE_URL,
+  useBinaryFormat: true,
   interceptors: [createAuthInterceptor({ retryOn401: false })],
   fetch: serverRewritingFetch(expoFetch as unknown as typeof globalThis.fetch),
 });
