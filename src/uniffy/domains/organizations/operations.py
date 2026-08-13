@@ -16,9 +16,8 @@ from uniffy.core.auth.cache import invalidate_domain_admin, invalidate_org_defau
 from uniffy.core.auth.permissions import invalidate_visible_sets_for_user
 from uniffy.core.auth.permissions.visible_sets import invalidate_visible_sets_for_org
 from uniffy.core.crypto import OrgCipher
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
-from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
@@ -54,10 +53,6 @@ class OrganizationOperations:
         if not org:
             raise NotFoundError("Organization", str(org_id))
         return org
-
-    async def get_by_slug(self, slug: str) -> Organization | None:
-        result = await self._session.execute(select(Organization).where(Organization.slug == slug))
-        return result.scalar_one_or_none()
 
     async def create(
         self,
@@ -185,6 +180,28 @@ class OrganizationOperations:
             )
         await self._session.commit()
 
+        from uniffy.db.seed_docs import (
+            seed_workspace_docs,
+            starter_content_enabled,
+            workspace_docs_available,
+        )
+
+        if owner and starter_content_enabled():
+            if workspace_docs_available():
+                from uniffy.core.search.indexer import SearchIndexer
+
+                await seed_workspace_docs(
+                    session=self._session,
+                    org=org,
+                    admin_user=owner,
+                    search_indexer=SearchIndexer(self._session),
+                )
+                await self._session.commit()
+            else:
+                logger.warning(
+                    "Starter docs skipped: docs tree not present in this deployment"
+                )
+
         await write_audit_event(
             self._session,
             organization_id=org.id,
@@ -241,93 +258,6 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(org)
         return org
-
-    async def delete(self, org_id: UUID, actor_user_id: UUID | None = None) -> bool:
-        org = await self.get_by_id(org_id)
-
-        groups_result = await self._session.execute(
-            select(Group.id).where(Group.organization_id == org_id)
-        )
-        group_ids = [row[0] for row in groups_result.all()]
-        if group_ids:
-            await self._session.execute(
-                sql_delete(GroupMember).where(GroupMember.group_id.in_(group_ids))
-            )
-
-        await self._session.execute(sql_delete(Group).where(Group.organization_id == org_id))
-
-        await self._session.execute(
-            sql_delete(DomainAdmin).where(DomainAdmin.organization_id == org_id)
-        )
-
-        await self._session.execute(
-            sql_delete(OrganizationPermissionDefaults).where(
-                OrganizationPermissionDefaults.organization_id == org_id
-            )
-        )
-
-        await self._session.execute(
-            sql_delete(OrganizationMember).where(OrganizationMember.organization_id == org_id)
-        )
-
-        await write_audit_event(
-            self._session,
-            organization_id=org_id,
-            actor_user_id=actor_user_id,
-            action=Action.ORGANIZATION_DELETED,
-            resource_type="ORGANIZATION",
-            resource_id=org_id,
-            details={"name": org.name, "slug": org.slug},
-        )
-
-        await self._session.delete(org)
-        await self._session.commit()
-
-        return True
-
-    async def list_all(
-        self,
-        page: int = 1,
-        page_size: int = 20,
-        query_str: str | None = None,
-    ) -> tuple[list[tuple[Organization, int, int]], int]:
-        query = select(Organization)
-
-        if query_str:
-            pattern = f"%{query_str}%"
-            query = query.where(Organization.name.ilike(pattern) | Organization.slug.ilike(pattern))
-
-        count_query = select(func.count()).select_from(query.subquery())
-        total = (await self._session.execute(count_query)).scalar() or 0
-
-        query = query.order_by(Organization.created_at.desc())
-        query = query.offset((page - 1) * page_size).limit(page_size)
-
-        result = await self._session.execute(query)
-        orgs = list(result.scalars().all())
-
-        orgs_with_counts: list[tuple[Organization, int, int]] = []
-        for org in orgs:
-            member_count_result = await self._session.execute(
-                select(func.count()).select_from(
-                    select(OrganizationMember)
-                    .where(OrganizationMember.organization_id == org.id)
-                    .where(OrganizationMember.is_active.is_(True))
-                    .subquery()
-                )
-            )
-            member_count = member_count_result.scalar() or 0
-
-            group_count_result = await self._session.execute(
-                select(func.count()).select_from(
-                    select(Group).where(Group.organization_id == org.id).subquery()
-                )
-            )
-            group_count = group_count_result.scalar() or 0
-
-            orgs_with_counts.append((org, member_count, group_count))
-
-        return orgs_with_counts, total
 
     async def get_user_organizations(
         self,
@@ -462,6 +392,31 @@ class OrganizationOperations:
 
         return (members, total)
 
+    async def _require_member_capacity(self, org_id: UUID) -> None:
+        """``Organization.max_members`` is a hard cap on active members.
+        ``None`` means uncapped; the platform surface owns the value.
+        """
+        cap = (
+            await self._session.execute(
+                select(Organization.max_members).where(Organization.id == org_id)
+            )
+        ).scalar_one_or_none()
+        if cap is None:
+            return
+        active = (
+            await self._session.execute(
+                select(func.count())
+                .select_from(OrganizationMember)
+                .where(OrganizationMember.organization_id == org_id)
+                .where(OrganizationMember.is_active.is_(True))
+            )
+        ).scalar_one()
+        if int(active) >= int(cap):
+            raise ValidationError(
+                "max_members",
+                f"Organization has reached its member cap of {cap}",
+            )
+
     async def add_member(
         self,
         user_id: UUID,
@@ -473,6 +428,7 @@ class OrganizationOperations:
         if existing:
             if existing.is_active:
                 return existing
+            await self._require_member_capacity(org_id)
             existing.is_active = True
             existing.role = role
             existing.updated_at = datetime.now(UTC)
@@ -495,6 +451,8 @@ class OrganizationOperations:
             await invalidate_membership_cache(user_id, org_id)
 
             return existing
+
+        await self._require_member_capacity(org_id)
 
         membership = OrganizationMember(
             user_id=user_id,

@@ -3,6 +3,8 @@ import { transport } from '@/config/api';
 import {
     SystemOrganizationsService,
     SystemUsersService,
+    CreateOrganizationRequestSchema,
+    CreateUserRequestSchema,
     DeleteOrganizationRequestSchema,
     ForceLogoutUserRequestSchema,
     GetOrganizationRequestSchema,
@@ -13,6 +15,8 @@ import {
     SetSystemAdminRequestSchema,
     SuspendOrganizationRequestSchema,
     UnsuspendOrganizationRequestSchema,
+    UpdateOrganizationRequestSchema,
+    UpdateUserRequestSchema,
 } from '@uniffy/proto/superadmin/v1/system_directory_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -25,6 +29,12 @@ export const platformOrgsApi = {
 
     get: async (request: MessageInitShape<typeof GetOrganizationRequestSchema>) =>
         orgsClient.getOrganization(request),
+
+    create: async (request: MessageInitShape<typeof CreateOrganizationRequestSchema>) =>
+        orgsClient.createOrganization(request),
+
+    update: async (request: MessageInitShape<typeof UpdateOrganizationRequestSchema>) =>
+        orgsClient.updateOrganization(request),
 
     suspend: async (request: MessageInitShape<typeof SuspendOrganizationRequestSchema>) =>
         orgsClient.suspendOrganization(request),
@@ -45,6 +55,12 @@ export const platformUsersApi = {
 
     get: async (request: MessageInitShape<typeof GetUserRequestSchema>) =>
         usersClient.getUser(request),
+
+    create: async (request: MessageInitShape<typeof CreateUserRequestSchema>) =>
+        usersClient.createUser(request),
+
+    update: async (request: MessageInitShape<typeof UpdateUserRequestSchema>) =>
+        usersClient.updateUser(request),
 
     forceLogout: async (request: MessageInitShape<typeof ForceLogoutUserRequestSchema>) =>
         usersClient.forceLogoutUser(request),

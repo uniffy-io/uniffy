@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
-    UsersThree,
+    CheckCircle,
+    DotsThreeVertical,
     MagnifyingGlass,
+    Prohibit,
     ShieldCheck,
     ShieldSlash,
     SignOut,
-    DotsThreeVertical,
-    CheckCircle,
+    UserPlus,
+    UsersThree,
     XCircle,
 } from '@phosphor-icons/react';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Drawer } from '@/components/ui/drawer';
 import { PortalMenu } from '@/components/ui/portal-menu';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { ReasonDialog } from '@/components/ui/reason-dialog';
 import {
     Table,
     TableBody,
@@ -30,10 +31,11 @@ import {
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { friendlyErrorMessage } from '@/config';
 import { useAppSelector } from '@/app/hooks';
+import { SubjectAvatarById } from '@/components/subject';
 import { platformUsersApi } from '@/features/platform/api/systemDirectoryApi';
-import { PlatformUserDetailPanel } from '@/features/platform/components/PlatformUserDetailPanel';
-import { ReasonDialog } from '@/components/ui/reason-dialog';
-import { mfaClient } from '@/features/mfa/api/mfaApi';
+import { CreateUserDialog } from '@/features/platform/components/CreateUserDialog';
+import { PlatformUserDetailDialog } from '@/features/platform/components/PlatformUserDetailDialog';
+import { systemMfaClient } from '@/features/platform/api/systemMfaApi';
 import { PeerResetInbox } from '@/features/mfa/components/PeerResetInbox';
 import type { PlatformUserSummary } from '@uniffy/proto/superadmin/v1/system_directory_pb';
 
@@ -41,7 +43,78 @@ type PendingUserAction =
     | { kind: 'force-logout'; user: PlatformUserSummary }
     | { kind: 'toggle-admin'; user: PlatformUserSummary }
     | { kind: 'mfa-reset-direct'; user: PlatformUserSummary }
-    | { kind: 'mfa-reset-peer'; user: PlatformUserSummary };
+    | { kind: 'mfa-reset-peer'; user: PlatformUserSummary }
+    | { kind: 'toggle-active'; user: PlatformUserSummary };
+
+interface ActionPrompt {
+    title: string;
+    description?: string;
+    confirmLabel: string;
+    variant: 'danger' | 'warning';
+}
+
+function promptFor(pending: PendingUserAction | null): ActionPrompt {
+    if (!pending) return { title: '', confirmLabel: 'Confirm', variant: 'danger' };
+    const { user } = pending;
+    switch (pending.kind) {
+        case 'force-logout':
+            return {
+                title: `Force-logout ${user.email}?`,
+                description:
+                    'Bumps the token version and invalidates every active JWT for this user.',
+                confirmLabel: 'Force logout',
+                variant: 'danger',
+            };
+        case 'toggle-admin':
+            return user.isSystemAdmin
+                ? {
+                      title: `Revoke system admin from ${user.email}?`,
+                      description:
+                          'User loses access to /platform/* and is logged out everywhere.',
+                      confirmLabel: 'Revoke',
+                      variant: 'danger',
+                  }
+                : {
+                      title: `Grant system admin to ${user.email}?`,
+                      description:
+                          'User gains access to /platform/* and is logged out everywhere.',
+                      confirmLabel: 'Grant',
+                      variant: 'warning',
+                  };
+        case 'toggle-active':
+            return user.isActive
+                ? {
+                      title: `Deactivate ${user.email}?`,
+                      description:
+                          'Blocks sign-in and kills every active session immediately. Org memberships are left in place, so reactivating restores the account as it was.',
+                      confirmLabel: 'Deactivate',
+                      variant: 'danger',
+                  }
+                : {
+                      title: `Reactivate ${user.email}?`,
+                      description:
+                          'Restores sign-in. The account keeps whatever memberships it had.',
+                      confirmLabel: 'Reactivate',
+                      variant: 'warning',
+                  };
+        case 'mfa-reset-direct':
+            return {
+                title: `Reset MFA on ${user.email}?`,
+                description:
+                    'Direct platform reset is only allowed for users with zero org memberships. The target is signed out everywhere and prompted to enrol again on next sign in.',
+                confirmLabel: 'Reset',
+                variant: 'danger',
+            };
+        case 'mfa-reset-peer':
+            return {
+                title: `Request peer MFA reset for ${user.email}?`,
+                description:
+                    'Opens a 10 minute peer co-sign window. Another platform admin (not you) must approve before MFA is actually reset.',
+                confirmLabel: 'Request reset',
+                variant: 'danger',
+            };
+    }
+}
 
 type ProtoTimestamp = { seconds: number | bigint; nanos: number };
 
@@ -53,11 +126,41 @@ function protoToDate(ts: ProtoTimestamp | undefined): Date | undefined {
     return new Date(ms);
 }
 
+function RoleBadge({ user }: { user: PlatformUserSummary }) {
+    if (user.isSystemAdmin) {
+        return (
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 dark:from-purple-950 dark:to-purple-900 dark:text-purple-300">
+                <ShieldCheck size={12} weight="fill" />
+                Sysadmin
+            </span>
+        );
+    }
+    return <span className="text-xs text-muted-foreground">Member</span>;
+}
+
+function StatusBadge({ active }: { active: boolean }) {
+    if (!active) {
+        return (
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 dark:from-amber-950 dark:to-amber-900 dark:text-amber-300">
+                <XCircle size={12} weight="fill" />
+                Inactive
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-700 dark:from-emerald-950 dark:to-emerald-900 dark:text-emerald-300">
+            <CheckCircle size={12} weight="fill" />
+            Active
+        </span>
+    );
+}
+
 interface RowActionsProps {
     user: PlatformUserSummary;
     isSelf: boolean;
     onForceLogout: () => void;
     onToggleSystemAdmin: () => void;
+    onToggleActive: () => void;
     onResetMfaDirect: () => void;
     onRequestPeerMfaReset: () => void;
 }
@@ -67,6 +170,7 @@ function RowActions({
     isSelf,
     onForceLogout,
     onToggleSystemAdmin,
+    onToggleActive,
     onResetMfaDirect,
     onRequestPeerMfaReset,
 }: RowActionsProps) {
@@ -123,6 +227,25 @@ function RowActions({
                     <ShieldCheck size={14} weight="duotone" />
                     {user.isSystemAdmin ? 'Revoke system admin' : 'Grant system admin'}
                 </button>
+                <button
+                    type="button"
+                    disabled={isSelf}
+                    className={cn(
+                        'w-full text-left px-3 py-1.5 flex items-center gap-2',
+                        isSelf ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent',
+                        user.isActive
+                            ? 'text-rose-700 dark:text-rose-400'
+                            : 'text-emerald-700 dark:text-emerald-400',
+                    )}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setOpen(false);
+                        if (!isSelf) onToggleActive();
+                    }}
+                >
+                    <Prohibit size={14} weight="duotone" />
+                    {user.isActive ? 'Deactivate account' : 'Reactivate account'}
+                </button>
                 {!isSelf && user.mfaEnabled && user.isSystemAdmin && (
                     <button
                         type="button"
@@ -157,9 +280,14 @@ function RowActions({
     );
 }
 
+interface UserStats {
+    users: number;
+    admins: number;
+    inactive: number;
+}
+
 export function PlatformUsersPage() {
     useDocumentTitle('Platform Users');
-    const { isMobileOrTablet } = useBreakpoint();
     const selfId = useAppSelector((state) => state.auth.user?.id);
     const [rows, setRows] = useState<PlatformUserSummary[]>([]);
     const [loading, setLoading] = useState(true);
@@ -168,9 +296,11 @@ export function PlatformUsersPage() {
     const [onlySystemAdmins, setOnlySystemAdmins] = useState(false);
     const [page, setPage] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
+    const [stats, setStats] = useState<UserStats | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [pending, setPending] = useState<PendingUserAction | null>(null);
     const [pendingBusy, setPendingBusy] = useState(false);
+    const [createOpen, setCreateOpen] = useState(false);
 
     const fetchRows = useCallback(async () => {
         setLoading(true);
@@ -192,9 +322,35 @@ export function PlatformUsersPage() {
         }
     }, [page, search, includeInactive, onlySystemAdmins]);
 
+    const fetchStats = useCallback(async () => {
+        try {
+            const [active, admins, withInactive] = await Promise.all([
+                platformUsersApi.list({ page: 0, pageSize: 1 }),
+                platformUsersApi.list({ page: 0, pageSize: 1, onlySystemAdmins: true }),
+                platformUsersApi.list({ page: 0, pageSize: 1, includeInactive: true }),
+            ]);
+            setStats({
+                users: active.totalCount,
+                admins: admins.totalCount,
+                inactive: Math.max(0, withInactive.totalCount - active.totalCount),
+            });
+        } catch {
+            setStats(null);
+        }
+    }, []);
+
     useEffect(() => {
         fetchRows();
     }, [fetchRows]);
+
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
+
+    const refreshAll = useCallback(() => {
+        fetchRows();
+        fetchStats();
+    }, [fetchRows, fetchStats]);
 
     const runPending = async (reason: string) => {
         if (!pending) return;
@@ -215,14 +371,26 @@ export function PlatformUsersPage() {
                         ? `Revoked system admin from ${pending.user.email}`
                         : `Granted system admin to ${pending.user.email}`,
                 );
+            } else if (pending.kind === 'toggle-active') {
+                const wasActive = pending.user.isActive;
+                await platformUsersApi.update({
+                    userId: pending.user.id,
+                    isActive: !wasActive,
+                    reason,
+                });
+                toast.success(
+                    wasActive
+                        ? `Deactivated ${pending.user.email}`
+                        : `Reactivated ${pending.user.email}`,
+                );
             } else if (pending.kind === 'mfa-reset-direct') {
-                await mfaClient.platformResetMfa({
+                await systemMfaClient.resetUserMfa({
                     targetUserId: pending.user.id,
                     reason,
                 });
                 toast.success(`Two factor reset for ${pending.user.email}`);
             } else if (pending.kind === 'mfa-reset-peer') {
-                const response = await mfaClient.requestPlatformPeerReset({
+                const response = await systemMfaClient.requestPeerReset({
                     targetUserId: pending.user.id,
                     reason,
                 });
@@ -231,7 +399,7 @@ export function PlatformUsersPage() {
                 );
             }
             setPending(null);
-            fetchRows();
+            refreshAll();
         } catch (error) {
             const message = friendlyErrorMessage((error as Error).message);
             if (message) toast.error(message);
@@ -239,6 +407,8 @@ export function PlatformUsersPage() {
             setPendingBusy(false);
         }
     };
+
+    const prompt = promptFor(pending);
 
     const pageInfo = useMemo(() => {
         const start = page * PAGE_SIZE;
@@ -248,28 +418,37 @@ export function PlatformUsersPage() {
 
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-    const showInlinePanel = !!selectedId && !isMobileOrTablet;
-    const showDrawerPanel = !!selectedId && isMobileOrTablet;
-
     return (
-        <div className="flex gap-4 lg:gap-6 min-w-0">
-            <div className="flex-1 min-w-0 flex flex-col gap-6">
-            <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                    <UsersThree size={22} weight="duotone" className="text-primary" />
+        <div className="space-y-6">
+            <div>
+                <div className="flex items-center gap-3 mb-2">
+                    <UsersThree size={24} weight="duotone" className="text-primary shrink-0" />
+                    <h1 className="text-xl md:text-2xl font-bold">Users</h1>
                 </div>
-                <div className="flex-1">
-                    <h1 className="text-xl font-semibold text-foreground">Users</h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Cross-tenant user directory. Force-logout invalidates every JWT for the user.
-                    </p>
+                <p className="text-muted-foreground text-sm">
+                    Cross-tenant user directory. Force-logout invalidates every JWT for the user.
+                </p>
+            </div>
+
+            <PeerResetInbox selfId={selfId} onApproved={refreshAll} />
+
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{stats?.users ?? '-'}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Users</p>
+                </div>
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{stats?.admins ?? '-'}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">System admins</p>
+                </div>
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{stats?.inactive ?? '-'}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Inactive</p>
                 </div>
             </div>
 
-            <PeerResetInbox selfId={selfId} onApproved={fetchRows} />
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex-1 relative">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-4">
+                <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                         type="text"
@@ -278,8 +457,9 @@ export function PlatformUsersPage() {
                             setSearch(e.target.value);
                             setPage(0);
                         }}
-                        placeholder="Search by email, username, or name"
-                        className="w-full bg-input border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="Search by email, username, or name..."
+                        className="w-full pl-9 pr-4 py-2 rounded-md border border-border bg-background
+                            text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                 </div>
                 <Checkbox
@@ -298,6 +478,10 @@ export function PlatformUsersPage() {
                         setPage(0);
                     }}
                 />
+                <Button variant="default" onClick={() => setCreateOpen(true)} className="sm:ml-auto">
+                    <UserPlus size={16} weight="bold" />
+                    New user
+                </Button>
             </div>
 
             <Table>
@@ -309,15 +493,16 @@ export function PlatformUsersPage() {
                         <TableHead className="hidden lg:table-cell">Last login</TableHead>
                         <TableHead align="center" className="hidden sm:table-cell">Verified</TableHead>
                         <TableHead align="center">Role</TableHead>
+                        <TableHead align="center">Status</TableHead>
                         <TableHead align="right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {loading ? (
-                        <TableLoading colSpan={7} message="Loading users..." />
+                        <TableLoading colSpan={8} message="Loading users..." />
                     ) : rows.length === 0 ? (
                         <TableEmpty
-                            colSpan={7}
+                            colSpan={8}
                             icon={<UsersThree size={48} weight="duotone" />}
                             title="No users match"
                             description={search ? 'Try a different search term' : 'No users in deployment yet.'}
@@ -331,16 +516,11 @@ export function PlatformUsersPage() {
                             >
                                 <TableCell>
                                     <div className="flex items-center gap-3">
-                                        <div
-                                            className={cn(
-                                                'h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0',
-                                                u.isSystemAdmin
-                                                    ? 'bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 text-purple-600 dark:text-purple-400'
-                                                    : 'bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400',
-                                            )}
-                                        >
-                                            {(u.username || u.email).slice(0, 2).toUpperCase()}
-                                        </div>
+                                        <SubjectAvatarById
+                                            userId={u.id}
+                                            displayName={u.fullName || u.username || u.email}
+                                            size="lg"
+                                        />
                                         <div className="min-w-0">
                                             <div className="font-semibold text-foreground truncate">
                                                 {u.fullName || u.username || u.email}
@@ -378,18 +558,10 @@ export function PlatformUsersPage() {
                                     )}
                                 </TableCell>
                                 <TableCell align="center">
-                                    {u.isSystemAdmin ? (
-                                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-                                            <ShieldCheck size={10} weight="fill" />
-                                            Sysadmin
-                                        </span>
-                                    ) : !u.isActive ? (
-                                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
-                                            Inactive
-                                        </span>
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground">Member</span>
-                                    )}
+                                    <RoleBadge user={u} />
+                                </TableCell>
+                                <TableCell align="center">
+                                    <StatusBadge active={u.isActive} />
                                 </TableCell>
                                 <TableCell align="right">
                                     <RowActions
@@ -400,6 +572,9 @@ export function PlatformUsersPage() {
                                         }
                                         onToggleSystemAdmin={() =>
                                             setPending({ kind: 'toggle-admin', user: u })
+                                        }
+                                        onToggleActive={() =>
+                                            setPending({ kind: 'toggle-active', user: u })
                                         }
                                         onResetMfaDirect={() =>
                                             setPending({ kind: 'mfa-reset-direct', user: u })
@@ -440,19 +615,20 @@ export function PlatformUsersPage() {
                 </div>
             </div>
 
-            </div>
+            {selectedId && (
+                <PlatformUserDetailDialog
+                    userId={selectedId}
+                    onClose={() => setSelectedId(null)}
+                    onChanged={refreshAll}
+                    selfId={selfId}
+                />
+            )}
 
-            {showInlinePanel && (
-                <aside className="w-[400px] xl:w-[440px] shrink-0">
-                    <div className="sticky top-0 h-[calc(100dvh-12rem)] rounded-lg border border-border overflow-hidden">
-                        <PlatformUserDetailPanel
-                            userId={selectedId}
-                            onClose={() => setSelectedId(null)}
-                            onChanged={fetchRows}
-                            selfId={selfId}
-                        />
-                    </div>
-                </aside>
+            {createOpen && (
+                <CreateUserDialog
+                    onClose={() => setCreateOpen(false)}
+                    onCreated={refreshAll}
+                />
             )}
 
             <ReasonDialog
@@ -461,70 +637,12 @@ export function PlatformUsersPage() {
                     if (!pendingBusy) setPending(null);
                 }}
                 onConfirm={runPending}
-                title={
-                    pending?.kind === 'force-logout'
-                        ? `Force-logout ${pending.user.email}?`
-                        : pending?.kind === 'toggle-admin'
-                          ? pending.user.isSystemAdmin
-                                ? `Revoke system admin from ${pending.user.email}?`
-                                : `Grant system admin to ${pending.user.email}?`
-                          : pending?.kind === 'mfa-reset-direct'
-                            ? `Reset MFA on ${pending.user.email}?`
-                            : pending?.kind === 'mfa-reset-peer'
-                              ? `Request peer MFA reset for ${pending.user.email}?`
-                              : ''
-                }
-                description={
-                    pending?.kind === 'force-logout'
-                        ? 'Bumps the token version and invalidates every active JWT for this user.'
-                        : pending?.kind === 'toggle-admin'
-                          ? pending.user.isSystemAdmin
-                                ? 'User loses access to /platform/* and is logged out everywhere.'
-                                : 'User gains access to /platform/* and is logged out everywhere.'
-                          : pending?.kind === 'mfa-reset-direct'
-                            ? 'Direct platform reset is only allowed for users with zero org memberships. The target is signed out everywhere and prompted to enrol again on next sign in.'
-                            : pending?.kind === 'mfa-reset-peer'
-                              ? 'Opens a 10 minute peer co-sign window. Another platform admin (not you) must approve before MFA is actually reset.'
-                              : undefined
-                }
-                confirmLabel={
-                    pending?.kind === 'force-logout'
-                        ? 'Force logout'
-                        : pending?.kind === 'toggle-admin'
-                          ? pending.user.isSystemAdmin
-                                ? 'Revoke'
-                                : 'Grant'
-                          : pending?.kind === 'mfa-reset-direct'
-                            ? 'Reset'
-                            : pending?.kind === 'mfa-reset-peer'
-                              ? 'Request reset'
-                              : 'Confirm'
-                }
-                variant={
-                    pending?.kind === 'toggle-admin' && !pending.user.isSystemAdmin
-                        ? 'warning'
-                        : 'danger'
-                }
+                title={prompt.title}
+                description={prompt.description}
+                confirmLabel={prompt.confirmLabel}
+                variant={prompt.variant}
                 loading={pendingBusy}
             />
-
-            {showDrawerPanel && (
-                <Drawer
-                    open
-                    onClose={() => setSelectedId(null)}
-                    side="right"
-                    className="w-full sm:w-[400px]"
-                    showClose={false}
-                    ariaLabel="User details"
-                >
-                    <PlatformUserDetailPanel
-                        userId={selectedId}
-                        onClose={() => setSelectedId(null)}
-                        onChanged={fetchRows}
-                        selfId={selfId}
-                    />
-                </Drawer>
-            )}
         </div>
     );
 }

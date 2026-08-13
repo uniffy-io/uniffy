@@ -6,6 +6,7 @@ mutation and the audit row commit (or roll back) atomically.
 
 from __future__ import annotations
 
+import hashlib
 import time
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -28,6 +29,16 @@ if TYPE_CHECKING:
 _DEDUPE_NAMESPACE = "audit"
 _DEDUPE_KEY_PREFIX = "audit:debounce"
 _DEFAULT_DEDUPE_TTL_SECONDS = 3600
+
+
+def email_hash(email: str | None) -> str | None:
+    """SHA-256 of the lower-cased address. Correlates rows about the same
+    account without putting the address itself in a long-retention table
+    that org admins can read.
+    """
+    if not email:
+        return None
+    return hashlib.sha256(email.strip().lower().encode("utf-8")).hexdigest()
 
 
 async def write_audit_event(

@@ -5,15 +5,17 @@ content stays unreachable here (no PermissionChecker bypass).
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any, NamedTuple
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy import delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.audit import write_audit_event
+from uniffy.core.audit import email_hash, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.mail.config import MAIL_NAMESPACE, MailConfig
@@ -28,10 +30,14 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.realtime.publisher import publish_token_revoke
+from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.core.valkey.queue import get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
+from uniffy.domains.auth.password_policy import validate_password
+from uniffy.domains.auth.passwords import hash_password, normalize_email
 from uniffy.domains.auth.revocation import mark_token_version_revoked
+from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
 
 logger = logger.bind(component="platform.directory.operations")
@@ -97,6 +103,7 @@ class PlatformOrgDetail(NamedTuple):
     owners: list[PlatformOrgOwner]
     suspension_reason: str | None
     deletion_reason: str | None
+    max_members: int | None
 
 
 class PlatformOrgPage(NamedTuple):
@@ -141,6 +148,78 @@ class PlatformUserPage(NamedTuple):
     total_count: int
     page: int
     page_size: int
+
+
+_PLAN_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,49}$")
+_DOMAIN_RE = re.compile(
+    r"^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$"
+)
+
+
+def normalize_org_name(name: str) -> str:
+    name = name.strip()
+    if not name:
+        raise ValidationError("name", "name is required")
+    if len(name) > 255:
+        raise ValidationError("name", "name must be 255 characters or fewer")
+    return name
+
+
+def normalize_slug(slug: str, *, fallback_name: str = "") -> str:
+    slug = slug.strip().lower()
+    if not slug and fallback_name:
+        slug = slugify(fallback_name, max_length=255)
+    if not slug or len(slug) < 2 or len(slug) > 255 or slug != slugify(slug):
+        raise ValidationError(
+            "slug",
+            "slug must be 2-255 characters of lowercase letters, digits and hyphens",
+        )
+    return slug
+
+
+def normalize_plan(plan: str) -> str:
+    plan = plan.strip().lower()
+    if not plan:
+        return "free"
+    if not _PLAN_RE.match(plan):
+        raise ValidationError(
+            "plan",
+            "plan must be 1-50 characters of lowercase letters, digits, hyphens and underscores",
+        )
+    return plan
+
+
+_USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
+
+
+def normalize_username(username: str) -> str:
+    username = username.strip().lower()
+    if not _USERNAME_RE.match(username):
+        raise ValidationError(
+            "username",
+            "username must be 2-64 characters of lowercase letters, digits, dots, "
+            "hyphens and underscores, starting with a letter or digit",
+        )
+    return username
+
+
+def derive_username(email: str) -> str:
+    """Best-effort username from the email local part; caller resolves collisions."""
+    local = email.split("@", 1)[0].lower()
+    cleaned = re.sub(r"[^a-z0-9._-]", "", local).lstrip("._-")
+    if len(cleaned) < 2:
+        cleaned = f"user-{cleaned}" if cleaned else "user"
+    return cleaned[:64]
+
+
+def normalize_domain(domain: str) -> str | None:
+    """Empty input means no domain; the return value is storable as-is."""
+    domain = domain.strip().lower()
+    if not domain:
+        return None
+    if len(domain) > 255 or not _DOMAIN_RE.match(domain):
+        raise ValidationError("domain", "domain is not a valid hostname")
+    return domain
 
 
 def _clamp_page_size(page_size: int) -> int:
@@ -290,6 +369,152 @@ class PlatformDirectoryOperations:
             owners=owners,
             suspension_reason=org.suspension_reason,
             deletion_reason=org.deletion_reason,
+            max_members=org.max_members,
+        )
+
+    async def create_organization(
+        self,
+        *,
+        user_id: UUID,
+        name: str,
+        slug: str,
+        owner_email: str,
+        domain: str = "",
+        plan: str = "",
+    ) -> PlatformOrgDetail:
+        """Full tenant bootstrap via ``OrganizationOperations.create``:
+        owner membership, org cipher, default channel/agent/presets.
+        """
+        await self._user_ops.require_system_admin(user_id)
+        await check_rate_limit(
+            key=_operator_mutation_key(user_id, "create_org"),
+            limit=_PLATFORM_SUSPEND_LIMIT,
+            window_seconds=_PLATFORM_SUSPEND_WINDOW_SECONDS,
+            resource="platform organization creations",
+        )
+        name = normalize_org_name(name)
+        slug = normalize_slug(slug, fallback_name=name)
+        plan = normalize_plan(plan)
+        domain_value = normalize_domain(domain)
+
+        email = normalize_email(owner_email)
+        if not email:
+            raise ValidationError("owner_email", "owner_email is required")
+        owner = (
+            await self._session.execute(select(User).where(User.email == email))
+        ).scalar_one_or_none()
+        if owner is None or not owner.is_active:
+            raise ValidationError(
+                "owner_email", "No active user account matches this email"
+            )
+
+        existing = (
+            await self._session.execute(
+                select(Organization.id).where(Organization.slug == slug)
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            raise ValidationError("slug", "Slug is already in use")
+
+        org = await OrganizationOperations(self._session).create(
+            name=name,
+            slug=slug,
+            owner_user_id=owner.id,
+            domain=domain_value,
+            plan=plan,
+            actor_user_id=user_id,
+        )
+        return await self.get_organization(
+            user_id=user_id, organization_id=org.id
+        )
+
+    async def update_organization(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        reason: str,
+        name: str | None = None,
+        slug: str | None = None,
+        domain: str | None = None,
+        plan: str | None = None,
+        max_members: int | None = None,
+    ) -> PlatformOrgDetail:
+        """``None`` leaves a field unchanged; ``domain=""`` clears the
+        domain and ``max_members=0`` removes the cap.
+        """
+        await self._user_ops.require_system_admin(user_id)
+        await check_rate_limit(
+            key=_operator_mutation_key(user_id, "update_org"),
+            limit=_PLATFORM_MUTATION_LIMIT,
+            window_seconds=_PLATFORM_MUTATION_WINDOW_SECONDS,
+            resource="platform organization updates",
+        )
+        reason = reason.strip()
+        if not reason:
+            raise ValidationError("reason", "reason is required")
+
+        org = await self._require_org(organization_id)
+        if org.deleted_at is not None:
+            raise ValidationError(
+                "organization", "Cannot edit a deleted organization"
+            )
+
+        changed_keys: list[str] = []
+        if name is not None:
+            value = normalize_org_name(name)
+            if value != org.name:
+                org.name = value
+                changed_keys.append("name")
+        if slug is not None:
+            value = normalize_slug(slug)
+            if value != org.slug:
+                taken = (
+                    await self._session.execute(
+                        select(Organization.id)
+                        .where(Organization.slug == value)
+                        .where(Organization.id != org.id)
+                    )
+                ).scalar_one_or_none()
+                if taken is not None:
+                    raise ValidationError("slug", "Slug is already in use")
+                org.slug = value
+                changed_keys.append("slug")
+        if domain is not None:
+            value = normalize_domain(domain)
+            if value != org.domain:
+                org.domain = value
+                changed_keys.append("domain")
+        if plan is not None:
+            value = normalize_plan(plan)
+            if value != org.plan:
+                org.plan = value
+                changed_keys.append("plan")
+        if max_members is not None:
+            if max_members < 0:
+                raise ValidationError(
+                    "max_members", "max_members cannot be negative"
+                )
+            cap = max_members if max_members > 0 else None
+            if cap != org.max_members:
+                org.max_members = cap
+                changed_keys.append("max_members")
+
+        if changed_keys:
+            self._session.add(org)
+            await write_audit_event(
+                self._session,
+                organization_id=org.id,
+                actor_user_id=user_id,
+                action=Action.ORGANIZATION_SETTINGS_CHANGED,
+                resource_type="organization",
+                resource_id=org.id,
+                details={"reason": reason, "changed_keys": changed_keys},
+            )
+            await self._session.commit()
+
+        return await self.get_organization(
+            user_id=user_id, organization_id=organization_id
         )
 
     async def suspend_organization(
@@ -558,6 +783,173 @@ class PlatformDirectoryOperations:
             rows=rows, total_count=int(total), page=page, page_size=page_size
         )
 
+    async def create_user(
+        self,
+        *,
+        user_id: UUID,
+        email: str,
+        username: str,
+        full_name: str,
+        password: str,
+        email_verified: bool,
+        is_system_admin: bool,
+        organization_id: UUID | None = None,
+        organization_role: str = "",
+        reason: str = "",
+    ) -> PlatformUserDetail:
+        """Direct provisioning path for operators; no invitation email,
+        the password is handed over out of band.
+        """
+        await self._user_ops.require_system_admin(user_id)
+        await check_rate_limit(
+            key=_operator_mutation_key(user_id, "create_user"),
+            limit=_PLATFORM_MUTATION_LIMIT,
+            window_seconds=_PLATFORM_MUTATION_WINDOW_SECONDS,
+            resource="platform user creations",
+        )
+        reason = reason.strip()
+        if not reason:
+            raise ValidationError("reason", "reason is required")
+
+        email = normalize_email(email)
+        if not email or "@" not in email:
+            raise ValidationError("email", "A valid email address is required")
+
+        username = username.strip().lower()
+        username_explicit = bool(username)
+        username = normalize_username(username) if username_explicit else derive_username(email)
+
+        full_name_value = full_name.strip() or None
+
+        validate_password(password)
+
+        org: Organization | None = None
+        role = OrganizationRole.MEMBER
+        if organization_id is not None:
+            org = await self._require_org(organization_id)
+            if org.deleted_at is not None:
+                raise ValidationError(
+                    "organization_id", "Cannot add a user to a deleted organization"
+                )
+            role_value = organization_role.strip().upper()
+            if role_value:
+                try:
+                    role = OrganizationRole(role_value)
+                except ValueError as exc:
+                    raise ValidationError(
+                        "organization_role",
+                        "organization_role must be MEMBER, ADMIN or OWNER",
+                    ) from exc
+
+        email_taken = (
+            await self._session.execute(select(User.id).where(User.email == email))
+        ).scalar_one_or_none()
+        if email_taken is not None:
+            raise ValidationError("email", "A user with this email already exists")
+
+        base_username = username
+        for suffix in range(0, 50):
+            candidate = base_username if suffix == 0 else f"{base_username}{suffix + 1}"
+            taken = (
+                await self._session.execute(
+                    select(User.id).where(User.username == candidate)
+                )
+            ).scalar_one_or_none()
+            if taken is None:
+                username = candidate
+                break
+            if username_explicit:
+                raise ValidationError("username", "Username is already taken")
+        else:
+            raise ValidationError("username", "Username is already taken")
+
+        target = User(
+            email=email,
+            username=username,
+            full_name=full_name_value,
+            hashed_password=hash_password(password),
+            email_verified=email_verified,
+            is_system_admin=is_system_admin,
+        )
+        self._session.add(target)
+        await self._session.flush()
+        await self._session.commit()
+        target_id = target.id
+
+        # ``add_member`` commits internally and reaches Meilisearch, so it
+        # cannot join the transaction above. A failure there would otherwise
+        # strand a loginable account with no membership, which no operator
+        # RPC could then clean up.
+        if org is not None:
+            try:
+                await OrganizationOperations(self._session).add_member(
+                    user_id=target_id,
+                    org_id=org.id,
+                    role=role,
+                    actor_user_id=user_id,
+                )
+            except Exception:
+                logger.exception(
+                    "platform create_user: membership failed, removing the account",
+                    user_id=str(target_id),
+                    org_id=str(org.id),
+                )
+                await self._discard_partial_user(target_id)
+                raise
+
+        await write_audit_event(
+            self._session,
+            organization_id=org.id if org else None,
+            actor_user_id=user_id,
+            action=Action.USER_CREATED,
+            resource_type="USER",
+            resource_id=target_id,
+            details={
+                "reason": reason,
+                "email_hash": email_hash(email),
+                "username": username,
+                "email_verified": email_verified,
+                "is_system_admin": is_system_admin,
+                "organization_id": str(org.id) if org else None,
+                "organization_role": role.value if org else None,
+            },
+        )
+        if is_system_admin:
+            await write_audit_event(
+                self._session,
+                organization_id=None,
+                actor_user_id=user_id,
+                action=Action.USER_SYSTEM_ADMIN_GRANTED,
+                resource_type="USER",
+                resource_id=target_id,
+                details={"reason": reason, "granted_at": "account_creation"},
+            )
+        await self._session.commit()
+
+        return await self.get_user(user_id=user_id, target_user_id=target_id)
+
+    async def _discard_partial_user(self, target_user_id: UUID) -> None:
+        """Undo a half-provisioned account. Best effort: the caller is already
+        raising, so a cleanup failure must not mask the original error.
+        """
+        try:
+            await self._session.rollback()
+            await self._session.execute(
+                sql_delete(OrganizationMember).where(
+                    OrganizationMember.user_id == target_user_id
+                )
+            )
+            await self._session.execute(
+                sql_delete(User).where(User.id == target_user_id)
+            )
+            await self._session.commit()
+        except Exception:
+            logger.exception(
+                "platform create_user: cleanup failed, account left orphaned",
+                user_id=str(target_user_id),
+            )
+            await self._session.rollback()
+
     async def get_user(
         self, *, user_id: UUID, target_user_id: UUID
     ) -> PlatformUserDetail:
@@ -580,6 +972,188 @@ class PlatformDirectoryOperations:
             created_at=target.created_at,
         )
         return PlatformUserDetail(summary=summary, memberships=memberships)
+
+    async def update_user(
+        self,
+        *,
+        user_id: UUID,
+        target_user_id: UUID,
+        reason: str,
+        email: str | None = None,
+        username: str | None = None,
+        full_name: str | None = None,
+        is_active: bool | None = None,
+        email_verified: bool | None = None,
+        password: str | None = None,
+    ) -> PlatformUserDetail:
+        """``None`` leaves a field unchanged. Deactivation, an email change and
+        a password reset each revoke the target's existing tokens.
+        """
+        await self._user_ops.require_system_admin(user_id)
+        await check_rate_limit(
+            key=_operator_mutation_key(user_id, "update_user"),
+            limit=_PLATFORM_MUTATION_LIMIT,
+            window_seconds=_PLATFORM_MUTATION_WINDOW_SECONDS,
+            resource="platform user updates",
+        )
+        reason = reason.strip()
+        if not reason:
+            raise ValidationError("reason", "reason is required")
+
+        target = await self._require_user(target_user_id)
+
+        # An operator who locks themselves out cannot unlock themselves, and
+        # the last active operator locking out is an unrecoverable deployment.
+        if is_active is False:
+            if target_user_id == user_id:
+                raise PermissionDeniedError("Cannot deactivate your own account")
+            if target.is_system_admin:
+                await self._require_another_active_sysadmin(target.id)
+
+        changed_keys: list[str] = []
+        revoke_tokens = False
+        previous_email = target.email
+
+        if email is not None:
+            value = normalize_email(email)
+            if not value or "@" not in value:
+                raise ValidationError("email", "A valid email address is required")
+            if value != target.email:
+                taken = (
+                    await self._session.execute(
+                        select(User.id)
+                        .where(User.email == value)
+                        .where(User.id != target.id)
+                    )
+                ).scalar_one_or_none()
+                if taken is not None:
+                    raise ValidationError(
+                        "email", "A user with this email already exists"
+                    )
+                target.email = value
+                # A new address has not been proven to belong to the user.
+                target.email_verified = False
+                changed_keys.append("email")
+                revoke_tokens = True
+
+        if username is not None:
+            value = normalize_username(username)
+            if value != target.username:
+                taken = (
+                    await self._session.execute(
+                        select(User.id)
+                        .where(User.username == value)
+                        .where(User.id != target.id)
+                    )
+                ).scalar_one_or_none()
+                if taken is not None:
+                    raise ValidationError("username", "Username is already taken")
+                target.username = value
+                changed_keys.append("username")
+
+        if full_name is not None:
+            value = full_name.strip() or None
+            if value != target.full_name:
+                target.full_name = value
+                changed_keys.append("full_name")
+
+        if email_verified is not None and email_verified != target.email_verified:
+            target.email_verified = email_verified
+            changed_keys.append("email_verified")
+
+        if password is not None and password:
+            validate_password(password)
+            target.hashed_password = hash_password(password)
+            changed_keys.append("password")
+            revoke_tokens = True
+
+        activation_action: str | None = None
+        if is_active is not None and is_active != target.is_active:
+            target.is_active = is_active
+            changed_keys.append("is_active")
+            activation_action = (
+                Action.USER_ACTIVATED if is_active else Action.USER_DEACTIVATED
+            )
+            if not is_active:
+                revoke_tokens = True
+
+        if not changed_keys:
+            return await self.get_user(
+                user_id=user_id, target_user_id=target_user_id
+            )
+
+        new_version: int | None = None
+        if revoke_tokens:
+            target.token_version += 1
+            new_version = target.token_version
+        self._session.add(target)
+
+        await write_audit_event(
+            self._session,
+            organization_id=None,
+            actor_user_id=user_id,
+            action=Action.USER_UPDATED,
+            resource_type="USER",
+            resource_id=target.id,
+            details={"reason": reason, "changed_keys": changed_keys},
+        )
+        if "email" in changed_keys:
+            await write_audit_event(
+                self._session,
+                organization_id=None,
+                actor_user_id=user_id,
+                action=Action.USER_EMAIL_CHANGED,
+                resource_type="USER",
+                resource_id=target.id,
+                details={
+                    "reason": reason,
+                    "previous_email_hash": email_hash(previous_email),
+                    "new_email_hash": email_hash(target.email),
+                },
+            )
+        if "password" in changed_keys:
+            await write_audit_event(
+                self._session,
+                organization_id=None,
+                actor_user_id=user_id,
+                action=Action.AUTH_PASSWORD_CHANGED,
+                resource_type="USER",
+                resource_id=target.id,
+                details={"reason": reason, "initiator": "platform_admin"},
+            )
+        if activation_action is not None:
+            await write_audit_event(
+                self._session,
+                organization_id=None,
+                actor_user_id=user_id,
+                action=activation_action,
+                resource_type="USER",
+                resource_id=target.id,
+                details={"reason": reason},
+            )
+        await self._session.commit()
+
+        if new_version is not None:
+            await mark_token_version_revoked(target.id, new_version)
+            await _safe_publish_token_revoke(target.id, new_version)
+        await invalidate_user_profile(target.id)
+
+        return await self.get_user(user_id=user_id, target_user_id=target_user_id)
+
+    async def _require_another_active_sysadmin(self, excluding_id: UUID) -> None:
+        remaining = (
+            await self._session.execute(
+                select(func.count())
+                .select_from(User)
+                .where(User.is_system_admin.is_(True))
+                .where(User.is_active.is_(True))
+                .where(User.id != excluding_id)
+            )
+        ).scalar_one()
+        if int(remaining) == 0:
+            raise PermissionDeniedError(
+                "Cannot deactivate the last remaining system admin"
+            )
 
     async def force_logout_user(
         self, *, user_id: UUID, target_user_id: UUID, reason: str

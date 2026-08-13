@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
-    Lifebuoy,
-    MagnifyingGlass,
     CheckCircle,
     Clock,
+    Hourglass,
+    Lifebuoy,
+    MagnifyingGlass,
     Prohibit,
     XCircle,
-    Hourglass,
 } from '@phosphor-icons/react';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
-import { Drawer } from '@/components/ui/drawer';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import {
     Table,
     TableBody,
@@ -26,12 +24,15 @@ import {
 } from '@/components/ui/table';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { friendlyErrorMessage } from '@/config';
+import { getAvatarGradientStyle, getInitials } from '@/components/subject/utils';
+import { SubjectAvatarById } from '@/components/subject';
 import { supportSessionsApi } from '@/features/platform/api/supportSessionsApi';
-import { PlatformSessionDetailPanel } from '@/features/platform/components/PlatformSessionDetailPanel';
+import { PlatformSessionDetailDialog } from '@/features/platform/components/PlatformSessionDetailDialog';
 import {
+    SupportSessionScope,
     SupportSessionState,
     type SupportSession,
-} from '@uniffy/proto/superadmin/v1/support_session_pb';
+} from '@uniffy/proto/support/v1/support_consent_pb';
 
 type ProtoTimestamp = { seconds: number | bigint; nanos: number };
 
@@ -67,12 +68,12 @@ function StateBadge({ state }: { state: SupportSessionState }) {
     const map: Record<number, { label: string; cls: string; Icon: typeof CheckCircle }> = {
         [SupportSessionState.PENDING]: {
             label: 'Pending',
-            cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+            cls: 'bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 dark:from-amber-950 dark:to-amber-900 dark:text-amber-300',
             Icon: Hourglass,
         },
         [SupportSessionState.ACTIVE]: {
             label: 'Active',
-            cls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+            cls: 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-700 dark:from-emerald-950 dark:to-emerald-900 dark:text-emerald-300',
             Icon: CheckCircle,
         },
         [SupportSessionState.EXPIRED]: {
@@ -82,12 +83,12 @@ function StateBadge({ state }: { state: SupportSessionState }) {
         },
         [SupportSessionState.REVOKED]: {
             label: 'Revoked',
-            cls: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+            cls: 'bg-gradient-to-r from-red-100 to-red-200 text-red-700 dark:from-red-950 dark:to-red-900 dark:text-red-300',
             Icon: Prohibit,
         },
         [SupportSessionState.REJECTED]: {
             label: 'Rejected',
-            cls: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+            cls: 'bg-gradient-to-r from-red-100 to-red-200 text-red-700 dark:from-red-950 dark:to-red-900 dark:text-red-300',
             Icon: XCircle,
         },
     };
@@ -95,22 +96,28 @@ function StateBadge({ state }: { state: SupportSessionState }) {
     if (!entry) return <span className="text-xs text-muted-foreground">-</span>;
     const Icon = entry.Icon;
     return (
-        <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium', entry.cls)}>
-            <Icon size={10} weight="duotone" />
+        <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold', entry.cls)}>
+            <Icon size={12} weight="fill" />
             {entry.label}
         </span>
     );
 }
 
+interface SessionStats {
+    active: number;
+    pending: number;
+    total: number;
+}
+
 export function PlatformSessionsPage() {
     useDocumentTitle('Platform Support Sessions');
-    const { isMobileOrTablet } = useBreakpoint();
     const [rows, setRows] = useState<SupportSession[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [stateFilter, setStateFilter] = useState<StateFilter>('all');
     const [page, setPage] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
+    const [stats, setStats] = useState<SessionStats | null>(null);
     const [selected, setSelected] = useState<SupportSession | null>(null);
 
     const fetchRows = useCallback(async () => {
@@ -132,9 +139,43 @@ export function PlatformSessionsPage() {
         }
     }, [page, search, stateFilter]);
 
+    const fetchStats = useCallback(async () => {
+        try {
+            const [active, pending, total] = await Promise.all([
+                supportSessionsApi.listAll({
+                    page: 0,
+                    pageSize: 1,
+                    state: SupportSessionState.ACTIVE,
+                }),
+                supportSessionsApi.listAll({
+                    page: 0,
+                    pageSize: 1,
+                    state: SupportSessionState.PENDING,
+                }),
+                supportSessionsApi.listAll({ page: 0, pageSize: 1 }),
+            ]);
+            setStats({
+                active: active.totalCount,
+                pending: pending.totalCount,
+                total: total.totalCount,
+            });
+        } catch {
+            setStats(null);
+        }
+    }, []);
+
     useEffect(() => {
         fetchRows();
     }, [fetchRows]);
+
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
+
+    const refreshAll = useCallback(() => {
+        fetchRows();
+        fetchStats();
+    }, [fetchRows, fetchStats]);
 
     const pageInfo = useMemo(() => {
         const start = page * PAGE_SIZE;
@@ -144,43 +185,48 @@ export function PlatformSessionsPage() {
 
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-    const showInlinePanel = !!selected && !isMobileOrTablet;
-    const showDrawerPanel = !!selected && isMobileOrTablet;
-
     return (
-        <div className="flex gap-4 lg:gap-6 min-w-0">
-            <div className="flex-1 min-w-0 flex flex-col gap-6">
-                <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                        <Lifebuoy size={22} weight="duotone" className="text-primary" />
-                    </div>
-                    <div className="flex-1">
-                        <h1 className="text-xl font-semibold text-foreground">Support sessions</h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Every time-bound operator grant across the deployment. Read-only metadata.
-                        </p>
-                    </div>
+        <div className="space-y-6">
+            <div>
+                <div className="flex items-center gap-3 mb-2">
+                    <Lifebuoy size={24} weight="duotone" className="text-primary shrink-0" />
+                    <h1 className="text-xl md:text-2xl font-bold">Support sessions</h1>
                 </div>
+                <p className="text-muted-foreground text-sm">
+                    Every time-bound operator grant across the deployment. Read-only metadata.
+                </p>
+            </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex-1 relative">
-                        <MagnifyingGlass
-                            size={16}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                        />
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => {
-                                setSearch(e.target.value);
-                                setPage(0);
-                            }}
-                            placeholder="Search by org or operator email"
-                            className="w-full bg-input border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                        />
-                    </div>
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{stats?.active ?? '-'}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Active</p>
                 </div>
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{stats?.pending ?? '-'}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Pending approval</p>
+                </div>
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{stats?.total ?? '-'}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Total sessions</p>
+                </div>
+            </div>
 
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-4">
+                <div className="relative flex-1 max-w-sm">
+                    <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setPage(0);
+                        }}
+                        placeholder="Search by org or operator email"
+                        className="w-full pl-9 pr-4 py-2 rounded-md border border-border bg-background
+                            text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                </div>
                 <div className="flex flex-wrap gap-1">
                     {STATE_FILTERS.map((f) => (
                         <button
@@ -201,133 +247,147 @@ export function PlatformSessionsPage() {
                         </button>
                     ))}
                 </div>
+            </div>
 
-                <Table>
-                    <TableHeader>
-                        <TableRow hoverable={false}>
-                            <TableHead>Organization</TableHead>
-                            <TableHead className="hidden md:table-cell">Operator</TableHead>
-                            <TableHead align="center" className="hidden sm:table-cell">Scope</TableHead>
-                            <TableHead align="center">State</TableHead>
-                            <TableHead className="hidden lg:table-cell">Requested</TableHead>
-                            <TableHead className="hidden lg:table-cell">Expires</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loading ? (
-                            <TableLoading colSpan={6} message="Loading support sessions..." />
-                        ) : rows.length === 0 ? (
-                            <TableEmpty
-                                colSpan={6}
-                                icon={<Lifebuoy size={48} weight="duotone" />}
-                                title="No support sessions match"
-                                description={
-                                    search
-                                        ? 'Try a different search term'
-                                        : 'No operator has opened a session yet.'
-                                }
-                            />
-                        ) : (
-                            rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    onClick={() => setSelected(row)}
-                                    className="cursor-pointer"
-                                >
-                                    <TableCell>
+            <Table>
+                <TableHeader>
+                    <TableRow hoverable={false}>
+                        <TableHead>Organization</TableHead>
+                        <TableHead className="hidden md:table-cell">Operator</TableHead>
+                        <TableHead align="center" className="hidden sm:table-cell">Scope</TableHead>
+                        <TableHead align="center">State</TableHead>
+                        <TableHead className="hidden lg:table-cell">Requested</TableHead>
+                        <TableHead className="hidden lg:table-cell">Expires</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {loading ? (
+                        <TableLoading colSpan={6} message="Loading support sessions..." />
+                    ) : rows.length === 0 ? (
+                        <TableEmpty
+                            colSpan={6}
+                            icon={<Lifebuoy size={48} weight="duotone" />}
+                            title="No support sessions match"
+                            description={
+                                search
+                                    ? 'Try a different search term'
+                                    : 'No operator has opened a session yet.'
+                            }
+                        />
+                    ) : (
+                        rows.map((row) => (
+                            <TableRow
+                                key={row.id}
+                                onClick={() => setSelected(row)}
+                                className="cursor-pointer"
+                            >
+                                <TableCell>
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold text-white shrink-0"
+                                            style={getAvatarGradientStyle(row.organizationName)}
+                                        >
+                                            {getInitials(row.organizationName)}
+                                        </div>
                                         <div className="min-w-0">
-                                            <div className="font-semibold text-foreground truncate">
+                                            <p className="font-semibold text-foreground truncate">
                                                 {row.organizationName || '-'}
-                                            </div>
+                                            </p>
                                             <code className="text-xs text-muted-foreground font-mono truncate block">
                                                 {row.organizationSlug}
                                             </code>
                                         </div>
-                                    </TableCell>
-                                    <TableCell className="hidden md:table-cell text-muted-foreground truncate">
-                                        {row.supportUserEmail}
-                                    </TableCell>
-                                    <TableCell className="hidden sm:table-cell" align="center">
-                                        <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                                            Read-only
-                                        </span>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <StateBadge state={row.state} />
-                                    </TableCell>
-                                    <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
-                                        {row.requestedAt
-                                            ? formatRelativeTime(
-                                                  protoToDate(row.requestedAt)?.toISOString() ?? '',
-                                              )
-                                            : '-'}
-                                    </TableCell>
-                                    <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
-                                        {row.expiresAt
-                                            ? formatRelativeTime(
-                                                  protoToDate(row.expiresAt)?.toISOString() ?? '',
-                                              )
-                                            : '-'}
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        {row.supportUserId ? (
+                                            <SubjectAvatarById
+                                                userId={row.supportUserId}
+                                                displayName={row.supportUserFullName || row.supportUserEmail}
+                                                size="md"
+                                            />
+                                        ) : (
+                                            <div
+                                                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium text-white shrink-0"
+                                                style={getAvatarGradientStyle(row.supportUserEmail)}
+                                            >
+                                                {getInitials(row.supportUserEmail)}
+                                            </div>
+                                        )}
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium truncate">
+                                                {row.supportUserFullName || row.supportUserEmail}
+                                            </p>
+                                            {row.supportUserFullName && (
+                                                <p className="text-xs text-muted-foreground truncate">
+                                                    {row.supportUserEmail}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="hidden sm:table-cell" align="center">
+                                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                                        {row.scope === SupportSessionScope.READ_WRITE
+                                            ? 'Read-write'
+                                            : 'Read-only'}
+                                    </span>
+                                </TableCell>
+                                <TableCell align="center">
+                                    <StateBadge state={row.state} />
+                                </TableCell>
+                                <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
+                                    {row.requestedAt
+                                        ? formatRelativeTime(
+                                              protoToDate(row.requestedAt)?.toISOString() ?? '',
+                                          )
+                                        : '-'}
+                                </TableCell>
+                                <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
+                                    {row.expiresAt
+                                        ? formatRelativeTime(
+                                              protoToDate(row.expiresAt)?.toISOString() ?? '',
+                                          )
+                                        : '-'}
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    )}
+                </TableBody>
+            </Table>
 
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{pageInfo}</span>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="ghost"
-                            size="xs"
-                            disabled={page <= 0}
-                            onClick={() => setPage((p) => Math.max(0, p - 1))}
-                        >
-                            Prev
-                        </Button>
-                        <span>
-                            Page {page + 1} / {totalPages}
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="xs"
-                            disabled={page + 1 >= totalPages}
-                            onClick={() => setPage((p) => p + 1)}
-                        >
-                            Next
-                        </Button>
-                    </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{pageInfo}</span>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="xs"
+                        disabled={page <= 0}
+                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    >
+                        Prev
+                    </Button>
+                    <span>
+                        Page {page + 1} / {totalPages}
+                    </span>
+                    <Button
+                        variant="ghost"
+                        size="xs"
+                        disabled={page + 1 >= totalPages}
+                        onClick={() => setPage((p) => p + 1)}
+                    >
+                        Next
+                    </Button>
                 </div>
             </div>
 
-            {showInlinePanel && (
-                <aside className="w-[400px] xl:w-[440px] shrink-0">
-                    <div className="sticky top-0 h-[calc(100dvh-12rem)] rounded-lg border border-border overflow-hidden">
-                        <PlatformSessionDetailPanel
-                            session={selected}
-                            onClose={() => setSelected(null)}
-                            onChanged={fetchRows}
-                        />
-                    </div>
-                </aside>
-            )}
-
-            {showDrawerPanel && (
-                <Drawer
-                    open
+            {selected && (
+                <PlatformSessionDetailDialog
+                    session={selected}
                     onClose={() => setSelected(null)}
-                    side="right"
-                    className="w-full sm:w-[400px]"
-                    showClose={false}
-                    ariaLabel="Session details"
-                >
-                    <PlatformSessionDetailPanel
-                        session={selected}
-                        onClose={() => setSelected(null)}
-                        onChanged={fetchRows}
-                    />
-                </Drawer>
+                    onChanged={refreshAll}
+                />
             )}
         </div>
     );

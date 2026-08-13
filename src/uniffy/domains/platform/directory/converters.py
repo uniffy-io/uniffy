@@ -95,6 +95,8 @@ def org_detail_to_proto(detail: PlatformOrgDetail) -> PlatformOrganizationDetail
         msg.suspension_reason = detail.suspension_reason
     if detail.deletion_reason is not None:
         msg.deletion_reason = detail.deletion_reason
+    if detail.max_members is not None:
+        msg.max_members = detail.max_members
     return msg
 
 
