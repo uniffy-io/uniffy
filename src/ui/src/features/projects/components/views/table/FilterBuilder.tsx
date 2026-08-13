@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Plus, X, CaretDown, Check } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { NumberInput } from "@/components/ui/number-input";
 import { TagPicker } from "@/features/tags";
 import type { FieldDefinition } from "@/features/projects/types";
 import type { FilterCondition, FilterConfig, FilterOperator } from "@/features/projects/types/views";
@@ -450,7 +451,7 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
 }
 
 const NUMBER_INPUT_CLASS =
-  "h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+  "h-7 px-2 text-xs text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors";
 
 function ConditionValueInput({ field, operator, value, onChange, epicOptions }: {
   field?: FieldDefinition;
@@ -543,8 +544,7 @@ function ConditionValueInput({ field, operator, value, onChange, epicOptions }: 
         : [null, null];
       return (
         <div className="flex items-center gap-1 flex-1 min-w-40">
-          <input
-            type="number"
+          <NumberInput
             inputMode="numeric"
             value={minVal !== null && minVal !== undefined ? String(minVal) : ""}
             onChange={(e) => {
@@ -555,8 +555,7 @@ function ConditionValueInput({ field, operator, value, onChange, epicOptions }: 
             className={NUMBER_INPUT_CLASS}
           />
           <span className="text-xs text-muted-foreground">to</span>
-          <input
-            type="number"
+          <NumberInput
             inputMode="numeric"
             value={maxVal !== null && maxVal !== undefined ? String(maxVal) : ""}
             onChange={(e) => {
@@ -570,8 +569,7 @@ function ConditionValueInput({ field, operator, value, onChange, epicOptions }: 
       );
     }
     return (
-      <input
-        type="number"
+      <NumberInput
         inputMode="numeric"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}

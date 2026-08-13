@@ -1,20 +1,25 @@
-/** Dismissed state persists for the session only (sessionStorage), so the banner reappears on next login. */
+/** Asks once per device: an explicit dismiss persists in localStorage, and an active push subscription keeps it hidden without any flag. */
 
 import { useCallback, useEffect, useReducer } from 'react';
 import { Bell, X, WarningCircle } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { usePushSubscription } from '@/features/notifications/hooks/usePushSubscription';
+import { useNotificationSettings } from '@/features/settings/hooks/useSettings';
 
 const DISMISSED_KEY = 'uniffy_push_dismissed';
+const SNOOZED_KEY = 'uniffy_push_snoozed';
 
 type BannerState = { visible: boolean; subscribing: boolean; error: string | null };
 type BannerAction =
+    | { type: 'show' }
     | { type: 'hide' }
     | { type: 'start_subscribe' }
     | { type: 'end_subscribe'; success: boolean; error?: string };
 
 function bannerReducer(state: BannerState, action: BannerAction): BannerState {
     switch (action.type) {
+        case 'show':
+            return { ...state, visible: true };
         case 'hide':
             return { ...state, visible: false, error: null };
         case 'start_subscribe':
@@ -27,22 +32,42 @@ function bannerReducer(state: BannerState, action: BannerAction): BannerState {
     }
 }
 
-/** Synchronous initial visibility - avoids setState-in-effect. `granted` still shows because the user may lack a subscription; `subscribe()` is idempotent. */
+function isDismissed(): boolean {
+    return localStorage.getItem(DISMISSED_KEY) === 'true' || sessionStorage.getItem(SNOOZED_KEY) === 'true';
+}
+
+/** Synchronous initial visibility - avoids setState-in-effect. `granted` starts hidden; the mount effect reveals it only when no subscription exists. */
 function getInitialVisibility(isSupported: boolean): boolean {
     if (!isSupported) return false;
     if (typeof Notification === 'undefined') return false;
-    if (Notification.permission === 'denied') return false;
-    if (sessionStorage.getItem(DISMISSED_KEY) === 'true') return false;
+    if (Notification.permission !== 'default') return false;
+    if (isDismissed()) return false;
     return true;
 }
 
 export function PushNotificationBanner() {
     const { subscribe, isSupported } = usePushSubscription();
+    const { browserEnabled } = useNotificationSettings();
     const [state, dispatch] = useReducer(bannerReducer, isSupported, (supported) => ({
         visible: getInitialVisibility(supported),
         subscribing: false,
         error: null,
     }));
+
+    // Permission granted but no live subscription (browser evicted it, or storage was cleared): surface the banner so push can be repaired without a browser prompt.
+    useEffect(() => {
+        if (!isSupported || typeof Notification === 'undefined') return;
+        if (Notification.permission !== 'granted' || isDismissed()) return;
+        let cancelled = false;
+        void (async () => {
+            const registration = await navigator.serviceWorker.getRegistration('/');
+            const subscription = await registration?.pushManager.getSubscription();
+            if (!cancelled && !subscription) dispatch({ type: 'show' });
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [isSupported]);
 
     const handleEnable = useCallback(async () => {
         dispatch({ type: 'start_subscribe' });
@@ -51,19 +76,21 @@ export function PushNotificationBanner() {
     }, [subscribe]);
 
     const handleDismiss = useCallback(() => {
-        sessionStorage.setItem(DISMISSED_KEY, 'true');
+        localStorage.setItem(DISMISSED_KEY, 'true');
         dispatch({ type: 'hide' });
     }, []);
 
+    // Failed attempts snooze for the session only; the user likely still wants push, so retry next visit.
     useEffect(() => {
         if (!state.error) return;
         const timer = setTimeout(() => {
-            sessionStorage.setItem(DISMISSED_KEY, 'true');
+            sessionStorage.setItem(SNOOZED_KEY, 'true');
             dispatch({ type: 'hide' });
         }, 8000);
         return () => clearTimeout(timer);
     }, [state.error]);
 
+    if (!browserEnabled) return null;
     if (!state.visible) return null;
 
     if (state.error) {

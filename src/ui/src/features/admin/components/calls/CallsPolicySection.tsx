@@ -5,6 +5,7 @@ import { useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { friendlyErrorMessage } from '@/config';
 import { callsApi } from '@/features/calls/api/callsApi';
+import { NumberInput } from '@/components/ui/number-input';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
 
@@ -185,7 +186,7 @@ export function CallsPolicySection() {
             title="Maximum participants"
             description="Cap on how many people can be in a single call (1 to 1000)."
           >
-            <NumberInput
+            <ClampedNumberInput
               value={form.maxParticipants}
               min={1}
               max={1000}
@@ -198,7 +199,7 @@ export function CallsPolicySection() {
             title="Maximum duration (minutes)"
             description="Calls auto-end after this many minutes (1 to 1440)."
           >
-            <NumberInput
+            <ClampedNumberInput
               value={form.maxDurationMinutes}
               min={1}
               max={1440}
@@ -248,7 +249,7 @@ function Row({
   );
 }
 
-function NumberInput({
+function ClampedNumberInput({
   value,
   min,
   max,
@@ -262,8 +263,7 @@ function NumberInput({
   disabled: boolean;
 }) {
   return (
-    <input
-      type="number"
+    <NumberInput
       value={value}
       min={min}
       max={max}
@@ -273,7 +273,7 @@ function NumberInput({
         if (Number.isNaN(parsed)) return;
         onChange(Math.min(max, Math.max(min, Math.round(parsed))));
       }}
-      className="w-28 rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+      className="w-28"
     />
   );
 }

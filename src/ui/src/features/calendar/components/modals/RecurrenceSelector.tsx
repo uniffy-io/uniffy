@@ -3,6 +3,7 @@ import { ArrowsClockwise } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { Select } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
+import { NumberInput } from '@/components/ui/number-input';
 import type { RecurrenceConfig, RecurrencePattern, DayOfWeek } from '@/features/calendar/types';
 import { RECURRENCE_LABELS, DAY_OF_WEEK_LABELS } from '@/features/calendar/constants';
 
@@ -53,11 +54,7 @@ function getDefaultDays(newPattern: RecurrencePattern): DayOfWeek[] | undefined 
   return undefined;
 }
 
-const INPUT_CLASS = cn(
-  'w-16 px-2 py-1 text-xs border border-border rounded-md bg-background text-foreground text-center',
-  'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all',
-  '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
-);
+const INPUT_CLASS = 'h-auto w-16 px-2 py-1 text-xs text-foreground text-center transition-all';
 
 interface RecurrenceSelectorProps {
   value: RecurrenceConfig | undefined;
@@ -154,8 +151,7 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
         <div className="space-y-3 pl-1">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Every</span>
-            <input
-              type="number"
+            <NumberInput
               min={1}
               max={99}
               value={value?.interval ?? 1}
@@ -199,8 +195,7 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
           {showDayOfMonth && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">On day</span>
-              <input
-                type="number"
+              <NumberInput
                 min={1}
                 max={31}
                 value={value?.dayOfMonth ?? 1}
@@ -234,17 +229,13 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
                   className="accent-primary"
                 />
                 <span className="text-xs text-foreground">After</span>
-                <input
-                  type="number"
+                <NumberInput
                   min={1}
                   max={999}
                   value={value?.maxOccurrences ?? 10}
                   onChange={(e) => handleMaxOccurrencesChange(Number(e.target.value))}
                   disabled={endCondition !== 'after'}
-                  className={cn(
-                    INPUT_CLASS,
-                    endCondition !== 'after' && 'opacity-50 cursor-not-allowed'
-                  )}
+                  className={INPUT_CLASS}
                 />
                 <span className="text-xs text-foreground">occurrences</span>
               </label>

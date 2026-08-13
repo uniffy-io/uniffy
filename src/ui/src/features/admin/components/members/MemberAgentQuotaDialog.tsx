@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { NumberInput } from '@/components/ui/number-input';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
     fetchUserQuota,
@@ -149,49 +149,41 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
                 ) : (
                     <>
                         <FormRow label={`Daily spend cap (${displayCurrency})`}>
-                            <Input
-                                type="number"
+                            <NumberInput
                                 min="0"
                                 step="0.01"
                                 placeholder="No cap"
                                 value={form.dailyLimit}
                                 onChange={(e) => update('dailyLimit', e.target.value)}
                                 disabled={saving}
-                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </FormRow>
                         <FormRow label={`Monthly spend cap (${displayCurrency})`}>
-                            <Input
-                                type="number"
+                            <NumberInput
                                 min="0"
                                 step="0.01"
                                 placeholder="No cap"
                                 value={form.monthlyLimit}
                                 onChange={(e) => update('monthlyLimit', e.target.value)}
                                 disabled={saving}
-                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </FormRow>
                         <FormRow label="Daily image cap">
-                            <Input
-                                type="number"
+                            <NumberInput
                                 min="0"
                                 placeholder="No cap"
                                 value={form.dailyImageLimit}
                                 onChange={(e) => update('dailyImageLimit', e.target.value)}
                                 disabled={saving}
-                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </FormRow>
                         <FormRow label="Monthly image cap">
-                            <Input
-                                type="number"
+                            <NumberInput
                                 min="0"
                                 placeholder="No cap"
                                 value={form.monthlyImageLimit}
                                 onChange={(e) => update('monthlyImageLimit', e.target.value)}
                                 disabled={saving}
-                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </FormRow>
                         <div className="flex items-center justify-between gap-4 pt-2">

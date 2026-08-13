@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { ArrowCounterClockwise, CaretRight, Faders } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
+import { NumberInput } from '@/components/ui/number-input';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
@@ -221,8 +222,7 @@ function NumberParamControl({
                         )}
                     />
                 )}
-                <input
-                    type="number"
+                <NumberInput
                     min={spec.minimum}
                     max={spec.maximum}
                     step={step}
@@ -235,11 +235,8 @@ function NumberParamControl({
                         if (e.key === 'Enter') commitText(e.currentTarget.value);
                     }}
                     className={cn(
-                        hasSlider ? 'w-24' : 'w-full',
-                        'bg-background border border-border rounded-md px-2 py-1 text-xs text-foreground tabular-nums',
-                        'focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all',
-                        'placeholder:text-muted-foreground',
-                        disabled && 'opacity-50 cursor-not-allowed',
+                        hasSlider && 'w-24',
+                        'h-auto px-2 py-1 text-xs text-foreground tabular-nums transition-all',
                     )}
                 />
             </div>

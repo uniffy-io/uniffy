@@ -17,6 +17,7 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Select } from '@/components/ui/select';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Badge } from '@/components/ui/badge';
@@ -552,14 +553,13 @@ function RuntimeTab() {
                     label="Send deadline (seconds)"
                     description="Wall-clock budget for a single agent run before it is abandoned."
                 >
-                    <Input
-                        type="number"
+                    <NumberInput
                         min="1"
                         value={form.sendDeadlineSeconds}
                         onChange={(e) =>
                             update({ sendDeadlineSeconds: parseInt(e.target.value, 10) || 0 })
                         }
-                        className="w-28 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-28"
                         disabled={busy}
                     />
                 </FieldRow>
@@ -568,8 +568,7 @@ function RuntimeTab() {
                     label="Circuit breaker failure threshold"
                     description="Consecutive provider failures before the breaker opens."
                 >
-                    <Input
-                        type="number"
+                    <NumberInput
                         min="1"
                         value={form.circuitBreakerFailureThreshold}
                         onChange={(e) =>
@@ -577,7 +576,7 @@ function RuntimeTab() {
                                 circuitBreakerFailureThreshold: parseInt(e.target.value, 10) || 0,
                             })
                         }
-                        className="w-28 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-28"
                         disabled={busy}
                     />
                 </FieldRow>
@@ -586,8 +585,7 @@ function RuntimeTab() {
                     label="Circuit breaker recovery (seconds)"
                     description="How long the breaker stays open before probing the provider again."
                 >
-                    <Input
-                        type="number"
+                    <NumberInput
                         min="1"
                         value={form.circuitBreakerRecoverySeconds}
                         onChange={(e) =>
@@ -595,7 +593,7 @@ function RuntimeTab() {
                                 circuitBreakerRecoverySeconds: parseInt(e.target.value, 10) || 0,
                             })
                         }
-                        className="w-28 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-28"
                         disabled={busy}
                     />
                 </FieldRow>
@@ -731,14 +729,13 @@ function BudgetTab() {
                     label={`Monthly spend cap (${budgetCurrency})`}
                     description={`Leave blank for no cap. Combined cost (in ${symbol}) of every agent run in the period. Change the org's display currency on the Currencies tab.`}
                 >
-                    <Input
-                        type="number"
+                    <NumberInput
                         min="0"
                         step="0.01"
                         placeholder="No cap"
                         value={monthlyLimit}
                         onChange={(e) => setMonthlyLimit(e.target.value)}
-                        className="w-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-40"
                         disabled={loading || saving}
                     />
                 </FieldRow>
@@ -747,13 +744,12 @@ function BudgetTab() {
                     label="Monthly image cap"
                     description="Combined image generations across the org. Leave blank for no cap."
                 >
-                    <Input
-                        type="number"
+                    <NumberInput
                         min="0"
                         placeholder="No cap"
                         value={imageLimit}
                         onChange={(e) => setImageLimit(e.target.value)}
-                        className="w-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-40"
                         disabled={loading || saving}
                     />
                 </FieldRow>
@@ -778,7 +774,7 @@ function BudgetTab() {
                         placeholder="50, 75, 90"
                         value={thresholds}
                         onChange={(e) => setThresholds(e.target.value)}
-                        className="w-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-40"
                         disabled={loading || saving}
                     />
                 </FieldRow>
@@ -787,13 +783,12 @@ function BudgetTab() {
                     label="Reset day"
                     description="Day of the month the budget period resets (1-28)."
                 >
-                    <Input
-                        type="number"
+                    <NumberInput
                         min="1"
                         max="28"
                         value={resetDay}
                         onChange={(e) => setResetDay(e.target.value)}
-                        className="w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-24"
                         disabled={loading || saving}
                     />
                 </FieldRow>
@@ -898,21 +893,19 @@ function RateLimitRow({ row }: { row: RateLimitState }) {
             </div>
             <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
-                    <Input
-                        type="number"
+                    <NumberInput
                         min="1"
                         value={limit}
                         onChange={(e) => setLimit(e.target.value)}
-                        className="w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-24"
                         disabled={saving}
                     />
                     <span className="text-xs text-muted-foreground">/</span>
-                    <Input
-                        type="number"
+                    <NumberInput
                         min="1"
                         value={windowSec}
                         onChange={(e) => setWindowSec(e.target.value)}
-                        className="w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-24"
                         disabled={saving}
                     />
                     <span className="text-xs text-muted-foreground whitespace-nowrap">sec</span>
@@ -1125,14 +1118,12 @@ function CurrenciesTab() {
                             <label className="block text-xs text-muted-foreground mb-1">
                                 Rate
                             </label>
-                            <Input
-                                type="number"
+                            <NumberInput
                                 step="0.0001"
                                 min="0"
                                 placeholder="e.g. 0.92"
                                 value={newRate}
                                 onChange={(e) => setNewRate(e.target.value)}
-                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </div>
                         <Button
