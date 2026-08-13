@@ -1,8 +1,12 @@
-"""Daily cron: email org owners 24h before a soft-deleted workspace is purged.
+"""Daily cron: email org owners when a soft-deleted workspace reaches the end
+of its restore window.
 
-The hard purge is operator-driven from the platform UI - tenant cascades touch
-many tables without uniform `ON DELETE CASCADE`, so automating it would orphan
-rows. Idempotent via `purge_warning_sent_at`.
+Nothing erases tenant data today. Tenant cascades touch many tables without
+uniform `ON DELETE CASCADE`, so an automated purge would orphan rows, and no
+operator-facing purge RPC exists yet either. A soft-deleted org therefore stays
+restorable indefinitely, and this mail says the window closed rather than
+promising a deletion that will not happen. Idempotent via
+`purge_warning_sent_at`.
 """
 
 from __future__ import annotations
@@ -89,7 +93,7 @@ async def _enqueue_warning(
 
 
 async def notify_pending_org_purges(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Email org owners 24h before purge fires; idempotent per org."""
+    """Email org owners as the restore window closes; idempotent per org."""
     del ctx
     if not await _acquire_lock():
         return {"status": "skipped", "reason": "lock_held"}

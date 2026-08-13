@@ -2,7 +2,7 @@
 {% block content %}
 {{ org_name }} has been scheduled for deletion.
 
-A platform operator marked your workspace for deletion on {{ deleted_at }}. The data will remain restorable for {{ grace_days }} days, until {{ purge_at }}, after which it will be permanently removed.
+A platform operator marked your workspace for deletion on {{ deleted_at }}. Sign-in is blocked from now on. The data stays restorable for {{ grace_days }} days, until {{ purge_at }}; after that it can be removed permanently at any time.
 
 {% if reason %}Reason recorded by the operator: {{ reason }}
 {% endif %}
