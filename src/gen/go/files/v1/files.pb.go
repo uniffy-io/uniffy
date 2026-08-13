@@ -6780,6 +6780,9 @@ type Attachment struct {
 	ContentId        string                 `protobuf:"bytes,5,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
 	AttachedByUserId string                 `protobuf:"bytes,6,opt,name=attached_by_user_id,json=attachedByUserId,proto3" json:"attached_by_user_id,omitempty"`
 	AttachedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=attached_at,json=attachedAt,proto3" json:"attached_at,omitempty"`
+	// File the attachment was copied from; lets clients dedupe a mention chip
+	// against its attachment copy.
+	SourceFileId *string `protobuf:"bytes,8,opt,name=source_file_id,json=sourceFileId,proto3,oneof" json:"source_file_id,omitempty"`
 	// File details (populated from the linked file)
 	Filename      string             `protobuf:"bytes,10,opt,name=filename,proto3" json:"filename,omitempty"`
 	MimeType      string             `protobuf:"bytes,11,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
@@ -6866,6 +6869,13 @@ func (x *Attachment) GetAttachedAt() *timestamppb.Timestamp {
 		return x.AttachedAt
 	}
 	return nil
+}
+
+func (x *Attachment) GetSourceFileId() string {
+	if x != nil && x.SourceFileId != nil {
+		return *x.SourceFileId
+	}
+	return ""
 }
 
 func (x *Attachment) GetFilename() string {
@@ -8170,7 +8180,7 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x18CreateFolderTreeResponse\x125\n" +
 	"\afolders\x18\x01 \x03(\v2\x1b.files.v1.CreatedFolderInfoR\afolders\"H\n" +
 	"\x1dEnsureRecordingsFolderRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xcc\x03\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\x8a\x04\n" +
 	"\n" +
 	"Attachment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
@@ -8181,14 +8191,16 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"content_id\x18\x05 \x01(\tR\tcontentId\x12-\n" +
 	"\x13attached_by_user_id\x18\x06 \x01(\tR\x10attachedByUserId\x12;\n" +
 	"\vattached_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"attachedAt\x12\x1a\n" +
+	"attachedAt\x12)\n" +
+	"\x0esource_file_id\x18\b \x01(\tH\x00R\fsourceFileId\x88\x01\x01\x12\x1a\n" +
 	"\bfilename\x18\n" +
 	" \x01(\tR\bfilename\x12\x1b\n" +
 	"\tmime_type\x18\v \x01(\tR\bmimeType\x12\x1d\n" +
 	"\n" +
 	"size_bytes\x18\f \x01(\x03R\tsizeBytes\x12?\n" +
 	"\n" +
-	"owner_info\x18\r \x01(\v2\x1b.files.v1.AttachedFileOwnerH\x00R\townerInfo\x88\x01\x01B\r\n" +
+	"owner_info\x18\r \x01(\v2\x1b.files.v1.AttachedFileOwnerH\x01R\townerInfo\x88\x01\x01B\x11\n" +
+	"\x0f_source_file_idB\r\n" +
 	"\v_owner_info\"M\n" +
 	"\x11AttachedFileOwner\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +

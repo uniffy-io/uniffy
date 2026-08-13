@@ -59,6 +59,11 @@ message SearchRequest {
   // Applied within match-strength buckets, so a weak (typo/partial) match
   // never outranks a full match via its type alone.
   repeated SearchResultType type_priority = 11;
+
+  // Match against titles/names only, skipping content, description, and tags.
+  // Mention pickers use this so a shared email domain or body text does not
+  // pull in every document; general search leaves it off.
+  bool name_matches_only = 12;
 }
 
 message SearchResponse {

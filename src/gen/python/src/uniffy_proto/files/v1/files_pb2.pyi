@@ -1187,7 +1187,7 @@ class EnsureRecordingsFolderRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
 
 class Attachment(_message.Message):
-    __slots__ = ("id", "organization_id", "file_id", "content_type", "content_id", "attached_by_user_id", "attached_at", "filename", "mime_type", "size_bytes", "owner_info")
+    __slots__ = ("id", "organization_id", "file_id", "content_type", "content_id", "attached_by_user_id", "attached_at", "source_file_id", "filename", "mime_type", "size_bytes", "owner_info")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     FILE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -1195,6 +1195,7 @@ class Attachment(_message.Message):
     CONTENT_ID_FIELD_NUMBER: _ClassVar[int]
     ATTACHED_BY_USER_ID_FIELD_NUMBER: _ClassVar[int]
     ATTACHED_AT_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FILE_ID_FIELD_NUMBER: _ClassVar[int]
     FILENAME_FIELD_NUMBER: _ClassVar[int]
     MIME_TYPE_FIELD_NUMBER: _ClassVar[int]
     SIZE_BYTES_FIELD_NUMBER: _ClassVar[int]
@@ -1206,11 +1207,12 @@ class Attachment(_message.Message):
     content_id: str
     attached_by_user_id: str
     attached_at: _timestamp_pb2.Timestamp
+    source_file_id: str
     filename: str
     mime_type: str
     size_bytes: int
     owner_info: AttachedFileOwner
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., file_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_id: _Optional[str] = ..., attached_by_user_id: _Optional[str] = ..., attached_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., owner_info: _Optional[_Union[AttachedFileOwner, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., file_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_id: _Optional[str] = ..., attached_by_user_id: _Optional[str] = ..., attached_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., source_file_id: _Optional[str] = ..., filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., owner_info: _Optional[_Union[AttachedFileOwner, _Mapping]] = ...) -> None: ...
 
 class AttachedFileOwner(_message.Message):
     __slots__ = ("id", "name", "email")
