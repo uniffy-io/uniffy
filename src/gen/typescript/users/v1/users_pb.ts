@@ -4,8 +4,6 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { MemberInfo, OrganizationInfo, OrganizationRole, PaginationRequest, PaginationResponse } from "../../common/v1/common_pb.js";
-import { file_common_v1_common } from "../../common/v1/common_pb.js";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
@@ -14,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file users/v1/users.proto.
  */
 export const file_users_v1_users: GenFile = /*@__PURE__*/
-  fileDesc("ChR1c2Vycy92MS91c2Vycy5wcm90bxIIdXNlcnMudjEitAMKC1VzZXJQcm9maWxlEgoKAmlkGAEgASgJEg0KBWVtYWlsGAIgASgJEhYKCWZ1bGxfbmFtZRgDIAEoCUgAiAEBEhUKCHVzZXJuYW1lGAQgASgJSAGIAQESFwoKYXZhdGFyX3VybBgFIAEoCUgCiAEBEhkKDGFjY2VudF9jb2xvchgGIAEoCUgDiAEBEhgKC2ZvbnRfZmFtaWx5GAcgASgJSASIAQESEQoJaXNfYWN0aXZlGAggASgIEhcKD2lzX3N5c3RlbV9hZG1pbhgJIAEoCBIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpoYXNfYXZhdGFyGAwgASgIEhUKCHByb25vdW5zGA0gASgJSAWIAQFCDAoKX2Z1bGxfbmFtZUILCglfdXNlcm5hbWVCDQoLX2F2YXRhcl91cmxCDwoNX2FjY2VudF9jb2xvckIOCgxfZm9udF9mYW1pbHlCCwoJX3Byb25vdW5zIhUKE0dldE15UHJvZmlsZVJlcXVlc3QiOwoUR2V0TXlQcm9maWxlUmVzcG9uc2USIwoEdXNlchgBIAEoCzIVLnVzZXJzLnYxLlVzZXJQcm9maWxlIj4KF1VwZGF0ZU15UHJvZmlsZVJlc3BvbnNlEiMKBHVzZXIYASABKAsyFS51c2Vycy52MS5Vc2VyUHJvZmlsZSI2Cg9HZXRVc2VyUmVzcG9uc2USIwoEdXNlchgBIAEoCzIVLnVzZXJzLnYxLlVzZXJQcm9maWxlIjkKEkNyZWF0ZVVzZXJSZXNwb25zZRIjCgR1c2VyGAEgASgLMhUudXNlcnMudjEuVXNlclByb2ZpbGUiOQoSVXBkYXRlVXNlclJlc3BvbnNlEiMKBHVzZXIYASABKAsyFS51c2Vycy52MS5Vc2VyUHJvZmlsZSI7ChRVcGxvYWRBdmF0YXJSZXNwb25zZRIjCgR1c2VyGAEgASgLMhUudXNlcnMudjEuVXNlclByb2ZpbGUiOwoURGVsZXRlQXZhdGFyUmVzcG9uc2USIwoEdXNlchgBIAEoCzIVLnVzZXJzLnYxLlVzZXJQcm9maWxlIkYKHUFkZFVzZXJUb09yZ2FuaXphdGlvblJlc3BvbnNlEiUKBm1lbWJlchgBIAEoCzIVLmNvbW1vbi52MS5NZW1iZXJJbmZvIpIBChZVcGRhdGVNeVByb2ZpbGVSZXF1ZXN0EhkKDGFjY2VudF9jb2xvchgBIAEoCUgAiAEBEhgKC2ZvbnRfZmFtaWx5GAIgASgJSAGIAQESFQoIcHJvbm91bnMYAyABKAlIAogBAUIPCg1fYWNjZW50X2NvbG9yQg4KDF9mb250X2ZhbWlseUILCglfcHJvbm91bnMirAEKEExpc3RVc2Vyc1JlcXVlc3QSNQoKcGFnaW5hdGlvbhgBIAEoCzIcLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVxdWVzdEgAiAEBEhMKBnNlYXJjaBgCIAEoCUgBiAEBEh0KEGluY2x1ZGVfaW5hY3RpdmUYAyABKAhIAogBAUINCgtfcGFnaW5hdGlvbkIJCgdfc2VhcmNoQhMKEV9pbmNsdWRlX2luYWN0aXZlIoABChFMaXN0VXNlcnNSZXNwb25zZRIkCgV1c2VycxgBIAMoCzIVLnVzZXJzLnYxLlVzZXJQcm9maWxlEjYKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlSACIAQFCDQoLX3BhZ2luYXRpb24iIQoOR2V0VXNlclJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCSKXAQoRQ3JlYXRlVXNlclJlcXVlc3QSDQoFZW1haWwYASABKAkSEAoIcGFzc3dvcmQYAiABKAkSFgoJZnVsbF9uYW1lGAMgASgJSACIAQESFQoIdXNlcm5hbWUYBCABKAlIAYgBARIXCg9pc19zeXN0ZW1fYWRtaW4YBSABKAhCDAoKX2Z1bGxfbmFtZUILCglfdXNlcm5hbWUiiAIKEVVwZGF0ZVVzZXJSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSEgoFZW1haWwYAiABKAlIAIgBARIWCglmdWxsX25hbWUYAyABKAlIAYgBARIVCgh1c2VybmFtZRgEIAEoCUgCiAEBEhYKCWlzX2FjdGl2ZRgFIAEoCEgDiAEBEhwKD2lzX3N5c3RlbV9hZG1pbhgGIAEoCEgEiAEBEhUKCHBhc3N3b3JkGAcgASgJSAWIAQFCCAoGX2VtYWlsQgwKCl9mdWxsX25hbWVCCwoJX3VzZXJuYW1lQgwKCl9pc19hY3RpdmVCEgoQX2lzX3N5c3RlbV9hZG1pbkILCglfcGFzc3dvcmQiJAoRRGVsZXRlVXNlclJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCSIlChJEZWxldGVVc2VyUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCIvChxMaXN0VXNlck9yZ2FuaXphdGlvbnNSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkiWgodTGlzdFVzZXJPcmdhbml6YXRpb25zUmVzcG9uc2USOQoLbWVtYmVyc2hpcHMYASADKAsyJC51c2Vycy52MS5Vc2VyT3JnYW5pemF0aW9uTWVtYmVyc2hpcCK8AQoaVXNlck9yZ2FuaXphdGlvbk1lbWJlcnNoaXASMQoMb3JnYW5pemF0aW9uGAEgASgLMhsuY29tbW9uLnYxLk9yZ2FuaXphdGlvbkluZm8SKQoEcm9sZRgCIAEoDjIbLmNvbW1vbi52MS5Pcmdhbml6YXRpb25Sb2xlEi0KCWpvaW5lZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEQoJaXNfYWN0aXZlGAQgASgIInMKHEFkZFVzZXJUb09yZ2FuaXphdGlvblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIXCg9vcmdhbml6YXRpb25faWQYAiABKAkSKQoEcm9sZRgDIAEoDjIbLmNvbW1vbi52MS5Pcmdhbml6YXRpb25Sb2xlIk0KIVJlbW92ZVVzZXJGcm9tT3JnYW5pemF0aW9uUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCSI1CiJSZW1vdmVVc2VyRnJvbU9yZ2FuaXphdGlvblJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiOwoTVXBsb2FkQXZhdGFyUmVxdWVzdBISCgppbWFnZV9kYXRhGAEgASgMEhAKCGZpbGVuYW1lGAIgASgJIhUKE0RlbGV0ZUF2YXRhclJlcXVlc3QygQgKDFVzZXJzU2VydmljZRJNCgxHZXRNeVByb2ZpbGUSHS51c2Vycy52MS5HZXRNeVByb2ZpbGVSZXF1ZXN0Gh4udXNlcnMudjEuR2V0TXlQcm9maWxlUmVzcG9uc2USVgoPVXBkYXRlTXlQcm9maWxlEiAudXNlcnMudjEuVXBkYXRlTXlQcm9maWxlUmVxdWVzdBohLnVzZXJzLnYxLlVwZGF0ZU15UHJvZmlsZVJlc3BvbnNlEkQKCUxpc3RVc2VycxIaLnVzZXJzLnYxLkxpc3RVc2Vyc1JlcXVlc3QaGy51c2Vycy52MS5MaXN0VXNlcnNSZXNwb25zZRI+CgdHZXRVc2VyEhgudXNlcnMudjEuR2V0VXNlclJlcXVlc3QaGS51c2Vycy52MS5HZXRVc2VyUmVzcG9uc2USRwoKQ3JlYXRlVXNlchIbLnVzZXJzLnYxLkNyZWF0ZVVzZXJSZXF1ZXN0GhwudXNlcnMudjEuQ3JlYXRlVXNlclJlc3BvbnNlEkcKClVwZGF0ZVVzZXISGy51c2Vycy52MS5VcGRhdGVVc2VyUmVxdWVzdBocLnVzZXJzLnYxLlVwZGF0ZVVzZXJSZXNwb25zZRJHCgpEZWxldGVVc2VyEhsudXNlcnMudjEuRGVsZXRlVXNlclJlcXVlc3QaHC51c2Vycy52MS5EZWxldGVVc2VyUmVzcG9uc2USTQoMVXBsb2FkQXZhdGFyEh0udXNlcnMudjEuVXBsb2FkQXZhdGFyUmVxdWVzdBoeLnVzZXJzLnYxLlVwbG9hZEF2YXRhclJlc3BvbnNlEk0KDERlbGV0ZUF2YXRhchIdLnVzZXJzLnYxLkRlbGV0ZUF2YXRhclJlcXVlc3QaHi51c2Vycy52MS5EZWxldGVBdmF0YXJSZXNwb25zZRJoChVMaXN0VXNlck9yZ2FuaXphdGlvbnMSJi51c2Vycy52MS5MaXN0VXNlck9yZ2FuaXphdGlvbnNSZXF1ZXN0GicudXNlcnMudjEuTGlzdFVzZXJPcmdhbml6YXRpb25zUmVzcG9uc2USaAoVQWRkVXNlclRvT3JnYW5pemF0aW9uEiYudXNlcnMudjEuQWRkVXNlclRvT3JnYW5pemF0aW9uUmVxdWVzdBonLnVzZXJzLnYxLkFkZFVzZXJUb09yZ2FuaXphdGlvblJlc3BvbnNlEncKGlJlbW92ZVVzZXJGcm9tT3JnYW5pemF0aW9uEisudXNlcnMudjEuUmVtb3ZlVXNlckZyb21Pcmdhbml6YXRpb25SZXF1ZXN0GiwudXNlcnMudjEuUmVtb3ZlVXNlckZyb21Pcmdhbml6YXRpb25SZXNwb25zZUI3WjVnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vdXNlcnMvdjE7dXNlcnN2MWIGcHJvdG8z", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChR1c2Vycy92MS91c2Vycy5wcm90bxIIdXNlcnMudjEitAMKC1VzZXJQcm9maWxlEgoKAmlkGAEgASgJEg0KBWVtYWlsGAIgASgJEhYKCWZ1bGxfbmFtZRgDIAEoCUgAiAEBEhUKCHVzZXJuYW1lGAQgASgJSAGIAQESFwoKYXZhdGFyX3VybBgFIAEoCUgCiAEBEhkKDGFjY2VudF9jb2xvchgGIAEoCUgDiAEBEhgKC2ZvbnRfZmFtaWx5GAcgASgJSASIAQESEQoJaXNfYWN0aXZlGAggASgIEhcKD2lzX3N5c3RlbV9hZG1pbhgJIAEoCBIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpoYXNfYXZhdGFyGAwgASgIEhUKCHByb25vdW5zGA0gASgJSAWIAQFCDAoKX2Z1bGxfbmFtZUILCglfdXNlcm5hbWVCDQoLX2F2YXRhcl91cmxCDwoNX2FjY2VudF9jb2xvckIOCgxfZm9udF9mYW1pbHlCCwoJX3Byb25vdW5zIhUKE0dldE15UHJvZmlsZVJlcXVlc3QiOwoUR2V0TXlQcm9maWxlUmVzcG9uc2USIwoEdXNlchgBIAEoCzIVLnVzZXJzLnYxLlVzZXJQcm9maWxlIj4KF1VwZGF0ZU15UHJvZmlsZVJlc3BvbnNlEiMKBHVzZXIYASABKAsyFS51c2Vycy52MS5Vc2VyUHJvZmlsZSI7ChRVcGxvYWRBdmF0YXJSZXNwb25zZRIjCgR1c2VyGAEgASgLMhUudXNlcnMudjEuVXNlclByb2ZpbGUiOwoURGVsZXRlQXZhdGFyUmVzcG9uc2USIwoEdXNlchgBIAEoCzIVLnVzZXJzLnYxLlVzZXJQcm9maWxlIpIBChZVcGRhdGVNeVByb2ZpbGVSZXF1ZXN0EhkKDGFjY2VudF9jb2xvchgBIAEoCUgAiAEBEhgKC2ZvbnRfZmFtaWx5GAIgASgJSAGIAQESFQoIcHJvbm91bnMYAyABKAlIAogBAUIPCg1fYWNjZW50X2NvbG9yQg4KDF9mb250X2ZhbWlseUILCglfcHJvbm91bnMiOwoTVXBsb2FkQXZhdGFyUmVxdWVzdBISCgppbWFnZV9kYXRhGAEgASgMEhAKCGZpbGVuYW1lGAIgASgJIhUKE0RlbGV0ZUF2YXRhclJlcXVlc3Qy0wIKDFVzZXJzU2VydmljZRJNCgxHZXRNeVByb2ZpbGUSHS51c2Vycy52MS5HZXRNeVByb2ZpbGVSZXF1ZXN0Gh4udXNlcnMudjEuR2V0TXlQcm9maWxlUmVzcG9uc2USVgoPVXBkYXRlTXlQcm9maWxlEiAudXNlcnMudjEuVXBkYXRlTXlQcm9maWxlUmVxdWVzdBohLnVzZXJzLnYxLlVwZGF0ZU15UHJvZmlsZVJlc3BvbnNlEk0KDFVwbG9hZEF2YXRhchIdLnVzZXJzLnYxLlVwbG9hZEF2YXRhclJlcXVlc3QaHi51c2Vycy52MS5VcGxvYWRBdmF0YXJSZXNwb25zZRJNCgxEZWxldGVBdmF0YXISHS51c2Vycy52MS5EZWxldGVBdmF0YXJSZXF1ZXN0Gh4udXNlcnMudjEuRGVsZXRlQXZhdGFyUmVzcG9uc2VCN1o1Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL3VzZXJzL3YxO3VzZXJzdjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message users.v1.UserProfile
@@ -141,57 +139,6 @@ export const UpdateMyProfileResponseSchema: GenMessage<UpdateMyProfileResponse> 
   messageDesc(file_users_v1_users, 3);
 
 /**
- * @generated from message users.v1.GetUserResponse
- */
-export type GetUserResponse = Message<"users.v1.GetUserResponse"> & {
-  /**
-   * @generated from field: users.v1.UserProfile user = 1;
-   */
-  user?: UserProfile | undefined;
-};
-
-/**
- * Describes the message users.v1.GetUserResponse.
- * Use `create(GetUserResponseSchema)` to create a new message.
- */
-export const GetUserResponseSchema: GenMessage<GetUserResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 4);
-
-/**
- * @generated from message users.v1.CreateUserResponse
- */
-export type CreateUserResponse = Message<"users.v1.CreateUserResponse"> & {
-  /**
-   * @generated from field: users.v1.UserProfile user = 1;
-   */
-  user?: UserProfile | undefined;
-};
-
-/**
- * Describes the message users.v1.CreateUserResponse.
- * Use `create(CreateUserResponseSchema)` to create a new message.
- */
-export const CreateUserResponseSchema: GenMessage<CreateUserResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 5);
-
-/**
- * @generated from message users.v1.UpdateUserResponse
- */
-export type UpdateUserResponse = Message<"users.v1.UpdateUserResponse"> & {
-  /**
-   * @generated from field: users.v1.UserProfile user = 1;
-   */
-  user?: UserProfile | undefined;
-};
-
-/**
- * Describes the message users.v1.UpdateUserResponse.
- * Use `create(UpdateUserResponseSchema)` to create a new message.
- */
-export const UpdateUserResponseSchema: GenMessage<UpdateUserResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 6);
-
-/**
  * @generated from message users.v1.UploadAvatarResponse
  */
 export type UploadAvatarResponse = Message<"users.v1.UploadAvatarResponse"> & {
@@ -206,7 +153,7 @@ export type UploadAvatarResponse = Message<"users.v1.UploadAvatarResponse"> & {
  * Use `create(UploadAvatarResponseSchema)` to create a new message.
  */
 export const UploadAvatarResponseSchema: GenMessage<UploadAvatarResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 7);
+  messageDesc(file_users_v1_users, 4);
 
 /**
  * @generated from message users.v1.DeleteAvatarResponse
@@ -223,24 +170,7 @@ export type DeleteAvatarResponse = Message<"users.v1.DeleteAvatarResponse"> & {
  * Use `create(DeleteAvatarResponseSchema)` to create a new message.
  */
 export const DeleteAvatarResponseSchema: GenMessage<DeleteAvatarResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 8);
-
-/**
- * @generated from message users.v1.AddUserToOrganizationResponse
- */
-export type AddUserToOrganizationResponse = Message<"users.v1.AddUserToOrganizationResponse"> & {
-  /**
-   * @generated from field: common.v1.MemberInfo member = 1;
-   */
-  member?: MemberInfo | undefined;
-};
-
-/**
- * Describes the message users.v1.AddUserToOrganizationResponse.
- * Use `create(AddUserToOrganizationResponseSchema)` to create a new message.
- */
-export const AddUserToOrganizationResponseSchema: GenMessage<AddUserToOrganizationResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 9);
+  messageDesc(file_users_v1_users, 5);
 
 /**
  * Identity (name, username, email) is NOT self-editable: platform admins and,
@@ -270,327 +200,7 @@ export type UpdateMyProfileRequest = Message<"users.v1.UpdateMyProfileRequest"> 
  * Use `create(UpdateMyProfileRequestSchema)` to create a new message.
  */
 export const UpdateMyProfileRequestSchema: GenMessage<UpdateMyProfileRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 10);
-
-/**
- * @generated from message users.v1.ListUsersRequest
- */
-export type ListUsersRequest = Message<"users.v1.ListUsersRequest"> & {
-  /**
-   * @generated from field: optional common.v1.PaginationRequest pagination = 1;
-   */
-  pagination?: PaginationRequest | undefined;
-
-  /**
-   * Filter by name or email
-   *
-   * @generated from field: optional string search = 2;
-   */
-  search?: string | undefined;
-
-  /**
-   * @generated from field: optional bool include_inactive = 3;
-   */
-  includeInactive?: boolean | undefined;
-};
-
-/**
- * Describes the message users.v1.ListUsersRequest.
- * Use `create(ListUsersRequestSchema)` to create a new message.
- */
-export const ListUsersRequestSchema: GenMessage<ListUsersRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 11);
-
-/**
- * @generated from message users.v1.ListUsersResponse
- */
-export type ListUsersResponse = Message<"users.v1.ListUsersResponse"> & {
-  /**
-   * @generated from field: repeated users.v1.UserProfile users = 1;
-   */
-  users: UserProfile[];
-
-  /**
-   * @generated from field: optional common.v1.PaginationResponse pagination = 2;
-   */
-  pagination?: PaginationResponse | undefined;
-};
-
-/**
- * Describes the message users.v1.ListUsersResponse.
- * Use `create(ListUsersResponseSchema)` to create a new message.
- */
-export const ListUsersResponseSchema: GenMessage<ListUsersResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 12);
-
-/**
- * @generated from message users.v1.GetUserRequest
- */
-export type GetUserRequest = Message<"users.v1.GetUserRequest"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
-};
-
-/**
- * Describes the message users.v1.GetUserRequest.
- * Use `create(GetUserRequestSchema)` to create a new message.
- */
-export const GetUserRequestSchema: GenMessage<GetUserRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 13);
-
-/**
- * @generated from message users.v1.CreateUserRequest
- */
-export type CreateUserRequest = Message<"users.v1.CreateUserRequest"> & {
-  /**
-   * @generated from field: string email = 1;
-   */
-  email: string;
-
-  /**
-   * @generated from field: string password = 2;
-   */
-  password: string;
-
-  /**
-   * @generated from field: optional string full_name = 3;
-   */
-  fullName?: string | undefined;
-
-  /**
-   * @generated from field: optional string username = 4;
-   */
-  username?: string | undefined;
-
-  /**
-   * @generated from field: bool is_system_admin = 5;
-   */
-  isSystemAdmin: boolean;
-};
-
-/**
- * Describes the message users.v1.CreateUserRequest.
- * Use `create(CreateUserRequestSchema)` to create a new message.
- */
-export const CreateUserRequestSchema: GenMessage<CreateUserRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 14);
-
-/**
- * @generated from message users.v1.UpdateUserRequest
- */
-export type UpdateUserRequest = Message<"users.v1.UpdateUserRequest"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
-
-  /**
-   * @generated from field: optional string email = 2;
-   */
-  email?: string | undefined;
-
-  /**
-   * @generated from field: optional string full_name = 3;
-   */
-  fullName?: string | undefined;
-
-  /**
-   * @generated from field: optional string username = 4;
-   */
-  username?: string | undefined;
-
-  /**
-   * @generated from field: optional bool is_active = 5;
-   */
-  isActive?: boolean | undefined;
-
-  /**
-   * @generated from field: optional bool is_system_admin = 6;
-   */
-  isSystemAdmin?: boolean | undefined;
-
-  /**
-   * Reset password
-   *
-   * @generated from field: optional string password = 7;
-   */
-  password?: string | undefined;
-};
-
-/**
- * Describes the message users.v1.UpdateUserRequest.
- * Use `create(UpdateUserRequestSchema)` to create a new message.
- */
-export const UpdateUserRequestSchema: GenMessage<UpdateUserRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 15);
-
-/**
- * @generated from message users.v1.DeleteUserRequest
- */
-export type DeleteUserRequest = Message<"users.v1.DeleteUserRequest"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
-};
-
-/**
- * Describes the message users.v1.DeleteUserRequest.
- * Use `create(DeleteUserRequestSchema)` to create a new message.
- */
-export const DeleteUserRequestSchema: GenMessage<DeleteUserRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 16);
-
-/**
- * @generated from message users.v1.DeleteUserResponse
- */
-export type DeleteUserResponse = Message<"users.v1.DeleteUserResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-};
-
-/**
- * Describes the message users.v1.DeleteUserResponse.
- * Use `create(DeleteUserResponseSchema)` to create a new message.
- */
-export const DeleteUserResponseSchema: GenMessage<DeleteUserResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 17);
-
-/**
- * @generated from message users.v1.ListUserOrganizationsRequest
- */
-export type ListUserOrganizationsRequest = Message<"users.v1.ListUserOrganizationsRequest"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
-};
-
-/**
- * Describes the message users.v1.ListUserOrganizationsRequest.
- * Use `create(ListUserOrganizationsRequestSchema)` to create a new message.
- */
-export const ListUserOrganizationsRequestSchema: GenMessage<ListUserOrganizationsRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 18);
-
-/**
- * @generated from message users.v1.ListUserOrganizationsResponse
- */
-export type ListUserOrganizationsResponse = Message<"users.v1.ListUserOrganizationsResponse"> & {
-  /**
-   * @generated from field: repeated users.v1.UserOrganizationMembership memberships = 1;
-   */
-  memberships: UserOrganizationMembership[];
-};
-
-/**
- * Describes the message users.v1.ListUserOrganizationsResponse.
- * Use `create(ListUserOrganizationsResponseSchema)` to create a new message.
- */
-export const ListUserOrganizationsResponseSchema: GenMessage<ListUserOrganizationsResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 19);
-
-/**
- * @generated from message users.v1.UserOrganizationMembership
- */
-export type UserOrganizationMembership = Message<"users.v1.UserOrganizationMembership"> & {
-  /**
-   * @generated from field: common.v1.OrganizationInfo organization = 1;
-   */
-  organization?: OrganizationInfo | undefined;
-
-  /**
-   * @generated from field: common.v1.OrganizationRole role = 2;
-   */
-  role: OrganizationRole;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp joined_at = 3;
-   */
-  joinedAt?: Timestamp | undefined;
-
-  /**
-   * @generated from field: bool is_active = 4;
-   */
-  isActive: boolean;
-};
-
-/**
- * Describes the message users.v1.UserOrganizationMembership.
- * Use `create(UserOrganizationMembershipSchema)` to create a new message.
- */
-export const UserOrganizationMembershipSchema: GenMessage<UserOrganizationMembership> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 20);
-
-/**
- * @generated from message users.v1.AddUserToOrganizationRequest
- */
-export type AddUserToOrganizationRequest = Message<"users.v1.AddUserToOrganizationRequest"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
-
-  /**
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: common.v1.OrganizationRole role = 3;
-   */
-  role: OrganizationRole;
-};
-
-/**
- * Describes the message users.v1.AddUserToOrganizationRequest.
- * Use `create(AddUserToOrganizationRequestSchema)` to create a new message.
- */
-export const AddUserToOrganizationRequestSchema: GenMessage<AddUserToOrganizationRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 21);
-
-/**
- * @generated from message users.v1.RemoveUserFromOrganizationRequest
- */
-export type RemoveUserFromOrganizationRequest = Message<"users.v1.RemoveUserFromOrganizationRequest"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
-
-  /**
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId: string;
-};
-
-/**
- * Describes the message users.v1.RemoveUserFromOrganizationRequest.
- * Use `create(RemoveUserFromOrganizationRequestSchema)` to create a new message.
- */
-export const RemoveUserFromOrganizationRequestSchema: GenMessage<RemoveUserFromOrganizationRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 22);
-
-/**
- * @generated from message users.v1.RemoveUserFromOrganizationResponse
- */
-export type RemoveUserFromOrganizationResponse = Message<"users.v1.RemoveUserFromOrganizationResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-};
-
-/**
- * Describes the message users.v1.RemoveUserFromOrganizationResponse.
- * Use `create(RemoveUserFromOrganizationResponseSchema)` to create a new message.
- */
-export const RemoveUserFromOrganizationResponseSchema: GenMessage<RemoveUserFromOrganizationResponse> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 23);
+  messageDesc(file_users_v1_users, 6);
 
 /**
  * @generated from message users.v1.UploadAvatarRequest
@@ -616,7 +226,7 @@ export type UploadAvatarRequest = Message<"users.v1.UploadAvatarRequest"> & {
  * Use `create(UploadAvatarRequestSchema)` to create a new message.
  */
 export const UploadAvatarRequestSchema: GenMessage<UploadAvatarRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 24);
+  messageDesc(file_users_v1_users, 7);
 
 /**
  * @generated from message users.v1.DeleteAvatarRequest
@@ -629,15 +239,13 @@ export type DeleteAvatarRequest = Message<"users.v1.DeleteAvatarRequest"> & {
  * Use `create(DeleteAvatarRequestSchema)` to create a new message.
  */
 export const DeleteAvatarRequestSchema: GenMessage<DeleteAvatarRequest> = /*@__PURE__*/
-  messageDesc(file_users_v1_users, 25);
+  messageDesc(file_users_v1_users, 8);
 
 /**
  * @generated from service users.v1.UsersService
  */
 export const UsersService: GenService<{
   /**
-   * Self-service profile operations
-   *
    * @generated from rpc users.v1.UsersService.GetMyProfile
    */
   getMyProfile: {
@@ -654,50 +262,6 @@ export const UsersService: GenService<{
     output: typeof UpdateMyProfileResponseSchema;
   },
   /**
-   * System Admin operations
-   *
-   * @generated from rpc users.v1.UsersService.ListUsers
-   */
-  listUsers: {
-    methodKind: "unary";
-    input: typeof ListUsersRequestSchema;
-    output: typeof ListUsersResponseSchema;
-  },
-  /**
-   * @generated from rpc users.v1.UsersService.GetUser
-   */
-  getUser: {
-    methodKind: "unary";
-    input: typeof GetUserRequestSchema;
-    output: typeof GetUserResponseSchema;
-  },
-  /**
-   * @generated from rpc users.v1.UsersService.CreateUser
-   */
-  createUser: {
-    methodKind: "unary";
-    input: typeof CreateUserRequestSchema;
-    output: typeof CreateUserResponseSchema;
-  },
-  /**
-   * @generated from rpc users.v1.UsersService.UpdateUser
-   */
-  updateUser: {
-    methodKind: "unary";
-    input: typeof UpdateUserRequestSchema;
-    output: typeof UpdateUserResponseSchema;
-  },
-  /**
-   * @generated from rpc users.v1.UsersService.DeleteUser
-   */
-  deleteUser: {
-    methodKind: "unary";
-    input: typeof DeleteUserRequestSchema;
-    output: typeof DeleteUserResponseSchema;
-  },
-  /**
-   * Avatar operations
-   *
    * @generated from rpc users.v1.UsersService.UploadAvatar
    */
   uploadAvatar: {
@@ -712,32 +276,6 @@ export const UsersService: GenService<{
     methodKind: "unary";
     input: typeof DeleteAvatarRequestSchema;
     output: typeof DeleteAvatarResponseSchema;
-  },
-  /**
-   * User-Organization operations (System Admin)
-   *
-   * @generated from rpc users.v1.UsersService.ListUserOrganizations
-   */
-  listUserOrganizations: {
-    methodKind: "unary";
-    input: typeof ListUserOrganizationsRequestSchema;
-    output: typeof ListUserOrganizationsResponseSchema;
-  },
-  /**
-   * @generated from rpc users.v1.UsersService.AddUserToOrganization
-   */
-  addUserToOrganization: {
-    methodKind: "unary";
-    input: typeof AddUserToOrganizationRequestSchema;
-    output: typeof AddUserToOrganizationResponseSchema;
-  },
-  /**
-   * @generated from rpc users.v1.UsersService.RemoveUserFromOrganization
-   */
-  removeUserFromOrganization: {
-    methodKind: "unary";
-    input: typeof RemoveUserFromOrganizationRequestSchema;
-    output: typeof RemoveUserFromOrganizationResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_users_v1_users, 0);

@@ -39,34 +39,13 @@ service MfaService {
   rpc RegenerateRecoveryCodes(RegenerateRecoveryCodesRequest) returns (RegenerateRecoveryCodesResponse);
 
   // Authenticated as org admin. Resets MFA on a user who is a member
-  // of the calling org. Cross-checks org membership.
+  // of the calling org. Cross-checks org membership. Platform-operator
+  // resets live on superadmin.v1.SystemMfaService.
   rpc AdminResetMfa(AdminResetMfaRequest) returns (AdminResetMfaResponse);
-
-  // Authenticated as platform admin. Direct reset is constrained to
-  // users with zero org memberships.
-  rpc PlatformResetMfa(PlatformResetMfaRequest) returns (PlatformResetMfaResponse);
-
-  // Authenticated as platform admin. Request the reset of another
-  // platform admin's MFA. Requires a second admin's approval within
-  // a 10-minute window.
-  rpc RequestPlatformPeerReset(RequestPlatformPeerResetRequest) returns (RequestPlatformPeerResetResponse);
-
-  // Authenticated as platform admin (distinct from the requester).
-  // Approves a pending peer-reset request and performs the reset.
-  rpc ApprovePlatformPeerReset(ApprovePlatformPeerResetRequest) returns (ApprovePlatformPeerResetResponse);
-
-  // Authenticated as platform admin. Returns every pending (not yet
-  // approved, not yet expired) peer-reset request so other platform
-  // admins can co-sign them from the inbox panel.
-  rpc ListPlatformPeerResets(ListPlatformPeerResetsRequest) returns (ListPlatformPeerResetsResponse);
 
   // Authenticated. Returns the calling user's MFA enrollment state.
   rpc GetMfaStatus(GetMfaStatusRequest) returns (GetMfaStatusResponse);
 }
-
-// ---------------------------------------------------------------- //
-// Enrollment                                                        //
-// ---------------------------------------------------------------- //
 
 message BeginEnrollmentRequest {}
 
@@ -103,10 +82,6 @@ message ConfirmEnrollmentResponse {
   string asset_cookie = 9;
 }
 
-// ---------------------------------------------------------------- //
-// Verify (login completion)                                         //
-// ---------------------------------------------------------------- //
-
 message VerifyMfaRequest {
   // The mfa_challenge JWT returned by AuthService.Authenticate.
   string challenge_token = 1;
@@ -135,10 +110,6 @@ message VerifyMfaResponse {
   string asset_cookie = 12;
 }
 
-// ---------------------------------------------------------------- //
-// Self-service management                                           //
-// ---------------------------------------------------------------- //
-
 message DisableMfaRequest {
   string code = 1; // Current TOTP code.
 }
@@ -164,10 +135,6 @@ message GetMfaStatusResponse {
   int32 remaining_recovery_codes = 4;
 }
 
-// ---------------------------------------------------------------- //
-// Admin / platform reset                                            //
-// ---------------------------------------------------------------- //
-
 message AdminResetMfaRequest {
   string organization_id = 1;
   string target_user_id = 2;
@@ -176,48 +143,4 @@ message AdminResetMfaRequest {
 
 message AdminResetMfaResponse {
   bool success = 1;
-}
-
-message PlatformResetMfaRequest {
-  string target_user_id = 1;
-  string reason = 2;
-}
-
-message PlatformResetMfaResponse {
-  bool success = 1;
-}
-
-message RequestPlatformPeerResetRequest {
-  string target_user_id = 1;
-  string reason = 2;
-}
-
-message RequestPlatformPeerResetResponse {
-  string request_id = 1;
-  google.protobuf.Timestamp expires_at = 2;
-}
-
-message ApprovePlatformPeerResetRequest {
-  string request_id = 1;
-}
-
-message ApprovePlatformPeerResetResponse {
-  bool success = 1;
-}
-
-message PendingPeerReset {
-  string request_id = 1;
-  string requester_user_id = 2;
-  string requester_email = 3;
-  string target_user_id = 4;
-  string target_email = 5;
-  string reason = 6;
-  google.protobuf.Timestamp created_at = 7;
-  google.protobuf.Timestamp expires_at = 8;
-}
-
-message ListPlatformPeerResetsRequest {}
-
-message ListPlatformPeerResetsResponse {
-  repeated PendingPeerReset requests = 1;
 }

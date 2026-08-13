@@ -19,17 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MfaService_BeginEnrollment_FullMethodName          = "/auth.v1.MfaService/BeginEnrollment"
-	MfaService_ConfirmEnrollment_FullMethodName        = "/auth.v1.MfaService/ConfirmEnrollment"
-	MfaService_VerifyMfa_FullMethodName                = "/auth.v1.MfaService/VerifyMfa"
-	MfaService_DisableMfa_FullMethodName               = "/auth.v1.MfaService/DisableMfa"
-	MfaService_RegenerateRecoveryCodes_FullMethodName  = "/auth.v1.MfaService/RegenerateRecoveryCodes"
-	MfaService_AdminResetMfa_FullMethodName            = "/auth.v1.MfaService/AdminResetMfa"
-	MfaService_PlatformResetMfa_FullMethodName         = "/auth.v1.MfaService/PlatformResetMfa"
-	MfaService_RequestPlatformPeerReset_FullMethodName = "/auth.v1.MfaService/RequestPlatformPeerReset"
-	MfaService_ApprovePlatformPeerReset_FullMethodName = "/auth.v1.MfaService/ApprovePlatformPeerReset"
-	MfaService_ListPlatformPeerResets_FullMethodName   = "/auth.v1.MfaService/ListPlatformPeerResets"
-	MfaService_GetMfaStatus_FullMethodName             = "/auth.v1.MfaService/GetMfaStatus"
+	MfaService_BeginEnrollment_FullMethodName         = "/auth.v1.MfaService/BeginEnrollment"
+	MfaService_ConfirmEnrollment_FullMethodName       = "/auth.v1.MfaService/ConfirmEnrollment"
+	MfaService_VerifyMfa_FullMethodName               = "/auth.v1.MfaService/VerifyMfa"
+	MfaService_DisableMfa_FullMethodName              = "/auth.v1.MfaService/DisableMfa"
+	MfaService_RegenerateRecoveryCodes_FullMethodName = "/auth.v1.MfaService/RegenerateRecoveryCodes"
+	MfaService_AdminResetMfa_FullMethodName           = "/auth.v1.MfaService/AdminResetMfa"
+	MfaService_GetMfaStatus_FullMethodName            = "/auth.v1.MfaService/GetMfaStatus"
 )
 
 // MfaServiceClient is the client API for MfaService service.
@@ -63,22 +59,9 @@ type MfaServiceClient interface {
 	// code. Old codes are invalidated.
 	RegenerateRecoveryCodes(ctx context.Context, in *RegenerateRecoveryCodesRequest, opts ...grpc.CallOption) (*RegenerateRecoveryCodesResponse, error)
 	// Authenticated as org admin. Resets MFA on a user who is a member
-	// of the calling org. Cross-checks org membership.
+	// of the calling org. Cross-checks org membership. Platform-operator
+	// resets live on superadmin.v1.SystemMfaService.
 	AdminResetMfa(ctx context.Context, in *AdminResetMfaRequest, opts ...grpc.CallOption) (*AdminResetMfaResponse, error)
-	// Authenticated as platform admin. Direct reset is constrained to
-	// users with zero org memberships.
-	PlatformResetMfa(ctx context.Context, in *PlatformResetMfaRequest, opts ...grpc.CallOption) (*PlatformResetMfaResponse, error)
-	// Authenticated as platform admin. Request the reset of another
-	// platform admin's MFA. Requires a second admin's approval within
-	// a 10-minute window.
-	RequestPlatformPeerReset(ctx context.Context, in *RequestPlatformPeerResetRequest, opts ...grpc.CallOption) (*RequestPlatformPeerResetResponse, error)
-	// Authenticated as platform admin (distinct from the requester).
-	// Approves a pending peer-reset request and performs the reset.
-	ApprovePlatformPeerReset(ctx context.Context, in *ApprovePlatformPeerResetRequest, opts ...grpc.CallOption) (*ApprovePlatformPeerResetResponse, error)
-	// Authenticated as platform admin. Returns every pending (not yet
-	// approved, not yet expired) peer-reset request so other platform
-	// admins can co-sign them from the inbox panel.
-	ListPlatformPeerResets(ctx context.Context, in *ListPlatformPeerResetsRequest, opts ...grpc.CallOption) (*ListPlatformPeerResetsResponse, error)
 	// Authenticated. Returns the calling user's MFA enrollment state.
 	GetMfaStatus(ctx context.Context, in *GetMfaStatusRequest, opts ...grpc.CallOption) (*GetMfaStatusResponse, error)
 }
@@ -151,46 +134,6 @@ func (c *mfaServiceClient) AdminResetMfa(ctx context.Context, in *AdminResetMfaR
 	return out, nil
 }
 
-func (c *mfaServiceClient) PlatformResetMfa(ctx context.Context, in *PlatformResetMfaRequest, opts ...grpc.CallOption) (*PlatformResetMfaResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PlatformResetMfaResponse)
-	err := c.cc.Invoke(ctx, MfaService_PlatformResetMfa_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mfaServiceClient) RequestPlatformPeerReset(ctx context.Context, in *RequestPlatformPeerResetRequest, opts ...grpc.CallOption) (*RequestPlatformPeerResetResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RequestPlatformPeerResetResponse)
-	err := c.cc.Invoke(ctx, MfaService_RequestPlatformPeerReset_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mfaServiceClient) ApprovePlatformPeerReset(ctx context.Context, in *ApprovePlatformPeerResetRequest, opts ...grpc.CallOption) (*ApprovePlatformPeerResetResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ApprovePlatformPeerResetResponse)
-	err := c.cc.Invoke(ctx, MfaService_ApprovePlatformPeerReset_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mfaServiceClient) ListPlatformPeerResets(ctx context.Context, in *ListPlatformPeerResetsRequest, opts ...grpc.CallOption) (*ListPlatformPeerResetsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListPlatformPeerResetsResponse)
-	err := c.cc.Invoke(ctx, MfaService_ListPlatformPeerResets_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *mfaServiceClient) GetMfaStatus(ctx context.Context, in *GetMfaStatusRequest, opts ...grpc.CallOption) (*GetMfaStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetMfaStatusResponse)
@@ -232,22 +175,9 @@ type MfaServiceServer interface {
 	// code. Old codes are invalidated.
 	RegenerateRecoveryCodes(context.Context, *RegenerateRecoveryCodesRequest) (*RegenerateRecoveryCodesResponse, error)
 	// Authenticated as org admin. Resets MFA on a user who is a member
-	// of the calling org. Cross-checks org membership.
+	// of the calling org. Cross-checks org membership. Platform-operator
+	// resets live on superadmin.v1.SystemMfaService.
 	AdminResetMfa(context.Context, *AdminResetMfaRequest) (*AdminResetMfaResponse, error)
-	// Authenticated as platform admin. Direct reset is constrained to
-	// users with zero org memberships.
-	PlatformResetMfa(context.Context, *PlatformResetMfaRequest) (*PlatformResetMfaResponse, error)
-	// Authenticated as platform admin. Request the reset of another
-	// platform admin's MFA. Requires a second admin's approval within
-	// a 10-minute window.
-	RequestPlatformPeerReset(context.Context, *RequestPlatformPeerResetRequest) (*RequestPlatformPeerResetResponse, error)
-	// Authenticated as platform admin (distinct from the requester).
-	// Approves a pending peer-reset request and performs the reset.
-	ApprovePlatformPeerReset(context.Context, *ApprovePlatformPeerResetRequest) (*ApprovePlatformPeerResetResponse, error)
-	// Authenticated as platform admin. Returns every pending (not yet
-	// approved, not yet expired) peer-reset request so other platform
-	// admins can co-sign them from the inbox panel.
-	ListPlatformPeerResets(context.Context, *ListPlatformPeerResetsRequest) (*ListPlatformPeerResetsResponse, error)
 	// Authenticated. Returns the calling user's MFA enrollment state.
 	GetMfaStatus(context.Context, *GetMfaStatusRequest) (*GetMfaStatusResponse, error)
 	mustEmbedUnimplementedMfaServiceServer()
@@ -277,18 +207,6 @@ func (UnimplementedMfaServiceServer) RegenerateRecoveryCodes(context.Context, *R
 }
 func (UnimplementedMfaServiceServer) AdminResetMfa(context.Context, *AdminResetMfaRequest) (*AdminResetMfaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AdminResetMfa not implemented")
-}
-func (UnimplementedMfaServiceServer) PlatformResetMfa(context.Context, *PlatformResetMfaRequest) (*PlatformResetMfaResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PlatformResetMfa not implemented")
-}
-func (UnimplementedMfaServiceServer) RequestPlatformPeerReset(context.Context, *RequestPlatformPeerResetRequest) (*RequestPlatformPeerResetResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RequestPlatformPeerReset not implemented")
-}
-func (UnimplementedMfaServiceServer) ApprovePlatformPeerReset(context.Context, *ApprovePlatformPeerResetRequest) (*ApprovePlatformPeerResetResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ApprovePlatformPeerReset not implemented")
-}
-func (UnimplementedMfaServiceServer) ListPlatformPeerResets(context.Context, *ListPlatformPeerResetsRequest) (*ListPlatformPeerResetsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListPlatformPeerResets not implemented")
 }
 func (UnimplementedMfaServiceServer) GetMfaStatus(context.Context, *GetMfaStatusRequest) (*GetMfaStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetMfaStatus not implemented")
@@ -422,78 +340,6 @@ func _MfaService_AdminResetMfa_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MfaService_PlatformResetMfa_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PlatformResetMfaRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MfaServiceServer).PlatformResetMfa(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MfaService_PlatformResetMfa_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MfaServiceServer).PlatformResetMfa(ctx, req.(*PlatformResetMfaRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MfaService_RequestPlatformPeerReset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestPlatformPeerResetRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MfaServiceServer).RequestPlatformPeerReset(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MfaService_RequestPlatformPeerReset_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MfaServiceServer).RequestPlatformPeerReset(ctx, req.(*RequestPlatformPeerResetRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MfaService_ApprovePlatformPeerReset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ApprovePlatformPeerResetRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MfaServiceServer).ApprovePlatformPeerReset(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MfaService_ApprovePlatformPeerReset_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MfaServiceServer).ApprovePlatformPeerReset(ctx, req.(*ApprovePlatformPeerResetRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MfaService_ListPlatformPeerResets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListPlatformPeerResetsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MfaServiceServer).ListPlatformPeerResets(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MfaService_ListPlatformPeerResets_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MfaServiceServer).ListPlatformPeerResets(ctx, req.(*ListPlatformPeerResetsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _MfaService_GetMfaStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetMfaStatusRequest)
 	if err := dec(in); err != nil {
@@ -542,22 +388,6 @@ var MfaService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AdminResetMfa",
 			Handler:    _MfaService_AdminResetMfa_Handler,
-		},
-		{
-			MethodName: "PlatformResetMfa",
-			Handler:    _MfaService_PlatformResetMfa_Handler,
-		},
-		{
-			MethodName: "RequestPlatformPeerReset",
-			Handler:    _MfaService_RequestPlatformPeerReset_Handler,
-		},
-		{
-			MethodName: "ApprovePlatformPeerReset",
-			Handler:    _MfaService_ApprovePlatformPeerReset_Handler,
-		},
-		{
-			MethodName: "ListPlatformPeerResets",
-			Handler:    _MfaService_ListPlatformPeerResets_Handler,
 		},
 		{
 			MethodName: "GetMfaStatus",

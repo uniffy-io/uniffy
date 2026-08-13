@@ -2,134 +2,17 @@
 // @generated from file superadmin/v1/support_session.proto (package superadmin.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { SupportSession, SupportSessionScope, SupportSessionState } from "../../support/v1/support_consent_pb.js";
+import { file_support_v1_support_consent } from "../../support/v1/support_consent_pb.js";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file superadmin/v1/support_session.proto.
  */
 export const file_superadmin_v1_support_session: GenFile = /*@__PURE__*/
-  fileDesc("CiNzdXBlcmFkbWluL3YxL3N1cHBvcnRfc2Vzc2lvbi5wcm90bxINc3VwZXJhZG1pbi52MSKWBwoOU3VwcG9ydFNlc3Npb24SCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhkKEW9yZ2FuaXphdGlvbl9uYW1lGAMgASgJEhkKEW9yZ2FuaXphdGlvbl9zbHVnGAQgASgJEhcKD3N1cHBvcnRfdXNlcl9pZBgFIAEoCRIaChJzdXBwb3J0X3VzZXJfZW1haWwYBiABKAkSIwoWc3VwcG9ydF91c2VyX2Z1bGxfbmFtZRgHIAEoCUgAiAEBEhwKFHJlcXVlc3RlZF9ieV91c2VyX2lkGAggASgJEh8KEmdyYW50ZWRfYnlfdXNlcl9pZBgJIAEoCUgBiAEBEh0KEGdyYW50ZWRfYnlfZW1haWwYCiABKAlIAogBARIfChJyZXZva2VkX2J5X3VzZXJfaWQYCyABKAlIA4gBARIdChByZXZva2VkX2J5X2VtYWlsGAwgASgJSASIAQESDgoGcmVhc29uGA0gASgJEjEKBXNjb3BlGA4gASgOMiIuc3VwZXJhZG1pbi52MS5TdXBwb3J0U2Vzc2lvblNjb3BlEjEKBXN0YXRlGA8gASgOMiIuc3VwZXJhZG1pbi52MS5TdXBwb3J0U2Vzc2lvblN0YXRlEjAKDHJlcXVlc3RlZF9hdBgQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMwoKZ3JhbnRlZF9hdBgRIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIBYgBARIuCgpleHBpcmVzX2F0GBIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIzCgpyZXZva2VkX2F0GBMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgGiAEBEi4KCmNyZWF0ZWRfYXQYFCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYFSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQhkKF19zdXBwb3J0X3VzZXJfZnVsbF9uYW1lQhUKE19ncmFudGVkX2J5X3VzZXJfaWRCEwoRX2dyYW50ZWRfYnlfZW1haWxCFQoTX3Jldm9rZWRfYnlfdXNlcl9pZEITChFfcmV2b2tlZF9ieV9lbWFpbEINCgtfZ3JhbnRlZF9hdEINCgtfcmV2b2tlZF9hdCKNAQoVUmVxdWVzdFNlc3Npb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIOCgZyZWFzb24YAiABKAkSMQoFc2NvcGUYAyABKA4yIi5zdXBlcmFkbWluLnYxLlN1cHBvcnRTZXNzaW9uU2NvcGUSGAoQZHVyYXRpb25fbWludXRlcxgEIAEoBSJIChZSZXF1ZXN0U2Vzc2lvblJlc3BvbnNlEi4KB3Nlc3Npb24YASABKAsyHS5zdXBlcmFkbWluLnYxLlN1cHBvcnRTZXNzaW9uIisKFUFwcHJvdmVTZXNzaW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJIkgKFkFwcHJvdmVTZXNzaW9uUmVzcG9uc2USLgoHc2Vzc2lvbhgBIAEoCzIdLnN1cGVyYWRtaW4udjEuU3VwcG9ydFNlc3Npb24iOgoUUmVqZWN0U2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRIOCgZyZWFzb24YAiABKAkiRwoVUmVqZWN0U2Vzc2lvblJlc3BvbnNlEi4KB3Nlc3Npb24YASABKAsyHS5zdXBlcmFkbWluLnYxLlN1cHBvcnRTZXNzaW9uIjoKFFJldm9rZVNlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSDgoGcmVhc29uGAIgASgJIkcKFVJldm9rZVNlc3Npb25SZXNwb25zZRIuCgdzZXNzaW9uGAEgASgLMh0uc3VwZXJhZG1pbi52MS5TdXBwb3J0U2Vzc2lvbiJSChVMaXN0TXlTZXNzaW9uc1JlcXVlc3QSDAoEcGFnZRgBIAEoBRIRCglwYWdlX3NpemUYAiABKAUSGAoQaW5jbHVkZV9pbmFjdGl2ZRgDIAEoCCJ/ChZMaXN0TXlTZXNzaW9uc1Jlc3BvbnNlEi8KCHNlc3Npb25zGAEgAygLMh0uc3VwZXJhZG1pbi52MS5TdXBwb3J0U2Vzc2lvbhITCgt0b3RhbF9jb3VudBgCIAEoBRIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBSJsChZMaXN0T3JnU2Vzc2lvbnNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRwYWdlGAIgASgFEhEKCXBhZ2Vfc2l6ZRgDIAEoBRIYChBpbmNsdWRlX2luYWN0aXZlGAQgASgIIoABChdMaXN0T3JnU2Vzc2lvbnNSZXNwb25zZRIvCghzZXNzaW9ucxgBIAMoCzIdLnN1cGVyYWRtaW4udjEuU3VwcG9ydFNlc3Npb24SEwoLdG90YWxfY291bnQYAiABKAUSDAoEcGFnZRgDIAEoBRIRCglwYWdlX3NpemUYBCABKAUifAoWTGlzdEFsbFNlc3Npb25zUmVxdWVzdBIMCgRwYWdlGAEgASgFEhEKCXBhZ2Vfc2l6ZRgCIAEoBRIxCgVzdGF0ZRgDIAEoDjIiLnN1cGVyYWRtaW4udjEuU3VwcG9ydFNlc3Npb25TdGF0ZRIOCgZzZWFyY2gYBCABKAkigAEKF0xpc3RBbGxTZXNzaW9uc1Jlc3BvbnNlEi8KCHNlc3Npb25zGAEgAygLMh0uc3VwZXJhZG1pbi52MS5TdXBwb3J0U2Vzc2lvbhITCgt0b3RhbF9jb3VudBgCIAEoBRIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBSLhAQoWU3VwcG9ydENvbnNlbnRNb2RlVmlldxI6Cg9kZXBsb3ltZW50X21vZGUYASABKA4yIS5zdXBlcmFkbWluLnYxLlN1cHBvcnRDb25zZW50TW9kZRI3Cgxvcmdfb3ZlcnJpZGUYAiABKA4yIS5zdXBlcmFkbWluLnYxLlN1cHBvcnRDb25zZW50TW9kZRI0CgllZmZlY3RpdmUYAyABKA4yIS5zdXBlcmFkbWluLnYxLlN1cHBvcnRDb25zZW50TW9kZRIcChRsb2NrZWRfYnlfZGVwbG95bWVudBgEIAEoCCIzChhHZXRPcmdDb25zZW50TW9kZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIlAKGUdldE9yZ0NvbnNlbnRNb2RlUmVzcG9uc2USMwoEdmlldxgBIAEoCzIlLnN1cGVyYWRtaW4udjEuU3VwcG9ydENvbnNlbnRNb2RlVmlldyJkChhTZXRPcmdDb25zZW50TW9kZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEi8KBG1vZGUYAiABKA4yIS5zdXBlcmFkbWluLnYxLlN1cHBvcnRDb25zZW50TW9kZSJQChlTZXRPcmdDb25zZW50TW9kZVJlc3BvbnNlEjMKBHZpZXcYASABKAsyJS5zdXBlcmFkbWluLnYxLlN1cHBvcnRDb25zZW50TW9kZVZpZXcqhwEKE1N1cHBvcnRTZXNzaW9uU2NvcGUSJQohU1VQUE9SVF9TRVNTSU9OX1NDT1BFX1VOU1BFQ0lGSUVEEAASIwofU1VQUE9SVF9TRVNTSU9OX1NDT1BFX1JFQURfT05MWRABEiQKIFNVUFBPUlRfU0VTU0lPTl9TQ09QRV9SRUFEX1dSSVRFEAIq6wEKE1N1cHBvcnRTZXNzaW9uU3RhdGUSJQohU1VQUE9SVF9TRVNTSU9OX1NUQVRFX1VOU1BFQ0lGSUVEEAASIQodU1VQUE9SVF9TRVNTSU9OX1NUQVRFX1BFTkRJTkcQARIgChxTVVBQT1JUX1NFU1NJT05fU1RBVEVfQUNUSVZFEAISIQodU1VQUE9SVF9TRVNTSU9OX1NUQVRFX0VYUElSRUQQAxIhCh1TVVBQT1JUX1NFU1NJT05fU1RBVEVfUkVWT0tFRBAEEiIKHlNVUFBPUlRfU0VTU0lPTl9TVEFURV9SRUpFQ1RFRBAFKpABChJTdXBwb3J0Q29uc2VudE1vZGUSJAogU1VQUE9SVF9DT05TRU5UX01PREVfVU5TUEVDSUZJRUQQABInCiNTVVBQT1JUX0NPTlNFTlRfTU9ERV9PV05FUl9BUFBST1ZFRBABEisKJ1NVUFBPUlRfQ09OU0VOVF9NT0RFX09QRVJBVE9SX0pVU1RJRklFRBACMosHCg5TdXBwb3J0U2VydmljZRJfCg5SZXF1ZXN0U2Vzc2lvbhIkLnN1cGVyYWRtaW4udjEuUmVxdWVzdFNlc3Npb25SZXF1ZXN0GiUuc3VwZXJhZG1pbi52MS5SZXF1ZXN0U2Vzc2lvblJlc3BvbnNlIgASXwoOQXBwcm92ZVNlc3Npb24SJC5zdXBlcmFkbWluLnYxLkFwcHJvdmVTZXNzaW9uUmVxdWVzdBolLnN1cGVyYWRtaW4udjEuQXBwcm92ZVNlc3Npb25SZXNwb25zZSIAElwKDVJlamVjdFNlc3Npb24SIy5zdXBlcmFkbWluLnYxLlJlamVjdFNlc3Npb25SZXF1ZXN0GiQuc3VwZXJhZG1pbi52MS5SZWplY3RTZXNzaW9uUmVzcG9uc2UiABJcCg1SZXZva2VTZXNzaW9uEiMuc3VwZXJhZG1pbi52MS5SZXZva2VTZXNzaW9uUmVxdWVzdBokLnN1cGVyYWRtaW4udjEuUmV2b2tlU2Vzc2lvblJlc3BvbnNlIgASXwoOTGlzdE15U2Vzc2lvbnMSJC5zdXBlcmFkbWluLnYxLkxpc3RNeVNlc3Npb25zUmVxdWVzdBolLnN1cGVyYWRtaW4udjEuTGlzdE15U2Vzc2lvbnNSZXNwb25zZSIAEmIKD0xpc3RPcmdTZXNzaW9ucxIlLnN1cGVyYWRtaW4udjEuTGlzdE9yZ1Nlc3Npb25zUmVxdWVzdBomLnN1cGVyYWRtaW4udjEuTGlzdE9yZ1Nlc3Npb25zUmVzcG9uc2UiABJiCg9MaXN0QWxsU2Vzc2lvbnMSJS5zdXBlcmFkbWluLnYxLkxpc3RBbGxTZXNzaW9uc1JlcXVlc3QaJi5zdXBlcmFkbWluLnYxLkxpc3RBbGxTZXNzaW9uc1Jlc3BvbnNlIgASaAoRR2V0T3JnQ29uc2VudE1vZGUSJy5zdXBlcmFkbWluLnYxLkdldE9yZ0NvbnNlbnRNb2RlUmVxdWVzdBooLnN1cGVyYWRtaW4udjEuR2V0T3JnQ29uc2VudE1vZGVSZXNwb25zZSIAEmgKEVNldE9yZ0NvbnNlbnRNb2RlEicuc3VwZXJhZG1pbi52MS5TZXRPcmdDb25zZW50TW9kZVJlcXVlc3QaKC5zdXBlcmFkbWluLnYxLlNldE9yZ0NvbnNlbnRNb2RlUmVzcG9uc2UiAEJBWj9naXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vc3VwZXJhZG1pbi92MTtzdXBlcmFkbWludjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
-
-/**
- * @generated from message superadmin.v1.SupportSession
- */
-export type SupportSession = Message<"superadmin.v1.SupportSession"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: string organization_name = 3;
-   */
-  organizationName: string;
-
-  /**
-   * @generated from field: string organization_slug = 4;
-   */
-  organizationSlug: string;
-
-  /**
-   * @generated from field: string support_user_id = 5;
-   */
-  supportUserId: string;
-
-  /**
-   * @generated from field: string support_user_email = 6;
-   */
-  supportUserEmail: string;
-
-  /**
-   * @generated from field: optional string support_user_full_name = 7;
-   */
-  supportUserFullName?: string | undefined;
-
-  /**
-   * @generated from field: string requested_by_user_id = 8;
-   */
-  requestedByUserId: string;
-
-  /**
-   * @generated from field: optional string granted_by_user_id = 9;
-   */
-  grantedByUserId?: string | undefined;
-
-  /**
-   * @generated from field: optional string granted_by_email = 10;
-   */
-  grantedByEmail?: string | undefined;
-
-  /**
-   * @generated from field: optional string revoked_by_user_id = 11;
-   */
-  revokedByUserId?: string | undefined;
-
-  /**
-   * @generated from field: optional string revoked_by_email = 12;
-   */
-  revokedByEmail?: string | undefined;
-
-  /**
-   * @generated from field: string reason = 13;
-   */
-  reason: string;
-
-  /**
-   * @generated from field: superadmin.v1.SupportSessionScope scope = 14;
-   */
-  scope: SupportSessionScope;
-
-  /**
-   * @generated from field: superadmin.v1.SupportSessionState state = 15;
-   */
-  state: SupportSessionState;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp requested_at = 16;
-   */
-  requestedAt?: Timestamp | undefined;
-
-  /**
-   * @generated from field: optional google.protobuf.Timestamp granted_at = 17;
-   */
-  grantedAt?: Timestamp | undefined;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp expires_at = 18;
-   */
-  expiresAt?: Timestamp | undefined;
-
-  /**
-   * @generated from field: optional google.protobuf.Timestamp revoked_at = 19;
-   */
-  revokedAt?: Timestamp | undefined;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp created_at = 20;
-   */
-  createdAt?: Timestamp | undefined;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp updated_at = 21;
-   */
-  updatedAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message superadmin.v1.SupportSession.
- * Use `create(SupportSessionSchema)` to create a new message.
- */
-export const SupportSessionSchema: GenMessage<SupportSession> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 0);
+  fileDesc("CiNzdXBlcmFkbWluL3YxL3N1cHBvcnRfc2Vzc2lvbi5wcm90bxINc3VwZXJhZG1pbi52MSKKAQoVUmVxdWVzdFNlc3Npb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIOCgZyZWFzb24YAiABKAkSLgoFc2NvcGUYAyABKA4yHy5zdXBwb3J0LnYxLlN1cHBvcnRTZXNzaW9uU2NvcGUSGAoQZHVyYXRpb25fbWludXRlcxgEIAEoBSJFChZSZXF1ZXN0U2Vzc2lvblJlc3BvbnNlEisKB3Nlc3Npb24YASABKAsyGi5zdXBwb3J0LnYxLlN1cHBvcnRTZXNzaW9uIlIKFUxpc3RNeVNlc3Npb25zUmVxdWVzdBIMCgRwYWdlGAEgASgFEhEKCXBhZ2Vfc2l6ZRgCIAEoBRIYChBpbmNsdWRlX2luYWN0aXZlGAMgASgIInwKFkxpc3RNeVNlc3Npb25zUmVzcG9uc2USLAoIc2Vzc2lvbnMYASADKAsyGi5zdXBwb3J0LnYxLlN1cHBvcnRTZXNzaW9uEhMKC3RvdGFsX2NvdW50GAIgASgFEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFInkKFkxpc3RBbGxTZXNzaW9uc1JlcXVlc3QSDAoEcGFnZRgBIAEoBRIRCglwYWdlX3NpemUYAiABKAUSLgoFc3RhdGUYAyABKA4yHy5zdXBwb3J0LnYxLlN1cHBvcnRTZXNzaW9uU3RhdGUSDgoGc2VhcmNoGAQgASgJIn0KF0xpc3RBbGxTZXNzaW9uc1Jlc3BvbnNlEiwKCHNlc3Npb25zGAEgAygLMhouc3VwcG9ydC52MS5TdXBwb3J0U2Vzc2lvbhITCgt0b3RhbF9jb3VudBgCIAEoBRIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBTK2AgoOU3VwcG9ydFNlcnZpY2USXwoOUmVxdWVzdFNlc3Npb24SJC5zdXBlcmFkbWluLnYxLlJlcXVlc3RTZXNzaW9uUmVxdWVzdBolLnN1cGVyYWRtaW4udjEuUmVxdWVzdFNlc3Npb25SZXNwb25zZSIAEl8KDkxpc3RNeVNlc3Npb25zEiQuc3VwZXJhZG1pbi52MS5MaXN0TXlTZXNzaW9uc1JlcXVlc3QaJS5zdXBlcmFkbWluLnYxLkxpc3RNeVNlc3Npb25zUmVzcG9uc2UiABJiCg9MaXN0QWxsU2Vzc2lvbnMSJS5zdXBlcmFkbWluLnYxLkxpc3RBbGxTZXNzaW9uc1JlcXVlc3QaJi5zdXBlcmFkbWluLnYxLkxpc3RBbGxTZXNzaW9uc1Jlc3BvbnNlIgBCQVo/Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL3N1cGVyYWRtaW4vdjE7c3VwZXJhZG1pbnYxYgZwcm90bzM", [file_support_v1_support_consent]);
 
 /**
  * @generated from message superadmin.v1.RequestSessionRequest
@@ -152,13 +35,13 @@ export type RequestSessionRequest = Message<"superadmin.v1.RequestSessionRequest
    * rejected with INVALID_ARGUMENT until a future phase ships the
    * write path.
    *
-   * @generated from field: superadmin.v1.SupportSessionScope scope = 3;
+   * @generated from field: support.v1.SupportSessionScope scope = 3;
    */
   scope: SupportSessionScope;
 
   /**
-   * Requested duration. Capped by deployment env (Phase 6); default
-   * 30min, max 120min.
+   * Requested duration. Capped by deployment env; default 30min,
+   * max 120min.
    *
    * @generated from field: int32 duration_minutes = 4;
    */
@@ -170,14 +53,14 @@ export type RequestSessionRequest = Message<"superadmin.v1.RequestSessionRequest
  * Use `create(RequestSessionRequestSchema)` to create a new message.
  */
 export const RequestSessionRequestSchema: GenMessage<RequestSessionRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 1);
+  messageDesc(file_superadmin_v1_support_session, 0);
 
 /**
  * @generated from message superadmin.v1.RequestSessionResponse
  */
 export type RequestSessionResponse = Message<"superadmin.v1.RequestSessionResponse"> & {
   /**
-   * @generated from field: superadmin.v1.SupportSession session = 1;
+   * @generated from field: support.v1.SupportSession session = 1;
    */
   session?: SupportSession | undefined;
 };
@@ -187,123 +70,7 @@ export type RequestSessionResponse = Message<"superadmin.v1.RequestSessionRespon
  * Use `create(RequestSessionResponseSchema)` to create a new message.
  */
 export const RequestSessionResponseSchema: GenMessage<RequestSessionResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 2);
-
-/**
- * @generated from message superadmin.v1.ApproveSessionRequest
- */
-export type ApproveSessionRequest = Message<"superadmin.v1.ApproveSessionRequest"> & {
-  /**
-   * @generated from field: string session_id = 1;
-   */
-  sessionId: string;
-};
-
-/**
- * Describes the message superadmin.v1.ApproveSessionRequest.
- * Use `create(ApproveSessionRequestSchema)` to create a new message.
- */
-export const ApproveSessionRequestSchema: GenMessage<ApproveSessionRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 3);
-
-/**
- * @generated from message superadmin.v1.ApproveSessionResponse
- */
-export type ApproveSessionResponse = Message<"superadmin.v1.ApproveSessionResponse"> & {
-  /**
-   * @generated from field: superadmin.v1.SupportSession session = 1;
-   */
-  session?: SupportSession | undefined;
-};
-
-/**
- * Describes the message superadmin.v1.ApproveSessionResponse.
- * Use `create(ApproveSessionResponseSchema)` to create a new message.
- */
-export const ApproveSessionResponseSchema: GenMessage<ApproveSessionResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 4);
-
-/**
- * @generated from message superadmin.v1.RejectSessionRequest
- */
-export type RejectSessionRequest = Message<"superadmin.v1.RejectSessionRequest"> & {
-  /**
-   * @generated from field: string session_id = 1;
-   */
-  sessionId: string;
-
-  /**
-   * Optional free-text shown in audit.
-   *
-   * @generated from field: string reason = 2;
-   */
-  reason: string;
-};
-
-/**
- * Describes the message superadmin.v1.RejectSessionRequest.
- * Use `create(RejectSessionRequestSchema)` to create a new message.
- */
-export const RejectSessionRequestSchema: GenMessage<RejectSessionRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 5);
-
-/**
- * @generated from message superadmin.v1.RejectSessionResponse
- */
-export type RejectSessionResponse = Message<"superadmin.v1.RejectSessionResponse"> & {
-  /**
-   * @generated from field: superadmin.v1.SupportSession session = 1;
-   */
-  session?: SupportSession | undefined;
-};
-
-/**
- * Describes the message superadmin.v1.RejectSessionResponse.
- * Use `create(RejectSessionResponseSchema)` to create a new message.
- */
-export const RejectSessionResponseSchema: GenMessage<RejectSessionResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 6);
-
-/**
- * @generated from message superadmin.v1.RevokeSessionRequest
- */
-export type RevokeSessionRequest = Message<"superadmin.v1.RevokeSessionRequest"> & {
-  /**
-   * @generated from field: string session_id = 1;
-   */
-  sessionId: string;
-
-  /**
-   * Optional free-text shown in audit.
-   *
-   * @generated from field: string reason = 2;
-   */
-  reason: string;
-};
-
-/**
- * Describes the message superadmin.v1.RevokeSessionRequest.
- * Use `create(RevokeSessionRequestSchema)` to create a new message.
- */
-export const RevokeSessionRequestSchema: GenMessage<RevokeSessionRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 7);
-
-/**
- * @generated from message superadmin.v1.RevokeSessionResponse
- */
-export type RevokeSessionResponse = Message<"superadmin.v1.RevokeSessionResponse"> & {
-  /**
-   * @generated from field: superadmin.v1.SupportSession session = 1;
-   */
-  session?: SupportSession | undefined;
-};
-
-/**
- * Describes the message superadmin.v1.RevokeSessionResponse.
- * Use `create(RevokeSessionResponseSchema)` to create a new message.
- */
-export const RevokeSessionResponseSchema: GenMessage<RevokeSessionResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 8);
+  messageDesc(file_superadmin_v1_support_session, 1);
 
 /**
  * @generated from message superadmin.v1.ListMySessionsRequest
@@ -333,14 +100,14 @@ export type ListMySessionsRequest = Message<"superadmin.v1.ListMySessionsRequest
  * Use `create(ListMySessionsRequestSchema)` to create a new message.
  */
 export const ListMySessionsRequestSchema: GenMessage<ListMySessionsRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 9);
+  messageDesc(file_superadmin_v1_support_session, 2);
 
 /**
  * @generated from message superadmin.v1.ListMySessionsResponse
  */
 export type ListMySessionsResponse = Message<"superadmin.v1.ListMySessionsResponse"> & {
   /**
-   * @generated from field: repeated superadmin.v1.SupportSession sessions = 1;
+   * @generated from field: repeated support.v1.SupportSession sessions = 1;
    */
   sessions: SupportSession[];
 
@@ -365,71 +132,7 @@ export type ListMySessionsResponse = Message<"superadmin.v1.ListMySessionsRespon
  * Use `create(ListMySessionsResponseSchema)` to create a new message.
  */
 export const ListMySessionsResponseSchema: GenMessage<ListMySessionsResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 10);
-
-/**
- * @generated from message superadmin.v1.ListOrgSessionsRequest
- */
-export type ListOrgSessionsRequest = Message<"superadmin.v1.ListOrgSessionsRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: int32 page = 2;
-   */
-  page: number;
-
-  /**
-   * @generated from field: int32 page_size = 3;
-   */
-  pageSize: number;
-
-  /**
-   * @generated from field: bool include_inactive = 4;
-   */
-  includeInactive: boolean;
-};
-
-/**
- * Describes the message superadmin.v1.ListOrgSessionsRequest.
- * Use `create(ListOrgSessionsRequestSchema)` to create a new message.
- */
-export const ListOrgSessionsRequestSchema: GenMessage<ListOrgSessionsRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 11);
-
-/**
- * @generated from message superadmin.v1.ListOrgSessionsResponse
- */
-export type ListOrgSessionsResponse = Message<"superadmin.v1.ListOrgSessionsResponse"> & {
-  /**
-   * @generated from field: repeated superadmin.v1.SupportSession sessions = 1;
-   */
-  sessions: SupportSession[];
-
-  /**
-   * @generated from field: int32 total_count = 2;
-   */
-  totalCount: number;
-
-  /**
-   * @generated from field: int32 page = 3;
-   */
-  page: number;
-
-  /**
-   * @generated from field: int32 page_size = 4;
-   */
-  pageSize: number;
-};
-
-/**
- * Describes the message superadmin.v1.ListOrgSessionsResponse.
- * Use `create(ListOrgSessionsResponseSchema)` to create a new message.
- */
-export const ListOrgSessionsResponseSchema: GenMessage<ListOrgSessionsResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 12);
+  messageDesc(file_superadmin_v1_support_session, 3);
 
 /**
  * @generated from message superadmin.v1.ListAllSessionsRequest
@@ -448,7 +151,7 @@ export type ListAllSessionsRequest = Message<"superadmin.v1.ListAllSessionsReque
   /**
    * Optional state filter (UNSPECIFIED = all states).
    *
-   * @generated from field: superadmin.v1.SupportSessionState state = 3;
+   * @generated from field: support.v1.SupportSessionState state = 3;
    */
   state: SupportSessionState;
 
@@ -465,14 +168,14 @@ export type ListAllSessionsRequest = Message<"superadmin.v1.ListAllSessionsReque
  * Use `create(ListAllSessionsRequestSchema)` to create a new message.
  */
 export const ListAllSessionsRequestSchema: GenMessage<ListAllSessionsRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 13);
+  messageDesc(file_superadmin_v1_support_session, 4);
 
 /**
  * @generated from message superadmin.v1.ListAllSessionsResponse
  */
 export type ListAllSessionsResponse = Message<"superadmin.v1.ListAllSessionsResponse"> & {
   /**
-   * @generated from field: repeated superadmin.v1.SupportSession sessions = 1;
+   * @generated from field: repeated support.v1.SupportSession sessions = 1;
    */
   sessions: SupportSession[];
 
@@ -497,249 +200,19 @@ export type ListAllSessionsResponse = Message<"superadmin.v1.ListAllSessionsResp
  * Use `create(ListAllSessionsResponseSchema)` to create a new message.
  */
 export const ListAllSessionsResponseSchema: GenMessage<ListAllSessionsResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 14);
+  messageDesc(file_superadmin_v1_support_session, 5);
 
 /**
- * @generated from message superadmin.v1.SupportConsentModeView
- */
-export type SupportConsentModeView = Message<"superadmin.v1.SupportConsentModeView"> & {
-  /**
-   * Deployment-wide policy (env-driven).
-   *
-   * @generated from field: superadmin.v1.SupportConsentMode deployment_mode = 1;
-   */
-  deploymentMode: SupportConsentMode;
-
-  /**
-   * Per-org override row, if one is set.
-   *
-   * @generated from field: superadmin.v1.SupportConsentMode org_override = 2;
-   */
-  orgOverride: SupportConsentMode;
-
-  /**
-   * Resolved effective mode after the tighten-only rule applies.
-   *
-   * @generated from field: superadmin.v1.SupportConsentMode effective = 3;
-   */
-  effective: SupportConsentMode;
-
-  /**
-   * True when the org cannot loosen the deployment policy (i.e.
-   * deployment is OWNER_APPROVED). UI shows the toggle as locked.
-   *
-   * @generated from field: bool locked_by_deployment = 4;
-   */
-  lockedByDeployment: boolean;
-};
-
-/**
- * Describes the message superadmin.v1.SupportConsentModeView.
- * Use `create(SupportConsentModeViewSchema)` to create a new message.
- */
-export const SupportConsentModeViewSchema: GenMessage<SupportConsentModeView> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 15);
-
-/**
- * @generated from message superadmin.v1.GetOrgConsentModeRequest
- */
-export type GetOrgConsentModeRequest = Message<"superadmin.v1.GetOrgConsentModeRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-};
-
-/**
- * Describes the message superadmin.v1.GetOrgConsentModeRequest.
- * Use `create(GetOrgConsentModeRequestSchema)` to create a new message.
- */
-export const GetOrgConsentModeRequestSchema: GenMessage<GetOrgConsentModeRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 16);
-
-/**
- * @generated from message superadmin.v1.GetOrgConsentModeResponse
- */
-export type GetOrgConsentModeResponse = Message<"superadmin.v1.GetOrgConsentModeResponse"> & {
-  /**
-   * @generated from field: superadmin.v1.SupportConsentModeView view = 1;
-   */
-  view?: SupportConsentModeView | undefined;
-};
-
-/**
- * Describes the message superadmin.v1.GetOrgConsentModeResponse.
- * Use `create(GetOrgConsentModeResponseSchema)` to create a new message.
- */
-export const GetOrgConsentModeResponseSchema: GenMessage<GetOrgConsentModeResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 17);
-
-/**
- * @generated from message superadmin.v1.SetOrgConsentModeRequest
- */
-export type SetOrgConsentModeRequest = Message<"superadmin.v1.SetOrgConsentModeRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * Pass UNSPECIFIED to clear the per-org override (fall back to
-   * deployment default).
-   *
-   * @generated from field: superadmin.v1.SupportConsentMode mode = 2;
-   */
-  mode: SupportConsentMode;
-};
-
-/**
- * Describes the message superadmin.v1.SetOrgConsentModeRequest.
- * Use `create(SetOrgConsentModeRequestSchema)` to create a new message.
- */
-export const SetOrgConsentModeRequestSchema: GenMessage<SetOrgConsentModeRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 18);
-
-/**
- * @generated from message superadmin.v1.SetOrgConsentModeResponse
- */
-export type SetOrgConsentModeResponse = Message<"superadmin.v1.SetOrgConsentModeResponse"> & {
-  /**
-   * @generated from field: superadmin.v1.SupportConsentModeView view = 1;
-   */
-  view?: SupportConsentModeView | undefined;
-};
-
-/**
- * Describes the message superadmin.v1.SetOrgConsentModeResponse.
- * Use `create(SetOrgConsentModeResponseSchema)` to create a new message.
- */
-export const SetOrgConsentModeResponseSchema: GenMessage<SetOrgConsentModeResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_support_session, 19);
-
-/**
- * Read vs read-write access during a session. v1 ships READ_ONLY
- * only; the enum is here for forward compatibility.
+ * Operator-side half of the support session contract: requesting a
+ * session against a tenant org and listing sessions cross-tenant.
+ * The tenant's consent controls (approve, reject, revoke, per-org
+ * listing, consent mode) live in ``support.v1.SupportConsentService``
+ * so this whole namespace can be firewalled off the public edge
+ * without breaking tenant consent.
  *
- * @generated from enum superadmin.v1.SupportSessionScope
- */
-export enum SupportSessionScope {
-  /**
-   * @generated from enum value: SUPPORT_SESSION_SCOPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: SUPPORT_SESSION_SCOPE_READ_ONLY = 1;
-   */
-  READ_ONLY = 1,
-
-  /**
-   * @generated from enum value: SUPPORT_SESSION_SCOPE_READ_WRITE = 2;
-   */
-  READ_WRITE = 2,
-}
-
-/**
- * Describes the enum superadmin.v1.SupportSessionScope.
- */
-export const SupportSessionScopeSchema: GenEnum<SupportSessionScope> = /*@__PURE__*/
-  enumDesc(file_superadmin_v1_support_session, 0);
-
-/**
- * Lifecycle of a single session row.
- *
- * @generated from enum superadmin.v1.SupportSessionState
- */
-export enum SupportSessionState {
-  /**
-   * @generated from enum value: SUPPORT_SESSION_STATE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * Operator created the row; awaiting org owner approval.
-   *
-   * @generated from enum value: SUPPORT_SESSION_STATE_PENDING = 1;
-   */
-  PENDING = 1,
-
-  /**
-   * Approved (or operator-justified mode) and within ``expires_at``.
-   *
-   * @generated from enum value: SUPPORT_SESSION_STATE_ACTIVE = 2;
-   */
-  ACTIVE = 2,
-
-  /**
-   * ``expires_at`` reached; ARQ cron flipped the row.
-   *
-   * @generated from enum value: SUPPORT_SESSION_STATE_EXPIRED = 3;
-   */
-  EXPIRED = 3,
-
-  /**
-   * Org owner or support user ended it early.
-   *
-   * @generated from enum value: SUPPORT_SESSION_STATE_REVOKED = 4;
-   */
-  REVOKED = 4,
-
-  /**
-   * Org owner declined the request.
-   *
-   * @generated from enum value: SUPPORT_SESSION_STATE_REJECTED = 5;
-   */
-  REJECTED = 5,
-}
-
-/**
- * Describes the enum superadmin.v1.SupportSessionState.
- */
-export const SupportSessionStateSchema: GenEnum<SupportSessionState> = /*@__PURE__*/
-  enumDesc(file_superadmin_v1_support_session, 1);
-
-/**
- * How a support session goes ACTIVE for a given org. UNSPECIFIED
- * when the per-org override is cleared.
- *
- * @generated from enum superadmin.v1.SupportConsentMode
- */
-export enum SupportConsentMode {
-  /**
-   * @generated from enum value: SUPPORT_CONSENT_MODE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: SUPPORT_CONSENT_MODE_OWNER_APPROVED = 1;
-   */
-  OWNER_APPROVED = 1,
-
-  /**
-   * @generated from enum value: SUPPORT_CONSENT_MODE_OPERATOR_JUSTIFIED = 2;
-   */
-  OPERATOR_JUSTIFIED = 2,
-}
-
-/**
- * Describes the enum superadmin.v1.SupportConsentMode.
- */
-export const SupportConsentModeSchema: GenEnum<SupportConsentMode> = /*@__PURE__*/
-  enumDesc(file_superadmin_v1_support_session, 2);
-
-/**
- * Time-bound, owner-consented grants that let a platform operator
- * step into a single tenant org for support. Unlike per-tenant
- * memberships, support sessions are temporary, audited end-to-end,
- * and surface to the org owner live (in-app banner + email + audit
- * rows tagged ``actor_kind=support``).
- *
- * Two consent modes (deployment policy; Phase 6 wires the knob):
- *
- * * ``OWNER_APPROVED`` (default for cloud) -- operator creates a row
- *   in ``PENDING``. Org owner must approve before it goes ``ACTIVE``.
- * * ``OPERATOR_JUSTIFIED`` -- session goes ``ACTIVE`` immediately;
- *   org owner sees the banner and may revoke at any time.
+ * Unlike per-tenant memberships, support sessions are temporary,
+ * audited end-to-end, and surface to the org owner live (in-app
+ * banner + email + audit rows tagged ``actor_kind=support``).
  *
  * v1 ships ``READ_ONLY`` scope only -- ``READ_WRITE`` is in the proto
  * for forward compatibility but ``RequestSession`` rejects it.
@@ -771,39 +244,6 @@ export const SupportService: GenService<{
     output: typeof RequestSessionResponseSchema;
   },
   /**
-   * Owner-side: approve a ``PENDING`` session in OWNER_APPROVED mode.
-   * Caller must be org OWNER or ADMIN of the target org.
-   *
-   * @generated from rpc superadmin.v1.SupportService.ApproveSession
-   */
-  approveSession: {
-    methodKind: "unary";
-    input: typeof ApproveSessionRequestSchema;
-    output: typeof ApproveSessionResponseSchema;
-  },
-  /**
-   * Owner-side: reject a ``PENDING`` session. Same gate as approve.
-   *
-   * @generated from rpc superadmin.v1.SupportService.RejectSession
-   */
-  rejectSession: {
-    methodKind: "unary";
-    input: typeof RejectSessionRequestSchema;
-    output: typeof RejectSessionResponseSchema;
-  },
-  /**
-   * Either side: revoke an ``ACTIVE`` or ``PENDING`` session early.
-   * Org OWNER/ADMIN can always revoke; the support user can always
-   * end their own session.
-   *
-   * @generated from rpc superadmin.v1.SupportService.RevokeSession
-   */
-  revokeSession: {
-    methodKind: "unary";
-    input: typeof RevokeSessionRequestSchema;
-    output: typeof RevokeSessionResponseSchema;
-  },
-  /**
    * Operator-side: list sessions where the caller is
    * ``support_user_id``. Most recent first.
    *
@@ -815,20 +255,9 @@ export const SupportService: GenService<{
     output: typeof ListMySessionsResponseSchema;
   },
   /**
-   * Owner-side: list sessions targeting one org. Caller must be that
-   * org's OWNER or ADMIN. Used by the in-org admin audit view.
-   *
-   * @generated from rpc superadmin.v1.SupportService.ListOrgSessions
-   */
-  listOrgSessions: {
-    methodKind: "unary";
-    input: typeof ListOrgSessionsRequestSchema;
-    output: typeof ListOrgSessionsResponseSchema;
-  },
-  /**
    * Operator-side: cross-tenant list of every session in the
-   * deployment. Used by ``/platform/sessions`` (Phase 5). Caller
-   * must have ``is_system_admin``.
+   * deployment. Backs ``/platform/sessions``. Caller must have
+   * ``is_system_admin``.
    *
    * @generated from rpc superadmin.v1.SupportService.ListAllSessions
    */
@@ -836,33 +265,6 @@ export const SupportService: GenService<{
     methodKind: "unary";
     input: typeof ListAllSessionsRequestSchema;
     output: typeof ListAllSessionsResponseSchema;
-  },
-  /**
-   * Read the effective consent policy for one org: deployment
-   * default, per-org override (if any), and resolved effective
-   * value. Caller must be org OWNER/ADMIN of the target org OR
-   * a platform admin.
-   *
-   * @generated from rpc superadmin.v1.SupportService.GetOrgConsentMode
-   */
-  getOrgConsentMode: {
-    methodKind: "unary";
-    input: typeof GetOrgConsentModeRequestSchema;
-    output: typeof GetOrgConsentModeResponseSchema;
-  },
-  /**
-   * Set the per-org override. Caller must be org OWNER/ADMIN of
-   * the target org. Override can only TIGHTEN the deployment
-   * default; attempts to loosen (OWNER_APPROVED -> OPERATOR_JUSTIFIED
-   * when deployment is OWNER_APPROVED) are silently coerced back to
-   * OWNER_APPROVED.
-   *
-   * @generated from rpc superadmin.v1.SupportService.SetOrgConsentMode
-   */
-  setOrgConsentMode: {
-    methodKind: "unary";
-    input: typeof SetOrgConsentModeRequestSchema;
-    output: typeof SetOrgConsentModeResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_superadmin_v1_support_session, 0);

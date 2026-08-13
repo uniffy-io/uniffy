@@ -19,33 +19,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SupportService_RequestSession_FullMethodName    = "/superadmin.v1.SupportService/RequestSession"
-	SupportService_ApproveSession_FullMethodName    = "/superadmin.v1.SupportService/ApproveSession"
-	SupportService_RejectSession_FullMethodName     = "/superadmin.v1.SupportService/RejectSession"
-	SupportService_RevokeSession_FullMethodName     = "/superadmin.v1.SupportService/RevokeSession"
-	SupportService_ListMySessions_FullMethodName    = "/superadmin.v1.SupportService/ListMySessions"
-	SupportService_ListOrgSessions_FullMethodName   = "/superadmin.v1.SupportService/ListOrgSessions"
-	SupportService_ListAllSessions_FullMethodName   = "/superadmin.v1.SupportService/ListAllSessions"
-	SupportService_GetOrgConsentMode_FullMethodName = "/superadmin.v1.SupportService/GetOrgConsentMode"
-	SupportService_SetOrgConsentMode_FullMethodName = "/superadmin.v1.SupportService/SetOrgConsentMode"
+	SupportService_RequestSession_FullMethodName  = "/superadmin.v1.SupportService/RequestSession"
+	SupportService_ListMySessions_FullMethodName  = "/superadmin.v1.SupportService/ListMySessions"
+	SupportService_ListAllSessions_FullMethodName = "/superadmin.v1.SupportService/ListAllSessions"
 )
 
 // SupportServiceClient is the client API for SupportService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Time-bound, owner-consented grants that let a platform operator
-// step into a single tenant org for support. Unlike per-tenant
-// memberships, support sessions are temporary, audited end-to-end,
-// and surface to the org owner live (in-app banner + email + audit
-// rows tagged “actor_kind=support“).
+// Operator-side half of the support session contract: requesting a
+// session against a tenant org and listing sessions cross-tenant.
+// The tenant's consent controls (approve, reject, revoke, per-org
+// listing, consent mode) live in “support.v1.SupportConsentService“
+// so this whole namespace can be firewalled off the public edge
+// without breaking tenant consent.
 //
-// Two consent modes (deployment policy; Phase 6 wires the knob):
-//
-//   - “OWNER_APPROVED“ (default for cloud) -- operator creates a row
-//     in “PENDING“. Org owner must approve before it goes “ACTIVE“.
-//   - “OPERATOR_JUSTIFIED“ -- session goes “ACTIVE“ immediately;
-//     org owner sees the banner and may revoke at any time.
+// Unlike per-tenant memberships, support sessions are temporary,
+// audited end-to-end, and surface to the org owner live (in-app
+// banner + email + audit rows tagged “actor_kind=support“).
 //
 // v1 ships “READ_ONLY“ scope only -- “READ_WRITE“ is in the proto
 // for forward compatibility but “RequestSession“ rejects it.
@@ -65,36 +57,13 @@ type SupportServiceClient interface {
 	// row in “PENDING“ (OWNER_APPROVED mode) or “ACTIVE“
 	// (OPERATOR_JUSTIFIED mode). Caller must have “is_system_admin“.
 	RequestSession(ctx context.Context, in *RequestSessionRequest, opts ...grpc.CallOption) (*RequestSessionResponse, error)
-	// Owner-side: approve a “PENDING“ session in OWNER_APPROVED mode.
-	// Caller must be org OWNER or ADMIN of the target org.
-	ApproveSession(ctx context.Context, in *ApproveSessionRequest, opts ...grpc.CallOption) (*ApproveSessionResponse, error)
-	// Owner-side: reject a “PENDING“ session. Same gate as approve.
-	RejectSession(ctx context.Context, in *RejectSessionRequest, opts ...grpc.CallOption) (*RejectSessionResponse, error)
-	// Either side: revoke an “ACTIVE“ or “PENDING“ session early.
-	// Org OWNER/ADMIN can always revoke; the support user can always
-	// end their own session.
-	RevokeSession(ctx context.Context, in *RevokeSessionRequest, opts ...grpc.CallOption) (*RevokeSessionResponse, error)
 	// Operator-side: list sessions where the caller is
 	// “support_user_id“. Most recent first.
 	ListMySessions(ctx context.Context, in *ListMySessionsRequest, opts ...grpc.CallOption) (*ListMySessionsResponse, error)
-	// Owner-side: list sessions targeting one org. Caller must be that
-	// org's OWNER or ADMIN. Used by the in-org admin audit view.
-	ListOrgSessions(ctx context.Context, in *ListOrgSessionsRequest, opts ...grpc.CallOption) (*ListOrgSessionsResponse, error)
 	// Operator-side: cross-tenant list of every session in the
-	// deployment. Used by “/platform/sessions“ (Phase 5). Caller
-	// must have “is_system_admin“.
+	// deployment. Backs “/platform/sessions“. Caller must have
+	// “is_system_admin“.
 	ListAllSessions(ctx context.Context, in *ListAllSessionsRequest, opts ...grpc.CallOption) (*ListAllSessionsResponse, error)
-	// Read the effective consent policy for one org: deployment
-	// default, per-org override (if any), and resolved effective
-	// value. Caller must be org OWNER/ADMIN of the target org OR
-	// a platform admin.
-	GetOrgConsentMode(ctx context.Context, in *GetOrgConsentModeRequest, opts ...grpc.CallOption) (*GetOrgConsentModeResponse, error)
-	// Set the per-org override. Caller must be org OWNER/ADMIN of
-	// the target org. Override can only TIGHTEN the deployment
-	// default; attempts to loosen (OWNER_APPROVED -> OPERATOR_JUSTIFIED
-	// when deployment is OWNER_APPROVED) are silently coerced back to
-	// OWNER_APPROVED.
-	SetOrgConsentMode(ctx context.Context, in *SetOrgConsentModeRequest, opts ...grpc.CallOption) (*SetOrgConsentModeResponse, error)
 }
 
 type supportServiceClient struct {
@@ -115,50 +84,10 @@ func (c *supportServiceClient) RequestSession(ctx context.Context, in *RequestSe
 	return out, nil
 }
 
-func (c *supportServiceClient) ApproveSession(ctx context.Context, in *ApproveSessionRequest, opts ...grpc.CallOption) (*ApproveSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ApproveSessionResponse)
-	err := c.cc.Invoke(ctx, SupportService_ApproveSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *supportServiceClient) RejectSession(ctx context.Context, in *RejectSessionRequest, opts ...grpc.CallOption) (*RejectSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RejectSessionResponse)
-	err := c.cc.Invoke(ctx, SupportService_RejectSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *supportServiceClient) RevokeSession(ctx context.Context, in *RevokeSessionRequest, opts ...grpc.CallOption) (*RevokeSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RevokeSessionResponse)
-	err := c.cc.Invoke(ctx, SupportService_RevokeSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *supportServiceClient) ListMySessions(ctx context.Context, in *ListMySessionsRequest, opts ...grpc.CallOption) (*ListMySessionsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListMySessionsResponse)
 	err := c.cc.Invoke(ctx, SupportService_ListMySessions_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *supportServiceClient) ListOrgSessions(ctx context.Context, in *ListOrgSessionsRequest, opts ...grpc.CallOption) (*ListOrgSessionsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListOrgSessionsResponse)
-	err := c.cc.Invoke(ctx, SupportService_ListOrgSessions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -175,42 +104,20 @@ func (c *supportServiceClient) ListAllSessions(ctx context.Context, in *ListAllS
 	return out, nil
 }
 
-func (c *supportServiceClient) GetOrgConsentMode(ctx context.Context, in *GetOrgConsentModeRequest, opts ...grpc.CallOption) (*GetOrgConsentModeResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetOrgConsentModeResponse)
-	err := c.cc.Invoke(ctx, SupportService_GetOrgConsentMode_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *supportServiceClient) SetOrgConsentMode(ctx context.Context, in *SetOrgConsentModeRequest, opts ...grpc.CallOption) (*SetOrgConsentModeResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetOrgConsentModeResponse)
-	err := c.cc.Invoke(ctx, SupportService_SetOrgConsentMode_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // SupportServiceServer is the server API for SupportService service.
 // All implementations must embed UnimplementedSupportServiceServer
 // for forward compatibility.
 //
-// Time-bound, owner-consented grants that let a platform operator
-// step into a single tenant org for support. Unlike per-tenant
-// memberships, support sessions are temporary, audited end-to-end,
-// and surface to the org owner live (in-app banner + email + audit
-// rows tagged “actor_kind=support“).
+// Operator-side half of the support session contract: requesting a
+// session against a tenant org and listing sessions cross-tenant.
+// The tenant's consent controls (approve, reject, revoke, per-org
+// listing, consent mode) live in “support.v1.SupportConsentService“
+// so this whole namespace can be firewalled off the public edge
+// without breaking tenant consent.
 //
-// Two consent modes (deployment policy; Phase 6 wires the knob):
-//
-//   - “OWNER_APPROVED“ (default for cloud) -- operator creates a row
-//     in “PENDING“. Org owner must approve before it goes “ACTIVE“.
-//   - “OPERATOR_JUSTIFIED“ -- session goes “ACTIVE“ immediately;
-//     org owner sees the banner and may revoke at any time.
+// Unlike per-tenant memberships, support sessions are temporary,
+// audited end-to-end, and surface to the org owner live (in-app
+// banner + email + audit rows tagged “actor_kind=support“).
 //
 // v1 ships “READ_ONLY“ scope only -- “READ_WRITE“ is in the proto
 // for forward compatibility but “RequestSession“ rejects it.
@@ -230,36 +137,13 @@ type SupportServiceServer interface {
 	// row in “PENDING“ (OWNER_APPROVED mode) or “ACTIVE“
 	// (OPERATOR_JUSTIFIED mode). Caller must have “is_system_admin“.
 	RequestSession(context.Context, *RequestSessionRequest) (*RequestSessionResponse, error)
-	// Owner-side: approve a “PENDING“ session in OWNER_APPROVED mode.
-	// Caller must be org OWNER or ADMIN of the target org.
-	ApproveSession(context.Context, *ApproveSessionRequest) (*ApproveSessionResponse, error)
-	// Owner-side: reject a “PENDING“ session. Same gate as approve.
-	RejectSession(context.Context, *RejectSessionRequest) (*RejectSessionResponse, error)
-	// Either side: revoke an “ACTIVE“ or “PENDING“ session early.
-	// Org OWNER/ADMIN can always revoke; the support user can always
-	// end their own session.
-	RevokeSession(context.Context, *RevokeSessionRequest) (*RevokeSessionResponse, error)
 	// Operator-side: list sessions where the caller is
 	// “support_user_id“. Most recent first.
 	ListMySessions(context.Context, *ListMySessionsRequest) (*ListMySessionsResponse, error)
-	// Owner-side: list sessions targeting one org. Caller must be that
-	// org's OWNER or ADMIN. Used by the in-org admin audit view.
-	ListOrgSessions(context.Context, *ListOrgSessionsRequest) (*ListOrgSessionsResponse, error)
 	// Operator-side: cross-tenant list of every session in the
-	// deployment. Used by “/platform/sessions“ (Phase 5). Caller
-	// must have “is_system_admin“.
+	// deployment. Backs “/platform/sessions“. Caller must have
+	// “is_system_admin“.
 	ListAllSessions(context.Context, *ListAllSessionsRequest) (*ListAllSessionsResponse, error)
-	// Read the effective consent policy for one org: deployment
-	// default, per-org override (if any), and resolved effective
-	// value. Caller must be org OWNER/ADMIN of the target org OR
-	// a platform admin.
-	GetOrgConsentMode(context.Context, *GetOrgConsentModeRequest) (*GetOrgConsentModeResponse, error)
-	// Set the per-org override. Caller must be org OWNER/ADMIN of
-	// the target org. Override can only TIGHTEN the deployment
-	// default; attempts to loosen (OWNER_APPROVED -> OPERATOR_JUSTIFIED
-	// when deployment is OWNER_APPROVED) are silently coerced back to
-	// OWNER_APPROVED.
-	SetOrgConsentMode(context.Context, *SetOrgConsentModeRequest) (*SetOrgConsentModeResponse, error)
 	mustEmbedUnimplementedSupportServiceServer()
 }
 
@@ -273,29 +157,11 @@ type UnimplementedSupportServiceServer struct{}
 func (UnimplementedSupportServiceServer) RequestSession(context.Context, *RequestSessionRequest) (*RequestSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RequestSession not implemented")
 }
-func (UnimplementedSupportServiceServer) ApproveSession(context.Context, *ApproveSessionRequest) (*ApproveSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ApproveSession not implemented")
-}
-func (UnimplementedSupportServiceServer) RejectSession(context.Context, *RejectSessionRequest) (*RejectSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RejectSession not implemented")
-}
-func (UnimplementedSupportServiceServer) RevokeSession(context.Context, *RevokeSessionRequest) (*RevokeSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RevokeSession not implemented")
-}
 func (UnimplementedSupportServiceServer) ListMySessions(context.Context, *ListMySessionsRequest) (*ListMySessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMySessions not implemented")
 }
-func (UnimplementedSupportServiceServer) ListOrgSessions(context.Context, *ListOrgSessionsRequest) (*ListOrgSessionsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListOrgSessions not implemented")
-}
 func (UnimplementedSupportServiceServer) ListAllSessions(context.Context, *ListAllSessionsRequest) (*ListAllSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAllSessions not implemented")
-}
-func (UnimplementedSupportServiceServer) GetOrgConsentMode(context.Context, *GetOrgConsentModeRequest) (*GetOrgConsentModeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetOrgConsentMode not implemented")
-}
-func (UnimplementedSupportServiceServer) SetOrgConsentMode(context.Context, *SetOrgConsentModeRequest) (*SetOrgConsentModeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SetOrgConsentMode not implemented")
 }
 func (UnimplementedSupportServiceServer) mustEmbedUnimplementedSupportServiceServer() {}
 func (UnimplementedSupportServiceServer) testEmbeddedByValue()                        {}
@@ -336,60 +202,6 @@ func _SupportService_RequestSession_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SupportService_ApproveSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ApproveSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SupportServiceServer).ApproveSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SupportService_ApproveSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SupportServiceServer).ApproveSession(ctx, req.(*ApproveSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SupportService_RejectSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RejectSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SupportServiceServer).RejectSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SupportService_RejectSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SupportServiceServer).RejectSession(ctx, req.(*RejectSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SupportService_RevokeSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RevokeSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SupportServiceServer).RevokeSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SupportService_RevokeSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SupportServiceServer).RevokeSession(ctx, req.(*RevokeSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _SupportService_ListMySessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListMySessionsRequest)
 	if err := dec(in); err != nil {
@@ -404,24 +216,6 @@ func _SupportService_ListMySessions_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SupportServiceServer).ListMySessions(ctx, req.(*ListMySessionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SupportService_ListOrgSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListOrgSessionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SupportServiceServer).ListOrgSessions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SupportService_ListOrgSessions_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SupportServiceServer).ListOrgSessions(ctx, req.(*ListOrgSessionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -444,42 +238,6 @@ func _SupportService_ListAllSessions_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SupportService_GetOrgConsentMode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetOrgConsentModeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SupportServiceServer).GetOrgConsentMode(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SupportService_GetOrgConsentMode_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SupportServiceServer).GetOrgConsentMode(ctx, req.(*GetOrgConsentModeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SupportService_SetOrgConsentMode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetOrgConsentModeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SupportServiceServer).SetOrgConsentMode(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SupportService_SetOrgConsentMode_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SupportServiceServer).SetOrgConsentMode(ctx, req.(*SetOrgConsentModeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // SupportService_ServiceDesc is the grpc.ServiceDesc for SupportService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -492,36 +250,12 @@ var SupportService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SupportService_RequestSession_Handler,
 		},
 		{
-			MethodName: "ApproveSession",
-			Handler:    _SupportService_ApproveSession_Handler,
-		},
-		{
-			MethodName: "RejectSession",
-			Handler:    _SupportService_RejectSession_Handler,
-		},
-		{
-			MethodName: "RevokeSession",
-			Handler:    _SupportService_RevokeSession_Handler,
-		},
-		{
 			MethodName: "ListMySessions",
 			Handler:    _SupportService_ListMySessions_Handler,
 		},
 		{
-			MethodName: "ListOrgSessions",
-			Handler:    _SupportService_ListOrgSessions_Handler,
-		},
-		{
 			MethodName: "ListAllSessions",
 			Handler:    _SupportService_ListAllSessions_Handler,
-		},
-		{
-			MethodName: "GetOrgConsentMode",
-			Handler:    _SupportService_GetOrgConsentMode_Handler,
-		},
-		{
-			MethodName: "SetOrgConsentMode",
-			Handler:    _SupportService_SetOrgConsentMode_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

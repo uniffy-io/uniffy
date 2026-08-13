@@ -49,18 +49,6 @@ const (
 	// MfaServiceAdminResetMfaProcedure is the fully-qualified name of the MfaService's AdminResetMfa
 	// RPC.
 	MfaServiceAdminResetMfaProcedure = "/auth.v1.MfaService/AdminResetMfa"
-	// MfaServicePlatformResetMfaProcedure is the fully-qualified name of the MfaService's
-	// PlatformResetMfa RPC.
-	MfaServicePlatformResetMfaProcedure = "/auth.v1.MfaService/PlatformResetMfa"
-	// MfaServiceRequestPlatformPeerResetProcedure is the fully-qualified name of the MfaService's
-	// RequestPlatformPeerReset RPC.
-	MfaServiceRequestPlatformPeerResetProcedure = "/auth.v1.MfaService/RequestPlatformPeerReset"
-	// MfaServiceApprovePlatformPeerResetProcedure is the fully-qualified name of the MfaService's
-	// ApprovePlatformPeerReset RPC.
-	MfaServiceApprovePlatformPeerResetProcedure = "/auth.v1.MfaService/ApprovePlatformPeerReset"
-	// MfaServiceListPlatformPeerResetsProcedure is the fully-qualified name of the MfaService's
-	// ListPlatformPeerResets RPC.
-	MfaServiceListPlatformPeerResetsProcedure = "/auth.v1.MfaService/ListPlatformPeerResets"
 	// MfaServiceGetMfaStatusProcedure is the fully-qualified name of the MfaService's GetMfaStatus RPC.
 	MfaServiceGetMfaStatusProcedure = "/auth.v1.MfaService/GetMfaStatus"
 )
@@ -88,22 +76,9 @@ type MfaServiceClient interface {
 	// code. Old codes are invalidated.
 	RegenerateRecoveryCodes(context.Context, *connect.Request[v1.RegenerateRecoveryCodesRequest]) (*connect.Response[v1.RegenerateRecoveryCodesResponse], error)
 	// Authenticated as org admin. Resets MFA on a user who is a member
-	// of the calling org. Cross-checks org membership.
+	// of the calling org. Cross-checks org membership. Platform-operator
+	// resets live on superadmin.v1.SystemMfaService.
 	AdminResetMfa(context.Context, *connect.Request[v1.AdminResetMfaRequest]) (*connect.Response[v1.AdminResetMfaResponse], error)
-	// Authenticated as platform admin. Direct reset is constrained to
-	// users with zero org memberships.
-	PlatformResetMfa(context.Context, *connect.Request[v1.PlatformResetMfaRequest]) (*connect.Response[v1.PlatformResetMfaResponse], error)
-	// Authenticated as platform admin. Request the reset of another
-	// platform admin's MFA. Requires a second admin's approval within
-	// a 10-minute window.
-	RequestPlatformPeerReset(context.Context, *connect.Request[v1.RequestPlatformPeerResetRequest]) (*connect.Response[v1.RequestPlatformPeerResetResponse], error)
-	// Authenticated as platform admin (distinct from the requester).
-	// Approves a pending peer-reset request and performs the reset.
-	ApprovePlatformPeerReset(context.Context, *connect.Request[v1.ApprovePlatformPeerResetRequest]) (*connect.Response[v1.ApprovePlatformPeerResetResponse], error)
-	// Authenticated as platform admin. Returns every pending (not yet
-	// approved, not yet expired) peer-reset request so other platform
-	// admins can co-sign them from the inbox panel.
-	ListPlatformPeerResets(context.Context, *connect.Request[v1.ListPlatformPeerResetsRequest]) (*connect.Response[v1.ListPlatformPeerResetsResponse], error)
 	// Authenticated. Returns the calling user's MFA enrollment state.
 	GetMfaStatus(context.Context, *connect.Request[v1.GetMfaStatusRequest]) (*connect.Response[v1.GetMfaStatusResponse], error)
 }
@@ -155,30 +130,6 @@ func NewMfaServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(mfaServiceMethods.ByName("AdminResetMfa")),
 			connect.WithClientOptions(opts...),
 		),
-		platformResetMfa: connect.NewClient[v1.PlatformResetMfaRequest, v1.PlatformResetMfaResponse](
-			httpClient,
-			baseURL+MfaServicePlatformResetMfaProcedure,
-			connect.WithSchema(mfaServiceMethods.ByName("PlatformResetMfa")),
-			connect.WithClientOptions(opts...),
-		),
-		requestPlatformPeerReset: connect.NewClient[v1.RequestPlatformPeerResetRequest, v1.RequestPlatformPeerResetResponse](
-			httpClient,
-			baseURL+MfaServiceRequestPlatformPeerResetProcedure,
-			connect.WithSchema(mfaServiceMethods.ByName("RequestPlatformPeerReset")),
-			connect.WithClientOptions(opts...),
-		),
-		approvePlatformPeerReset: connect.NewClient[v1.ApprovePlatformPeerResetRequest, v1.ApprovePlatformPeerResetResponse](
-			httpClient,
-			baseURL+MfaServiceApprovePlatformPeerResetProcedure,
-			connect.WithSchema(mfaServiceMethods.ByName("ApprovePlatformPeerReset")),
-			connect.WithClientOptions(opts...),
-		),
-		listPlatformPeerResets: connect.NewClient[v1.ListPlatformPeerResetsRequest, v1.ListPlatformPeerResetsResponse](
-			httpClient,
-			baseURL+MfaServiceListPlatformPeerResetsProcedure,
-			connect.WithSchema(mfaServiceMethods.ByName("ListPlatformPeerResets")),
-			connect.WithClientOptions(opts...),
-		),
 		getMfaStatus: connect.NewClient[v1.GetMfaStatusRequest, v1.GetMfaStatusResponse](
 			httpClient,
 			baseURL+MfaServiceGetMfaStatusProcedure,
@@ -190,17 +141,13 @@ func NewMfaServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 
 // mfaServiceClient implements MfaServiceClient.
 type mfaServiceClient struct {
-	beginEnrollment          *connect.Client[v1.BeginEnrollmentRequest, v1.BeginEnrollmentResponse]
-	confirmEnrollment        *connect.Client[v1.ConfirmEnrollmentRequest, v1.ConfirmEnrollmentResponse]
-	verifyMfa                *connect.Client[v1.VerifyMfaRequest, v1.VerifyMfaResponse]
-	disableMfa               *connect.Client[v1.DisableMfaRequest, v1.DisableMfaResponse]
-	regenerateRecoveryCodes  *connect.Client[v1.RegenerateRecoveryCodesRequest, v1.RegenerateRecoveryCodesResponse]
-	adminResetMfa            *connect.Client[v1.AdminResetMfaRequest, v1.AdminResetMfaResponse]
-	platformResetMfa         *connect.Client[v1.PlatformResetMfaRequest, v1.PlatformResetMfaResponse]
-	requestPlatformPeerReset *connect.Client[v1.RequestPlatformPeerResetRequest, v1.RequestPlatformPeerResetResponse]
-	approvePlatformPeerReset *connect.Client[v1.ApprovePlatformPeerResetRequest, v1.ApprovePlatformPeerResetResponse]
-	listPlatformPeerResets   *connect.Client[v1.ListPlatformPeerResetsRequest, v1.ListPlatformPeerResetsResponse]
-	getMfaStatus             *connect.Client[v1.GetMfaStatusRequest, v1.GetMfaStatusResponse]
+	beginEnrollment         *connect.Client[v1.BeginEnrollmentRequest, v1.BeginEnrollmentResponse]
+	confirmEnrollment       *connect.Client[v1.ConfirmEnrollmentRequest, v1.ConfirmEnrollmentResponse]
+	verifyMfa               *connect.Client[v1.VerifyMfaRequest, v1.VerifyMfaResponse]
+	disableMfa              *connect.Client[v1.DisableMfaRequest, v1.DisableMfaResponse]
+	regenerateRecoveryCodes *connect.Client[v1.RegenerateRecoveryCodesRequest, v1.RegenerateRecoveryCodesResponse]
+	adminResetMfa           *connect.Client[v1.AdminResetMfaRequest, v1.AdminResetMfaResponse]
+	getMfaStatus            *connect.Client[v1.GetMfaStatusRequest, v1.GetMfaStatusResponse]
 }
 
 // BeginEnrollment calls auth.v1.MfaService.BeginEnrollment.
@@ -233,26 +180,6 @@ func (c *mfaServiceClient) AdminResetMfa(ctx context.Context, req *connect.Reque
 	return c.adminResetMfa.CallUnary(ctx, req)
 }
 
-// PlatformResetMfa calls auth.v1.MfaService.PlatformResetMfa.
-func (c *mfaServiceClient) PlatformResetMfa(ctx context.Context, req *connect.Request[v1.PlatformResetMfaRequest]) (*connect.Response[v1.PlatformResetMfaResponse], error) {
-	return c.platformResetMfa.CallUnary(ctx, req)
-}
-
-// RequestPlatformPeerReset calls auth.v1.MfaService.RequestPlatformPeerReset.
-func (c *mfaServiceClient) RequestPlatformPeerReset(ctx context.Context, req *connect.Request[v1.RequestPlatformPeerResetRequest]) (*connect.Response[v1.RequestPlatformPeerResetResponse], error) {
-	return c.requestPlatformPeerReset.CallUnary(ctx, req)
-}
-
-// ApprovePlatformPeerReset calls auth.v1.MfaService.ApprovePlatformPeerReset.
-func (c *mfaServiceClient) ApprovePlatformPeerReset(ctx context.Context, req *connect.Request[v1.ApprovePlatformPeerResetRequest]) (*connect.Response[v1.ApprovePlatformPeerResetResponse], error) {
-	return c.approvePlatformPeerReset.CallUnary(ctx, req)
-}
-
-// ListPlatformPeerResets calls auth.v1.MfaService.ListPlatformPeerResets.
-func (c *mfaServiceClient) ListPlatformPeerResets(ctx context.Context, req *connect.Request[v1.ListPlatformPeerResetsRequest]) (*connect.Response[v1.ListPlatformPeerResetsResponse], error) {
-	return c.listPlatformPeerResets.CallUnary(ctx, req)
-}
-
 // GetMfaStatus calls auth.v1.MfaService.GetMfaStatus.
 func (c *mfaServiceClient) GetMfaStatus(ctx context.Context, req *connect.Request[v1.GetMfaStatusRequest]) (*connect.Response[v1.GetMfaStatusResponse], error) {
 	return c.getMfaStatus.CallUnary(ctx, req)
@@ -281,22 +208,9 @@ type MfaServiceHandler interface {
 	// code. Old codes are invalidated.
 	RegenerateRecoveryCodes(context.Context, *connect.Request[v1.RegenerateRecoveryCodesRequest]) (*connect.Response[v1.RegenerateRecoveryCodesResponse], error)
 	// Authenticated as org admin. Resets MFA on a user who is a member
-	// of the calling org. Cross-checks org membership.
+	// of the calling org. Cross-checks org membership. Platform-operator
+	// resets live on superadmin.v1.SystemMfaService.
 	AdminResetMfa(context.Context, *connect.Request[v1.AdminResetMfaRequest]) (*connect.Response[v1.AdminResetMfaResponse], error)
-	// Authenticated as platform admin. Direct reset is constrained to
-	// users with zero org memberships.
-	PlatformResetMfa(context.Context, *connect.Request[v1.PlatformResetMfaRequest]) (*connect.Response[v1.PlatformResetMfaResponse], error)
-	// Authenticated as platform admin. Request the reset of another
-	// platform admin's MFA. Requires a second admin's approval within
-	// a 10-minute window.
-	RequestPlatformPeerReset(context.Context, *connect.Request[v1.RequestPlatformPeerResetRequest]) (*connect.Response[v1.RequestPlatformPeerResetResponse], error)
-	// Authenticated as platform admin (distinct from the requester).
-	// Approves a pending peer-reset request and performs the reset.
-	ApprovePlatformPeerReset(context.Context, *connect.Request[v1.ApprovePlatformPeerResetRequest]) (*connect.Response[v1.ApprovePlatformPeerResetResponse], error)
-	// Authenticated as platform admin. Returns every pending (not yet
-	// approved, not yet expired) peer-reset request so other platform
-	// admins can co-sign them from the inbox panel.
-	ListPlatformPeerResets(context.Context, *connect.Request[v1.ListPlatformPeerResetsRequest]) (*connect.Response[v1.ListPlatformPeerResetsResponse], error)
 	// Authenticated. Returns the calling user's MFA enrollment state.
 	GetMfaStatus(context.Context, *connect.Request[v1.GetMfaStatusRequest]) (*connect.Response[v1.GetMfaStatusResponse], error)
 }
@@ -344,30 +258,6 @@ func NewMfaServiceHandler(svc MfaServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(mfaServiceMethods.ByName("AdminResetMfa")),
 		connect.WithHandlerOptions(opts...),
 	)
-	mfaServicePlatformResetMfaHandler := connect.NewUnaryHandler(
-		MfaServicePlatformResetMfaProcedure,
-		svc.PlatformResetMfa,
-		connect.WithSchema(mfaServiceMethods.ByName("PlatformResetMfa")),
-		connect.WithHandlerOptions(opts...),
-	)
-	mfaServiceRequestPlatformPeerResetHandler := connect.NewUnaryHandler(
-		MfaServiceRequestPlatformPeerResetProcedure,
-		svc.RequestPlatformPeerReset,
-		connect.WithSchema(mfaServiceMethods.ByName("RequestPlatformPeerReset")),
-		connect.WithHandlerOptions(opts...),
-	)
-	mfaServiceApprovePlatformPeerResetHandler := connect.NewUnaryHandler(
-		MfaServiceApprovePlatformPeerResetProcedure,
-		svc.ApprovePlatformPeerReset,
-		connect.WithSchema(mfaServiceMethods.ByName("ApprovePlatformPeerReset")),
-		connect.WithHandlerOptions(opts...),
-	)
-	mfaServiceListPlatformPeerResetsHandler := connect.NewUnaryHandler(
-		MfaServiceListPlatformPeerResetsProcedure,
-		svc.ListPlatformPeerResets,
-		connect.WithSchema(mfaServiceMethods.ByName("ListPlatformPeerResets")),
-		connect.WithHandlerOptions(opts...),
-	)
 	mfaServiceGetMfaStatusHandler := connect.NewUnaryHandler(
 		MfaServiceGetMfaStatusProcedure,
 		svc.GetMfaStatus,
@@ -388,14 +278,6 @@ func NewMfaServiceHandler(svc MfaServiceHandler, opts ...connect.HandlerOption) 
 			mfaServiceRegenerateRecoveryCodesHandler.ServeHTTP(w, r)
 		case MfaServiceAdminResetMfaProcedure:
 			mfaServiceAdminResetMfaHandler.ServeHTTP(w, r)
-		case MfaServicePlatformResetMfaProcedure:
-			mfaServicePlatformResetMfaHandler.ServeHTTP(w, r)
-		case MfaServiceRequestPlatformPeerResetProcedure:
-			mfaServiceRequestPlatformPeerResetHandler.ServeHTTP(w, r)
-		case MfaServiceApprovePlatformPeerResetProcedure:
-			mfaServiceApprovePlatformPeerResetHandler.ServeHTTP(w, r)
-		case MfaServiceListPlatformPeerResetsProcedure:
-			mfaServiceListPlatformPeerResetsHandler.ServeHTTP(w, r)
 		case MfaServiceGetMfaStatusProcedure:
 			mfaServiceGetMfaStatusHandler.ServeHTTP(w, r)
 		default:
@@ -429,22 +311,6 @@ func (UnimplementedMfaServiceHandler) RegenerateRecoveryCodes(context.Context, *
 
 func (UnimplementedMfaServiceHandler) AdminResetMfa(context.Context, *connect.Request[v1.AdminResetMfaRequest]) (*connect.Response[v1.AdminResetMfaResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.MfaService.AdminResetMfa is not implemented"))
-}
-
-func (UnimplementedMfaServiceHandler) PlatformResetMfa(context.Context, *connect.Request[v1.PlatformResetMfaRequest]) (*connect.Response[v1.PlatformResetMfaResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.MfaService.PlatformResetMfa is not implemented"))
-}
-
-func (UnimplementedMfaServiceHandler) RequestPlatformPeerReset(context.Context, *connect.Request[v1.RequestPlatformPeerResetRequest]) (*connect.Response[v1.RequestPlatformPeerResetResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.MfaService.RequestPlatformPeerReset is not implemented"))
-}
-
-func (UnimplementedMfaServiceHandler) ApprovePlatformPeerReset(context.Context, *connect.Request[v1.ApprovePlatformPeerResetRequest]) (*connect.Response[v1.ApprovePlatformPeerResetResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.MfaService.ApprovePlatformPeerReset is not implemented"))
-}
-
-func (UnimplementedMfaServiceHandler) ListPlatformPeerResets(context.Context, *connect.Request[v1.ListPlatformPeerResetsRequest]) (*connect.Response[v1.ListPlatformPeerResetsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.MfaService.ListPlatformPeerResets is not implemented"))
 }
 
 func (UnimplementedMfaServiceHandler) GetMfaStatus(context.Context, *connect.Request[v1.GetMfaStatusRequest]) (*connect.Response[v1.GetMfaStatusResponse], error) {

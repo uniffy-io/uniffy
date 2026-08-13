@@ -24,6 +24,12 @@ class SystemOrganizationsService(Protocol):
     async def get_organization(self, request: superadmin_dot_v1_dot_system__directory__pb2.GetOrganizationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.GetOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def create_organization(self, request: superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def update_organization(self, request: superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def suspend_organization(self, request: superadmin_dot_v1_dot_system__directory__pb2.SuspendOrganizationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.SuspendOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -61,6 +67,26 @@ class SystemOrganizationsServiceASGIApplication(ConnectASGIApplication[SystemOrg
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_organization,
+                ),
+                "/superadmin.v1.SystemOrganizationsService/CreateOrganization": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateOrganization",
+                        service_name="superadmin.v1.SystemOrganizationsService",
+                        input=superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationRequest,
+                        output=superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_organization,
+                ),
+                "/superadmin.v1.SystemOrganizationsService/UpdateOrganization": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateOrganization",
+                        service_name="superadmin.v1.SystemOrganizationsService",
+                        input=superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationRequest,
+                        output=superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_organization,
                 ),
                 "/superadmin.v1.SystemOrganizationsService/SuspendOrganization": Endpoint.unary(
                     method=MethodInfo(
@@ -156,6 +182,46 @@ class SystemOrganizationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def create_organization(
+        self,
+        request: superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateOrganization",
+                service_name="superadmin.v1.SystemOrganizationsService",
+                input=superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationRequest,
+                output=superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_organization(
+        self,
+        request: superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateOrganization",
+                service_name="superadmin.v1.SystemOrganizationsService",
+                input=superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationRequest,
+                output=superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def suspend_organization(
         self,
         request: superadmin_dot_v1_dot_system__directory__pb2.SuspendOrganizationRequest,
@@ -243,6 +309,12 @@ class SystemUsersService(Protocol):
     async def get_user(self, request: superadmin_dot_v1_dot_system__directory__pb2.GetUserRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.GetUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def create_user(self, request: superadmin_dot_v1_dot_system__directory__pb2.CreateUserRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.CreateUserResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def update_user(self, request: superadmin_dot_v1_dot_system__directory__pb2.UpdateUserRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.UpdateUserResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def force_logout_user(self, request: superadmin_dot_v1_dot_system__directory__pb2.ForceLogoutUserRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.ForceLogoutUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -274,6 +346,26 @@ class SystemUsersServiceASGIApplication(ConnectASGIApplication[SystemUsersServic
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_user,
+                ),
+                "/superadmin.v1.SystemUsersService/CreateUser": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateUser",
+                        service_name="superadmin.v1.SystemUsersService",
+                        input=superadmin_dot_v1_dot_system__directory__pb2.CreateUserRequest,
+                        output=superadmin_dot_v1_dot_system__directory__pb2.CreateUserResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_user,
+                ),
+                "/superadmin.v1.SystemUsersService/UpdateUser": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateUser",
+                        service_name="superadmin.v1.SystemUsersService",
+                        input=superadmin_dot_v1_dot_system__directory__pb2.UpdateUserRequest,
+                        output=superadmin_dot_v1_dot_system__directory__pb2.UpdateUserResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_user,
                 ),
                 "/superadmin.v1.SystemUsersService/ForceLogoutUser": Endpoint.unary(
                     method=MethodInfo(
@@ -349,6 +441,46 @@ class SystemUsersServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def create_user(
+        self,
+        request: superadmin_dot_v1_dot_system__directory__pb2.CreateUserRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__directory__pb2.CreateUserResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateUser",
+                service_name="superadmin.v1.SystemUsersService",
+                input=superadmin_dot_v1_dot_system__directory__pb2.CreateUserRequest,
+                output=superadmin_dot_v1_dot_system__directory__pb2.CreateUserResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_user(
+        self,
+        request: superadmin_dot_v1_dot_system__directory__pb2.UpdateUserRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__directory__pb2.UpdateUserResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateUser",
+                service_name="superadmin.v1.SystemUsersService",
+                input=superadmin_dot_v1_dot_system__directory__pb2.UpdateUserRequest,
+                output=superadmin_dot_v1_dot_system__directory__pb2.UpdateUserResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def force_logout_user(
         self,
         request: superadmin_dot_v1_dot_system__directory__pb2.ForceLogoutUserRequest,
@@ -398,6 +530,10 @@ class SystemOrganizationsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_organization(self, request: superadmin_dot_v1_dot_system__directory__pb2.GetOrganizationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.GetOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def create_organization(self, request: superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_organization(self, request: superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def suspend_organization(self, request: superadmin_dot_v1_dot_system__directory__pb2.SuspendOrganizationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.SuspendOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def unsuspend_organization(self, request: superadmin_dot_v1_dot_system__directory__pb2.UnsuspendOrganizationRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.UnsuspendOrganizationResponse:
@@ -431,6 +567,26 @@ class SystemOrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_organization,
+                ),
+                "/superadmin.v1.SystemOrganizationsService/CreateOrganization": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateOrganization",
+                        service_name="superadmin.v1.SystemOrganizationsService",
+                        input=superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationRequest,
+                        output=superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_organization,
+                ),
+                "/superadmin.v1.SystemOrganizationsService/UpdateOrganization": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateOrganization",
+                        service_name="superadmin.v1.SystemOrganizationsService",
+                        input=superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationRequest,
+                        output=superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_organization,
                 ),
                 "/superadmin.v1.SystemOrganizationsService/SuspendOrganization": EndpointSync.unary(
                     method=MethodInfo(
@@ -526,6 +682,46 @@ class SystemOrganizationsServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
+    def create_organization(
+        self,
+        request: superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateOrganization",
+                service_name="superadmin.v1.SystemOrganizationsService",
+                input=superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationRequest,
+                output=superadmin_dot_v1_dot_system__directory__pb2.CreateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_organization(
+        self,
+        request: superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateOrganization",
+                service_name="superadmin.v1.SystemOrganizationsService",
+                input=superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationRequest,
+                output=superadmin_dot_v1_dot_system__directory__pb2.UpdateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     def suspend_organization(
         self,
         request: superadmin_dot_v1_dot_system__directory__pb2.SuspendOrganizationRequest,
@@ -611,6 +807,10 @@ class SystemUsersServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_user(self, request: superadmin_dot_v1_dot_system__directory__pb2.GetUserRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.GetUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def create_user(self, request: superadmin_dot_v1_dot_system__directory__pb2.CreateUserRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.CreateUserResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_user(self, request: superadmin_dot_v1_dot_system__directory__pb2.UpdateUserRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.UpdateUserResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def force_logout_user(self, request: superadmin_dot_v1_dot_system__directory__pb2.ForceLogoutUserRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.ForceLogoutUserResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def set_system_admin(self, request: superadmin_dot_v1_dot_system__directory__pb2.SetSystemAdminRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_system__directory__pb2.SetSystemAdminResponse:
@@ -640,6 +840,26 @@ class SystemUsersServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_user,
+                ),
+                "/superadmin.v1.SystemUsersService/CreateUser": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateUser",
+                        service_name="superadmin.v1.SystemUsersService",
+                        input=superadmin_dot_v1_dot_system__directory__pb2.CreateUserRequest,
+                        output=superadmin_dot_v1_dot_system__directory__pb2.CreateUserResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_user,
+                ),
+                "/superadmin.v1.SystemUsersService/UpdateUser": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateUser",
+                        service_name="superadmin.v1.SystemUsersService",
+                        input=superadmin_dot_v1_dot_system__directory__pb2.UpdateUserRequest,
+                        output=superadmin_dot_v1_dot_system__directory__pb2.UpdateUserResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_user,
                 ),
                 "/superadmin.v1.SystemUsersService/ForceLogoutUser": EndpointSync.unary(
                     method=MethodInfo(
@@ -709,6 +929,46 @@ class SystemUsersServiceClientSync(ConnectClientSync):
                 service_name="superadmin.v1.SystemUsersService",
                 input=superadmin_dot_v1_dot_system__directory__pb2.GetUserRequest,
                 output=superadmin_dot_v1_dot_system__directory__pb2.GetUserResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def create_user(
+        self,
+        request: superadmin_dot_v1_dot_system__directory__pb2.CreateUserRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__directory__pb2.CreateUserResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateUser",
+                service_name="superadmin.v1.SystemUsersService",
+                input=superadmin_dot_v1_dot_system__directory__pb2.CreateUserRequest,
+                output=superadmin_dot_v1_dot_system__directory__pb2.CreateUserResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_user(
+        self,
+        request: superadmin_dot_v1_dot_system__directory__pb2.UpdateUserRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> superadmin_dot_v1_dot_system__directory__pb2.UpdateUserResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateUser",
+                service_name="superadmin.v1.SystemUsersService",
+                input=superadmin_dot_v1_dot_system__directory__pb2.UpdateUserRequest,
+                output=superadmin_dot_v1_dot_system__directory__pb2.UpdateUserResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

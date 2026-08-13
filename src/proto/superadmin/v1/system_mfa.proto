@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package superadmin.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1";
+
+// Platform-operator MFA resets. Lives under superadmin.v1 so the whole
+// operator surface stays behind one blockable path prefix; the tenant
+// enrollment/verify/status RPCs and the org-scoped AdminResetMfa stay
+// on auth.v1.MfaService because they run on the login path.
+service SystemMfaService {
+  // Direct reset, constrained to users with zero org memberships
+  // (org members go through their org admin's AdminResetMfa).
+  rpc ResetUserMfa(ResetUserMfaRequest) returns (ResetUserMfaResponse);
+
+  // Request the reset of another platform admin's MFA. Requires a
+  // second admin's approval within a 10-minute window.
+  rpc RequestPeerReset(RequestPeerResetRequest) returns (RequestPeerResetResponse);
+
+  // Every pending (not yet approved, not yet expired) peer-reset
+  // request, so other platform admins can co-sign from the inbox.
+  rpc ListPeerResets(ListPeerResetsRequest) returns (ListPeerResetsResponse);
+
+  // Approves a pending peer-reset request and performs the reset.
+  // Caller must be a platform admin distinct from the requester.
+  rpc ApprovePeerReset(ApprovePeerResetRequest) returns (ApprovePeerResetResponse);
+}
+
+message ResetUserMfaRequest {
+  string target_user_id = 1;
+  string reason = 2;
+}
+
+message ResetUserMfaResponse {
+  bool success = 1;
+}
+
+message RequestPeerResetRequest {
+  string target_user_id = 1;
+  string reason = 2;
+}
+
+message RequestPeerResetResponse {
+  string request_id = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message ApprovePeerResetRequest {
+  string request_id = 1;
+}
+
+message ApprovePeerResetResponse {
+  bool success = 1;
+}
+
+message PendingPeerReset {
+  string request_id = 1;
+  string requester_user_id = 2;
+  string requester_email = 3;
+  string target_user_id = 4;
+  string target_email = 5;
+  string reason = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+}
+
+message ListPeerResetsRequest {}
+
+message ListPeerResetsResponse {
+  repeated PendingPeerReset requests = 1;
+}

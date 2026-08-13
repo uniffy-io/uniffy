@@ -20,6 +20,16 @@ service SystemOrganizationsService {
   // status, recent platform-audit rows. No tenant content.
   rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse) {}
 
+  // Provision a new tenant: org row, owner membership, org cipher,
+  // default channel/agent/presets - the same bootstrap a fresh
+  // deployment runs. The owner must be an existing active user.
+  rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse) {}
+
+  // Edit org settings a platform operator owns: name, slug, domain,
+  // plan, member cap. Tenant-facing settings (mail, security, ...)
+  // stay on the org admin surface.
+  rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse) {}
+
   // Block sign-in for every member of the org and bump
   // ``token_version`` so existing JWTs reject immediately. Reversible
   // via ``UnsuspendOrganization``.
@@ -29,12 +39,14 @@ service SystemOrganizationsService {
   // login (existing tokens are still dead from the original bump).
   rpc UnsuspendOrganization(UnsuspendOrganizationRequest) returns (UnsuspendOrganizationResponse) {}
 
-  // Soft-delete: stamps ``deleted_at`` on the org. A daily cron purges
-  // rows whose ``deleted_at + 30d < now``. Owner is emailed at delete
-  // time and 24h before purge. Restorable via ``RestoreOrganization``.
+  // Soft-delete: stamps ``deleted_at`` on the org and revokes every
+  // member's tokens. The rows are retained, not destroyed: nothing
+  // erases tenant data today, so a deleted org stays restorable until
+  // an operator purges it out of band. The owner is emailed at delete
+  // time and again 24h after the 30-day mark passes.
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
 
-  // Clear ``deleted_at``. Only effective before the 30-day purge.
+  // Clear ``deleted_at`` and bring the org back.
   rpc RestoreOrganization(RestoreOrganizationRequest) returns (RestoreOrganizationResponse) {}
 }
 
@@ -44,6 +56,16 @@ service SystemUsersService {
 
   // Full detail for one user: profile, last login, org memberships.
   rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+
+  // Provision a user account directly, bypassing invitations. The
+  // password must satisfy the deployment password policy; optionally
+  // attaches the user to one organization.
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+
+  // Edit account identity and activation state. Deactivating blocks
+  // sign-in and kills existing tokens; identity fields (email,
+  // username, full name) are operator-owned rather than self-editable.
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
 
   // Bump ``token_version`` to invalidate every JWT for one user.
   // Forces them to log in again on next request.
@@ -96,7 +118,7 @@ message PlatformOrganizationSummary {
 // field and stays small (typically <5).
 message PlatformOrganizationDetail {
   PlatformOrganizationSummary summary = 1;
-  // Org domain (auto-join + SSO matcher).
+  // Org primary mail domain. A label only; nothing matches on it.
   string domain = 2;
   // Org logo URL (if set in profile).
   string logo_url = 3;
@@ -108,6 +130,8 @@ message PlatformOrganizationDetail {
   optional string suspension_reason = 5;
   // Free-text delete reason, set by the operator.
   optional string deletion_reason = 6;
+  // Member cap, enforced when members are added. Unset means no cap.
+  optional int32 max_members = 7;
 }
 
 message PlatformOrgOwner {
@@ -126,7 +150,7 @@ message PlatformUserSummary {
   bool is_active = 5;
   bool is_system_admin = 6;
   bool email_verified = 7;
-  // Placeholder until MFA ships; always false today.
+  // True when the user has a confirmed TOTP enrollment.
   bool mfa_enabled = 8;
   int32 org_memberships_count = 9;
   // MAX(audit_events.created_at WHERE action='auth.logged_in'
@@ -175,6 +199,41 @@ message GetOrganizationRequest {
 }
 
 message GetOrganizationResponse {
+  PlatformOrganizationDetail organization = 1;
+}
+
+message CreateOrganizationRequest {
+  string name = 1;
+  // URL-safe identifier; unique across the deployment. Empty derives
+  // one from the name.
+  string slug = 2;
+  // Email of an existing active user who becomes the org OWNER.
+  string owner_email = 3;
+  // Optional label recording the org's primary mail domain. Nothing
+  // matches on it: it drives neither auto-join nor SSO today.
+  string domain = 4;
+  // Plan label; empty defaults to 'free'.
+  string plan = 5;
+}
+
+message CreateOrganizationResponse {
+  PlatformOrganizationDetail organization = 1;
+}
+
+message UpdateOrganizationRequest {
+  string organization_id = 1;
+  // Unset fields stay unchanged.
+  optional string name = 2;
+  optional string slug = 3;
+  // Empty string clears the domain.
+  optional string domain = 4;
+  optional string plan = 5;
+  // 0 removes the member cap.
+  optional int32 max_members = 6;
+  string reason = 7;
+}
+
+message UpdateOrganizationResponse {
   PlatformOrganizationDetail organization = 1;
 }
 
@@ -236,6 +295,46 @@ message ListUsersResponse {
   int32 total_count = 2;
   int32 page = 3;
   int32 page_size = 4;
+}
+
+message CreateUserRequest {
+  string email = 1;
+  // Empty derives one from the email local part.
+  string username = 2;
+  string full_name = 3;
+  string password = 4;
+  // Skip the verification email round-trip for operator-created accounts.
+  bool email_verified = 5;
+  bool is_system_admin = 6;
+  // Optional: also add the user to this organization.
+  string organization_id = 7;
+  // 'MEMBER' | 'ADMIN' | 'OWNER'; empty defaults to MEMBER.
+  string organization_role = 8;
+  // Why this account was provisioned. Recorded in the audit row.
+  string reason = 9;
+}
+
+message CreateUserResponse {
+  PlatformUserDetail user = 1;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  // Unset fields stay unchanged.
+  optional string email = 2;
+  optional string username = 3;
+  optional string full_name = 4;
+  // Deactivating blocks sign-in and revokes existing tokens.
+  optional bool is_active = 5;
+  optional bool email_verified = 6;
+  // Replaces the password outright; must satisfy the password policy.
+  // The new password is handed over out of band, never emailed.
+  optional string password = 7;
+  string reason = 8;
+}
+
+message UpdateUserResponse {
+  PlatformUserDetail user = 1;
 }
 
 message GetUserRequest {

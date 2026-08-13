@@ -21,28 +21,10 @@ class SupportService(Protocol):
     async def request_session(self, request: superadmin_dot_v1_dot_support__session__pb2.RequestSessionRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.RequestSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def approve_session(self, request: superadmin_dot_v1_dot_support__session__pb2.ApproveSessionRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.ApproveSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def reject_session(self, request: superadmin_dot_v1_dot_support__session__pb2.RejectSessionRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.RejectSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def revoke_session(self, request: superadmin_dot_v1_dot_support__session__pb2.RevokeSessionRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.RevokeSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def list_my_sessions(self, request: superadmin_dot_v1_dot_support__session__pb2.ListMySessionsRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.ListMySessionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def list_org_sessions(self, request: superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def list_all_sessions(self, request: superadmin_dot_v1_dot_support__session__pb2.ListAllSessionsRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.ListAllSessionsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def get_org_consent_mode(self, request: superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def set_org_consent_mode(self, request: superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -61,36 +43,6 @@ class SupportServiceASGIApplication(ConnectASGIApplication[SupportService]):
                     ),
                     function=svc.request_session,
                 ),
-                "/superadmin.v1.SupportService/ApproveSession": Endpoint.unary(
-                    method=MethodInfo(
-                        name="ApproveSession",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.ApproveSessionRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.ApproveSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.approve_session,
-                ),
-                "/superadmin.v1.SupportService/RejectSession": Endpoint.unary(
-                    method=MethodInfo(
-                        name="RejectSession",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.RejectSessionRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.RejectSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.reject_session,
-                ),
-                "/superadmin.v1.SupportService/RevokeSession": Endpoint.unary(
-                    method=MethodInfo(
-                        name="RevokeSession",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.RevokeSessionRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.RevokeSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.revoke_session,
-                ),
                 "/superadmin.v1.SupportService/ListMySessions": Endpoint.unary(
                     method=MethodInfo(
                         name="ListMySessions",
@@ -101,16 +53,6 @@ class SupportServiceASGIApplication(ConnectASGIApplication[SupportService]):
                     ),
                     function=svc.list_my_sessions,
                 ),
-                "/superadmin.v1.SupportService/ListOrgSessions": Endpoint.unary(
-                    method=MethodInfo(
-                        name="ListOrgSessions",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.list_org_sessions,
-                ),
                 "/superadmin.v1.SupportService/ListAllSessions": Endpoint.unary(
                     method=MethodInfo(
                         name="ListAllSessions",
@@ -120,26 +62,6 @@ class SupportServiceASGIApplication(ConnectASGIApplication[SupportService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_all_sessions,
-                ),
-                "/superadmin.v1.SupportService/GetOrgConsentMode": Endpoint.unary(
-                    method=MethodInfo(
-                        name="GetOrgConsentMode",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.get_org_consent_mode,
-                ),
-                "/superadmin.v1.SupportService/SetOrgConsentMode": Endpoint.unary(
-                    method=MethodInfo(
-                        name="SetOrgConsentMode",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.set_org_consent_mode,
                 ),
             },
             interceptors=interceptors,
@@ -175,66 +97,6 @@ class SupportServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def approve_session(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.ApproveSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.ApproveSessionResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ApproveSession",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.ApproveSessionRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.ApproveSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def reject_session(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.RejectSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.RejectSessionResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="RejectSession",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.RejectSessionRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.RejectSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def revoke_session(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.RevokeSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.RevokeSessionResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="RevokeSession",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.RevokeSessionRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.RevokeSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def list_my_sessions(
         self,
         request: superadmin_dot_v1_dot_support__session__pb2.ListMySessionsRequest,
@@ -249,26 +111,6 @@ class SupportServiceClient(ConnectClient):
                 service_name="superadmin.v1.SupportService",
                 input=superadmin_dot_v1_dot_support__session__pb2.ListMySessionsRequest,
                 output=superadmin_dot_v1_dot_support__session__pb2.ListMySessionsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def list_org_sessions(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ListOrgSessions",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -295,46 +137,6 @@ class SupportServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def get_org_consent_mode(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetOrgConsentMode",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def set_org_consent_mode(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SetOrgConsentMode",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
 
 
 
@@ -342,21 +144,9 @@ class SupportServiceClient(ConnectClient):
 class SupportServiceSync(Protocol):
     def request_session(self, request: superadmin_dot_v1_dot_support__session__pb2.RequestSessionRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.RequestSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def approve_session(self, request: superadmin_dot_v1_dot_support__session__pb2.ApproveSessionRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.ApproveSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def reject_session(self, request: superadmin_dot_v1_dot_support__session__pb2.RejectSessionRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.RejectSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def revoke_session(self, request: superadmin_dot_v1_dot_support__session__pb2.RevokeSessionRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.RevokeSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_my_sessions(self, request: superadmin_dot_v1_dot_support__session__pb2.ListMySessionsRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.ListMySessionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_org_sessions(self, request: superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_all_sessions(self, request: superadmin_dot_v1_dot_support__session__pb2.ListAllSessionsRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.ListAllSessionsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_org_consent_mode(self, request: superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def set_org_consent_mode(self, request: superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeRequest, ctx: RequestContext) -> superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -374,36 +164,6 @@ class SupportServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.request_session,
                 ),
-                "/superadmin.v1.SupportService/ApproveSession": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="ApproveSession",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.ApproveSessionRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.ApproveSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.approve_session,
-                ),
-                "/superadmin.v1.SupportService/RejectSession": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="RejectSession",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.RejectSessionRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.RejectSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.reject_session,
-                ),
-                "/superadmin.v1.SupportService/RevokeSession": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="RevokeSession",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.RevokeSessionRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.RevokeSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.revoke_session,
-                ),
                 "/superadmin.v1.SupportService/ListMySessions": EndpointSync.unary(
                     method=MethodInfo(
                         name="ListMySessions",
@@ -414,16 +174,6 @@ class SupportServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.list_my_sessions,
                 ),
-                "/superadmin.v1.SupportService/ListOrgSessions": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="ListOrgSessions",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.list_org_sessions,
-                ),
                 "/superadmin.v1.SupportService/ListAllSessions": EndpointSync.unary(
                     method=MethodInfo(
                         name="ListAllSessions",
@@ -433,26 +183,6 @@ class SupportServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_all_sessions,
-                ),
-                "/superadmin.v1.SupportService/GetOrgConsentMode": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="GetOrgConsentMode",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.get_org_consent_mode,
-                ),
-                "/superadmin.v1.SupportService/SetOrgConsentMode": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="SetOrgConsentMode",
-                        service_name="superadmin.v1.SupportService",
-                        input=superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeRequest,
-                        output=superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.set_org_consent_mode,
                 ),
             },
             interceptors=interceptors,
@@ -488,66 +218,6 @@ class SupportServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
-    def approve_session(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.ApproveSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.ApproveSessionResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ApproveSession",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.ApproveSessionRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.ApproveSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def reject_session(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.RejectSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.RejectSessionResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="RejectSession",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.RejectSessionRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.RejectSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def revoke_session(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.RevokeSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.RevokeSessionResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="RevokeSession",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.RevokeSessionRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.RevokeSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     def list_my_sessions(
         self,
         request: superadmin_dot_v1_dot_support__session__pb2.ListMySessionsRequest,
@@ -568,26 +238,6 @@ class SupportServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
-    def list_org_sessions(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ListOrgSessions",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.ListOrgSessionsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     def list_all_sessions(
         self,
         request: superadmin_dot_v1_dot_support__session__pb2.ListAllSessionsRequest,
@@ -602,46 +252,6 @@ class SupportServiceClientSync(ConnectClientSync):
                 service_name="superadmin.v1.SupportService",
                 input=superadmin_dot_v1_dot_support__session__pb2.ListAllSessionsRequest,
                 output=superadmin_dot_v1_dot_support__session__pb2.ListAllSessionsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def get_org_consent_mode(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetOrgConsentMode",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.GetOrgConsentModeResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def set_org_consent_mode(
-        self,
-        request: superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SetOrgConsentMode",
-                service_name="superadmin.v1.SupportService",
-                input=superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeRequest,
-                output=superadmin_dot_v1_dot_support__session__pb2.SetOrgConsentModeResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
