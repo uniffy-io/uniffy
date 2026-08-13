@@ -407,6 +407,58 @@ composer guard (`(both products)`).
 - [ ] Mention a team in a calendar event where some team members are already attendees: the
       attendees get only the invite, not a duplicate mention notification.
 
+## Mention chip display + flat look
+
+`mentionDisplay` drives the default everywhere; the manual caret toggle is remembered per
+surface (chat / notes / calendar / ...) per URN. Sweep in dark AND light, at 1024px and 375px
+(`(both products)`).
+
+- [ ] Setting `expanded`: expandable mentions render the full card in notes AND chat, capped
+      at `max-w-md`; a mid-sentence card breaks out as a clean block splitting the lines (no
+      ragged gaps, no orphaned punctuation, no inline island).
+- [ ] Setting `compact`: everything renders as a flat pill; hovering an expandable pill shows
+      the full-size preview card; the popover never covers the pill or its expand caret,
+      including when it opens upward near the bottom of the viewport.
+- [ ] Collapse a card in chat via the hover-reveal caret; the same URN mentioned in a note
+      still shows a card (per-surface memory). Re-expand in chat; a reload preserves both.
+- [ ] Editor: arrow-key navigation across the mention node works; click navigates; the
+      expand/collapse buttons still work (capture-phase mousedown keeps skipping buttons).
+- [ ] Thread/reply previews stay compact pills regardless of setting.
+- [ ] Live update: rename the mentioned note in a second tab; the pill label and an open card
+      both update without refresh.
+- [ ] No tinted halo anywhere: cards and pills are flat (`bg-card` / solid tint + 1px border);
+      the only glow is the temporary live-update pulse.
+
+## Mention people tokens + container previews
+
+USER/AGENT/TEAM render as Slack-style `@Name` text tokens; folders, folder-notes, and rooms
+carry live container stats. Sweep in dark AND light (`(both products)`).
+
+- [ ] User, agent, and team mentions render as `@Name` tokens in chat AND notes: primary tint,
+      no border, no avatar; the line height next to plain text does not change.
+- [ ] Hover a user token: card shows avatar, presence, email, status, team, job title. Hover an
+      agent token: agent card. Hover a team token: member count.
+- [ ] A mention of YOURSELF renders with the stronger wash than a mention of someone else.
+- [ ] Editor: token click navigates; Cmd/Ctrl+click opens a new tab; token color survives the
+      editor typography overrides (stays primary, not foreground).
+- [ ] Folder mention: pill shows the file-count suffix; expanded card shows
+      "N files · M folders · size" with the parent breadcrumb. Upload a file into that folder
+      in a second tab: the count ticks without refresh. Move the file out: it ticks back.
+- [ ] Note-folder mention shows "N notes"; creating/deleting a child note updates it live.
+- [ ] Room mention card shows room type, seats, building, floor, and the amenities line;
+      editing the room in admin updates an open card live; deleting the room tombstones it.
+- [ ] Deleted user/agent/team mentions still render the tombstone chip, not a token.
+- [ ] No `<div> cannot appear as a descendant of <p>` warnings in the console on chat or notes
+      pages containing task cards with assignee stacks.
+- [ ] Chat `@` popup: users, agents, and teams always sit above content results; the people
+      group matches on names only (a query hitting everyone's shared email domain, e.g. "uni",
+      must NOT flood the list with users), and it steps aside when an explicit `note:`/`file:`
+      filter is typed.
+- [ ] Mobile: typing `@` in a channel composer AND a thread composer raises the inline
+      suggestion bar above the composer (people first, names only; bare `@` lists people);
+      tapping a row inserts `@Label`, keeps the keyboard up, and the sent message renders the
+      mention; the `@` tool button still opens the full-screen reference overlay.
+
 ## Chat notification deep links
 
 Chat notifications name the channel as their source; the message they were raised for rides in

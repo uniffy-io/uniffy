@@ -26,7 +26,7 @@ Every mention chip satisfies these properties:
 1. **Live**: when the referenced content changes (rename, status flip, member add, folder rename, …) every visible chip pointing to it updates without a page refresh.
 2. **Snapshot-safe**: when the reference target is deleted or no longer accessible, the chip renders a tombstone - a half-broken card or a generic "Note content" placeholder reads as a bug.
 3. **Pure-Meili reads**: the resolve path runs zero database queries. Everything a chip displays is denormalized into the Meilisearch document at index time. If a chip needs a new field, add it to the index rather than to a resolve-time enrichment hook.
-4. **Same look everywhere**: chips render identically in chat messages, search results, comments, and the note editor. There is one chip component, not three.
+4. **Same component everywhere, setting-driven default**: one chip component renders in chat messages, search results, comments, and the note editor, and the user's `mentionDisplay` setting decides pill vs card uniformly. A mid-sentence expanded card breaks out as a block that splits the line boxes (editor CSS owns that); it never renders as an inline island.
 5. **Stable size**: a chip in expanded mode reserves the expanded-card footprint immediately (skeleton). Growing from inline-pill to block-card after the fetch lands tends to feel janky.
 
 If a change you are about to make breaks one of these, it is a good moment to reconsider the design.
@@ -96,6 +96,23 @@ If a field appears in the index document, every code path that changes it re-ind
 - Any bulk path (`empty_trash`, batch member add) - snapshot affected ids before the mutation, re-index after the commit.
 
 Skipping this step leaves the chip with stale data. The user will notice. Cache invalidation is not a substitute.
+
+### The label slot is sanitized, never raw
+
+`[[[label|urn]]]` is built by string interpolation on all three platforms, so **every writer routes the
+label through the sanitizer**: `sanitize_mention_label` (`core/content/references.py`),
+`sanitizeMentionLabel` (`@/shared/utils/mentionUtils`), `sanitizeMentionLabel`
+(`@shared/mentions/mentionLabel` on mobile). It strips `[ ] | \`, collapses whitespace, and falls back
+to `mention`. Without it a title like `X|urn:uniffy:content:USER:<id>]]] approved [[[Y` mints a mention
+of a user its author never referenced - and the rename fanout (`replace_mention_label`) writes that into
+*other people's* documents, so the sanitize call inside it is load-bearing rather than defensive.
+
+Stripping is lossless for readers: the label is display fallback only, since a live chip renders
+`liveState.title || label` from the resolved document. Titles keep their `|` and `[` everywhere else.
+
+The parse side matches: every mention regex on every platform uses `[^[\]|]` for the label group, so raw
+markup carrying structural characters renders as visible plain text instead of silently restructuring.
+A new writer that interpolates a label without the sanitizer reopens this.
 
 ### Live updates: `publish_mention_state`
 
@@ -200,6 +217,8 @@ MentionChip          (full chip; hover preview, expand button, live state)
 │  ├─ TaskMentionPreview
 │  ├─ NoteMentionPreview
 │  ├─ FileMentionPreview
+│  ├─ FolderMentionPreview
+│  ├─ RoomMentionPreview
 │  ├─ ChatMentionPreview
 │  ├─ CalendarMentionPreview
 │  ├─ ProjectMentionPreview
@@ -207,15 +226,19 @@ MentionChip          (full chip; hover preview, expand button, live state)
 │  └─ AgentMentionPreview
 ├─ MentionExpandedCardSkeleton  (loading footprint, prevents size jump)
 ├─ MentionTombstoneChip / MentionTombstoneCard  (deleted state)
-└─ MentionPreview (popover; non-expandable types only)
+└─ MentionPreview (hover popover; attaches on every chip type - the expand caret suppresses it)
 
 MentionChipCompact   (dense inline pill; same data, smaller)
 MentionChipBasic     (no Redux, no live state; ProseMirror render fallback)
 ```
 
-**Expandable types** (rendered as block card by default): `TASK`, `CALENDAR_EVENT`, `PROJECT`, `FILE`, `NOTE`, `CHAT`. See `mentionConstants.ts`. Other types render as inline pills with a hover popover.
+**People tokens:** `USER`, `AGENT`, and `TEAM` do not render as boxed chips. All three variants render them as a Slack-style `@Name` text token, composed from `peopleTokenClasses` + `PEOPLE_TOKEN_TYPES` in `mentionConstants.ts` (every surface reuses that helper - hand-copied class strings drift): one accent for every subject kind (`text-primary` on `bg-primary/10`, `bg-primary/25` when the mentioned user IS the viewer; `MentionChipBasic` and the compose static chip render without viewer context, so they never apply the self-mention wash), baseline-aligned, no border, no avatar, no presence. Avatars, presence, the agent badge, and member counts live in the hover card only. Teams get the people treatment because a team mention notifies its members - it behaves like a people mention, so it reads like one.
 
-The user's `mentionDisplay` setting (`expanded` / `compact`) controls the default. Per-chip toggles persist in `localStorage` under `mention-toggle:{urn}`.
+**Expandable types** (may render the block card): `TASK`, `CALENDAR_EVENT`, `PROJECT`, `FILE`, `FOLDER`, `NOTE`, `CHAT`, `CHAT_MESSAGE`, `TAG`, `ROOM`. See `mentionConstants.ts`. Other non-token types render as inline pills with a hover popover.
+
+**Container stats are index metadata, live like everything else.** File folders carry `file_count` / `folder_count` / `total_size` (direct children only - recursive totals would turn deep mutations into subtree walks); every child create/delete/restore/move calls `FolderOperations.refresh_folder_stats`, which re-indexes and publishes the full payload. Trash purges (`empty_trash`) deliberately do NOT refresh: trashed rows are already excluded from the counts. Folder-type notes carry `child_count` the same way via `NoteOperations._refresh_parent_folder`. Rooms carry `room_type` / `capacity` / `building` / `floor` / `location` / `amenities` (pre-joined display string, capped at 4).
+
+The user's `mentionDisplay` setting (`expanded` / `compact`) controls the default everywhere. Per-chip toggles persist in `localStorage` under `mention-toggle:{surface}:{urn}` (surface = first route segment: chat, notes, calendar, ...) and win over the setting within that surface only - collapsing a chip in chat never collapses the same URN in a note.
 
 ### Consistent placement
 
