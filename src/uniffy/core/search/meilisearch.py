@@ -404,6 +404,7 @@ class MeilisearchClient:
         metadata_filters: dict[str, str] | None = None,
         limit: int = 20,
         offset: int = 0,
+        attributes_to_search_on: list[str] | None = None,
     ) -> SearchResults:
         """Search with permission filtering applied as a Meilisearch filter expression."""
         index = self.client.index(self.config.index_name)
@@ -449,6 +450,7 @@ class MeilisearchClient:
             sort=["rank_score:desc", "updated_at:desc"],
             show_ranking_score=True,
             attributes_to_retrieve=SEARCH_HIT_FIELDS,
+            attributes_to_search_on=attributes_to_search_on,
             attributes_to_highlight=["title", "description"],
             highlight_pre_tag=HIGHLIGHT_PRE_TAG,
             highlight_post_tag=HIGHLIGHT_POST_TAG,

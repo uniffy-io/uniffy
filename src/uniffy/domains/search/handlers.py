@@ -106,6 +106,7 @@ class SearchHandlers:
                     limit=limit,
                     offset=offset,
                     type_priority=type_priority if type_priority else None,
+                    name_matches_only=request.name_matches_only,
                 )
 
                 items = [search_result_to_proto(item) for item in results]
