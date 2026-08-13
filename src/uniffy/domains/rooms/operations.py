@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -27,8 +28,11 @@ from uniffy.core.types import (
     RoomType,
     SubjectType,
 )
+from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.rooms import queries
+
+logger = logger.bind(component="rooms.operations")
 
 
 class RoomOperations(BaseContentOperations[Room]):
@@ -69,6 +73,12 @@ class RoomOperations(BaseContentOperations[Room]):
         }
         if model.building:
             metadata["building"] = model.building
+        if model.floor:
+            metadata["floor"] = model.floor
+        if model.location:
+            metadata["location"] = model.location
+        if model.amenities:
+            metadata["amenities"] = ", ".join(model.amenities[:4])
         return metadata
 
     async def create_room(
@@ -216,6 +226,31 @@ class RoomOperations(BaseContentOperations[Room]):
         await self._index_for_search(room)
         await self.session.commit()
 
+        if changed_keys:
+            effective_mode, _ = await self._effective_policy(organization_id, room)
+            try:
+                # Full denormalized payload; empty strings clear fields that
+                # mention chips must stop showing once the room drops them.
+                await publish_mention_state(
+                    organization_id=organization_id,
+                    urn=build_content_urn(self.content_type, room.id),
+                    changes={
+                        "title": room.name,
+                        "description": (room.description or "")[:200],
+                        "room_type": room.room_type.value,
+                        "capacity": str(room.capacity),
+                        "building": room.building or "",
+                        "floor": room.floor or "",
+                        "location": room.location or "",
+                        "amenities": ", ".join((room.amenities or [])[:4]),
+                    },
+                    restricted=effective_mode != AccessMode.OPEN_TO_ORG,
+                )
+            except Exception:
+                logger.opt(exception=True).warning(
+                    f"Failed to publish room mention state for {room_id}"
+                )
+
         return room
 
     async def delete_room(
@@ -247,6 +282,9 @@ class RoomOperations(BaseContentOperations[Room]):
                 "Cancel the bookings first.",
             )
 
+        # Resolved before the delete: the row is unreadable after the commit.
+        effective_mode, _ = await self._effective_policy(organization_id, room)
+
         if permanent:
             await self.session.delete(room)
         else:
@@ -269,6 +307,18 @@ class RoomOperations(BaseContentOperations[Room]):
             build_content_urn(self.content_type, room_id), organization_id
         )
         await self.session.commit()
+
+        try:
+            await publish_mention_state(
+                organization_id=organization_id,
+                urn=build_content_urn(self.content_type, room_id),
+                changes={"urn_status": "DELETED"},
+                restricted=effective_mode != AccessMode.OPEN_TO_ORG,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"Failed to publish room tombstone for {room_id}"
+            )
 
     async def list_rooms(
         self,

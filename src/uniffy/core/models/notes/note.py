@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Enum
+from sqlalchemy import Column, DateTime, Enum, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -18,6 +18,8 @@ class Note(SQLModel, table=True):
     """
 
     __tablename__ = "notes_notes"
+    # Serves the per-folder child COUNT behind note-folder mention stats.
+    __table_args__ = (Index("ix_notes_notes_parent_id_is_deleted", "parent_id", "is_deleted"),)
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)

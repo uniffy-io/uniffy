@@ -1495,6 +1495,11 @@ class FilesHandlers:
                 folder_ops = FolderOperations(session)
                 members_ops = ContentMembersOperations(session)
 
+                # Per-item stat refreshes are skipped and each affected folder
+                # is refreshed once after the loops: a 200-file move must not
+                # recompute the same two folders 400 times.
+                affected_folder_ids: set[UUID | None] = set()
+
                 for file_id in file_ids:
                     file = await file_ops._fetch_by_id(file_id, organization_id)
                     if not file:
@@ -1522,16 +1527,20 @@ class FilesHandlers:
                             )
 
                     if target_folder_id is not None or request.HasField("target_folder_id"):
+                        previous_folder_id = file.folder_id
                         try:
                             await file_ops.move_file(
                                 user_id=user_id,
                                 organization_id=organization_id,
                                 file_id=file_id,
                                 folder_id=target_folder_id,
+                                refresh_stats=False,
                             )
                         except PermissionDeniedError:
                             # One unmovable item does not sink the batch.
                             continue
+                        affected_folder_ids.add(previous_folder_id)
+                        affected_folder_ids.add(target_folder_id)
 
                     await session.commit()
                     files_moved += 1
@@ -1563,18 +1572,25 @@ class FilesHandlers:
                             )
 
                     if target_folder_id is not None or request.HasField("target_folder_id"):
+                        previous_parent_id = folder.parent_id
                         try:
                             await folder_ops.update(
                                 user_id=user_id,
                                 organization_id=organization_id,
                                 folder_id=folder_id,
                                 parent_id=target_folder_id if target_folder_id else "",
+                                refresh_parent_stats=False,
                             )
                         except PermissionDeniedError:
                             continue
+                        affected_folder_ids.add(previous_parent_id)
+                        affected_folder_ids.add(target_folder_id)
 
                     await session.commit()
                     folders_moved += 1
+
+                for affected_id in affected_folder_ids:
+                    await folder_ops.refresh_folder_stats(affected_id, organization_id)
 
                 return MoveItemsResponse(
                     success=True,

@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, Index
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
@@ -14,6 +14,8 @@ class Folder(SQLModel, table=True):
     """Folder in the org file hierarchy; nests via parent_id, shares the file permission model."""
 
     __tablename__ = "files_folders"
+    # Serves the per-folder subfolder COUNT behind folder mention stats.
+    __table_args__ = (Index("ix_files_folders_parent_id_is_deleted", "parent_id", "is_deleted"),)
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)

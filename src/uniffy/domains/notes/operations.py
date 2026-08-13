@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.permissions import modes_at_least_as_open
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import (
@@ -50,6 +51,7 @@ from uniffy.core.types import (
     NotificationType,
     SubjectType,
 )
+from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.notes import queries
 from uniffy.domains.tags import (
     TagAssignment,
@@ -62,8 +64,8 @@ logger = logger.bind(component="notes.operations")
 
 _MAX_TREE_DEPTH = 64
 
-_MENTION_ESCAPED_RE = re.compile(r"\\?\[\\?\[\\?\[([^|\]]+)\|[^\]]+\\?\]\\?\]\\?\]")
-_MENTION_RE = re.compile(r"\[\[\[([^|]+)\|[^\]]+\]\]\]")
+_MENTION_ESCAPED_RE = re.compile(r"\\?\[\\?\[\\?\[([^\[\]|]+)\|[^\]]+\\?\]\\?\]\\?\]")
+_MENTION_RE = re.compile(r"\[\[\[([^\[\]|]+)\|[^\]]+\]\]\]")
 _IMAGE_RE = re.compile(r"!\[([^\]]*)\]\([^)]+\)")
 _LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
@@ -190,7 +192,59 @@ class NoteOperations(BaseContentOperations[Note]):
             title = result.scalar_one_or_none()
             if title:
                 meta["parent_label"] = title
+        if model.node_type == NodeType.FOLDER:
+            # The chip renders "N notes" and the number reaches everyone who
+            # can resolve the folder: only actual notes count, and children
+            # with a narrower effective mode stay uncounted.
+            folder_mode, _ = await self._effective_policy(model.organization_id, model)
+            allowed = modes_at_least_as_open(folder_mode)
+            default_mode, _ = await self.permission_checker.get_org_defaults(
+                model.organization_id, ContentType.NOTE
+            )
+            visible = Note.access_mode.in_(allowed)
+            if (default_mode or AccessMode.OWNER_ONLY) in allowed:
+                visible = or_(visible, Note.access_mode.is_(None))
+            count = (
+                await self.session.execute(
+                    select(func.count(Note.id)).where(
+                        Note.parent_id == model.id,
+                        Note.organization_id == model.organization_id,
+                        Note.is_deleted == False,  # noqa: E712
+                        Note.node_type == NodeType.NOTE,
+                        visible,
+                    )
+                )
+            ).scalar_one()
+            meta["child_count"] = str(count or 0)
         return meta or None
+
+    async def _refresh_parent_folder(
+        self,
+        parent_id: UUID | None,
+        organization_id: UUID,
+    ) -> None:
+        """A child create/delete/restore/move changes the parent folder's
+        indexed ``child_count``; re-index and broadcast so folder chips
+        update without a refresh.
+        """
+        if parent_id is None:
+            return
+        parent = await self._fetch_by_id(parent_id, organization_id)
+        if not parent or parent.is_deleted or parent.node_type != NodeType.FOLDER:
+            return
+        try:
+            meta = await self._index_for_search(parent) or {}
+            effective_mode, _ = await self._effective_policy(organization_id, parent)
+            await publish_mention_state(
+                organization_id=organization_id,
+                urn=build_content_urn(self.content_type, parent.id),
+                changes={"title": parent.title, **meta},
+                restricted=effective_mode != AccessMode.OPEN_TO_ORG,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"Failed to refresh note folder stats for {parent_id}"
+            )
 
     @staticmethod
     def _extract_canvas_text(canvas_data: dict) -> list[str]:
@@ -282,6 +336,8 @@ class NoteOperations(BaseContentOperations[Note]):
         await self._notify_new_mentions(
                 user_id, organization_id, note, old_refs=None, writer_id=user_id
             )
+
+        await self._refresh_parent_folder(parent_id, organization_id)
 
         return note
 
@@ -434,6 +490,10 @@ class NoteOperations(BaseContentOperations[Note]):
             if note.node_type == NodeType.FOLDER:
                 await self._refresh_children_parent_label(note)
 
+        if parent_changed:
+            await self._refresh_parent_folder(previous_parent_id, organization_id)
+            await self._refresh_parent_folder(note.parent_id, organization_id)
+
         effective_mode, _ = await self._effective_policy(organization_id, note)
         if effective_mode != AccessMode.OWNER_ONLY:
             await emit_notification(
@@ -501,6 +561,8 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self._require_delete(user_id, organization_id, note)
 
+        parent_folder_id = note.parent_id
+
         # Snapshot descendants before mutation so search cleanup is correct.
         removed_ids = await self._collect_descendant_ids(note)
 
@@ -538,6 +600,8 @@ class NoteOperations(BaseContentOperations[Note]):
         )
         await self.session.commit()
 
+        await self._refresh_parent_folder(parent_folder_id, organization_id)
+
         return True
 
     async def restore(
@@ -571,6 +635,8 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self._index_for_search(note)
         await self.session.commit()
+
+        await self._refresh_parent_folder(note.parent_id, organization_id)
 
         return note
 
@@ -1035,8 +1101,6 @@ class NoteOperations(BaseContentOperations[Note]):
 
     async def _refresh_children_parent_label(self, parent: Note) -> None:
         """Re-index children + broadcast ``parent_label`` after a folder rename."""
-        from uniffy.core.valkey.mentions import publish_mention_state
-
         result = await self.session.execute(
             select(Note).where(
                 Note.parent_id == parent.id,

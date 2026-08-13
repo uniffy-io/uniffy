@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.types import RoomStatus, RoomType, generate_id
+from uniffy.core.types import AccessMode, RoomStatus, RoomType, generate_id
 
 
 def _audit_rows(session: MagicMock) -> list:
@@ -80,6 +80,10 @@ async def test_update_room_status_to_retired_emits_archived() -> None:
         RoomOperations, "get_by_id", AsyncMock(return_value=room)
     ), patch.object(
         RoomOperations, "_require_edit", AsyncMock(return_value=None)
+    ), patch.object(
+        RoomOperations,
+        "_effective_policy",
+        AsyncMock(return_value=(AccessMode.OPEN_TO_ORG, None)),
     ):
         await ops.update_room(
             user_id=generate_id(),

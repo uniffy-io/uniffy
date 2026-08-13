@@ -14,7 +14,9 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import (
     PermissionChecker,
+    modes_at_least_as_open,
     resolve_access_policy,
+    resolve_effective_policy,
     role_can_view,
 )
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
@@ -39,6 +41,7 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.core.valkey import publish_content_access_changed
+from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.files.quota_operations import QuotaOperations
 from uniffy.domains.files.version_policy import (
     resolve_version_policy,
@@ -206,7 +209,19 @@ class FileOperations(BaseContentOperations[File]):
         access_mode: AccessMode | None = None,
         baseline_role: ContentRole | None = None,
     ) -> MultipartUpload:
-        """Start an S3 multipart upload and record the access policy for the resulting File."""
+        """Start an S3 multipart upload and record the access policy for the resulting File.
+
+        The destination folder must exist in this org and be viewable by the
+        uploader, matching ``move_file``'s contract; ``complete_upload`` copies
+        ``folder_id`` onto the File verbatim, so this is the only gate.
+        """
+        if folder_id is not None:
+            folder_ops = FolderOperations(self.session)
+            folder = await folder_ops.get_by_id(folder_id, organization_id)
+            if not folder or folder.is_deleted:
+                raise NotFoundError("Folder", folder_id)
+            await folder_ops.require_view(user_id, organization_id, folder)
+
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
         )
@@ -509,6 +524,10 @@ class FileOperations(BaseContentOperations[File]):
         effective_mode, _ = await self._effective_policy(file.organization_id, file)
         await self._broadcast_open_to_org_create(file.organization_id, file.id, effective_mode)
 
+        await FolderOperations(self.session).refresh_folder_stats(
+            file.folder_id, file.organization_id
+        )
+
         if file.extraction_status == ExtractionStatus.PENDING:
             await self._enqueue_processing_jobs(file)
 
@@ -603,6 +622,10 @@ class FileOperations(BaseContentOperations[File]):
 
         await self._index_for_search(model=file, skip_member_lookup=False)
         await self.session.commit()
+
+        await FolderOperations(self.session).refresh_folder_stats(
+            file.folder_id, file.organization_id
+        )
 
         if file.extraction_status == ExtractionStatus.PENDING:
             await self._enqueue_processing_jobs(file)
@@ -719,6 +742,10 @@ class FileOperations(BaseContentOperations[File]):
 
         await self._index_for_search(model=file, skip_member_lookup=False)
         await self.session.commit()
+
+        await FolderOperations(self.session).refresh_folder_stats(
+            file.folder_id, file.organization_id
+        )
 
         if file.extraction_status == ExtractionStatus.PENDING:
             await self._enqueue_processing_jobs(file)
@@ -909,6 +936,7 @@ class FileOperations(BaseContentOperations[File]):
         organization_id: UUID,
         file_id: UUID,
         folder_id: UUID | None,
+        refresh_stats: bool = True,
     ) -> File:
         """Move a file into ``folder_id`` (``None`` = root).
 
@@ -916,9 +944,9 @@ class FileOperations(BaseContentOperations[File]):
         a permission container, so filing into it never widens who can read the
         file. ``folder_id`` rides the file's search document as ``folder_id`` +
         ``parent_label``, hence the re-index and the mention fanout.
+        ``refresh_stats=False`` lets bulk movers refresh each affected folder
+        once after their loop instead of twice per file.
         """
-        from uniffy.core.valkey.mentions import publish_mention_state
-
         file = await self._fetch_by_id(file_id, organization_id)
         if not file:
             raise NotFoundError("File", file_id)
@@ -966,7 +994,14 @@ class FileOperations(BaseContentOperations[File]):
                 changes={"parent_label": folder_name},
             )
         except Exception:
-            logger.warning(f"Failed to publish parent_label for file {file.id}")
+            logger.opt(exception=True).warning(
+                f"Failed to publish parent_label for file {file.id}"
+            )
+
+        if refresh_stats:
+            folder_ops = FolderOperations(self.session)
+            await folder_ops.refresh_folder_stats(previous_folder_id, organization_id)
+            await folder_ops.refresh_folder_stats(folder_id, organization_id)
 
         return file
 
@@ -983,6 +1018,8 @@ class FileOperations(BaseContentOperations[File]):
             raise NotFoundError("File", file_id)
 
         await self._require_delete(user_id, organization_id, file)
+
+        parent_folder_id = file.folder_id
 
         if permanent:
             file_size = file.size_bytes
@@ -1054,6 +1091,10 @@ class FileOperations(BaseContentOperations[File]):
         )
         await self.session.commit()
 
+        await FolderOperations(self.session).refresh_folder_stats(
+            parent_folder_id, organization_id
+        )
+
         return True
 
     async def restore(
@@ -1088,6 +1129,10 @@ class FileOperations(BaseContentOperations[File]):
 
         await self._index_for_search(model=file)
         await self.session.commit()
+
+        await FolderOperations(self.session).refresh_folder_stats(
+            file.folder_id, organization_id
+        )
 
         return file
 
@@ -1388,14 +1433,23 @@ class FolderOperations:
         self.access_query = ContentAccessQuery(session)
         self.permission_checker = PermissionChecker(session)
 
-    async def _index_for_search(self, folder: Folder) -> None:
+    async def _index_for_search(
+        self,
+        folder: Folder,
+        effective_policy: tuple[AccessMode, ContentRole | None] | None = None,
+    ) -> dict[str, str] | None:
         """System folders (auto-provisioned Attachments/Recordings) stay out
         of the index; every user owning an identical copy is pure noise.
+        Returns the metadata written so callers can publish it verbatim.
         """
         if folder.is_system or folder.is_deleted:
-            return
+            return None
 
         from uniffy.core.search.indexer import SearchIndexer
+
+        if effective_policy is None:
+            effective_policy = await self._effective_policy(folder.organization_id, folder)
+        effective_mode, effective_baseline = effective_policy
 
         members = await self.session.execute(
             select(
@@ -1423,6 +1477,12 @@ class FolderOperations:
             parent = await self.get_by_id(folder.parent_id, folder.organization_id)
             parent_label = parent.name if parent else ""
 
+        metadata = {
+            "parent_id": str(folder.parent_id) if folder.parent_id else "",
+            "parent_label": parent_label,
+            **await self._child_stats(folder, effective_mode),
+        }
+
         indexer = SearchIndexer(self.session)
         await indexer.index(
             urn=build_content_urn(ContentType.FOLDER, folder.id),
@@ -1431,18 +1491,108 @@ class FolderOperations:
             entity_type=ContentType.FOLDER.value,
             url_path=f"/files?folder={folder.id}",
             owner_id=folder.owner_id,
-            access_mode=(folder.access_mode or AccessMode.OWNER_ONLY).value,
-            baseline_role=folder.baseline_role.value if folder.baseline_role else None,
+            access_mode=effective_mode.value,
+            baseline_role=effective_baseline.value if effective_baseline else None,
             keywords=folder.name,
             shared_user_ids=shared_users or None,
             shared_group_ids=shared_groups or None,
             blocked_user_ids=blocked_users or None,
             blocked_group_ids=blocked_groups or None,
-            metadata={
-                "parent_id": str(folder.parent_id) if folder.parent_id else "",
-                "parent_label": parent_label,
-            },
+            metadata=metadata,
         )
+        return metadata
+
+    async def _effective_policy(
+        self,
+        organization_id: UUID,
+        folder: Folder,
+    ) -> tuple[AccessMode, ContentRole | None]:
+        """Materialise NULL access-policy columns against the org's defaults."""
+        default_mode, default_baseline = await self.permission_checker.get_org_defaults(
+            organization_id, ContentType.FOLDER
+        )
+        return resolve_effective_policy(
+            folder.access_mode, folder.baseline_role, default_mode, default_baseline
+        )
+
+    async def _child_stats(self, folder: Folder, folder_mode: AccessMode) -> dict[str, str]:
+        """Direct-children counts only; recursive totals would turn every
+        deep mutation into a subtree walk. Children with a narrower effective
+        mode stay uncounted: the stat reaches everyone who can resolve the
+        folder, so it must not disclose restricted children.
+        """
+        allowed = modes_at_least_as_open(folder_mode)
+        file_default, _ = await self.permission_checker.get_org_defaults(
+            folder.organization_id, ContentType.FILE
+        )
+        folder_default, _ = await self.permission_checker.get_org_defaults(
+            folder.organization_id, ContentType.FOLDER
+        )
+
+        def visible(mode_column, default_mode):
+            condition = mode_column.in_(allowed)
+            if (default_mode or AccessMode.OWNER_ONLY) in allowed:
+                condition = or_(condition, mode_column.is_(None))
+            return condition
+
+        files_row = (
+            await self.session.execute(
+                select(
+                    func.count(File.id),
+                    func.coalesce(func.sum(File.size_bytes), 0),
+                ).where(
+                    File.folder_id == folder.id,
+                    File.organization_id == folder.organization_id,
+                    File.is_deleted == False,  # noqa: E712
+                    visible(File.access_mode, file_default),
+                )
+            )
+        ).one()
+        subfolder_count = (
+            await self.session.execute(
+                select(func.count(Folder.id)).where(
+                    Folder.parent_id == folder.id,
+                    Folder.organization_id == folder.organization_id,
+                    Folder.is_deleted == False,  # noqa: E712
+                    visible(Folder.access_mode, folder_default),
+                )
+            )
+        ).scalar_one()
+        return {
+            "file_count": str(files_row[0] or 0),
+            "folder_count": str(subfolder_count or 0),
+            "total_size": str(files_row[1] or 0),
+        }
+
+    async def refresh_folder_stats(
+        self,
+        folder_id: UUID | None,
+        organization_id: UUID,
+    ) -> None:
+        """Child mutations change the folder's indexed counts; re-index and
+        broadcast so visible folder chips update without a refresh. No-ops for
+        root (None), system, and trashed folders.
+        """
+        if folder_id is None:
+            return
+        folder = await self.get_by_id(folder_id, organization_id)
+        if not folder or folder.is_deleted or folder.is_system:
+            return
+        try:
+            effective_policy = await self._effective_policy(organization_id, folder)
+            metadata = await self._index_for_search(folder, effective_policy)
+            if metadata is None:
+                return
+            await publish_mention_state(
+                organization_id=organization_id,
+                urn=build_content_urn(ContentType.FOLDER, folder.id),
+                changes={"title": folder.name, **metadata},
+                restricted=effective_policy[0] != AccessMode.OPEN_TO_ORG,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"Failed to refresh folder stats for {folder_id}"
+            )
 
     async def _remove_from_search(self, folder_id: UUID) -> None:
         from uniffy.core.search.indexer import SearchIndexer
@@ -1553,6 +1703,8 @@ class FolderOperations:
         except Exception:
             logger.warning(f"Search index failed for folder {folder.id}")
 
+        await self.refresh_folder_stats(parent_id, organization_id)
+
         return folder
 
     async def get_by_id(
@@ -1576,11 +1728,13 @@ class FolderOperations:
         folder_id: UUID,
         name: str | None = None,
         parent_id: UUID | None | str = None,
+        refresh_parent_stats: bool = True,
     ) -> Folder:
         """Update a folder's metadata.
 
         Access policy changes (access mode, members) go through the
-        MembersService, not this method.
+        MembersService, not this method. ``refresh_parent_stats=False`` lets
+        bulk movers refresh each affected parent once after their loop.
         """
         folder = await self.get_by_id(folder_id, organization_id)
         if not folder:
@@ -1591,6 +1745,7 @@ class FolderOperations:
         if isinstance(parent_id, UUID):
             await self._require_moveable_under(folder.id, parent_id, organization_id)
 
+        previous_parent_id = folder.parent_id
         name_changed = name is not None and name != folder.name
         if name is not None:
             if len(name) > 255:
@@ -1606,30 +1761,38 @@ class FolderOperations:
         await self.session.commit()
         await self.session.refresh(folder)
 
-        try:
-            await self._index_for_search(folder)
-        except Exception:
-            logger.warning(f"Search index failed for folder {folder.id}")
+        # Re-index + broadcast the folder's own chip state (title, breadcrumb, counts).
+        await self.refresh_folder_stats(folder.id, organization_id)
 
-        # Folder rename: every file inside carries the folder name as
-        # ``parent_label`` in its search-index metadata, so re-index
-        # them and broadcast a mention-state change so visible chips
-        # pick up the new breadcrumb without a refresh.
+        # Folder rename: every direct child (file or folder) carries the
+        # folder name as ``parent_label`` in its search-index metadata, so
+        # re-index them and broadcast a mention-state change so visible
+        # chips pick up the new breadcrumb without a refresh.
         if name_changed:
-            await self._refresh_files_in_folder(folder.id, folder.name)
+            await self._refresh_children_after_rename(folder.id, folder.name, organization_id)
+
+        if folder.parent_id != previous_parent_id and refresh_parent_stats:
+            await self.refresh_folder_stats(previous_parent_id, organization_id)
+            await self.refresh_folder_stats(folder.parent_id, organization_id)
 
         return folder
 
-    async def _refresh_files_in_folder(self, folder_id: UUID, parent_label: str) -> None:
-        """Re-index every active file in the folder and broadcast the
-        new ``parent_label`` so mention chips update live.
+    async def _refresh_children_after_rename(
+        self,
+        folder_id: UUID,
+        parent_label: str,
+        organization_id: UUID,
+    ) -> None:
+        """Re-index every active direct child and broadcast the new
+        ``parent_label`` so mention chips update live. Child folders route
+        through ``refresh_folder_stats`` so each re-index ships with its
+        recipient-gated broadcast.
         """
-        from uniffy.core.valkey.mentions import publish_mention_state
-
         file_ops = FileOperations(self.session)
         result = await self.session.execute(
             select(File).where(
                 File.folder_id == folder_id,
+                File.organization_id == organization_id,
                 File.is_deleted == False,  # noqa: E712
             )
         )
@@ -1638,7 +1801,9 @@ class FolderOperations:
             try:
                 await file_ops._index_for_search(f)
             except Exception:
-                logger.warning(f"Failed to re-index file {f.id} after folder rename")
+                logger.opt(exception=True).warning(
+                    f"Failed to re-index file {f.id} after folder rename"
+                )
             try:
                 await publish_mention_state(
                     organization_id=f.organization_id,
@@ -1646,7 +1811,23 @@ class FolderOperations:
                     changes={"parent_label": parent_label},
                 )
             except Exception:
-                logger.warning(f"Failed to publish parent_label for file {f.id}")
+                logger.opt(exception=True).warning(
+                    f"Failed to publish parent_label for file {f.id}"
+                )
+
+        child_folder_ids = list(
+            (
+                await self.session.execute(
+                    select(Folder.id).where(
+                        Folder.parent_id == folder_id,
+                        Folder.organization_id == organization_id,
+                        Folder.is_deleted == False,  # noqa: E712
+                    )
+                )
+            ).scalars()
+        )
+        for child_id in child_folder_ids:
+            await self.refresh_folder_stats(child_id, organization_id)
 
     async def delete(
         self,
@@ -1677,6 +1858,10 @@ class FolderOperations:
                 folder_id, organization_id, user_id, permanent
             )
 
+        parent_id = folder.parent_id
+        # Resolved before the delete: the row is unreadable after the commit.
+        effective_mode, _ = await self._effective_policy(organization_id, folder)
+
         if permanent:
             uploads_result = await self.session.execute(
                 select(MultipartUpload).where(MultipartUpload.folder_id == folder_id)
@@ -1693,6 +1878,18 @@ class FolderOperations:
         await self.session.commit()
 
         await self._remove_from_search(folder_id)
+        try:
+            await publish_mention_state(
+                organization_id=organization_id,
+                urn=build_content_urn(ContentType.FOLDER, folder_id),
+                changes={"urn_status": "DELETED"},
+                restricted=effective_mode != AccessMode.OPEN_TO_ORG,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"Failed to publish folder tombstone for {folder_id}"
+            )
+        await self.refresh_folder_stats(parent_id, organization_id)
 
         return files_deleted, folders_deleted + 1
 
@@ -1732,19 +1929,24 @@ class FolderOperations:
         await self.session.commit()
         await self.session.refresh(folder_obj)
 
-        # Deletion dropped every doc from the search index; restore must
-        # put them back or restored content stays unfindable.
+        # Deletion dropped every doc from the search index; restore must put
+        # them back or restored content stays unfindable. Folders go through
+        # refresh_folder_stats so each re-index ships with its broadcast.
         file_ops = FileOperations(self.session)
-        for restored in [folder_obj, *restored_folders]:
-            try:
-                await self._index_for_search(restored)
-            except Exception:
-                logger.warning(f"Search index failed for restored folder {restored.id}")
+        for restored in restored_folders:
+            await self.refresh_folder_stats(restored.id, organization_id)
         for file in restored_files:
             try:
                 await file_ops._index_for_search(model=file)
             except Exception:
-                logger.warning(f"Search index failed for restored file {file.id}")
+                logger.opt(exception=True).warning(
+                    f"Search index failed for restored file {file.id}"
+                )
+
+        # The restored subtree changes its parent's counts, and visible chips
+        # for the restored folder itself need a fresh broadcast.
+        await self.refresh_folder_stats(folder_obj.id, organization_id)
+        await self.refresh_folder_stats(folder_obj.parent_id, organization_id)
 
         return folder_obj
 
@@ -1982,7 +2184,12 @@ class FolderOperations:
             try:
                 await self._index_for_search(folder)
             except Exception:
-                logger.warning(f"Search index failed for folder {folder.id}")
+                logger.opt(exception=True).warning(
+                    f"Search index failed for folder {folder.id}"
+                )
+
+        # The dropped tree changes the destination folder's subfolder count.
+        await self.refresh_folder_stats(parent_id, organization_id)
 
         return created
 

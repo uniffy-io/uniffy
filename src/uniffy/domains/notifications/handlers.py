@@ -538,7 +538,7 @@ class NotificationsHandlers:
         disconnect = get_disconnect_event()
 
         organization_uuid = UUID(request.organization_id)
-        tag_relay = TagEventRelay(user_id, organization_uuid)
+        relay = TagEventRelay(user_id, organization_uuid)
 
         try:
             async with aclosing(
@@ -628,6 +628,12 @@ class NotificationsHandlers:
                         continue
 
                     if payload.get("_type") == "mention_state_changed":
+                        # Restricted content broadcasts org-wide but is only
+                        # forwarded to recipients who can view it.
+                        if payload.get("restricted") and not await relay.allows_mention_state(
+                            payload
+                        ):
+                            continue
                         mention_payload = MentionStateChangedPayload(
                             urn=payload.get("urn", ""),
                             changes=payload.get("changes", {}),
@@ -642,7 +648,7 @@ class NotificationsHandlers:
                     # Per-recipient filter; re-emitted as MENTION_STATE_CHANGED
                     # so the chip-state pipeline picks them up unchanged.
                     if payload.get("_type", "").startswith("tag."):
-                        relayed = await tag_relay.project(payload)
+                        relayed = await relay.project(payload)
                         for changes in relayed:
                             urn = changes.pop("urn", "")
                             if not urn:

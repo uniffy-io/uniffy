@@ -119,3 +119,32 @@ class TestProjection:
             }
         )
         assert result == []
+
+
+class TestMentionStateGate:
+    async def test_forwards_when_recipient_can_view(self) -> None:
+        relay = _make_relay()
+        urn = f"urn:uniffy:content:FOLDER:{generate_id()}"
+        assert await relay.allows_mention_state({"urn": urn, "restricted": True}) is True
+        relay._can_view_content.assert_awaited_once_with(
+            ContentType.FOLDER, relay._can_view_content.await_args.args[1]
+        )
+
+    async def test_drops_when_recipient_cannot_view(self) -> None:
+        relay = _make_relay()
+        relay._can_view_content = AsyncMock(return_value=False)
+        urn = f"urn:uniffy:content:FOLDER:{generate_id()}"
+        assert await relay.allows_mention_state({"urn": urn}) is False
+
+    async def test_drops_malformed_urn(self) -> None:
+        relay = _make_relay()
+        assert await relay.allows_mention_state({"urn": "urn:uniffy:content:FOLDER"}) is False
+        assert await relay.allows_mention_state({"urn": ""}) is False
+        assert await relay.allows_mention_state({}) is False
+        relay._can_view_content.assert_not_awaited()
+
+    async def test_fails_closed_when_permission_check_errors(self) -> None:
+        relay = _make_relay()
+        relay._can_view_content = AsyncMock(side_effect=RuntimeError("valkey down"))
+        urn = f"urn:uniffy:content:ROOM:{generate_id()}"
+        assert await relay.allows_mention_state({"urn": urn}) is False

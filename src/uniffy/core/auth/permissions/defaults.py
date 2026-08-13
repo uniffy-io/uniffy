@@ -82,6 +82,22 @@ async def resolve_access_policy(
     return access_mode, None
 
 
+_MODE_OPENNESS: dict[AccessMode, int] = {
+    AccessMode.OWNER_ONLY: 0,
+    AccessMode.EXPLICIT_MEMBERS: 1,
+    AccessMode.OPEN_TO_ORG: 2,
+}
+
+
+def modes_at_least_as_open(mode: AccessMode) -> list[AccessMode]:
+    """Access modes no narrower than ``mode``.
+
+    Used by denormalized child aggregates: one number reaches everyone who can
+    resolve the parent, so children with a narrower mode must stay uncounted.
+    """
+    return [m for m, rank in _MODE_OPENNESS.items() if rank >= _MODE_OPENNESS[mode]]
+
+
 def resolve_effective_policy(
     raw_access_mode: AccessMode | None,
     raw_baseline_role: ContentRole | None,
