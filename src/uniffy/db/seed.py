@@ -8,18 +8,8 @@ from typing import TYPE_CHECKING
 from loguru import logger
 from sqlalchemy import select
 
-from uniffy.db.seed_docs import seed_workspace_docs
-
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
-
-
-def starter_content_enabled() -> bool:
-    """Gate for the docs notes and the Welcome canvas."""
-    raw = os.getenv("SEED_STARTER_CONTENT", "").strip().lower()
-    if not raw:
-        return True
-    return raw in {"1", "true", "yes", "on"}
 
 
 async def seed_initial_data() -> None:
@@ -37,7 +27,6 @@ async def seed_initial_data() -> None:
 async def _seed_initial_data_locked() -> None:
     # Lazy imports avoid the auth-module circular dependency.
     from uniffy.core.models import Organization, User
-    from uniffy.core.search.indexer import SearchIndexer
     from uniffy.db.session import open_session
     from uniffy.domains.auth.passwords import hash_password
 
@@ -129,18 +118,6 @@ async def _seed_initial_data_locked() -> None:
                 plan="enterprise",
             )
             logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")
-
-            search_indexer = SearchIndexer(session)
-
-            if starter_content_enabled():
-                await seed_workspace_docs(
-                    session=session,
-                    default_org=default_org,
-                    admin_user=admin_user,
-                    search_indexer=search_indexer,
-                )
-            else:
-                logger.info("SEED_STARTER_CONTENT off: skipping docs notes and canvas")
 
             await _seed_vapid_keys(session, admin_email)
 

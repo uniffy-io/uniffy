@@ -45,9 +45,10 @@ async def seed_demo_company(
     anchor_date: datetime | None = None,
     only: tuple[str, ...] = DOMAINS,
     dry_run: bool = False,
+    password: str | None = None,
 ) -> SeedReport:
     """Seed one org with a demo knowledge base; safe to re-run, existing rows are left alone."""
-    content = load_demo_content(content_dir)
+    content = load_demo_content(content_dir, password=password)
     report = SeedReport()
 
     async with open_session() as session:

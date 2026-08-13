@@ -334,7 +334,9 @@ async def ensure_demo_user(
         actor_user_id=ctx.actor_id,
     )
 
-    logger.info(f"Demo login: {spec.email} / {spec.password}")
+    # The password stays out of the log: --password exists so a deployment can
+    # use one that is not in the repository, and logs outlive the run.
+    logger.info(f"Demo login: {spec.email}")
     return user.id
 
 
