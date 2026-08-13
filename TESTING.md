@@ -1388,6 +1388,24 @@ The one hard invariant of this feature. Two accounts needed.
    never returned to the client. A second active non-LOCAL source is
    rejected.
 
+## Platform surface hardening (edge deny rule)
+
+The operator API is exactly the `/api/superadmin.v1.` prefix; the docs page
+`deployment/hardening.md` documents the one-rule edge block. Verify the split
+holds with the rule active (proxy configured to deny the prefix from a
+public-source address, per the Caddy or nginx snippet in the docs).
+
+- [ ] From a public (denied) address, every `/platform` page fails its API
+      calls with 403 from the edge: users, organizations, sessions, audit,
+      mail, encryption, config, and the MFA reset actions.
+- [ ] From the same denied address, the org admin Support Access page works
+      end to end as a non-sysadmin org admin: operator requests a session
+      (from an allowed address), the org admin sees it, approves it, and
+      revokes it; the consent mode toggle reads and saves.
+- [ ] Tenant surfaces unaffected: login, profile + avatar edits, org
+      settings, and members pages all work from the denied address.
+- [ ] From an allowed (private/VPN) address, the `/platform` pages work.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

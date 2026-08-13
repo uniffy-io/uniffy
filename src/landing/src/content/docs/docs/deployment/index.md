@@ -10,12 +10,14 @@ This guide is for operators running Uniffy on their own infrastructure.
 
 ## What is here
 
+- [Harden the edge](/docs/deployment/hardening/): lock the operator API to your private network with one reverse proxy rule.
+
 Coming soon:
 
 - Install (Docker Compose, Kubernetes)
 - Required services (Postgres, Valkey, Meilisearch, object storage)
 - Configuration and environment
-- TLS and reverse proxy
+- TLS termination
 - Upgrades and migrations
 - Backups and disaster recovery
 - Observability (logs, metrics, traces)

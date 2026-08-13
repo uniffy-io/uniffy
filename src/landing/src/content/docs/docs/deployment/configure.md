@@ -172,7 +172,7 @@ Optional. Off by default in compose (profile `calls-turn`); most local dev does 
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `TRUSTED_PROXIES` | empty | Comma-separated list of trusted-proxy peer IPs. When the immediate ASGI client matches one of these, the audit middleware honors the leftmost entry of `X-Forwarded-For` as the client IP captured into `audit_events.ip_address`. With the list empty, the raw socket peer is used and `X-Forwarded-For` is ignored: correct for direct-connect deployments and the safe default behind an unknown load balancer. |
+| `TRUSTED_PROXY_HOPS` | `0` | Number of reverse proxies in front of the backend, as a hop count rather than an address list. With `N` above zero, the audit middleware takes the entry `N` from the right of `X-Forwarded-For` as the client IP captured into `audit_events.ip_address`, matching how nginx, Caddy, ALB, and Cloudflare append the immediate caller. At `0` the raw socket peer is used and `X-Forwarded-For` is ignored: correct for direct-connect deployments and the safe default behind an unknown load balancer. Also load-bearing for per-IP rate limits: at `0` a private or loopback peer skips the per-IP bucket so a misconfigured proxy cannot lock out every user behind it. Set `1` behind a single proxy, `2` when chained. |
 | `AUDIT_EVENTS_FILE_UPLOADED` | `false` | Opt-in for the high-volume `file.uploaded` audit row. Each successful upload writes one row. Turn on once storage volume has been characterised and compliance asks for upload attribution. Accepts `1`, `true`, `yes` (case-insensitive). |
 
 ## Prometheus metrics
