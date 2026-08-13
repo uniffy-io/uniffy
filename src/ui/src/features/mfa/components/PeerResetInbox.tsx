@@ -4,10 +4,10 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { friendlyErrorMessage } from '@/config';
-import { mfaClient } from '@/features/mfa/api/mfaApi';
+import { systemMfaClient } from '@/features/platform/api/systemMfaApi';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 
-import type { PendingPeerReset } from '@uniffy/proto/auth/v1/mfa_pb';
+import type { PendingPeerReset } from '@uniffy/proto/superadmin/v1/system_mfa_pb';
 
 type ProtoTimestamp = { seconds: bigint; nanos: number };
 
@@ -38,7 +38,7 @@ export function PeerResetInbox({ selfId, onApproved }: PeerResetInboxProps) {
 
     const refresh = useCallback(async () => {
         try {
-            const response = await mfaClient.listPlatformPeerResets({});
+            const response = await systemMfaClient.listPeerResets({});
             setRequests(response.requests);
         } catch (err) {
             const raw = err instanceof Error ? err.message : String(err);
@@ -58,7 +58,7 @@ export function PeerResetInbox({ selfId, onApproved }: PeerResetInboxProps) {
     const handleApprove = async (request: PendingPeerReset) => {
         setApprovingId(request.requestId);
         try {
-            await mfaClient.approvePlatformPeerReset({ requestId: request.requestId });
+            await systemMfaClient.approvePeerReset({ requestId: request.requestId });
             toast.success(`Approved peer reset for ${request.targetEmail}`);
             await refresh();
             onApproved?.();

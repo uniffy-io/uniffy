@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
 
@@ -14,6 +14,11 @@ from uniffy.core.data_files import load_documents
 logger = logger.bind(component="scripts.demo_company.loader")
 
 CONTENT_DIR = Path(__file__).parent / "content"
+
+# Every roster entry shares this login unless the content overrides it, which is
+# only safe on a stack nobody else can reach. Pass a password to
+# load_demo_content when seeding anywhere else.
+DEFAULT_PERSON_PASSWORD = "admin"
 
 MIME_BY_SUFFIX: dict[str, str] = {
     ".csv": "text/csv",
@@ -262,20 +267,24 @@ class ContentError(ValueError):
     """A demo content directory is missing something the seeder needs."""
 
 
-def load_demo_content(directory: Path | None = None) -> DemoContent:
+def load_demo_content(directory: Path | None = None, *, password: str | None = None) -> DemoContent:
     """Read a content directory into specs; any directory with the same shape works."""
     root = directory or CONTENT_DIR
     if not root.is_dir():
         raise ContentError(f"Content directory not found: {root}")
 
     manifest = _load_manifest(root / "manifest.json")
+    people = _load_people(root / "people.json", manifest.demo_user)
+    if password is not None:
+        manifest, people = _override_passwords(manifest, people, password)
+
     files = _load_files(root / "files", root / "files.json")
     if root == CONTENT_DIR:
         files = _merge_generated(files)
 
     content = DemoContent(
         manifest=manifest,
-        people=_load_people(root / "people.json", manifest.demo_user),
+        people=people,
         notes=_load_notes(root / "notes"),
         rooms=_load_rooms(root / "rooms.json"),
         events=_load_events(root / "events.json"),
@@ -296,6 +305,25 @@ def load_demo_content(directory: Path | None = None) -> DemoContent:
         f"{len(content.chat.series)} recurring series"
     )
     return content
+
+
+def _override_passwords(
+    manifest: Manifest,
+    people: PeopleContent,
+    password: str,
+) -> tuple[Manifest, PeopleContent]:
+    """Give every seeded login the same caller-chosen password.
+
+    Only newly created users are affected. The seeders hash the password once,
+    at insert time, so a persona that already exists keeps the one it has.
+    """
+    if manifest.demo_user is not None:
+        manifest = replace(manifest, demo_user=replace(manifest.demo_user, password=password))
+    people = replace(
+        people,
+        people=tuple(replace(person, password=password) for person in people.people),
+    )
+    return manifest, people
 
 
 def _merge_generated(files: tuple[FileSpec, ...]) -> tuple[FileSpec, ...]:
@@ -439,7 +467,7 @@ def _load_roster(path: Path, entries: list[dict]) -> tuple[PersonSpec, ...]:
                 email=email,
                 username=username,
                 full_name=entry.get("full_name", ""),
-                password=entry.get("password", "admin"),
+                password=entry.get("password", DEFAULT_PERSON_PASSWORD),
                 job_title=entry["job_title"],
                 department=entry["department"],
                 office_location=entry.get("office_location", ""),

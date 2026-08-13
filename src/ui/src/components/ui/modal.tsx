@@ -1,7 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/shared/utils/cn';
 
 const ANIMATION_MS = 150;
+
+// Escape must close only the topmost modal when dialogs stack.
+const modalStack: symbol[] = [];
 
 interface ModalProps {
   children: React.ReactNode;
@@ -20,6 +24,16 @@ export function Modal({
 }: ModalProps) {
   const [phase, setPhase] = useState<'entering' | 'open' | 'exiting'>('entering');
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const stackIdRef = useRef(Symbol('modal'));
+
+  useEffect(() => {
+    const id = stackIdRef.current;
+    modalStack.push(id);
+    return () => {
+      const index = modalStack.indexOf(id);
+      if (index >= 0) modalStack.splice(index, 1);
+    };
+  }, []);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
@@ -42,7 +56,9 @@ export function Modal({
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') requestClose();
+      if (e.key !== 'Escape') return;
+      if (modalStack[modalStack.length - 1] !== stackIdRef.current) return;
+      requestClose();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
@@ -58,7 +74,10 @@ export function Modal({
 
   const isVisible = phase === 'open';
 
-  return (
+  // Rendered through a portal: an ancestor's transform (e.g. another
+  // Modal's scale transition) would otherwise become the containing
+  // block for `fixed` and clip nested dialogs.
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
       <div
         className={cn(
@@ -81,6 +100,7 @@ export function Modal({
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

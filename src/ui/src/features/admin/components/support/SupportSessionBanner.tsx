@@ -4,13 +4,13 @@ import { Lifebuoy, Clock, ShieldWarning } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { friendlyErrorMessage } from '@/config';
-import { supportSessionsApi } from '@/features/platform/api/supportSessionsApi';
+import { supportConsentApi } from '@/features/admin/api/supportConsentApi';
 import { SupportSessionApprovalDialog } from '@/features/admin/components/support/SupportSessionApprovalDialog';
 import { ReasonDialog } from '@/components/ui/reason-dialog';
 import {
     SupportSessionState,
     type SupportSession,
-} from '@uniffy/proto/superadmin/v1/support_session_pb';
+} from '@uniffy/proto/support/v1/support_consent_pb';
 
 type ProtoTimestamp = { seconds: number | bigint; nanos: number };
 
@@ -48,7 +48,7 @@ export function SupportSessionBanner() {
             return;
         }
         try {
-            const response = await supportSessionsApi.listOrg({
+            const response = await supportConsentApi.listOrg({
                 organizationId,
                 page: 0,
                 pageSize: 25,
@@ -93,7 +93,7 @@ export function SupportSessionBanner() {
         if (!revokeTarget) return;
         setRevoking(revokeTarget.id);
         try {
-            await supportSessionsApi.revoke({ sessionId: revokeTarget.id, reason });
+            await supportConsentApi.revoke({ sessionId: revokeTarget.id, reason });
             toast.success('Support session revoked');
             setRevokeTarget(null);
             refresh();

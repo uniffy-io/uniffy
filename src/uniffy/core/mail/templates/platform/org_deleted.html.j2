@@ -2,7 +2,7 @@
 {% block title %}Your workspace {{ org_name }} is scheduled for deletion{% endblock %}
 {% block content %}
 <p style="margin:0 0 16px 0;font-size:16px;font-weight:600;">{{ org_name }} has been scheduled for deletion.</p>
-<p style="margin:0 0 16px 0;">A platform operator marked your workspace for deletion on {{ deleted_at }}. The data will remain restorable for {{ grace_days }} days, until <strong>{{ purge_at }}</strong>, after which it will be permanently removed.</p>
+<p style="margin:0 0 16px 0;">A platform operator marked your workspace for deletion on {{ deleted_at }}. Sign-in is blocked from now on. The data stays restorable for {{ grace_days }} days, until <strong>{{ purge_at }}</strong>; after that it can be removed permanently at any time.</p>
 {% if reason %}
 <p style="margin:0 0 16px 0;"><strong>Reason recorded by the operator:</strong> {{ reason }}</p>
 {% endif %}

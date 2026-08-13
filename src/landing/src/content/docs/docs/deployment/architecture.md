@@ -272,5 +272,6 @@ Backing up Postgres is mandatory. Meilisearch can be rebuilt from Postgres in O(
 ## Where to go next
 
 - [Configure Uniffy](/docs/deployment/configure/) for every environment variable.
+- [Harden the Edge](/docs/deployment/hardening/) to keep the platform operator API off the public internet.
 - [Administration Guide](/docs/administration/) for org-level configuration: members, permissions, SSO, audit, encryption.
 - [User Guide](/docs/user/) for end-user features.

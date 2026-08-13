@@ -1,12 +1,12 @@
 {% extends "base.txt.j2" %}
 {% block content %}
-{{ org_name }} will be permanently deleted on {{ purge_at }}.
+The restore window for {{ org_name }} closes on {{ purge_at }}.
 
-This is the final notice before the data is removed. After {{ purge_at }} the workspace and all its content (notes, files, chat, calendar, projects) will no longer be recoverable.
+Your workspace was marked for deletion and has been kept restorable since then. Once {{ purge_at }} passes, that guarantee ends: the workspace and all its content (notes, files, chat, calendar, projects) can be removed permanently at any time, and restoring it may no longer be possible.
 
 {% if reason %}Reason recorded at the time of deletion: {{ reason }}
 {% endif %}
-If you believe this is an error, contact your platform admin or support immediately to restore the workspace.
+If this is a mistake, contact your platform admin or support now, while the workspace can still be restored.
 
 This notice is automatic; the original action is recorded in your workspace audit log.
 {% endblock %}

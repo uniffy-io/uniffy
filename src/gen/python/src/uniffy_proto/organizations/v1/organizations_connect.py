@@ -21,19 +21,10 @@ class OrganizationsService(Protocol):
     async def list_my_organizations(self, request: organizations_dot_v1_dot_organizations__pb2.ListMyOrganizationsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListMyOrganizationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def list_organizations(self, request: organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def get_organization(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def create_organization(self, request: organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def update_organization(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def delete_organization(self, request: organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def get_organization_overview(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse:
@@ -112,16 +103,6 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                     ),
                     function=svc.list_my_organizations,
                 ),
-                "/organizations.v1.OrganizationsService/ListOrganizations": Endpoint.unary(
-                    method=MethodInfo(
-                        name="ListOrganizations",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.list_organizations,
-                ),
                 "/organizations.v1.OrganizationsService/GetOrganization": Endpoint.unary(
                     method=MethodInfo(
                         name="GetOrganization",
@@ -132,16 +113,6 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                     ),
                     function=svc.get_organization,
                 ),
-                "/organizations.v1.OrganizationsService/CreateOrganization": Endpoint.unary(
-                    method=MethodInfo(
-                        name="CreateOrganization",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.create_organization,
-                ),
                 "/organizations.v1.OrganizationsService/UpdateOrganization": Endpoint.unary(
                     method=MethodInfo(
                         name="UpdateOrganization",
@@ -151,16 +122,6 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_organization,
-                ),
-                "/organizations.v1.OrganizationsService/DeleteOrganization": Endpoint.unary(
-                    method=MethodInfo(
-                        name="DeleteOrganization",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.delete_organization,
                 ),
                 "/organizations.v1.OrganizationsService/GetOrganizationOverview": Endpoint.unary(
                     method=MethodInfo(
@@ -396,26 +357,6 @@ class OrganizationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def list_organizations(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ListOrganizations",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def get_organization(
         self,
         request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest,
@@ -436,26 +377,6 @@ class OrganizationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def create_organization(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="CreateOrganization",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def update_organization(
         self,
         request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest,
@@ -470,26 +391,6 @@ class OrganizationsServiceClient(ConnectClient):
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest,
                 output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def delete_organization(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="DeleteOrganization",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -903,15 +804,9 @@ class OrganizationsServiceClient(ConnectClient):
 class OrganizationsServiceSync(Protocol):
     def list_my_organizations(self, request: organizations_dot_v1_dot_organizations__pb2.ListMyOrganizationsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListMyOrganizationsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_organizations(self, request: organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_organization(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def create_organization(self, request: organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def update_organization(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def delete_organization(self, request: organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_organization_overview(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationOverviewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -969,16 +864,6 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.list_my_organizations,
                 ),
-                "/organizations.v1.OrganizationsService/ListOrganizations": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="ListOrganizations",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.list_organizations,
-                ),
                 "/organizations.v1.OrganizationsService/GetOrganization": EndpointSync.unary(
                     method=MethodInfo(
                         name="GetOrganization",
@@ -989,16 +874,6 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.get_organization,
                 ),
-                "/organizations.v1.OrganizationsService/CreateOrganization": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="CreateOrganization",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.create_organization,
-                ),
                 "/organizations.v1.OrganizationsService/UpdateOrganization": EndpointSync.unary(
                     method=MethodInfo(
                         name="UpdateOrganization",
@@ -1008,16 +883,6 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_organization,
-                ),
-                "/organizations.v1.OrganizationsService/DeleteOrganization": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="DeleteOrganization",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.delete_organization,
                 ),
                 "/organizations.v1.OrganizationsService/GetOrganizationOverview": EndpointSync.unary(
                     method=MethodInfo(
@@ -1253,26 +1118,6 @@ class OrganizationsServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
-    def list_organizations(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ListOrganizations",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.ListOrganizationsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.ListOrganizationsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     def get_organization(
         self,
         request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationRequest,
@@ -1293,26 +1138,6 @@ class OrganizationsServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
-    def create_organization(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="CreateOrganization",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.CreateOrganizationResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     def update_organization(
         self,
         request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest,
@@ -1327,26 +1152,6 @@ class OrganizationsServiceClientSync(ConnectClientSync):
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationRequest,
                 output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def delete_organization(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="DeleteOrganization",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.DeleteOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

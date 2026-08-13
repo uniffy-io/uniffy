@@ -4,6 +4,7 @@ import { TaskRecurrenceSelector } from "@/features/projects/components/detail/Ta
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { attachmentsApi } from "@/features/files/api/attachmentsApi";
@@ -433,8 +434,7 @@ export function CreateTaskModal() {
                           placeholder={`Select ${field.name.toLowerCase()}...`}
                         />
                       ) : field.type === "number" ? (
-                        <Input
-                          type="number"
+                        <NumberInput
                           value={(fieldValues[field.id] as string) ?? ""}
                           onChange={(e) => handleFieldValueChange(field.id, e.target.value ? Number(e.target.value) : null)}
                           disabled={isSubmitting}

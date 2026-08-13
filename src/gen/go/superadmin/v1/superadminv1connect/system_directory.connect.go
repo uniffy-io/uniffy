@@ -42,6 +42,12 @@ const (
 	// SystemOrganizationsServiceGetOrganizationProcedure is the fully-qualified name of the
 	// SystemOrganizationsService's GetOrganization RPC.
 	SystemOrganizationsServiceGetOrganizationProcedure = "/superadmin.v1.SystemOrganizationsService/GetOrganization"
+	// SystemOrganizationsServiceCreateOrganizationProcedure is the fully-qualified name of the
+	// SystemOrganizationsService's CreateOrganization RPC.
+	SystemOrganizationsServiceCreateOrganizationProcedure = "/superadmin.v1.SystemOrganizationsService/CreateOrganization"
+	// SystemOrganizationsServiceUpdateOrganizationProcedure is the fully-qualified name of the
+	// SystemOrganizationsService's UpdateOrganization RPC.
+	SystemOrganizationsServiceUpdateOrganizationProcedure = "/superadmin.v1.SystemOrganizationsService/UpdateOrganization"
 	// SystemOrganizationsServiceSuspendOrganizationProcedure is the fully-qualified name of the
 	// SystemOrganizationsService's SuspendOrganization RPC.
 	SystemOrganizationsServiceSuspendOrganizationProcedure = "/superadmin.v1.SystemOrganizationsService/SuspendOrganization"
@@ -60,6 +66,12 @@ const (
 	// SystemUsersServiceGetUserProcedure is the fully-qualified name of the SystemUsersService's
 	// GetUser RPC.
 	SystemUsersServiceGetUserProcedure = "/superadmin.v1.SystemUsersService/GetUser"
+	// SystemUsersServiceCreateUserProcedure is the fully-qualified name of the SystemUsersService's
+	// CreateUser RPC.
+	SystemUsersServiceCreateUserProcedure = "/superadmin.v1.SystemUsersService/CreateUser"
+	// SystemUsersServiceUpdateUserProcedure is the fully-qualified name of the SystemUsersService's
+	// UpdateUser RPC.
+	SystemUsersServiceUpdateUserProcedure = "/superadmin.v1.SystemUsersService/UpdateUser"
 	// SystemUsersServiceForceLogoutUserProcedure is the fully-qualified name of the
 	// SystemUsersService's ForceLogoutUser RPC.
 	SystemUsersServiceForceLogoutUserProcedure = "/superadmin.v1.SystemUsersService/ForceLogoutUser"
@@ -77,6 +89,14 @@ type SystemOrganizationsServiceClient interface {
 	// Full detail for one org: counts, owners list, mail/encryption
 	// status, recent platform-audit rows. No tenant content.
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
+	// Provision a new tenant: org row, owner membership, org cipher,
+	// default channel/agent/presets - the same bootstrap a fresh
+	// deployment runs. The owner must be an existing active user.
+	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
+	// Edit org settings a platform operator owns: name, slug, domain,
+	// plan, member cap. Tenant-facing settings (mail, security, ...)
+	// stay on the org admin surface.
+	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
 	// Block sign-in for every member of the org and bump
 	// “token_version“ so existing JWTs reject immediately. Reversible
 	// via “UnsuspendOrganization“.
@@ -84,11 +104,13 @@ type SystemOrganizationsServiceClient interface {
 	// Clear the suspension flag. Members can sign in again on next
 	// login (existing tokens are still dead from the original bump).
 	UnsuspendOrganization(context.Context, *connect.Request[v1.UnsuspendOrganizationRequest]) (*connect.Response[v1.UnsuspendOrganizationResponse], error)
-	// Soft-delete: stamps “deleted_at“ on the org. A daily cron purges
-	// rows whose “deleted_at + 30d < now“. Owner is emailed at delete
-	// time and 24h before purge. Restorable via “RestoreOrganization“.
+	// Soft-delete: stamps “deleted_at“ on the org and revokes every
+	// member's tokens. The rows are retained, not destroyed: nothing
+	// erases tenant data today, so a deleted org stays restorable until
+	// an operator purges it out of band. The owner is emailed at delete
+	// time and again 24h after the 30-day mark passes.
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
-	// Clear “deleted_at“. Only effective before the 30-day purge.
+	// Clear “deleted_at“ and bring the org back.
 	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 }
 
@@ -113,6 +135,18 @@ func NewSystemOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL 
 			httpClient,
 			baseURL+SystemOrganizationsServiceGetOrganizationProcedure,
 			connect.WithSchema(systemOrganizationsServiceMethods.ByName("GetOrganization")),
+			connect.WithClientOptions(opts...),
+		),
+		createOrganization: connect.NewClient[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse](
+			httpClient,
+			baseURL+SystemOrganizationsServiceCreateOrganizationProcedure,
+			connect.WithSchema(systemOrganizationsServiceMethods.ByName("CreateOrganization")),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrganization: connect.NewClient[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse](
+			httpClient,
+			baseURL+SystemOrganizationsServiceUpdateOrganizationProcedure,
+			connect.WithSchema(systemOrganizationsServiceMethods.ByName("UpdateOrganization")),
 			connect.WithClientOptions(opts...),
 		),
 		suspendOrganization: connect.NewClient[v1.SuspendOrganizationRequest, v1.SuspendOrganizationResponse](
@@ -146,6 +180,8 @@ func NewSystemOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL 
 type systemOrganizationsServiceClient struct {
 	listOrganizations     *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
 	getOrganization       *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
+	createOrganization    *connect.Client[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse]
+	updateOrganization    *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
 	suspendOrganization   *connect.Client[v1.SuspendOrganizationRequest, v1.SuspendOrganizationResponse]
 	unsuspendOrganization *connect.Client[v1.UnsuspendOrganizationRequest, v1.UnsuspendOrganizationResponse]
 	deleteOrganization    *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
@@ -160,6 +196,16 @@ func (c *systemOrganizationsServiceClient) ListOrganizations(ctx context.Context
 // GetOrganization calls superadmin.v1.SystemOrganizationsService.GetOrganization.
 func (c *systemOrganizationsServiceClient) GetOrganization(ctx context.Context, req *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
 	return c.getOrganization.CallUnary(ctx, req)
+}
+
+// CreateOrganization calls superadmin.v1.SystemOrganizationsService.CreateOrganization.
+func (c *systemOrganizationsServiceClient) CreateOrganization(ctx context.Context, req *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {
+	return c.createOrganization.CallUnary(ctx, req)
+}
+
+// UpdateOrganization calls superadmin.v1.SystemOrganizationsService.UpdateOrganization.
+func (c *systemOrganizationsServiceClient) UpdateOrganization(ctx context.Context, req *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
+	return c.updateOrganization.CallUnary(ctx, req)
 }
 
 // SuspendOrganization calls superadmin.v1.SystemOrganizationsService.SuspendOrganization.
@@ -191,6 +237,14 @@ type SystemOrganizationsServiceHandler interface {
 	// Full detail for one org: counts, owners list, mail/encryption
 	// status, recent platform-audit rows. No tenant content.
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
+	// Provision a new tenant: org row, owner membership, org cipher,
+	// default channel/agent/presets - the same bootstrap a fresh
+	// deployment runs. The owner must be an existing active user.
+	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
+	// Edit org settings a platform operator owns: name, slug, domain,
+	// plan, member cap. Tenant-facing settings (mail, security, ...)
+	// stay on the org admin surface.
+	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
 	// Block sign-in for every member of the org and bump
 	// “token_version“ so existing JWTs reject immediately. Reversible
 	// via “UnsuspendOrganization“.
@@ -198,11 +252,13 @@ type SystemOrganizationsServiceHandler interface {
 	// Clear the suspension flag. Members can sign in again on next
 	// login (existing tokens are still dead from the original bump).
 	UnsuspendOrganization(context.Context, *connect.Request[v1.UnsuspendOrganizationRequest]) (*connect.Response[v1.UnsuspendOrganizationResponse], error)
-	// Soft-delete: stamps “deleted_at“ on the org. A daily cron purges
-	// rows whose “deleted_at + 30d < now“. Owner is emailed at delete
-	// time and 24h before purge. Restorable via “RestoreOrganization“.
+	// Soft-delete: stamps “deleted_at“ on the org and revokes every
+	// member's tokens. The rows are retained, not destroyed: nothing
+	// erases tenant data today, so a deleted org stays restorable until
+	// an operator purges it out of band. The owner is emailed at delete
+	// time and again 24h after the 30-day mark passes.
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
-	// Clear “deleted_at“. Only effective before the 30-day purge.
+	// Clear “deleted_at“ and bring the org back.
 	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 }
 
@@ -223,6 +279,18 @@ func NewSystemOrganizationsServiceHandler(svc SystemOrganizationsServiceHandler,
 		SystemOrganizationsServiceGetOrganizationProcedure,
 		svc.GetOrganization,
 		connect.WithSchema(systemOrganizationsServiceMethods.ByName("GetOrganization")),
+		connect.WithHandlerOptions(opts...),
+	)
+	systemOrganizationsServiceCreateOrganizationHandler := connect.NewUnaryHandler(
+		SystemOrganizationsServiceCreateOrganizationProcedure,
+		svc.CreateOrganization,
+		connect.WithSchema(systemOrganizationsServiceMethods.ByName("CreateOrganization")),
+		connect.WithHandlerOptions(opts...),
+	)
+	systemOrganizationsServiceUpdateOrganizationHandler := connect.NewUnaryHandler(
+		SystemOrganizationsServiceUpdateOrganizationProcedure,
+		svc.UpdateOrganization,
+		connect.WithSchema(systemOrganizationsServiceMethods.ByName("UpdateOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
 	systemOrganizationsServiceSuspendOrganizationHandler := connect.NewUnaryHandler(
@@ -255,6 +323,10 @@ func NewSystemOrganizationsServiceHandler(svc SystemOrganizationsServiceHandler,
 			systemOrganizationsServiceListOrganizationsHandler.ServeHTTP(w, r)
 		case SystemOrganizationsServiceGetOrganizationProcedure:
 			systemOrganizationsServiceGetOrganizationHandler.ServeHTTP(w, r)
+		case SystemOrganizationsServiceCreateOrganizationProcedure:
+			systemOrganizationsServiceCreateOrganizationHandler.ServeHTTP(w, r)
+		case SystemOrganizationsServiceUpdateOrganizationProcedure:
+			systemOrganizationsServiceUpdateOrganizationHandler.ServeHTTP(w, r)
 		case SystemOrganizationsServiceSuspendOrganizationProcedure:
 			systemOrganizationsServiceSuspendOrganizationHandler.ServeHTTP(w, r)
 		case SystemOrganizationsServiceUnsuspendOrganizationProcedure:
@@ -280,6 +352,14 @@ func (UnimplementedSystemOrganizationsServiceHandler) GetOrganization(context.Co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemOrganizationsService.GetOrganization is not implemented"))
 }
 
+func (UnimplementedSystemOrganizationsServiceHandler) CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemOrganizationsService.CreateOrganization is not implemented"))
+}
+
+func (UnimplementedSystemOrganizationsServiceHandler) UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemOrganizationsService.UpdateOrganization is not implemented"))
+}
+
 func (UnimplementedSystemOrganizationsServiceHandler) SuspendOrganization(context.Context, *connect.Request[v1.SuspendOrganizationRequest]) (*connect.Response[v1.SuspendOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemOrganizationsService.SuspendOrganization is not implemented"))
 }
@@ -302,6 +382,14 @@ type SystemUsersServiceClient interface {
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
 	// Full detail for one user: profile, last login, org memberships.
 	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error)
+	// Provision a user account directly, bypassing invitations. The
+	// password must satisfy the deployment password policy; optionally
+	// attaches the user to one organization.
+	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
+	// Edit account identity and activation state. Deactivating blocks
+	// sign-in and kills existing tokens; identity fields (email,
+	// username, full name) are operator-owned rather than self-editable.
+	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
 	// Bump “token_version“ to invalidate every JWT for one user.
 	// Forces them to log in again on next request.
 	ForceLogoutUser(context.Context, *connect.Request[v1.ForceLogoutUserRequest]) (*connect.Response[v1.ForceLogoutUserResponse], error)
@@ -334,6 +422,18 @@ func NewSystemUsersServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			connect.WithSchema(systemUsersServiceMethods.ByName("GetUser")),
 			connect.WithClientOptions(opts...),
 		),
+		createUser: connect.NewClient[v1.CreateUserRequest, v1.CreateUserResponse](
+			httpClient,
+			baseURL+SystemUsersServiceCreateUserProcedure,
+			connect.WithSchema(systemUsersServiceMethods.ByName("CreateUser")),
+			connect.WithClientOptions(opts...),
+		),
+		updateUser: connect.NewClient[v1.UpdateUserRequest, v1.UpdateUserResponse](
+			httpClient,
+			baseURL+SystemUsersServiceUpdateUserProcedure,
+			connect.WithSchema(systemUsersServiceMethods.ByName("UpdateUser")),
+			connect.WithClientOptions(opts...),
+		),
 		forceLogoutUser: connect.NewClient[v1.ForceLogoutUserRequest, v1.ForceLogoutUserResponse](
 			httpClient,
 			baseURL+SystemUsersServiceForceLogoutUserProcedure,
@@ -353,6 +453,8 @@ func NewSystemUsersServiceClient(httpClient connect.HTTPClient, baseURL string, 
 type systemUsersServiceClient struct {
 	listUsers       *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
 	getUser         *connect.Client[v1.GetUserRequest, v1.GetUserResponse]
+	createUser      *connect.Client[v1.CreateUserRequest, v1.CreateUserResponse]
+	updateUser      *connect.Client[v1.UpdateUserRequest, v1.UpdateUserResponse]
 	forceLogoutUser *connect.Client[v1.ForceLogoutUserRequest, v1.ForceLogoutUserResponse]
 	setSystemAdmin  *connect.Client[v1.SetSystemAdminRequest, v1.SetSystemAdminResponse]
 }
@@ -365,6 +467,16 @@ func (c *systemUsersServiceClient) ListUsers(ctx context.Context, req *connect.R
 // GetUser calls superadmin.v1.SystemUsersService.GetUser.
 func (c *systemUsersServiceClient) GetUser(ctx context.Context, req *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error) {
 	return c.getUser.CallUnary(ctx, req)
+}
+
+// CreateUser calls superadmin.v1.SystemUsersService.CreateUser.
+func (c *systemUsersServiceClient) CreateUser(ctx context.Context, req *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error) {
+	return c.createUser.CallUnary(ctx, req)
+}
+
+// UpdateUser calls superadmin.v1.SystemUsersService.UpdateUser.
+func (c *systemUsersServiceClient) UpdateUser(ctx context.Context, req *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error) {
+	return c.updateUser.CallUnary(ctx, req)
 }
 
 // ForceLogoutUser calls superadmin.v1.SystemUsersService.ForceLogoutUser.
@@ -383,6 +495,14 @@ type SystemUsersServiceHandler interface {
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
 	// Full detail for one user: profile, last login, org memberships.
 	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error)
+	// Provision a user account directly, bypassing invitations. The
+	// password must satisfy the deployment password policy; optionally
+	// attaches the user to one organization.
+	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
+	// Edit account identity and activation state. Deactivating blocks
+	// sign-in and kills existing tokens; identity fields (email,
+	// username, full name) are operator-owned rather than self-editable.
+	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
 	// Bump “token_version“ to invalidate every JWT for one user.
 	// Forces them to log in again on next request.
 	ForceLogoutUser(context.Context, *connect.Request[v1.ForceLogoutUserRequest]) (*connect.Response[v1.ForceLogoutUserResponse], error)
@@ -411,6 +531,18 @@ func NewSystemUsersServiceHandler(svc SystemUsersServiceHandler, opts ...connect
 		connect.WithSchema(systemUsersServiceMethods.ByName("GetUser")),
 		connect.WithHandlerOptions(opts...),
 	)
+	systemUsersServiceCreateUserHandler := connect.NewUnaryHandler(
+		SystemUsersServiceCreateUserProcedure,
+		svc.CreateUser,
+		connect.WithSchema(systemUsersServiceMethods.ByName("CreateUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	systemUsersServiceUpdateUserHandler := connect.NewUnaryHandler(
+		SystemUsersServiceUpdateUserProcedure,
+		svc.UpdateUser,
+		connect.WithSchema(systemUsersServiceMethods.ByName("UpdateUser")),
+		connect.WithHandlerOptions(opts...),
+	)
 	systemUsersServiceForceLogoutUserHandler := connect.NewUnaryHandler(
 		SystemUsersServiceForceLogoutUserProcedure,
 		svc.ForceLogoutUser,
@@ -429,6 +561,10 @@ func NewSystemUsersServiceHandler(svc SystemUsersServiceHandler, opts ...connect
 			systemUsersServiceListUsersHandler.ServeHTTP(w, r)
 		case SystemUsersServiceGetUserProcedure:
 			systemUsersServiceGetUserHandler.ServeHTTP(w, r)
+		case SystemUsersServiceCreateUserProcedure:
+			systemUsersServiceCreateUserHandler.ServeHTTP(w, r)
+		case SystemUsersServiceUpdateUserProcedure:
+			systemUsersServiceUpdateUserHandler.ServeHTTP(w, r)
 		case SystemUsersServiceForceLogoutUserProcedure:
 			systemUsersServiceForceLogoutUserHandler.ServeHTTP(w, r)
 		case SystemUsersServiceSetSystemAdminProcedure:
@@ -448,6 +584,14 @@ func (UnimplementedSystemUsersServiceHandler) ListUsers(context.Context, *connec
 
 func (UnimplementedSystemUsersServiceHandler) GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemUsersService.GetUser is not implemented"))
+}
+
+func (UnimplementedSystemUsersServiceHandler) CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemUsersService.CreateUser is not implemented"))
+}
+
+func (UnimplementedSystemUsersServiceHandler) UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemUsersService.UpdateUser is not implemented"))
 }
 
 func (UnimplementedSystemUsersServiceHandler) ForceLogoutUser(context.Context, *connect.Request[v1.ForceLogoutUserRequest]) (*connect.Response[v1.ForceLogoutUserResponse], error) {

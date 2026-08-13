@@ -36,6 +36,8 @@ class Action:
     AUTH_MFA_POLICY_CHANGED = "auth.mfa_policy_changed"
 
     # Users
+    USER_CREATED = "user.created"
+    USER_UPDATED = "user.updated"
     USER_INVITED = "user.invited"
     USER_ACTIVATED = "user.activated"
     USER_DEACTIVATED = "user.deactivated"

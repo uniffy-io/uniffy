@@ -66,6 +66,10 @@ from uniffy_proto.superadmin.v1.system_encryption_connect import (
     SystemEncryptionServiceASGIApplication,
 )
 from uniffy_proto.superadmin.v1.system_mail_connect import SystemMailServiceASGIApplication
+from uniffy_proto.superadmin.v1.system_mfa_connect import SystemMfaServiceASGIApplication
+from uniffy_proto.support.v1.support_consent_connect import (
+    SupportConsentServiceASGIApplication,
+)
 from uniffy_proto.tags.v1.tags_connect import TagsServiceASGIApplication
 from uniffy_proto.users.v1.users_connect import UsersServiceASGIApplication
 
@@ -158,6 +162,10 @@ from uniffy.domains.platform.audit.service import PlatformAuditServiceImpl
 from uniffy.domains.platform.directory.service import (
     SystemOrganizationsServiceImpl,
     SystemUsersServiceImpl,
+)
+from uniffy.domains.platform.mfa.service import SystemMfaServiceImpl
+from uniffy.domains.platform.support_session.consent_service import (
+    SupportConsentServiceImpl,
 )
 from uniffy.domains.platform.support_session.service import SupportServiceImpl
 from uniffy.domains.presence.service import PresenceServiceImpl
@@ -594,6 +602,12 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         OrgMailServiceASGIApplication(OrgMailServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
+        "/support.v1.SupportConsentService",
+        SupportConsentServiceASGIApplication(
+            SupportConsentServiceImpl(), interceptors=interceptors
+        ),
+    )
+    dispatcher.add_service(
         "/superadmin.v1.SystemMailService",
         SystemMailServiceASGIApplication(SystemMailServiceImpl(), interceptors=interceptors),
     )
@@ -620,6 +634,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/superadmin.v1.SupportService",
         SupportServiceASGIApplication(SupportServiceImpl(), interceptors=interceptors),
+    )
+    dispatcher.add_service(
+        "/superadmin.v1.SystemMfaService",
+        SystemMfaServiceASGIApplication(SystemMfaServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/superadmin.v1.PlatformAuditService",

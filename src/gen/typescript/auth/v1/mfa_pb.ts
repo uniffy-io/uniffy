@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file auth/v1/mfa.proto.
  */
 export const file_auth_v1_mfa: GenFile = /*@__PURE__*/
-  fileDesc("ChFhdXRoL3YxL21mYS5wcm90bxIHYXV0aC52MSIYChZCZWdpbkVucm9sbG1lbnRSZXF1ZXN0Il4KF0JlZ2luRW5yb2xsbWVudFJlc3BvbnNlEhIKCnNlY3JldF9iMzIYASABKAkSGAoQcHJvdmlzaW9uaW5nX3VyaRgCIAEoCRIVCg1xcl9zdmdfYmFzZTY0GAMgASgJIigKGENvbmZpcm1FbnJvbGxtZW50UmVxdWVzdBIMCgRjb2RlGAEgASgJIt0CChlDb25maXJtRW5yb2xsbWVudFJlc3BvbnNlEhYKDnJlY292ZXJ5X2NvZGVzGAEgAygJEhQKDGFjY2Vzc190b2tlbhgCIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAMgASgJEhIKCnNlc3Npb25faWQYBCABKAkSHAoPb3JnYW5pemF0aW9uX2lkGAUgASgJSACIAQESHgoRb3JnYW5pemF0aW9uX3NsdWcYBiABKAlIAYgBARIeChFvcmdhbml6YXRpb25fcm9sZRgHIAEoCUgCiAEBEjMKFGRvbWFpbl9hZG1pbl9kb21haW5zGAggAygOMhUuY29tbW9uLnYxLkRvbWFpblR5cGUSFAoMYXNzZXRfY29va2llGAkgASgJQhIKEF9vcmdhbml6YXRpb25faWRCFAoSX29yZ2FuaXphdGlvbl9zbHVnQhQKEl9vcmdhbml6YXRpb25fcm9sZSJJChBWZXJpZnlNZmFSZXF1ZXN0EhcKD2NoYWxsZW5nZV90b2tlbhgBIAEoCRIMCgRjb2RlGAIgASgJEg4KBm1ldGhvZBgDIAEoCSK0AwoRVmVyaWZ5TWZhUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKdG9rZW5fdHlwZRgDIAEoCRIPCgd1c2VyX2lkGAQgASgJEhwKD29yZ2FuaXphdGlvbl9pZBgFIAEoCUgAiAEBEh4KEW9yZ2FuaXphdGlvbl9yb2xlGAYgASgJSAGIAQESFwoKc2Vzc2lvbl9pZBgHIAEoCUgCiAEBEhoKEnVzZWRfcmVjb3ZlcnlfY29kZRgIIAEoCBIgChhyZW1haW5pbmdfcmVjb3ZlcnlfY29kZXMYCSABKAUSHgoRb3JnYW5pemF0aW9uX3NsdWcYCiABKAlIA4gBARIzChRkb21haW5fYWRtaW5fZG9tYWlucxgLIAMoDjIVLmNvbW1vbi52MS5Eb21haW5UeXBlEhQKDGFzc2V0X2Nvb2tpZRgMIAEoCUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZEIUChJfb3JnYW5pemF0aW9uX3NsdWciIQoRRGlzYWJsZU1mYVJlcXVlc3QSDAoEY29kZRgBIAEoCSIlChJEaXNhYmxlTWZhUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCIuCh5SZWdlbmVyYXRlUmVjb3ZlcnlDb2Rlc1JlcXVlc3QSDAoEY29kZRgBIAEoCSI5Ch9SZWdlbmVyYXRlUmVjb3ZlcnlDb2Rlc1Jlc3BvbnNlEhYKDnJlY292ZXJ5X2NvZGVzGAEgAygJIhUKE0dldE1mYVN0YXR1c1JlcXVlc3Qi1wEKFEdldE1mYVN0YXR1c1Jlc3BvbnNlEg8KB2VuYWJsZWQYASABKAgSNAoLZW5yb2xsZWRfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQESNQoMbGFzdF91c2VkX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgBiAEBEiAKGHJlbWFpbmluZ19yZWNvdmVyeV9jb2RlcxgEIAEoBUIOCgxfZW5yb2xsZWRfYXRCDwoNX2xhc3RfdXNlZF9hdCJXChRBZG1pblJlc2V0TWZhUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFgoOdGFyZ2V0X3VzZXJfaWQYAiABKAkSDgoGcmVhc29uGAMgASgJIigKFUFkbWluUmVzZXRNZmFSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIkEKF1BsYXRmb3JtUmVzZXRNZmFSZXF1ZXN0EhYKDnRhcmdldF91c2VyX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSIrChhQbGF0Zm9ybVJlc2V0TWZhUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJJCh9SZXF1ZXN0UGxhdGZvcm1QZWVyUmVzZXRSZXF1ZXN0EhYKDnRhcmdldF91c2VyX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSJmCiBSZXF1ZXN0UGxhdGZvcm1QZWVyUmVzZXRSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJEi4KCmV4cGlyZXNfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIjUKH0FwcHJvdmVQbGF0Zm9ybVBlZXJSZXNldFJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCSIzCiBBcHByb3ZlUGxhdGZvcm1QZWVyUmVzZXRSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIvgBChBQZW5kaW5nUGVlclJlc2V0EhIKCnJlcXVlc3RfaWQYASABKAkSGQoRcmVxdWVzdGVyX3VzZXJfaWQYAiABKAkSFwoPcmVxdWVzdGVyX2VtYWlsGAMgASgJEhYKDnRhcmdldF91c2VyX2lkGAQgASgJEhQKDHRhcmdldF9lbWFpbBgFIAEoCRIOCgZyZWFzb24YBiABKAkSLgoKY3JlYXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKZXhwaXJlc19hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiHwodTGlzdFBsYXRmb3JtUGVlclJlc2V0c1JlcXVlc3QiTQoeTGlzdFBsYXRmb3JtUGVlclJlc2V0c1Jlc3BvbnNlEisKCHJlcXVlc3RzGAEgAygLMhkuYXV0aC52MS5QZW5kaW5nUGVlclJlc2V0MvoHCgpNZmFTZXJ2aWNlElQKD0JlZ2luRW5yb2xsbWVudBIfLmF1dGgudjEuQmVnaW5FbnJvbGxtZW50UmVxdWVzdBogLmF1dGgudjEuQmVnaW5FbnJvbGxtZW50UmVzcG9uc2USWgoRQ29uZmlybUVucm9sbG1lbnQSIS5hdXRoLnYxLkNvbmZpcm1FbnJvbGxtZW50UmVxdWVzdBoiLmF1dGgudjEuQ29uZmlybUVucm9sbG1lbnRSZXNwb25zZRJCCglWZXJpZnlNZmESGS5hdXRoLnYxLlZlcmlmeU1mYVJlcXVlc3QaGi5hdXRoLnYxLlZlcmlmeU1mYVJlc3BvbnNlEkUKCkRpc2FibGVNZmESGi5hdXRoLnYxLkRpc2FibGVNZmFSZXF1ZXN0GhsuYXV0aC52MS5EaXNhYmxlTWZhUmVzcG9uc2USbAoXUmVnZW5lcmF0ZVJlY292ZXJ5Q29kZXMSJy5hdXRoLnYxLlJlZ2VuZXJhdGVSZWNvdmVyeUNvZGVzUmVxdWVzdBooLmF1dGgudjEuUmVnZW5lcmF0ZVJlY292ZXJ5Q29kZXNSZXNwb25zZRJOCg1BZG1pblJlc2V0TWZhEh0uYXV0aC52MS5BZG1pblJlc2V0TWZhUmVxdWVzdBoeLmF1dGgudjEuQWRtaW5SZXNldE1mYVJlc3BvbnNlElcKEFBsYXRmb3JtUmVzZXRNZmESIC5hdXRoLnYxLlBsYXRmb3JtUmVzZXRNZmFSZXF1ZXN0GiEuYXV0aC52MS5QbGF0Zm9ybVJlc2V0TWZhUmVzcG9uc2USbwoYUmVxdWVzdFBsYXRmb3JtUGVlclJlc2V0EiguYXV0aC52MS5SZXF1ZXN0UGxhdGZvcm1QZWVyUmVzZXRSZXF1ZXN0GikuYXV0aC52MS5SZXF1ZXN0UGxhdGZvcm1QZWVyUmVzZXRSZXNwb25zZRJvChhBcHByb3ZlUGxhdGZvcm1QZWVyUmVzZXQSKC5hdXRoLnYxLkFwcHJvdmVQbGF0Zm9ybVBlZXJSZXNldFJlcXVlc3QaKS5hdXRoLnYxLkFwcHJvdmVQbGF0Zm9ybVBlZXJSZXNldFJlc3BvbnNlEmkKFkxpc3RQbGF0Zm9ybVBlZXJSZXNldHMSJi5hdXRoLnYxLkxpc3RQbGF0Zm9ybVBlZXJSZXNldHNSZXF1ZXN0GicuYXV0aC52MS5MaXN0UGxhdGZvcm1QZWVyUmVzZXRzUmVzcG9uc2USSwoMR2V0TWZhU3RhdHVzEhwuYXV0aC52MS5HZXRNZmFTdGF0dXNSZXF1ZXN0Gh0uYXV0aC52MS5HZXRNZmFTdGF0dXNSZXNwb25zZUI1WjNnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vYXV0aC92MTthdXRodjFiBnByb3RvMw", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChFhdXRoL3YxL21mYS5wcm90bxIHYXV0aC52MSIYChZCZWdpbkVucm9sbG1lbnRSZXF1ZXN0Il4KF0JlZ2luRW5yb2xsbWVudFJlc3BvbnNlEhIKCnNlY3JldF9iMzIYASABKAkSGAoQcHJvdmlzaW9uaW5nX3VyaRgCIAEoCRIVCg1xcl9zdmdfYmFzZTY0GAMgASgJIigKGENvbmZpcm1FbnJvbGxtZW50UmVxdWVzdBIMCgRjb2RlGAEgASgJIt0CChlDb25maXJtRW5yb2xsbWVudFJlc3BvbnNlEhYKDnJlY292ZXJ5X2NvZGVzGAEgAygJEhQKDGFjY2Vzc190b2tlbhgCIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAMgASgJEhIKCnNlc3Npb25faWQYBCABKAkSHAoPb3JnYW5pemF0aW9uX2lkGAUgASgJSACIAQESHgoRb3JnYW5pemF0aW9uX3NsdWcYBiABKAlIAYgBARIeChFvcmdhbml6YXRpb25fcm9sZRgHIAEoCUgCiAEBEjMKFGRvbWFpbl9hZG1pbl9kb21haW5zGAggAygOMhUuY29tbW9uLnYxLkRvbWFpblR5cGUSFAoMYXNzZXRfY29va2llGAkgASgJQhIKEF9vcmdhbml6YXRpb25faWRCFAoSX29yZ2FuaXphdGlvbl9zbHVnQhQKEl9vcmdhbml6YXRpb25fcm9sZSJJChBWZXJpZnlNZmFSZXF1ZXN0EhcKD2NoYWxsZW5nZV90b2tlbhgBIAEoCRIMCgRjb2RlGAIgASgJEg4KBm1ldGhvZBgDIAEoCSK0AwoRVmVyaWZ5TWZhUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKdG9rZW5fdHlwZRgDIAEoCRIPCgd1c2VyX2lkGAQgASgJEhwKD29yZ2FuaXphdGlvbl9pZBgFIAEoCUgAiAEBEh4KEW9yZ2FuaXphdGlvbl9yb2xlGAYgASgJSAGIAQESFwoKc2Vzc2lvbl9pZBgHIAEoCUgCiAEBEhoKEnVzZWRfcmVjb3ZlcnlfY29kZRgIIAEoCBIgChhyZW1haW5pbmdfcmVjb3ZlcnlfY29kZXMYCSABKAUSHgoRb3JnYW5pemF0aW9uX3NsdWcYCiABKAlIA4gBARIzChRkb21haW5fYWRtaW5fZG9tYWlucxgLIAMoDjIVLmNvbW1vbi52MS5Eb21haW5UeXBlEhQKDGFzc2V0X2Nvb2tpZRgMIAEoCUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZEIUChJfb3JnYW5pemF0aW9uX3NsdWciIQoRRGlzYWJsZU1mYVJlcXVlc3QSDAoEY29kZRgBIAEoCSIlChJEaXNhYmxlTWZhUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCIuCh5SZWdlbmVyYXRlUmVjb3ZlcnlDb2Rlc1JlcXVlc3QSDAoEY29kZRgBIAEoCSI5Ch9SZWdlbmVyYXRlUmVjb3ZlcnlDb2Rlc1Jlc3BvbnNlEhYKDnJlY292ZXJ5X2NvZGVzGAEgAygJIhUKE0dldE1mYVN0YXR1c1JlcXVlc3Qi1wEKFEdldE1mYVN0YXR1c1Jlc3BvbnNlEg8KB2VuYWJsZWQYASABKAgSNAoLZW5yb2xsZWRfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQESNQoMbGFzdF91c2VkX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgBiAEBEiAKGHJlbWFpbmluZ19yZWNvdmVyeV9jb2RlcxgEIAEoBUIOCgxfZW5yb2xsZWRfYXRCDwoNX2xhc3RfdXNlZF9hdCJXChRBZG1pblJlc2V0TWZhUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFgoOdGFyZ2V0X3VzZXJfaWQYAiABKAkSDgoGcmVhc29uGAMgASgJIigKFUFkbWluUmVzZXRNZmFSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIMtQECgpNZmFTZXJ2aWNlElQKD0JlZ2luRW5yb2xsbWVudBIfLmF1dGgudjEuQmVnaW5FbnJvbGxtZW50UmVxdWVzdBogLmF1dGgudjEuQmVnaW5FbnJvbGxtZW50UmVzcG9uc2USWgoRQ29uZmlybUVucm9sbG1lbnQSIS5hdXRoLnYxLkNvbmZpcm1FbnJvbGxtZW50UmVxdWVzdBoiLmF1dGgudjEuQ29uZmlybUVucm9sbG1lbnRSZXNwb25zZRJCCglWZXJpZnlNZmESGS5hdXRoLnYxLlZlcmlmeU1mYVJlcXVlc3QaGi5hdXRoLnYxLlZlcmlmeU1mYVJlc3BvbnNlEkUKCkRpc2FibGVNZmESGi5hdXRoLnYxLkRpc2FibGVNZmFSZXF1ZXN0GhsuYXV0aC52MS5EaXNhYmxlTWZhUmVzcG9uc2USbAoXUmVnZW5lcmF0ZVJlY292ZXJ5Q29kZXMSJy5hdXRoLnYxLlJlZ2VuZXJhdGVSZWNvdmVyeUNvZGVzUmVxdWVzdBooLmF1dGgudjEuUmVnZW5lcmF0ZVJlY292ZXJ5Q29kZXNSZXNwb25zZRJOCg1BZG1pblJlc2V0TWZhEh0uYXV0aC52MS5BZG1pblJlc2V0TWZhUmVxdWVzdBoeLmF1dGgudjEuQWRtaW5SZXNldE1mYVJlc3BvbnNlEksKDEdldE1mYVN0YXR1cxIcLmF1dGgudjEuR2V0TWZhU3RhdHVzUmVxdWVzdBodLmF1dGgudjEuR2V0TWZhU3RhdHVzUmVzcG9uc2VCNVozZ2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL2F1dGgvdjE7YXV0aHYxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message auth.v1.BeginEnrollmentRequest
@@ -425,205 +425,6 @@ export const AdminResetMfaResponseSchema: GenMessage<AdminResetMfaResponse> = /*
   messageDesc(file_auth_v1_mfa, 13);
 
 /**
- * @generated from message auth.v1.PlatformResetMfaRequest
- */
-export type PlatformResetMfaRequest = Message<"auth.v1.PlatformResetMfaRequest"> & {
-  /**
-   * @generated from field: string target_user_id = 1;
-   */
-  targetUserId: string;
-
-  /**
-   * @generated from field: string reason = 2;
-   */
-  reason: string;
-};
-
-/**
- * Describes the message auth.v1.PlatformResetMfaRequest.
- * Use `create(PlatformResetMfaRequestSchema)` to create a new message.
- */
-export const PlatformResetMfaRequestSchema: GenMessage<PlatformResetMfaRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_mfa, 14);
-
-/**
- * @generated from message auth.v1.PlatformResetMfaResponse
- */
-export type PlatformResetMfaResponse = Message<"auth.v1.PlatformResetMfaResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-};
-
-/**
- * Describes the message auth.v1.PlatformResetMfaResponse.
- * Use `create(PlatformResetMfaResponseSchema)` to create a new message.
- */
-export const PlatformResetMfaResponseSchema: GenMessage<PlatformResetMfaResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_mfa, 15);
-
-/**
- * @generated from message auth.v1.RequestPlatformPeerResetRequest
- */
-export type RequestPlatformPeerResetRequest = Message<"auth.v1.RequestPlatformPeerResetRequest"> & {
-  /**
-   * @generated from field: string target_user_id = 1;
-   */
-  targetUserId: string;
-
-  /**
-   * @generated from field: string reason = 2;
-   */
-  reason: string;
-};
-
-/**
- * Describes the message auth.v1.RequestPlatformPeerResetRequest.
- * Use `create(RequestPlatformPeerResetRequestSchema)` to create a new message.
- */
-export const RequestPlatformPeerResetRequestSchema: GenMessage<RequestPlatformPeerResetRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_mfa, 16);
-
-/**
- * @generated from message auth.v1.RequestPlatformPeerResetResponse
- */
-export type RequestPlatformPeerResetResponse = Message<"auth.v1.RequestPlatformPeerResetResponse"> & {
-  /**
-   * @generated from field: string request_id = 1;
-   */
-  requestId: string;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp expires_at = 2;
-   */
-  expiresAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message auth.v1.RequestPlatformPeerResetResponse.
- * Use `create(RequestPlatformPeerResetResponseSchema)` to create a new message.
- */
-export const RequestPlatformPeerResetResponseSchema: GenMessage<RequestPlatformPeerResetResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_mfa, 17);
-
-/**
- * @generated from message auth.v1.ApprovePlatformPeerResetRequest
- */
-export type ApprovePlatformPeerResetRequest = Message<"auth.v1.ApprovePlatformPeerResetRequest"> & {
-  /**
-   * @generated from field: string request_id = 1;
-   */
-  requestId: string;
-};
-
-/**
- * Describes the message auth.v1.ApprovePlatformPeerResetRequest.
- * Use `create(ApprovePlatformPeerResetRequestSchema)` to create a new message.
- */
-export const ApprovePlatformPeerResetRequestSchema: GenMessage<ApprovePlatformPeerResetRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_mfa, 18);
-
-/**
- * @generated from message auth.v1.ApprovePlatformPeerResetResponse
- */
-export type ApprovePlatformPeerResetResponse = Message<"auth.v1.ApprovePlatformPeerResetResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-};
-
-/**
- * Describes the message auth.v1.ApprovePlatformPeerResetResponse.
- * Use `create(ApprovePlatformPeerResetResponseSchema)` to create a new message.
- */
-export const ApprovePlatformPeerResetResponseSchema: GenMessage<ApprovePlatformPeerResetResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_mfa, 19);
-
-/**
- * @generated from message auth.v1.PendingPeerReset
- */
-export type PendingPeerReset = Message<"auth.v1.PendingPeerReset"> & {
-  /**
-   * @generated from field: string request_id = 1;
-   */
-  requestId: string;
-
-  /**
-   * @generated from field: string requester_user_id = 2;
-   */
-  requesterUserId: string;
-
-  /**
-   * @generated from field: string requester_email = 3;
-   */
-  requesterEmail: string;
-
-  /**
-   * @generated from field: string target_user_id = 4;
-   */
-  targetUserId: string;
-
-  /**
-   * @generated from field: string target_email = 5;
-   */
-  targetEmail: string;
-
-  /**
-   * @generated from field: string reason = 6;
-   */
-  reason: string;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp created_at = 7;
-   */
-  createdAt?: Timestamp | undefined;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp expires_at = 8;
-   */
-  expiresAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message auth.v1.PendingPeerReset.
- * Use `create(PendingPeerResetSchema)` to create a new message.
- */
-export const PendingPeerResetSchema: GenMessage<PendingPeerReset> = /*@__PURE__*/
-  messageDesc(file_auth_v1_mfa, 20);
-
-/**
- * @generated from message auth.v1.ListPlatformPeerResetsRequest
- */
-export type ListPlatformPeerResetsRequest = Message<"auth.v1.ListPlatformPeerResetsRequest"> & {
-};
-
-/**
- * Describes the message auth.v1.ListPlatformPeerResetsRequest.
- * Use `create(ListPlatformPeerResetsRequestSchema)` to create a new message.
- */
-export const ListPlatformPeerResetsRequestSchema: GenMessage<ListPlatformPeerResetsRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_mfa, 21);
-
-/**
- * @generated from message auth.v1.ListPlatformPeerResetsResponse
- */
-export type ListPlatformPeerResetsResponse = Message<"auth.v1.ListPlatformPeerResetsResponse"> & {
-  /**
-   * @generated from field: repeated auth.v1.PendingPeerReset requests = 1;
-   */
-  requests: PendingPeerReset[];
-};
-
-/**
- * Describes the message auth.v1.ListPlatformPeerResetsResponse.
- * Use `create(ListPlatformPeerResetsResponseSchema)` to create a new message.
- */
-export const ListPlatformPeerResetsResponseSchema: GenMessage<ListPlatformPeerResetsResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_mfa, 22);
-
-/**
  * MFA service. Co-located with AuthService in the auth.v1 package so
  * the wire surface stays tight. TOTP (RFC 6238) is the only v1 factor;
  * the methods field on MfaChallenge is a list precisely so additive
@@ -695,7 +496,8 @@ export const MfaService: GenService<{
   },
   /**
    * Authenticated as org admin. Resets MFA on a user who is a member
-   * of the calling org. Cross-checks org membership.
+   * of the calling org. Cross-checks org membership. Platform-operator
+   * resets live on superadmin.v1.SystemMfaService.
    *
    * @generated from rpc auth.v1.MfaService.AdminResetMfa
    */
@@ -703,52 +505,6 @@ export const MfaService: GenService<{
     methodKind: "unary";
     input: typeof AdminResetMfaRequestSchema;
     output: typeof AdminResetMfaResponseSchema;
-  },
-  /**
-   * Authenticated as platform admin. Direct reset is constrained to
-   * users with zero org memberships.
-   *
-   * @generated from rpc auth.v1.MfaService.PlatformResetMfa
-   */
-  platformResetMfa: {
-    methodKind: "unary";
-    input: typeof PlatformResetMfaRequestSchema;
-    output: typeof PlatformResetMfaResponseSchema;
-  },
-  /**
-   * Authenticated as platform admin. Request the reset of another
-   * platform admin's MFA. Requires a second admin's approval within
-   * a 10-minute window.
-   *
-   * @generated from rpc auth.v1.MfaService.RequestPlatformPeerReset
-   */
-  requestPlatformPeerReset: {
-    methodKind: "unary";
-    input: typeof RequestPlatformPeerResetRequestSchema;
-    output: typeof RequestPlatformPeerResetResponseSchema;
-  },
-  /**
-   * Authenticated as platform admin (distinct from the requester).
-   * Approves a pending peer-reset request and performs the reset.
-   *
-   * @generated from rpc auth.v1.MfaService.ApprovePlatformPeerReset
-   */
-  approvePlatformPeerReset: {
-    methodKind: "unary";
-    input: typeof ApprovePlatformPeerResetRequestSchema;
-    output: typeof ApprovePlatformPeerResetResponseSchema;
-  },
-  /**
-   * Authenticated as platform admin. Returns every pending (not yet
-   * approved, not yet expired) peer-reset request so other platform
-   * admins can co-sign them from the inbox panel.
-   *
-   * @generated from rpc auth.v1.MfaService.ListPlatformPeerResets
-   */
-  listPlatformPeerResets: {
-    methodKind: "unary";
-    input: typeof ListPlatformPeerResetsRequestSchema;
-    output: typeof ListPlatformPeerResetsResponseSchema;
   },
   /**
    * Authenticated. Returns the calling user's MFA enrollment state.

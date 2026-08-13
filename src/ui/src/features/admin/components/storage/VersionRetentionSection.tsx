@@ -4,6 +4,7 @@ import { useAppSelector } from '@/app/hooks';
 import { friendlyErrorMessage } from '@/config';
 import { filesApi } from '@/features/files/api/filesApi';
 import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
 
 const MIN_KEEP_VERSIONS = 1;
 const MAX_KEEP_VERSIONS = 100;
@@ -84,8 +85,7 @@ export function VersionRetentionSection() {
                 <p className="text-sm" style={{ color: 'var(--status-error)' }}>{error}</p>
             ) : (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <input
-                        type="number"
+                    <NumberInput
                         value={keepVersions ?? ''}
                         min={MIN_KEEP_VERSIONS}
                         max={MAX_KEEP_VERSIONS}
@@ -97,7 +97,7 @@ export function VersionRetentionSection() {
                                 Math.min(MAX_KEEP_VERSIONS, Math.max(MIN_KEEP_VERSIONS, Math.round(parsed))),
                             );
                         }}
-                        className="w-28 rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                        className="w-28"
                         aria-label="Versions to keep per file"
                     />
                     <Button

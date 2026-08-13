@@ -5,12 +5,19 @@ import type { SerializedMemberInfo, SerializedGroupInfo } from '@/features/admin
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
 import { subjectKindFromGroupKind } from '@/components/subject/utils';
 
+// A page can mount dozens of resolvers in one commit; their effects all see
+// pre-dispatch flags, so without a module-level latch each one fires its own
+// directory fetch.
+let membersRequestInFlight = false;
+let groupsRequestInFlight = false;
+
 /** Resolves IDs against admin.members/groups/agents; unresolved IDs get a truncated-ID fallback Subject. */
 export function useSubjectResolver(ids: string[]): {
     subjects: Subject[];
     loading: boolean;
 } {
     const dispatch = useAppDispatch();
+    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
     const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
     const membersLoading = useAppSelector((state) => state.admin.membersLoading);
     const membersFetched = useAppSelector((state) => state.admin.membersFetched);
@@ -23,16 +30,26 @@ export function useSubjectResolver(ids: string[]): {
     const groupsFetched = useAppSelector((state) => state.admin.groupsFetched);
 
     useEffect(() => {
-        if (!membersFetched && !membersLoading) {
-            dispatch(fetchMembers({ pageSize: 200 }));
+        // No org context (pure platform operator): there is no directory to
+        // resolve against, so IDs stay on the fallback Subject.
+        if (!organizationId || membersFetched || membersLoading || membersRequestInFlight) {
+            return;
         }
-    }, [dispatch, membersFetched, membersLoading]);
+        membersRequestInFlight = true;
+        void dispatch(fetchMembers({ pageSize: 200 })).finally(() => {
+            membersRequestInFlight = false;
+        });
+    }, [dispatch, organizationId, membersFetched, membersLoading]);
 
     useEffect(() => {
-        if (!groupsFetched && !groupsLoading) {
-            dispatch(fetchGroups({}));
+        if (!organizationId || groupsFetched || groupsLoading || groupsRequestInFlight) {
+            return;
         }
-    }, [dispatch, groupsFetched, groupsLoading]);
+        groupsRequestInFlight = true;
+        void dispatch(fetchGroups({})).finally(() => {
+            groupsRequestInFlight = false;
+        });
+    }, [dispatch, organizationId, groupsFetched, groupsLoading]);
 
     const memberMap = useMemo(() => {
         const map: Record<string, SerializedMemberInfo> = {};

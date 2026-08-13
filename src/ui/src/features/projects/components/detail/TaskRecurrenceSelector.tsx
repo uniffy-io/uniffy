@@ -3,6 +3,7 @@ import { ArrowsClockwise, CaretDown, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { NumberInput } from "@/components/ui/number-input";
 
 type RecurrencePattern = "daily" | "weekly" | "biweekly" | "monthly" | "yearly";
 type DayOfWeek = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
@@ -103,9 +104,8 @@ function ordinalSuffix(n: number): string {
 }
 
 const INPUT_CLASS = cn(
-  "w-14 px-1.5 py-0.5 text-xs border border-border rounded bg-background text-foreground text-center",
-  "focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition-all",
-  "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+  "h-auto w-14 px-1.5 py-0.5 text-xs rounded text-foreground text-center",
+  "focus:ring-1 focus:ring-primary/50 focus:border-primary transition-all",
 );
 
 interface TaskRecurrenceSelectorProps {
@@ -255,8 +255,7 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
               className="w-28"
             />
             <span className="text-xs text-muted-foreground">every</span>
-            <input
-              type="number"
+            <NumberInput
               min={1}
               max={99}
               value={config.interval}
@@ -295,8 +294,7 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
           {showDayOfMonth && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">on day</span>
-              <input
-                type="number"
+              <NumberInput
                 min={1}
                 max={31}
                 value={config.day_of_month ?? 1}
@@ -330,8 +328,7 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
               <span className="text-foreground">After</span>
               {endCondition === "after" && (
                 <>
-                  <input
-                    type="number"
+                  <NumberInput
                     min={1}
                     max={999}
                     value={config.max_occurrences ?? 10}

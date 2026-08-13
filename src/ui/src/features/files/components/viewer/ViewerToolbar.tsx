@@ -23,6 +23,7 @@ import {
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { NumberInput } from '@/components/ui/number-input';
 import { useFormattedKeybinding } from '@/features/settings';
 import {
     toggleFullscreen,
@@ -463,8 +464,7 @@ function PageJumpInput({ currentPage, totalPages, onJump }: PageJumpInputProps) 
     }
 
     return (
-        <input
-            type="number"
+        <NumberInput
             min={1}
             max={totalPages}
             autoFocus
@@ -484,7 +484,7 @@ function PageJumpInput({ currentPage, totalPages, onJump }: PageJumpInputProps) 
                 }
             }}
             onBlur={() => setEditing(false)}
-            className="viewer-page-input"
+            className="viewer-page-input h-auto"
             aria-label="Go to page"
         />
     );

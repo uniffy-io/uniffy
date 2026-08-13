@@ -6,6 +6,7 @@ import { mailApi } from '@/features/admin/api/mailApi';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { NumberInput } from '@/components/ui/number-input';
 import { cn } from '@/shared/utils/cn';
 import { friendlyErrorMessage } from '@/config';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
@@ -370,8 +371,7 @@ function ConfigurationTab({
                     />
                 </Field>
                 <Field label="SMTP port">
-                    <input
-                        type="number"
+                    <NumberInput
                         value={draft.smtpPort}
                         onChange={(e) => update('smtpPort', e.target.value)}
                         placeholder="587"
@@ -409,8 +409,7 @@ function ConfigurationTab({
                     )}
                 </Field>
                 <Field label="Rate limit (per minute)">
-                    <input
-                        type="number"
+                    <NumberInput
                         value={draft.rateLimitPerMin}
                         onChange={(e) => update('rateLimitPerMin', e.target.value)}
                         min={1}
@@ -586,8 +585,4 @@ const inputClass = cn(
     'border border-border',
     'focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring',
     'disabled:opacity-50 disabled:cursor-not-allowed',
-    // Hide native number-input spinners (WebKit + Firefox).
-    '[appearance:textfield] [-moz-appearance:textfield]',
-    '[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0',
-    '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0',
 );

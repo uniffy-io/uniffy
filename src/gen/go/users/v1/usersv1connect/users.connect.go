@@ -39,51 +39,20 @@ const (
 	// UsersServiceUpdateMyProfileProcedure is the fully-qualified name of the UsersService's
 	// UpdateMyProfile RPC.
 	UsersServiceUpdateMyProfileProcedure = "/users.v1.UsersService/UpdateMyProfile"
-	// UsersServiceListUsersProcedure is the fully-qualified name of the UsersService's ListUsers RPC.
-	UsersServiceListUsersProcedure = "/users.v1.UsersService/ListUsers"
-	// UsersServiceGetUserProcedure is the fully-qualified name of the UsersService's GetUser RPC.
-	UsersServiceGetUserProcedure = "/users.v1.UsersService/GetUser"
-	// UsersServiceCreateUserProcedure is the fully-qualified name of the UsersService's CreateUser RPC.
-	UsersServiceCreateUserProcedure = "/users.v1.UsersService/CreateUser"
-	// UsersServiceUpdateUserProcedure is the fully-qualified name of the UsersService's UpdateUser RPC.
-	UsersServiceUpdateUserProcedure = "/users.v1.UsersService/UpdateUser"
-	// UsersServiceDeleteUserProcedure is the fully-qualified name of the UsersService's DeleteUser RPC.
-	UsersServiceDeleteUserProcedure = "/users.v1.UsersService/DeleteUser"
 	// UsersServiceUploadAvatarProcedure is the fully-qualified name of the UsersService's UploadAvatar
 	// RPC.
 	UsersServiceUploadAvatarProcedure = "/users.v1.UsersService/UploadAvatar"
 	// UsersServiceDeleteAvatarProcedure is the fully-qualified name of the UsersService's DeleteAvatar
 	// RPC.
 	UsersServiceDeleteAvatarProcedure = "/users.v1.UsersService/DeleteAvatar"
-	// UsersServiceListUserOrganizationsProcedure is the fully-qualified name of the UsersService's
-	// ListUserOrganizations RPC.
-	UsersServiceListUserOrganizationsProcedure = "/users.v1.UsersService/ListUserOrganizations"
-	// UsersServiceAddUserToOrganizationProcedure is the fully-qualified name of the UsersService's
-	// AddUserToOrganization RPC.
-	UsersServiceAddUserToOrganizationProcedure = "/users.v1.UsersService/AddUserToOrganization"
-	// UsersServiceRemoveUserFromOrganizationProcedure is the fully-qualified name of the UsersService's
-	// RemoveUserFromOrganization RPC.
-	UsersServiceRemoveUserFromOrganizationProcedure = "/users.v1.UsersService/RemoveUserFromOrganization"
 )
 
 // UsersServiceClient is a client for the users.v1.UsersService service.
 type UsersServiceClient interface {
-	// Self-service profile operations
 	GetMyProfile(context.Context, *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.GetMyProfileResponse], error)
 	UpdateMyProfile(context.Context, *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UpdateMyProfileResponse], error)
-	// System Admin operations
-	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
-	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error)
-	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
-	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
-	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
-	// Avatar operations
 	UploadAvatar(context.Context, *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UploadAvatarResponse], error)
 	DeleteAvatar(context.Context, *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.DeleteAvatarResponse], error)
-	// User-Organization operations (System Admin)
-	ListUserOrganizations(context.Context, *connect.Request[v1.ListUserOrganizationsRequest]) (*connect.Response[v1.ListUserOrganizationsResponse], error)
-	AddUserToOrganization(context.Context, *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v1.AddUserToOrganizationResponse], error)
-	RemoveUserFromOrganization(context.Context, *connect.Request[v1.RemoveUserFromOrganizationRequest]) (*connect.Response[v1.RemoveUserFromOrganizationResponse], error)
 }
 
 // NewUsersServiceClient constructs a client for the users.v1.UsersService service. By default, it
@@ -109,36 +78,6 @@ func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(usersServiceMethods.ByName("UpdateMyProfile")),
 			connect.WithClientOptions(opts...),
 		),
-		listUsers: connect.NewClient[v1.ListUsersRequest, v1.ListUsersResponse](
-			httpClient,
-			baseURL+UsersServiceListUsersProcedure,
-			connect.WithSchema(usersServiceMethods.ByName("ListUsers")),
-			connect.WithClientOptions(opts...),
-		),
-		getUser: connect.NewClient[v1.GetUserRequest, v1.GetUserResponse](
-			httpClient,
-			baseURL+UsersServiceGetUserProcedure,
-			connect.WithSchema(usersServiceMethods.ByName("GetUser")),
-			connect.WithClientOptions(opts...),
-		),
-		createUser: connect.NewClient[v1.CreateUserRequest, v1.CreateUserResponse](
-			httpClient,
-			baseURL+UsersServiceCreateUserProcedure,
-			connect.WithSchema(usersServiceMethods.ByName("CreateUser")),
-			connect.WithClientOptions(opts...),
-		),
-		updateUser: connect.NewClient[v1.UpdateUserRequest, v1.UpdateUserResponse](
-			httpClient,
-			baseURL+UsersServiceUpdateUserProcedure,
-			connect.WithSchema(usersServiceMethods.ByName("UpdateUser")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteUser: connect.NewClient[v1.DeleteUserRequest, v1.DeleteUserResponse](
-			httpClient,
-			baseURL+UsersServiceDeleteUserProcedure,
-			connect.WithSchema(usersServiceMethods.ByName("DeleteUser")),
-			connect.WithClientOptions(opts...),
-		),
 		uploadAvatar: connect.NewClient[v1.UploadAvatarRequest, v1.UploadAvatarResponse](
 			httpClient,
 			baseURL+UsersServiceUploadAvatarProcedure,
@@ -151,41 +90,15 @@ func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(usersServiceMethods.ByName("DeleteAvatar")),
 			connect.WithClientOptions(opts...),
 		),
-		listUserOrganizations: connect.NewClient[v1.ListUserOrganizationsRequest, v1.ListUserOrganizationsResponse](
-			httpClient,
-			baseURL+UsersServiceListUserOrganizationsProcedure,
-			connect.WithSchema(usersServiceMethods.ByName("ListUserOrganizations")),
-			connect.WithClientOptions(opts...),
-		),
-		addUserToOrganization: connect.NewClient[v1.AddUserToOrganizationRequest, v1.AddUserToOrganizationResponse](
-			httpClient,
-			baseURL+UsersServiceAddUserToOrganizationProcedure,
-			connect.WithSchema(usersServiceMethods.ByName("AddUserToOrganization")),
-			connect.WithClientOptions(opts...),
-		),
-		removeUserFromOrganization: connect.NewClient[v1.RemoveUserFromOrganizationRequest, v1.RemoveUserFromOrganizationResponse](
-			httpClient,
-			baseURL+UsersServiceRemoveUserFromOrganizationProcedure,
-			connect.WithSchema(usersServiceMethods.ByName("RemoveUserFromOrganization")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
 // usersServiceClient implements UsersServiceClient.
 type usersServiceClient struct {
-	getMyProfile               *connect.Client[v1.GetMyProfileRequest, v1.GetMyProfileResponse]
-	updateMyProfile            *connect.Client[v1.UpdateMyProfileRequest, v1.UpdateMyProfileResponse]
-	listUsers                  *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
-	getUser                    *connect.Client[v1.GetUserRequest, v1.GetUserResponse]
-	createUser                 *connect.Client[v1.CreateUserRequest, v1.CreateUserResponse]
-	updateUser                 *connect.Client[v1.UpdateUserRequest, v1.UpdateUserResponse]
-	deleteUser                 *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
-	uploadAvatar               *connect.Client[v1.UploadAvatarRequest, v1.UploadAvatarResponse]
-	deleteAvatar               *connect.Client[v1.DeleteAvatarRequest, v1.DeleteAvatarResponse]
-	listUserOrganizations      *connect.Client[v1.ListUserOrganizationsRequest, v1.ListUserOrganizationsResponse]
-	addUserToOrganization      *connect.Client[v1.AddUserToOrganizationRequest, v1.AddUserToOrganizationResponse]
-	removeUserFromOrganization *connect.Client[v1.RemoveUserFromOrganizationRequest, v1.RemoveUserFromOrganizationResponse]
+	getMyProfile    *connect.Client[v1.GetMyProfileRequest, v1.GetMyProfileResponse]
+	updateMyProfile *connect.Client[v1.UpdateMyProfileRequest, v1.UpdateMyProfileResponse]
+	uploadAvatar    *connect.Client[v1.UploadAvatarRequest, v1.UploadAvatarResponse]
+	deleteAvatar    *connect.Client[v1.DeleteAvatarRequest, v1.DeleteAvatarResponse]
 }
 
 // GetMyProfile calls users.v1.UsersService.GetMyProfile.
@@ -198,31 +111,6 @@ func (c *usersServiceClient) UpdateMyProfile(ctx context.Context, req *connect.R
 	return c.updateMyProfile.CallUnary(ctx, req)
 }
 
-// ListUsers calls users.v1.UsersService.ListUsers.
-func (c *usersServiceClient) ListUsers(ctx context.Context, req *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error) {
-	return c.listUsers.CallUnary(ctx, req)
-}
-
-// GetUser calls users.v1.UsersService.GetUser.
-func (c *usersServiceClient) GetUser(ctx context.Context, req *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error) {
-	return c.getUser.CallUnary(ctx, req)
-}
-
-// CreateUser calls users.v1.UsersService.CreateUser.
-func (c *usersServiceClient) CreateUser(ctx context.Context, req *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error) {
-	return c.createUser.CallUnary(ctx, req)
-}
-
-// UpdateUser calls users.v1.UsersService.UpdateUser.
-func (c *usersServiceClient) UpdateUser(ctx context.Context, req *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error) {
-	return c.updateUser.CallUnary(ctx, req)
-}
-
-// DeleteUser calls users.v1.UsersService.DeleteUser.
-func (c *usersServiceClient) DeleteUser(ctx context.Context, req *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error) {
-	return c.deleteUser.CallUnary(ctx, req)
-}
-
 // UploadAvatar calls users.v1.UsersService.UploadAvatar.
 func (c *usersServiceClient) UploadAvatar(ctx context.Context, req *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UploadAvatarResponse], error) {
 	return c.uploadAvatar.CallUnary(ctx, req)
@@ -233,39 +121,12 @@ func (c *usersServiceClient) DeleteAvatar(ctx context.Context, req *connect.Requ
 	return c.deleteAvatar.CallUnary(ctx, req)
 }
 
-// ListUserOrganizations calls users.v1.UsersService.ListUserOrganizations.
-func (c *usersServiceClient) ListUserOrganizations(ctx context.Context, req *connect.Request[v1.ListUserOrganizationsRequest]) (*connect.Response[v1.ListUserOrganizationsResponse], error) {
-	return c.listUserOrganizations.CallUnary(ctx, req)
-}
-
-// AddUserToOrganization calls users.v1.UsersService.AddUserToOrganization.
-func (c *usersServiceClient) AddUserToOrganization(ctx context.Context, req *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v1.AddUserToOrganizationResponse], error) {
-	return c.addUserToOrganization.CallUnary(ctx, req)
-}
-
-// RemoveUserFromOrganization calls users.v1.UsersService.RemoveUserFromOrganization.
-func (c *usersServiceClient) RemoveUserFromOrganization(ctx context.Context, req *connect.Request[v1.RemoveUserFromOrganizationRequest]) (*connect.Response[v1.RemoveUserFromOrganizationResponse], error) {
-	return c.removeUserFromOrganization.CallUnary(ctx, req)
-}
-
 // UsersServiceHandler is an implementation of the users.v1.UsersService service.
 type UsersServiceHandler interface {
-	// Self-service profile operations
 	GetMyProfile(context.Context, *connect.Request[v1.GetMyProfileRequest]) (*connect.Response[v1.GetMyProfileResponse], error)
 	UpdateMyProfile(context.Context, *connect.Request[v1.UpdateMyProfileRequest]) (*connect.Response[v1.UpdateMyProfileResponse], error)
-	// System Admin operations
-	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
-	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error)
-	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
-	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
-	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
-	// Avatar operations
 	UploadAvatar(context.Context, *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UploadAvatarResponse], error)
 	DeleteAvatar(context.Context, *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.DeleteAvatarResponse], error)
-	// User-Organization operations (System Admin)
-	ListUserOrganizations(context.Context, *connect.Request[v1.ListUserOrganizationsRequest]) (*connect.Response[v1.ListUserOrganizationsResponse], error)
-	AddUserToOrganization(context.Context, *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v1.AddUserToOrganizationResponse], error)
-	RemoveUserFromOrganization(context.Context, *connect.Request[v1.RemoveUserFromOrganizationRequest]) (*connect.Response[v1.RemoveUserFromOrganizationResponse], error)
 }
 
 // NewUsersServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -287,36 +148,6 @@ func NewUsersServiceHandler(svc UsersServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(usersServiceMethods.ByName("UpdateMyProfile")),
 		connect.WithHandlerOptions(opts...),
 	)
-	usersServiceListUsersHandler := connect.NewUnaryHandler(
-		UsersServiceListUsersProcedure,
-		svc.ListUsers,
-		connect.WithSchema(usersServiceMethods.ByName("ListUsers")),
-		connect.WithHandlerOptions(opts...),
-	)
-	usersServiceGetUserHandler := connect.NewUnaryHandler(
-		UsersServiceGetUserProcedure,
-		svc.GetUser,
-		connect.WithSchema(usersServiceMethods.ByName("GetUser")),
-		connect.WithHandlerOptions(opts...),
-	)
-	usersServiceCreateUserHandler := connect.NewUnaryHandler(
-		UsersServiceCreateUserProcedure,
-		svc.CreateUser,
-		connect.WithSchema(usersServiceMethods.ByName("CreateUser")),
-		connect.WithHandlerOptions(opts...),
-	)
-	usersServiceUpdateUserHandler := connect.NewUnaryHandler(
-		UsersServiceUpdateUserProcedure,
-		svc.UpdateUser,
-		connect.WithSchema(usersServiceMethods.ByName("UpdateUser")),
-		connect.WithHandlerOptions(opts...),
-	)
-	usersServiceDeleteUserHandler := connect.NewUnaryHandler(
-		UsersServiceDeleteUserProcedure,
-		svc.DeleteUser,
-		connect.WithSchema(usersServiceMethods.ByName("DeleteUser")),
-		connect.WithHandlerOptions(opts...),
-	)
 	usersServiceUploadAvatarHandler := connect.NewUnaryHandler(
 		UsersServiceUploadAvatarProcedure,
 		svc.UploadAvatar,
@@ -329,50 +160,16 @@ func NewUsersServiceHandler(svc UsersServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(usersServiceMethods.ByName("DeleteAvatar")),
 		connect.WithHandlerOptions(opts...),
 	)
-	usersServiceListUserOrganizationsHandler := connect.NewUnaryHandler(
-		UsersServiceListUserOrganizationsProcedure,
-		svc.ListUserOrganizations,
-		connect.WithSchema(usersServiceMethods.ByName("ListUserOrganizations")),
-		connect.WithHandlerOptions(opts...),
-	)
-	usersServiceAddUserToOrganizationHandler := connect.NewUnaryHandler(
-		UsersServiceAddUserToOrganizationProcedure,
-		svc.AddUserToOrganization,
-		connect.WithSchema(usersServiceMethods.ByName("AddUserToOrganization")),
-		connect.WithHandlerOptions(opts...),
-	)
-	usersServiceRemoveUserFromOrganizationHandler := connect.NewUnaryHandler(
-		UsersServiceRemoveUserFromOrganizationProcedure,
-		svc.RemoveUserFromOrganization,
-		connect.WithSchema(usersServiceMethods.ByName("RemoveUserFromOrganization")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/users.v1.UsersService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UsersServiceGetMyProfileProcedure:
 			usersServiceGetMyProfileHandler.ServeHTTP(w, r)
 		case UsersServiceUpdateMyProfileProcedure:
 			usersServiceUpdateMyProfileHandler.ServeHTTP(w, r)
-		case UsersServiceListUsersProcedure:
-			usersServiceListUsersHandler.ServeHTTP(w, r)
-		case UsersServiceGetUserProcedure:
-			usersServiceGetUserHandler.ServeHTTP(w, r)
-		case UsersServiceCreateUserProcedure:
-			usersServiceCreateUserHandler.ServeHTTP(w, r)
-		case UsersServiceUpdateUserProcedure:
-			usersServiceUpdateUserHandler.ServeHTTP(w, r)
-		case UsersServiceDeleteUserProcedure:
-			usersServiceDeleteUserHandler.ServeHTTP(w, r)
 		case UsersServiceUploadAvatarProcedure:
 			usersServiceUploadAvatarHandler.ServeHTTP(w, r)
 		case UsersServiceDeleteAvatarProcedure:
 			usersServiceDeleteAvatarHandler.ServeHTTP(w, r)
-		case UsersServiceListUserOrganizationsProcedure:
-			usersServiceListUserOrganizationsHandler.ServeHTTP(w, r)
-		case UsersServiceAddUserToOrganizationProcedure:
-			usersServiceAddUserToOrganizationHandler.ServeHTTP(w, r)
-		case UsersServiceRemoveUserFromOrganizationProcedure:
-			usersServiceRemoveUserFromOrganizationHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -390,42 +187,10 @@ func (UnimplementedUsersServiceHandler) UpdateMyProfile(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.UpdateMyProfile is not implemented"))
 }
 
-func (UnimplementedUsersServiceHandler) ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.ListUsers is not implemented"))
-}
-
-func (UnimplementedUsersServiceHandler) GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.GetUser is not implemented"))
-}
-
-func (UnimplementedUsersServiceHandler) CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.CreateUser is not implemented"))
-}
-
-func (UnimplementedUsersServiceHandler) UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.UpdateUser is not implemented"))
-}
-
-func (UnimplementedUsersServiceHandler) DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.DeleteUser is not implemented"))
-}
-
 func (UnimplementedUsersServiceHandler) UploadAvatar(context.Context, *connect.Request[v1.UploadAvatarRequest]) (*connect.Response[v1.UploadAvatarResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.UploadAvatar is not implemented"))
 }
 
 func (UnimplementedUsersServiceHandler) DeleteAvatar(context.Context, *connect.Request[v1.DeleteAvatarRequest]) (*connect.Response[v1.DeleteAvatarResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.DeleteAvatar is not implemented"))
-}
-
-func (UnimplementedUsersServiceHandler) ListUserOrganizations(context.Context, *connect.Request[v1.ListUserOrganizationsRequest]) (*connect.Response[v1.ListUserOrganizationsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.ListUserOrganizations is not implemented"))
-}
-
-func (UnimplementedUsersServiceHandler) AddUserToOrganization(context.Context, *connect.Request[v1.AddUserToOrganizationRequest]) (*connect.Response[v1.AddUserToOrganizationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.AddUserToOrganization is not implemented"))
-}
-
-func (UnimplementedUsersServiceHandler) RemoveUserFromOrganization(context.Context, *connect.Request[v1.RemoveUserFromOrganizationRequest]) (*connect.Response[v1.RemoveUserFromOrganizationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.RemoveUserFromOrganization is not implemented"))
 }

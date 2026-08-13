@@ -36,21 +36,12 @@ const (
 	// OrganizationsServiceListMyOrganizationsProcedure is the fully-qualified name of the
 	// OrganizationsService's ListMyOrganizations RPC.
 	OrganizationsServiceListMyOrganizationsProcedure = "/organizations.v1.OrganizationsService/ListMyOrganizations"
-	// OrganizationsServiceListOrganizationsProcedure is the fully-qualified name of the
-	// OrganizationsService's ListOrganizations RPC.
-	OrganizationsServiceListOrganizationsProcedure = "/organizations.v1.OrganizationsService/ListOrganizations"
 	// OrganizationsServiceGetOrganizationProcedure is the fully-qualified name of the
 	// OrganizationsService's GetOrganization RPC.
 	OrganizationsServiceGetOrganizationProcedure = "/organizations.v1.OrganizationsService/GetOrganization"
-	// OrganizationsServiceCreateOrganizationProcedure is the fully-qualified name of the
-	// OrganizationsService's CreateOrganization RPC.
-	OrganizationsServiceCreateOrganizationProcedure = "/organizations.v1.OrganizationsService/CreateOrganization"
 	// OrganizationsServiceUpdateOrganizationProcedure is the fully-qualified name of the
 	// OrganizationsService's UpdateOrganization RPC.
 	OrganizationsServiceUpdateOrganizationProcedure = "/organizations.v1.OrganizationsService/UpdateOrganization"
-	// OrganizationsServiceDeleteOrganizationProcedure is the fully-qualified name of the
-	// OrganizationsService's DeleteOrganization RPC.
-	OrganizationsServiceDeleteOrganizationProcedure = "/organizations.v1.OrganizationsService/DeleteOrganization"
 	// OrganizationsServiceGetOrganizationOverviewProcedure is the fully-qualified name of the
 	// OrganizationsService's GetOrganizationOverview RPC.
 	OrganizationsServiceGetOrganizationOverviewProcedure = "/organizations.v1.OrganizationsService/GetOrganizationOverview"
@@ -117,12 +108,10 @@ const (
 type OrganizationsServiceClient interface {
 	// User's organizations
 	ListMyOrganizations(context.Context, *connect.Request[v1.ListMyOrganizationsRequest]) (*connect.Response[v1.ListMyOrganizationsResponse], error)
-	// Organization CRUD (System Admin)
-	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
+	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
+	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
-	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
 	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
-	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
 	// Organization overview (Org Admin)
 	GetOrganizationOverview(context.Context, *connect.Request[v1.GetOrganizationOverviewRequest]) (*connect.Response[v1.GetOrganizationOverviewResponse], error)
 	// Member management (Org Admin)
@@ -170,34 +159,16 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(organizationsServiceMethods.ByName("ListMyOrganizations")),
 			connect.WithClientOptions(opts...),
 		),
-		listOrganizations: connect.NewClient[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse](
-			httpClient,
-			baseURL+OrganizationsServiceListOrganizationsProcedure,
-			connect.WithSchema(organizationsServiceMethods.ByName("ListOrganizations")),
-			connect.WithClientOptions(opts...),
-		),
 		getOrganization: connect.NewClient[v1.GetOrganizationRequest, v1.GetOrganizationResponse](
 			httpClient,
 			baseURL+OrganizationsServiceGetOrganizationProcedure,
 			connect.WithSchema(organizationsServiceMethods.ByName("GetOrganization")),
 			connect.WithClientOptions(opts...),
 		),
-		createOrganization: connect.NewClient[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse](
-			httpClient,
-			baseURL+OrganizationsServiceCreateOrganizationProcedure,
-			connect.WithSchema(organizationsServiceMethods.ByName("CreateOrganization")),
-			connect.WithClientOptions(opts...),
-		),
 		updateOrganization: connect.NewClient[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse](
 			httpClient,
 			baseURL+OrganizationsServiceUpdateOrganizationProcedure,
 			connect.WithSchema(organizationsServiceMethods.ByName("UpdateOrganization")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteOrganization: connect.NewClient[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse](
-			httpClient,
-			baseURL+OrganizationsServiceDeleteOrganizationProcedure,
-			connect.WithSchema(organizationsServiceMethods.ByName("DeleteOrganization")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationOverview: connect.NewClient[v1.GetOrganizationOverviewRequest, v1.GetOrganizationOverviewResponse](
@@ -326,11 +297,8 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 // organizationsServiceClient implements OrganizationsServiceClient.
 type organizationsServiceClient struct {
 	listMyOrganizations        *connect.Client[v1.ListMyOrganizationsRequest, v1.ListMyOrganizationsResponse]
-	listOrganizations          *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
 	getOrganization            *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
-	createOrganization         *connect.Client[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse]
 	updateOrganization         *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
-	deleteOrganization         *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
 	getOrganizationOverview    *connect.Client[v1.GetOrganizationOverviewRequest, v1.GetOrganizationOverviewResponse]
 	listMembers                *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
 	addMember                  *connect.Client[v1.AddMemberRequest, v1.AddMemberResponse]
@@ -358,29 +326,14 @@ func (c *organizationsServiceClient) ListMyOrganizations(ctx context.Context, re
 	return c.listMyOrganizations.CallUnary(ctx, req)
 }
 
-// ListOrganizations calls organizations.v1.OrganizationsService.ListOrganizations.
-func (c *organizationsServiceClient) ListOrganizations(ctx context.Context, req *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
-	return c.listOrganizations.CallUnary(ctx, req)
-}
-
 // GetOrganization calls organizations.v1.OrganizationsService.GetOrganization.
 func (c *organizationsServiceClient) GetOrganization(ctx context.Context, req *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
 	return c.getOrganization.CallUnary(ctx, req)
 }
 
-// CreateOrganization calls organizations.v1.OrganizationsService.CreateOrganization.
-func (c *organizationsServiceClient) CreateOrganization(ctx context.Context, req *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {
-	return c.createOrganization.CallUnary(ctx, req)
-}
-
 // UpdateOrganization calls organizations.v1.OrganizationsService.UpdateOrganization.
 func (c *organizationsServiceClient) UpdateOrganization(ctx context.Context, req *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
 	return c.updateOrganization.CallUnary(ctx, req)
-}
-
-// DeleteOrganization calls organizations.v1.OrganizationsService.DeleteOrganization.
-func (c *organizationsServiceClient) DeleteOrganization(ctx context.Context, req *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error) {
-	return c.deleteOrganization.CallUnary(ctx, req)
 }
 
 // GetOrganizationOverview calls organizations.v1.OrganizationsService.GetOrganizationOverview.
@@ -489,12 +442,10 @@ func (c *organizationsServiceClient) RotateEncryptionKey(ctx context.Context, re
 type OrganizationsServiceHandler interface {
 	// User's organizations
 	ListMyOrganizations(context.Context, *connect.Request[v1.ListMyOrganizationsRequest]) (*connect.Response[v1.ListMyOrganizationsResponse], error)
-	// Organization CRUD (System Admin)
-	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
+	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
+	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
-	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
 	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
-	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
 	// Organization overview (Org Admin)
 	GetOrganizationOverview(context.Context, *connect.Request[v1.GetOrganizationOverviewRequest]) (*connect.Response[v1.GetOrganizationOverviewResponse], error)
 	// Member management (Org Admin)
@@ -538,34 +489,16 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		connect.WithSchema(organizationsServiceMethods.ByName("ListMyOrganizations")),
 		connect.WithHandlerOptions(opts...),
 	)
-	organizationsServiceListOrganizationsHandler := connect.NewUnaryHandler(
-		OrganizationsServiceListOrganizationsProcedure,
-		svc.ListOrganizations,
-		connect.WithSchema(organizationsServiceMethods.ByName("ListOrganizations")),
-		connect.WithHandlerOptions(opts...),
-	)
 	organizationsServiceGetOrganizationHandler := connect.NewUnaryHandler(
 		OrganizationsServiceGetOrganizationProcedure,
 		svc.GetOrganization,
 		connect.WithSchema(organizationsServiceMethods.ByName("GetOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
-	organizationsServiceCreateOrganizationHandler := connect.NewUnaryHandler(
-		OrganizationsServiceCreateOrganizationProcedure,
-		svc.CreateOrganization,
-		connect.WithSchema(organizationsServiceMethods.ByName("CreateOrganization")),
-		connect.WithHandlerOptions(opts...),
-	)
 	organizationsServiceUpdateOrganizationHandler := connect.NewUnaryHandler(
 		OrganizationsServiceUpdateOrganizationProcedure,
 		svc.UpdateOrganization,
 		connect.WithSchema(organizationsServiceMethods.ByName("UpdateOrganization")),
-		connect.WithHandlerOptions(opts...),
-	)
-	organizationsServiceDeleteOrganizationHandler := connect.NewUnaryHandler(
-		OrganizationsServiceDeleteOrganizationProcedure,
-		svc.DeleteOrganization,
-		connect.WithSchema(organizationsServiceMethods.ByName("DeleteOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
 	organizationsServiceGetOrganizationOverviewHandler := connect.NewUnaryHandler(
@@ -692,16 +625,10 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		switch r.URL.Path {
 		case OrganizationsServiceListMyOrganizationsProcedure:
 			organizationsServiceListMyOrganizationsHandler.ServeHTTP(w, r)
-		case OrganizationsServiceListOrganizationsProcedure:
-			organizationsServiceListOrganizationsHandler.ServeHTTP(w, r)
 		case OrganizationsServiceGetOrganizationProcedure:
 			organizationsServiceGetOrganizationHandler.ServeHTTP(w, r)
-		case OrganizationsServiceCreateOrganizationProcedure:
-			organizationsServiceCreateOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationsServiceUpdateOrganizationProcedure:
 			organizationsServiceUpdateOrganizationHandler.ServeHTTP(w, r)
-		case OrganizationsServiceDeleteOrganizationProcedure:
-			organizationsServiceDeleteOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationsServiceGetOrganizationOverviewProcedure:
 			organizationsServiceGetOrganizationOverviewHandler.ServeHTTP(w, r)
 		case OrganizationsServiceListMembersProcedure:
@@ -755,24 +682,12 @@ func (UnimplementedOrganizationsServiceHandler) ListMyOrganizations(context.Cont
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.ListMyOrganizations is not implemented"))
 }
 
-func (UnimplementedOrganizationsServiceHandler) ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.ListOrganizations is not implemented"))
-}
-
 func (UnimplementedOrganizationsServiceHandler) GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.GetOrganization is not implemented"))
 }
 
-func (UnimplementedOrganizationsServiceHandler) CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.CreateOrganization is not implemented"))
-}
-
 func (UnimplementedOrganizationsServiceHandler) UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.UpdateOrganization is not implemented"))
-}
-
-func (UnimplementedOrganizationsServiceHandler) DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.DeleteOrganization is not implemented"))
 }
 
 func (UnimplementedOrganizationsServiceHandler) GetOrganizationOverview(context.Context, *connect.Request[v1.GetOrganizationOverviewRequest]) (*connect.Response[v1.GetOrganizationOverviewResponse], error) {

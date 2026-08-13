@@ -1,7 +1,8 @@
-"""Starter workspace docs seeded into the first organization."""
+"""Starter workspace docs provisioned into every new organization."""
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -20,6 +21,22 @@ if TYPE_CHECKING:
 logger = logger.bind(component="db.seed_docs")
 
 DOCS_DIR = Path(__file__).parent.parent.parent.parent / "docs"
+
+
+def starter_content_enabled() -> bool:
+    """Gate for the docs notes and the Welcome canvas."""
+    raw = os.getenv("SEED_STARTER_CONTENT", "").strip().lower()
+    if not raw:
+        return True
+    return raw in {"1", "true", "yes", "on"}
+
+
+def workspace_docs_available() -> bool:
+    """The docs tree is part of the repo/image; a deployment without it
+    skips starter docs instead of failing org creation.
+    """
+    return (DOCS_DIR / "ABOUT.md").exists()
+
 
 FILE_PATH_TO_SLUG: dict[str, str] = {
     "ABOUT.md": "about",
@@ -66,7 +83,7 @@ def build_note_urn(note_id: UUID) -> str:
 async def seed_workspace_docs(
     *,
     session: AsyncSession,
-    default_org: Organization,
+    org: Organization,
     admin_user: User,
     search_indexer: SearchIndexer,
 ) -> None:
@@ -76,7 +93,7 @@ async def seed_workspace_docs(
     from uniffy.core.types import AccessMode, ContentRole, ContentType, NodeType
 
     uniffy_folder = Note(
-        organization_id=default_org.id,
+        organization_id=org.id,
         owner_id=admin_user.id,
         access_mode=AccessMode.OPEN_TO_ORG,
         baseline_role=ContentRole.EDITOR,
@@ -91,7 +108,7 @@ async def seed_workspace_docs(
     logger.info("Created Uniffy root folder")
 
     docs_folder = Note(
-        organization_id=default_org.id,
+        organization_id=org.id,
         owner_id=admin_user.id,
         parent_id=uniffy_folder.id,
         access_mode=AccessMode.OPEN_TO_ORG,
@@ -109,7 +126,7 @@ async def seed_workspace_docs(
     # Notes are created with empty content first so all IDs exist
     # before markdown link rewriting resolves slugs to URNs.
     about_note = Note(
-        organization_id=default_org.id,
+        organization_id=org.id,
         owner_id=admin_user.id,
         parent_id=uniffy_folder.id,
         access_mode=AccessMode.OPEN_TO_ORG,
@@ -123,7 +140,7 @@ async def seed_workspace_docs(
     session.add(about_note)
 
     plans_note = Note(
-        organization_id=default_org.id,
+        organization_id=org.id,
         owner_id=admin_user.id,
         parent_id=uniffy_folder.id,
         access_mode=AccessMode.OPEN_TO_ORG,
@@ -137,7 +154,7 @@ async def seed_workspace_docs(
     session.add(plans_note)
 
     transparency_note = Note(
-        organization_id=default_org.id,
+        organization_id=org.id,
         owner_id=admin_user.id,
         parent_id=uniffy_folder.id,
         access_mode=AccessMode.OPEN_TO_ORG,
@@ -151,7 +168,7 @@ async def seed_workspace_docs(
     session.add(transparency_note)
 
     licenses_note = Note(
-        organization_id=default_org.id,
+        organization_id=org.id,
         owner_id=admin_user.id,
         parent_id=uniffy_folder.id,
         access_mode=AccessMode.OPEN_TO_ORG,
@@ -165,7 +182,7 @@ async def seed_workspace_docs(
     session.add(licenses_note)
 
     searching_note = Note(
-        organization_id=default_org.id,
+        organization_id=org.id,
         owner_id=admin_user.id,
         parent_id=docs_folder.id,
         access_mode=AccessMode.OPEN_TO_ORG,
@@ -179,7 +196,7 @@ async def seed_workspace_docs(
     session.add(searching_note)
 
     sharing_note = Note(
-        organization_id=default_org.id,
+        organization_id=org.id,
         owner_id=admin_user.id,
         parent_id=docs_folder.id,
         access_mode=AccessMode.OPEN_TO_ORG,
@@ -193,7 +210,7 @@ async def seed_workspace_docs(
     session.add(sharing_note)
 
     encryption_note = Note(
-        organization_id=default_org.id,
+        organization_id=org.id,
         owner_id=admin_user.id,
         parent_id=docs_folder.id,
         access_mode=AccessMode.OPEN_TO_ORG,
@@ -290,12 +307,12 @@ async def seed_workspace_docs(
     tag_ops = TagOperations(session)
     doc_tag = await tag_ops.create(
         actor_id=admin_user.id,
-        organization_id=default_org.id,
+        organization_id=org.id,
         name="documentation",
     )
     uniffy_tag = await tag_ops.create(
         actor_id=admin_user.id,
-        organization_id=default_org.id,
+        organization_id=org.id,
         name="uniffy",
     )
     seed_tag_ids = [doc_tag.id, uniffy_tag.id]
@@ -304,7 +321,7 @@ async def seed_workspace_docs(
     for tagged in (uniffy_folder, docs_folder, *all_notes):
         await tag_ops.assign(
             actor_id=admin_user.id,
-            organization_id=default_org.id,
+            organization_id=org.id,
             content_urn=build_content_urn(ContentType.NOTE, tagged.id),
             tag_ids=seed_tag_ids,
         )
@@ -312,7 +329,7 @@ async def seed_workspace_docs(
 
     await search_indexer.index(
         urn=build_content_urn(ContentType.NOTE, uniffy_folder.id),
-        organization_id=default_org.id,
+        organization_id=org.id,
         title=uniffy_folder.title,
         entity_type=ContentType.NOTE.value,
         url_path=f"/notes/{uniffy_folder.id}",
@@ -330,7 +347,7 @@ async def seed_workspace_docs(
 
     await search_indexer.index(
         urn=build_content_urn(ContentType.NOTE, docs_folder.id),
-        organization_id=default_org.id,
+        organization_id=org.id,
         title=docs_folder.title,
         entity_type=ContentType.NOTE.value,
         url_path=f"/notes/{docs_folder.id}",
@@ -349,7 +366,7 @@ async def seed_workspace_docs(
     for note in all_notes:
         await search_indexer.index(
             urn=build_content_urn(ContentType.NOTE, note.id),
-            organization_id=default_org.id,
+            organization_id=org.id,
             title=note.title,
             entity_type=ContentType.NOTE.value,
             url_path=f"/notes/{note.id}",
@@ -367,7 +384,7 @@ async def seed_workspace_docs(
 
     await seed_welcome_canvas(
         session=session,
-        org=default_org,
+        org=org,
         admin_user=admin_user,
         uniffy_folder=uniffy_folder,
         seed_notes={

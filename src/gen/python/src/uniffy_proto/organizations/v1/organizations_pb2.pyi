@@ -44,22 +44,6 @@ class MyOrganization(_message.Message):
     joined_at: _timestamp_pb2.Timestamp
     def __init__(self, organization: _Optional[_Union[_common_pb2.OrganizationInfo, _Mapping]] = ..., role: _Optional[_Union[_common_pb2.OrganizationRole, str]] = ..., joined_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
-class ListOrganizationsRequest(_message.Message):
-    __slots__ = ("pagination", "search")
-    PAGINATION_FIELD_NUMBER: _ClassVar[int]
-    SEARCH_FIELD_NUMBER: _ClassVar[int]
-    pagination: _common_pb2.PaginationRequest
-    search: str
-    def __init__(self, pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., search: _Optional[str] = ...) -> None: ...
-
-class ListOrganizationsResponse(_message.Message):
-    __slots__ = ("organizations", "pagination")
-    ORGANIZATIONS_FIELD_NUMBER: _ClassVar[int]
-    PAGINATION_FIELD_NUMBER: _ClassVar[int]
-    organizations: _containers.RepeatedCompositeFieldContainer[OrganizationDetail]
-    pagination: _common_pb2.PaginationResponse
-    def __init__(self, organizations: _Optional[_Iterable[_Union[OrganizationDetail, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
-
 class OrganizationDetail(_message.Message):
     __slots__ = ("organization", "member_count", "group_count", "is_active")
     ORGANIZATION_FIELD_NUMBER: _ClassVar[int]
@@ -84,29 +68,11 @@ class GetOrganizationResponse(_message.Message):
     organization: OrganizationDetail
     def __init__(self, organization: _Optional[_Union[OrganizationDetail, _Mapping]] = ...) -> None: ...
 
-class CreateOrganizationResponse(_message.Message):
-    __slots__ = ("organization",)
-    ORGANIZATION_FIELD_NUMBER: _ClassVar[int]
-    organization: _common_pb2.OrganizationInfo
-    def __init__(self, organization: _Optional[_Union[_common_pb2.OrganizationInfo, _Mapping]] = ...) -> None: ...
-
 class UpdateOrganizationResponse(_message.Message):
     __slots__ = ("organization",)
     ORGANIZATION_FIELD_NUMBER: _ClassVar[int]
     organization: _common_pb2.OrganizationInfo
     def __init__(self, organization: _Optional[_Union[_common_pb2.OrganizationInfo, _Mapping]] = ...) -> None: ...
-
-class CreateOrganizationRequest(_message.Message):
-    __slots__ = ("name", "slug", "logo_url", "owner_user_id")
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    SLUG_FIELD_NUMBER: _ClassVar[int]
-    LOGO_URL_FIELD_NUMBER: _ClassVar[int]
-    OWNER_USER_ID_FIELD_NUMBER: _ClassVar[int]
-    name: str
-    slug: str
-    logo_url: str
-    owner_user_id: str
-    def __init__(self, name: _Optional[str] = ..., slug: _Optional[str] = ..., logo_url: _Optional[str] = ..., owner_user_id: _Optional[str] = ...) -> None: ...
 
 class UpdateOrganizationRequest(_message.Message):
     __slots__ = ("organization_id", "name", "slug", "logo_url", "is_active")
@@ -121,18 +87,6 @@ class UpdateOrganizationRequest(_message.Message):
     logo_url: str
     is_active: bool
     def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., logo_url: _Optional[str] = ..., is_active: _Optional[bool] = ...) -> None: ...
-
-class DeleteOrganizationRequest(_message.Message):
-    __slots__ = ("organization_id",)
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    organization_id: str
-    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
-
-class DeleteOrganizationResponse(_message.Message):
-    __slots__ = ("success",)
-    SUCCESS_FIELD_NUMBER: _ClassVar[int]
-    success: bool
-    def __init__(self, success: _Optional[bool] = ...) -> None: ...
 
 class GetOrganizationOverviewRequest(_message.Message):
     __slots__ = ("organization_id",)

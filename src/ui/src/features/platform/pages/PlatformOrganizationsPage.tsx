@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
-    Buildings,
-    MagnifyingGlass,
-    Trash,
     ArrowCounterClockwise,
-    Prohibit,
-    Lifebuoy,
-    DotsThreeVertical,
-    Clock,
-    ShieldWarning,
+    Buildings,
     CheckCircle,
+    Clock,
+    DotsThreeVertical,
+    Lifebuoy,
+    MagnifyingGlass,
+    Plus,
+    Prohibit,
+    ShieldWarning,
+    Trash,
 } from '@phosphor-icons/react';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Drawer } from '@/components/ui/drawer';
 import { PortalMenu } from '@/components/ui/portal-menu';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { ReasonDialog } from '@/components/ui/reason-dialog';
 import {
     Table,
     TableBody,
@@ -31,10 +31,11 @@ import {
 } from '@/components/ui/table';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { friendlyErrorMessage } from '@/config';
+import { getAvatarGradientStyle, getInitials } from '@/components/subject/utils';
 import { platformOrgsApi } from '@/features/platform/api/systemDirectoryApi';
-import { PlatformOrgDetailPanel } from '@/features/platform/components/PlatformOrgDetailPanel';
+import { CreateOrganizationDialog } from '@/features/platform/components/CreateOrganizationDialog';
+import { PlatformOrgDetailDialog } from '@/features/platform/components/PlatformOrgDetailDialog';
 import { RequestSupportSessionDialog } from '@/features/platform/components/RequestSupportSessionDialog';
-import { ReasonDialog } from '@/components/ui/reason-dialog';
 import type { PlatformOrganizationSummary } from '@uniffy/proto/superadmin/v1/system_directory_pb';
 
 type PendingOrgRowAction = {
@@ -84,23 +85,23 @@ function StatusBadge({ org }: { org: PlatformOrganizationSummary }) {
         const purge = protoToDate(org.purgeAt);
         const purgeLabel = purge ? formatRelativeTime(purge.toISOString()) : 'soon';
         return (
-            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                <Trash size={10} weight="duotone" />
-                Deleted - purge {purgeLabel}
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gradient-to-r from-red-100 to-red-200 text-red-700 dark:from-red-950 dark:to-red-900 dark:text-red-300">
+                <Trash size={12} weight="fill" />
+                Purge {purgeLabel}
             </span>
         );
     }
     if (org.isSuspended) {
         return (
-            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                <ShieldWarning size={10} weight="duotone" />
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 dark:from-amber-950 dark:to-amber-900 dark:text-amber-300">
+                <ShieldWarning size={12} weight="fill" />
                 Suspended
             </span>
         );
     }
     return (
-        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
-            <CheckCircle size={10} weight="duotone" />
+        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-700 dark:from-emerald-950 dark:to-emerald-900 dark:text-emerald-300">
+            <CheckCircle size={12} weight="fill" />
             Active
         </span>
     );
@@ -199,9 +200,14 @@ function RowActions({ org, onSuspend, onUnsuspend, onRestore, onDelete, onSuppor
     );
 }
 
+interface OrgStats {
+    active: number;
+    suspended: number;
+    deleted: number;
+}
+
 export function PlatformOrganizationsPage() {
     useDocumentTitle('Platform Organizations');
-    const { isMobileOrTablet } = useBreakpoint();
     const [rows, setRows] = useState<PlatformOrganizationSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -209,10 +215,12 @@ export function PlatformOrganizationsPage() {
     const [onlySuspended, setOnlySuspended] = useState(false);
     const [page, setPage] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
+    const [stats, setStats] = useState<OrgStats | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [supportTarget, setSupportTarget] = useState<{ id: string; name: string } | null>(null);
     const [pending, setPending] = useState<PendingOrgRowAction | null>(null);
     const [pendingBusy, setPendingBusy] = useState(false);
+    const [createOpen, setCreateOpen] = useState(false);
 
     const fetchRows = useCallback(async () => {
         setLoading(true);
@@ -234,18 +242,35 @@ export function PlatformOrganizationsPage() {
         }
     }, [page, search, includeDeleted, onlySuspended]);
 
+    const fetchStats = useCallback(async () => {
+        try {
+            const [active, suspended, withDeleted] = await Promise.all([
+                platformOrgsApi.list({ page: 0, pageSize: 1 }),
+                platformOrgsApi.list({ page: 0, pageSize: 1, onlySuspended: true }),
+                platformOrgsApi.list({ page: 0, pageSize: 1, includeDeleted: true }),
+            ]);
+            setStats({
+                active: active.totalCount,
+                suspended: suspended.totalCount,
+                deleted: Math.max(0, withDeleted.totalCount - active.totalCount),
+            });
+        } catch {
+            setStats(null);
+        }
+    }, []);
+
     useEffect(() => {
         fetchRows();
     }, [fetchRows]);
 
-    const handleSuspend = (org: PlatformOrganizationSummary) =>
-        setPending({ kind: 'suspend', org });
-    const handleUnsuspend = (org: PlatformOrganizationSummary) =>
-        setPending({ kind: 'unsuspend', org });
-    const handleRestore = (org: PlatformOrganizationSummary) =>
-        setPending({ kind: 'restore', org });
-    const handleDelete = (org: PlatformOrganizationSummary) =>
-        setPending({ kind: 'delete', org });
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
+
+    const refreshAll = useCallback(() => {
+        fetchRows();
+        fetchStats();
+    }, [fetchRows, fetchStats]);
 
     const runPending = async (reason: string) => {
         if (!pending) return;
@@ -270,17 +295,13 @@ export function PlatformOrganizationsPage() {
                 toast.success(`Deleted ${org.name}. Owners notified.`);
             }
             setPending(null);
-            fetchRows();
+            refreshAll();
         } catch (error) {
             const message = friendlyErrorMessage((error as Error).message);
             if (message) toast.error(message);
         } finally {
             setPendingBusy(false);
         }
-    };
-
-    const handleSupport = (org: PlatformOrganizationSummary) => {
-        setSupportTarget({ id: org.id, name: org.name });
     };
 
     const pageInfo = useMemo(() => {
@@ -291,26 +312,35 @@ export function PlatformOrganizationsPage() {
 
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-    const showInlinePanel = !!selectedId && !isMobileOrTablet;
-    const showDrawerPanel = !!selectedId && isMobileOrTablet;
-
     return (
-        <div className="flex gap-4 lg:gap-6 min-w-0">
-            <div className="flex-1 min-w-0 flex flex-col gap-6">
-            <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                    <Buildings size={22} weight="duotone" className="text-primary" />
+        <div className="space-y-6">
+            <div>
+                <div className="flex items-center gap-3 mb-2">
+                    <Buildings size={24} weight="duotone" className="text-primary shrink-0" />
+                    <h1 className="text-xl md:text-2xl font-bold">Organizations</h1>
                 </div>
-                <div className="flex-1">
-                    <h1 className="text-xl font-semibold text-foreground">Organizations</h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Cross-tenant directory. Metadata only - tenant content is unreachable from here.
-                    </p>
+                <p className="text-muted-foreground text-sm">
+                    Cross-tenant directory. Metadata only - tenant content is unreachable from here.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{stats?.active ?? '-'}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Organizations</p>
+                </div>
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{stats?.suspended ?? '-'}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Suspended</p>
+                </div>
+                <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+                    <p className="text-xl md:text-2xl font-bold">{stats?.deleted ?? '-'}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Pending purge</p>
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex-1 relative">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-4">
+                <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                         type="text"
@@ -319,8 +349,9 @@ export function PlatformOrganizationsPage() {
                             setSearch(e.target.value);
                             setPage(0);
                         }}
-                        placeholder="Search by name or slug"
-                        className="w-full bg-input border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="Search by name or slug..."
+                        className="w-full pl-9 pr-4 py-2 rounded-md border border-border bg-background
+                            text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                 </div>
                 <Checkbox
@@ -339,12 +370,16 @@ export function PlatformOrganizationsPage() {
                         setPage(0);
                     }}
                 />
+                <Button variant="default" onClick={() => setCreateOpen(true)} className="sm:ml-auto">
+                    <Plus size={16} weight="bold" />
+                    New organization
+                </Button>
             </div>
 
             <Table>
                 <TableHeader>
                     <TableRow hoverable={false}>
-                        <TableHead>Name</TableHead>
+                        <TableHead>Organization</TableHead>
                         <TableHead className="hidden lg:table-cell">Slug</TableHead>
                         <TableHead align="center">Members</TableHead>
                         <TableHead className="hidden md:table-cell">Mail</TableHead>
@@ -377,16 +412,15 @@ export function PlatformOrganizationsPage() {
                             >
                                 <TableCell>
                                     <div className="flex items-center gap-3">
-                                        <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center border border-blue-500/30 shrink-0">
-                                            <Buildings
-                                                size={18}
-                                                weight="duotone"
-                                                className="text-blue-600 dark:text-blue-400"
-                                            />
+                                        <div
+                                            className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold text-white shrink-0"
+                                            style={getAvatarGradientStyle(org.name)}
+                                        >
+                                            {getInitials(org.name)}
                                         </div>
                                         <div className="min-w-0">
-                                            <div className="font-semibold text-foreground truncate">{org.name}</div>
-                                            <div className="text-xs text-muted-foreground capitalize">{org.plan}</div>
+                                            <p className="font-semibold text-foreground truncate">{org.name}</p>
+                                            <p className="text-xs text-muted-foreground capitalize">{org.plan}</p>
                                         </div>
                                     </div>
                                 </TableCell>
@@ -426,11 +460,11 @@ export function PlatformOrganizationsPage() {
                                 <TableCell align="right">
                                     <RowActions
                                         org={org}
-                                        onSuspend={() => handleSuspend(org)}
-                                        onUnsuspend={() => handleUnsuspend(org)}
-                                        onRestore={() => handleRestore(org)}
-                                        onDelete={() => handleDelete(org)}
-                                        onSupport={() => handleSupport(org)}
+                                        onSuspend={() => setPending({ kind: 'suspend', org })}
+                                        onUnsuspend={() => setPending({ kind: 'unsuspend', org })}
+                                        onRestore={() => setPending({ kind: 'restore', org })}
+                                        onDelete={() => setPending({ kind: 'delete', org })}
+                                        onSupport={() => setSupportTarget({ id: org.id, name: org.name })}
                                     />
                                 </TableCell>
                             </TableRow>
@@ -464,35 +498,19 @@ export function PlatformOrganizationsPage() {
                 </div>
             </div>
 
-            </div>
-
-            {showInlinePanel && (
-                <aside className="w-[400px] xl:w-[440px] shrink-0">
-                    <div className="sticky top-0 h-[calc(100dvh-12rem)] rounded-lg border border-border overflow-hidden">
-                        <PlatformOrgDetailPanel
-                            organizationId={selectedId}
-                            onClose={() => setSelectedId(null)}
-                            onChanged={fetchRows}
-                        />
-                    </div>
-                </aside>
+            {selectedId && (
+                <PlatformOrgDetailDialog
+                    organizationId={selectedId}
+                    onClose={() => setSelectedId(null)}
+                    onChanged={refreshAll}
+                />
             )}
 
-            {showDrawerPanel && (
-                <Drawer
-                    open
-                    onClose={() => setSelectedId(null)}
-                    side="right"
-                    className="w-full sm:w-[400px]"
-                    showClose={false}
-                    ariaLabel="Organization details"
-                >
-                    <PlatformOrgDetailPanel
-                        organizationId={selectedId}
-                        onClose={() => setSelectedId(null)}
-                        onChanged={fetchRows}
-                    />
-                </Drawer>
+            {createOpen && (
+                <CreateOrganizationDialog
+                    onClose={() => setCreateOpen(false)}
+                    onCreated={refreshAll}
+                />
             )}
 
             {supportTarget && (
@@ -500,7 +518,7 @@ export function PlatformOrganizationsPage() {
                     organizationId={supportTarget.id}
                     organizationName={supportTarget.name}
                     onClose={() => setSupportTarget(null)}
-                    onCreated={fetchRows}
+                    onCreated={refreshAll}
                 />
             )}
 

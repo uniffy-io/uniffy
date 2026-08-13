@@ -40,20 +40,22 @@ class PlatformOrganizationSummary(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., plan: _Optional[str] = ..., member_count: _Optional[int] = ..., mail_config_source: _Optional[str] = ..., encryption_version: _Optional[int] = ..., last_activity_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_login_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_suspended: _Optional[bool] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., purge_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class PlatformOrganizationDetail(_message.Message):
-    __slots__ = ("summary", "domain", "logo_url", "owners", "suspension_reason", "deletion_reason")
+    __slots__ = ("summary", "domain", "logo_url", "owners", "suspension_reason", "deletion_reason", "max_members")
     SUMMARY_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_FIELD_NUMBER: _ClassVar[int]
     LOGO_URL_FIELD_NUMBER: _ClassVar[int]
     OWNERS_FIELD_NUMBER: _ClassVar[int]
     SUSPENSION_REASON_FIELD_NUMBER: _ClassVar[int]
     DELETION_REASON_FIELD_NUMBER: _ClassVar[int]
+    MAX_MEMBERS_FIELD_NUMBER: _ClassVar[int]
     summary: PlatformOrganizationSummary
     domain: str
     logo_url: str
     owners: _containers.RepeatedCompositeFieldContainer[PlatformOrgOwner]
     suspension_reason: str
     deletion_reason: str
-    def __init__(self, summary: _Optional[_Union[PlatformOrganizationSummary, _Mapping]] = ..., domain: _Optional[str] = ..., logo_url: _Optional[str] = ..., owners: _Optional[_Iterable[_Union[PlatformOrgOwner, _Mapping]]] = ..., suspension_reason: _Optional[str] = ..., deletion_reason: _Optional[str] = ...) -> None: ...
+    max_members: int
+    def __init__(self, summary: _Optional[_Union[PlatformOrganizationSummary, _Mapping]] = ..., domain: _Optional[str] = ..., logo_url: _Optional[str] = ..., owners: _Optional[_Iterable[_Union[PlatformOrgOwner, _Mapping]]] = ..., suspension_reason: _Optional[str] = ..., deletion_reason: _Optional[str] = ..., max_members: _Optional[int] = ...) -> None: ...
 
 class PlatformOrgOwner(_message.Message):
     __slots__ = ("user_id", "email", "full_name", "joined_at")
@@ -159,6 +161,50 @@ class GetOrganizationResponse(_message.Message):
     organization: PlatformOrganizationDetail
     def __init__(self, organization: _Optional[_Union[PlatformOrganizationDetail, _Mapping]] = ...) -> None: ...
 
+class CreateOrganizationRequest(_message.Message):
+    __slots__ = ("name", "slug", "owner_email", "domain", "plan")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SLUG_FIELD_NUMBER: _ClassVar[int]
+    OWNER_EMAIL_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_FIELD_NUMBER: _ClassVar[int]
+    PLAN_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    slug: str
+    owner_email: str
+    domain: str
+    plan: str
+    def __init__(self, name: _Optional[str] = ..., slug: _Optional[str] = ..., owner_email: _Optional[str] = ..., domain: _Optional[str] = ..., plan: _Optional[str] = ...) -> None: ...
+
+class CreateOrganizationResponse(_message.Message):
+    __slots__ = ("organization",)
+    ORGANIZATION_FIELD_NUMBER: _ClassVar[int]
+    organization: PlatformOrganizationDetail
+    def __init__(self, organization: _Optional[_Union[PlatformOrganizationDetail, _Mapping]] = ...) -> None: ...
+
+class UpdateOrganizationRequest(_message.Message):
+    __slots__ = ("organization_id", "name", "slug", "domain", "plan", "max_members", "reason")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SLUG_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_FIELD_NUMBER: _ClassVar[int]
+    PLAN_FIELD_NUMBER: _ClassVar[int]
+    MAX_MEMBERS_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    name: str
+    slug: str
+    domain: str
+    plan: str
+    max_members: int
+    reason: str
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., domain: _Optional[str] = ..., plan: _Optional[str] = ..., max_members: _Optional[int] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class UpdateOrganizationResponse(_message.Message):
+    __slots__ = ("organization",)
+    ORGANIZATION_FIELD_NUMBER: _ClassVar[int]
+    organization: PlatformOrganizationDetail
+    def __init__(self, organization: _Optional[_Union[PlatformOrganizationDetail, _Mapping]] = ...) -> None: ...
+
 class SuspendOrganizationRequest(_message.Message):
     __slots__ = ("organization_id", "reason")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -242,6 +288,60 @@ class ListUsersResponse(_message.Message):
     page: int
     page_size: int
     def __init__(self, users: _Optional[_Iterable[_Union[PlatformUserSummary, _Mapping]]] = ..., total_count: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
+
+class CreateUserRequest(_message.Message):
+    __slots__ = ("email", "username", "full_name", "password", "email_verified", "is_system_admin", "organization_id", "organization_role", "reason")
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    FULL_NAME_FIELD_NUMBER: _ClassVar[int]
+    PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_VERIFIED_FIELD_NUMBER: _ClassVar[int]
+    IS_SYSTEM_ADMIN_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ROLE_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    email: str
+    username: str
+    full_name: str
+    password: str
+    email_verified: bool
+    is_system_admin: bool
+    organization_id: str
+    organization_role: str
+    reason: str
+    def __init__(self, email: _Optional[str] = ..., username: _Optional[str] = ..., full_name: _Optional[str] = ..., password: _Optional[str] = ..., email_verified: _Optional[bool] = ..., is_system_admin: _Optional[bool] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class CreateUserResponse(_message.Message):
+    __slots__ = ("user",)
+    USER_FIELD_NUMBER: _ClassVar[int]
+    user: PlatformUserDetail
+    def __init__(self, user: _Optional[_Union[PlatformUserDetail, _Mapping]] = ...) -> None: ...
+
+class UpdateUserRequest(_message.Message):
+    __slots__ = ("user_id", "email", "username", "full_name", "is_active", "email_verified", "password", "reason")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    FULL_NAME_FIELD_NUMBER: _ClassVar[int]
+    IS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_VERIFIED_FIELD_NUMBER: _ClassVar[int]
+    PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    email: str
+    username: str
+    full_name: str
+    is_active: bool
+    email_verified: bool
+    password: str
+    reason: str
+    def __init__(self, user_id: _Optional[str] = ..., email: _Optional[str] = ..., username: _Optional[str] = ..., full_name: _Optional[str] = ..., is_active: _Optional[bool] = ..., email_verified: _Optional[bool] = ..., password: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class UpdateUserResponse(_message.Message):
+    __slots__ = ("user",)
+    USER_FIELD_NUMBER: _ClassVar[int]
+    user: PlatformUserDetail
+    def __init__(self, user: _Optional[_Union[PlatformUserDetail, _Mapping]] = ...) -> None: ...
 
 class GetUserRequest(_message.Message):
     __slots__ = ("user_id",)

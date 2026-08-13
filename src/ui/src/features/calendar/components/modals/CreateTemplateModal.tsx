@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/number-input';
 import { createEventTemplate, updateEventTemplate } from '@/features/calendar/store/calendarThunks';
 import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
@@ -191,13 +192,12 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
             <label className="block text-sm font-medium text-foreground mb-1">
               Default Duration (minutes)
             </label>
-            <input
-              type="number"
+            <NumberInput
               value={duration}
               onChange={(e) => setDuration(parseInt(e.target.value))}
               min="15"
               step="15"
-              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="text-foreground"
             />
           </div>
 

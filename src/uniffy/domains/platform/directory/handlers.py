@@ -11,6 +11,10 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+    CreateOrganizationRequest,
+    CreateOrganizationResponse,
+    CreateUserRequest,
+    CreateUserResponse,
     DeleteOrganizationRequest,
     DeleteOrganizationResponse,
     ForceLogoutUserRequest,
@@ -31,6 +35,10 @@ from uniffy_proto.superadmin.v1.system_directory_pb2 import (
     SuspendOrganizationResponse,
     UnsuspendOrganizationRequest,
     UnsuspendOrganizationResponse,
+    UpdateOrganizationRequest,
+    UpdateOrganizationResponse,
+    UpdateUserRequest,
+    UpdateUserResponse,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -112,6 +120,51 @@ class SystemOrganizationsHandlers:
         except Exception as exc:
             raise _map_domain_error(exc) from exc
         return GetOrganizationResponse(organization=org_detail_to_proto(detail))
+
+    async def create_organization(
+        self, request: CreateOrganizationRequest, ctx: RequestContext
+    ) -> CreateOrganizationResponse:
+        user_id = get_user_id_from_context(ctx)
+        try:
+            async with open_session() as session:
+                detail = await PlatformDirectoryOperations(session).create_organization(
+                    user_id=user_id,
+                    name=request.name,
+                    slug=request.slug,
+                    owner_email=request.owner_email,
+                    domain=request.domain,
+                    plan=request.plan,
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+        return CreateOrganizationResponse(organization=org_detail_to_proto(detail))
+
+    async def update_organization(
+        self, request: UpdateOrganizationRequest, ctx: RequestContext
+    ) -> UpdateOrganizationResponse:
+        user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        try:
+            async with open_session() as session:
+                detail = await PlatformDirectoryOperations(session).update_organization(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    reason=request.reason,
+                    name=request.name if request.HasField("name") else None,
+                    slug=request.slug if request.HasField("slug") else None,
+                    domain=request.domain if request.HasField("domain") else None,
+                    plan=request.plan if request.HasField("plan") else None,
+                    max_members=request.max_members
+                    if request.HasField("max_members")
+                    else None,
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+        return UpdateOrganizationResponse(organization=org_detail_to_proto(detail))
 
     async def suspend_organization(
         self, request: SuspendOrganizationRequest, ctx: RequestContext
@@ -232,6 +285,69 @@ class SystemUsersHandlers:
         except Exception as exc:
             raise _map_domain_error(exc) from exc
         return GetUserResponse(user=user_detail_to_proto(detail))
+
+    async def create_user(
+        self, request: CreateUserRequest, ctx: RequestContext
+    ) -> CreateUserResponse:
+        user_id = get_user_id_from_context(ctx)
+        org_id = (
+            _parse_uuid(request.organization_id, "organization_id")
+            if request.organization_id
+            else None
+        )
+        try:
+            async with open_session() as session:
+                detail = await PlatformDirectoryOperations(session).create_user(
+                    user_id=user_id,
+                    email=request.email,
+                    username=request.username,
+                    full_name=request.full_name,
+                    password=request.password,
+                    email_verified=request.email_verified,
+                    is_system_admin=request.is_system_admin,
+                    organization_id=org_id,
+                    organization_role=request.organization_role,
+                    reason=request.reason,
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+        return CreateUserResponse(user=user_detail_to_proto(detail))
+
+    async def update_user(
+        self, request: UpdateUserRequest, ctx: RequestContext
+    ) -> UpdateUserResponse:
+        user_id = get_user_id_from_context(ctx)
+        target_id = _parse_uuid(request.user_id, "user_id")
+        try:
+            async with open_session() as session:
+                detail = await PlatformDirectoryOperations(session).update_user(
+                    user_id=user_id,
+                    target_user_id=target_id,
+                    reason=request.reason,
+                    email=request.email if request.HasField("email") else None,
+                    username=request.username
+                    if request.HasField("username")
+                    else None,
+                    full_name=request.full_name
+                    if request.HasField("full_name")
+                    else None,
+                    is_active=request.is_active
+                    if request.HasField("is_active")
+                    else None,
+                    email_verified=request.email_verified
+                    if request.HasField("email_verified")
+                    else None,
+                    password=request.password
+                    if request.HasField("password")
+                    else None,
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+        return UpdateUserResponse(user=user_detail_to_proto(detail))
 
     async def force_logout_user(
         self, request: ForceLogoutUserRequest, ctx: RequestContext

@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file superadmin/v1/system_directory.proto.
  */
 export const file_superadmin_v1_system_directory: GenFile = /*@__PURE__*/
-  fileDesc("CiRzdXBlcmFkbWluL3YxL3N5c3RlbV9kaXJlY3RvcnkucHJvdG8SDXN1cGVyYWRtaW4udjEihQQKG1BsYXRmb3JtT3JnYW5pemF0aW9uU3VtbWFyeRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEgwKBHNsdWcYAyABKAkSDAoEcGxhbhgEIAEoCRIUCgxtZW1iZXJfY291bnQYBSABKAUSGgoSbWFpbF9jb25maWdfc291cmNlGAYgASgJEhoKEmVuY3J5cHRpb25fdmVyc2lvbhgHIAEoBRI5ChBsYXN0X2FjdGl2aXR5X2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBEjYKDWxhc3RfbG9naW5fYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESFAoMaXNfc3VzcGVuZGVkGAogASgIEjMKCmRlbGV0ZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAKIAQESMQoIcHVyZ2VfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAOIAQESLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCEwoRX2xhc3RfYWN0aXZpdHlfYXRCEAoOX2xhc3RfbG9naW5fYXRCDQoLX2RlbGV0ZWRfYXRCCwoJX3B1cmdlX2F0IpQCChpQbGF0Zm9ybU9yZ2FuaXphdGlvbkRldGFpbBI7CgdzdW1tYXJ5GAEgASgLMiouc3VwZXJhZG1pbi52MS5QbGF0Zm9ybU9yZ2FuaXphdGlvblN1bW1hcnkSDgoGZG9tYWluGAIgASgJEhAKCGxvZ29fdXJsGAMgASgJEi8KBm93bmVycxgEIAMoCzIfLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1PcmdPd25lchIeChFzdXNwZW5zaW9uX3JlYXNvbhgFIAEoCUgAiAEBEhwKD2RlbGV0aW9uX3JlYXNvbhgGIAEoCUgBiAEBQhQKEl9zdXNwZW5zaW9uX3JlYXNvbkISChBfZGVsZXRpb25fcmVhc29uIocBChBQbGF0Zm9ybU9yZ093bmVyEg8KB3VzZXJfaWQYASABKAkSDQoFZW1haWwYAiABKAkSFgoJZnVsbF9uYW1lGAMgASgJSACIAQESLQoJam9pbmVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIMCgpfZnVsbF9uYW1lItoCChNQbGF0Zm9ybVVzZXJTdW1tYXJ5EgoKAmlkGAEgASgJEg0KBWVtYWlsGAIgASgJEhAKCHVzZXJuYW1lGAMgASgJEhYKCWZ1bGxfbmFtZRgEIAEoCUgAiAEBEhEKCWlzX2FjdGl2ZRgFIAEoCBIXCg9pc19zeXN0ZW1fYWRtaW4YBiABKAgSFgoOZW1haWxfdmVyaWZpZWQYByABKAgSEwoLbWZhX2VuYWJsZWQYCCABKAgSHQoVb3JnX21lbWJlcnNoaXBzX2NvdW50GAkgASgFEjYKDWxhc3RfbG9naW5fYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESLgoKY3JlYXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDAoKX2Z1bGxfbmFtZUIQCg5fbGFzdF9sb2dpbl9hdCKFAQoSUGxhdGZvcm1Vc2VyRGV0YWlsEjMKB3N1bW1hcnkYASABKAsyIi5zdXBlcmFkbWluLnYxLlBsYXRmb3JtVXNlclN1bW1hcnkSOgoLbWVtYmVyc2hpcHMYAiADKAsyJS5zdXBlcmFkbWluLnYxLlBsYXRmb3JtVXNlck1lbWJlcnNoaXAikQIKFlBsYXRmb3JtVXNlck1lbWJlcnNoaXASFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhkKEW9yZ2FuaXphdGlvbl9uYW1lGAIgASgJEhkKEW9yZ2FuaXphdGlvbl9zbHVnGAMgASgJEgwKBHJvbGUYBCABKAkSLQoJam9pbmVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCglpc19hY3RpdmUYBiABKAgSFAoMaXNfc3VzcGVuZGVkGAcgASgIEjMKCmRlbGV0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQFCDQoLX2RlbGV0ZWRfYXQifAoYTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0EgwKBHBhZ2UYASABKAUSEQoJcGFnZV9zaXplGAIgASgFEg4KBnNlYXJjaBgDIAEoCRIXCg9pbmNsdWRlX2RlbGV0ZWQYBCABKAgSFgoOb25seV9zdXNwZW5kZWQYBSABKAgilAEKGUxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USQQoNb3JnYW5pemF0aW9ucxgBIAMoCzIqLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1Pcmdhbml6YXRpb25TdW1tYXJ5EhMKC3RvdGFsX2NvdW50GAIgASgFEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFIjEKFkdldE9yZ2FuaXphdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIloKF0dldE9yZ2FuaXphdGlvblJlc3BvbnNlEj8KDG9yZ2FuaXphdGlvbhgBIAEoCzIpLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1Pcmdhbml6YXRpb25EZXRhaWwiRQoaU3VzcGVuZE9yZ2FuaXphdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSJeChtTdXNwZW5kT3JnYW5pemF0aW9uUmVzcG9uc2USPwoMb3JnYW5pemF0aW9uGAEgASgLMikuc3VwZXJhZG1pbi52MS5QbGF0Zm9ybU9yZ2FuaXphdGlvbkRldGFpbCJHChxVbnN1c3BlbmRPcmdhbml6YXRpb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIOCgZyZWFzb24YAiABKAkiYAodVW5zdXNwZW5kT3JnYW5pemF0aW9uUmVzcG9uc2USPwoMb3JnYW5pemF0aW9uGAEgASgLMikuc3VwZXJhZG1pbi52MS5QbGF0Zm9ybU9yZ2FuaXphdGlvbkRldGFpbCJaChlEZWxldGVPcmdhbml6YXRpb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIUCgxjb25maXJtX3NsdWcYAiABKAkSDgoGcmVhc29uGAMgASgJIl0KGkRlbGV0ZU9yZ2FuaXphdGlvblJlc3BvbnNlEj8KDG9yZ2FuaXphdGlvbhgBIAEoCzIpLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1Pcmdhbml6YXRpb25EZXRhaWwiRQoaUmVzdG9yZU9yZ2FuaXphdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSJeChtSZXN0b3JlT3JnYW5pemF0aW9uUmVzcG9uc2USPwoMb3JnYW5pemF0aW9uGAEgASgLMikuc3VwZXJhZG1pbi52MS5QbGF0Zm9ybU9yZ2FuaXphdGlvbkRldGFpbCJ5ChBMaXN0VXNlcnNSZXF1ZXN0EgwKBHBhZ2UYASABKAUSEQoJcGFnZV9zaXplGAIgASgFEg4KBnNlYXJjaBgDIAEoCRIYChBpbmNsdWRlX2luYWN0aXZlGAQgASgIEhoKEm9ubHlfc3lzdGVtX2FkbWlucxgFIAEoCCJ8ChFMaXN0VXNlcnNSZXNwb25zZRIxCgV1c2VycxgBIAMoCzIiLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1Vc2VyU3VtbWFyeRITCgt0b3RhbF9jb3VudBgCIAEoBRIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBSIhCg5HZXRVc2VyUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJIkIKD0dldFVzZXJSZXNwb25zZRIvCgR1c2VyGAEgASgLMiEuc3VwZXJhZG1pbi52MS5QbGF0Zm9ybVVzZXJEZXRhaWwiOQoWRm9yY2VMb2dvdXRVc2VyUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSIZChdGb3JjZUxvZ291dFVzZXJSZXNwb25zZSJRChVTZXRTeXN0ZW1BZG1pblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIXCg9pc19zeXN0ZW1fYWRtaW4YAiABKAgSDgoGcmVhc29uGAMgASgJIkkKFlNldFN5c3RlbUFkbWluUmVzcG9uc2USLwoEdXNlchgBIAEoCzIhLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1Vc2VyRGV0YWlsMq0FChpTeXN0ZW1Pcmdhbml6YXRpb25zU2VydmljZRJoChFMaXN0T3JnYW5pemF0aW9ucxInLnN1cGVyYWRtaW4udjEuTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0Giguc3VwZXJhZG1pbi52MS5MaXN0T3JnYW5pemF0aW9uc1Jlc3BvbnNlIgASYgoPR2V0T3JnYW5pemF0aW9uEiUuc3VwZXJhZG1pbi52MS5HZXRPcmdhbml6YXRpb25SZXF1ZXN0GiYuc3VwZXJhZG1pbi52MS5HZXRPcmdhbml6YXRpb25SZXNwb25zZSIAEm4KE1N1c3BlbmRPcmdhbml6YXRpb24SKS5zdXBlcmFkbWluLnYxLlN1c3BlbmRPcmdhbml6YXRpb25SZXF1ZXN0Giouc3VwZXJhZG1pbi52MS5TdXNwZW5kT3JnYW5pemF0aW9uUmVzcG9uc2UiABJ0ChVVbnN1c3BlbmRPcmdhbml6YXRpb24SKy5zdXBlcmFkbWluLnYxLlVuc3VzcGVuZE9yZ2FuaXphdGlvblJlcXVlc3QaLC5zdXBlcmFkbWluLnYxLlVuc3VzcGVuZE9yZ2FuaXphdGlvblJlc3BvbnNlIgASawoSRGVsZXRlT3JnYW5pemF0aW9uEiguc3VwZXJhZG1pbi52MS5EZWxldGVPcmdhbml6YXRpb25SZXF1ZXN0Gikuc3VwZXJhZG1pbi52MS5EZWxldGVPcmdhbml6YXRpb25SZXNwb25zZSIAEm4KE1Jlc3RvcmVPcmdhbml6YXRpb24SKS5zdXBlcmFkbWluLnYxLlJlc3RvcmVPcmdhbml6YXRpb25SZXF1ZXN0Giouc3VwZXJhZG1pbi52MS5SZXN0b3JlT3JnYW5pemF0aW9uUmVzcG9uc2UiADL3AgoSU3lzdGVtVXNlcnNTZXJ2aWNlElAKCUxpc3RVc2VycxIfLnN1cGVyYWRtaW4udjEuTGlzdFVzZXJzUmVxdWVzdBogLnN1cGVyYWRtaW4udjEuTGlzdFVzZXJzUmVzcG9uc2UiABJKCgdHZXRVc2VyEh0uc3VwZXJhZG1pbi52MS5HZXRVc2VyUmVxdWVzdBoeLnN1cGVyYWRtaW4udjEuR2V0VXNlclJlc3BvbnNlIgASYgoPRm9yY2VMb2dvdXRVc2VyEiUuc3VwZXJhZG1pbi52MS5Gb3JjZUxvZ291dFVzZXJSZXF1ZXN0GiYuc3VwZXJhZG1pbi52MS5Gb3JjZUxvZ291dFVzZXJSZXNwb25zZSIAEl8KDlNldFN5c3RlbUFkbWluEiQuc3VwZXJhZG1pbi52MS5TZXRTeXN0ZW1BZG1pblJlcXVlc3QaJS5zdXBlcmFkbWluLnYxLlNldFN5c3RlbUFkbWluUmVzcG9uc2UiAEJBWj9naXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vc3VwZXJhZG1pbi92MTtzdXBlcmFkbWludjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("CiRzdXBlcmFkbWluL3YxL3N5c3RlbV9kaXJlY3RvcnkucHJvdG8SDXN1cGVyYWRtaW4udjEihQQKG1BsYXRmb3JtT3JnYW5pemF0aW9uU3VtbWFyeRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEgwKBHNsdWcYAyABKAkSDAoEcGxhbhgEIAEoCRIUCgxtZW1iZXJfY291bnQYBSABKAUSGgoSbWFpbF9jb25maWdfc291cmNlGAYgASgJEhoKEmVuY3J5cHRpb25fdmVyc2lvbhgHIAEoBRI5ChBsYXN0X2FjdGl2aXR5X2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBEjYKDWxhc3RfbG9naW5fYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESFAoMaXNfc3VzcGVuZGVkGAogASgIEjMKCmRlbGV0ZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAKIAQESMQoIcHVyZ2VfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAOIAQESLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCEwoRX2xhc3RfYWN0aXZpdHlfYXRCEAoOX2xhc3RfbG9naW5fYXRCDQoLX2RlbGV0ZWRfYXRCCwoJX3B1cmdlX2F0Ir4CChpQbGF0Zm9ybU9yZ2FuaXphdGlvbkRldGFpbBI7CgdzdW1tYXJ5GAEgASgLMiouc3VwZXJhZG1pbi52MS5QbGF0Zm9ybU9yZ2FuaXphdGlvblN1bW1hcnkSDgoGZG9tYWluGAIgASgJEhAKCGxvZ29fdXJsGAMgASgJEi8KBm93bmVycxgEIAMoCzIfLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1PcmdPd25lchIeChFzdXNwZW5zaW9uX3JlYXNvbhgFIAEoCUgAiAEBEhwKD2RlbGV0aW9uX3JlYXNvbhgGIAEoCUgBiAEBEhgKC21heF9tZW1iZXJzGAcgASgFSAKIAQFCFAoSX3N1c3BlbnNpb25fcmVhc29uQhIKEF9kZWxldGlvbl9yZWFzb25CDgoMX21heF9tZW1iZXJzIocBChBQbGF0Zm9ybU9yZ093bmVyEg8KB3VzZXJfaWQYASABKAkSDQoFZW1haWwYAiABKAkSFgoJZnVsbF9uYW1lGAMgASgJSACIAQESLQoJam9pbmVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIMCgpfZnVsbF9uYW1lItoCChNQbGF0Zm9ybVVzZXJTdW1tYXJ5EgoKAmlkGAEgASgJEg0KBWVtYWlsGAIgASgJEhAKCHVzZXJuYW1lGAMgASgJEhYKCWZ1bGxfbmFtZRgEIAEoCUgAiAEBEhEKCWlzX2FjdGl2ZRgFIAEoCBIXCg9pc19zeXN0ZW1fYWRtaW4YBiABKAgSFgoOZW1haWxfdmVyaWZpZWQYByABKAgSEwoLbWZhX2VuYWJsZWQYCCABKAgSHQoVb3JnX21lbWJlcnNoaXBzX2NvdW50GAkgASgFEjYKDWxhc3RfbG9naW5fYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESLgoKY3JlYXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDAoKX2Z1bGxfbmFtZUIQCg5fbGFzdF9sb2dpbl9hdCKFAQoSUGxhdGZvcm1Vc2VyRGV0YWlsEjMKB3N1bW1hcnkYASABKAsyIi5zdXBlcmFkbWluLnYxLlBsYXRmb3JtVXNlclN1bW1hcnkSOgoLbWVtYmVyc2hpcHMYAiADKAsyJS5zdXBlcmFkbWluLnYxLlBsYXRmb3JtVXNlck1lbWJlcnNoaXAikQIKFlBsYXRmb3JtVXNlck1lbWJlcnNoaXASFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhkKEW9yZ2FuaXphdGlvbl9uYW1lGAIgASgJEhkKEW9yZ2FuaXphdGlvbl9zbHVnGAMgASgJEgwKBHJvbGUYBCABKAkSLQoJam9pbmVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCglpc19hY3RpdmUYBiABKAgSFAoMaXNfc3VzcGVuZGVkGAcgASgIEjMKCmRlbGV0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQFCDQoLX2RlbGV0ZWRfYXQifAoYTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0EgwKBHBhZ2UYASABKAUSEQoJcGFnZV9zaXplGAIgASgFEg4KBnNlYXJjaBgDIAEoCRIXCg9pbmNsdWRlX2RlbGV0ZWQYBCABKAgSFgoOb25seV9zdXNwZW5kZWQYBSABKAgilAEKGUxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USQQoNb3JnYW5pemF0aW9ucxgBIAMoCzIqLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1Pcmdhbml6YXRpb25TdW1tYXJ5EhMKC3RvdGFsX2NvdW50GAIgASgFEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFIjEKFkdldE9yZ2FuaXphdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIloKF0dldE9yZ2FuaXphdGlvblJlc3BvbnNlEj8KDG9yZ2FuaXphdGlvbhgBIAEoCzIpLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1Pcmdhbml6YXRpb25EZXRhaWwiagoZQ3JlYXRlT3JnYW5pemF0aW9uUmVxdWVzdBIMCgRuYW1lGAEgASgJEgwKBHNsdWcYAiABKAkSEwoLb3duZXJfZW1haWwYAyABKAkSDgoGZG9tYWluGAQgASgJEgwKBHBsYW4YBSABKAkiXQoaQ3JlYXRlT3JnYW5pemF0aW9uUmVzcG9uc2USPwoMb3JnYW5pemF0aW9uGAEgASgLMikuc3VwZXJhZG1pbi52MS5QbGF0Zm9ybU9yZ2FuaXphdGlvbkRldGFpbCLiAQoZVXBkYXRlT3JnYW5pemF0aW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEQoEbmFtZRgCIAEoCUgAiAEBEhEKBHNsdWcYAyABKAlIAYgBARITCgZkb21haW4YBCABKAlIAogBARIRCgRwbGFuGAUgASgJSAOIAQESGAoLbWF4X21lbWJlcnMYBiABKAVIBIgBARIOCgZyZWFzb24YByABKAlCBwoFX25hbWVCBwoFX3NsdWdCCQoHX2RvbWFpbkIHCgVfcGxhbkIOCgxfbWF4X21lbWJlcnMiXQoaVXBkYXRlT3JnYW5pemF0aW9uUmVzcG9uc2USPwoMb3JnYW5pemF0aW9uGAEgASgLMikuc3VwZXJhZG1pbi52MS5QbGF0Zm9ybU9yZ2FuaXphdGlvbkRldGFpbCJFChpTdXNwZW5kT3JnYW5pemF0aW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDgoGcmVhc29uGAIgASgJIl4KG1N1c3BlbmRPcmdhbml6YXRpb25SZXNwb25zZRI/Cgxvcmdhbml6YXRpb24YASABKAsyKS5zdXBlcmFkbWluLnYxLlBsYXRmb3JtT3JnYW5pemF0aW9uRGV0YWlsIkcKHFVuc3VzcGVuZE9yZ2FuaXphdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSJgCh1VbnN1c3BlbmRPcmdhbml6YXRpb25SZXNwb25zZRI/Cgxvcmdhbml6YXRpb24YASABKAsyKS5zdXBlcmFkbWluLnYxLlBsYXRmb3JtT3JnYW5pemF0aW9uRGV0YWlsIloKGURlbGV0ZU9yZ2FuaXphdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhQKDGNvbmZpcm1fc2x1ZxgCIAEoCRIOCgZyZWFzb24YAyABKAkiXQoaRGVsZXRlT3JnYW5pemF0aW9uUmVzcG9uc2USPwoMb3JnYW5pemF0aW9uGAEgASgLMikuc3VwZXJhZG1pbi52MS5QbGF0Zm9ybU9yZ2FuaXphdGlvbkRldGFpbCJFChpSZXN0b3JlT3JnYW5pemF0aW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDgoGcmVhc29uGAIgASgJIl4KG1Jlc3RvcmVPcmdhbml6YXRpb25SZXNwb25zZRI/Cgxvcmdhbml6YXRpb24YASABKAsyKS5zdXBlcmFkbWluLnYxLlBsYXRmb3JtT3JnYW5pemF0aW9uRGV0YWlsInkKEExpc3RVc2Vyc1JlcXVlc3QSDAoEcGFnZRgBIAEoBRIRCglwYWdlX3NpemUYAiABKAUSDgoGc2VhcmNoGAMgASgJEhgKEGluY2x1ZGVfaW5hY3RpdmUYBCABKAgSGgoSb25seV9zeXN0ZW1fYWRtaW5zGAUgASgIInwKEUxpc3RVc2Vyc1Jlc3BvbnNlEjEKBXVzZXJzGAEgAygLMiIuc3VwZXJhZG1pbi52MS5QbGF0Zm9ybVVzZXJTdW1tYXJ5EhMKC3RvdGFsX2NvdW50GAIgASgFEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFIs4BChFDcmVhdGVVc2VyUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIRCglmdWxsX25hbWUYAyABKAkSEAoIcGFzc3dvcmQYBCABKAkSFgoOZW1haWxfdmVyaWZpZWQYBSABKAgSFwoPaXNfc3lzdGVtX2FkbWluGAYgASgIEhcKD29yZ2FuaXphdGlvbl9pZBgHIAEoCRIZChFvcmdhbml6YXRpb25fcm9sZRgIIAEoCRIOCgZyZWFzb24YCSABKAkiRQoSQ3JlYXRlVXNlclJlc3BvbnNlEi8KBHVzZXIYASABKAsyIS5zdXBlcmFkbWluLnYxLlBsYXRmb3JtVXNlckRldGFpbCKWAgoRVXBkYXRlVXNlclJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRISCgVlbWFpbBgCIAEoCUgAiAEBEhUKCHVzZXJuYW1lGAMgASgJSAGIAQESFgoJZnVsbF9uYW1lGAQgASgJSAKIAQESFgoJaXNfYWN0aXZlGAUgASgISAOIAQESGwoOZW1haWxfdmVyaWZpZWQYBiABKAhIBIgBARIVCghwYXNzd29yZBgHIAEoCUgFiAEBEg4KBnJlYXNvbhgIIAEoCUIICgZfZW1haWxCCwoJX3VzZXJuYW1lQgwKCl9mdWxsX25hbWVCDAoKX2lzX2FjdGl2ZUIRCg9fZW1haWxfdmVyaWZpZWRCCwoJX3Bhc3N3b3JkIkUKElVwZGF0ZVVzZXJSZXNwb25zZRIvCgR1c2VyGAEgASgLMiEuc3VwZXJhZG1pbi52MS5QbGF0Zm9ybVVzZXJEZXRhaWwiIQoOR2V0VXNlclJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCSJCCg9HZXRVc2VyUmVzcG9uc2USLwoEdXNlchgBIAEoCzIhLnN1cGVyYWRtaW4udjEuUGxhdGZvcm1Vc2VyRGV0YWlsIjkKFkZvcmNlTG9nb3V0VXNlclJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIOCgZyZWFzb24YAiABKAkiGQoXRm9yY2VMb2dvdXRVc2VyUmVzcG9uc2UiUQoVU2V0U3lzdGVtQWRtaW5SZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSFwoPaXNfc3lzdGVtX2FkbWluGAIgASgIEg4KBnJlYXNvbhgDIAEoCSJJChZTZXRTeXN0ZW1BZG1pblJlc3BvbnNlEi8KBHVzZXIYASABKAsyIS5zdXBlcmFkbWluLnYxLlBsYXRmb3JtVXNlckRldGFpbDKHBwoaU3lzdGVtT3JnYW5pemF0aW9uc1NlcnZpY2USaAoRTGlzdE9yZ2FuaXphdGlvbnMSJy5zdXBlcmFkbWluLnYxLkxpc3RPcmdhbml6YXRpb25zUmVxdWVzdBooLnN1cGVyYWRtaW4udjEuTGlzdE9yZ2FuaXphdGlvbnNSZXNwb25zZSIAEmIKD0dldE9yZ2FuaXphdGlvbhIlLnN1cGVyYWRtaW4udjEuR2V0T3JnYW5pemF0aW9uUmVxdWVzdBomLnN1cGVyYWRtaW4udjEuR2V0T3JnYW5pemF0aW9uUmVzcG9uc2UiABJrChJDcmVhdGVPcmdhbml6YXRpb24SKC5zdXBlcmFkbWluLnYxLkNyZWF0ZU9yZ2FuaXphdGlvblJlcXVlc3QaKS5zdXBlcmFkbWluLnYxLkNyZWF0ZU9yZ2FuaXphdGlvblJlc3BvbnNlIgASawoSVXBkYXRlT3JnYW5pemF0aW9uEiguc3VwZXJhZG1pbi52MS5VcGRhdGVPcmdhbml6YXRpb25SZXF1ZXN0Gikuc3VwZXJhZG1pbi52MS5VcGRhdGVPcmdhbml6YXRpb25SZXNwb25zZSIAEm4KE1N1c3BlbmRPcmdhbml6YXRpb24SKS5zdXBlcmFkbWluLnYxLlN1c3BlbmRPcmdhbml6YXRpb25SZXF1ZXN0Giouc3VwZXJhZG1pbi52MS5TdXNwZW5kT3JnYW5pemF0aW9uUmVzcG9uc2UiABJ0ChVVbnN1c3BlbmRPcmdhbml6YXRpb24SKy5zdXBlcmFkbWluLnYxLlVuc3VzcGVuZE9yZ2FuaXphdGlvblJlcXVlc3QaLC5zdXBlcmFkbWluLnYxLlVuc3VzcGVuZE9yZ2FuaXphdGlvblJlc3BvbnNlIgASawoSRGVsZXRlT3JnYW5pemF0aW9uEiguc3VwZXJhZG1pbi52MS5EZWxldGVPcmdhbml6YXRpb25SZXF1ZXN0Gikuc3VwZXJhZG1pbi52MS5EZWxldGVPcmdhbml6YXRpb25SZXNwb25zZSIAEm4KE1Jlc3RvcmVPcmdhbml6YXRpb24SKS5zdXBlcmFkbWluLnYxLlJlc3RvcmVPcmdhbml6YXRpb25SZXF1ZXN0Giouc3VwZXJhZG1pbi52MS5SZXN0b3JlT3JnYW5pemF0aW9uUmVzcG9uc2UiADKhBAoSU3lzdGVtVXNlcnNTZXJ2aWNlElAKCUxpc3RVc2VycxIfLnN1cGVyYWRtaW4udjEuTGlzdFVzZXJzUmVxdWVzdBogLnN1cGVyYWRtaW4udjEuTGlzdFVzZXJzUmVzcG9uc2UiABJKCgdHZXRVc2VyEh0uc3VwZXJhZG1pbi52MS5HZXRVc2VyUmVxdWVzdBoeLnN1cGVyYWRtaW4udjEuR2V0VXNlclJlc3BvbnNlIgASUwoKQ3JlYXRlVXNlchIgLnN1cGVyYWRtaW4udjEuQ3JlYXRlVXNlclJlcXVlc3QaIS5zdXBlcmFkbWluLnYxLkNyZWF0ZVVzZXJSZXNwb25zZSIAElMKClVwZGF0ZVVzZXISIC5zdXBlcmFkbWluLnYxLlVwZGF0ZVVzZXJSZXF1ZXN0GiEuc3VwZXJhZG1pbi52MS5VcGRhdGVVc2VyUmVzcG9uc2UiABJiCg9Gb3JjZUxvZ291dFVzZXISJS5zdXBlcmFkbWluLnYxLkZvcmNlTG9nb3V0VXNlclJlcXVlc3QaJi5zdXBlcmFkbWluLnYxLkZvcmNlTG9nb3V0VXNlclJlc3BvbnNlIgASXwoOU2V0U3lzdGVtQWRtaW4SJC5zdXBlcmFkbWluLnYxLlNldFN5c3RlbUFkbWluUmVxdWVzdBolLnN1cGVyYWRtaW4udjEuU2V0U3lzdGVtQWRtaW5SZXNwb25zZSIAQkFaP2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9zdXBlcmFkbWluL3YxO3N1cGVyYWRtaW52MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * One row in the cross-tenant organizations table.
@@ -125,7 +125,7 @@ export type PlatformOrganizationDetail = Message<"superadmin.v1.PlatformOrganiza
   summary?: PlatformOrganizationSummary | undefined;
 
   /**
-   * Org domain (auto-join + SSO matcher).
+   * Org primary mail domain. A label only; nothing matches on it.
    *
    * @generated from field: string domain = 2;
    */
@@ -160,6 +160,13 @@ export type PlatformOrganizationDetail = Message<"superadmin.v1.PlatformOrganiza
    * @generated from field: optional string deletion_reason = 6;
    */
   deletionReason?: string | undefined;
+
+  /**
+   * Member cap, enforced when members are added. Unset means no cap.
+   *
+   * @generated from field: optional int32 max_members = 7;
+   */
+  maxMembers?: number | undefined;
 };
 
 /**
@@ -243,7 +250,7 @@ export type PlatformUserSummary = Message<"superadmin.v1.PlatformUserSummary"> &
   emailVerified: boolean;
 
   /**
-   * Placeholder until MFA ships; always false today.
+   * True when the user has a confirmed TOTP enrollment.
    *
    * @generated from field: bool mfa_enabled = 8;
    */
@@ -461,6 +468,140 @@ export const GetOrganizationResponseSchema: GenMessage<GetOrganizationResponse> 
   messageDesc(file_superadmin_v1_system_directory, 9);
 
 /**
+ * @generated from message superadmin.v1.CreateOrganizationRequest
+ */
+export type CreateOrganizationRequest = Message<"superadmin.v1.CreateOrganizationRequest"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * URL-safe identifier; unique across the deployment. Empty derives
+   * one from the name.
+   *
+   * @generated from field: string slug = 2;
+   */
+  slug: string;
+
+  /**
+   * Email of an existing active user who becomes the org OWNER.
+   *
+   * @generated from field: string owner_email = 3;
+   */
+  ownerEmail: string;
+
+  /**
+   * Optional label recording the org's primary mail domain. Nothing
+   * matches on it: it drives neither auto-join nor SSO today.
+   *
+   * @generated from field: string domain = 4;
+   */
+  domain: string;
+
+  /**
+   * Plan label; empty defaults to 'free'.
+   *
+   * @generated from field: string plan = 5;
+   */
+  plan: string;
+};
+
+/**
+ * Describes the message superadmin.v1.CreateOrganizationRequest.
+ * Use `create(CreateOrganizationRequestSchema)` to create a new message.
+ */
+export const CreateOrganizationRequestSchema: GenMessage<CreateOrganizationRequest> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_directory, 10);
+
+/**
+ * @generated from message superadmin.v1.CreateOrganizationResponse
+ */
+export type CreateOrganizationResponse = Message<"superadmin.v1.CreateOrganizationResponse"> & {
+  /**
+   * @generated from field: superadmin.v1.PlatformOrganizationDetail organization = 1;
+   */
+  organization?: PlatformOrganizationDetail | undefined;
+};
+
+/**
+ * Describes the message superadmin.v1.CreateOrganizationResponse.
+ * Use `create(CreateOrganizationResponseSchema)` to create a new message.
+ */
+export const CreateOrganizationResponseSchema: GenMessage<CreateOrganizationResponse> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_directory, 11);
+
+/**
+ * @generated from message superadmin.v1.UpdateOrganizationRequest
+ */
+export type UpdateOrganizationRequest = Message<"superadmin.v1.UpdateOrganizationRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * Unset fields stay unchanged.
+   *
+   * @generated from field: optional string name = 2;
+   */
+  name?: string | undefined;
+
+  /**
+   * @generated from field: optional string slug = 3;
+   */
+  slug?: string | undefined;
+
+  /**
+   * Empty string clears the domain.
+   *
+   * @generated from field: optional string domain = 4;
+   */
+  domain?: string | undefined;
+
+  /**
+   * @generated from field: optional string plan = 5;
+   */
+  plan?: string | undefined;
+
+  /**
+   * 0 removes the member cap.
+   *
+   * @generated from field: optional int32 max_members = 6;
+   */
+  maxMembers?: number | undefined;
+
+  /**
+   * @generated from field: string reason = 7;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message superadmin.v1.UpdateOrganizationRequest.
+ * Use `create(UpdateOrganizationRequestSchema)` to create a new message.
+ */
+export const UpdateOrganizationRequestSchema: GenMessage<UpdateOrganizationRequest> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_directory, 12);
+
+/**
+ * @generated from message superadmin.v1.UpdateOrganizationResponse
+ */
+export type UpdateOrganizationResponse = Message<"superadmin.v1.UpdateOrganizationResponse"> & {
+  /**
+   * @generated from field: superadmin.v1.PlatformOrganizationDetail organization = 1;
+   */
+  organization?: PlatformOrganizationDetail | undefined;
+};
+
+/**
+ * Describes the message superadmin.v1.UpdateOrganizationResponse.
+ * Use `create(UpdateOrganizationResponseSchema)` to create a new message.
+ */
+export const UpdateOrganizationResponseSchema: GenMessage<UpdateOrganizationResponse> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_directory, 13);
+
+/**
  * @generated from message superadmin.v1.SuspendOrganizationRequest
  */
 export type SuspendOrganizationRequest = Message<"superadmin.v1.SuspendOrganizationRequest"> & {
@@ -483,7 +624,7 @@ export type SuspendOrganizationRequest = Message<"superadmin.v1.SuspendOrganizat
  * Use `create(SuspendOrganizationRequestSchema)` to create a new message.
  */
 export const SuspendOrganizationRequestSchema: GenMessage<SuspendOrganizationRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 10);
+  messageDesc(file_superadmin_v1_system_directory, 14);
 
 /**
  * @generated from message superadmin.v1.SuspendOrganizationResponse
@@ -500,7 +641,7 @@ export type SuspendOrganizationResponse = Message<"superadmin.v1.SuspendOrganiza
  * Use `create(SuspendOrganizationResponseSchema)` to create a new message.
  */
 export const SuspendOrganizationResponseSchema: GenMessage<SuspendOrganizationResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 11);
+  messageDesc(file_superadmin_v1_system_directory, 15);
 
 /**
  * @generated from message superadmin.v1.UnsuspendOrganizationRequest
@@ -522,7 +663,7 @@ export type UnsuspendOrganizationRequest = Message<"superadmin.v1.UnsuspendOrgan
  * Use `create(UnsuspendOrganizationRequestSchema)` to create a new message.
  */
 export const UnsuspendOrganizationRequestSchema: GenMessage<UnsuspendOrganizationRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 12);
+  messageDesc(file_superadmin_v1_system_directory, 16);
 
 /**
  * @generated from message superadmin.v1.UnsuspendOrganizationResponse
@@ -539,7 +680,7 @@ export type UnsuspendOrganizationResponse = Message<"superadmin.v1.UnsuspendOrga
  * Use `create(UnsuspendOrganizationResponseSchema)` to create a new message.
  */
 export const UnsuspendOrganizationResponseSchema: GenMessage<UnsuspendOrganizationResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 13);
+  messageDesc(file_superadmin_v1_system_directory, 17);
 
 /**
  * @generated from message superadmin.v1.DeleteOrganizationRequest
@@ -569,7 +710,7 @@ export type DeleteOrganizationRequest = Message<"superadmin.v1.DeleteOrganizatio
  * Use `create(DeleteOrganizationRequestSchema)` to create a new message.
  */
 export const DeleteOrganizationRequestSchema: GenMessage<DeleteOrganizationRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 14);
+  messageDesc(file_superadmin_v1_system_directory, 18);
 
 /**
  * @generated from message superadmin.v1.DeleteOrganizationResponse
@@ -586,7 +727,7 @@ export type DeleteOrganizationResponse = Message<"superadmin.v1.DeleteOrganizati
  * Use `create(DeleteOrganizationResponseSchema)` to create a new message.
  */
 export const DeleteOrganizationResponseSchema: GenMessage<DeleteOrganizationResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 15);
+  messageDesc(file_superadmin_v1_system_directory, 19);
 
 /**
  * @generated from message superadmin.v1.RestoreOrganizationRequest
@@ -608,7 +749,7 @@ export type RestoreOrganizationRequest = Message<"superadmin.v1.RestoreOrganizat
  * Use `create(RestoreOrganizationRequestSchema)` to create a new message.
  */
 export const RestoreOrganizationRequestSchema: GenMessage<RestoreOrganizationRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 16);
+  messageDesc(file_superadmin_v1_system_directory, 20);
 
 /**
  * @generated from message superadmin.v1.RestoreOrganizationResponse
@@ -625,7 +766,7 @@ export type RestoreOrganizationResponse = Message<"superadmin.v1.RestoreOrganiza
  * Use `create(RestoreOrganizationResponseSchema)` to create a new message.
  */
 export const RestoreOrganizationResponseSchema: GenMessage<RestoreOrganizationResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 17);
+  messageDesc(file_superadmin_v1_system_directory, 21);
 
 /**
  * @generated from message superadmin.v1.ListUsersRequest
@@ -669,7 +810,7 @@ export type ListUsersRequest = Message<"superadmin.v1.ListUsersRequest"> & {
  * Use `create(ListUsersRequestSchema)` to create a new message.
  */
 export const ListUsersRequestSchema: GenMessage<ListUsersRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 18);
+  messageDesc(file_superadmin_v1_system_directory, 22);
 
 /**
  * @generated from message superadmin.v1.ListUsersResponse
@@ -701,7 +842,167 @@ export type ListUsersResponse = Message<"superadmin.v1.ListUsersResponse"> & {
  * Use `create(ListUsersResponseSchema)` to create a new message.
  */
 export const ListUsersResponseSchema: GenMessage<ListUsersResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 19);
+  messageDesc(file_superadmin_v1_system_directory, 23);
+
+/**
+ * @generated from message superadmin.v1.CreateUserRequest
+ */
+export type CreateUserRequest = Message<"superadmin.v1.CreateUserRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+
+  /**
+   * Empty derives one from the email local part.
+   *
+   * @generated from field: string username = 2;
+   */
+  username: string;
+
+  /**
+   * @generated from field: string full_name = 3;
+   */
+  fullName: string;
+
+  /**
+   * @generated from field: string password = 4;
+   */
+  password: string;
+
+  /**
+   * Skip the verification email round-trip for operator-created accounts.
+   *
+   * @generated from field: bool email_verified = 5;
+   */
+  emailVerified: boolean;
+
+  /**
+   * @generated from field: bool is_system_admin = 6;
+   */
+  isSystemAdmin: boolean;
+
+  /**
+   * Optional: also add the user to this organization.
+   *
+   * @generated from field: string organization_id = 7;
+   */
+  organizationId: string;
+
+  /**
+   * 'MEMBER' | 'ADMIN' | 'OWNER'; empty defaults to MEMBER.
+   *
+   * @generated from field: string organization_role = 8;
+   */
+  organizationRole: string;
+
+  /**
+   * Why this account was provisioned. Recorded in the audit row.
+   *
+   * @generated from field: string reason = 9;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message superadmin.v1.CreateUserRequest.
+ * Use `create(CreateUserRequestSchema)` to create a new message.
+ */
+export const CreateUserRequestSchema: GenMessage<CreateUserRequest> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_directory, 24);
+
+/**
+ * @generated from message superadmin.v1.CreateUserResponse
+ */
+export type CreateUserResponse = Message<"superadmin.v1.CreateUserResponse"> & {
+  /**
+   * @generated from field: superadmin.v1.PlatformUserDetail user = 1;
+   */
+  user?: PlatformUserDetail | undefined;
+};
+
+/**
+ * Describes the message superadmin.v1.CreateUserResponse.
+ * Use `create(CreateUserResponseSchema)` to create a new message.
+ */
+export const CreateUserResponseSchema: GenMessage<CreateUserResponse> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_directory, 25);
+
+/**
+ * @generated from message superadmin.v1.UpdateUserRequest
+ */
+export type UpdateUserRequest = Message<"superadmin.v1.UpdateUserRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * Unset fields stay unchanged.
+   *
+   * @generated from field: optional string email = 2;
+   */
+  email?: string | undefined;
+
+  /**
+   * @generated from field: optional string username = 3;
+   */
+  username?: string | undefined;
+
+  /**
+   * @generated from field: optional string full_name = 4;
+   */
+  fullName?: string | undefined;
+
+  /**
+   * Deactivating blocks sign-in and revokes existing tokens.
+   *
+   * @generated from field: optional bool is_active = 5;
+   */
+  isActive?: boolean | undefined;
+
+  /**
+   * @generated from field: optional bool email_verified = 6;
+   */
+  emailVerified?: boolean | undefined;
+
+  /**
+   * Replaces the password outright; must satisfy the password policy.
+   * The new password is handed over out of band, never emailed.
+   *
+   * @generated from field: optional string password = 7;
+   */
+  password?: string | undefined;
+
+  /**
+   * @generated from field: string reason = 8;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message superadmin.v1.UpdateUserRequest.
+ * Use `create(UpdateUserRequestSchema)` to create a new message.
+ */
+export const UpdateUserRequestSchema: GenMessage<UpdateUserRequest> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_directory, 26);
+
+/**
+ * @generated from message superadmin.v1.UpdateUserResponse
+ */
+export type UpdateUserResponse = Message<"superadmin.v1.UpdateUserResponse"> & {
+  /**
+   * @generated from field: superadmin.v1.PlatformUserDetail user = 1;
+   */
+  user?: PlatformUserDetail | undefined;
+};
+
+/**
+ * Describes the message superadmin.v1.UpdateUserResponse.
+ * Use `create(UpdateUserResponseSchema)` to create a new message.
+ */
+export const UpdateUserResponseSchema: GenMessage<UpdateUserResponse> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_directory, 27);
 
 /**
  * @generated from message superadmin.v1.GetUserRequest
@@ -718,7 +1019,7 @@ export type GetUserRequest = Message<"superadmin.v1.GetUserRequest"> & {
  * Use `create(GetUserRequestSchema)` to create a new message.
  */
 export const GetUserRequestSchema: GenMessage<GetUserRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 20);
+  messageDesc(file_superadmin_v1_system_directory, 28);
 
 /**
  * @generated from message superadmin.v1.GetUserResponse
@@ -735,7 +1036,7 @@ export type GetUserResponse = Message<"superadmin.v1.GetUserResponse"> & {
  * Use `create(GetUserResponseSchema)` to create a new message.
  */
 export const GetUserResponseSchema: GenMessage<GetUserResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 21);
+  messageDesc(file_superadmin_v1_system_directory, 29);
 
 /**
  * @generated from message superadmin.v1.ForceLogoutUserRequest
@@ -757,7 +1058,7 @@ export type ForceLogoutUserRequest = Message<"superadmin.v1.ForceLogoutUserReque
  * Use `create(ForceLogoutUserRequestSchema)` to create a new message.
  */
 export const ForceLogoutUserRequestSchema: GenMessage<ForceLogoutUserRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 22);
+  messageDesc(file_superadmin_v1_system_directory, 30);
 
 /**
  * @generated from message superadmin.v1.ForceLogoutUserResponse
@@ -770,7 +1071,7 @@ export type ForceLogoutUserResponse = Message<"superadmin.v1.ForceLogoutUserResp
  * Use `create(ForceLogoutUserResponseSchema)` to create a new message.
  */
 export const ForceLogoutUserResponseSchema: GenMessage<ForceLogoutUserResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 23);
+  messageDesc(file_superadmin_v1_system_directory, 31);
 
 /**
  * @generated from message superadmin.v1.SetSystemAdminRequest
@@ -797,7 +1098,7 @@ export type SetSystemAdminRequest = Message<"superadmin.v1.SetSystemAdminRequest
  * Use `create(SetSystemAdminRequestSchema)` to create a new message.
  */
 export const SetSystemAdminRequestSchema: GenMessage<SetSystemAdminRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 24);
+  messageDesc(file_superadmin_v1_system_directory, 32);
 
 /**
  * @generated from message superadmin.v1.SetSystemAdminResponse
@@ -814,7 +1115,7 @@ export type SetSystemAdminResponse = Message<"superadmin.v1.SetSystemAdminRespon
  * Use `create(SetSystemAdminResponseSchema)` to create a new message.
  */
 export const SetSystemAdminResponseSchema: GenMessage<SetSystemAdminResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_directory, 25);
+  messageDesc(file_superadmin_v1_system_directory, 33);
 
 /**
  * Cross-tenant directory of organizations and users for platform
@@ -849,6 +1150,30 @@ export const SystemOrganizationsService: GenService<{
     output: typeof GetOrganizationResponseSchema;
   },
   /**
+   * Provision a new tenant: org row, owner membership, org cipher,
+   * default channel/agent/presets - the same bootstrap a fresh
+   * deployment runs. The owner must be an existing active user.
+   *
+   * @generated from rpc superadmin.v1.SystemOrganizationsService.CreateOrganization
+   */
+  createOrganization: {
+    methodKind: "unary";
+    input: typeof CreateOrganizationRequestSchema;
+    output: typeof CreateOrganizationResponseSchema;
+  },
+  /**
+   * Edit org settings a platform operator owns: name, slug, domain,
+   * plan, member cap. Tenant-facing settings (mail, security, ...)
+   * stay on the org admin surface.
+   *
+   * @generated from rpc superadmin.v1.SystemOrganizationsService.UpdateOrganization
+   */
+  updateOrganization: {
+    methodKind: "unary";
+    input: typeof UpdateOrganizationRequestSchema;
+    output: typeof UpdateOrganizationResponseSchema;
+  },
+  /**
    * Block sign-in for every member of the org and bump
    * ``token_version`` so existing JWTs reject immediately. Reversible
    * via ``UnsuspendOrganization``.
@@ -872,9 +1197,11 @@ export const SystemOrganizationsService: GenService<{
     output: typeof UnsuspendOrganizationResponseSchema;
   },
   /**
-   * Soft-delete: stamps ``deleted_at`` on the org. A daily cron purges
-   * rows whose ``deleted_at + 30d < now``. Owner is emailed at delete
-   * time and 24h before purge. Restorable via ``RestoreOrganization``.
+   * Soft-delete: stamps ``deleted_at`` on the org and revokes every
+   * member's tokens. The rows are retained, not destroyed: nothing
+   * erases tenant data today, so a deleted org stays restorable until
+   * an operator purges it out of band. The owner is emailed at delete
+   * time and again 24h after the 30-day mark passes.
    *
    * @generated from rpc superadmin.v1.SystemOrganizationsService.DeleteOrganization
    */
@@ -884,7 +1211,7 @@ export const SystemOrganizationsService: GenService<{
     output: typeof DeleteOrganizationResponseSchema;
   },
   /**
-   * Clear ``deleted_at``. Only effective before the 30-day purge.
+   * Clear ``deleted_at`` and bring the org back.
    *
    * @generated from rpc superadmin.v1.SystemOrganizationsService.RestoreOrganization
    */
@@ -919,6 +1246,30 @@ export const SystemUsersService: GenService<{
     methodKind: "unary";
     input: typeof GetUserRequestSchema;
     output: typeof GetUserResponseSchema;
+  },
+  /**
+   * Provision a user account directly, bypassing invitations. The
+   * password must satisfy the deployment password policy; optionally
+   * attaches the user to one organization.
+   *
+   * @generated from rpc superadmin.v1.SystemUsersService.CreateUser
+   */
+  createUser: {
+    methodKind: "unary";
+    input: typeof CreateUserRequestSchema;
+    output: typeof CreateUserResponseSchema;
+  },
+  /**
+   * Edit account identity and activation state. Deactivating blocks
+   * sign-in and kills existing tokens; identity fields (email,
+   * username, full name) are operator-owned rather than self-editable.
+   *
+   * @generated from rpc superadmin.v1.SystemUsersService.UpdateUser
+   */
+  updateUser: {
+    methodKind: "unary";
+    input: typeof UpdateUserRequestSchema;
+    output: typeof UpdateUserResponseSchema;
   },
   /**
    * Bump ``token_version`` to invalidate every JWT for one user.

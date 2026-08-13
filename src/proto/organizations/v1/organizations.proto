@@ -13,12 +13,10 @@ service OrganizationsService {
   // User's organizations
   rpc ListMyOrganizations(ListMyOrganizationsRequest) returns (ListMyOrganizationsResponse);
 
-  // Organization CRUD (System Admin)
-  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
+  // Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
+  // is the platform surface: superadmin.v1.SystemOrganizationsService.
   rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse);
-  rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse);
   rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
-  rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse);
 
   // Organization overview (Org Admin)
   rpc GetOrganizationOverview(GetOrganizationOverviewRequest) returns (GetOrganizationOverviewResponse);
@@ -71,18 +69,6 @@ message MyOrganization {
   google.protobuf.Timestamp joined_at = 3;
 }
 
-// Organization CRUD Messages (System Admin)
-
-message ListOrganizationsRequest {
-  optional common.v1.PaginationRequest pagination = 1;
-  optional string search = 2;
-}
-
-message ListOrganizationsResponse {
-  repeated OrganizationDetail organizations = 1;
-  optional common.v1.PaginationResponse pagination = 2;
-}
-
 message OrganizationDetail {
   common.v1.OrganizationInfo organization = 1;
   int32 member_count = 2;
@@ -98,19 +84,8 @@ message GetOrganizationResponse {
   OrganizationDetail organization = 1;
 }
 
-message CreateOrganizationResponse {
-  common.v1.OrganizationInfo organization = 1;
-}
-
 message UpdateOrganizationResponse {
   common.v1.OrganizationInfo organization = 1;
-}
-
-message CreateOrganizationRequest {
-  string name = 1;
-  string slug = 2;
-  optional string logo_url = 3;
-  optional string owner_user_id = 4;
 }
 
 message UpdateOrganizationRequest {
@@ -119,14 +94,6 @@ message UpdateOrganizationRequest {
   optional string slug = 3;
   optional string logo_url = 4;
   optional bool is_active = 5;
-}
-
-message DeleteOrganizationRequest {
-  string organization_id = 1;
-}
-
-message DeleteOrganizationResponse {
-  bool success = 1;
 }
 
 // Organization Overview Messages (Org Admin)

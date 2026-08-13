@@ -24,12 +24,16 @@ from uniffy.core.valkey import (
 )
 from uniffy.db.session import init_db, open_session
 from uniffy.scripts.demo_company.context import ResolutionError
-from uniffy.scripts.demo_company.loader import ContentError
+from uniffy.scripts.demo_company.loader import DEFAULT_PERSON_PASSWORD, ContentError
 from uniffy.scripts.demo_company.seeder import DOMAINS, seed_demo_company
 
 SENTINEL_NAMESPACE = "seed"
 SENTINEL_KEY = "demo_company"
 BOOTSTRAP_TIMEOUT_SECONDS = 600
+
+# Production is never seedable. Staging is, behind --allow-non-development,
+# because the content ships real logins into a deployment other people reach.
+SEEDABLE_ENVIRONMENTS = frozenset({"development", "staging"})
 
 
 def _parse_args() -> argparse.Namespace:
@@ -63,6 +67,19 @@ def _parse_args() -> argparse.Namespace:
         help="Report what would be created without writing anything",
     )
     parser.add_argument(
+        "--password",
+        help="Password for every login this run creates, replacing the one the "
+        "content declares. Required outside ENVIRONMENT=development. Existing "
+        "users keep the password they already have",
+    )
+    parser.add_argument(
+        "--allow-non-development",
+        action="store_true",
+        help=f"Seed a deployment whose ENVIRONMENT is not 'development'. "
+        f"Accepted on {', '.join(sorted(SEEDABLE_ENVIRONMENTS))} only, and "
+        f"--password comes with it",
+    )
+    parser.add_argument(
         "--fresh-only",
         action="store_true",
         help="Stack boot mode: wait for the backend bootstrap, run the full "
@@ -76,11 +93,7 @@ async def main() -> None:
     args = _parse_args()
 
     environment = os.getenv("ENVIRONMENT", "production").strip().lower()
-    if environment != "development":
-        raise SystemExit(
-            f"Demo seeding is a development-stack tool; refusing to run with "
-            f"ENVIRONMENT={environment!r}"
-        )
+    _check_environment(environment, args)
 
     only = tuple(part.strip() for part in args.only.split(",") if part.strip())
     unknown = sorted(set(only) - set(DOMAINS))
@@ -108,11 +121,45 @@ async def main() -> None:
             anchor_date=anchor,
             only=only,
             dry_run=args.dry_run,
+            password=args.password,
         )
         if args.fresh_only and not args.dry_run:
             await _write_sentinel()
     finally:
         await _close_valkey()
+
+
+def _check_environment(environment: str, args: argparse.Namespace) -> None:
+    """Guard the two ways this run reaches people who did not ask for demo data.
+
+    The content declares logins, so seeding a deployment others can reach hands
+    out accounts. Production is refused outright and staging asks for both an
+    explicit opt-in and a password that is not the one in the repository.
+    """
+    if environment == "development":
+        return
+
+    if environment not in SEEDABLE_ENVIRONMENTS:
+        raise SystemExit(
+            f"Demo seeding refuses ENVIRONMENT={environment!r}; it runs on "
+            f"{', '.join(sorted(SEEDABLE_ENVIRONMENTS))} only"
+        )
+
+    if not args.allow_non_development:
+        raise SystemExit(
+            f"ENVIRONMENT={environment!r} needs --allow-non-development. This seeds "
+            f"real, active, email-verified logins into a live deployment"
+        )
+
+    if not args.password and not args.dry_run:
+        raise SystemExit(
+            f"--password is required on {environment}. Without it every seeded "
+            f"persona gets {DEFAULT_PERSON_PASSWORD!r} from the content defaults"
+        )
+
+    logger.warning(
+        f"Seeding demo content and demo logins into a live {environment} deployment"
+    )
 
 
 async def _wait_for_bootstrap() -> None:

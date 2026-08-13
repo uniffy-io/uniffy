@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	SystemOrganizationsService_ListOrganizations_FullMethodName     = "/superadmin.v1.SystemOrganizationsService/ListOrganizations"
 	SystemOrganizationsService_GetOrganization_FullMethodName       = "/superadmin.v1.SystemOrganizationsService/GetOrganization"
+	SystemOrganizationsService_CreateOrganization_FullMethodName    = "/superadmin.v1.SystemOrganizationsService/CreateOrganization"
+	SystemOrganizationsService_UpdateOrganization_FullMethodName    = "/superadmin.v1.SystemOrganizationsService/UpdateOrganization"
 	SystemOrganizationsService_SuspendOrganization_FullMethodName   = "/superadmin.v1.SystemOrganizationsService/SuspendOrganization"
 	SystemOrganizationsService_UnsuspendOrganization_FullMethodName = "/superadmin.v1.SystemOrganizationsService/UnsuspendOrganization"
 	SystemOrganizationsService_DeleteOrganization_FullMethodName    = "/superadmin.v1.SystemOrganizationsService/DeleteOrganization"
@@ -43,6 +45,14 @@ type SystemOrganizationsServiceClient interface {
 	// Full detail for one org: counts, owners list, mail/encryption
 	// status, recent platform-audit rows. No tenant content.
 	GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error)
+	// Provision a new tenant: org row, owner membership, org cipher,
+	// default channel/agent/presets - the same bootstrap a fresh
+	// deployment runs. The owner must be an existing active user.
+	CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error)
+	// Edit org settings a platform operator owns: name, slug, domain,
+	// plan, member cap. Tenant-facing settings (mail, security, ...)
+	// stay on the org admin surface.
+	UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error)
 	// Block sign-in for every member of the org and bump
 	// “token_version“ so existing JWTs reject immediately. Reversible
 	// via “UnsuspendOrganization“.
@@ -50,11 +60,13 @@ type SystemOrganizationsServiceClient interface {
 	// Clear the suspension flag. Members can sign in again on next
 	// login (existing tokens are still dead from the original bump).
 	UnsuspendOrganization(ctx context.Context, in *UnsuspendOrganizationRequest, opts ...grpc.CallOption) (*UnsuspendOrganizationResponse, error)
-	// Soft-delete: stamps “deleted_at“ on the org. A daily cron purges
-	// rows whose “deleted_at + 30d < now“. Owner is emailed at delete
-	// time and 24h before purge. Restorable via “RestoreOrganization“.
+	// Soft-delete: stamps “deleted_at“ on the org and revokes every
+	// member's tokens. The rows are retained, not destroyed: nothing
+	// erases tenant data today, so a deleted org stays restorable until
+	// an operator purges it out of band. The owner is emailed at delete
+	// time and again 24h after the 30-day mark passes.
 	DeleteOrganization(ctx context.Context, in *DeleteOrganizationRequest, opts ...grpc.CallOption) (*DeleteOrganizationResponse, error)
-	// Clear “deleted_at“. Only effective before the 30-day purge.
+	// Clear “deleted_at“ and bring the org back.
 	RestoreOrganization(ctx context.Context, in *RestoreOrganizationRequest, opts ...grpc.CallOption) (*RestoreOrganizationResponse, error)
 }
 
@@ -80,6 +92,26 @@ func (c *systemOrganizationsServiceClient) GetOrganization(ctx context.Context, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetOrganizationResponse)
 	err := c.cc.Invoke(ctx, SystemOrganizationsService_GetOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemOrganizationsServiceClient) CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateOrganizationResponse)
+	err := c.cc.Invoke(ctx, SystemOrganizationsService_CreateOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemOrganizationsServiceClient) UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateOrganizationResponse)
+	err := c.cc.Invoke(ctx, SystemOrganizationsService_UpdateOrganization_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +174,14 @@ type SystemOrganizationsServiceServer interface {
 	// Full detail for one org: counts, owners list, mail/encryption
 	// status, recent platform-audit rows. No tenant content.
 	GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error)
+	// Provision a new tenant: org row, owner membership, org cipher,
+	// default channel/agent/presets - the same bootstrap a fresh
+	// deployment runs. The owner must be an existing active user.
+	CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error)
+	// Edit org settings a platform operator owns: name, slug, domain,
+	// plan, member cap. Tenant-facing settings (mail, security, ...)
+	// stay on the org admin surface.
+	UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error)
 	// Block sign-in for every member of the org and bump
 	// “token_version“ so existing JWTs reject immediately. Reversible
 	// via “UnsuspendOrganization“.
@@ -149,11 +189,13 @@ type SystemOrganizationsServiceServer interface {
 	// Clear the suspension flag. Members can sign in again on next
 	// login (existing tokens are still dead from the original bump).
 	UnsuspendOrganization(context.Context, *UnsuspendOrganizationRequest) (*UnsuspendOrganizationResponse, error)
-	// Soft-delete: stamps “deleted_at“ on the org. A daily cron purges
-	// rows whose “deleted_at + 30d < now“. Owner is emailed at delete
-	// time and 24h before purge. Restorable via “RestoreOrganization“.
+	// Soft-delete: stamps “deleted_at“ on the org and revokes every
+	// member's tokens. The rows are retained, not destroyed: nothing
+	// erases tenant data today, so a deleted org stays restorable until
+	// an operator purges it out of band. The owner is emailed at delete
+	// time and again 24h after the 30-day mark passes.
 	DeleteOrganization(context.Context, *DeleteOrganizationRequest) (*DeleteOrganizationResponse, error)
-	// Clear “deleted_at“. Only effective before the 30-day purge.
+	// Clear “deleted_at“ and bring the org back.
 	RestoreOrganization(context.Context, *RestoreOrganizationRequest) (*RestoreOrganizationResponse, error)
 	mustEmbedUnimplementedSystemOrganizationsServiceServer()
 }
@@ -170,6 +212,12 @@ func (UnimplementedSystemOrganizationsServiceServer) ListOrganizations(context.C
 }
 func (UnimplementedSystemOrganizationsServiceServer) GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrganization not implemented")
+}
+func (UnimplementedSystemOrganizationsServiceServer) CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateOrganization not implemented")
+}
+func (UnimplementedSystemOrganizationsServiceServer) UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateOrganization not implemented")
 }
 func (UnimplementedSystemOrganizationsServiceServer) SuspendOrganization(context.Context, *SuspendOrganizationRequest) (*SuspendOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SuspendOrganization not implemented")
@@ -237,6 +285,42 @@ func _SystemOrganizationsService_GetOrganization_Handler(srv interface{}, ctx co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SystemOrganizationsServiceServer).GetOrganization(ctx, req.(*GetOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemOrganizationsService_CreateOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemOrganizationsServiceServer).CreateOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemOrganizationsService_CreateOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemOrganizationsServiceServer).CreateOrganization(ctx, req.(*CreateOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemOrganizationsService_UpdateOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemOrganizationsServiceServer).UpdateOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemOrganizationsService_UpdateOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemOrganizationsServiceServer).UpdateOrganization(ctx, req.(*UpdateOrganizationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -329,6 +413,14 @@ var SystemOrganizationsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SystemOrganizationsService_GetOrganization_Handler,
 		},
 		{
+			MethodName: "CreateOrganization",
+			Handler:    _SystemOrganizationsService_CreateOrganization_Handler,
+		},
+		{
+			MethodName: "UpdateOrganization",
+			Handler:    _SystemOrganizationsService_UpdateOrganization_Handler,
+		},
+		{
 			MethodName: "SuspendOrganization",
 			Handler:    _SystemOrganizationsService_SuspendOrganization_Handler,
 		},
@@ -352,6 +444,8 @@ var SystemOrganizationsService_ServiceDesc = grpc.ServiceDesc{
 const (
 	SystemUsersService_ListUsers_FullMethodName       = "/superadmin.v1.SystemUsersService/ListUsers"
 	SystemUsersService_GetUser_FullMethodName         = "/superadmin.v1.SystemUsersService/GetUser"
+	SystemUsersService_CreateUser_FullMethodName      = "/superadmin.v1.SystemUsersService/CreateUser"
+	SystemUsersService_UpdateUser_FullMethodName      = "/superadmin.v1.SystemUsersService/UpdateUser"
 	SystemUsersService_ForceLogoutUser_FullMethodName = "/superadmin.v1.SystemUsersService/ForceLogoutUser"
 	SystemUsersService_SetSystemAdmin_FullMethodName  = "/superadmin.v1.SystemUsersService/SetSystemAdmin"
 )
@@ -364,6 +458,14 @@ type SystemUsersServiceClient interface {
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	// Full detail for one user: profile, last login, org memberships.
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	// Provision a user account directly, bypassing invitations. The
+	// password must satisfy the deployment password policy; optionally
+	// attaches the user to one organization.
+	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
+	// Edit account identity and activation state. Deactivating blocks
+	// sign-in and kills existing tokens; identity fields (email,
+	// username, full name) are operator-owned rather than self-editable.
+	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
 	// Bump “token_version“ to invalidate every JWT for one user.
 	// Forces them to log in again on next request.
 	ForceLogoutUser(ctx context.Context, in *ForceLogoutUserRequest, opts ...grpc.CallOption) (*ForceLogoutUserResponse, error)
@@ -401,6 +503,26 @@ func (c *systemUsersServiceClient) GetUser(ctx context.Context, in *GetUserReque
 	return out, nil
 }
 
+func (c *systemUsersServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateUserResponse)
+	err := c.cc.Invoke(ctx, SystemUsersService_CreateUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemUsersServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateUserResponse)
+	err := c.cc.Invoke(ctx, SystemUsersService_UpdateUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *systemUsersServiceClient) ForceLogoutUser(ctx context.Context, in *ForceLogoutUserRequest, opts ...grpc.CallOption) (*ForceLogoutUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ForceLogoutUserResponse)
@@ -429,6 +551,14 @@ type SystemUsersServiceServer interface {
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	// Full detail for one user: profile, last login, org memberships.
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	// Provision a user account directly, bypassing invitations. The
+	// password must satisfy the deployment password policy; optionally
+	// attaches the user to one organization.
+	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
+	// Edit account identity and activation state. Deactivating blocks
+	// sign-in and kills existing tokens; identity fields (email,
+	// username, full name) are operator-owned rather than self-editable.
+	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
 	// Bump “token_version“ to invalidate every JWT for one user.
 	// Forces them to log in again on next request.
 	ForceLogoutUser(context.Context, *ForceLogoutUserRequest) (*ForceLogoutUserResponse, error)
@@ -451,6 +581,12 @@ func (UnimplementedSystemUsersServiceServer) ListUsers(context.Context, *ListUse
 }
 func (UnimplementedSystemUsersServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUser not implemented")
+}
+func (UnimplementedSystemUsersServiceServer) CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateUser not implemented")
+}
+func (UnimplementedSystemUsersServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateUser not implemented")
 }
 func (UnimplementedSystemUsersServiceServer) ForceLogoutUser(context.Context, *ForceLogoutUserRequest) (*ForceLogoutUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ForceLogoutUser not implemented")
@@ -515,6 +651,42 @@ func _SystemUsersService_GetUser_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemUsersService_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemUsersServiceServer).CreateUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemUsersService_CreateUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemUsersServiceServer).CreateUser(ctx, req.(*CreateUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemUsersService_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemUsersServiceServer).UpdateUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemUsersService_UpdateUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemUsersServiceServer).UpdateUser(ctx, req.(*UpdateUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SystemUsersService_ForceLogoutUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ForceLogoutUserRequest)
 	if err := dec(in); err != nil {
@@ -565,6 +737,14 @@ var SystemUsersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUser",
 			Handler:    _SystemUsersService_GetUser_Handler,
+		},
+		{
+			MethodName: "CreateUser",
+			Handler:    _SystemUsersService_CreateUser_Handler,
+		},
+		{
+			MethodName: "UpdateUser",
+			Handler:    _SystemUsersService_UpdateUser_Handler,
 		},
 		{
 			MethodName: "ForceLogoutUser",

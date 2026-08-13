@@ -18,14 +18,19 @@ export function useAvatarUrl(userId: string, size: string = 'sm'): string | null
     const membersFetched = useAppSelector((state) => state.admin.membersFetched);
     const membersLoading = useAppSelector((state) => state.admin.membersLoading);
     const currentUser = useAppSelector((state) => state.auth.user);
+    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
     useEffect(() => {
-        if (!userId || membersFetched || membersLoading || directoryInFlight) return;
+        // No org context (e.g. a pure platform operator): there is no member
+        // directory to resolve against, so stay on the initials fallback.
+        if (!userId || !organizationId || membersFetched || membersLoading || directoryInFlight) {
+            return;
+        }
         directoryInFlight = true;
         void dispatch(fetchMembers({ pageSize: 200 })).finally(() => {
             directoryInFlight = false;
         });
-    }, [dispatch, userId, membersFetched, membersLoading]);
+    }, [dispatch, userId, organizationId, membersFetched, membersLoading]);
 
     return useMemo(() => {
         if (!userId) return null;

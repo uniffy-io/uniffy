@@ -2,6 +2,10 @@
 
 from connectrpc.request import RequestContext
 from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+    CreateOrganizationRequest,
+    CreateOrganizationResponse,
+    CreateUserRequest,
+    CreateUserResponse,
     DeleteOrganizationRequest,
     DeleteOrganizationResponse,
     ForceLogoutUserRequest,
@@ -22,6 +26,10 @@ from uniffy_proto.superadmin.v1.system_directory_pb2 import (
     SuspendOrganizationResponse,
     UnsuspendOrganizationRequest,
     UnsuspendOrganizationResponse,
+    UpdateOrganizationRequest,
+    UpdateOrganizationResponse,
+    UpdateUserRequest,
+    UpdateUserResponse,
 )
 
 from uniffy.domains.platform.directory.handlers import (
@@ -43,6 +51,16 @@ class SystemOrganizationsServiceImpl:
         self, request: GetOrganizationRequest, ctx: RequestContext
     ) -> GetOrganizationResponse:
         return await self._handlers.get_organization(request, ctx)
+
+    async def create_organization(
+        self, request: CreateOrganizationRequest, ctx: RequestContext
+    ) -> CreateOrganizationResponse:
+        return await self._handlers.create_organization(request, ctx)
+
+    async def update_organization(
+        self, request: UpdateOrganizationRequest, ctx: RequestContext
+    ) -> UpdateOrganizationResponse:
+        return await self._handlers.update_organization(request, ctx)
 
     async def suspend_organization(
         self, request: SuspendOrganizationRequest, ctx: RequestContext
@@ -78,6 +96,16 @@ class SystemUsersServiceImpl:
         self, request: GetUserRequest, ctx: RequestContext
     ) -> GetUserResponse:
         return await self._handlers.get_user(request, ctx)
+
+    async def create_user(
+        self, request: CreateUserRequest, ctx: RequestContext
+    ) -> CreateUserResponse:
+        return await self._handlers.create_user(request, ctx)
+
+    async def update_user(
+        self, request: UpdateUserRequest, ctx: RequestContext
+    ) -> UpdateUserResponse:
+        return await self._handlers.update_user(request, ctx)
 
     async def force_logout_user(
         self, request: ForceLogoutUserRequest, ctx: RequestContext

@@ -19,40 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UsersService_GetMyProfile_FullMethodName               = "/users.v1.UsersService/GetMyProfile"
-	UsersService_UpdateMyProfile_FullMethodName            = "/users.v1.UsersService/UpdateMyProfile"
-	UsersService_ListUsers_FullMethodName                  = "/users.v1.UsersService/ListUsers"
-	UsersService_GetUser_FullMethodName                    = "/users.v1.UsersService/GetUser"
-	UsersService_CreateUser_FullMethodName                 = "/users.v1.UsersService/CreateUser"
-	UsersService_UpdateUser_FullMethodName                 = "/users.v1.UsersService/UpdateUser"
-	UsersService_DeleteUser_FullMethodName                 = "/users.v1.UsersService/DeleteUser"
-	UsersService_UploadAvatar_FullMethodName               = "/users.v1.UsersService/UploadAvatar"
-	UsersService_DeleteAvatar_FullMethodName               = "/users.v1.UsersService/DeleteAvatar"
-	UsersService_ListUserOrganizations_FullMethodName      = "/users.v1.UsersService/ListUserOrganizations"
-	UsersService_AddUserToOrganization_FullMethodName      = "/users.v1.UsersService/AddUserToOrganization"
-	UsersService_RemoveUserFromOrganization_FullMethodName = "/users.v1.UsersService/RemoveUserFromOrganization"
+	UsersService_GetMyProfile_FullMethodName    = "/users.v1.UsersService/GetMyProfile"
+	UsersService_UpdateMyProfile_FullMethodName = "/users.v1.UsersService/UpdateMyProfile"
+	UsersService_UploadAvatar_FullMethodName    = "/users.v1.UsersService/UploadAvatar"
+	UsersService_DeleteAvatar_FullMethodName    = "/users.v1.UsersService/DeleteAvatar"
 )
 
 // UsersServiceClient is the client API for UsersService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersServiceClient interface {
-	// Self-service profile operations
 	GetMyProfile(ctx context.Context, in *GetMyProfileRequest, opts ...grpc.CallOption) (*GetMyProfileResponse, error)
 	UpdateMyProfile(ctx context.Context, in *UpdateMyProfileRequest, opts ...grpc.CallOption) (*UpdateMyProfileResponse, error)
-	// System Admin operations
-	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
-	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
-	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
-	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
-	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
-	// Avatar operations
 	UploadAvatar(ctx context.Context, in *UploadAvatarRequest, opts ...grpc.CallOption) (*UploadAvatarResponse, error)
 	DeleteAvatar(ctx context.Context, in *DeleteAvatarRequest, opts ...grpc.CallOption) (*DeleteAvatarResponse, error)
-	// User-Organization operations (System Admin)
-	ListUserOrganizations(ctx context.Context, in *ListUserOrganizationsRequest, opts ...grpc.CallOption) (*ListUserOrganizationsResponse, error)
-	AddUserToOrganization(ctx context.Context, in *AddUserToOrganizationRequest, opts ...grpc.CallOption) (*AddUserToOrganizationResponse, error)
-	RemoveUserFromOrganization(ctx context.Context, in *RemoveUserFromOrganizationRequest, opts ...grpc.CallOption) (*RemoveUserFromOrganizationResponse, error)
 }
 
 type usersServiceClient struct {
@@ -83,56 +63,6 @@ func (c *usersServiceClient) UpdateMyProfile(ctx context.Context, in *UpdateMyPr
 	return out, nil
 }
 
-func (c *usersServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListUsersResponse)
-	err := c.cc.Invoke(ctx, UsersService_ListUsers_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetUserResponse)
-	err := c.cc.Invoke(ctx, UsersService_GetUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateUserResponse)
-	err := c.cc.Invoke(ctx, UsersService_CreateUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateUserResponse)
-	err := c.cc.Invoke(ctx, UsersService_UpdateUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersServiceClient) DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteUserResponse)
-	err := c.cc.Invoke(ctx, UsersService_DeleteUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *usersServiceClient) UploadAvatar(ctx context.Context, in *UploadAvatarRequest, opts ...grpc.CallOption) (*UploadAvatarResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UploadAvatarResponse)
@@ -153,56 +83,14 @@ func (c *usersServiceClient) DeleteAvatar(ctx context.Context, in *DeleteAvatarR
 	return out, nil
 }
 
-func (c *usersServiceClient) ListUserOrganizations(ctx context.Context, in *ListUserOrganizationsRequest, opts ...grpc.CallOption) (*ListUserOrganizationsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListUserOrganizationsResponse)
-	err := c.cc.Invoke(ctx, UsersService_ListUserOrganizations_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersServiceClient) AddUserToOrganization(ctx context.Context, in *AddUserToOrganizationRequest, opts ...grpc.CallOption) (*AddUserToOrganizationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AddUserToOrganizationResponse)
-	err := c.cc.Invoke(ctx, UsersService_AddUserToOrganization_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersServiceClient) RemoveUserFromOrganization(ctx context.Context, in *RemoveUserFromOrganizationRequest, opts ...grpc.CallOption) (*RemoveUserFromOrganizationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RemoveUserFromOrganizationResponse)
-	err := c.cc.Invoke(ctx, UsersService_RemoveUserFromOrganization_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // UsersServiceServer is the server API for UsersService service.
 // All implementations must embed UnimplementedUsersServiceServer
 // for forward compatibility.
 type UsersServiceServer interface {
-	// Self-service profile operations
 	GetMyProfile(context.Context, *GetMyProfileRequest) (*GetMyProfileResponse, error)
 	UpdateMyProfile(context.Context, *UpdateMyProfileRequest) (*UpdateMyProfileResponse, error)
-	// System Admin operations
-	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
-	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
-	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
-	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
-	DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error)
-	// Avatar operations
 	UploadAvatar(context.Context, *UploadAvatarRequest) (*UploadAvatarResponse, error)
 	DeleteAvatar(context.Context, *DeleteAvatarRequest) (*DeleteAvatarResponse, error)
-	// User-Organization operations (System Admin)
-	ListUserOrganizations(context.Context, *ListUserOrganizationsRequest) (*ListUserOrganizationsResponse, error)
-	AddUserToOrganization(context.Context, *AddUserToOrganizationRequest) (*AddUserToOrganizationResponse, error)
-	RemoveUserFromOrganization(context.Context, *RemoveUserFromOrganizationRequest) (*RemoveUserFromOrganizationResponse, error)
 	mustEmbedUnimplementedUsersServiceServer()
 }
 
@@ -219,35 +107,11 @@ func (UnimplementedUsersServiceServer) GetMyProfile(context.Context, *GetMyProfi
 func (UnimplementedUsersServiceServer) UpdateMyProfile(context.Context, *UpdateMyProfileRequest) (*UpdateMyProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateMyProfile not implemented")
 }
-func (UnimplementedUsersServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
-}
-func (UnimplementedUsersServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetUser not implemented")
-}
-func (UnimplementedUsersServiceServer) CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateUser not implemented")
-}
-func (UnimplementedUsersServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateUser not implemented")
-}
-func (UnimplementedUsersServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteUser not implemented")
-}
 func (UnimplementedUsersServiceServer) UploadAvatar(context.Context, *UploadAvatarRequest) (*UploadAvatarResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UploadAvatar not implemented")
 }
 func (UnimplementedUsersServiceServer) DeleteAvatar(context.Context, *DeleteAvatarRequest) (*DeleteAvatarResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAvatar not implemented")
-}
-func (UnimplementedUsersServiceServer) ListUserOrganizations(context.Context, *ListUserOrganizationsRequest) (*ListUserOrganizationsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListUserOrganizations not implemented")
-}
-func (UnimplementedUsersServiceServer) AddUserToOrganization(context.Context, *AddUserToOrganizationRequest) (*AddUserToOrganizationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method AddUserToOrganization not implemented")
-}
-func (UnimplementedUsersServiceServer) RemoveUserFromOrganization(context.Context, *RemoveUserFromOrganizationRequest) (*RemoveUserFromOrganizationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RemoveUserFromOrganization not implemented")
 }
 func (UnimplementedUsersServiceServer) mustEmbedUnimplementedUsersServiceServer() {}
 func (UnimplementedUsersServiceServer) testEmbeddedByValue()                      {}
@@ -306,96 +170,6 @@ func _UsersService_UpdateMyProfile_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UsersService_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListUsersRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServiceServer).ListUsers(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UsersService_ListUsers_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServiceServer).ListUsers(ctx, req.(*ListUsersRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UsersService_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServiceServer).GetUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UsersService_GetUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServiceServer).GetUser(ctx, req.(*GetUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UsersService_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServiceServer).CreateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UsersService_CreateUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServiceServer).CreateUser(ctx, req.(*CreateUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UsersService_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServiceServer).UpdateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UsersService_UpdateUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServiceServer).UpdateUser(ctx, req.(*UpdateUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UsersService_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServiceServer).DeleteUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UsersService_DeleteUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServiceServer).DeleteUser(ctx, req.(*DeleteUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _UsersService_UploadAvatar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UploadAvatarRequest)
 	if err := dec(in); err != nil {
@@ -432,60 +206,6 @@ func _UsersService_DeleteAvatar_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UsersService_ListUserOrganizations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListUserOrganizationsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServiceServer).ListUserOrganizations(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UsersService_ListUserOrganizations_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServiceServer).ListUserOrganizations(ctx, req.(*ListUserOrganizationsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UsersService_AddUserToOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddUserToOrganizationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServiceServer).AddUserToOrganization(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UsersService_AddUserToOrganization_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServiceServer).AddUserToOrganization(ctx, req.(*AddUserToOrganizationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UsersService_RemoveUserFromOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RemoveUserFromOrganizationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServiceServer).RemoveUserFromOrganization(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UsersService_RemoveUserFromOrganization_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServiceServer).RemoveUserFromOrganization(ctx, req.(*RemoveUserFromOrganizationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // UsersService_ServiceDesc is the grpc.ServiceDesc for UsersService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -502,44 +222,12 @@ var UsersService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UsersService_UpdateMyProfile_Handler,
 		},
 		{
-			MethodName: "ListUsers",
-			Handler:    _UsersService_ListUsers_Handler,
-		},
-		{
-			MethodName: "GetUser",
-			Handler:    _UsersService_GetUser_Handler,
-		},
-		{
-			MethodName: "CreateUser",
-			Handler:    _UsersService_CreateUser_Handler,
-		},
-		{
-			MethodName: "UpdateUser",
-			Handler:    _UsersService_UpdateUser_Handler,
-		},
-		{
-			MethodName: "DeleteUser",
-			Handler:    _UsersService_DeleteUser_Handler,
-		},
-		{
 			MethodName: "UploadAvatar",
 			Handler:    _UsersService_UploadAvatar_Handler,
 		},
 		{
 			MethodName: "DeleteAvatar",
 			Handler:    _UsersService_DeleteAvatar_Handler,
-		},
-		{
-			MethodName: "ListUserOrganizations",
-			Handler:    _UsersService_ListUserOrganizations_Handler,
-		},
-		{
-			MethodName: "AddUserToOrganization",
-			Handler:    _UsersService_AddUserToOrganization_Handler,
-		},
-		{
-			MethodName: "RemoveUserFromOrganization",
-			Handler:    _UsersService_RemoveUserFromOrganization_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

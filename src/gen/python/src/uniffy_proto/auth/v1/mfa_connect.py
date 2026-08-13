@@ -36,18 +36,6 @@ class MfaService(Protocol):
     async def admin_reset_mfa(self, request: auth_dot_v1_dot_mfa__pb2.AdminResetMfaRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.AdminResetMfaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def platform_reset_mfa(self, request: auth_dot_v1_dot_mfa__pb2.PlatformResetMfaRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.PlatformResetMfaResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def request_platform_peer_reset(self, request: auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def approve_platform_peer_reset(self, request: auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def list_platform_peer_resets(self, request: auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def get_mfa_status(self, request: auth_dot_v1_dot_mfa__pb2.GetMfaStatusRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.GetMfaStatusResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -116,46 +104,6 @@ class MfaServiceASGIApplication(ConnectASGIApplication[MfaService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.admin_reset_mfa,
-                ),
-                "/auth.v1.MfaService/PlatformResetMfa": Endpoint.unary(
-                    method=MethodInfo(
-                        name="PlatformResetMfa",
-                        service_name="auth.v1.MfaService",
-                        input=auth_dot_v1_dot_mfa__pb2.PlatformResetMfaRequest,
-                        output=auth_dot_v1_dot_mfa__pb2.PlatformResetMfaResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.platform_reset_mfa,
-                ),
-                "/auth.v1.MfaService/RequestPlatformPeerReset": Endpoint.unary(
-                    method=MethodInfo(
-                        name="RequestPlatformPeerReset",
-                        service_name="auth.v1.MfaService",
-                        input=auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetRequest,
-                        output=auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.request_platform_peer_reset,
-                ),
-                "/auth.v1.MfaService/ApprovePlatformPeerReset": Endpoint.unary(
-                    method=MethodInfo(
-                        name="ApprovePlatformPeerReset",
-                        service_name="auth.v1.MfaService",
-                        input=auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetRequest,
-                        output=auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.approve_platform_peer_reset,
-                ),
-                "/auth.v1.MfaService/ListPlatformPeerResets": Endpoint.unary(
-                    method=MethodInfo(
-                        name="ListPlatformPeerResets",
-                        service_name="auth.v1.MfaService",
-                        input=auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsRequest,
-                        output=auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.list_platform_peer_resets,
                 ),
                 "/auth.v1.MfaService/GetMfaStatus": Endpoint.unary(
                     method=MethodInfo(
@@ -301,86 +249,6 @@ class MfaServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def platform_reset_mfa(
-        self,
-        request: auth_dot_v1_dot_mfa__pb2.PlatformResetMfaRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_mfa__pb2.PlatformResetMfaResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="PlatformResetMfa",
-                service_name="auth.v1.MfaService",
-                input=auth_dot_v1_dot_mfa__pb2.PlatformResetMfaRequest,
-                output=auth_dot_v1_dot_mfa__pb2.PlatformResetMfaResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def request_platform_peer_reset(
-        self,
-        request: auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="RequestPlatformPeerReset",
-                service_name="auth.v1.MfaService",
-                input=auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetRequest,
-                output=auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def approve_platform_peer_reset(
-        self,
-        request: auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ApprovePlatformPeerReset",
-                service_name="auth.v1.MfaService",
-                input=auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetRequest,
-                output=auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def list_platform_peer_resets(
-        self,
-        request: auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ListPlatformPeerResets",
-                service_name="auth.v1.MfaService",
-                input=auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsRequest,
-                output=auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def get_mfa_status(
         self,
         request: auth_dot_v1_dot_mfa__pb2.GetMfaStatusRequest,
@@ -417,14 +285,6 @@ class MfaServiceSync(Protocol):
     def regenerate_recovery_codes(self, request: auth_dot_v1_dot_mfa__pb2.RegenerateRecoveryCodesRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.RegenerateRecoveryCodesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def admin_reset_mfa(self, request: auth_dot_v1_dot_mfa__pb2.AdminResetMfaRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.AdminResetMfaResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def platform_reset_mfa(self, request: auth_dot_v1_dot_mfa__pb2.PlatformResetMfaRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.PlatformResetMfaResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def request_platform_peer_reset(self, request: auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def approve_platform_peer_reset(self, request: auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_platform_peer_resets(self, request: auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_mfa_status(self, request: auth_dot_v1_dot_mfa__pb2.GetMfaStatusRequest, ctx: RequestContext) -> auth_dot_v1_dot_mfa__pb2.GetMfaStatusResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -493,46 +353,6 @@ class MfaServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.admin_reset_mfa,
-                ),
-                "/auth.v1.MfaService/PlatformResetMfa": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="PlatformResetMfa",
-                        service_name="auth.v1.MfaService",
-                        input=auth_dot_v1_dot_mfa__pb2.PlatformResetMfaRequest,
-                        output=auth_dot_v1_dot_mfa__pb2.PlatformResetMfaResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.platform_reset_mfa,
-                ),
-                "/auth.v1.MfaService/RequestPlatformPeerReset": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="RequestPlatformPeerReset",
-                        service_name="auth.v1.MfaService",
-                        input=auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetRequest,
-                        output=auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.request_platform_peer_reset,
-                ),
-                "/auth.v1.MfaService/ApprovePlatformPeerReset": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="ApprovePlatformPeerReset",
-                        service_name="auth.v1.MfaService",
-                        input=auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetRequest,
-                        output=auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.approve_platform_peer_reset,
-                ),
-                "/auth.v1.MfaService/ListPlatformPeerResets": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="ListPlatformPeerResets",
-                        service_name="auth.v1.MfaService",
-                        input=auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsRequest,
-                        output=auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.list_platform_peer_resets,
                 ),
                 "/auth.v1.MfaService/GetMfaStatus": EndpointSync.unary(
                     method=MethodInfo(
@@ -672,86 +492,6 @@ class MfaServiceClientSync(ConnectClientSync):
                 service_name="auth.v1.MfaService",
                 input=auth_dot_v1_dot_mfa__pb2.AdminResetMfaRequest,
                 output=auth_dot_v1_dot_mfa__pb2.AdminResetMfaResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def platform_reset_mfa(
-        self,
-        request: auth_dot_v1_dot_mfa__pb2.PlatformResetMfaRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_mfa__pb2.PlatformResetMfaResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="PlatformResetMfa",
-                service_name="auth.v1.MfaService",
-                input=auth_dot_v1_dot_mfa__pb2.PlatformResetMfaRequest,
-                output=auth_dot_v1_dot_mfa__pb2.PlatformResetMfaResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def request_platform_peer_reset(
-        self,
-        request: auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="RequestPlatformPeerReset",
-                service_name="auth.v1.MfaService",
-                input=auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetRequest,
-                output=auth_dot_v1_dot_mfa__pb2.RequestPlatformPeerResetResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def approve_platform_peer_reset(
-        self,
-        request: auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ApprovePlatformPeerReset",
-                service_name="auth.v1.MfaService",
-                input=auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetRequest,
-                output=auth_dot_v1_dot_mfa__pb2.ApprovePlatformPeerResetResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def list_platform_peer_resets(
-        self,
-        request: auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ListPlatformPeerResets",
-                service_name="auth.v1.MfaService",
-                input=auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsRequest,
-                output=auth_dot_v1_dot_mfa__pb2.ListPlatformPeerResetsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
