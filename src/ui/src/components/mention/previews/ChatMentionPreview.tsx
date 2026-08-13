@@ -62,8 +62,6 @@ export function ChatMentionPreview({
 
   return (
     <>
-      <span className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-violet-500/10 via-violet-500/5 to-transparent pointer-events-none" />
-
       <span className="block relative px-4 pr-10 pt-3.5 pb-2 pl-5">
         <span className="flex items-start gap-3">
           <span className="grid place-items-center shrink-0 w-10 h-10 rounded-lg border border-primary/55 bg-primary/10 text-primary">

@@ -63,8 +63,6 @@ export function NoteMentionPreview({
 
   return (
     <>
-      <span className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
-
       {/* Header row */}
       <span className="block relative px-4 pr-10 pt-3 pb-1 pl-5">
         <span className="flex items-center gap-2.5">
@@ -81,6 +79,14 @@ export function NoteMentionPreview({
                 </>
               )}
               <span className="text-[10px] font-medium text-primary">{typeLabel}</span>
+              {liveState.noteNodeType === 'FOLDER' && liveState.noteChildCount != null && (
+                <>
+                  <MetaSeparator />
+                  <span className="text-[10px] text-muted-foreground">
+                    {liveState.noteChildCount} note{liveState.noteChildCount === 1 ? '' : 's'}
+                  </span>
+                </>
+              )}
               {liveState.noteIsBeingEdited && (
                 <>
                   <MetaSeparator />
@@ -92,8 +98,9 @@ export function NoteMentionPreview({
         </span>
       </span>
 
-      {/* Content preview - aligned with title (icon 28px + gap 10px + pl-5 = pl offset) */}
-      {description && (
+      {/* Content preview - aligned with title (icon 28px + gap 10px + pl-5 = pl offset).
+          Folder-type notes have no body; the child count in the meta row is the content. */}
+      {description && liveState.noteNodeType !== 'FOLDER' && (
         <span className="block px-4 pb-2 pl-[3.375rem]">
           <span className="block text-xs text-muted-foreground/70 leading-relaxed line-clamp-3">{description}</span>
         </span>

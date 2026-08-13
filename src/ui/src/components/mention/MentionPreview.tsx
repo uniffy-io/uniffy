@@ -19,7 +19,9 @@ import {
   CalendarMentionPreview,
   ProjectMentionPreview,
   FileMentionPreview,
+  FolderMentionPreview,
   NoteMentionPreview,
+  RoomMentionPreview,
   UserMentionPreview,
   TeamMentionPreview,
   ChatMentionPreview,
@@ -32,7 +34,8 @@ interface MentionPreviewProps {
   preview: UrnPreviewData | null;
   isLoading: boolean;
   error: string | null;
-  position: { x: number; y: number };
+  /** `y` = chip bottom (downward anchor); `top` = chip top so an upward popover clears the chip instead of covering it. */
+  position: { x: number; y: number; top?: number };
   onClose: () => void;
   onEmbed?: () => void;
   onMouseEnter?: () => void;
@@ -42,12 +45,10 @@ interface MentionPreviewProps {
 
 interface TypeTheme {
   icon: Icon;
-  gradient: string;
   iconBg: string;
   iconBoxAccent: string;
   accentText: string;
   border: string;
-  glow: string;
 }
 
 function getTypeTheme(type: UrnType): TypeTheme {
@@ -55,18 +56,16 @@ function getTypeTheme(type: UrnType): TypeTheme {
   const theme = config.theme;
   return {
     icon: config.icon,
-    gradient: theme.gradient,
     iconBg: theme.iconBg,
     iconBoxAccent: theme.iconBoxAccent,
     accentText: theme.accentText,
     border: theme.border,
-    glow: theme.glow,
   };
 }
 
 const KNOWN_PREVIEW_TYPES = new Set<UrnType>([
-  UrnType.TASK, UrnType.CALENDAR_EVENT, UrnType.PROJECT, UrnType.FILE,
-  UrnType.NOTE, UrnType.USER, UrnType.TEAM, UrnType.CHAT, UrnType.AGENT, UrnType.TAG,
+  UrnType.TASK, UrnType.CALENDAR_EVENT, UrnType.PROJECT, UrnType.FILE, UrnType.FOLDER,
+  UrnType.NOTE, UrnType.ROOM, UrnType.USER, UrnType.TEAM, UrnType.CHAT, UrnType.AGENT, UrnType.TAG,
 ]);
 
 export function MentionPreview({
@@ -108,7 +107,9 @@ export function MentionPreview({
   }, [previewUrn]);
 
   const GAP = 8;
-  const adjustedLeft = Math.min(Math.max(position.x, 8), window.innerWidth - 340);
+  // Same footprint as the expanded card (max-w-md) so hover and expand read as one surface.
+  const CARD_WIDTH = 448;
+  const adjustedLeft = Math.max(8, Math.min(position.x, window.innerWidth - CARD_WIDTH - 8));
   const opensDownward = position.y + GAP + 260 <= window.innerHeight;
 
   const parsed = preview ? parseUrn(preview.urn) : null;
@@ -123,7 +124,7 @@ export function MentionPreview({
         left: `${adjustedLeft}px`,
         ...(opensDownward
           ? { top: `${position.y}px`, paddingTop: `${GAP}px` }
-          : { bottom: `${window.innerHeight - position.y + GAP}px` }
+          : { bottom: `${window.innerHeight - (position.top ?? position.y) + GAP}px` }
         ),
       }}
       onMouseEnter={onMouseEnter}
@@ -131,12 +132,11 @@ export function MentionPreview({
     >
       <div
         className={cn(
-          'w-80',
-          'bg-card/95 backdrop-blur-xl',
+          'w-[28rem] max-w-[calc(100vw-1rem)]',
+          'bg-card',
           'text-card-foreground',
-          'rounded-xl shadow-2xl',
-          theme.glow,
-          'border border-border/50',
+          'rounded-lg shadow-lg',
+          'border border-border',
           'overflow-hidden',
           'animate-in fade-in-0 zoom-in-95 duration-200',
           opensDownward ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2',
@@ -226,6 +226,25 @@ export function MentionPreview({
             onCopyLink={handleCopyLink}
           />
         )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.FOLDER && (
+          <FolderMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.ROOM && (
+          <RoomMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
         {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.USER && (
           <UserMentionPreview
             urn={preview.urn}
@@ -280,7 +299,6 @@ export function MentionPreview({
         {preview && !isLoading && !error && !(effectiveLiveState && parsed && KNOWN_PREVIEW_TYPES.has(parsed.type)) && (
           <>
             <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary" />
-            <div className={cn('absolute inset-x-0 top-0 h-16 bg-gradient-to-b pointer-events-none opacity-60', theme.gradient)} />
 
             <div className="relative px-4 pt-3.5 pb-2 pl-5">
               <div className="flex items-start gap-3">

@@ -1,32 +1,39 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
 import { useState, useCallback } from 'react';
 import {
+  Clock,
   ArrowSquareOut,
   CopySimple,
   Check,
-  Tag as TagIcon,
+  Folder,
 } from '@phosphor-icons/react';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { MetaSeparator } from '@/components/mention/previews/ParentBadge';
-import { tagColorClasses } from '@/features/tags/utils/colors';
+import { formatRelativeTime, formatFileSize } from '@/shared/utils/dateFormatting';
+import { cn } from '@/shared/utils/cn';
+import { UrnType } from '@/shared/utils/urn';
+import { getUrnTypeTheme } from '@/config/theme/urnColors';
+import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
 import type { MentionLiveState } from '@/components/mention/types';
 
-interface TagMentionPreviewProps {
+const theme = getUrnTypeTheme(UrnType.FOLDER);
+
+interface FolderMentionPreviewProps {
   urn: string;
   title: string;
-  description?: string;
   liveState: MentionLiveState;
   onClose: () => void;
   onCopyLink: () => void;
 }
 
-export function TagMentionPreview({
+function countLabel(count: number, singular: string): string {
+  return `${count} ${singular}${count === 1 ? '' : 's'}`;
+}
+
+export function FolderMentionPreview({
   urn,
   title,
-  description,
   liveState,
   onCopyLink,
-}: TagMentionPreviewProps) {
+}: FolderMentionPreviewProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(() => {
@@ -36,58 +43,48 @@ export function TagMentionPreview({
     setTimeout(() => setCopied(false), 2000);
   }, [urn, onCopyLink]);
 
-  const palette = tagColorClasses(liveState.tagSlug ?? '', liveState.tagColor ?? undefined);
-  const totalUsage = liveState.tagUsageCount ?? 0;
-  const slug = liveState.tagSlug ?? '';
-  const tagPath = slug ? `/tags/${slug}` : '/tags';
-  const lastAddedAt = liveState.tagRecentAssignmentAt?.[0];
+  const fileCount = liveState.folderFileCount ?? 0;
+  const subfolderCount = liveState.folderSubfolderCount ?? 0;
+  const totalSize = liveState.folderTotalSize ?? 0;
+  const hasStats = liveState.folderFileCount != null;
 
   return (
     <>
       <span className="block relative px-4 pr-10 pt-3 pb-1 pl-5">
         <span className="flex items-center gap-2.5">
-          <span className={`grid place-items-center shrink-0 w-7 h-7 rounded-md border ${palette.bg} ${palette.text} ${palette.border}`}>
-            <TagIcon size={16} weight="duotone" />
+          <span className={cn('grid place-items-center shrink-0 w-7 h-7 rounded-md border', theme.border, theme.badgeBg, theme.accentText)}>
+            <Folder size={16} weight="duotone" />
           </span>
           <span className="block flex-1 min-w-0">
             <span className="block font-semibold text-sm truncate">{title}</span>
             <span className="flex items-center gap-1.5 flex-wrap">
-              {slug && (
+              {liveState.parentLabel && (
                 <>
-                  <span className="text-[10px] font-mono text-muted-foreground">#{slug}</span>
+                  <ParentBadge label={liveState.parentLabel} />
                   <MetaSeparator />
                 </>
               )}
-              <span className="text-[10px] font-medium text-primary">Tag</span>
+              <span className={cn('text-[10px] font-medium', theme.accentText)}>Folder</span>
             </span>
           </span>
         </span>
       </span>
 
-      {description && (
-        <span className="block px-4 pb-2 pl-[3.375rem]">
-          <span className="block text-xs text-muted-foreground/70 leading-relaxed line-clamp-3">{description}</span>
+      {hasStats && (
+        <span className="block px-4 pb-2 pl-[3.125rem]">
+          <span className="block text-xs text-muted-foreground">
+            {countLabel(fileCount, 'file')}
+            {' · '}
+            {countLabel(subfolderCount, 'folder')}
+            {totalSize > 0 && <>{' · '}{formatFileSize(totalSize)}</>}
+          </span>
         </span>
       )}
 
-      <span className="flex px-4 pb-2 pl-[3.375rem] items-center gap-2 flex-wrap">
-        <span className="text-[11px] font-medium text-foreground">
-          {totalUsage === 1 ? '1 item' : `${totalUsage} items`}
-        </span>
-        {lastAddedAt && (
-          <>
-            <MetaSeparator />
-            <span className="text-[11px] text-muted-foreground">
-              Last added {formatRelativeTime(lastAddedAt)}
-            </span>
-          </>
-        )}
-      </span>
-
       <span className="flex px-4 py-1.5 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <TagIcon size={12} weight="duotone" />
-          <span>Tag</span>
+          <Clock size={12} weight="duotone" />
+          <span>{formatRelativeTime(liveState.updatedAt) || 'No date'}</span>
         </span>
         <span className="flex items-center gap-1">
           <button
@@ -98,14 +95,10 @@ export function TagMentionPreview({
           >
             {copied ? <Check size={11} weight="bold" className="text-green-500" /> : <CopySimple size={11} weight="bold" />}
           </button>
-          <a
-            href={tagPath}
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-foreground"
-          >
+          <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
             <ArrowSquareOut size={11} weight="bold" />
             <span>Open</span>
-          </a>
+          </span>
         </span>
       </span>
     </>

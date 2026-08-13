@@ -81,7 +81,7 @@ export function SubjectAvatar({
     if (subject.type === SUBJECT_TYPE.GROUP) {
         if (subject.kind === 'team') {
             return (
-                <div
+                <span
                     className={cn(
                         'rounded-full flex items-center justify-center shrink-0',
                         'bg-primary/15 text-primary',
@@ -92,12 +92,12 @@ export function SubjectAvatar({
                     title={subject.name}
                 >
                     <TreeStructure size={TEAM_ICON_SIZES[size]} weight="duotone" />
-                </div>
+                </span>
             );
         }
         const groupInitials = getInitials(subject.name || subject.id.slice(0, 2));
         return (
-            <div
+            <span
                 className={cn(
                     'rounded-full flex items-center justify-center shrink-0 font-medium',
                     'bg-violet-500/15 text-violet-700 dark:text-violet-400',
@@ -108,7 +108,7 @@ export function SubjectAvatar({
                 title={subject.name}
             >
                 {groupInitials}
-            </div>
+            </span>
         );
     }
 
@@ -126,7 +126,7 @@ export function SubjectAvatar({
             onError={handleImgError}
         />
     ) : (
-        <div
+        <span
             className={cn(
                 'rounded-full flex items-center justify-center shrink-0 font-medium text-white',
                 sizeClass,
@@ -137,18 +137,18 @@ export function SubjectAvatar({
             title={subject.name}
         >
             {getInitials(subject.name || subject.id.slice(-2))}
-        </div>
+        </span>
     );
 
     if (shouldShowPresence) {
         return (
-            <div className={cn('relative inline-flex shrink-0', className)}>
+            <span className={cn('relative inline-flex shrink-0', className)}>
                 {avatarElement}
                 <PresenceIndicator
                     status={presenceStatus}
                     size={INDICATOR_SIZE_MAP[size]}
                 />
-            </div>
+            </span>
         );
     }
 
@@ -201,7 +201,7 @@ export function SubjectAvatarById({
             onError={handleImgError}
         />
     ) : (
-        <div
+        <span
             className={cn(
                 'rounded-full flex items-center justify-center shrink-0 font-medium text-white',
                 sizeClass,
@@ -212,18 +212,18 @@ export function SubjectAvatarById({
             title={displayName}
         >
             {displayName ? getInitials(displayName) : userId.slice(-2).toUpperCase()}
-        </div>
+        </span>
     );
 
     if (showPresence) {
         return (
-            <div className={cn('relative inline-flex shrink-0', className)}>
+            <span className={cn('relative inline-flex shrink-0', className)}>
                 {avatarElement}
                 <PresenceIndicator
                     status={presenceStatus}
                     size={INDICATOR_SIZE_MAP[size]}
                 />
-            </div>
+            </span>
         );
     }
 

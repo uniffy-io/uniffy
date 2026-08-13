@@ -1,22 +1,18 @@
 /* eslint-disable react-hooks/preserve-manual-memoization */
 import { memo, useState, useRef, useCallback, useMemo, useEffect, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { CaretDown, Robot, Trash } from '@phosphor-icons/react';
+import { CaretDown, Trash } from '@phosphor-icons/react';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
-import { buildFileUrl, buildMediaUrl, buildAgentAvatarUrl } from '@/shared/utils/fileUrls';
+import { buildFileUrl, buildMediaUrl } from '@/shared/utils/fileUrls';
 import { MentionPreview } from '@/components/mention/MentionPreview';
 import { MentionExpandedCard } from '@/components/mention/MentionExpandedCard';
 import { buildLiveStateFromMetadata } from '@/components/mention/buildLiveState';
-import { hasExpandedCard } from '@/components/mention/mentionConstants';
+import { hasExpandedCard, isPeopleTokenType, peopleTokenClasses } from '@/components/mention/mentionConstants';
 import { useUrnPreview } from '@/components/editor/plugins/mention/useUrnPreview';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { useAppSelector } from '@/app/hooks';
-import { usePresence } from '@/features/presence/hooks/usePresence';
-import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
-import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 import { LiveIndicator } from '@/components/mention/LiveIndicators';
 import { isTaskDoneStatus } from '@/components/mention/types';
-import { getInitials } from '@/components/subject/utils';
 import { useMentionState, useMentionDisplay } from '@/components/mention/useMentionState';
 import { cn } from '@/shared/utils/cn';
 import type { Icon } from '@phosphor-icons/react';
@@ -36,13 +32,20 @@ function useTimeoutCleanup(...refs: RefObject<ReturnType<typeof setTimeout> | nu
   }, []);
 }
 
-/** localStorage key prefix for per-URN expand/collapse preference. */
+/** localStorage key prefix for the per-surface, per-URN expand/collapse preference. */
 const TOGGLE_STORAGE_PREFIX = 'mention-toggle:';
+
+/** Surface the chip lives on (chat, notes, calendar, ...) so a toggle in one place
+ *  never leaks into another; derived from the route since chips render under it. */
+function toggleScope(): string {
+  if (typeof window === 'undefined') return 'app';
+  return window.location.pathname.split('/')[1] || 'app';
+}
 
 function readToggle(urn: string): boolean | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(TOGGLE_STORAGE_PREFIX + urn);
+    const raw = window.localStorage.getItem(TOGGLE_STORAGE_PREFIX + toggleScope() + ':' + urn);
     if (raw === 'true') return true;
     if (raw === 'false') return false;
     return null;
@@ -54,7 +57,7 @@ function readToggle(urn: string): boolean | null {
 function writeToggle(urn: string, value: boolean): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(TOGGLE_STORAGE_PREFIX + urn, String(value));
+    window.localStorage.setItem(TOGGLE_STORAGE_PREFIX + toggleScope() + ':' + urn, String(value));
   } catch {
     // Quota / private mode -- ignore.
   }
@@ -68,9 +71,9 @@ function MentionExpandedCardSkeleton({ label }: { label: string }) {
       aria-label={`Loading ${label}`}
       className={cn(
         'mention-expanded-card not-prose relative block',
-        'w-80 my-2 px-4 py-3',
-        'bg-card/95 backdrop-blur-xl',
-        'rounded-xl border border-border/50 shadow-sm',
+        'w-full max-w-md my-2 px-4 py-3',
+        'bg-card',
+        'rounded-lg border border-border shadow-xs',
         'overflow-hidden',
       )}
     >
@@ -140,9 +143,9 @@ function MentionTombstoneCard({
       aria-label={heading}
       className={cn(
         'mention-expanded-card not-prose relative block',
-        'w-80 my-2 px-4 py-3',
-        'bg-muted/40 backdrop-blur-xl text-muted-foreground',
-        'rounded-xl border border-dashed border-muted-foreground/40',
+        'w-full max-w-md my-2 px-4 py-3',
+        'bg-muted/40 text-muted-foreground',
+        'rounded-lg border border-dashed border-muted-foreground/40 shadow-xs',
         'cursor-not-allowed select-none',
       )}
       title={heading}
@@ -165,39 +168,12 @@ function MentionTombstoneCard({
   );
 }
 
-/** Null `src` skips the `<img>` entirely so we don't fire a 404 for subjects with no avatar. */
-function ChipAvatar({
-  src,
-  size,
-  fallback,
-}: {
-  src: string | null;
-  size: number;
-  fallback: React.ReactNode;
-}) {
-  const [failed, setFailed] = useState(false);
-  if (!src || failed) return <>{fallback}</>;
-  return (
-    <img
-      src={src}
-      alt=""
-      className="rounded-full object-cover"
-      style={{ width: size, height: size }}
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
 interface TypeStyle {
   icon: Icon;
-  gradient: string;
-  iconBg: string;
   iconBoxAccent: string;
   border: string;
-  shadow: string;
-  glow: string;
+  borderHover: string;
   badgeBg: string;
-  accentText: string;
 }
 
 function getTypeStyle(type: UrnType): TypeStyle {
@@ -205,14 +181,10 @@ function getTypeStyle(type: UrnType): TypeStyle {
   const theme = config.theme;
   return {
     icon: config.icon,
-    gradient: theme.gradient,
-    iconBg: theme.iconBg,
     iconBoxAccent: theme.iconBoxAccent,
     border: theme.border,
-    shadow: theme.shadow,
-    glow: theme.glow,
+    borderHover: theme.borderHover,
     badgeBg: theme.badgeBg,
-    accentText: theme.accentText,
   };
 }
 
@@ -234,13 +206,9 @@ function MentionChipInner({
   const typeLabel = getUrnTypeLabel(urn);
   const TypeIcon = style.icon;
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
-  const isUser = parsed.type === UrnType.USER && !!parsed.id;
-  const isAgent = parsed.type === UrnType.AGENT && !!parsed.id;
-  const presenceStatus = usePresence(isUser ? parsed.id! : '');
-  const avatarSrc = useAvatarUrl(isUser ? parsed.id! : '', 'sm');
-  const agent = useAppSelector((state) =>
-    isAgent ? state.agents.agents[parsed.id!] ?? null : null,
-  );
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const isPeopleToken = isPeopleTokenType(parsed.type);
+  const isSelfMention = parsed.type === UrnType.USER && !!parsed.id && parsed.id === currentUserId;
 
   const contextState = useMentionState(urn);
 
@@ -274,7 +242,7 @@ function MentionChipInner({
   const isDeleted = resolvedLiveState?.status === 'deleted';
 
   const [showPreview, setShowPreview] = useState(false);
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  const [previewPosition, setPreviewPosition] = useState<{ x: number; y: number; top?: number }>({ x: 0, y: 0 });
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chipRef = useRef<HTMLSpanElement>(null);
@@ -301,7 +269,7 @@ function MentionChipInner({
     hoverTimeoutRef.current = setTimeout(() => {
       if (chipRef.current) {
         const rect = chipRef.current.getBoundingClientRect();
-        setPreviewPosition({ x: rect.left, y: rect.bottom });
+        setPreviewPosition({ x: rect.left, y: rect.bottom, top: rect.top });
         fetchPreview(urn);
         setShowPreview(true);
       }
@@ -315,6 +283,16 @@ function MentionChipInner({
     }
     scheduleClose();
   }, [scheduleClose]);
+
+  // The expand caret must stay clickable: entering it cancels any pending or open preview.
+  const suppressPreview = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    cancelClose();
+    setShowPreview(false);
+  }, [cancelClose]);
 
   const handleClosePreview = useCallback(() => {
     cancelClose();
@@ -364,6 +342,43 @@ function MentionChipInner({
       : <MentionTombstoneChip typeLabel={typeLabel} />;
   }
 
+  const previewPortal = showPreview && createPortal(
+    <MentionPreview
+      preview={preview}
+      isLoading={isLoading}
+      error={error}
+      position={previewPosition}
+      onClose={handleClosePreview}
+      onEmbed={onReplaceWithMedia ? handleEmbed : undefined}
+      onMouseEnter={cancelClose}
+      onMouseLeave={scheduleClose}
+      liveState={resolvedLiveState}
+    />,
+    document.body,
+  );
+
+  if (isPeopleToken) {
+    return (
+      <>
+        <span
+          ref={chipRef}
+          role="link"
+          tabIndex={0}
+          aria-label={`${typeLabel}: ${displayLabel}`}
+          className={peopleTokenClasses(isSelfMention, selected)}
+          onClick={(e) => onClick?.(e)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          title={`Open ${typeLabel}: ${displayLabel} (Cmd/Ctrl+Click for new tab)`}
+        >
+          @{displayLabel}
+        </span>
+        {previewPortal}
+      </>
+    );
+  }
+
   if (isExpanded && resolvedLiveState) {
     return (
       <MentionExpandedCard
@@ -393,69 +408,26 @@ function MentionChipInner({
           'mention-chip group/chip inline-flex items-center align-middle',
           'gap-1.5 px-2 py-1 mx-0.5 my-0.5',
           'rounded-md',
-          'bg-gradient-to-r', style.gradient,
-          'backdrop-blur-sm',
-          'border', style.border,
+          style.badgeBg,
+          'border', style.border, style.borderHover,
           isLive && 'mention-chip-live',
-          style.glow,
           'cursor-pointer select-none',
-          'transition-all duration-200 ease-out',
-          'hover:shadow-md hover:scale-[1.01]',
-          'active:scale-[0.98]',
+          'transition-colors duration-200',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
           selected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
         )}
         onClick={(e) => onClick?.(e)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
-        onMouseEnter={canExpand ? undefined : handleMouseEnter}
-        onMouseLeave={canExpand ? undefined : handleMouseLeave}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         title={`Open ${typeLabel}: ${displayLabel} (Cmd/Ctrl+Click for new tab)`}
       >
-        {isUser ? (
-          <span className="relative flex items-center justify-center shrink-0 w-5 h-5 rounded-full overflow-visible">
-            <ChipAvatar
-              src={avatarSrc}
-              size={20}
-              fallback={
-                <span className={cn('grid place-items-center w-5 h-5 rounded-full text-[8px] font-semibold', style.iconBoxAccent)}>
-                  {getInitials(label)}
-                </span>
-              }
-            />
-            <PresenceIndicator status={presenceStatus} size="sm" />
-          </span>
-        ) : isAgent ? (
-          <span className="relative flex items-center justify-center shrink-0 w-5 h-5 rounded-full overflow-visible">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full overflow-hidden">
-              <ChipAvatar
-                src={agent?.avatarKey ? buildAgentAvatarUrl(parsed.id!, 'sm') : null}
-                size={20}
-                fallback={
-                  <span className={cn(
-                    'grid place-items-center w-5 h-5 rounded-full text-[10px]',
-                    agent?.avatarEmoji ? 'bg-muted' : style.iconBoxAccent,
-                  )}>
-                    {agent?.avatarEmoji ?? <TypeIcon size={11} weight="duotone" />}
-                  </span>
-                }
-              />
-            </span>
-            <span
-              className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-2.5 h-2.5 rounded-full ring-2 ring-background shrink-0 bg-primary text-primary-foreground"
-              aria-label="Agent"
-              title="Agent"
-            >
-              <Robot size={7} weight="fill" />
-            </span>
-          </span>
-        ) : (
-          <span className={cn(
-            'grid place-items-center shrink-0 w-5 h-5 rounded',
-            style.iconBoxAccent,
-          )}>
-            <TypeIcon size={11} weight="duotone" />
-          </span>
-        )}
+        <span className={cn(
+          'grid place-items-center shrink-0 w-5 h-5 rounded',
+          style.iconBoxAccent,
+        )}>
+          <TypeIcon size={11} weight="duotone" />
+        </span>
 
         {parsed.type === UrnType.TASK && resolvedLiveState?.taskPriorityColor && (
           <span
@@ -495,6 +467,12 @@ function MentionChipInner({
           </span>
         )}
 
+        {parsed.type === UrnType.FOLDER && resolvedLiveState?.folderFileCount != null && (
+          <span className="text-[10px] font-medium text-muted-foreground tabular-nums shrink-0">
+            {resolvedLiveState.folderFileCount}
+          </span>
+        )}
+
         {hasLiveIndicator && resolvedLiveState && (
           <span className="inline-flex items-center shrink-0 ml-0.5">
             <LiveIndicator urnType={parsed.type} liveState={resolvedLiveState} />
@@ -505,6 +483,7 @@ function MentionChipInner({
           <button
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); persistToggle(true); }}
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onMouseEnter={suppressPreview}
             className="inline-flex items-center shrink-0 p-0.5 -mr-1 rounded hover:bg-foreground/10 text-muted-foreground transition-colors"
             title="Expand card"
           >
@@ -513,20 +492,7 @@ function MentionChipInner({
         )}
       </span>
 
-      {showPreview && !canExpand && createPortal(
-        <MentionPreview
-          preview={preview}
-          isLoading={isLoading}
-          error={error}
-          position={previewPosition}
-          onClose={handleClosePreview}
-          onEmbed={onReplaceWithMedia ? handleEmbed : undefined}
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
-          liveState={resolvedLiveState}
-        />,
-        document.body,
-      )}
+      {previewPortal}
     </>
   );
 }
@@ -542,13 +508,9 @@ function MentionChipCompactInner({
   const style = getTypeStyle(parsed.type);
   const typeLabel = getUrnTypeLabel(urn);
   const TypeIcon = style.icon;
-  const isUser = parsed.type === UrnType.USER && !!parsed.id;
-  const isAgent = parsed.type === UrnType.AGENT && !!parsed.id;
-  const presenceStatus = usePresence(isUser ? parsed.id! : '');
-  const avatarSrc = useAvatarUrl(isUser ? parsed.id! : '', 'sm');
-  const agent = useAppSelector((state) =>
-    isAgent ? state.agents.agents[parsed.id!] ?? null : null,
-  );
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const isPeopleToken = isPeopleTokenType(parsed.type);
+  const isSelfMention = parsed.type === UrnType.USER && !!parsed.id && parsed.id === currentUserId;
 
   const contextState = useMentionState(urn);
   const resolvedLiveState = liveState ?? contextState;
@@ -557,7 +519,7 @@ function MentionChipCompactInner({
   const displayLabel = resolvedLiveState?.title || label;
 
   const [showPreview, setShowPreview] = useState(false);
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  const [previewPosition, setPreviewPosition] = useState<{ x: number; y: number; top?: number }>({ x: 0, y: 0 });
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chipRef = useRef<HTMLSpanElement>(null);
@@ -582,7 +544,7 @@ function MentionChipCompactInner({
     hoverTimeoutRef.current = setTimeout(() => {
       if (chipRef.current) {
         const rect = chipRef.current.getBoundingClientRect();
-        setPreviewPosition({ x: rect.left, y: rect.bottom });
+        setPreviewPosition({ x: rect.left, y: rect.bottom, top: rect.top });
         fetchPreview(urn);
         setShowPreview(true);
       }
@@ -611,6 +573,42 @@ function MentionChipCompactInner({
     return <MentionTombstoneChip typeLabel={typeLabel} compact />;
   }
 
+  const previewPortal = showPreview && createPortal(
+    <MentionPreview
+      preview={preview}
+      isLoading={isLoading}
+      error={error}
+      position={previewPosition}
+      onClose={() => { cancelClose(); setShowPreview(false); }}
+      onMouseEnter={cancelClose}
+      onMouseLeave={scheduleClose}
+      liveState={resolvedLiveState}
+    />,
+    document.body,
+  );
+
+  if (isPeopleToken) {
+    return (
+      <>
+        <span
+          ref={chipRef}
+          role="link"
+          tabIndex={0}
+          aria-label={`${typeLabel}: ${displayLabel}`}
+          className={cn(peopleTokenClasses(isSelfMention, selected), 'text-xs')}
+          onClick={(e) => onClick?.(e)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          title={`Open ${typeLabel}: ${displayLabel}`}
+        >
+          @{displayLabel}
+        </span>
+        {previewPortal}
+      </>
+    );
+  }
+
   return (
     <>
       <span
@@ -622,12 +620,10 @@ function MentionChipCompactInner({
           'mention-chip-compact group/chip inline-flex items-center align-middle',
           'gap-1 px-1.5 py-0.5 mx-0.5',
           'rounded-md',
-          'bg-gradient-to-r', style.gradient,
-          'border', style.border,
-          style.glow,
+          style.badgeBg,
+          'border', style.border, style.borderHover,
           'cursor-pointer select-none',
-          'transition-all duration-150',
-          'hover:shadow-sm',
+          'transition-colors duration-150',
           'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
           selected && 'ring-1 ring-primary',
         )}
@@ -637,48 +633,9 @@ function MentionChipCompactInner({
         onMouseLeave={handleMouseLeave}
         title={`Open ${typeLabel}: ${displayLabel}`}
       >
-        {isUser ? (
-          <span className="relative flex items-center justify-center shrink-0 w-3.5 h-3.5 rounded-full overflow-visible">
-            <ChipAvatar
-              src={avatarSrc}
-              size={14}
-              fallback={
-                <span className={cn('grid place-items-center w-3.5 h-3.5 rounded-sm', style.iconBoxAccent)}>
-                  <TypeIcon size={8} weight="duotone" />
-                </span>
-              }
-            />
-            <PresenceIndicator status={presenceStatus} size="sm" className="!w-1.5 !h-1.5 !ring-1" />
-          </span>
-        ) : isAgent ? (
-          <span className="relative flex items-center justify-center shrink-0 w-3.5 h-3.5 rounded-full overflow-visible">
-            <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full overflow-hidden">
-              <ChipAvatar
-                src={agent?.avatarKey ? buildAgentAvatarUrl(parsed.id!, 'sm') : null}
-                size={14}
-                fallback={
-                  <span className={cn(
-                    'grid place-items-center w-3.5 h-3.5 rounded-full text-[8px]',
-                    agent?.avatarEmoji ? 'bg-muted' : style.iconBoxAccent,
-                  )}>
-                    {agent?.avatarEmoji ?? <TypeIcon size={8} weight="duotone" />}
-                  </span>
-                }
-              />
-            </span>
-            <span
-              className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-2 h-2 rounded-full ring-1 ring-background shrink-0 bg-primary text-primary-foreground"
-              aria-label="Agent"
-              title="Agent"
-            >
-              <Robot size={6} weight="fill" />
-            </span>
-          </span>
-        ) : (
-          <span className={cn('grid place-items-center shrink-0 w-3.5 h-3.5 rounded-sm', style.iconBoxAccent)}>
-            <TypeIcon size={8} weight="duotone" />
-          </span>
-        )}
+        <span className={cn('grid place-items-center shrink-0 w-3.5 h-3.5 rounded-sm', style.iconBoxAccent)}>
+          <TypeIcon size={8} weight="duotone" />
+        </span>
 
         <span
           className={cn(
@@ -694,19 +651,7 @@ function MentionChipCompactInner({
         )}
       </span>
 
-      {showPreview && createPortal(
-        <MentionPreview
-          preview={preview}
-          isLoading={isLoading}
-          error={error}
-          position={previewPosition}
-          onClose={() => { cancelClose(); setShowPreview(false); }}
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
-          liveState={resolvedLiveState}
-        />,
-        document.body,
-      )}
+      {previewPortal}
     </>
   );
 }
@@ -717,8 +662,18 @@ function MentionChipBasicInner({ urn, label, selected = false }: MentionChipBasi
   const style = getTypeStyle(parsed.type);
   const typeLabel = getUrnTypeLabel(urn);
   const TypeIcon = style.icon;
-  const isUser = parsed.type === UrnType.USER && !!parsed.id;
-  const isAgent = parsed.type === UrnType.AGENT && !!parsed.id;
+
+  if (isPeopleTokenType(parsed.type)) {
+    return (
+      <span
+        role="link"
+        className={peopleTokenClasses(false, selected)}
+        title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
+      >
+        @{label}
+      </span>
+    );
+  }
 
   return (
     <span
@@ -727,34 +682,20 @@ function MentionChipBasicInner({ urn, label, selected = false }: MentionChipBasi
         'mention-chip group/chip inline-flex items-center align-middle',
         'gap-1.5 px-2 py-1 mx-0.5 my-0.5',
         'rounded-md',
-        'bg-gradient-to-r', style.gradient,
-        'backdrop-blur-sm',
-        'border', style.border,
-        style.glow,
+        style.badgeBg,
+        'border', style.border, style.borderHover,
         'cursor-pointer select-none',
-        'transition-all duration-200 ease-out',
-        'hover:shadow-md hover:scale-[1.01]',
-        'active:scale-[0.98]',
+        'transition-colors duration-200',
         selected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
       )}
       title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
     >
-      {isUser && parsed.id ? (
-        <span className={cn('grid place-items-center shrink-0 w-5 h-5 rounded-full text-[8px] font-semibold', style.iconBoxAccent)}>
-          {getInitials(label)}
-        </span>
-      ) : isAgent && parsed.id ? (
-        <span className={cn('grid place-items-center shrink-0 w-5 h-5 rounded-full', style.iconBoxAccent)}>
-          <TypeIcon size={11} weight="duotone" />
-        </span>
-      ) : (
-        <span className={cn(
-          'grid place-items-center shrink-0 w-5 h-5 rounded',
-          style.iconBoxAccent,
-        )}>
-          <TypeIcon size={11} weight="duotone" />
-        </span>
-      )}
+      <span className={cn(
+        'grid place-items-center shrink-0 w-5 h-5 rounded',
+        style.iconBoxAccent,
+      )}>
+        <TypeIcon size={11} weight="duotone" />
+      </span>
 
       <span className="text-sm font-medium text-foreground truncate max-w-[200px] leading-tight">
         {label}

@@ -21,9 +21,10 @@ import { SkillSlashPopup } from '@/features/agents/components/chat/SkillSlashPop
 import { computeSlashToken, matchLeadingSkillCommand } from '@/features/agents/utils/slashCommands';
 import { fetchRunnableSkills, type SerializedRunnableSkill } from '@/features/agents/store/agentRunnableSkillsThunks';
 import { selectRunnableSkillsForAgent } from '@/features/agents/store/agentRunnableSkillsSlice';
-import { parseUrn, UrnType } from '@/shared/utils/urn';
+import { parseUrn } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
-import { getInitials } from '@/components/subject/utils';
+import { isPeopleTokenType, peopleTokenClasses } from '@/components/mention/mentionConstants';
+import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
 import { useKeybinding, matchesShortcut } from '@/features/settings';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
 import { AgentModelPicker } from '@/features/chat/components/compose/AgentModelPicker';
@@ -110,7 +111,7 @@ function serializeToMarkdown(container: HTMLDivElement): string {
       const urn = el.getAttribute(MENTION_ATTR);
       if (urn) {
         const label = el.getAttribute(MENTION_LABEL_ATTR) ?? el.textContent ?? '';
-        result += `[[[${label}|${urn}]]]`;
+        result += `[[[${sanitizeMentionLabel(label)}|${urn}]]]`;
         return;
       }
 
@@ -145,10 +146,16 @@ function serializeToMarkdown(container: HTMLDivElement): string {
 /** Static chip for the compose contentEditable; avoids `<img>` since onError can't run under renderToStaticMarkup. */
 function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }) {
   const parsed = parseUrn(urn);
+
+  // Same Slack-style token the sent message renders; static markup has no
+  // viewer context, so the self-mention wash never applies here.
+  if (isPeopleTokenType(parsed.type)) {
+    return <span className={peopleTokenClasses(false, false)}>@{label}</span>;
+  }
+
   const config = getContentTypeConfig(parsed.type);
   const TypeIcon = config.icon;
   const theme = config.theme;
-  const isUser = parsed.type === UrnType.USER && !!parsed.id;
 
   return (
     <span
@@ -156,31 +163,19 @@ function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }
         'mention-chip inline-flex items-center align-middle',
         'gap-1.5 px-2 py-1 mx-0.5 my-0.5',
         'rounded-md border',
-        'bg-gradient-to-r', theme.gradient,
+        theme.badgeBg,
         theme.border,
-        theme.glow,
         'cursor-default select-none',
       )}
     >
-      {isUser ? (
-        <span
-          className={cn(
-            'grid place-items-center shrink-0 w-5 h-5 rounded-full text-[8px] font-semibold',
-            theme.iconBoxAccent,
-          )}
-        >
-          {getInitials(label)}
-        </span>
-      ) : (
-        <span
-          className={cn(
-            'grid place-items-center shrink-0 w-5 h-5 rounded',
-            theme.iconBoxAccent,
-          )}
-        >
-          <TypeIcon size={11} weight="duotone" />
-        </span>
-      )}
+      <span
+        className={cn(
+          'grid place-items-center shrink-0 w-5 h-5 rounded',
+          theme.iconBoxAccent,
+        )}
+      >
+        <TypeIcon size={11} weight="duotone" />
+      </span>
       <span className="text-sm font-medium text-foreground truncate max-w-[200px] leading-tight">
         {label}
       </span>
@@ -193,14 +188,17 @@ function createMentionElement(label: string, urn: string): HTMLSpanElement {
   wrapper.setAttribute(MENTION_ATTR, urn);
   wrapper.setAttribute(MENTION_LABEL_ATTR, label);
   wrapper.contentEditable = 'false';
-  wrapper.className = 'inline-block align-middle';
+  // Tokens flow with the text baseline; boxed chips keep the inline-block wrapper.
+  wrapper.className = isPeopleTokenType(parseUrn(urn).type)
+    ? 'inline align-baseline'
+    : 'inline-block align-middle';
   wrapper.innerHTML = renderToStaticMarkup(
     <ComposeMentionChipStatic urn={urn} label={label} />,
   );
   return wrapper;
 }
 
-const MENTION_MARKDOWN_PATTERN = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+const MENTION_MARKDOWN_PATTERN = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
 
 // Builds the DOM from text nodes + createMentionElement only; draft content is
 // synced from other sessions and must never be assigned as an HTML string.
@@ -632,7 +630,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     // receives the file URN, not just the raw attachment. Skip any already mentioned.
     const attachmentMentions = pendingFiles
       .filter((f) => Boolean(f.fileId) && !body.includes(f.fileId!))
-      .map((f) => `[[[${f.name}|urn:uniffy:content:FILE:${f.fileId!}]]]`)
+      .map((f) => `[[[${sanitizeMentionLabel(f.name)}|urn:uniffy:content:FILE:${f.fileId!}]]]`)
       .join(' ');
     const content = attachmentMentions
       ? body

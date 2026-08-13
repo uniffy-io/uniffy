@@ -42,8 +42,6 @@ export function ProjectMentionPreview({
 
   return (
     <>
-      <span className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-orange-500/10 via-orange-500/5 to-transparent pointer-events-none" />
-
       {/* Header */}
       <span className="block relative px-4 pr-10 pt-3.5 pb-2 pl-5">
         <span className="flex items-start gap-3">

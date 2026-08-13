@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { X, At } from '@phosphor-icons/react';
 import { SearchResultsList, useSearch } from '@/features/search';
 import { FilterChip } from '@/features/search/components/FilterChip';
@@ -10,8 +10,28 @@ import {
     removeMyFilterFromQuery,
     removeProjectFilterFromQuery,
 } from '@/features/search/utils/queryParser';
-import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
+import { SearchResultType, type SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 import { cn } from '@/shared/utils/cn';
+
+// An @-mention is a people gesture first: users, agents, and teams (mentioning
+// one notifies its members) sit above content unconditionally. A single
+// re-ranked query cannot deliver that - an org where everyone's email matches
+// the query fills the whole page with users and pushes exact-name agents out -
+// so the popup runs a dedicated people query (relevance-ordered within the
+// group, capped) and prepends it to the content results.
+const MENTION_PEOPLE_TYPES: SearchResultType[] = [
+    SearchResultType.USER,
+    SearchResultType.AGENT,
+    SearchResultType.TEAM,
+];
+const MENTION_PEOPLE_LIMIT = 8;
+// nameMatchesOnly keeps the shared email domain (and other non-name text) from
+// matching every member of the org.
+const MENTION_PEOPLE_SEARCH_OPTIONS = {
+    typeFilters: MENTION_PEOPLE_TYPES,
+    nameMatchesOnly: true,
+    limit: MENTION_PEOPLE_LIMIT,
+};
 
 interface ChatMentionPopupProps {
     initialQuery: string;
@@ -31,13 +51,40 @@ export function ChatMentionPopup({
 
     const {
         query: searchQuery,
-        setQuery,
+        setQuery: setContentQuery,
         results,
-        isLoading,
-        clearResults,
+        isLoading: contentLoading,
+        clearResults: clearContentResults,
         parsedQuery,
         hasFilters,
     } = useSearch();
+
+    const {
+        setQuery: setPeopleQuery,
+        results: peopleResults,
+        isLoading: peopleLoading,
+        clearResults: clearPeopleResults,
+    } = useSearch(MENTION_PEOPLE_SEARCH_OPTIONS);
+
+    const setQuery = useCallback((q: string) => {
+        setContentQuery(q);
+        setPeopleQuery(q);
+    }, [setContentQuery, setPeopleQuery]);
+
+    const clearResults = useCallback(() => {
+        clearContentResults();
+        clearPeopleResults();
+    }, [clearContentResults, clearPeopleResults]);
+
+    const isLoading = contentLoading || peopleLoading;
+
+    // An explicitly typed type filter (note:, file:, ...) is the user narrowing
+    // on purpose; the people group steps aside for it.
+    const orderedResults = useMemo(() => {
+        if (parsedQuery.filters.types.length > 0) return results;
+        const peopleUrns = new Set(peopleResults.map((r) => r.urn));
+        return [...peopleResults, ...results.filter((r) => !peopleUrns.has(r.urn))];
+    }, [parsedQuery.filters.types.length, peopleResults, results]);
 
     useEffect(() => {
         if (initialQuery) {
@@ -197,7 +244,7 @@ export function ChatMentionPopup({
 
                         {searchQuery.trim() || isLoading || hasFilters ? (
                             <SearchResultsList
-                                results={results}
+                                results={orderedResults}
                                 isLoading={isLoading}
                                 query={searchQuery}
                                 onSelect={onSelect}

@@ -96,6 +96,22 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
 
     case UrnType.NOTE:
       state.noteNodeType = meta.noteNodeType || undefined;
+      if (m.child_count) state.noteChildCount = parseInt(m.child_count, 10) || 0;
+      break;
+
+    case UrnType.FOLDER:
+      if (m.file_count) state.folderFileCount = parseInt(m.file_count, 10) || 0;
+      if (m.folder_count) state.folderSubfolderCount = parseInt(m.folder_count, 10) || 0;
+      if (m.total_size) state.folderTotalSize = parseInt(m.total_size, 10) || 0;
+      break;
+
+    case UrnType.ROOM:
+      state.roomType = m.room_type || undefined;
+      if (m.capacity) state.roomCapacity = parseInt(m.capacity, 10) || 0;
+      state.roomBuilding = m.building || undefined;
+      state.roomFloor = m.floor || undefined;
+      state.roomLocation = m.location || undefined;
+      state.roomAmenities = m.amenities || undefined;
       break;
 
     case UrnType.PROJECT:
@@ -215,8 +231,11 @@ export function streamChangesToLiveState(changes: Record<string, string>): Parti
         patch.eventEndTime = value || undefined; break;
       case 'is_all_day':
         patch.eventIsAllDay = value === 'true'; break;
+      // Shared by CALENDAR_EVENT and ROOM; each chip type reads only its own field.
       case 'location':
-        patch.eventLocation = value || undefined; break;
+        patch.eventLocation = value || undefined;
+        patch.roomLocation = value || undefined;
+        break;
       case 'meeting_url':
         patch.eventMeetingUrl = value || undefined; break;
 
@@ -232,6 +251,28 @@ export function streamChangesToLiveState(changes: Record<string, string>): Parti
       // NOTE
       case 'node_type':
         patch.noteNodeType = value || undefined; break;
+      case 'child_count':
+        patch.noteChildCount = value ? parseInt(value, 10) || 0 : 0; break;
+
+      // FOLDER
+      case 'file_count':
+        patch.folderFileCount = value ? parseInt(value, 10) || 0 : 0; break;
+      case 'folder_count':
+        patch.folderSubfolderCount = value ? parseInt(value, 10) || 0 : 0; break;
+      case 'total_size':
+        patch.folderTotalSize = value ? parseInt(value, 10) || 0 : 0; break;
+
+      // ROOM
+      case 'room_type':
+        patch.roomType = value || undefined; break;
+      case 'capacity':
+        patch.roomCapacity = value ? parseInt(value, 10) || 0 : 0; break;
+      case 'building':
+        patch.roomBuilding = value || undefined; break;
+      case 'floor':
+        patch.roomFloor = value || undefined; break;
+      case 'amenities':
+        patch.roomAmenities = value || undefined; break;
 
       // PROJECT
       case 'completed_tasks':

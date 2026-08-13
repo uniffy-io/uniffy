@@ -2,7 +2,9 @@ export { TaskMentionPreview } from '@/components/mention/previews/TaskMentionPre
 export { CalendarMentionPreview } from '@/components/mention/previews/CalendarMentionPreview';
 export { ProjectMentionPreview } from '@/components/mention/previews/ProjectMentionPreview';
 export { FileMentionPreview } from '@/components/mention/previews/FileMentionPreview';
+export { FolderMentionPreview } from '@/components/mention/previews/FolderMentionPreview';
 export { NoteMentionPreview } from '@/components/mention/previews/NoteMentionPreview';
+export { RoomMentionPreview } from '@/components/mention/previews/RoomMentionPreview';
 export { UserMentionPreview } from '@/components/mention/previews/UserMentionPreview';
 export { TeamMentionPreview } from '@/components/mention/previews/TeamMentionPreview';
 export { ChatMentionPreview } from '@/components/mention/previews/ChatMentionPreview';
