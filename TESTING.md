@@ -458,6 +458,11 @@ carry live container stats. Sweep in dark AND light (`(both products)`).
       suggestion bar above the composer (people first, names only; bare `@` lists people);
       tapping a row inserts `@Label`, keeps the keyboard up, and the sent message renders the
       mention; the `@` tool button still opens the full-screen reference overlay.
+- [ ] Mobile: user, agent, and team mentions render as `@Name` tokens (violet tint, no box,
+      no icon) in chat messages, thread replies, note bodies, event and task descriptions, and
+      comments; a mention of yourself carries the stronger wash; tokens wrap mid-sentence with
+      the surrounding text instead of breaking onto a chip row; content mentions (notes, files,
+      folders) keep the boxed chip and still navigate on tap.
 
 ## Chat notification deep links
 

@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { ReferenceChip } from "@shared/mentions/ReferenceChip";
+import { MentionToken, isPeopleTokenUrnType } from "@shared/mentions/MentionToken";
 import type { Domain } from "@core/types";
 
 const MENTION_RE = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
@@ -18,7 +19,6 @@ const CONTENT_TYPE_TO_DOMAIN: Record<string, Domain> = {
   CHAT: "chat",
   CALENDAR_EVENT: "calendar",
   PROJECT: "projects",
-  AGENT: "agents",
 };
 
 // Domains with a /{domain}/[id] detail route mentions can navigate to.
@@ -114,12 +114,34 @@ function parseInlineSpans(text: string): InlinePart[] {
   return parts;
 }
 
-function hasMentions(parts: InlinePart[]): boolean {
-  return parts.some((p) => p.type === "mention");
+function mentionUrnType(urn: string): string | null {
+  const match = urn.match(/urn:uniffy:content:([^:]+):/);
+  return match ? match[1] : null;
 }
 
-function renderTextParts(parts: InlinePart[], T: ThemeColors, kp: number | string = 0) {
+// People tokens are nested Text and flow with the line; only boxed chips
+// need the flex-wrap row layout that breaks natural text wrapping.
+function hasChipMentions(parts: InlinePart[]): boolean {
+  return parts.some((p) => p.type === "mention" && !isPeopleTokenUrnType(mentionUrnType(p.urn)));
+}
+
+function renderTextParts(
+  parts: InlinePart[],
+  T: ThemeColors,
+  kp: number | string = 0,
+  onMentionPress?: (urn: string, label: string) => void,
+) {
   return parts.map((part, i) => {
+    if (part.type === "mention") {
+      return (
+        <MentionToken
+          key={`${kp}-m${i}`}
+          urn={part.urn}
+          label={part.label}
+          onPress={onMentionPress ? () => onMentionPress(part.urn, part.label) : undefined}
+        />
+      );
+    }
     if (part.type === "code") {
       return (
         <Text
@@ -195,14 +217,25 @@ function renderMixedParts(
     if (part.type === "mention") {
       const urnMatch = part.urn.match(/urn:uniffy:content:([^:]+):(.+)/);
       const urnType = urnMatch ? urnMatch[1] : null;
+      if (isPeopleTokenUrnType(urnType)) {
+        return (
+          <MentionToken
+            key={`${kp}-m${i}`}
+            urn={part.urn}
+            label={part.label}
+            textStyle={textStyle}
+            onPress={onMentionPress ? () => onMentionPress(part.urn, part.label) : undefined}
+          />
+        );
+      }
       const domain = urnType ? CONTENT_TYPE_TO_DOMAIN[urnType] : null;
       const refId = urnMatch ? urnMatch[2] : null;
       if (!domain) {
-        if (urnType === "USER" || urnType === "GROUP") {
+        if (urnType === "GROUP") {
           return (
             <ReferenceChip
               key={`${kp}-m${i}`}
-              domain={urnType === "USER" ? "user" : "group"}
+              domain="group"
               label={part.label}
               onPress={onMentionPress ? () => onMentionPress(part.urn, part.label) : undefined}
             />
@@ -322,10 +355,10 @@ function renderLineContent(
   onMentionPress?: (urn: string, label: string) => void,
 ) {
   const parts = parseInlineWithMentions(content);
-  if (!hasMentions(parts)) {
+  if (!hasChipMentions(parts)) {
     return (
       <Text key={index} style={textStyle}>
-        {renderTextParts(parts, T, index)}
+        {renderTextParts(parts, T, index, onMentionPress)}
       </Text>
     );
   }
@@ -472,12 +505,12 @@ function renderMarkdownLine(
     const textStyle = [styles.mdBlockquoteText, { color: T.textDim }];
     return (
       <View key={index} style={[styles.mdBlockquote, { borderLeftColor: T.accent }]}>
-        {hasMentions(parts) ? (
+        {hasChipMentions(parts) ? (
           <View style={styles.inlineRow}>
             {renderMixedParts(parts, T, textStyle, onMentionPress, index)}
           </View>
         ) : (
-          <Text style={textStyle}>{renderTextParts(parts, T, index)}</Text>
+          <Text style={textStyle}>{renderTextParts(parts, T, index, onMentionPress)}</Text>
         )}
       </View>
     );
@@ -493,12 +526,12 @@ function renderMarkdownLine(
         <View style={[styles.mdCheckBox, { backgroundColor: T.accent, borderColor: T.accent }]}>
           <Text style={styles.mdCheckMark}>✓</Text>
         </View>
-        {hasMentions(parts) ? (
+        {hasChipMentions(parts) ? (
           <View style={[styles.inlineRow, { flex: 1 }]}>
             {renderMixedParts(parts, T, textStyle, onMentionPress, index)}
           </View>
         ) : (
-          <Text style={textStyle}>{renderTextParts(parts, T, index)}</Text>
+          <Text style={textStyle}>{renderTextParts(parts, T, index, onMentionPress)}</Text>
         )}
       </View>
     );
@@ -509,12 +542,12 @@ function renderMarkdownLine(
     return (
       <View key={index} style={styles.mdCheckItem}>
         <View style={[styles.mdCheckBox, { borderColor: T.border }]} />
-        {hasMentions(parts) ? (
+        {hasChipMentions(parts) ? (
           <View style={[styles.inlineRow, { flex: 1 }]}>
             {renderMixedParts(parts, T, textStyle, onMentionPress, index)}
           </View>
         ) : (
-          <Text style={textStyle}>{renderTextParts(parts, T, index)}</Text>
+          <Text style={textStyle}>{renderTextParts(parts, T, index, onMentionPress)}</Text>
         )}
       </View>
     );
@@ -525,12 +558,12 @@ function renderMarkdownLine(
     return (
       <View key={index} style={styles.mdListItem}>
         <View style={[styles.mdBullet, { backgroundColor: T.textDim }]} />
-        {hasMentions(parts) ? (
+        {hasChipMentions(parts) ? (
           <View style={[styles.inlineRow, { flex: 1 }]}>
             {renderMixedParts(parts, T, textStyle, onMentionPress, index)}
           </View>
         ) : (
-          <Text style={textStyle}>{renderTextParts(parts, T, index)}</Text>
+          <Text style={textStyle}>{renderTextParts(parts, T, index, onMentionPress)}</Text>
         )}
       </View>
     );
@@ -542,12 +575,12 @@ function renderMarkdownLine(
     return (
       <View key={index} style={styles.mdListItem}>
         <Text style={[styles.mdNumberLabel, { color: T.textDim }]}>{numberedMatch[1]}.</Text>
-        {hasMentions(parts) ? (
+        {hasChipMentions(parts) ? (
           <View style={[styles.inlineRow, { flex: 1 }]}>
             {renderMixedParts(parts, T, textStyle, onMentionPress, index)}
           </View>
         ) : (
-          <Text style={textStyle}>{renderTextParts(parts, T, index)}</Text>
+          <Text style={textStyle}>{renderTextParts(parts, T, index, onMentionPress)}</Text>
         )}
       </View>
     );
@@ -577,8 +610,8 @@ export function MentionLine({
 }: MentionLineProps) {
   const T = useTheme();
   const parts = parseInlineWithMentions(content);
-  if (!hasMentions(parts)) {
-    return <Text style={textStyle}>{renderTextParts(parts, T)}</Text>;
+  if (!hasChipMentions(parts)) {
+    return <Text style={textStyle}>{renderTextParts(parts, T, 0, onMentionPress)}</Text>;
   }
   return (
     <View style={[styles.inlineRow, wrapperStyle]}>
