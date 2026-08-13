@@ -101,6 +101,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
           const attachments = response.attachments.map((a) => ({
             id: a.id,
             fileId: a.fileId,
+            sourceFileId: a.sourceFileId || undefined,
             filename: a.filename,
             mimeType: a.mimeType,
             sizeBytes: Number(a.sizeBytes),

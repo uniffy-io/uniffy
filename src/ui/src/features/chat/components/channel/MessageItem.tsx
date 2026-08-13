@@ -105,8 +105,14 @@ function MessageItemInner({
   const isAgent = message.senderType === 'AGENT';
   // A file referenced inline as a mention chip already represents itself; skip its
   // card so it shows once (the attachment record still rides along for access).
+  // Uploads mention the SOURCE file while the attachment links its copy, so both
+  // ids count as "already shown".
   const visibleAttachments = useMemo(
-    () => (message.attachments ?? []).filter((att) => !message.content.includes(`FILE:${att.fileId}`)),
+    () => (message.attachments ?? []).filter(
+      (att) =>
+        !message.content.includes(`FILE:${att.fileId}`) &&
+        !(att.sourceFileId && message.content.includes(`FILE:${att.sourceFileId}`)),
+    ),
     [message.attachments, message.content],
   );
   // Set on the trigger message when the user stops the agent's reply mid-run.

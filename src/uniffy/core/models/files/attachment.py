@@ -19,6 +19,9 @@ class Attachment(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     file_id: UUID = Field(foreign_key="files_files.id", unique=True, nullable=False, index=True)
+    # The file the attachment was copied from; no FK because the source lives its
+    # own life. Lets renderers dedupe a mention chip against its attachment copy.
+    source_file_id: UUID | None = Field(default=None, nullable=True)
     content_type: ContentType = Field(
         sa_column=Column(
             SAEnum(
