@@ -252,6 +252,7 @@ function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveS
       state.userJobTitle = m["job_title"] || undefined;
       state.userDepartment = m["department"] || undefined;
       state.userTeamName = m["team_name"] || undefined;
+      state.userTimezone = m["timezone"] || undefined;
       break;
     case UrnType.TAG:
       state.tagColor = m["color"] || undefined;

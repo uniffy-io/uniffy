@@ -12,8 +12,6 @@ import {
 } from "@/features/calendar/utils";
 import { cn } from "@/shared/utils/cn";
 
-const DAY_HEADERS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-
 export function MiniCalendar() {
   const dispatch = useAppDispatch();
   const currentDate = useAppSelector((state) => state.calendarUi.currentDate);
@@ -82,9 +80,12 @@ export function MiniCalendar() {
       </div>
 
       <div className="grid grid-cols-7 gap-1 mb-1">
-        {DAY_HEADERS.map((day) => (
-          <div key={day} className="text-center text-[10px] text-muted-foreground py-1">
-            {day}
+        {monthColumns.slice(0, 7).map((column) => (
+          <div
+            key={column.dateString}
+            className="text-center text-[10px] text-muted-foreground py-1"
+          >
+            {column.dayName.slice(0, 2)}
           </div>
         ))}
       </div>

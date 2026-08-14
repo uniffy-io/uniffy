@@ -232,7 +232,12 @@ export const agentMessagesSlice = createSlice({
       if (block) {
         block.content += delta;
       } else {
-        state.streamingThinking.push({ blockId, content: delta, elapsedMs: 0, done: false });
+        state.streamingThinking.push({
+          blockId,
+          content: delta,
+          elapsedMs: 0,
+          done: false,
+        });
       }
     },
     endStreamingThinking: (

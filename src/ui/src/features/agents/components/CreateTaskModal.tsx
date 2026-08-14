@@ -8,6 +8,8 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { TimezoneSelect } from "@/components/ui/timezone-select";
+import { getBrowserTimeZone } from "@/shared/utils/timezone";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { createCronTask } from "@/features/agents/store/agentCronThunks";
 import {
@@ -17,7 +19,6 @@ import {
   MINUTE_INTERVAL_OPTIONS,
   MINUTE_OPTIONS,
   MONTH_DAY_OPTIONS,
-  TIMEZONE_OPTIONS,
   WEEKDAY_LABELS,
   cronToHuman,
   scheduleToCron,
@@ -185,7 +186,13 @@ function CreateTaskModalContent({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [schedule, setSchedule] = useState<ScheduleConfig>(DEFAULT_SCHEDULE);
-  const [timezone, setTimezone] = useState("UTC");
+  // Derived until the user picks: a mount-time snapshot goes stale when the
+  // settings fetch lands after the modal opens.
+  const settingsTimezone = useAppSelector(
+    (state) => state.settings.effectiveSettings?.appearance.timezone,
+  );
+  const [timezoneOverride, setTimezoneOverride] = useState<string | null>(null);
+  const timezone = timezoneOverride ?? settingsTimezone ?? getBrowserTimeZone();
   const [submitting, setSubmitting] = useState(false);
 
   const effectiveAgentId = agentId || agentOptions[0]?.value || "";
@@ -278,7 +285,7 @@ function CreateTaskModalContent({ onClose }: { onClose: () => void }) {
 
         <div>
           <label className="block text-sm text-muted-foreground mb-1">Timezone</label>
-          <Select value={timezone} onChange={setTimezone} options={TIMEZONE_OPTIONS} />
+          <TimezoneSelect value={timezone} onChange={setTimezoneOverride} allowAutomatic={false} />
         </div>
       </div>
 

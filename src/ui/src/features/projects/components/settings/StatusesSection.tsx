@@ -366,8 +366,8 @@ export function StatusesSection({ project }: StatusesSectionProps) {
         message={
           <div className="space-y-3">
             <p>
-              Are you sure you want to delete the status &quot;{deleteTarget?.label}&quot;? Tasks
-              using this status will need to be migrated to another status.
+              Are you sure you want to delete the status &quot;{deleteTarget?.label}
+              &quot;? Tasks using this status will need to be migrated to another status.
             </p>
             {items.filter((i) => i.id !== deleteTarget?.id).length > 0 && (
               <div>

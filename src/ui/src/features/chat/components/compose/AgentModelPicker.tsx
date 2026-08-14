@@ -361,7 +361,10 @@ export function AgentModelPicker({
                   data-testid="chat-compose-agent-memory-button"
                 >
                   <Brain size={14} weight="duotone" className="text-muted-foreground shrink-0" />
-                  <span>Memory{memoryState.loaded ? ` (${memoryState.totalCount})` : ""}</span>
+                  <span>
+                    Memory
+                    {memoryState.loaded ? ` (${memoryState.totalCount})` : ""}
+                  </span>
                 </button>
               </div>
             </div>

@@ -344,6 +344,46 @@ Needs user A (organizer + channel member), user B (attendee to add), and user C 
       meeting" button. Start a call in that channel: it turns rose with a live dot and "Join live
       meeting (N)"; clicking it opens the pre-join modal.
 
+## Timezone preference + UTC pipeline
+
+Settings > Appearance > Date & time holds the display timezone; Automatic
+follows the browser. All backend storage stays UTC regardless of the choice.
+
+- [ ] With Automatic selected, behavior matches the browser zone everywhere
+      (calendar grid, chat timestamps, task due dates).
+- [ ] Pick `Pacific/Auckland` on a European browser. The calendar header offset
+      label updates, the grid re-renders, and an event created by double-clicking
+      the 09:00 cell shows 09:00. Verify in the DB (`db shell`) that
+      `start_time` is the UTC instant for 09:00 Auckland.
+- [ ] Drag an event to another day in Month view: it keeps its displayed
+      wall-clock time and lands on the dropped day.
+- [ ] Chat: day separators agree with the timestamps rendered next to messages,
+      and both follow the selected zone.
+- [ ] Task due dates: a task due today is NOT overdue; the due chip shows the
+      picked calendar date in any zone.
+- [ ] Agents: ask "what's on my calendar today" in a channel. No request
+      timezone rides chat, so the agent answers in the stored preference's zone.
+- [ ] The timezone picker lists Browser Time and Coordinated Universal Time on
+      top, then zones grouped by region with city, abbreviation and UTC offset.
+      Searching by city, region or abbreviation filters the list.
+- [ ] Week start: switch to Sunday. The calendar week and month grids, the mini
+      calendar and every date picker start their weeks on Sunday; switch back to
+      Monday and they follow.
+- [ ] Automations: the Create task modal defaults its timezone to the effective
+      display zone, not UTC.
+- [ ] Mention hover local time: set a profile timezone for a second user
+      (People > their profile, or Settings > Account for them) that differs
+      from yours, then hover their `@` mention in chat or a note. The card's
+      meta row shows "It's HH:MM for {first name}". Same zone offset as the
+      viewer, or no profile timezone, shows no time row. Changing the profile
+      timezone updates an already-visible card without a refresh.
+- [ ] Clear back to Automatic: browser-zone behavior returns after reload.
+- [ ] The preference follows the account: log in from a second browser with a
+      different OS zone and see the same selected zone. (both products)
+- [ ] Backend UTC smoke: start the backend with `TZ=America/New_York` on a local
+      stack; permission grant expiries, audit export windows and chat mutes
+      behave identically to a UTC host. (both products)
+
 ## Chat synced drafts
 
 Unsent composer text syncs across devices per channel and per thread. Needs one user logged in

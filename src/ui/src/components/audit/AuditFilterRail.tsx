@@ -22,6 +22,15 @@ import type {
   OrganizationOption,
 } from "@/components/audit/types";
 
+/** Local calendar day of a stored ISO bound; a UTC slice shifts a day for non-UTC users. */
+function localDayValue(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 export interface AuditFilterRailProps {
   filter: AuditFilter;
   onChange: (next: AuditFilter) => void;
@@ -111,11 +120,11 @@ function DateRangeSection({ filter, onChange }: SubProps) {
               From
             </label>
             <DatePicker
-              value={filter.fromTime?.slice(0, 10) ?? ""}
+              value={localDayValue(filter.fromTime)}
               onChange={(value) =>
                 onChange({
                   ...filter,
-                  fromTime: value ? new Date(value).toISOString() : null,
+                  fromTime: value ? new Date(`${value}T00:00:00`).toISOString() : null,
                 })
               }
             />
@@ -123,7 +132,7 @@ function DateRangeSection({ filter, onChange }: SubProps) {
           <div className="space-y-1">
             <label className="text-[10px] text-muted-foreground uppercase tracking-wide">To</label>
             <DatePicker
-              value={filter.toTime?.slice(0, 10) ?? ""}
+              value={localDayValue(filter.toTime)}
               onChange={(value) =>
                 onChange({
                   ...filter,

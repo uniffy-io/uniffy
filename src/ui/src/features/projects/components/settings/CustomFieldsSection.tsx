@@ -151,7 +151,10 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
       isRequired: editRequired,
     };
     if (field.type === "single_select" || field.type === "multi_select") {
-      updates.config = { ...field.config, options: editOptions.filter((o) => o.label.trim()) };
+      updates.config = {
+        ...field.config,
+        options: editOptions.filter((o) => o.label.trim()),
+      };
     }
 
     await dispatch(updateFieldThunk({ projectId: project.id, fieldId: editingId, updates }));

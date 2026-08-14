@@ -32,6 +32,34 @@ class OccurrenceInstance:
     end_time: datetime
 
 
+def resolve_event_zone(timezone: str) -> ZoneInfo:
+    """Invalid stored zones degrade to UTC instead of failing every expansion."""
+    try:
+        return ZoneInfo(timezone)
+    except (KeyError, ValueError):
+        return ZoneInfo("UTC")
+
+
+def occurrence_start_for_date(
+    start_time: datetime, timezone: str, occurrence_date: date
+) -> datetime:
+    """Rebuild a start instant on ``occurrence_date`` preserving the event's
+    LOCAL wall clock, so occurrences keep their hour across DST transitions.
+    """
+    tz = resolve_event_zone(timezone)
+    local_start = start_time.astimezone(tz)
+    occ_local = datetime(
+        occurrence_date.year,
+        occurrence_date.month,
+        occurrence_date.day,
+        local_start.hour,
+        local_start.minute,
+        local_start.second,
+        tzinfo=tz,
+    )
+    return occ_local.astimezone(ZoneInfo("UTC"))
+
+
 def expand_recurrence(
     start_time: datetime,
     end_time: datetime,
@@ -42,34 +70,9 @@ def expand_recurrence(
     exception_dates: set[date] | None = None,
     timezone: str = "UTC",
 ) -> list[OccurrenceInstance]:
-    """
-    Expand a recurring event into virtual instances within a date range.
-
-    Parameters
-    ----------
-    start_time : datetime
-        The master event's start time.
-    end_time : datetime
-        The master event's end time.
-    recurrence_pattern : RecurrencePattern
-        The recurrence pattern (DAILY, WEEKLY, etc.).
-    recurrence_config : dict | None
-        Full recurrence configuration (interval, days_of_week, etc.).
-    range_start : datetime
-        Start of the query range.
-    range_end : datetime
-        End of the query range.
-    exception_dates : set[date] | None
-        Dates to exclude (cancelled or overridden occurrences).
-    timezone : str
-        IANA timezone for the event (e.g., 'Europe/Sofia'). Used to
-        preserve wall-clock time across DST transitions.
-
-    Returns
-    -------
-    list[OccurrenceInstance]
-        List of expanded occurrences within the range.
-
+    """Expand a recurring event into the virtual instances whose ``[start, end)``
+    instants overlap ``[range_start, range_end)``, preserving the event's local
+    wall clock across DST.
     """
     if recurrence_pattern == RecurrencePattern.NONE:
         return []
@@ -93,20 +96,14 @@ def expand_recurrence(
 
     max_occurrences: int | None = config.get("max_occurrences")
 
-    # Resolve the event's local timezone to preserve wall-clock time across DST
-    try:
-        tz = ZoneInfo(timezone)
-    except (KeyError, ValueError):
-        tz = ZoneInfo("UTC")
+    tz = resolve_event_zone(timezone)
+    event_start_date = start_time.astimezone(tz).date()
+    duration = end_time - start_time
 
-    # Convert master start/end to local time to extract wall-clock hour/minute
-    local_start = start_time.astimezone(tz)
-    local_end = end_time.astimezone(tz)
-
-    event_start_date = local_start.date()
-    duration = local_end - local_start
-
-    # Generate occurrence dates
+    # Occurrence dates live in the event's LOCAL zone while the range bounds
+    # are UTC instants: a boundary occurrence can sit on the neighbouring
+    # local date. Widen the date window by a day each side and clip on
+    # instants below.
     occurrence_dates = _generate_occurrence_dates(
         event_start_date=event_start_date,
         pattern=recurrence_pattern,
@@ -115,35 +112,26 @@ def expand_recurrence(
         day_of_month=config.get("day_of_month"),
         end_date=end_date,
         max_occurrences=max_occurrences,
-        range_start=range_start.date(),
-        range_end=range_end.date(),
+        range_start=range_start.date() - timedelta(days=1),
+        range_end=range_end.date() + timedelta(days=1),
     )
 
     exceptions = exception_dates or set()
     results: list[OccurrenceInstance] = []
 
     for occ_date in occurrence_dates:
-        # Skip the master event's own date (it's already in the results as a real event)
+        # The master event's own date is already in results as a real event.
         if occ_date == event_start_date:
             continue
 
-        # Skip exception dates
         if occ_date in exceptions:
             continue
 
-        # Build occurrence in local timezone to preserve wall-clock time,
-        # then convert to UTC so the rest of the system works consistently.
-        occ_local = datetime(
-            occ_date.year,
-            occ_date.month,
-            occ_date.day,
-            local_start.hour,
-            local_start.minute,
-            local_start.second,
-            tzinfo=tz,
-        )
-        occ_start = occ_local.astimezone(ZoneInfo("UTC"))
+        occ_start = occurrence_start_for_date(start_time, timezone, occ_date)
         occ_end = occ_start + duration
+
+        if occ_start >= range_end or occ_end <= range_start:
+            continue
 
         results.append(
             OccurrenceInstance(

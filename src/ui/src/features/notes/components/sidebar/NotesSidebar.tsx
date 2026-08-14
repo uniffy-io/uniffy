@@ -409,7 +409,10 @@ export function NotesSidebar() {
       try {
         if (droppedNodeVisibility !== targetFolderVisibility) {
           await dispatch(
-            moveNote({ noteId: droppedNodeId, targetAccessMode: targetFolderVisibility }),
+            moveNote({
+              noteId: droppedNodeId,
+              targetAccessMode: targetFolderVisibility,
+            }),
           ).unwrap();
         }
         await dispatch(updateNote({ noteId: droppedNodeId, parentId: targetFolderId })).unwrap();
@@ -431,7 +434,11 @@ export function NotesSidebar() {
         targetAccessMode === AccessMode.OPEN_TO_ORG &&
         droppedNodeVisibility !== AccessMode.OPEN_TO_ORG
       ) {
-        setPendingOrgMove({ noteId: droppedNodeId, targetAccessMode, targetFolderId: null });
+        setPendingOrgMove({
+          noteId: droppedNodeId,
+          targetAccessMode,
+          targetFolderId: null,
+        });
         return;
       }
 

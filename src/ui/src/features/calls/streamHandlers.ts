@@ -31,7 +31,13 @@ export function handleCallStreamEvent(ce: ChatEvent, dispatch: AppDispatch): boo
     case ChatEventType.CALL_ENDED: {
       if (ce.payload.case === "callLifecycle" && ce.payload.value.call) {
         const call = callToPlain(ce.payload.value.call);
-        dispatch(callEnded({ callId: call.id, channelId: call.channelId, reason: call.endReason }));
+        dispatch(
+          callEnded({
+            callId: call.id,
+            channelId: call.channelId,
+            reason: call.endReason,
+          }),
+        );
       }
       return true;
     }

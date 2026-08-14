@@ -227,7 +227,9 @@ export function ParticipantTile({
           )}
           style={
             canZoom && zoomed
-              ? { transform: `translate3d(${zoom.tx}px, ${zoom.ty}px, 0) scale(${zoom.scale})` }
+              ? {
+                  transform: `translate3d(${zoom.tx}px, ${zoom.ty}px, 0) scale(${zoom.scale})`,
+                }
               : undefined
           }
         />

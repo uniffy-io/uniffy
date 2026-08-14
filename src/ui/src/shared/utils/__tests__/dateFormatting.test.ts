@@ -9,7 +9,24 @@ import {
   formatRelativeTime,
   formatMediaTime,
   formatFileSize,
+  formatTimeInZone,
+  parseCalendarDate,
 } from "@/shared/utils/dateFormatting";
+
+function localDateString(d: Date): string {
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+describe("parseCalendarDate", () => {
+  it("reads YYYY-MM-DD as a local calendar date regardless of zone", () => {
+    const d = parseCalendarDate("2026-08-13");
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(7);
+    expect(d.getDate()).toBe(13);
+  });
+});
 
 describe("formatDateShort", () => {
   it("formats date in current year without year", () => {
@@ -84,6 +101,22 @@ describe("isOverdue", () => {
   it("returns false for future dates", () => {
     expect(isOverdue("2099-12-31")).toBe(false);
   });
+
+  it("a task due today is not overdue in any zone", () => {
+    expect(isOverdue(localDateString(new Date()))).toBe(false);
+  });
+
+  it("a task due yesterday is overdue", () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    expect(isOverdue(localDateString(yesterday))).toBe(true);
+  });
+
+  it("a task due tomorrow is not overdue", () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    expect(isOverdue(localDateString(tomorrow))).toBe(false);
+  });
 });
 
 describe("formatRelativeTime", () => {
@@ -145,6 +178,20 @@ describe("formatMediaTime", () => {
 
   it("formats hours, minutes, seconds", () => {
     expect(formatMediaTime(3723)).toBe("1:02:03");
+  });
+});
+
+describe("formatTimeInZone", () => {
+  // 2026-01-15 12:00:00 UTC; both zones are outside DST in January.
+  const at = new Date("2026-01-15T12:00:00Z");
+
+  it("renders the wall clock of the given zone", () => {
+    expect(formatTimeInZone(at, "UTC")).toMatch(/12/);
+    expect(formatTimeInZone(at, "Europe/Sofia")).toMatch(/2/); // UTC+2
+  });
+
+  it("differs across zones for the same instant", () => {
+    expect(formatTimeInZone(at, "America/New_York")).not.toBe(formatTimeInZone(at, "Asia/Tokyo"));
   });
 });
 

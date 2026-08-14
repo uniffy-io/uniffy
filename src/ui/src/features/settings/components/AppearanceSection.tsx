@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { TimezoneSelect } from "@/components/ui/timezone-select";
 import { cn } from "@/shared/utils/cn";
 import { useSettings, useAppearanceSettings } from "@/features/settings/hooks/useSettings";
 
@@ -148,6 +149,14 @@ export function AppearanceSection() {
     updateSettings({ appearance: { mentionDisplay } });
   };
 
+  const handleTimezoneChange = (timezone: string) => {
+    updateSettings({ appearance: { timezone } });
+  };
+
+  const handleWeekStartChange = (weekStart: string) => {
+    updateSettings({ appearance: { weekStart } });
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -187,6 +196,52 @@ export function AppearanceSection() {
 
       <section className="space-y-4">
         <div>
+          <h2 className="text-lg font-semibold text-foreground">Date &amp; time</h2>
+          <p className="text-sm text-muted-foreground">
+            Times, dates and calendar weeks across the app follow these settings.
+          </p>
+        </div>
+
+        <div className="flex max-w-2xl flex-col gap-4 md:flex-row md:items-end">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Timezone</label>
+            <TimezoneSelect
+              value={appearance.timezone ?? ""}
+              onChange={handleTimezoneChange}
+              disabled={saving}
+              ariaLabel="Display timezone"
+            />
+          </div>
+          <div className="shrink-0 space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Week start</label>
+            <div className="flex gap-2">
+              {[
+                { id: "monday", label: "Monday" },
+                { id: "saturday", label: "Saturday" },
+                { id: "sunday", label: "Sunday" },
+              ].map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleWeekStartChange(id)}
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                    (appearance.weekStart ?? "monday") === id
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-foreground hover:bg-muted",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div>
           <h2 className="text-lg font-semibold text-foreground">Mention Display</h2>
           <p className="text-sm text-muted-foreground">
             Choose how mentions appear in chat, notes, and other content.
@@ -195,8 +250,16 @@ export function AppearanceSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
           {[
-            { id: "expanded", label: "Expanded", description: "Rich card with live metadata" },
-            { id: "compact", label: "Compact", description: "Inline chip with label only" },
+            {
+              id: "expanded",
+              label: "Expanded",
+              description: "Rich card with live metadata",
+            },
+            {
+              id: "compact",
+              label: "Compact",
+              description: "Inline chip with label only",
+            },
           ].map(({ id, label, description }) => (
             <button
               key={id}

@@ -14,6 +14,7 @@ from uniffy_proto.people.v1 import people_pb2 as pb
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
@@ -92,7 +93,7 @@ def _profile_changes(
             value = getattr(request, name)
             changes[name] = value if value else None
     if with_start_date and request.HasField("start_date"):
-        changes["start_date"] = request.start_date.ToDatetime().date()
+        changes["start_date"] = timestamp_to_datetime(request.start_date).date()
     if with_links and request.HasField("links"):
         changes["links"] = [
             {"label": link.label, "url": link.url} for link in request.links.links

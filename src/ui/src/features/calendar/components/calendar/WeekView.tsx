@@ -1,6 +1,7 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { updateEventThunk, openEventModal } from "@/features/calendar/store";
+import { instantFromDisplayParts } from "@/features/calendar/utils";
 import { useCalendarNavigation, useCalendarEvents } from "@/features/calendar/hooks";
 import {
   TimeColumn,
@@ -162,8 +163,7 @@ export function WeekView() {
       const slot = getSlotFromCoordinates(e.clientX, e.clientY);
       if (!slot) return;
 
-      const newStartDate = new Date(slot.dateObj);
-      newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
+      const newStartDate = instantFromDisplayParts(slot.dateObj, slot.hour, slot.isHalf ? 30 : 0);
 
       let eventToUpdate = null;
       for (const evts of positionedEventsMap.values()) {
@@ -226,10 +226,8 @@ export function WeekView() {
       const endHourVal = clickedHour + 1;
       const endMinutes = Math.round((endHourVal % 1) * 60);
 
-      const startDt = new Date(dateObj);
-      startDt.setHours(Math.floor(clickedHour), startMinutes, 0, 0);
-      const endDt = new Date(dateObj);
-      endDt.setHours(Math.floor(endHourVal), endMinutes, 0, 0);
+      const startDt = instantFromDisplayParts(dateObj, Math.floor(clickedHour), startMinutes);
+      const endDt = instantFromDisplayParts(dateObj, Math.floor(endHourVal), endMinutes);
 
       dispatch(
         openEventModal({

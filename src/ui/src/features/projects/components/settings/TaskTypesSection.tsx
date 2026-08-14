@@ -123,7 +123,10 @@ export function TaskTypesSection({ project }: TaskTypesSectionProps) {
           {TASK_TYPES.map((taskType) => {
             const config = getTaskTypeConfig(taskType.value);
             const TypeIcon = config.icon;
-            const schema = schemas[taskType.value] || { shownFieldIds: [], requiredFieldIds: [] };
+            const schema = schemas[taskType.value] || {
+              shownFieldIds: [],
+              requiredFieldIds: [],
+            };
             const shownSet = new Set(schema.shownFieldIds);
             const requiredSet = new Set(schema.requiredFieldIds);
 

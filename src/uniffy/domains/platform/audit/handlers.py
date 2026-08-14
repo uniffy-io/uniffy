@@ -15,6 +15,7 @@ from uniffy_proto.superadmin.v1.platform_audit_pb2 import (
     ListPlatformAuditResponse,
 )
 
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
@@ -59,12 +60,12 @@ class PlatformAuditHandlers:
             request.actor_user_id, "actor_user_id"
         )
         from_ts = (
-            request.from_ts.ToDatetime()
+            timestamp_to_datetime(request.from_ts)
             if request.HasField("from_ts")
             else None
         )
         to_ts = (
-            request.to_ts.ToDatetime() if request.HasField("to_ts") else None
+            timestamp_to_datetime(request.to_ts) if request.HasField("to_ts") else None
         )
         try:
             async with open_session() as session:

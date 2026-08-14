@@ -755,7 +755,9 @@ export const projectsApi = {
   getProjectMembers: async (
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _projectId: string,
-  ): Promise<{ members: Array<{ id: string; name: string; initials: string; color: string }> }> => {
+  ): Promise<{
+    members: Array<{ id: string; name: string; initials: string; color: string }>;
+  }> => {
     return { members: [] };
   },
 

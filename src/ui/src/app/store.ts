@@ -14,6 +14,9 @@ import {
 import type { PersistedState, MigrationManifest } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import { authReducer } from "@/features/auth/store/authSlice";
+import { instantDayKey } from "@/features/calendar/utils";
+import { setPreferredTimeZone } from "@/shared/utils/timezone";
+import { setPreferredWeekStart } from "@/shared/utils/weekStart";
 import type { AuthState } from "@/features/auth/store/authSlice";
 import { bookmarksReducer } from "@/features/bookmarks/store/bookmarksSlice";
 import { themeReducer } from "@/config/theme/themeSlice";
@@ -96,7 +99,7 @@ const calendarUiTransform = createTransform(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (outboundState: any) => ({
     ...outboundState,
-    currentDate: new Date().toISOString().split("T")[0],
+    currentDate: instantDayKey(new Date()),
   }),
   { whitelist: ["calendarUi"] },
 );
@@ -309,6 +312,24 @@ export const store = configureStore({
 });
 
 setStoreRef(store);
+
+// Non-React date utils read the zone and week start through their module
+// getters; keep both in sync with the stored preference.
+let lastPreferredTimeZone: string | null | undefined;
+let lastWeekStart: string | null | undefined;
+store.subscribe(() => {
+  const appearance = store.getState().settings.effectiveSettings?.appearance;
+  const tz = appearance?.timezone ?? null;
+  if (tz !== lastPreferredTimeZone) {
+    lastPreferredTimeZone = tz;
+    setPreferredTimeZone(tz);
+  }
+  const weekStart = appearance?.weekStart ?? null;
+  if (weekStart !== lastWeekStart) {
+    lastWeekStart = weekStart;
+    setPreferredWeekStart(weekStart);
+  }
+});
 
 export const persistor = persistStore(store);
 

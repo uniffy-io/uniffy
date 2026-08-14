@@ -23,7 +23,15 @@ export function useContentMembers(contentType: number, contentId: string) {
   const add = useCallback(
     (subjectType: number, subjectId: string, role: number, expiresAt?: Date, note?: string) =>
       dispatch(
-        addContentMember({ contentType, contentId, subjectType, subjectId, role, expiresAt, note }),
+        addContentMember({
+          contentType,
+          contentId,
+          subjectType,
+          subjectId,
+          role,
+          expiresAt,
+          note,
+        }),
       ).unwrap(),
     [dispatch, contentType, contentId],
   );
@@ -31,7 +39,14 @@ export function useContentMembers(contentType: number, contentId: string) {
   const update = useCallback(
     (subjectType: number, subjectId: string, newRole: number, note?: string) =>
       dispatch(
-        updateContentMemberRole({ contentType, contentId, subjectType, subjectId, newRole, note }),
+        updateContentMemberRole({
+          contentType,
+          contentId,
+          subjectType,
+          subjectId,
+          newRole,
+          note,
+        }),
       ).unwrap(),
     [dispatch, contentType, contentId],
   );

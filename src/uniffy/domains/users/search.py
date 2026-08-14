@@ -34,6 +34,7 @@ class UserSearchIndexer:
         email = user.email
         job_title = profile.job_title if profile else None
         department = profile.department if profile else None
+        timezone = profile.timezone if profile else None
         avatar_url = get_avatar_url(user.id, user.avatar_key)
 
         keywords_parts = [user.username, user.full_name, email, job_title, department, team_name]
@@ -50,6 +51,10 @@ class UserSearchIndexer:
             metadata["department"] = department
         if team_name:
             metadata["team_name"] = team_name
+        # Not part of keywords: zone names carry city names ("Europe/Sofia")
+        # that would pollute people search.
+        if timezone:
+            metadata["timezone"] = timezone
 
         await self._indexer.index(
             urn=urn,
@@ -77,6 +82,7 @@ class UserSearchIndexer:
                 "job_title": job_title or "",
                 "department": department or "",
                 "team_name": team_name or "",
+                "timezone": timezone or "",
             },
         )
 

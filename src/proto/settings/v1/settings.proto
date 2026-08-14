@@ -207,6 +207,10 @@ message AppearanceSettings {
   optional bool markdown_show_preview = 8;
   // Whether the Markdown editor displays line numbers in the gutter
   optional bool markdown_show_line_numbers = 9;
+  // IANA display timezone; empty = automatic (browser/device)
+  optional string timezone = 10;
+  // First day of the week for calendar grids: "monday", "saturday", "sunday"
+  optional string week_start = 11;
 }
 
 // Keyboard shortcuts settings

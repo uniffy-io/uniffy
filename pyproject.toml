@@ -102,42 +102,6 @@ exclude = ["*.proto"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
-[tool.pyright]
-exclude = ["**", "./**/**"]
-reportCallIssue = false
-reportAny = false
-reportExplicitAny = false
-reportGeneralTypeIssues = false
-reportUnknownParameterType = false
-reportPrivateImportUsage = false
-reportMissingImports = false
-reportImplicitStringConcatenation = false
-reportFunctionMemberAccess = false
-reportUnknownModuleTypes = false
-reportPossiblyUnboundVariable = false
-reportUnknownVariableType = false
-reportUnknownArgumentType = false
-reportUnknownAttribute = false
-reportUnknownMemberType = false
-reportUnknownGlobalVariableType = false
-reportUnknownModuleType = false
-reportUnknownFunctionType = false
-reportReturnType = false
-reportOptionalOperand = false
-reportAssignmentType = false
-reportAttributeAccessIssue = false
-reportArgumentType = false
-reportIncompatibleVariableOverride = false
-reportIncompatibleMethodOverride = false
-reportOptionalMemberAccess = false
-reportOptionalMethodAccess = false
-reportOptionalFunctionAccess = false
-reportOptionalType = false
-reportOptionalCall = false
-reportOptionalSubscript = false
-venvPath = "."
-venv = ".venv"
-
 [tool.ruff]
 line-length = 101
 preview = true
@@ -163,8 +127,6 @@ exclude = [
   "dist",
   "node_modules",
   "venv",
-  "**/stanza-cache",
-  "**/models-cache",
   "tests/",
   "src/gen",
 ]
@@ -173,7 +135,6 @@ exclude = [
 extend-exclude = ["src/uniffy/vendor"]
 
 [tool.ruff.lint]
-exclude = ["*.ipynb"]
 ignore = ["UP007", "SIM102", "UP042", "E402", "B904"]
 select = [
   # pycodestyle
@@ -186,6 +147,8 @@ select = [
   "B",
   # flake8-simplify
   "SIM",
+  # flake8-datetimez - naive datetimes violate the UTC-only backend invariant
+  "DTZ",
   # isort
   "I",
 ]
@@ -202,5 +165,3 @@ skip-magic-trailing-comma = false
 
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
-
-exclude = ["*.ipynb"]

@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { sessionsApi } from "@/features/agents/api/sessionsApi";
 import { runtimeApi } from "@/features/agents/api/runtimeApi";
 import type { RootState, AppDispatch } from "@/app/store";
@@ -85,7 +86,7 @@ export const streamSendMessage = createAsyncThunk<
       sessionId: params.sessionId,
       content: params.content,
       fileIds: params.fileIds ?? [],
-      userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      userTimezone: getEffectiveTimeZone(),
       invokedSkillId: params.invokedSkillId,
     });
 
@@ -120,7 +121,7 @@ export const rerunFromMessage = createAsyncThunk<
     const stream = runtimeApi.rerunFromMessage({
       organizationId,
       messageId: params.messageId,
-      userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      userTimezone: getEffectiveTimeZone(),
     });
 
     const consumer = createAgentStreamConsumer(dispatch as AppDispatch, params.sessionId);

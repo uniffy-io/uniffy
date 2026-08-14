@@ -245,7 +245,9 @@ export function TaskCard({
                 "h-full rounded-full transition-all",
                 task.subtaskCompleted === task.subtaskTotal ? "bg-green-500" : "bg-primary",
               )}
-              style={{ width: `${(task.subtaskCompleted / task.subtaskTotal) * 100}%` }}
+              style={{
+                width: `${(task.subtaskCompleted / task.subtaskTotal) * 100}%`,
+              }}
             />
           </div>
         )}

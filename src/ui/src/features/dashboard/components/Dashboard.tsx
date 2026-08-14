@@ -24,11 +24,15 @@ import {
 import { useDashboardRefresh } from "@/features/dashboard/hooks/useDashboardRefresh";
 import { useDashboardLayout } from "@/features/dashboard/hooks/useDashboardLayout";
 import { ArrowsClockwise, WarningCircle, ArrowRight } from "@phosphor-icons/react";
+import { formatInTimeZone } from "date-fns-tz";
+import { effectiveDayKey, formatTimeInZone } from "@/shared/utils/dateFormatting";
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import type { Task } from "@/features/projects/types/project";
 import type { CalendarEvent } from "@/features/calendar/types";
 
+// Greeting, date line and "today" buckets all live on the display zone's clock.
 function getGreeting(): string {
-  const hour = new Date().getHours();
+  const hour = Number(formatInTimeZone(new Date(), getEffectiveTimeZone(), "H"));
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
@@ -40,7 +44,15 @@ function formatTodayDate(): string {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: getEffectiveTimeZone(),
   });
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Due dates are calendar dates; instants collapse to the display zone's day. */
+function dayKeyOf(value: string): string {
+  return DATE_ONLY.test(value) ? value : effectiveDayKey(new Date(value));
 }
 
 function useContextualSummary() {
@@ -50,16 +62,11 @@ function useContextualSummary() {
   const userId = useAppSelector((state) => state.auth.user?.id ?? "");
 
   return useMemo(() => {
-    const now = new Date();
+    const todayKey = effectiveDayKey(new Date());
 
-    const eventsToday = Object.values(events).filter((event: CalendarEvent) => {
-      const start = new Date(event.startTime);
-      return (
-        start.getFullYear() === now.getFullYear() &&
-        start.getMonth() === now.getMonth() &&
-        start.getDate() === now.getDate()
-      );
-    }).length;
+    const eventsToday = Object.values(events).filter(
+      (event: CalendarEvent) => effectiveDayKey(new Date(event.startTime)) === todayKey,
+    ).length;
 
     let overdueCount = 0;
     let tasksDueToday = 0;
@@ -67,14 +74,10 @@ function useContextualSummary() {
       if (task.deletedAt || task.completedAt) return;
       if (!task.assigneeIds.includes(userId)) return;
       if (!task.dueDate) return;
-      const due = new Date(task.dueDate);
-      const sameDay =
-        due.getFullYear() === now.getFullYear() &&
-        due.getMonth() === now.getMonth() &&
-        due.getDate() === now.getDate();
-      if (due < now && !sameDay) {
+      const dueKey = dayKeyOf(task.dueDate);
+      if (dueKey < todayKey) {
         overdueCount++;
-      } else if (sameDay) {
+      } else if (dueKey === todayKey) {
         tasksDueToday++;
       }
     });
@@ -150,7 +153,7 @@ export function Dashboard() {
               <span>
                 {isRefreshing
                   ? "Refreshing..."
-                  : `${lastRefreshed.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
+                  : formatTimeInZone(lastRefreshed, getEffectiveTimeZone())}
               </span>
             </button>
           )}

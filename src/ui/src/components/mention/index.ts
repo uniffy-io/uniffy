@@ -1,8 +1,4 @@
-export {
-  MentionChip,
-  MentionChipCompact,
-  MentionChipBasic,
-} from "@/components/mention/MentionChip";
+export { MentionChip, MentionChipCompact } from "@/components/mention/MentionChip";
 export { MentionPreview } from "@/components/mention/MentionPreview";
 export {
   LiveIndicator,
@@ -19,7 +15,6 @@ export {
   ProjectMentionPreview,
   FileMentionPreview,
   NoteMentionPreview,
-  UserMentionPreview,
   ChatMentionPreview,
   AgentMentionPreview,
 } from "@/components/mention/previews";
@@ -36,7 +31,6 @@ export type {
   MentionLiveState,
   MentionStateChangeEvent,
   MentionChipProps,
-  MentionChipBasicProps,
   MentionChipCompactProps,
   TaskStatus,
   FileProcessingStatus,

@@ -146,6 +146,7 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
       state.userJobTitle = m.job_title || undefined;
       state.userDepartment = m.department || undefined;
       state.userTeamName = m.team_name || undefined;
+      state.userTimezone = m.timezone || undefined;
       break;
 
     case UrnType.TAG:
@@ -350,6 +351,9 @@ export function streamChangesToLiveState(
         break;
       case "team_name":
         patch.userTeamName = value || undefined;
+        break;
+      case "timezone":
+        patch.userTimezone = value || undefined;
         break;
 
       // TAG

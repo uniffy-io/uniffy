@@ -38,6 +38,7 @@ from uniffy.core.converters.common_proto import (
     content_type_from_proto,
     subject_type_from_proto,
 )
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.types import (
     AccessMode,
@@ -190,7 +191,7 @@ class MembersHandlers:
 
         expires_at = None
         if request.HasField("expires_at"):
-            expires_at = request.expires_at.ToDatetime()
+            expires_at = timestamp_to_datetime(request.expires_at)
 
         try:
             async with open_session() as session:
@@ -388,10 +389,10 @@ class MembersHandlers:
 
         after = None
         if request.HasField("after"):
-            after = request.after.ToDatetime()
+            after = timestamp_to_datetime(request.after)
         before = None
         if request.HasField("before"):
-            before = request.before.ToDatetime()
+            before = timestamp_to_datetime(request.before)
 
         offset = (page - 1) * page_size
 

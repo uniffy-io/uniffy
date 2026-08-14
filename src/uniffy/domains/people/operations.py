@@ -43,6 +43,9 @@ ADMIN_EDITABLE_FIELDS = frozenset(
 # Fields denormalized into the cached org chart payload.
 _CHART_NODE_FIELDS = frozenset({"job_title", "department"})
 
+# Fields denormalized into the Meili user document; mention chips read them.
+_SEARCH_DOC_FIELDS = _CHART_NODE_FIELDS | frozenset({"timezone"})
+
 _MAX_LENGTHS = {
     "job_title": 255,
     "department": 255,
@@ -273,10 +276,9 @@ class PeopleOperations:
             )
             await self._session.commit()
             await invalidate_person(organization_id, target_id)
-            # Chart nodes, the Meili document and mention chips all
-            # denormalize these fields.
             if any(name in _CHART_NODE_FIELDS for name in changed_keys):
                 await invalidate_chart(organization_id)
+            if any(name in _SEARCH_DOC_FIELDS for name in changed_keys):
                 await sync_people_search(self._session, organization_id, [target_id])
         return profile
 

@@ -10,6 +10,7 @@ import {
   formatMonthYear,
   getDateRangeLabel,
   parseISO,
+  toDateString,
 } from "@/features/calendar/utils";
 
 export function useCalendarNavigation() {
@@ -20,12 +21,12 @@ export function useCalendarNavigation() {
 
   const goToPrevious = useCallback(() => {
     const newDate = navigateDate(currentDate, "previous", viewMode);
-    dispatch(setCurrentDate(newDate.toISOString().split("T")[0]));
+    dispatch(setCurrentDate(toDateString(newDate)));
   }, [currentDate, viewMode, dispatch]);
 
   const goToNext = useCallback(() => {
     const newDate = navigateDate(currentDate, "next", viewMode);
-    dispatch(setCurrentDate(newDate.toISOString().split("T")[0]));
+    dispatch(setCurrentDate(toDateString(newDate)));
   }, [currentDate, viewMode, dispatch]);
 
   const handleGoToToday = useCallback(() => {
@@ -34,7 +35,7 @@ export function useCalendarNavigation() {
 
   const goToDate = useCallback(
     (date: Date | string) => {
-      const dateString = typeof date === "string" ? date : date.toISOString().split("T")[0];
+      const dateString = typeof date === "string" ? date : toDateString(date);
       dispatch(setCurrentDate(dateString));
     },
     [dispatch],

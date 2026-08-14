@@ -134,9 +134,19 @@ class UsageOperations:
         interval: str,
     ) -> list[dict]:
         if interval == "1d":
-            bucket = func.date(AgentRunLog.created_at)
+            # timezone('UTC', timestamptz) yields a naive-UTC timestamp, so the
+            # bucket boundary no longer follows the session TimeZone.
+            bucket = func.date(func.timezone("UTC", AgentRunLog.created_at))
         elif interval == "1h":
-            bucket = func.date_trunc(literal_column("'hour'"), AgentRunLog.created_at)
+            # Inner timezone() pins the truncation boundary to UTC; the outer
+            # one restores timestamptz so the row comes back aware.
+            bucket = func.timezone(
+                "UTC",
+                func.date_trunc(
+                    literal_column("'hour'"),
+                    func.timezone("UTC", AgentRunLog.created_at),
+                ),
+            )
         else:
             # For arbitrary intervals (30m, 2h, 4h), use epoch floor rounding
             secs = INTERVAL_TO_SECONDS[interval]
@@ -181,7 +191,9 @@ class UsageOperations:
 
         return [
             {
-                "date": row.bucket.strftime("%Y-%m-%d %H:%M"),
+                # Aware isoformat carries the offset - a bare wall-clock string
+                # gets parsed as LOCAL time by `new Date()` in the browser.
+                "date": row.bucket.isoformat(),
                 "runs": row.runs,
                 "input_tokens": row.input_tokens,
                 "output_tokens": row.output_tokens,

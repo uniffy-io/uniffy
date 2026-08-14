@@ -30,7 +30,10 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
       { value: "auth.mfa_verified", label: "MFA verified" },
       { value: "auth.mfa_failed", label: "MFA verify failed" },
       { value: "auth.mfa_recovery_code_used", label: "MFA recovery code used" },
-      { value: "auth.mfa_recovery_codes_regenerated", label: "MFA recovery codes regenerated" },
+      {
+        value: "auth.mfa_recovery_codes_regenerated",
+        label: "MFA recovery codes regenerated",
+      },
       { value: "auth.mfa_disabled", label: "MFA disabled" },
       { value: "auth.mfa_admin_reset", label: "MFA reset by org admin" },
       { value: "auth.mfa_platform_reset", label: "MFA reset by platform admin" },
@@ -73,7 +76,10 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
       { value: "organization.invitation_resent", label: "Invitation resent" },
       { value: "organization.security_settings_changed", label: "Security settings changed" },
       { value: "organization.encryption_key_rotated", label: "Encryption key rotated" },
-      { value: "organization.permission_defaults_changed", label: "Permission defaults changed" },
+      {
+        value: "organization.permission_defaults_changed",
+        label: "Permission defaults changed",
+      },
       { value: "organization.suspended", label: "Suspended by platform" },
       { value: "organization.unsuspended", label: "Unsuspended by platform" },
       { value: "organization.deleted_by_platform", label: "Deleted by platform" },

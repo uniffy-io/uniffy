@@ -16,18 +16,20 @@ import {
   FolderMentionPreview,
   NoteMentionPreview,
   RoomMentionPreview,
-  UserMentionPreview,
   TeamMentionPreview,
   ChatMentionPreview,
   AgentMentionPreview,
   TagMentionPreview,
 } from "@/components/mention/previews";
+import { PersonCardContent } from "@/components/subject/PersonHoverCard";
 import type { Icon } from "@phosphor-icons/react";
 
 interface MentionPreviewProps {
   preview: UrnPreviewData | null;
   isLoading: boolean;
   error: string | null;
+  /** The hovered chip's URN; lets the USER person card render before the preview fetch lands. */
+  urn?: string;
   /** `y` = chip bottom (downward anchor); `top` = chip top so an upward popover clears the chip instead of covering it. */
   position: { x: number; y: number; top?: number };
   onClose: () => void;
@@ -65,7 +67,6 @@ const KNOWN_PREVIEW_TYPES = new Set<UrnType>([
   UrnType.FOLDER,
   UrnType.NOTE,
   UrnType.ROOM,
-  UrnType.USER,
   UrnType.TEAM,
   UrnType.CHAT,
   UrnType.AGENT,
@@ -76,6 +77,7 @@ export function MentionPreview({
   preview,
   isLoading,
   error,
+  urn,
   position,
   onClose,
   onEmbed,
@@ -110,6 +112,11 @@ export function MentionPreview({
     setTimeout(() => setCopied(false), 2000);
   }, [previewUrn]);
 
+  const targetUrn = urn ?? preview?.urn;
+  const parsedTarget = targetUrn ? parseUrn(targetUrn) : null;
+  const userCardId =
+    parsedTarget?.type === UrnType.USER && parsedTarget.id ? parsedTarget.id : null;
+
   const GAP = 8;
   // Same footprint as the expanded card (max-w-md) so hover and expand read as one surface.
   const CARD_WIDTH = 448;
@@ -119,6 +126,34 @@ export function MentionPreview({
   const parsed = preview ? parseUrn(preview.urn) : null;
   const theme = parsed ? getTypeTheme(parsed.type) : getTypeTheme(UrnType.UNKNOWN);
   const TypeIcon = theme.icon;
+
+  // People get the org-wide person card, not the content-preview shell.
+  if (userCardId) {
+    return (
+      <div
+        ref={popoverRef}
+        className="fixed z-[9999]"
+        style={{
+          left: `${adjustedLeft}px`,
+          ...(opensDownward
+            ? { top: `${position.y}px`, paddingTop: `${GAP}px` }
+            : {
+                bottom: `${window.innerHeight - (position.top ?? position.y) + GAP}px`,
+              }),
+        }}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
+        <PersonCardContent
+          userId={userCardId}
+          fallbackName={liveState?.title || preview?.title}
+          urn={targetUrn}
+          onClose={onClose}
+          className={opensDownward ? "slide-in-from-top-2" : "slide-in-from-bottom-2"}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -255,15 +290,6 @@ export function MentionPreview({
             urn={preview.urn}
             title={preview.title}
             description={preview.description ? stripMarkdown(preview.description) : undefined}
-            liveState={effectiveLiveState!}
-            onClose={onClose}
-            onCopyLink={handleCopyLink}
-          />
-        )}
-        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.USER && (
-          <UserMentionPreview
-            urn={preview.urn}
-            title={preview.title}
             liveState={effectiveLiveState!}
             onClose={onClose}
             onCopyLink={handleCopyLink}

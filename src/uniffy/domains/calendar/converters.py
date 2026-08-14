@@ -1,6 +1,6 @@
 """Proto <-> domain converters for the calendar domain."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from uniffy_proto.cal.v1.calendar_pb2 import (
     Attendee as ProtoAttendee,
@@ -300,6 +300,12 @@ def event_to_proto(
             end_dt = config["end_date"]
             if isinstance(end_dt, str):
                 end_dt = datetime.fromisoformat(end_dt)
+            if isinstance(end_dt, datetime):
+                if end_dt.tzinfo is None:
+                    end_dt = end_dt.replace(tzinfo=UTC)
+            else:
+                # JSONB may hold a bare date; date-only midnight is UTC by convention.
+                end_dt = datetime(end_dt.year, end_dt.month, end_dt.day, tzinfo=UTC)
             proto_recurrence_config.end_date.CopyFrom(datetime_to_timestamp(end_dt))
         if config.get("max_occurrences"):
             proto_recurrence_config.max_occurrences = config["max_occurrences"]

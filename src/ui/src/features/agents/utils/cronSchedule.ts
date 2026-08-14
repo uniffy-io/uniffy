@@ -52,20 +52,6 @@ export const MINUTE_OPTIONS = [
   { value: 45, label: ":45" },
 ];
 
-export const TIMEZONE_OPTIONS = [
-  { value: "UTC", label: "UTC" },
-  { value: "America/New_York", label: "US Eastern" },
-  { value: "America/Chicago", label: "US Central" },
-  { value: "America/Denver", label: "US Mountain" },
-  { value: "America/Los_Angeles", label: "US Pacific" },
-  { value: "Europe/London", label: "London" },
-  { value: "Europe/Berlin", label: "Berlin" },
-  { value: "Europe/Paris", label: "Paris" },
-  { value: "Asia/Tokyo", label: "Tokyo" },
-  { value: "Asia/Shanghai", label: "Shanghai" },
-  { value: "Australia/Sydney", label: "Sydney" },
-];
-
 export function ordinalSuffix(n: number): string {
   if (n >= 11 && n <= 13) return "th";
   switch (n % 10) {

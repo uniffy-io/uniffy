@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, LockSimple, Plus, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -6,6 +6,8 @@ import { friendlyErrorMessage } from "@/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { TimezoneSelect } from "@/components/ui/timezone-select";
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { updateUser } from "@/features/auth/store/authSlice";
 import { usersApi } from "@/features/settings/api/usersApi";
 import { formatDateFull } from "@/shared/utils/dateFormatting";
@@ -39,16 +41,6 @@ const MONTHS = [
 const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 const pad2 = (value: number): string => String(value).padStart(2, "0");
-
-// Not in every engine yet, and the type only lands in newer TS libs.
-const listTimeZones = (): string[] => {
-  const supported = (Intl as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf;
-  try {
-    return supported ? supported("timeZone") : [];
-  } catch {
-    return [];
-  }
-};
 
 function ManagedHint() {
   return (
@@ -96,7 +88,7 @@ function ReadOnlyFacts({ person }: { person: SerializedPersonProfile }) {
   if (person.startDateMs !== null) {
     facts.push({
       label: "Start date",
-      value: formatDateFull(new Date(person.startDateMs).toISOString()),
+      value: formatDateFull(new Date(person.startDateMs).toISOString().slice(0, 10)),
     });
   }
   if (facts.length === 0) return null;
@@ -255,7 +247,6 @@ function ProfileForm({ person, initialPronouns }: ProfileFormProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const timeZones = useMemo(() => listTimeZones(), []);
   const isManaged = (field: string) => person.managedFields.includes(field);
 
   const cleanLinks = links
@@ -318,14 +309,14 @@ function ProfileForm({ person, initialPronouns }: ProfileFormProps) {
 
           <Field label="Time zone" htmlFor="profile-timezone" managed={isManaged("timezone")}>
             <div className="flex items-center gap-2">
-              <Input
-                id="profile-timezone"
+              <TimezoneSelect
                 value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
+                onChange={setTimezone}
+                automaticLabel="Not set"
+                showBrowserZoneHint={false}
                 disabled={isManaged("timezone")}
-                list="profile-timezone-options"
-                maxLength={64}
-                placeholder="e.g. Europe/Sofia"
+                className="flex-1"
+                ariaLabel="Profile time zone"
               />
               <Button
                 type="button"
@@ -333,16 +324,11 @@ function ProfileForm({ person, initialPronouns }: ProfileFormProps) {
                 size="md"
                 className="shrink-0"
                 disabled={isManaged("timezone")}
-                onClick={() => setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)}
+                onClick={() => setTimezone(getEffectiveTimeZone())}
               >
                 Use current
               </Button>
             </div>
-            <datalist id="profile-timezone-options">
-              {timeZones.map((zone) => (
-                <option key={zone} value={zone} />
-              ))}
-            </datalist>
           </Field>
 
           <Field label="Work phone" htmlFor="profile-work-phone" managed={isManaged("work_phone")}>

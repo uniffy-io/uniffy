@@ -99,7 +99,10 @@ export function CreateTaskModal() {
   }, [isSubmitting, handleClose]);
 
   // Compute visible custom fields for the selected task type
-  const typeCustomFields = useMemo((): { fields: FieldDefinition[]; requiredIds: Set<string> } => {
+  const typeCustomFields = useMemo((): {
+    fields: FieldDefinition[];
+    requiredIds: Set<string>;
+  } => {
     if (!project) return { fields: [], requiredIds: new Set() };
     const { visibleFieldIds, requiredFieldIds } = getFieldsForTaskType(
       project.fieldDefinitions,

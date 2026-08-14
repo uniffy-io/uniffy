@@ -75,6 +75,7 @@ export function buildLiveStateFromMetadata(
   if (metadata.job_title) state.userJobTitle = metadata.job_title;
   if (metadata.department) state.userDepartment = metadata.department;
   if (metadata.team_name) state.userTeamName = metadata.team_name;
+  if (metadata.timezone) state.userTimezone = metadata.timezone;
 
   if (metadata.completed_tasks)
     state.projectCompletedTasks = parseInt(metadata.completed_tasks, 10) || 0;

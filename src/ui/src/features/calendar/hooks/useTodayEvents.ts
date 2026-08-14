@@ -2,6 +2,7 @@ import { useEffect, useMemo, useCallback, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { fetchEventsInRange } from "@/features/calendar/store/calendarThunks";
 import type { CalendarEvent } from "@/features/calendar/types";
+import { displayDayKey, instantDayKey } from "@/features/calendar/utils";
 
 interface TodayEventGroup {
   current: CalendarEvent[];
@@ -92,14 +93,12 @@ export function useTodayEvents(enabled: boolean): UseTodayEventsResult {
   }, [enabled, refresh]);
 
   const todayEvents = useMemo(() => {
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const todayKey = instantDayKey(new Date());
 
-    return Object.values(events).filter((event) => {
-      const startDate = event.startTime.slice(0, 10);
-      const endDate = event.endTime.slice(0, 10);
-      return startDate === todayStr || endDate === todayStr;
-    });
+    return Object.values(events).filter(
+      (event) =>
+        displayDayKey(event.startTime) === todayKey || displayDayKey(event.endTime) === todayKey,
+    );
   }, [events]);
 
   const groups = useMemo(() => groupEvents(todayEvents, now), [todayEvents, now]);

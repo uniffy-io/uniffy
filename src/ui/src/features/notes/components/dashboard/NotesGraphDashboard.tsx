@@ -925,7 +925,8 @@ export function NotesGraphDashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {hoveredNode.connections} connection{hoveredNode.connections !== 1 ? "s" : ""}
+                  {hoveredNode.connections} connection
+                  {hoveredNode.connections !== 1 ? "s" : ""}
                 </p>
               </div>
             </div>

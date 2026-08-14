@@ -1,8 +1,49 @@
+import { formatInTimeZone } from "date-fns-tz";
+import { getEffectiveTimeZone, getPreferredTimeZone } from "@/shared/utils/timezone";
+
+/**
+ * Reads a plain `YYYY-MM-DD` as a date on the user's calendar.
+ *
+ * `new Date("2026-08-06")` is specified to parse as UTC midnight, which lands
+ * on the previous day everywhere west of Greenwich and shifts day arithmetic
+ * by a full day east of it.
+ */
+export function parseCalendarDate(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function isDateOnly(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+/** Accepts either a date-only string or a full timestamp. */
+function toDate(value: string): Date {
+  return isDateOnly(value) ? parseCalendarDate(value) : new Date(value);
+}
+
+/** Set preference only; undefined keeps Intl on the browser zone. */
+function displayTimeZone(): string | undefined {
+  return getPreferredTimeZone() ?? undefined;
+}
+
+function displayYear(date: Date): number {
+  const tz = displayTimeZone();
+  return tz ? Number(formatInTimeZone(date, tz, "yyyy")) : date.getFullYear();
+}
+
+/** Effective-zone calendar day of an instant, as YYYY-MM-DD. */
+export function effectiveDayKey(date: Date): string {
+  return formatInTimeZone(date, getEffectiveTimeZone(), "yyyy-MM-dd");
+}
+
 /** "Jan 22" (adds year when not in the current year). */
 export function formatDateShort(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = toDate(dateStr);
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  if (date.getFullYear() !== new Date().getFullYear()) {
+  if (!isDateOnly(dateStr)) opts.timeZone = displayTimeZone();
+  const yearOf = isDateOnly(dateStr) ? date.getFullYear() : displayYear(date);
+  if (yearOf !== displayYear(new Date())) {
     opts.year = "numeric";
   }
   return date.toLocaleDateString("en-US", opts);
@@ -10,21 +51,23 @@ export function formatDateShort(dateStr: string): string {
 
 /** "Jan 22, 2026" */
 export function formatDateFull(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = toDate(dateStr);
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: isDateOnly(dateStr) ? undefined : displayTimeZone(),
   });
 }
 
 /** "Mon, Jan 22" */
 export function formatDateWithWeekday(dateStr: string): string {
-  const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
+  const date = toDate(dateStr);
   return date.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
+    timeZone: isDateOnly(dateStr) ? undefined : displayTimeZone(),
   });
 }
 
@@ -36,8 +79,12 @@ export function formatProtoDate(timestamp?: { seconds: number | bigint; nanos: n
       ? Number(timestamp.seconds) * 1000
       : timestamp.seconds * 1000;
   const date = new Date(ms);
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  if (date.getFullYear() !== new Date().getFullYear()) {
+  const opts: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    timeZone: displayTimeZone(),
+  };
+  if (displayYear(date) !== displayYear(new Date())) {
     opts.year = "numeric";
   }
   return date.toLocaleDateString(undefined, opts);
@@ -60,14 +107,14 @@ export function formatProtoDateTime(timestamp?: {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: displayTimeZone(),
   });
 }
 
 export function isOverdue(dateStr: string): boolean {
-  const date = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
+  // Due dates are calendar dates; "today" is the effective zone's calendar day.
+  const dueDay = isDateOnly(dateStr) ? dateStr : effectiveDayKey(new Date(dateStr));
+  return dueDay < effectiveDayKey(new Date());
 }
 
 /** "Just now" / "5m ago" / "3d ago"; falls back to short date past 7 days. */
@@ -87,40 +134,68 @@ export function formatRelativeTime(dateStr: string | undefined): string {
   if (diffDay < 7) return `${diffDay}d ago`;
   if (diffDay < 30) return `${diffDay}d ago`;
 
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: displayTimeZone(),
+  });
 }
 
 /** Today -> "2:30 PM"; yesterday -> "Yesterday, 4:15 PM"; this week -> "Mon, 10:00 AM"; this year -> "Apr 12, 2:30 PM"; older includes year. */
 export function formatSmartDateTime(dateStr: string | undefined): string {
   if (!dateStr) return "";
+  const tz = displayTimeZone();
   const date = new Date(dateStr);
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterdayStart = new Date(todayStart);
-  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-  const weekStart = new Date(todayStart);
-  weekStart.setDate(weekStart.getDate() - 6);
 
-  const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  // Day boundaries live on the DISPLAY zone's calendar.
+  const dayDiff = Math.round(
+    (parseCalendarDate(effectiveDayKey(now)).getTime() -
+      parseCalendarDate(effectiveDayKey(date)).getTime()) /
+      86400000,
+  );
 
-  if (date >= todayStart) {
+  const time = date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: tz,
+  });
+
+  if (dayDiff <= 0) {
     return time;
   }
-  if (date >= yesterdayStart) {
+  if (dayDiff === 1) {
     return `Yesterday, ${time}`;
   }
-  if (date >= weekStart) {
-    const day = date.toLocaleDateString(undefined, { weekday: "short" });
+  if (dayDiff <= 6) {
+    const day = date.toLocaleDateString(undefined, { weekday: "short", timeZone: tz });
     return `${day}, ${time}`;
   }
-  if (date.getFullYear() === now.getFullYear()) {
-    const d = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (displayYear(date) === displayYear(now)) {
+    const d = date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      timeZone: tz,
+    });
     return `${d}, ${time}`;
   }
   return (
-    date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) +
-    `, ${time}`
+    date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: tz,
+    }) + `, ${time}`
   );
+}
+
+/** Wall-clock time in an explicit zone, e.g. "2:30 PM". */
+export function formatTimeInZone(date: Date, timeZone: string): string {
+  return date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  });
 }
 
 /** "1:23" or "1:02:03" */

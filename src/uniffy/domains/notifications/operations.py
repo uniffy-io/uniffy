@@ -230,7 +230,7 @@ class NotificationOperations:
         ]
 
         # Daily stats
-        date_col = func.date(Notification.created_at).label("day")
+        date_col = func.date(func.timezone("UTC", Notification.created_at)).label("day")
         daily_query = (
             select(
                 date_col,

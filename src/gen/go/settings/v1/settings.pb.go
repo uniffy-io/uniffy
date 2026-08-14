@@ -1069,8 +1069,12 @@ type AppearanceSettings struct {
 	MarkdownShowPreview *bool `protobuf:"varint,8,opt,name=markdown_show_preview,json=markdownShowPreview,proto3,oneof" json:"markdown_show_preview,omitempty"`
 	// Whether the Markdown editor displays line numbers in the gutter
 	MarkdownShowLineNumbers *bool `protobuf:"varint,9,opt,name=markdown_show_line_numbers,json=markdownShowLineNumbers,proto3,oneof" json:"markdown_show_line_numbers,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// IANA display timezone; empty = automatic (browser/device)
+	Timezone *string `protobuf:"bytes,10,opt,name=timezone,proto3,oneof" json:"timezone,omitempty"`
+	// First day of the week for calendar grids: "monday", "saturday", "sunday"
+	WeekStart     *string `protobuf:"bytes,11,opt,name=week_start,json=weekStart,proto3,oneof" json:"week_start,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AppearanceSettings) Reset() {
@@ -1164,6 +1168,20 @@ func (x *AppearanceSettings) GetMarkdownShowLineNumbers() bool {
 		return *x.MarkdownShowLineNumbers
 	}
 	return false
+}
+
+func (x *AppearanceSettings) GetTimezone() string {
+	if x != nil && x.Timezone != nil {
+		return *x.Timezone
+	}
+	return ""
+}
+
+func (x *AppearanceSettings) GetWeekStart() string {
+	if x != nil && x.WeekStart != nil {
+		return *x.WeekStart
+	}
+	return ""
 }
 
 // Keyboard shortcuts settings
@@ -1481,7 +1499,7 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"appearance\x18\x01 \x01(\v2\x1f.settings.v1.AppearanceSettingsR\n" +
 	"appearance\x12U\n" +
 	"\x12keyboard_shortcuts\x18\x02 \x01(\v2&.settings.v1.KeyboardShortcutsSettingsR\x11keyboardShortcuts\x12H\n" +
-	"\rnotifications\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\"\xde\x04\n" +
+	"\rnotifications\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\"\xbf\x05\n" +
 	"\x12AppearanceSettings\x12\x19\n" +
 	"\x05theme\x18\x01 \x01(\tH\x00R\x05theme\x88\x01\x01\x12&\n" +
 	"\faccent_color\x18\x02 \x01(\tH\x01R\vaccentColor\x88\x01\x01\x12$\n" +
@@ -1492,7 +1510,12 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x0edefault_editor\x18\x06 \x01(\tH\x05R\rdefaultEditor\x88\x01\x01\x12,\n" +
 	"\x0fmention_display\x18\a \x01(\tH\x06R\x0ementionDisplay\x88\x01\x01\x127\n" +
 	"\x15markdown_show_preview\x18\b \x01(\bH\aR\x13markdownShowPreview\x88\x01\x01\x12@\n" +
-	"\x1amarkdown_show_line_numbers\x18\t \x01(\bH\bR\x17markdownShowLineNumbers\x88\x01\x01B\b\n" +
+	"\x1amarkdown_show_line_numbers\x18\t \x01(\bH\bR\x17markdownShowLineNumbers\x88\x01\x01\x12\x1f\n" +
+	"\btimezone\x18\n" +
+	" \x01(\tH\tR\btimezone\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"week_start\x18\v \x01(\tH\n" +
+	"R\tweekStart\x88\x01\x01B\b\n" +
 	"\x06_themeB\x0f\n" +
 	"\r_accent_colorB\x0e\n" +
 	"\f_font_familyB\x14\n" +
@@ -1501,7 +1524,9 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x0f_default_editorB\x12\n" +
 	"\x10_mention_displayB\x18\n" +
 	"\x16_markdown_show_previewB\x1d\n" +
-	"\x1b_markdown_show_line_numbers\"\xaa\x01\n" +
+	"\x1b_markdown_show_line_numbersB\v\n" +
+	"\t_timezoneB\r\n" +
+	"\v_week_start\"\xaa\x01\n" +
 	"\x19KeyboardShortcutsSettings\x12P\n" +
 	"\bbindings\x18\x01 \x03(\v24.settings.v1.KeyboardShortcutsSettings.BindingsEntryR\bbindings\x1a;\n" +
 	"\rBindingsEntry\x12\x10\n" +

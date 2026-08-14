@@ -294,7 +294,10 @@ export function FilterBuilder({
               {/* Operator selector */}
               <FilterSelect
                 value={condition.operator}
-                options={operators.map((op) => ({ value: op.value, label: op.label }))}
+                options={operators.map((op) => ({
+                  value: op.value,
+                  label: op.label,
+                }))}
                 onChange={(val) =>
                   updateCondition(condition.id, {
                     operator: val as FilterOperator,

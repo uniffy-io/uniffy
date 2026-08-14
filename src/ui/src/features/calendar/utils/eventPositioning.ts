@@ -2,12 +2,13 @@ import type { CalendarEvent, PositionedEvent, MultiDayPosition } from "@/feature
 import { GRID } from "@/features/calendar/constants";
 import { parseISO, getDurationMinutes, format } from "@/features/calendar/utils/dateUtils";
 import { formatInTimeZone } from "date-fns-tz";
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 
 const getLocalTimezone = (): string => {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return getEffectiveTimeZone();
 };
 
-/** Read clock hours/minutes in the browser's local zone (events are stored UTC). */
+/** Read clock hours/minutes in the display zone (events are stored UTC). */
 function getLocalHoursMinutes(isoString: string): { hours: number; minutes: number } {
   const date = parseISO(isoString);
   const timezone = getLocalTimezone();

@@ -97,9 +97,17 @@ const TYPE_CATEGORIES: TypeCategory[] = [
     types: [
       { value: NotificationType.CHAT_MENTION, label: "Mention", icon: ChatCircle },
       { value: NotificationType.CHAT_DM, label: "Direct message", icon: ChatCenteredText },
-      { value: NotificationType.CHAT_CHANNEL_INVITE, label: "Channel invite", icon: UserPlus },
+      {
+        value: NotificationType.CHAT_CHANNEL_INVITE,
+        label: "Channel invite",
+        icon: UserPlus,
+      },
       { value: NotificationType.CHAT_CHANNEL_REMOVED, label: "Removed", icon: UserMinus },
-      { value: NotificationType.CHAT_THREAD_REPLY, label: "Thread reply", icon: ArrowBendUpLeft },
+      {
+        value: NotificationType.CHAT_THREAD_REPLY,
+        label: "Thread reply",
+        icon: ArrowBendUpLeft,
+      },
     ],
   },
   {
@@ -224,8 +232,18 @@ export function NotificationsFilterSidebar() {
               {(
                 [
                   { value: null, label: "All", icon: Bell, count: totalCount },
-                  { value: false, label: "Unread", icon: Envelope, count: unreadCount },
-                  { value: true, label: "Read", icon: EnvelopeOpen, count: readCount },
+                  {
+                    value: false,
+                    label: "Unread",
+                    icon: Envelope,
+                    count: unreadCount,
+                  },
+                  {
+                    value: true,
+                    label: "Read",
+                    icon: EnvelopeOpen,
+                    count: readCount,
+                  },
                 ] as const
               ).map((option) => {
                 const isActive = isReadFilter === option.value;

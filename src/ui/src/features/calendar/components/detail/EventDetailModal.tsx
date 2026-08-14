@@ -27,7 +27,6 @@ import { EventActivityLog } from "@/features/calendar/components/detail/EventAct
 export function EventDetailModal() {
   const dispatch = useAppDispatch();
   const { selectedEvent, visibleEvents } = useCalendarEvents();
-  const displayTimezone = useAppSelector((state) => state.calendarUi.displayTimezone);
   const categories = useAppSelector((state) => state.calendar.categories);
   const isLoadingDetail = useAppSelector((state) => state.calendar.loading.eventDetail);
 
@@ -199,12 +198,7 @@ export function EventDetailModal() {
               </div>
 
               <div className="px-5 py-3 border-b border-border">
-                <EventScheduleSection
-                  event={selectedEvent}
-                  canEdit={canEdit}
-                  displayTimezone={displayTimezone}
-                  commit={commit}
-                />
+                <EventScheduleSection event={selectedEvent} canEdit={canEdit} commit={commit} />
               </div>
 
               <div className="px-5 py-3 border-b border-border">

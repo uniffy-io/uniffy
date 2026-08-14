@@ -185,7 +185,10 @@ export function serializeOrgOverview(o: OrganizationOverview): SerializedOrgOver
     groupCount: o.groupCount,
     contentCounts,
     createdAt: o.organization?.createdAt
-      ? { seconds: Number(o.organization.createdAt.seconds), nanos: o.organization.createdAt.nanos }
+      ? {
+          seconds: Number(o.organization.createdAt.seconds),
+          nanos: o.organization.createdAt.nanos,
+        }
       : null,
   };
 }

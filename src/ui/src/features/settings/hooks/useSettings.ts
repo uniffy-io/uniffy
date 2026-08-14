@@ -158,6 +158,8 @@ export function useAppearanceSettings() {
     mentionDisplay: effectiveSettings?.appearance.mentionDisplay ?? "expanded",
     markdownShowPreview: effectiveSettings?.appearance.markdownShowPreview ?? true,
     markdownShowLineNumbers: effectiveSettings?.appearance.markdownShowLineNumbers ?? true,
+    timezone: effectiveSettings?.appearance.timezone ?? "",
+    weekStart: effectiveSettings?.appearance.weekStart ?? "monday",
   };
 }
 

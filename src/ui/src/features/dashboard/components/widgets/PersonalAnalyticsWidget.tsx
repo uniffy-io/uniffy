@@ -125,7 +125,10 @@ export function PersonalAnalyticsWidget() {
                     fontSize: "12px",
                     padding: "6px 10px",
                   }}
-                  labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                  labelStyle={{
+                    color: "hsl(var(--foreground))",
+                    fontWeight: 600,
+                  }}
                   itemStyle={{ color: "hsl(var(--muted-foreground))" }}
                   formatter={(value) => [value as number, "Items"]}
                 />

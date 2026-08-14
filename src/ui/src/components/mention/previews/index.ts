@@ -5,7 +5,6 @@ export { FileMentionPreview } from "@/components/mention/previews/FileMentionPre
 export { FolderMentionPreview } from "@/components/mention/previews/FolderMentionPreview";
 export { NoteMentionPreview } from "@/components/mention/previews/NoteMentionPreview";
 export { RoomMentionPreview } from "@/components/mention/previews/RoomMentionPreview";
-export { UserMentionPreview } from "@/components/mention/previews/UserMentionPreview";
 export { TeamMentionPreview } from "@/components/mention/previews/TeamMentionPreview";
 export { ChatMentionPreview } from "@/components/mention/previews/ChatMentionPreview";
 export { ChatMessageMentionPreview } from "@/components/mention/previews/ChatMessageMentionPreview";

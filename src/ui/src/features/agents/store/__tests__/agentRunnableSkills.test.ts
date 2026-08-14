@@ -37,7 +37,9 @@ describe("agentRunnableSkills slice", () => {
 
     const done = agentRunnableSkillsReducer(
       pending,
-      fetchRunnableSkills.fulfilled({ agentId: AGENT, skills: [] }, "req", { agentId: AGENT }),
+      fetchRunnableSkills.fulfilled({ agentId: AGENT, skills: [] }, "req", {
+        agentId: AGENT,
+      }),
     );
     expect(done.loadingAgentId).toBeNull();
   });

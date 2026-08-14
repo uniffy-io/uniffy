@@ -462,9 +462,10 @@ export function TableView() {
         e.preventDefault();
         if (undoStack.length > 0) {
           const entry = undoStack[undoStack.length - 1];
-          const undoPayload = { id: entry.taskId, ...entry.previousValues } as Partial<Task> & {
-            id: string;
-          };
+          const undoPayload = {
+            id: entry.taskId,
+            ...entry.previousValues,
+          } as Partial<Task> & { id: string };
           dispatch(optimisticUpdateTask(undoPayload));
           dispatch(updateTask(undoPayload));
           dispatch(popUndo());
@@ -475,9 +476,10 @@ export function TableView() {
         e.preventDefault();
         if (redoStack.length > 0) {
           const entry = redoStack[redoStack.length - 1];
-          const redoPayload = { id: entry.taskId, ...entry.newValues } as Partial<Task> & {
-            id: string;
-          };
+          const redoPayload = {
+            id: entry.taskId,
+            ...entry.newValues,
+          } as Partial<Task> & { id: string };
           dispatch(optimisticUpdateTask(redoPayload));
           dispatch(updateTask(redoPayload));
           dispatch(popRedo());
@@ -496,14 +498,22 @@ export function TableView() {
           e.preventDefault();
           if (!focusedCell) {
             if (orderedTaskIds.length > 0 && orderedFieldIds.length > 0) {
-              dispatch(setFocusedCell({ taskId: orderedTaskIds[0], fieldId: orderedFieldIds[0] }));
+              dispatch(
+                setFocusedCell({
+                  taskId: orderedTaskIds[0],
+                  fieldId: orderedFieldIds[0],
+                }),
+              );
             }
             return;
           }
           const rowIdx = orderedTaskIds.indexOf(focusedCell.taskId);
           if (rowIdx < orderedTaskIds.length - 1) {
             dispatch(
-              setFocusedCell({ taskId: orderedTaskIds[rowIdx + 1], fieldId: focusedCell.fieldId }),
+              setFocusedCell({
+                taskId: orderedTaskIds[rowIdx + 1],
+                fieldId: focusedCell.fieldId,
+              }),
             );
           }
           break;
@@ -524,7 +534,10 @@ export function TableView() {
           const rowIdx = orderedTaskIds.indexOf(focusedCell.taskId);
           if (rowIdx > 0) {
             dispatch(
-              setFocusedCell({ taskId: orderedTaskIds[rowIdx - 1], fieldId: focusedCell.fieldId }),
+              setFocusedCell({
+                taskId: orderedTaskIds[rowIdx - 1],
+                fieldId: focusedCell.fieldId,
+              }),
             );
           }
           break;
@@ -535,7 +548,10 @@ export function TableView() {
           const colIdx = orderedFieldIds.indexOf(focusedCell.fieldId);
           if (colIdx < orderedFieldIds.length - 1) {
             dispatch(
-              setFocusedCell({ taskId: focusedCell.taskId, fieldId: orderedFieldIds[colIdx + 1] }),
+              setFocusedCell({
+                taskId: focusedCell.taskId,
+                fieldId: orderedFieldIds[colIdx + 1],
+              }),
             );
           }
           break;
@@ -546,7 +562,10 @@ export function TableView() {
           const colIdx = orderedFieldIds.indexOf(focusedCell.fieldId);
           if (colIdx > 0) {
             dispatch(
-              setFocusedCell({ taskId: focusedCell.taskId, fieldId: orderedFieldIds[colIdx - 1] }),
+              setFocusedCell({
+                taskId: focusedCell.taskId,
+                fieldId: orderedFieldIds[colIdx - 1],
+              }),
             );
           }
           break;
@@ -603,7 +622,12 @@ export function TableView() {
             dispatch(selectTask(focusedCell.taskId));
             dispatch(openDetailPanel());
           } else {
-            dispatch(setEditingCell({ taskId: focusedCell.taskId, fieldId: focusedCell.fieldId }));
+            dispatch(
+              setEditingCell({
+                taskId: focusedCell.taskId,
+                fieldId: focusedCell.fieldId,
+              }),
+            );
           }
           break;
         }
@@ -1003,15 +1027,31 @@ export function TableView() {
           statusOptions={statusOptions}
           priorityOptions={priorityOptions}
           onChangeStatus={(statusId) => {
-            dispatch(bulkUpdateTasks({ ids: selectedTaskIds, changes: { status: statusId } }));
             dispatch(
-              bulkUpdateTasksThunk({ taskIds: selectedTaskIds, updates: { status: statusId } }),
+              bulkUpdateTasks({
+                ids: selectedTaskIds,
+                changes: { status: statusId },
+              }),
+            );
+            dispatch(
+              bulkUpdateTasksThunk({
+                taskIds: selectedTaskIds,
+                updates: { status: statusId },
+              }),
             );
           }}
           onChangePriority={(priorityId) => {
-            dispatch(bulkUpdateTasks({ ids: selectedTaskIds, changes: { priority: priorityId } }));
             dispatch(
-              bulkUpdateTasksThunk({ taskIds: selectedTaskIds, updates: { priority: priorityId } }),
+              bulkUpdateTasks({
+                ids: selectedTaskIds,
+                changes: { priority: priorityId },
+              }),
+            );
+            dispatch(
+              bulkUpdateTasksThunk({
+                taskIds: selectedTaskIds,
+                updates: { priority: priorityId },
+              }),
             );
           }}
           onDelete={() => {
@@ -1119,7 +1159,12 @@ export function TableView() {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (project) {
-                      dispatch(hideColumn({ projectId: project.id, fieldId: field.id }));
+                      dispatch(
+                        hideColumn({
+                          projectId: project.id,
+                          fieldId: field.id,
+                        }),
+                      );
                     }
                   }}
                 >
@@ -1271,9 +1316,10 @@ export function TableView() {
             onClick={() => {
               if (undoStack.length > 0) {
                 const entry = undoStack[undoStack.length - 1];
-                const payload = { id: entry.taskId, ...entry.previousValues } as Partial<Task> & {
-                  id: string;
-                };
+                const payload = {
+                  id: entry.taskId,
+                  ...entry.previousValues,
+                } as Partial<Task> & { id: string };
                 dispatch(optimisticUpdateTask(payload));
                 dispatch(updateTask(payload));
                 dispatch(popUndo());
@@ -1291,9 +1337,10 @@ export function TableView() {
             onClick={() => {
               if (redoStack.length > 0) {
                 const entry = redoStack[redoStack.length - 1];
-                const payload = { id: entry.taskId, ...entry.newValues } as Partial<Task> & {
-                  id: string;
-                };
+                const payload = {
+                  id: entry.taskId,
+                  ...entry.newValues,
+                } as Partial<Task> & { id: string };
                 dispatch(optimisticUpdateTask(payload));
                 dispatch(updateTask(payload));
                 dispatch(popRedo());
@@ -2138,7 +2185,10 @@ function InlineDateEditor({
               <CaretLeft size={16} weight="bold" />
             </button>
             <span className="text-sm font-medium text-foreground">
-              {displayMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              {displayMonth.toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              })}
             </span>
             <button
               type="button"

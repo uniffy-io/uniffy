@@ -974,7 +974,10 @@ export function CrepeEditor({
                 // Find the highlight element to position the popover
                 const el = document.querySelector(`[data-comment-id="${commentId}"]`);
                 if (el) {
-                  setThreadPopover({ commentId, rect: el.getBoundingClientRect() });
+                  setThreadPopover({
+                    commentId,
+                    rect: el.getBoundingClientRect(),
+                  });
                 }
               });
             }

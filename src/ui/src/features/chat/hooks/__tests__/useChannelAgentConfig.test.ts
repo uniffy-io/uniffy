@@ -43,7 +43,11 @@ beforeEach(() => {
 describe("configFromProto", () => {
   it("maps empty wire strings to no-override state", () => {
     expect(
-      configFromProto({ modelOverride: "", modelParamsOverride: "", imageParamsOverride: "" }),
+      configFromProto({
+        modelOverride: "",
+        modelParamsOverride: "",
+        imageParamsOverride: "",
+      }),
     ).toEqual({ modelOverride: null, modelParams: {}, imageParams: {} });
   });
 

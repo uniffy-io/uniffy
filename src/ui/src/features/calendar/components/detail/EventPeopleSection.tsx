@@ -84,9 +84,21 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
           <SectionLabel>Your Response</SectionLabel>
           <div className="flex items-center gap-1.5">
             {[
-              { status: "accepted" as const, label: "Accept", active: "status-success border" },
-              { status: "tentative" as const, label: "Maybe", active: "status-warning border" },
-              { status: "declined" as const, label: "Decline", active: "status-error border" },
+              {
+                status: "accepted" as const,
+                label: "Accept",
+                active: "status-success border",
+              },
+              {
+                status: "tentative" as const,
+                label: "Maybe",
+                active: "status-warning border",
+              },
+              {
+                status: "declined" as const,
+                label: "Decline",
+                active: "status-error border",
+              },
             ].map(({ status, label, active }) => (
               <button
                 key={status}

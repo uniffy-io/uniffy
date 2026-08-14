@@ -22,7 +22,10 @@ export function TypeFieldSchemasSection({
 
   const toggleShown = useCallback(
     (taskType: string, fieldId: string) => {
-      const schema = typeFieldSchemas[taskType] || { shownFieldIds: [], requiredFieldIds: [] };
+      const schema = typeFieldSchemas[taskType] || {
+        shownFieldIds: [],
+        requiredFieldIds: [],
+      };
       const shownSet = new Set(schema.shownFieldIds);
       const requiredSet = new Set(schema.requiredFieldIds);
 
@@ -46,7 +49,10 @@ export function TypeFieldSchemasSection({
 
   const toggleRequired = useCallback(
     (taskType: string, fieldId: string) => {
-      const schema = typeFieldSchemas[taskType] || { shownFieldIds: [], requiredFieldIds: [] };
+      const schema = typeFieldSchemas[taskType] || {
+        shownFieldIds: [],
+        requiredFieldIds: [],
+      };
       const shownSet = new Set(schema.shownFieldIds);
       const requiredSet = new Set(schema.requiredFieldIds);
 

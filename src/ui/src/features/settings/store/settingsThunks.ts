@@ -22,6 +22,8 @@ const appearanceToPlain = (appearance?: AppearanceSettings) => {
     mentionDisplay: appearance.mentionDisplay || undefined,
     markdownShowPreview: appearance.markdownShowPreview,
     markdownShowLineNumbers: appearance.markdownShowLineNumbers,
+    timezone: appearance.timezone || undefined,
+    weekStart: appearance.weekStart || undefined,
   };
 };
 
@@ -87,6 +89,8 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
     mentionDisplay: "expanded",
     markdownShowPreview: true,
     markdownShowLineNumbers: true,
+    timezone: undefined,
+    weekStart: "monday",
   },
   keyboardShortcuts: keyboardShortcutsToPlain(settings.keyboardShortcuts) ?? {
     bindings: {},

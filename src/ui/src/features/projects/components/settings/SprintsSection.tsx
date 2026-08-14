@@ -502,7 +502,10 @@ function CreateSprintInline({ projectId, onCancel, onCreated }: CreateSprintInli
 
 function StatusBadge({ status }: { status: Sprint["status"] }) {
   const config = {
-    active: { label: "Active", className: "bg-green-500/10 text-green-600 dark:text-green-400" },
+    active: {
+      label: "Active",
+      className: "bg-green-500/10 text-green-600 dark:text-green-400",
+    },
     planned: { label: "Planned", className: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
     closed: { label: "Closed", className: "bg-muted text-muted-foreground" },
   }[status];

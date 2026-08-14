@@ -91,7 +91,8 @@ export function NoteMentionPreview({
                 <>
                   <MetaSeparator />
                   <span className="text-[10px] text-muted-foreground">
-                    {liveState.noteChildCount} note{liveState.noteChildCount === 1 ? "" : "s"}
+                    {liveState.noteChildCount} note
+                    {liveState.noteChildCount === 1 ? "" : "s"}
                   </span>
                 </>
               )}

@@ -187,7 +187,11 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
               const charBefore = fromB > 0 ? doc.sliceString(fromB - 1, fromB) : "";
               const atWordBoundary = !charBefore || /\s/.test(charBefore);
               if (!atWordBoundary) return;
-              setMentionPopup({ triggerFrom: fromB, triggerTo: fromB + 1, query: "" });
+              setMentionPopup({
+                triggerFrom: fromB,
+                triggerTo: fromB + 1,
+                query: "",
+              });
             });
           }
         }),
@@ -251,7 +255,10 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
           style={
             stackVertically
               ? { height: showMarkdownPreview ? "50%" : "100%", width: "100%" }
-              : { width: showMarkdownPreview ? `${splitRatio * 100}%` : "100%", height: "100%" }
+              : {
+                  width: showMarkdownPreview ? `${splitRatio * 100}%` : "100%",
+                  height: "100%",
+                }
           }
         >
           <div ref={editorContainerRef} className="h-full" />

@@ -1,5 +1,6 @@
 import { useCurrentTime } from "@/features/calendar/hooks";
 import type { DayColumn } from "@/features/calendar/types";
+import { parseISO } from "@/features/calendar/utils";
 
 interface CurrentTimeIndicatorProps {
   days: DayColumn[];
@@ -74,7 +75,7 @@ export function DayCurrentTimeIndicator({
 }: DayCurrentTimeIndicatorProps) {
   const { position } = useCurrentTime(undefined, hourHeight);
 
-  const dateObj = typeof date === "string" ? new Date(date) : date;
+  const dateObj = typeof date === "string" ? parseISO(date) : date;
   const today = new Date();
   const isToday = dateObj.toDateString() === today.toDateString();
 

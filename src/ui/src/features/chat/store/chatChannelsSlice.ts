@@ -135,7 +135,11 @@ export const chatChannelsSlice = createSlice({
     },
     setMemberRole: (
       state,
-      action: PayloadAction<{ channelId: string; userId: string; role: ChatChannelMember["role"] }>,
+      action: PayloadAction<{
+        channelId: string;
+        userId: string;
+        role: ChatChannelMember["role"];
+      }>,
     ) => {
       const members = state.channelMembers[action.payload.channelId];
       const member = members?.find(

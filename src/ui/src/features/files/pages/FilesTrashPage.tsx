@@ -315,7 +315,11 @@ function TrashView() {
         dispatch(removeTrashFile(pendingPermanentDelete.id));
       } else if (pendingPermanentDelete.kind === "folder") {
         await dispatch(
-          deleteFolder({ folderId: pendingPermanentDelete.id, recursive: true, permanent: true }),
+          deleteFolder({
+            folderId: pendingPermanentDelete.id,
+            recursive: true,
+            permanent: true,
+          }),
         ).unwrap();
         dispatch(removeTrashFolder(pendingPermanentDelete.id));
       } else {
@@ -481,7 +485,12 @@ function TrashView() {
               <Select
                 value={sortOrder}
                 onChange={(v) => setSortOrder(v as OrderValue)}
-                options={SORT_ORDER_OPTIONS as unknown as { value: string; label: string }[]}
+                options={
+                  SORT_ORDER_OPTIONS as unknown as {
+                    value: string;
+                    label: string;
+                  }[]
+                }
                 size="sm"
               />
             </>

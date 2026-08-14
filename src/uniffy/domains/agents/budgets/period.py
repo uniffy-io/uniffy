@@ -7,15 +7,13 @@ image-quota check and the text-spend preflight check so both surfaces
 agree on what "this period" means.
 """
 
+from calendar import monthrange
 from datetime import UTC, datetime, timedelta
 
 
 def last_day_of_month(year: int, month: int) -> int:
     """Return the last calendar day of ``(year, month)``."""
-    next_first = (
-        datetime(year + 1, 1, 1) if month == 12 else datetime(year, month + 1, 1)
-    )
-    return (next_first - timedelta(days=1)).day
+    return monthrange(year, month)[1]
 
 
 def month_window(reset_day: int, now: datetime) -> tuple[datetime, datetime]:

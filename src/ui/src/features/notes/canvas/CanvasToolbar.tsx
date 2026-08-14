@@ -429,7 +429,9 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                           "w-5 h-5 rounded border transition-transform",
                           c === currentBg ? "border-foreground scale-110" : "border-border",
                         )}
-                        style={{ backgroundColor: c === "transparent" ? undefined : c }}
+                        style={{
+                          backgroundColor: c === "transparent" ? undefined : c,
+                        }}
                         title={c === "transparent" ? "No fill" : c}
                       >
                         {c === "transparent" && (
@@ -455,7 +457,9 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                           "w-5 h-5 rounded border transition-transform",
                           c === currentBorder ? "border-foreground scale-110" : "border-border",
                         )}
-                        style={{ backgroundColor: c === "transparent" ? undefined : c }}
+                        style={{
+                          backgroundColor: c === "transparent" ? undefined : c,
+                        }}
                         title={c === "transparent" ? "No border" : c}
                       >
                         {c === "transparent" && (
@@ -493,10 +497,26 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                 {defaultsPanel === "edgeShape" && (
                   <div className="mt-1.5 pt-1.5 border-t border-border flex gap-1">
                     {[
-                      { value: "default" as EdgeShape, label: "Bezier", icon: BezierCurve },
-                      { value: "straight" as EdgeShape, label: "Straight", icon: LineSegment },
-                      { value: "smoothstep" as EdgeShape, label: "Smooth Step", icon: Path },
-                      { value: "step" as EdgeShape, label: "Step", icon: ArrowBendRightDown },
+                      {
+                        value: "default" as EdgeShape,
+                        label: "Bezier",
+                        icon: BezierCurve,
+                      },
+                      {
+                        value: "straight" as EdgeShape,
+                        label: "Straight",
+                        icon: LineSegment,
+                      },
+                      {
+                        value: "smoothstep" as EdgeShape,
+                        label: "Smooth Step",
+                        icon: Path,
+                      },
+                      {
+                        value: "step" as EdgeShape,
+                        label: "Step",
+                        icon: ArrowBendRightDown,
+                      },
                     ].map(({ value, label, icon: Icon }) => (
                       <button
                         key={`des-${value}`}
@@ -531,7 +551,9 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                           "w-5 h-5 rounded border transition-transform",
                           c === currentEdgeColor ? "border-foreground scale-110" : "border-border",
                         )}
-                        style={{ backgroundColor: c === "transparent" ? undefined : c }}
+                        style={{
+                          backgroundColor: c === "transparent" ? undefined : c,
+                        }}
                         title={c === "transparent" ? "Default" : c}
                       >
                         {c === "transparent" && (

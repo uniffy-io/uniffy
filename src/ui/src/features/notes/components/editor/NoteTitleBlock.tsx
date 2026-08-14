@@ -70,7 +70,12 @@ function AlignmentChip({
           <div
             ref={popoverRef}
             role="menu"
-            style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, zIndex: 1000 }}
+            style={{
+              position: "fixed",
+              top: rect.bottom + 4,
+              left: rect.left,
+              zIndex: 1000,
+            }}
             className="min-w-[160px] rounded-md border border-border bg-card text-card-foreground shadow-lg p-1"
           >
             {(["left", "center"] as const).map((value) => (

@@ -54,12 +54,18 @@ const ACCESS_OPTIONS: SelectOption<number>[] = [
 ];
 
 function isoToCalendarValue(iso: string | null): string {
-  return iso ? iso.slice(0, 10) : "";
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.valueOf())) return "";
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
 }
 
 function calendarValueToIso(value: string): string | null {
   if (!value) return null;
-  const parsed = new Date(`${value}T00:00:00.000Z`);
+  // Local midnight: the user picked a day on THEIR calendar.
+  const parsed = new Date(`${value}T00:00:00`);
   if (Number.isNaN(parsed.valueOf())) return null;
   return parsed.toISOString();
 }

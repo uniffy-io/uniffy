@@ -48,6 +48,7 @@ from uniffy.domains.chat.messages.operations import bump_channel_message_stats
 from uniffy.domains.chat.streaming import events as chat_evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 from uniffy.domains.files.attachments.operations import AttachmentOperations
+from uniffy.domains.settings.operations import get_user_timezone
 
 logger = logger.bind(component="agents.chat_integration.operations")
 
@@ -136,6 +137,9 @@ class AgentChatBridge:
             trigger_message_id=trigger_message_id,
         )
 
+        # Chat triggers carry no request timezone; fall back to the stored preference.
+        user_timezone = await get_user_timezone(self._session, user_id)
+
         publisher = ChatStreamPublisher(
             session=self._session,
             channel_id=channel_id,
@@ -194,6 +198,7 @@ class AgentChatBridge:
                 content=trigger.content,
                 files=files,
                 invoked_skill_id=invoked_skill_id,
+                user_timezone=user_timezone,
             ):
                 await publisher.publish(event)
 

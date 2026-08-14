@@ -98,7 +98,11 @@ export const revertSkill = createAsyncThunk<
   async ({ skillId, versionNumber }, { getState, rejectWithValue }) => {
     try {
       const organizationId = getOrganizationId(getState());
-      const response = await skillsApi.revertSkill({ organizationId, skillId, versionNumber });
+      const response = await skillsApi.revertSkill({
+        organizationId,
+        skillId,
+        versionNumber,
+      });
       if (!response.skill || !response.version) throw new Error("Incomplete revert response");
       return {
         skillId,

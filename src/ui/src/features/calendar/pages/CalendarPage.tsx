@@ -22,9 +22,15 @@ import {
   fetchCategories,
   fetchEvent,
 } from "@/features/calendar/store/calendarThunks";
-import { toDateString } from "@/features/calendar/utils";
+import { displayParts, instantDayKey, parseISO } from "@/features/calendar/utils";
 import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+
+/** Fractional wall-clock hour of an instant on the display zone's clock. */
+function displayHourOf(instant: string): number {
+  const { hours, minutes } = displayParts(instant);
+  return hours + minutes / 60;
+}
 
 export function CalendarPage() {
   const dispatch = useAppDispatch();
@@ -73,7 +79,7 @@ export function CalendarPage() {
       .unwrap()
       .then((event) => {
         // Snap the calendar to the event's date so the selection is visible.
-        const eventDate = toDateString(new Date(event.startTime));
+        const eventDate = instantDayKey(event.startTime);
         if (eventDate !== currentDate) {
           dispatch(setCurrentDate(eventDate));
         }
@@ -122,19 +128,15 @@ export function CalendarPage() {
         isOpen={isEventModalOpen}
         onClose={() => dispatch(closeEventModal())}
         initialDate={
-          eventModalPrefill?.startTime ? new Date(eventModalPrefill.startTime) : undefined
+          eventModalPrefill?.startTime
+            ? parseISO(eventModalPrefill.date || instantDayKey(eventModalPrefill.startTime))
+            : undefined
         }
         initialStartHour={
-          eventModalPrefill?.startTime
-            ? new Date(eventModalPrefill.startTime).getHours() +
-              new Date(eventModalPrefill.startTime).getMinutes() / 60
-            : undefined
+          eventModalPrefill?.startTime ? displayHourOf(eventModalPrefill.startTime) : undefined
         }
         initialEndHour={
-          eventModalPrefill?.endTime
-            ? new Date(eventModalPrefill.endTime).getHours() +
-              new Date(eventModalPrefill.endTime).getMinutes() / 60
-            : undefined
+          eventModalPrefill?.endTime ? displayHourOf(eventModalPrefill.endTime) : undefined
         }
       />
 
