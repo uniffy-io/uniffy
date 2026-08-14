@@ -27,7 +27,8 @@ export function EventMeetingJoin({ channelId }: EventMeetingJoinProps) {
   useEffect(() => {
     if (!organizationId) return;
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset while re-resolving a new channel binding
+    // Clear on a channel switch so the button never shows the previous channel while resolving.
+    // eslint-disable-next-line react/react-compiler
     setChannelName(null);
     setHasAccess(null);
     chatApi

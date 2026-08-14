@@ -43,9 +43,10 @@ export function EditProjectModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Populate form when project changes
+  // The modal stays mounted and only renders null while closed, so seed the form per project.
   useEffect(() => {
     if (project) {
+      // eslint-disable-next-line react/react-compiler
       setName(project.name);
       setDescription(project.description || "");
       setIcon((project.icon || "kanban") as ProjectIconName);

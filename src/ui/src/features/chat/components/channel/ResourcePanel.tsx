@@ -31,7 +31,7 @@ export function ResourcePanel() {
   useEffect(() => {
     if (!activeChannel) return;
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state tied to async fetch lifecycle
+    // eslint-disable-next-line react/react-compiler -- loading state tied to async fetch lifecycle
     setIsLoading(true);
     dispatch(
       fetchChannelResources({

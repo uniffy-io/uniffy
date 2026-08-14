@@ -51,6 +51,7 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
   useEffect(() => {
     if (!open || !userId) return;
     let cancelled = false;
+    // eslint-disable-next-line react/react-compiler -- fetching the member's quota each time the dialog opens; the form shows a spinner until it arrives
     setLoading(true);
     dispatch(fetchUserQuota({ userId }))
       .unwrap()

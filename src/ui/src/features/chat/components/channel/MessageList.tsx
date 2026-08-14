@@ -391,7 +391,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     // A list that opens on a jump target is not at its bottom, and claiming otherwise lets the
     // height-change pin below drag the view off the target while rows are still measuring.
     const opensOnJump = jumpIndexRef.current >= 0;
-    /* eslint-disable react-hooks/set-state-in-effect -- per-channel reset on switch is intentional */
+    // eslint-disable-next-line react/react-compiler -- per-channel reset on switch is intentional
     setFirstItemIndex(START_INDEX);
     prevFirstIdRef.current = undefined;
     prevLenRef.current = 0;
@@ -401,7 +401,6 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     setHighlightedId(null);
     isAtBottomRef.current = !opensOnJump;
     setAtBottom(!opensOnJump);
-    /* eslint-enable react-hooks/set-state-in-effect */
   }, [listKey]);
 
   useEffect(() => {

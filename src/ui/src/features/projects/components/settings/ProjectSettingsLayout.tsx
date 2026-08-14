@@ -70,7 +70,8 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
   useEffect(() => {
     const section = searchParams.get("section");
     if (section && ALL_SECTION_IDS.has(section)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing URL search param to local state on navigation
+      // The URL owns the section on navigation; local state owns it between navigations.
+      // eslint-disable-next-line react/react-compiler
       setActiveSection(section as SettingsSection);
     }
   }, [searchParams]);

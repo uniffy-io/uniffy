@@ -130,7 +130,6 @@ export function FloatingFormattingToolbar() {
   // using the rendered width to keep the bar centered on the selection.
   useLayoutEffect(() => {
     if (!visible || !anchor || !containerRef.current) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing position when selection collapses is a sync with the external editor view
       setPosition(null);
       return;
     }
@@ -150,7 +149,8 @@ export function FloatingFormattingToolbar() {
 
   // Close the highlight picker if selection collapses.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- close picker when external editor selection collapses
+    // Dropping the anchor, rather than hiding it, keeps a stale picker off the next selection.
+    // eslint-disable-next-line react/react-compiler
     if (!visible) setHighlightAnchor(null);
   }, [visible]);
 

@@ -47,14 +47,14 @@ export function NoteMoveDialog({ target, onClose }: NoteMoveDialogProps) {
   // Get only folders for the selected visibility
   const availableFolders = useMemo(() => {
     const nodes = selectedVisibility === "personal" ? tree.personal : tree.organization;
-    const filterFolders = (items: TreeNode[]): TreeNode[] => {
+    function filterFolders(items: TreeNode[]): TreeNode[] {
       return items
         .filter((n) => n.type === "folder" && n.id !== target.noteId)
         .map((n) => ({
           ...n,
           children: n.children ? filterFolders(n.children) : undefined,
         }));
-    };
+    }
     return filterFolders(nodes);
   }, [selectedVisibility, tree.personal, tree.organization, target.noteId]);
 
@@ -148,8 +148,8 @@ export function NoteMoveDialog({ target, onClose }: NoteMoveDialogProps) {
     await performMove();
   }, [selectedVisibility, target.currentAccessMode, performMove]);
 
-  const renderFolderNode = useCallback(
-    (node: TreeNode, depth = 0): React.ReactNode => {
+  const renderFolderNode = useMemo(() => {
+    function renderNode(node: TreeNode, depth = 0): React.ReactNode {
       if (node.type !== "folder") return null;
 
       const isExpanded = expandedFolders.has(node.id);
@@ -196,13 +196,13 @@ export function NoteMoveDialog({ target, onClose }: NoteMoveDialogProps) {
           </div>
 
           {isExpanded && hasChildren && (
-            <div>{folderChildren.map((child) => renderFolderNode(child, depth + 1))}</div>
+            <div>{folderChildren.map((child) => renderNode(child, depth + 1))}</div>
           )}
         </div>
       );
-    },
-    [expandedFolders, selectedFolderId, target.noteId, handleSelectFolder, toggleFolder],
-  );
+    }
+    return renderNode;
+  }, [expandedFolders, selectedFolderId, target.noteId, handleSelectFolder, toggleFolder]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">

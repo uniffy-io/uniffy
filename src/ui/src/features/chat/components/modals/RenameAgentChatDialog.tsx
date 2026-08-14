@@ -22,14 +22,10 @@ export function RenameAgentChatDialog() {
   );
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [value, setValue] = useState("");
+  // ChatPage mounts this dialog only while a rename target is set, so the seed runs once per open.
+  // Re-seeding from the channel row would wipe what the user typed whenever that row updates.
+  const [value, setValue] = useState(() => channel?.customName ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (channel) {
-      setValue(channel.customName ?? "");
-    }
-  }, [channel]);
 
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 50);

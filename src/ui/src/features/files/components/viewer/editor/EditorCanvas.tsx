@@ -57,7 +57,8 @@ export function EditorCanvas({
   useEffect(() => {
     if (!containerElement) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- seeding initial size before the observer fires
+    // ResizeObserver does not report the mount-time size, so seed it once here.
+    // eslint-disable-next-line react/react-compiler
     setContainerSize({
       width: containerElement.clientWidth,
       height: containerElement.clientHeight,
@@ -85,7 +86,8 @@ export function EditorCanvas({
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when imageUrl changes is valid
+    // A new source has to load before its natural dimensions are known again.
+    // eslint-disable-next-line react/react-compiler
     setImageLoaded(false);
   }, [imageUrl]);
 

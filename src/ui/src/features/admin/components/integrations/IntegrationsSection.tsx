@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createElement, useCallback, useEffect, useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import {
   ArrowClockwise,
@@ -32,6 +32,18 @@ import { integrationIcon } from "@/features/integrations/config/integrationBrand
 import { AddConnectionForm } from "@/features/admin/components/integrations/AddConnectionForm";
 import { ConnectionDetailPanel } from "@/features/admin/components/integrations/ConnectionDetailPanel";
 
+function IntegrationBrandIcon({
+  provider,
+  size,
+  className,
+}: {
+  provider: string | undefined;
+  size: number;
+  className?: string;
+}) {
+  return createElement(integrationIcon(provider) ?? Plugs, { size, className });
+}
+
 export function IntegrationsSection() {
   const dispatch = useAppDispatch();
   const providers = useAppSelector(selectIntegrationProviders);
@@ -54,9 +66,6 @@ export function IntegrationsSection() {
     () => connections.find((c) => c.id === selectedId) ?? null,
     [connections, selectedId],
   );
-  const SelectedBrandIcon = selectedConnection
-    ? (integrationIcon(selectedConnection.provider) ?? Plugs)
-    : Plugs;
 
   const handleValidate = async (connectionId: string) => {
     setValidatingId(connectionId);
@@ -160,7 +169,6 @@ export function IntegrationsSection() {
                 <div className="flex-1 overflow-y-auto">
                   {connections.map((connection) => {
                     const isSelected = connection.id === selectedId;
-                    const BrandIcon = integrationIcon(connection.provider) ?? Plugs;
                     return (
                       <button
                         key={connection.id}
@@ -176,7 +184,11 @@ export function IntegrationsSection() {
                             : "hover:bg-muted border-l-2 border-transparent",
                         )}
                       >
-                        <BrandIcon size={18} className="text-muted-foreground shrink-0" />
+                        <IntegrationBrandIcon
+                          provider={connection.provider}
+                          size={18}
+                          className="text-muted-foreground shrink-0"
+                        />
                         <div className="flex flex-col flex-1 min-w-0">
                           <span className="text-sm font-medium truncate text-foreground">
                             {connection.name}
@@ -228,7 +240,11 @@ export function IntegrationsSection() {
                     <div className="px-6 py-4 border-b border-border">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                          <SelectedBrandIcon size={20} className="text-muted-foreground" />
+                          <IntegrationBrandIcon
+                            provider={selectedConnection.provider}
+                            size={20}
+                            className="text-muted-foreground"
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h2 className="text-xl font-semibold text-foreground">

@@ -48,6 +48,7 @@ export function CommentThreadPopover({
   }, [organizationId, comment.id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- pulling the comment with its replies is the whole point of this effect; the setStates it reaches are the async results, not derived render state
     fetchFullComment();
   }, [fetchFullComment]);
 

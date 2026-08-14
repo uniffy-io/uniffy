@@ -114,7 +114,8 @@ export function ImageViewer({ file }: ImageViewerProps) {
   }, [dispatch]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when file.id changes is valid
+    // A new file has to load before it can be painted, so the viewer goes back to loading.
+    // eslint-disable-next-line react/react-compiler
     setImageLoaded(false);
     dispatch(setViewerLoading(true));
   }, [file.id, dispatch]);

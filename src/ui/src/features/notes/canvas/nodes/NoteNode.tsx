@@ -34,7 +34,7 @@ export const NoteNode = memo(function NoteNode({ id, data, selected }: NodeProps
 
   useEffect(() => {
     if (!needsFetch || !data.noteId || fetchState === "loading" || fetchState === "failed") return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- tracking fetch lifecycle
+    // eslint-disable-next-line react/react-compiler -- tracking fetch lifecycle
     setFetchState("loading");
     dispatch(fetchNote(data.noteId))
       .unwrap()

@@ -197,6 +197,7 @@ export function AuditLogsPage() {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- a filter change invalidates the accumulated page tokens, so paging restarts at the first page
     setPageTokens([null]);
     setPageIndex(0);
     fetchPage(null);
@@ -257,6 +258,9 @@ export function AuditLogsPage() {
         setExporting(null);
       }
     },
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
     [filter, organizationId, organizationSlug],
   );
 

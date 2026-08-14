@@ -82,7 +82,6 @@ export function ChannelView({
     const prev = prevHeroPhaseRef.current;
     prevHeroPhaseRef.current = heroPhase;
     if (prev === "hero" && heroPhase === "off") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- transition trigger on a derived phase flip, not derivable during render
       setHeroExit(true);
       const timer = setTimeout(() => setHeroExit(false), 550);
       return () => clearTimeout(timer);

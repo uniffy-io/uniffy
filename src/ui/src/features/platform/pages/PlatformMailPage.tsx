@@ -200,6 +200,7 @@ function SystemConfigTab() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount; load raises the loading flag before awaiting the API
     void load();
   }, [load]);
 
@@ -481,6 +482,7 @@ function OrgConfigsTab() {
   }, [page, search, onlyWithOrgConfig]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount and on every filter or page change; load raises the loading flag before awaiting the API
     void load();
   }, [load]);
 
@@ -651,6 +653,7 @@ function SuppressionsTab() {
   }, [page, search]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount and on every search or page change; load raises the loading flag before awaiting the API
     void load();
   }, [load]);
 
@@ -806,6 +809,7 @@ function DeliveriesTab() {
   }, [page, outcome]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount and on every outcome or page change; load raises the loading flag before awaiting the API
     void load();
   }, [load]);
 

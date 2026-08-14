@@ -70,11 +70,15 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
     triggerTo: number;
     query: string;
   } | null>(null);
+  // The textarea handlers below stay identity-stable so a re-render never
+  // remounts them mid-keystroke; current values reach them through these refs.
+  /* eslint-disable react/react-compiler -- latest-value refs for stable textarea handlers */
   const mentionPopupRef = useRef(mentionPopup);
   mentionPopupRef.current = mentionPopup;
 
   const realtimeRef = useRef(realtime);
   realtimeRef.current = realtime;
+  /* eslint-enable react/react-compiler */
 
   const handleContentChange = useCallback((newContent: string) => {
     const rt = realtimeRef.current;

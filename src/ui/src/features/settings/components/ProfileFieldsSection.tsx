@@ -255,7 +255,7 @@ function ProfileForm({ person, initialPronouns }: ProfileFormProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const timeZones = useMemo(listTimeZones, []);
+  const timeZones = useMemo(() => listTimeZones(), []);
   const isManaged = (field: string) => person.managedFields.includes(field);
 
   const cleanLinks = links

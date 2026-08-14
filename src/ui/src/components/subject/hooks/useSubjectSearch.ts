@@ -37,6 +37,7 @@ export function useSubjectSearch(options: UseSubjectSearchOptions = {}): UseSubj
     if (timerRef.current) clearTimeout(timerRef.current);
 
     if (query.trim().length < 2 || !organizationId) {
+      // eslint-disable-next-line react/react-compiler -- a query that drops below the threshold must drop the previous results here; the debounced fetch below never runs for it
       setResults([]);
       setLoading(false);
       return;

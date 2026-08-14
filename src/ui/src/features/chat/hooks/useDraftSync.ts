@@ -63,7 +63,6 @@ export function useDraftSync(channelId: string | null, rootMessageId?: string): 
     if (lastLocalRef.current !== lastSyncedRef.current) return;
     lastSyncedRef.current = incoming;
     lastLocalRef.current = incoming;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- surfacing a store change that another session produced
     setRemote({ key, content: incoming });
   }, [key, draftContent]);
 

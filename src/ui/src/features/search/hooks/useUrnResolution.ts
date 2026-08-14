@@ -97,6 +97,7 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
   }, [organizationId, urns]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetching the URN batch is the whole point of this effect; the setStates it reaches are the async results, not derived render state
     fetchMetadata();
 
     return () => {

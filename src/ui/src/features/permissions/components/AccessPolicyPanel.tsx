@@ -44,6 +44,9 @@ export function AccessPolicyPanel({
   const [confirmPersonal, setConfirmPersonal] = useState(false);
   const [narrowing, setNarrowing] = useState(false);
 
+  // Keyed on the owner id, not the whole policy: this array feeds a resolver that refetches
+  // on identity change, so a policy edit elsewhere must not churn it.
+  // eslint-disable-next-line react/react-compiler
   const ownerIds = useMemo(() => (policy?.ownerId ? [policy.ownerId] : []), [policy?.ownerId]);
   const { subjects: ownerSubjects } = useSubjectResolver(ownerIds);
   const owner = ownerSubjects[0];
@@ -65,6 +68,7 @@ export function AccessPolicyPanel({
   }, [members]);
 
   const existingSubjectIds = useMemo(
+    // eslint-disable-next-line react/react-compiler
     () => members.map((m) => m.subjectId).concat(policy?.ownerId ? [policy.ownerId] : []),
     [members, policy?.ownerId],
   );

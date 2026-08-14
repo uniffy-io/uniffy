@@ -91,6 +91,8 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
 
   // --- Create handlers ---
 
+  // The compiler wants the setState functions listed; React guarantees their identity is stable.
+  // eslint-disable-next-line react/react-compiler
   const resetCreateForm = useCallback(() => {
     setNewName("");
     setNewType("text");

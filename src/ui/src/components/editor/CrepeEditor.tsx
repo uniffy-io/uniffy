@@ -450,6 +450,10 @@ export function CrepeEditor({
   realtime,
 }: CrepeEditorProps) {
   const realtimeRef = useRef<CrepeRealtimeBinding | undefined>(realtime);
+  // The Crepe instance and its $prose plugins are built once - rebuilding them
+  // would drop the ySync binding and the markdown mirror - so current props
+  // reach the plugin closures through refs written here rather than in effects.
+  // eslint-disable-next-line react/react-compiler -- latest-value ref for the one-shot editor plugins
   realtimeRef.current = realtime;
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
@@ -477,10 +481,12 @@ export function CrepeEditor({
   }, [enableComments, contentComments]);
 
   // Refs to pass current values into the plugin without re-creating the editor
+  /* eslint-disable react/react-compiler -- latest-value refs for the one-shot editor plugins */
   const commentAnchorsRef = useRef(commentAnchors);
   commentAnchorsRef.current = commentAnchors;
   const activeCommentIdRef = useRef(activeCommentId);
   activeCommentIdRef.current = activeCommentId;
+  /* eslint-enable react/react-compiler */
 
   const settings = editorState?.settings ?? defaultSettings;
   const editorRef = useRef<HTMLDivElement>(null);
@@ -491,6 +497,7 @@ export function CrepeEditor({
   const initializedNoteIdRef = useRef<string | null>(null);
   const handleScopeRef = useRef<object>({});
   const onEditorReadyRef = useRef(onEditorReady);
+  // eslint-disable-next-line react/react-compiler -- latest-value ref for the one-shot editor plugins
   onEditorReadyRef.current = onEditorReady;
 
   // Mention popup state
@@ -519,6 +526,7 @@ export function CrepeEditor({
 
   // Stable ref for the comment callback so createCrepeConfig captures the latest version
   const commentCallbackRef = useRef<() => void>(() => {});
+  // eslint-disable-next-line react/react-compiler -- latest-value ref for the one-shot editor plugins
   commentCallbackRef.current = () => {
     const view = viewRef.current;
     if (!view || view.isDestroyed) return;
@@ -543,6 +551,7 @@ export function CrepeEditor({
 
   // Stable ref for the highlight callback
   const highlightCallbackRef = useRef<() => void>(() => {});
+  // eslint-disable-next-line react/react-compiler -- latest-value ref for the one-shot editor plugins
   highlightCallbackRef.current = () => {
     const view = viewRef.current;
     if (!view || view.isDestroyed) return;

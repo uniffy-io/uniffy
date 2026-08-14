@@ -77,6 +77,7 @@ export function MemberProfileDialog({ userId, displayName, onClose }: MemberProf
   // Seed the form once the profile arrives; a re-fetch must not clobber edits.
   useEffect(() => {
     if (!person || loadedFor === person.userId) return;
+    // eslint-disable-next-line react/react-compiler
     setJobTitle(person.jobTitle ?? "");
     setDepartment(person.department ?? "");
     setOfficeLocation(person.officeLocation ?? "");

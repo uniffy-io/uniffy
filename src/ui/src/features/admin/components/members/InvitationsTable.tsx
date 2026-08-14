@@ -198,6 +198,7 @@ export function InvitationsTable({ organizationId, refreshKey }: InvitationsTabl
   }, [organizationId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount and on every refreshKey bump; reload raises the loading flag before awaiting the API
     void reload();
   }, [reload, refreshKey]);
 

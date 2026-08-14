@@ -477,6 +477,9 @@ function usePersistentChatStream() {
   const channelIds = useAppSelector((state) => state.chatChannels.ids);
 
   // Refs keep the effect from re-running on channel switch or user change.
+  // A re-run would drop and re-open the user stream, and events during that gap
+  // are lost - resyncing them costs a full snapshot round trip.
+  /* eslint-disable react/react-compiler -- latest-value refs keeping the stream connection alive across renders */
   const channelIdRef = useRef(activeChannelId);
   channelIdRef.current = activeChannelId;
   const userIdRef = useRef(currentUserId);
@@ -486,6 +489,7 @@ function usePersistentChatStream() {
   channelIdsRef.current = new Set(channelIds);
   const byIdRef = useRef(byId);
   byIdRef.current = byId;
+  /* eslint-enable react/react-compiler */
   const fetchingChannelsRef = useRef(new Set<string>());
 
   // Returning to the tab clears the badge the hidden-tab stream handlers left

@@ -177,7 +177,10 @@ function VersionHistorySection({
   const dispatch = useAppDispatch();
   const entry = useAppSelector(selectSkillVersionsEntry(skill.id));
   const [busy, setBusy] = useState<number | "follow" | null>(null);
-  const [compare, setCompare] = useState<{ base: number; target: number } | null>(null);
+  // Null until the user picks a pair of their own; "main vs latest" applies until then.
+  const [compareOverride, setCompareOverride] = useState<{ base: number; target: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     dispatch(fetchSkillVersions(skill.id));
@@ -187,16 +190,16 @@ function VersionHistorySection({
   const activeNumber = entry?.activeVersionNumber ?? 0;
   const pinned = entry?.activeVersionPinned ?? false;
 
-  // Default the compare picker to "main vs latest" once versions land.
-  useEffect(() => {
-    if (compare || versions.length < 2 || !entry) return;
+  const compare = useMemo(() => {
+    if (compareOverride) return compareOverride;
+    if (versions.length < 2 || !entry) return null;
     const latest = entry.latestVersionNumber;
     const base =
       entry.activeVersionNumber && entry.activeVersionNumber !== latest
         ? entry.activeVersionNumber
         : versions[1].versionNumber;
-    setCompare({ base, target: latest });
-  }, [compare, entry, versions]);
+    return { base, target: latest };
+  }, [compareOverride, entry, versions]);
 
   const byNumber = useMemo(() => {
     const map = new Map<number, (typeof versions)[number]>();
@@ -265,7 +268,7 @@ function VersionHistorySection({
             <span>Compare</span>
             <Select
               value={compare.base}
-              onChange={(value) => setCompare({ ...compare, base: value })}
+              onChange={(value) => setCompareOverride({ ...compare, base: value })}
               size="sm"
               triggerClassName="min-w-0 w-20"
               options={versions.map((v) => ({
@@ -276,7 +279,7 @@ function VersionHistorySection({
             <span>with</span>
             <Select
               value={compare.target}
-              onChange={(value) => setCompare({ ...compare, target: value })}
+              onChange={(value) => setCompareOverride({ ...compare, target: value })}
               size="sm"
               triggerClassName="min-w-0 w-20"
               options={versions.map((v) => ({

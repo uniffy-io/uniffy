@@ -116,6 +116,8 @@ export function useFileDownload(
 
     const cached = getCachedBlob(fileId, options?.versionId);
     if (cached) {
+      // The blob cache is an external store, so a hit short-circuits the download.
+      // eslint-disable-next-line react/react-compiler
       setBlob(cached.blob);
       setUrl(cached.url);
       setMimeType(cached.mimeType);

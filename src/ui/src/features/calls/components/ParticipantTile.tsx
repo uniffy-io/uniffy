@@ -82,7 +82,7 @@ export function ParticipantTile({
   }, [videoTrack]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset zoom when the track changes
+    // eslint-disable-next-line react/react-compiler -- reset zoom when the track changes
     setZoom(ZOOM_FIT);
   }, [videoTrack]);
 

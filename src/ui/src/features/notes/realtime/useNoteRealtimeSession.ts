@@ -48,7 +48,7 @@ export function useNoteRealtimeSession(
 
   useEffect(() => {
     if (!session || !canEdit) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset undo manager when the session drops
+      // eslint-disable-next-line react/react-compiler -- reset undo manager when the session drops
       setUndoManager(null);
       return;
     }

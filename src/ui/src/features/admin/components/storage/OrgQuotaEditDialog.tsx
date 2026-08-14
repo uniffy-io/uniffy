@@ -24,6 +24,7 @@ export function OrgQuotaEditDialog({ open, onClose }: OrgQuotaEditDialogProps) {
 
   useEffect(() => {
     if (orgQuota && open) {
+      // eslint-disable-next-line react/react-compiler -- seeding the form when the dialog opens, and again if the stored quota arrives later
       setOrgQuotaBytes(orgQuota.orgQuotaBytes);
       setDefaultUserQuotaBytes(orgQuota.defaultUserQuotaBytes);
       setWarnAtPercent(orgQuota.warnAtPercent);

@@ -27,6 +27,9 @@ export function MiniCalendar() {
       newDate.getMonth() !== displayMonth.getMonth() ||
       newDate.getFullYear() !== displayMonth.getFullYear()
     ) {
+      // The mini calendar keeps its own month while the user pages through it, so the
+      // store value only reclaims it when the main view lands on a different month.
+      // eslint-disable-next-line react/react-compiler
       setDisplayMonth(newDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

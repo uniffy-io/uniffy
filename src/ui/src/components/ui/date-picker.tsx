@@ -57,7 +57,8 @@ export function DatePicker({
 
   useEffect(() => {
     if (selectedDate) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting display month when selectedDate changes
+      // Follow the externally controlled value so the grid opens on the selected month.
+      // eslint-disable-next-line react/react-compiler
       setDisplayMonth(selectedDate);
     }
   }, [selectedDate]);

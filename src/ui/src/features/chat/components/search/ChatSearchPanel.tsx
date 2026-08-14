@@ -63,7 +63,7 @@ export function ChatSearchPanel({
     } else {
       clear();
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset keyboard focus when search criteria change
+    // eslint-disable-next-line react/react-compiler -- reset keyboard focus when search criteria change
     setFocusedIndex(-1);
   }, [query, filters, search, clear]);
 

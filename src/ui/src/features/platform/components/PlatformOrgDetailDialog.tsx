@@ -93,6 +93,7 @@ export function PlatformOrgDetailDialog({ organizationId, onClose, onChanged }: 
   }, [organizationId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount and whenever the dialog switches org; refresh raises the loading flag before awaiting the API
     refresh();
   }, [refresh]);
 

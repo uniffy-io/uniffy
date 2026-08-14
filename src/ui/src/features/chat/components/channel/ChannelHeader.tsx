@@ -201,6 +201,9 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
       setIsSavingName(false);
       setIsEditingName(false);
     }
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
   }, [activeChannel, isAgentDm, nameDraft, dispatch]);
 
   const handleNameKeyDown = useCallback(

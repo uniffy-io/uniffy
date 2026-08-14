@@ -41,8 +41,9 @@ export function GeneralSection({ project }: GeneralSectionProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Reset form when project changes
+  // The section stays mounted across project switches and external edits win over an unsaved draft.
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler
     setName(project.name);
     setDescription(project.description || "");
     setSlug(project.slug || "");

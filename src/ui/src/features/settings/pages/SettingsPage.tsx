@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import {
@@ -17,18 +17,10 @@ export function SettingsPage() {
   useDocumentTitle("Settings");
   const [searchParams, setSearchParams] = useSearchParams();
   const sectionParam = searchParams.get("section") as SettingsSection | null;
-  const [activeSection, setActiveSection] = useState<SettingsSection>(sectionParam || "appearance");
+  const activeSection: SettingsSection = sectionParam || "appearance";
   const { initializeSettings, initialized, loading, error, dismissError } = useSettings();
 
-  useEffect(() => {
-    if (sectionParam && sectionParam !== activeSection) {
-      setActiveSection(sectionParam);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync when URL param changes
-  }, [sectionParam]);
-
   const handleSectionChange = (section: SettingsSection) => {
-    setActiveSection(section);
     setSearchParams({ section });
   };
 

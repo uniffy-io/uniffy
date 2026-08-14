@@ -492,7 +492,7 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
   useEffect(() => {
     if (!organizationId) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when organizationId changes is valid
+    // eslint-disable-next-line react/react-compiler -- an org switch must drop every resolved title before the refetch, or chips keep rendering the previous tenant's content
     setStates(new Map());
     clearMentionStates();
 

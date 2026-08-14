@@ -31,7 +31,8 @@ export function InlineTextField({
 
   useEffect(() => {
     if (!isEditing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resync when the value changes externally
+      // Resync the draft when the value changes externally, but never mid-edit.
+      // eslint-disable-next-line react/react-compiler
       setDraft(value);
     }
   }, [value, isEditing]);

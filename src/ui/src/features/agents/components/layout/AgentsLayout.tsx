@@ -104,6 +104,9 @@ export function AgentsLayout() {
     } finally {
       setCreatingSkill(false);
     }
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
   }, [creatingSkill, dispatch, navigate]);
 
   const handleNewAutomation = useCallback(() => {

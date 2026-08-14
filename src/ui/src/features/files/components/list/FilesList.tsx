@@ -100,6 +100,17 @@ function buildFolderBreadcrumb(
   return path;
 }
 
+function findFolderNode(nodes: SerializedTreeNode[], folderId: string): SerializedTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === folderId) return node;
+    if (node.children) {
+      const found = findFolderNode(node.children, folderId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 interface FilesListProps {
   files: SerializedFile[];
   allFiles?: SerializedFile[]; // All files in store (for folder download)
@@ -390,21 +401,10 @@ export function FilesList({
   // Move folder handler (single folder from context menu)
   const handleMoveFolder = useCallback(
     (folderId: string) => {
-      const findFolder = (nodes: SerializedTreeNode[]): SerializedTreeNode | null => {
-        for (const node of nodes) {
-          if (node.id === folderId) return node;
-          if (node.children) {
-            const found = findFolder(node.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-
       const folder = folderTree
-        ? findFolder(folderTree.personal) ||
-          findFolder(folderTree.organization) ||
-          findFolder(folderTree.shared)
+        ? findFolderNode(folderTree.personal, folderId) ||
+          findFolderNode(folderTree.organization, folderId) ||
+          findFolderNode(folderTree.shared, folderId)
         : null;
 
       if (folder) {
@@ -598,6 +598,9 @@ export function FilesList({
         setBulkActionLoading(false);
       }
     },
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
     [dispatch],
   );
 
@@ -660,6 +663,9 @@ export function FilesList({
       // Fallback: download files individually (only selected files, not folder contents)
       selectedFileIds.forEach((fileId) => onDownload(fileId));
     }
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
   }, [selectedFileIds, selectedFolderIds, onBulkDownload, onDownload, folderTree, allFilesInfo]);
 
   // Folder action handlers (must be after allFilesInfo is defined)
@@ -719,6 +725,9 @@ export function FilesList({
     } finally {
       setBulkActionLoading(false);
     }
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
   }, [dispatch, selectedFileIds]);
 
   // Check if all visible items are selected

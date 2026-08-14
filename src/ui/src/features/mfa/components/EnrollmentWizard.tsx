@@ -50,6 +50,7 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react/react-compiler -- minting the TOTP secret on mount; the wizard shows a spinner until the QR material arrives
     setLoading(true);
     mfaClient
       .beginEnrollment({})

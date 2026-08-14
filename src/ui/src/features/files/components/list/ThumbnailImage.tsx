@@ -14,7 +14,7 @@ export function ThumbnailImage({ file, fallback }: ThumbnailImageProps) {
 
   // Re-extracted files bump extractionStatus; clear the error so we retry.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when extractionStatus changes is valid
+    // eslint-disable-next-line react/react-compiler
     setError(false);
   }, [file.extractionStatus]);
 

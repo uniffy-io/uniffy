@@ -83,6 +83,9 @@ export function TagEditDialog({ tag, onClose }: TagEditDialogProps) {
     } finally {
       setIsSubmitting(false);
     }
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
   }, [color, description, dispatch, name, onClose, tag.id]);
 
   const handleDelete = useCallback(async () => {

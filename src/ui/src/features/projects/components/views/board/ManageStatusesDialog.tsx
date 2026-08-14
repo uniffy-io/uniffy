@@ -41,7 +41,8 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
     // Focus appropriate input
     if (editingId) {
       editInputRef.current?.focus();
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting color picker when switching to edit mode
+      // Entering edit mode closes a picker left open for another row.
+      // eslint-disable-next-line react/react-compiler
       setIsColorPickerOpen(false);
     } else if (isAdding) {
       newInputRef.current?.focus();

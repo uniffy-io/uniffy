@@ -132,6 +132,7 @@ function useCallTabChannel(isInCall: () => boolean) {
     const nonce = Math.random().toString(36).slice(2);
     return new Promise<boolean>((resolve) => {
       const timer = setTimeout(() => {
+        // eslint-disable-next-line react/react-compiler -- onMessage is local to this probe, not a hook dependency
         bc.removeEventListener("message", onMessage);
         resolve(false);
       }, TAB_PROBE_TIMEOUT_MS);
@@ -170,6 +171,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reportInFlightRef = useRef(false);
   const reportPendingRef = useRef(false);
+  // This provider never unmounts, and the rejoin loop, media reporter and
+  // disconnect handler must stay identity-stable for the life of a call while
+  // still reading the CURRENT session/preferences/org. Moving these writes into
+  // an effect would let a mid-render LiveKit callback act on the previous org or
+  // call id, so the latest value lands in the ref during render.
+  /* eslint-disable react/react-compiler -- latest-value refs feeding identity-stable call callbacks */
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const preferencesRef = useRef(preferences);
@@ -177,6 +184,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const screenShareCapRef = useRef<ScreenShareQuality>(ScreenShareQuality.BALANCED);
   const orgIdRef = useRef(currentOrgId);
   orgIdRef.current = currentOrgId;
+  /* eslint-enable react/react-compiler */
   const rejoiningRef = useRef(false);
   const everConnectedRef = useRef(false);
   const connectedAtRef = useRef(0);
@@ -261,6 +269,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }, 250);
   }, [sendMediaReport]);
 
+  // Self-rearming timer chain: each refresh schedules the next one, so the
+  // callback has to reference itself and can never list itself as a dependency.
+  /* eslint-disable react/react-compiler -- recursive token-refresh chain */
   const scheduleTokenRefresh = useCallback(
     (token: string, callId: string) => {
       clearRefreshTimer();
@@ -283,6 +294,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     },
     [clearRefreshTimer, dispatch],
   );
+  /* eslint-enable react/react-compiler */
 
   const publishInitialMedia = useCallback(
     async (r: Room, opts: JoinMediaOptions) => {
@@ -496,6 +508,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       teardown,
     ],
   );
+  // Breaks the cycle between attemptRejoin and connectRoom: the rejoin loop
+  // calls the current connectRoom without taking it as a dependency, which would
+  // rebuild the loop mid-reconnect.
+  // eslint-disable-next-line react/react-compiler -- indirection ref for the rejoin/connect cycle
   connectRoomRef.current = connectRoom;
 
   const guardOtherTab = useCallback(async (): Promise<boolean> => {
@@ -771,6 +787,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // sessionConnecting clears endedInfo before `room` becomes non-null.
   useEffect(() => {
     if (endedInfo && room) {
+      // teardown() disconnects the LiveKit room first; clearing `room` is the
+      // bookkeeping half of that external-system update.
+      // eslint-disable-next-line react/react-compiler -- a room left connected keeps transmitting the mic
       void teardown();
     }
   }, [endedInfo, room, teardown]);

@@ -149,6 +149,8 @@ export function QuickEventModal({
   useEffect(() => {
     if (isOpen) {
       const date = initialDate || new Date();
+      // The modal stays mounted and only renders null while closed, so each open reseeds the form.
+      // eslint-disable-next-line react/react-compiler
       setTitle("");
       setDescription("");
       setIsMultiDay(false);

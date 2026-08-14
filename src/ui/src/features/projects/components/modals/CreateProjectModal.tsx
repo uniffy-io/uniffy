@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { X, Kanban, LockSimple, Buildings } from "@phosphor-icons/react";
 import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
 import { useNavigate } from "react-router-dom";
@@ -38,30 +38,26 @@ export function CreateProjectModal() {
   const [icon, setIcon] = useState<ProjectIconName>("kanban");
   const [isOrgScope, setIsOrgScope] = useState(projectScope === "organization");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [slug, setSlug] = useState("");
-  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+  // Null until the user types a key of their own; the name-derived suggestion applies until then.
+  const [manualSlug, setManualSlug] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-generate slug from name when not manually edited
-  useEffect(() => {
-    if (isSlugManuallyEdited) return;
+  const slug = useMemo(() => {
+    if (manualSlug !== null) return manualSlug;
     const words = name.trim().split(/\s+/).filter(Boolean);
-    let candidate: string;
     if (words.length >= 2) {
-      candidate = words
+      return words
         .map((w) => w[0])
         .join("")
         .slice(0, 5)
         .toUpperCase();
-    } else {
-      candidate = name
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .slice(0, 3)
-        .toUpperCase();
     }
-    setSlug(candidate);
-  }, [name, isSlugManuallyEdited]);
+    return name
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(0, 3)
+      .toUpperCase();
+  }, [manualSlug, name]);
 
   // Focus input on mount
   useEffect(() => {
@@ -74,8 +70,7 @@ export function CreateProjectModal() {
     setDescription("");
     setIcon("kanban");
     setIsOrgScope(projectScope === "organization");
-    setIsSlugManuallyEdited(false);
-    setSlug("");
+    setManualSlug(null);
     setTagIds([]);
     dispatch(closeCreateProjectModal());
   }, [dispatch, projectScope]);
@@ -147,15 +142,14 @@ export function CreateProjectModal() {
               <Input
                 type="text"
                 value={slug}
-                onChange={(e) => {
-                  setSlug(
+                onChange={(e) =>
+                  setManualSlug(
                     e.target.value
                       .toUpperCase()
                       .replace(/[^A-Z0-9]/g, "")
                       .slice(0, 5),
-                  );
-                  setIsSlugManuallyEdited(true);
-                }}
+                  )
+                }
                 maxLength={5}
                 disabled={isSubmitting}
                 className="w-32 font-mono"

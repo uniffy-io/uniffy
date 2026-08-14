@@ -35,6 +35,8 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
     if (isOpen) {
       if (editingCategoryId && categories[editingCategoryId]) {
         const category = categories[editingCategoryId];
+        // The modal stays mounted and only renders null while closed, so each open reseeds the form.
+        // eslint-disable-next-line react/react-compiler
         setName(category.name);
         setSelectedColor(category.color);
       } else {

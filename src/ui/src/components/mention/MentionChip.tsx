@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/preserve-manual-memoization */
 import { memo, useState, useRef, useCallback, useMemo, useEffect, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { CaretDown, Trash } from "@phosphor-icons/react";
@@ -303,6 +302,9 @@ function MentionChipInner({
     setShowPreview(false);
   }, [cancelClose]);
 
+  // parseUrn hands back a fresh record of primitives; the compiler cannot see that across the
+  // module boundary and treats every parsed.* dep as mutable, so it drops the whole callback.
+  /* eslint-disable react/react-compiler */
   const handleEmbed = useCallback(() => {
     if (!preview || !onReplaceWithMedia || !organizationId) return;
     const mimeType = preview.metadata?.mime_type;
@@ -327,6 +329,7 @@ function MentionChipInner({
     setShowPreview(false);
     onReplaceWithMedia(mediaType, url, label);
   }, [preview, onReplaceWithMedia, organizationId, parsed.isValid, parsed.id, label]);
+  /* eslint-enable react/react-compiler */
 
   const hasLiveIndicator = useMemo(() => {
     if (!resolvedLiveState) return false;
@@ -344,6 +347,7 @@ function MentionChipInner({
       default:
         return false;
     }
+    // eslint-disable-next-line react/react-compiler -- parseUrn hands back a fresh record of primitives; the compiler cannot see that across the module boundary and treats every parsed.* dep as mutable
   }, [parsed.type, resolvedLiveState]);
 
   if (isDeleted) {
@@ -607,6 +611,7 @@ function MentionChipCompactInner({
       default:
         return false;
     }
+    // eslint-disable-next-line react/react-compiler -- parseUrn hands back a fresh record of primitives; the compiler cannot see that across the module boundary and treats every parsed.* dep as mutable
   }, [parsed.type, resolvedLiveState]);
 
   if (isDeleted) {

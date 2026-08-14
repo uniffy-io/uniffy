@@ -28,8 +28,9 @@ export function CreateTaskModal() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("");
-  const [priority, setPriority] = useState("");
+  // Null until the user picks one; the project's field options supply the default until then.
+  const [statusOverride, setStatusOverride] = useState<string | null>(null);
+  const [priorityOverride, setPriorityOverride] = useState<string | null>(null);
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -61,16 +62,12 @@ export function CreateTaskModal() {
     [priorityField?.config.options],
   );
 
-  // Set defaults
-  useEffect(() => {
-    if (statusOptions.length > 0 && !status) {
-      setStatus(statusOptions[0].id);
-    }
-    if (priorityOptions.length > 0 && !priority) {
-      const medium = priorityOptions.find((o) => o.id.includes("medium"));
-      setPriority(medium?.id || priorityOptions[0].id);
-    }
-  }, [statusOptions, priorityOptions, status, priority]);
+  const status = statusOverride ?? statusOptions[0]?.id ?? "";
+  const priority =
+    priorityOverride ??
+    priorityOptions.find((o) => o.id.includes("medium"))?.id ??
+    priorityOptions[0]?.id ??
+    "";
 
   const handleClose = useCallback(() => {
     setTitle("");
@@ -268,7 +265,7 @@ export function CreateTaskModal() {
                 <label className="block text-sm font-medium text-foreground mb-1.5">Status</label>
                 <Select
                   value={status}
-                  onChange={setStatus}
+                  onChange={setStatusOverride}
                   disabled={isSubmitting}
                   options={statusOptions.map((opt) => ({
                     value: opt.id,
@@ -283,7 +280,7 @@ export function CreateTaskModal() {
                 <label className="block text-sm font-medium text-foreground mb-1.5">Priority</label>
                 <Select
                   value={priority}
-                  onChange={setPriority}
+                  onChange={setPriorityOverride}
                   disabled={isSubmitting}
                   options={priorityOptions.map((opt) => ({
                     value: opt.id,

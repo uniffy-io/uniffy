@@ -57,7 +57,7 @@ export function BookingModal({ isOpen, onClose, onBooked, roomId, roomName }: Bo
 
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting form state when modal opens
+      // eslint-disable-next-line react/react-compiler -- resetting form state when modal opens
       setForm({
         selectedRoomId: roomId || null,
         date: getTodayString(),

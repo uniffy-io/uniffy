@@ -24,6 +24,8 @@ export function Modal({
 }: ModalProps) {
   const [phase, setPhase] = useState<"entering" | "open" | "exiting">("entering");
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // The compiler reads the `Symbol` built-in as a component because it is capitalized.
+  // eslint-disable-next-line react/react-compiler
   const stackIdRef = useRef(Symbol("modal"));
 
   useEffect(() => {

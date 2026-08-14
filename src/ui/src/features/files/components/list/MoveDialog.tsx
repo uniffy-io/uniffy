@@ -151,8 +151,8 @@ export function MoveDialog({
     await performMove();
   }, [selectedVisibility, currentAccessMode, performMove]);
 
-  const renderFolderNode = useCallback(
-    (node: SerializedTreeNode, depth = 0): React.ReactNode => {
+  const renderFolderNode = useMemo(() => {
+    function renderNode(node: SerializedTreeNode, depth = 0): React.ReactNode {
       if (!node.isFolder) return null;
 
       const isExpanded = expandedFolders.has(node.id);
@@ -201,14 +201,14 @@ export function MoveDialog({
             <div>
               {node
                 .children!.filter((c) => c.isFolder)
-                .map((child) => renderFolderNode(child, depth + 1))}
+                .map((child) => renderNode(child, depth + 1))}
             </div>
           )}
         </div>
       );
-    },
-    [expandedFolders, selectedFolderId, folderIds, handleSelectFolder, toggleFolder],
-  );
+    }
+    return renderNode;
+  }, [expandedFolders, selectedFolderId, folderIds, handleSelectFolder, toggleFolder]);
 
   if (!isOpen) return null;
 

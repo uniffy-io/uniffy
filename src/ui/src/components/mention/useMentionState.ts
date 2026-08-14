@@ -47,7 +47,7 @@ export function useMentionState(urn: string): MentionLiveState | null {
 
     // Resync to close the race between the useState initializer and the listener subscribing.
     const current = getMentionState(urn);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot resync to close the initializer-vs-subscribe race
+    // eslint-disable-next-line react/react-compiler -- one-shot resync to close the initializer-vs-subscribe race
     if (current) setFallbackState(current);
 
     return onMentionStateChange((changedUrn, changes) => {

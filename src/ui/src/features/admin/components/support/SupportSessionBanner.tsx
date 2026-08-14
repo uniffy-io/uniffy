@@ -62,6 +62,7 @@ export function SupportSessionBanner() {
   }, [organizationId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- priming the poll loop; a banner must show an already-open session before the first interval tick
     refresh();
     const interval = window.setInterval(refresh, POLL_INTERVAL_MS);
     return () => window.clearInterval(interval);

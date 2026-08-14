@@ -53,7 +53,7 @@ export function TagPicker({
 
   useEffect(() => {
     if (query.trim().length < MIN_PREFIX) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing the picker dropdown when the user backspaces below the prefix threshold is a deliberate reset
+      // eslint-disable-next-line react/react-compiler -- clearing the picker dropdown when the user backspaces below the prefix threshold is a deliberate reset
       setSuggestions([]);
       return;
     }

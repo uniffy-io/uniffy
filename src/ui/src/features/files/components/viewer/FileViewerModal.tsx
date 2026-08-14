@@ -82,7 +82,8 @@ export function FileViewerModal() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when currentFileId changes is valid
+    // Paging to another file leaves edit mode; the modal stays mounted across the switch.
+    // eslint-disable-next-line react/react-compiler
     setIsEditing(false);
   }, [currentFileId]);
 

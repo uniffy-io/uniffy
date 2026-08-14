@@ -123,6 +123,8 @@ export function useChannelAgentConfig(
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
+    // Clearing on a channel/agent switch so the panel never edits the previous pair's overrides.
+    // eslint-disable-next-line react/react-compiler
     setConfig(null);
     if (!channelId || !agentId || !organizationId) return;
     let cancelled = false;

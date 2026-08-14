@@ -17,24 +17,23 @@ export function useCurrentTime(
   const [timeInfo, setTimeInfo] = useState(() => getCurrentTimeInfo());
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing with external clock
-    setTimeInfo(getCurrentTimeInfo());
-
     const now = new Date();
     const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
 
     // Align the first tick to the next minute boundary, then tick every minute.
+    let interval: ReturnType<typeof setInterval> | null = null;
     const syncTimeout = setTimeout(() => {
       setTimeInfo(getCurrentTimeInfo());
 
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         setTimeInfo(getCurrentTimeInfo());
       }, 60000);
-
-      return () => clearInterval(interval);
     }, msUntilNextMinute);
 
-    return () => clearTimeout(syncTimeout);
+    return () => {
+      clearTimeout(syncTimeout);
+      if (interval !== null) clearInterval(interval);
+    };
   }, []);
 
   const position = useMemo(() => {

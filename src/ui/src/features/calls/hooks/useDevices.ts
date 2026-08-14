@@ -14,7 +14,7 @@ export function useDevices() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh() reads navigator.mediaDevices asynchronously and backs the devicechange subscription
+    // eslint-disable-next-line react/react-compiler -- refresh() reads navigator.mediaDevices asynchronously and backs the devicechange subscription
     void refresh();
     const media = navigator.mediaDevices;
     if (!media?.addEventListener) return;

@@ -41,6 +41,7 @@ export function SetUserQuotaDialog({ open, userId, onClose }: SetUserQuotaDialog
   useEffect(() => {
     if (open && userInfo) {
       if (userInfo.override) {
+        // eslint-disable-next-line react/react-compiler -- seeding the form when the dialog opens on a member, and again if their override arrives later
         setQuotaBytes(userInfo.override.quotaBytes);
         setNote(userInfo.override.note || "");
       } else {

@@ -371,7 +371,7 @@ function RuntimeTab() {
 
   useEffect(() => {
     if (!settings) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync form fields when the fetched settings load
+    // eslint-disable-next-line react/react-compiler -- sync form fields when the fetched settings load
     setForm(settings);
   }, [settings]);
 
@@ -610,7 +610,7 @@ function BudgetTab() {
 
   useEffect(() => {
     if (!budget) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing form fields when the fetched budget loads or changes
+    // eslint-disable-next-line react/react-compiler -- syncing form fields when the fetched budget loads or changes
     setMonthlyLimit(budget.monthlyLimit ?? "");
     setImageLimit(budget.imageMonthlyLimit?.toString() ?? "");
     setHardLimit(budget.hardLimit);
@@ -818,7 +818,7 @@ function RateLimitRow({ row }: { row: RateLimitState }) {
   const [windowSec, setWindowSec] = useState(row.windowSeconds.toString());
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing form fields when the row prop changes after a save
+    // eslint-disable-next-line react/react-compiler -- syncing form fields when the row prop changes after a save
     setLimit(row.limit.toString());
     setWindowSec(row.windowSeconds.toString());
   }, [row.limit, row.windowSeconds]);
@@ -909,7 +909,7 @@ function CurrenciesTab() {
   }, [dispatch, orgId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing form select when the org's display currency loads
+    // eslint-disable-next-line react/react-compiler -- syncing form select when the org's display currency loads
     setPicked(displayCurrency);
     setNewTo(displayCurrency || "USD");
   }, [displayCurrency]);

@@ -58,6 +58,7 @@ export function SupportAccessPage() {
   }, [organizationId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount; refresh raises the loading flag before awaiting the API
     refresh();
   }, [refresh]);
 

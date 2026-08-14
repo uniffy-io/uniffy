@@ -182,6 +182,8 @@ export function useChannelAgentContext(
   }, [channelId, agentId, organizationId, stats]);
 
   useEffect(() => {
+    // Clearing on a channel/agent switch so the meter never shows the previous pair's token counts.
+    // eslint-disable-next-line react/react-compiler
     setStats(null);
     wasAgentTypingRef.current = false;
     if (!channelId || !agentId) return;
@@ -254,6 +256,8 @@ export function useChannelAgentContextBatch(
   }, [channelId, organizationId, sortedIdsKey]);
 
   useEffect(() => {
+    // Clearing on a channel/roster switch so no agent row keeps the previous channel's stats.
+    // eslint-disable-next-line react/react-compiler
     setStatsByAgentId({});
     if (!channelId || !sortedIdsKey) return;
     void refresh();

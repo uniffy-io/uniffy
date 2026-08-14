@@ -122,7 +122,8 @@ export function NoteTitleBlock({ note, canEdit, compact = false }: NoteTitleBloc
   const title = localTitle !== null ? localTitle : note.title;
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local title when switching notes is valid
+    // Drop the local draft when the note changes so the new note's title is shown.
+    // eslint-disable-next-line react/react-compiler
     setLocalTitle(null);
   }, [note.id]);
 

@@ -111,6 +111,9 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       persistence,
       whenSynced,
     };
+    // The effect owns the session objects, so a bump is the only way the memo
+    // below learns they exist. One extra render per session, not per keystroke.
+    // eslint-disable-next-line react/react-compiler -- republishes the effect-created session
     setTick((t) => t + 1);
 
     return () => {
@@ -124,6 +127,10 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, contentType, contentId, organizationId]);
 
+  // Y.Doc / Awareness / UndoManager identities must survive every re-render -
+  // recreating them would drop the CRDT state and the undo history - so the ref
+  // holds them and `tick` is the invalidation signal for this memo.
+  /* eslint-disable react/react-compiler -- ref-held session republished through `tick` */
   return useMemo<DocSession | null>(() => {
     const current = sessionRef.current;
     if (!current) return null;
@@ -137,4 +144,5 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, tick]);
+  /* eslint-enable react/react-compiler */
 }

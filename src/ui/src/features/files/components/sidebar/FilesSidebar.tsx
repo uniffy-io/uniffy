@@ -249,6 +249,21 @@ function FolderNode({
   );
 }
 
+function findPathInNodes(
+  nodes: SerializedTreeNode[],
+  targetId: string,
+  currentPath: string[],
+): string[] | null {
+  for (const node of nodes) {
+    if (node.id === targetId) return currentPath;
+    if (node.children) {
+      const found = findPathInNodes(node.children, targetId, [...currentPath, node.id]);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 interface FilesSidebarProps {
   onToggleSidebar?: () => void;
   onUpload?: () => void;
@@ -317,34 +332,10 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
   }, [bookmarkedUrns, files, dispatch]);
 
   const findPathToFolder = useCallback(
-    (folderId: string): string[] => {
-      const path: string[] = [];
-
-      const findInNodes = (
-        nodes: SerializedTreeNode[],
-        targetId: string,
-        currentPath: string[],
-      ): boolean => {
-        for (const node of nodes) {
-          if (node.id === targetId) {
-            path.push(...currentPath);
-            return true;
-          }
-          if (node.children) {
-            if (findInNodes(node.children, targetId, [...currentPath, node.id])) {
-              return true;
-            }
-          }
-        }
-        return false;
-      };
-
-      // Search in all sections
-      findInNodes(tree.personal, folderId, ["personal"]);
-      findInNodes(tree.organization, folderId, ["organization"]);
-
-      return path;
-    },
+    (folderId: string): string[] =>
+      findPathInNodes(tree.personal, folderId, ["personal"]) ??
+      findPathInNodes(tree.organization, folderId, ["organization"]) ??
+      [],
     [tree],
   );
 

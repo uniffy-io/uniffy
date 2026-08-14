@@ -107,11 +107,6 @@ export function DmMembersModal() {
 
   const displayTitle = channel ? getChannelDisplayName(channel) : "";
 
-  useEffect(() => {
-    if (showConvert) setConvertName(displayTitle.slice(0, MAX_NAME_LENGTH));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- prefill once per open
-  }, [showConvert]);
-
   if (!channel) return null;
 
   const handleClose = () => dispatch(closeChannelSettingsModal());
@@ -522,7 +517,10 @@ export function DmMembersModal() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowConvert(true)}
+                    onClick={() => {
+                      setConvertName(displayTitle.slice(0, MAX_NAME_LENGTH));
+                      setShowConvert(true);
+                    }}
                     data-testid="chat-dm-convert-button"
                   >
                     Convert to channel

@@ -39,7 +39,7 @@ function ChatImage({ src, alt, className }: ChatImageProps) {
 
   useEffect(() => {
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- src changes require resetting the rendered <img> while we wait for a slot
+    // eslint-disable-next-line react/react-compiler -- src changes require resetting the rendered <img> while we wait for a slot
     setResolvedSrc(null);
     imageLoadLimiter.acquire().then((release) => {
       if (cancelled) {

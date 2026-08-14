@@ -181,7 +181,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
   const alone = session.status === "connected" && participants.length === 1;
   useEffect(() => {
     if (!alone) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when someone joins
+      // eslint-disable-next-line react/react-compiler -- reset when someone joins
       setShowSoloPrompt(false);
       return;
     }
@@ -221,6 +221,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
       };
       const onUp = () => {
         window.removeEventListener("pointermove", onMove);
+        // eslint-disable-next-line react/react-compiler -- onUp is local to this drag, not a hook dependency
         window.removeEventListener("pointerup", onUp);
         dispatch(viewHeightChanged(Math.round(latest)));
       };

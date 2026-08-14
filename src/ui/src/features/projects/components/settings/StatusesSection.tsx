@@ -58,7 +58,8 @@ export function StatusesSection({ project }: StatusesSectionProps) {
   useEffect(() => {
     const field = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
     const opts = field?.config.options || [];
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from external project state
+    // The list is reordered and edited locally before it is persisted, so it needs its own copy.
+    // eslint-disable-next-line react/react-compiler
     setItems([...opts]);
   }, [project.fieldDefinitions]);
 

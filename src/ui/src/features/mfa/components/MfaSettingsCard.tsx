@@ -48,7 +48,7 @@ export function MfaSettingsCard() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch syncs with backend
+    // eslint-disable-next-line react/react-compiler -- initial fetch syncs with backend
     refresh();
   }, [refresh]);
 

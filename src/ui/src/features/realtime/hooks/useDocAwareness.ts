@@ -13,7 +13,7 @@ export function useDocAwareness<T = Record<string, unknown>>(
 
   useEffect(() => {
     if (!awareness) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset peers when awareness detaches
+      // eslint-disable-next-line react/react-compiler -- reset peers when awareness detaches
       setPeers([]);
       return;
     }

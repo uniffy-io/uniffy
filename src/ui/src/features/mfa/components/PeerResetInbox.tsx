@@ -50,6 +50,7 @@ export function PeerResetInbox({ selfId, onApproved }: PeerResetInboxProps) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- priming the poll loop; the inbox must list pending resets before the first interval tick
     refresh();
     const id = window.setInterval(refresh, 30_000);
     return () => window.clearInterval(id);

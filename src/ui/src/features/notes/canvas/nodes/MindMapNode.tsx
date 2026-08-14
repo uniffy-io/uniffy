@@ -67,8 +67,8 @@ export const MindMapNode = memo(function MindMapNode({
   // Enter edit mode when selected or for newly created nodes (editingNodeId).
   // Exit edit mode and commit label when deselected.
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- syncing editing state with selection and editingNodeId from parent */
     if (editingNodeId === id) {
+      // eslint-disable-next-line react/react-compiler -- syncing editing state with selection and editingNodeId from parent
       setIsEditing(true);
       setLocalLabel(data.label || "");
       clearEditingNodeId();
@@ -82,7 +82,6 @@ export const MindMapNode = memo(function MindMapNode({
         onMindMapLabelChange?.(id, trimmed || "Untitled");
       }
     }
-    /* eslint-enable react-hooks/set-state-in-effect */
   }, [selected, editingNodeId, id, clearEditingNodeId, data.label, readonly]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Place cursor at end when entering edit mode

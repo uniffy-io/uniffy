@@ -68,7 +68,7 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
   useEffect(() => {
     if (isOpen) {
       if (room) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting form state when modal opens with different room data
+        // eslint-disable-next-line react/react-compiler -- resetting form state when modal opens with different room data
         setForm({
           name: room.name,
           description: room.description,

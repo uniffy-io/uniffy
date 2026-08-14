@@ -17,7 +17,6 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
   useEffect(() => {
     const anchor = anchorRef?.current;
     if (!anchor) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- fallback position when no anchor ref is provided
       setPosition({ top: window.innerHeight / 2 - 200, left: window.innerWidth / 2 - 176 });
       return;
     }

@@ -307,7 +307,7 @@ export function NotesGraphDashboard() {
     // Preserve node positions from previous render
     // This ref access during render is intentional to maintain node positions
     // when the graph data changes (e.g., when URN metadata updates)
-    /* eslint-disable react-hooks/refs */
+    /* eslint-disable react/react-compiler -- carry force-simulation positions across rebuilds */
     const existingNodes = nodeMapRef.current;
     const newNodeMap = new Map<string, NodeObject>();
 
@@ -343,7 +343,7 @@ export function NotesGraphDashboard() {
       newNodeMap.set(node.id, node as unknown as NodeObject);
     }
     nodeMapRef.current = newNodeMap;
-    /* eslint-enable react-hooks/refs */
+    /* eslint-enable react/react-compiler */
 
     return {
       nodes: data.nodes as unknown as NodeObject[],
@@ -532,6 +532,10 @@ export function NotesGraphDashboard() {
   );
 
   // Custom mouse move handler for hover detection
+  // The compiler infers the stable `setHoveredNode` as the dependency; the real
+  // one is `findNodeAtPosition`, and this closure has to stay stable because it
+  // is registered as a native pointer listener on the graph canvas.
+  /* eslint-disable react/react-compiler -- manual deps are the correct ones here */
   const handleCanvasMouseMove = useCallback(
     (e: MouseEvent) => {
       const node = findNodeAtPosition(e.clientX, e.clientY);
@@ -556,6 +560,7 @@ export function NotesGraphDashboard() {
     },
     [findNodeAtPosition],
   );
+  /* eslint-enable react/react-compiler */
 
   // Custom click handler
   const handleCanvasClick = useCallback(

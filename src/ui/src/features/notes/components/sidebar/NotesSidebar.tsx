@@ -60,6 +60,32 @@ const SECTIONS: SectionConfig[] = [
   { id: "organization", name: "Organization", icon: Buildings, scope: AccessMode.OPEN_TO_ORG },
 ];
 
+function findNodeRecursively(nodes: TreeNode[], nodeId: string): TreeNode | null {
+  for (const node of nodes) {
+    if (node.id === nodeId) return node;
+    if (node.children) {
+      const found = findNodeRecursively(node.children, nodeId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function findNodeParentId(
+  nodes: TreeNode[],
+  nodeId: string,
+  parentId: string | null = null,
+): string | null {
+  for (const node of nodes) {
+    if (node.id === nodeId) return parentId;
+    if (node.children) {
+      const found = findNodeParentId(node.children, nodeId, node.id);
+      if (found !== null) return found;
+    }
+  }
+  return null;
+}
+
 export function NotesSidebar() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -154,17 +180,6 @@ export function NotesSidebar() {
 
   const isExpanded = useCallback((id: string) => expandedNodes.includes(id), [expandedNodes]);
 
-  const findNodeRecursively = useCallback((nodes: TreeNode[], nodeId: string): TreeNode | null => {
-    for (const node of nodes) {
-      if (node.id === nodeId) return node;
-      if (node.children) {
-        const found = findNodeRecursively(node.children, nodeId);
-        if (found) return found;
-      }
-    }
-    return null;
-  }, []);
-
   const findNodeVisibility = useCallback(
     (nodeId: string): number => {
       if (findNodeRecursively(tree.personal, nodeId)) return AccessMode.OWNER_ONLY;
@@ -176,21 +191,7 @@ export function NotesSidebar() {
 
       return AccessMode.OWNER_ONLY;
     },
-    [tree, findNodeRecursively],
-  );
-
-  const findNodeParentId = useCallback(
-    (nodes: TreeNode[], nodeId: string, parentId: string | null = null): string | null => {
-      for (const node of nodes) {
-        if (node.id === nodeId) return parentId;
-        if (node.children) {
-          const found = findNodeParentId(node.children, nodeId, node.id);
-          if (found !== undefined) return found;
-        }
-      }
-      return null;
-    },
-    [],
+    [tree],
   );
 
   const handleToggle = useCallback(
@@ -366,7 +367,7 @@ export function NotesSidebar() {
         navigate(`/notes/${result.id}`);
       } catch {}
     },
-    [findNodeVisibility, findNodeRecursively, tree, dispatch, navigate],
+    [findNodeVisibility, tree, dispatch, navigate],
   );
 
   const handleOpenMoveDialog = useCallback(
@@ -383,7 +384,7 @@ export function NotesSidebar() {
         currentParentId: parentId,
       });
     },
-    [findNodeVisibility, findNodeRecursively, findNodeParentId, tree],
+    [findNodeVisibility, tree],
   );
 
   const handleDrop = useCallback(

@@ -169,6 +169,7 @@ export function PlatformAuditPage() {
   }, [page, filter]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount and on every filter or page change; fetchRows raises the loading flag before awaiting the API
     fetchRows();
   }, [fetchRows]);
 

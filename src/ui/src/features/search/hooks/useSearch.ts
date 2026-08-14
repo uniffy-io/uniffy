@@ -48,6 +48,9 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
   const hasFilters = useMemo(() => hasActiveFilters(parsedQuery.filters), [parsedQuery.filters]);
 
   const performSearch = useCallback(
+    // Depending on `options` itself would remint this callback every render, because callers pass an
+    // inline object literal, and the debounce effect below would then re-arm before it ever fires.
+    // eslint-disable-next-line react/react-compiler
     async (rawQuery: string) => {
       const parsed = parseSearchQuery(rawQuery);
       const searchText = parsed.text;
@@ -130,6 +133,7 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
     const hasSearchCriteria = parsed.text.trim() || hasActiveFilters(parsed.filters);
 
     if (!hasSearchCriteria) {
+      // eslint-disable-next-line react/react-compiler -- clearing a query must drop the previous results here; the debounced fetch below never runs for an empty query
       setResults([]);
       setTotalCount(0);
       setIsLoading(false);

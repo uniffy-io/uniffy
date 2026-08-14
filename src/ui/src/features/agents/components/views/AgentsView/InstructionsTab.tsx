@@ -131,7 +131,8 @@ function SoulPromptEditor({ agent, canEdit }: { agent: SerializedAgent; canEdit:
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when agent.id changes
+    // The editor holds a debounced draft, so it resyncs when the stored prompt changes.
+    // eslint-disable-next-line react/react-compiler
     setLocalValue(agent.soulPrompt);
   }, [agent.id, agent.soulPrompt]);
 

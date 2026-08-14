@@ -89,6 +89,7 @@ export function PlatformUserDetailDialog({ userId, onClose, onChanged, selfId }:
   }, [userId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount and whenever the dialog switches user; refresh raises the loading flag before awaiting the API
     refresh();
   }, [refresh]);
 

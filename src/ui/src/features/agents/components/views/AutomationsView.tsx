@@ -78,7 +78,8 @@ function TaskRunHistory({ taskId }: { taskId: string }) {
 
   useEffect(() => {
     dispatch(fetchCronRunLogs({ taskId }));
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting loaded state when taskId changes
+    // The history stays hidden until the first fetch is dispatched, so it never flashes empty.
+    // eslint-disable-next-line react/react-compiler
     setLoaded(true);
   }, [taskId, dispatch]);
 

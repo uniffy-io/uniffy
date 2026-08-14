@@ -30,7 +30,7 @@ export const TextNode = memo(function TextNode({ id, data, selected }: NodeProps
   // Auto-enter edit mode when this node was just created
   useEffect(() => {
     if (editingNodeId === id) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting editing state when editingNodeId changes from parent
+      // eslint-disable-next-line react/react-compiler -- resetting editing state when editingNodeId changes from parent
       setIsEditing(true);
       clearEditingNodeId();
     }
@@ -55,7 +55,7 @@ export const TextNode = memo(function TextNode({ id, data, selected }: NodeProps
   // Exit edit mode when deselected
   useEffect(() => {
     if (!selected && isEditing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing local editing state with external selection state
+      // eslint-disable-next-line react/react-compiler -- syncing local editing state with external selection state
       setIsEditing(false);
     }
   }, [selected, isEditing]);

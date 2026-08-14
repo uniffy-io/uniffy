@@ -36,6 +36,7 @@ export function SecuritySection() {
   }, [organizationId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount; reload raises the loading flag before awaiting the API
     void reload();
   }, [reload]);
 

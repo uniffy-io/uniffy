@@ -31,6 +31,7 @@ export function PlatformEncryptionPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount; load raises the loading flag before awaiting the API
     void load();
   }, [load]);
 

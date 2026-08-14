@@ -209,6 +209,8 @@ export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasP
       trail.add(id);
       let count = 0;
       for (const child of childrenByManager.get(id) ?? []) {
+        // The recursion is local to this memo, so there is no dependency to add.
+        // eslint-disable-next-line react/react-compiler
         count += 1 + countDescendants(child, trail);
       }
       descendantCounts.set(id, count);
@@ -248,6 +250,8 @@ export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasP
     const enqueue = (id: string): boolean => {
       if (drawnIds.has(id)) return true;
       if (drawnIds.size >= MAX_RENDERED_NODES) {
+        // enqueue and drain never leave this memo, so the flag is a plain local.
+        // eslint-disable-next-line react/react-compiler
         budgetExhausted = true;
         return false;
       }

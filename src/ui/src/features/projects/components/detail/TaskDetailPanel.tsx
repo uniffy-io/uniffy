@@ -666,7 +666,8 @@ function EditableTitle({
   // Keep local value in sync when title changes from outside
   useEffect(() => {
     if (!isEditing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting local value when title prop changes externally
+      // Resync the draft when the title changes externally, but never mid-edit.
+      // eslint-disable-next-line react/react-compiler
       setValue(title);
     }
   }, [title, isEditing]);

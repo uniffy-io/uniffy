@@ -272,10 +272,12 @@ export function PlatformOrganizationsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount and on every filter change; fetchRows raises the loading flag before awaiting the API
     fetchRows();
   }, [fetchRows]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetch on mount; fetchStats only writes state after the await resolves
     fetchStats();
   }, [fetchStats]);
 

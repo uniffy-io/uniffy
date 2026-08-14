@@ -41,7 +41,8 @@ export function ReasonDialog({
 
   useEffect(() => {
     if (!isOpen) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset form state when dialog opens
+    // The dialog stays mounted between opens, so each open starts from a blank form.
+    // eslint-disable-next-line react/react-compiler
     setReason("");
     setSlugInput("");
     const timer = setTimeout(() => reasonRef.current?.focus(), 50);

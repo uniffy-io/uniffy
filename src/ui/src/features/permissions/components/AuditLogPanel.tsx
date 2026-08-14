@@ -55,6 +55,8 @@ function AuditLogRow({ event }: { event: SerializedMemberEvent }) {
   const relative = formatRelativeTime(iso);
   const full = event.occurredAt
     ? formatProtoDateTime({
+        // The compiler reads the `BigInt` built-in as a component because it is capitalized.
+        // eslint-disable-next-line react/react-compiler
         seconds: BigInt(event.occurredAt.seconds),
         nanos: event.occurredAt.nanos,
       })

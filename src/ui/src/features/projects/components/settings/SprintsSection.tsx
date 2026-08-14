@@ -279,9 +279,10 @@ function SprintRow({
   const [endDate, setEndDate] = useState(sprint.endDate || "");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Reset form when entering edit mode
+  // The row stays mounted when edit mode toggles, so each entry reseeds from the sprint.
   useEffect(() => {
     if (isEditing) {
+      // eslint-disable-next-line react/react-compiler
       setName(sprint.name);
       setGoal(sprint.goal || "");
       setStartDate(sprint.startDate || "");

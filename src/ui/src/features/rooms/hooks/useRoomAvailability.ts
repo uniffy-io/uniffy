@@ -12,7 +12,7 @@ export function useRoomAvailability(roomId: string | null, startTime?: string, e
   useEffect(() => {
     if (!roomId || !startTime || !endTime || !organizationId) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag tied to async dispatch lifecycle
+    // eslint-disable-next-line react/react-compiler -- loading flag tied to async dispatch lifecycle
     setLoading(true);
     dispatch(
       checkAvailability({

@@ -32,7 +32,7 @@ function MicLevelMeter({ stream }: { stream: MediaStream | null }) {
 
   useEffect(() => {
     if (!stream) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the meter when the mic stream detaches
+      // eslint-disable-next-line react/react-compiler -- reset the meter when the mic stream detaches
       setLevel(0);
       return;
     }
@@ -172,6 +172,8 @@ export function PreJoinScreen() {
 
   useEffect(() => {
     if (!micOn) {
+      // Stops the live capture tracks; the state clear is the bookkeeping half.
+      // eslint-disable-next-line react/react-compiler -- releasing the mic must happen the moment micOn flips
       stopMicStream();
       return;
     }
