@@ -1,6 +1,6 @@
-import { createSlice, createSelector, type PayloadAction } from '@reduxjs/toolkit';
-import type { ChatMessage } from '@/features/chat/types';
-import type { RootState } from '@/app/store';
+import { createSlice, createSelector, type PayloadAction } from "@reduxjs/toolkit";
+import type { ChatMessage } from "@/features/chat/types";
+import type { RootState } from "@/app/store";
 
 interface TypingEntry {
   userId: string;
@@ -54,7 +54,7 @@ function isPinnedActive(msg: ChatMessage | undefined): boolean {
 }
 
 export const chatMessagesSlice = createSlice({
-  name: 'chatMessages',
+  name: "chatMessages",
   initialState,
   reducers: {
     setMessages: (
@@ -77,10 +77,7 @@ export const chatMessagesSlice = createSlice({
       state.pinnedCountByChannel[channelId] = pinned;
       state.windowedByChannel[channelId] = windowed;
     },
-    appendMessage: (
-      state,
-      action: PayloadAction<{ channelId: string; message: ChatMessage }>,
-    ) => {
+    appendMessage: (state, action: PayloadAction<{ channelId: string; message: ChatMessage }>) => {
       const { channelId, message } = action.payload;
       if (!state.idsByChannel[channelId]) state.idsByChannel[channelId] = [];
       if (!state.idSetByChannel[channelId]) state.idSetByChannel[channelId] = {};
@@ -112,7 +109,8 @@ export const chatMessagesSlice = createSlice({
       }
       state.idsByChannel[channelId] = [...newIds, ...state.idsByChannel[channelId]];
       if (pinnedDelta) {
-        state.pinnedCountByChannel[channelId] = (state.pinnedCountByChannel[channelId] ?? 0) + pinnedDelta;
+        state.pinnedCountByChannel[channelId] =
+          (state.pinnedCountByChannel[channelId] ?? 0) + pinnedDelta;
       }
     },
     updateMessage: (
@@ -139,10 +137,7 @@ export const chatMessagesSlice = createSlice({
         );
       }
     },
-    deleteMessage: (
-      state,
-      action: PayloadAction<{ channelId: string; messageId: string }>,
-    ) => {
+    deleteMessage: (state, action: PayloadAction<{ channelId: string; messageId: string }>) => {
       const { channelId, messageId } = action.payload;
       const existing = state.byId[messageId];
       if (!existing) return;
@@ -155,10 +150,7 @@ export const chatMessagesSlice = createSlice({
         );
       }
     },
-    removeMessage: (
-      state,
-      action: PayloadAction<{ channelId: string; messageId: string }>,
-    ) => {
+    removeMessage: (state, action: PayloadAction<{ channelId: string; messageId: string }>) => {
       const { channelId, messageId } = action.payload;
       const existing = state.byId[messageId];
       const wasPinned = isPinnedActive(existing);
@@ -176,10 +168,7 @@ export const chatMessagesSlice = createSlice({
         );
       }
     },
-    evictOldestMessages: (
-      state,
-      action: PayloadAction<{ channelId: string; count: number }>,
-    ) => {
+    evictOldestMessages: (state, action: PayloadAction<{ channelId: string; count: number }>) => {
       const { channelId, count } = action.payload;
       const ids = state.idsByChannel[channelId];
       if (!ids || ids.length === 0 || count <= 0) return;
@@ -201,10 +190,7 @@ export const chatMessagesSlice = createSlice({
       }
       state.hasMoreByChannel[channelId] = true;
     },
-    setHasMore: (
-      state,
-      action: PayloadAction<{ channelId: string; hasMore: boolean }>,
-    ) => {
+    setHasMore: (state, action: PayloadAction<{ channelId: string; hasMore: boolean }>) => {
       state.hasMoreByChannel[action.payload.channelId] = action.payload.hasMore;
     },
     setUnreadSeparator: (
@@ -247,18 +233,15 @@ export const chatMessagesSlice = createSlice({
       const TYPING_TTL = 5000;
       const now = Date.now();
       const existing = state.typingByChannel[channelId] ?? [];
-      const filtered = existing.filter(e => e.expiresAt > now && e.userId !== userId);
+      const filtered = existing.filter((e) => e.expiresAt > now && e.userId !== userId);
       filtered.push({ userId, displayName, expiresAt: now + TYPING_TTL });
       state.typingByChannel[channelId] = filtered;
     },
-    clearTypingUser: (
-      state,
-      action: PayloadAction<{ channelId: string; userId: string }>,
-    ) => {
+    clearTypingUser: (state, action: PayloadAction<{ channelId: string; userId: string }>) => {
       const { channelId, userId } = action.payload;
       const existing = state.typingByChannel[channelId];
       if (existing) {
-        state.typingByChannel[channelId] = existing.filter(e => e.userId !== userId);
+        state.typingByChannel[channelId] = existing.filter((e) => e.userId !== userId);
       }
     },
     setAgentTyping: (
@@ -281,12 +264,12 @@ export const chatMessagesSlice = createSlice({
       };
       if (rootId) {
         const existing = state.typingByThread[rootId] ?? [];
-        const filtered = existing.filter(e => e.expiresAt > now && e.userId !== agentId);
+        const filtered = existing.filter((e) => e.expiresAt > now && e.userId !== agentId);
         filtered.push(entry);
         state.typingByThread[rootId] = filtered;
       } else {
         const existing = state.typingByChannel[channelId] ?? [];
-        const filtered = existing.filter(e => e.expiresAt > now && e.userId !== agentId);
+        const filtered = existing.filter((e) => e.expiresAt > now && e.userId !== agentId);
         filtered.push(entry);
         state.typingByChannel[channelId] = filtered;
       }
@@ -299,12 +282,12 @@ export const chatMessagesSlice = createSlice({
       if (rootId) {
         const existing = state.typingByThread[rootId];
         if (existing) {
-          state.typingByThread[rootId] = existing.filter(e => e.userId !== agentId);
+          state.typingByThread[rootId] = existing.filter((e) => e.userId !== agentId);
         }
       } else {
         const existing = state.typingByChannel[channelId];
         if (existing) {
-          state.typingByChannel[channelId] = existing.filter(e => e.userId !== agentId);
+          state.typingByChannel[channelId] = existing.filter((e) => e.userId !== agentId);
         }
       }
     },
@@ -315,7 +298,7 @@ export const chatMessagesSlice = createSlice({
       const now = Date.now();
       const prune = (entries: TypingEntry[] | undefined): TypingEntry[] | undefined => {
         if (!entries || entries.length === 0) return entries;
-        const kept = entries.filter(e => e.expiresAt > now);
+        const kept = entries.filter((e) => e.expiresAt > now);
         return kept.length === entries.length ? entries : kept;
       };
       const targetChannel = action.payload?.channelId;
@@ -361,7 +344,7 @@ export const chatMessagesSlice = createSlice({
       const msg = state.byId[messageId];
       if (!msg) return;
       if (!msg.reactions) msg.reactions = [];
-      const group = msg.reactions.find(r => r.emoji === emoji);
+      const group = msg.reactions.find((r) => r.emoji === emoji);
       if (group) {
         if (!group.userIds.includes(userId)) {
           group.count += 1;
@@ -390,19 +373,16 @@ export const chatMessagesSlice = createSlice({
       const { messageId, emoji, userId, currentUserId } = action.payload;
       const msg = state.byId[messageId];
       if (!msg?.reactions) return;
-      const group = msg.reactions.find(r => r.emoji === emoji);
+      const group = msg.reactions.find((r) => r.emoji === emoji);
       if (!group) return;
       group.count = Math.max(0, group.count - 1);
-      group.userIds = group.userIds.filter(id => id !== userId);
+      group.userIds = group.userIds.filter((id) => id !== userId);
       if (userId === currentUserId) group.currentUserReacted = false;
       if (group.count === 0) {
-        msg.reactions = msg.reactions.filter(r => r.emoji !== emoji);
+        msg.reactions = msg.reactions.filter((r) => r.emoji !== emoji);
       }
     },
-    setMessageFeedback: (
-      state,
-      action: PayloadAction<{ messageId: string; rating: string }>,
-    ) => {
+    setMessageFeedback: (state, action: PayloadAction<{ messageId: string; rating: string }>) => {
       const msg = state.byId[action.payload.messageId];
       if (!msg) return;
       msg.feedbackRating = action.payload.rating || undefined;
@@ -422,10 +402,10 @@ export const chatMessagesSlice = createSlice({
       if (!msg) return;
 
       const meta = (msg.metadata ?? {}) as Record<string, unknown>;
-      const lastSeq = typeof meta.streaming_sequence === 'number' ? meta.streaming_sequence : 0;
+      const lastSeq = typeof meta.streaming_sequence === "number" ? meta.streaming_sequence : 0;
       if (sequence <= lastSeq && !final) return;
 
-      msg.content = (msg.content ?? '') + delta;
+      msg.content = (msg.content ?? "") + delta;
       const nextMeta: Record<string, unknown> = {
         ...meta,
         streaming_sequence: sequence,
@@ -452,7 +432,7 @@ export const chatMessagesSlice = createSlice({
       const blocks = state.agentThinkingByMessage[messageId] ?? [];
       let block = blocks.find((b) => b.blockId === blockId);
       if (!block) {
-        block = { blockId, content: '', elapsedMs: 0, done: false, lastSequence: 0 };
+        block = { blockId, content: "", elapsedMs: 0, done: false, lastSequence: 0 };
         blocks.push(block);
       }
       if (sequence <= block.lastSequence && !final) return;
@@ -509,15 +489,9 @@ export const selectMessageIdsForChannel = (
   channelId: string,
 ): readonly string[] => state.chatMessages.idsByChannel[channelId] ?? EMPTY_IDS;
 
-const messagesSelectorByChannel = new Map<
-  string,
-  (state: RootState) => ChatMessage[]
->();
+const messagesSelectorByChannel = new Map<string, (state: RootState) => ChatMessage[]>();
 
-export const selectMessagesForChannel = (
-  state: RootState,
-  channelId: string,
-): ChatMessage[] => {
+export const selectMessagesForChannel = (state: RootState, channelId: string): ChatMessage[] => {
   let selector = messagesSelectorByChannel.get(channelId);
   if (!selector) {
     selector = createSelector(
@@ -540,10 +514,8 @@ export const selectMessagesForChannel = (
   return selector(state);
 };
 
-export const selectMessageById = (
-  state: RootState,
-  messageId: string,
-): ChatMessage | undefined => state.chatMessages.byId[messageId];
+export const selectMessageById = (state: RootState, messageId: string): ChatMessage | undefined =>
+  state.chatMessages.byId[messageId];
 
 export interface InFlightTool {
   agentId: string;
@@ -572,19 +544,25 @@ export const selectInFlightToolsForChannel = (
         const settledCallIds = new Set<string>();
         for (const id of ids) {
           const m = byId[id];
-          if (m?.senderType === 'AGENT' && m.metadata?.['kind'] === 'tool_result') {
-            const cid = m.metadata?.['tool_call_id'];
-            if (typeof cid === 'string') settledCallIds.add(cid);
+          if (m?.senderType === "AGENT" && m.metadata?.["kind"] === "tool_result") {
+            const cid = m.metadata?.["tool_call_id"];
+            if (typeof cid === "string") settledCallIds.add(cid);
           }
         }
         const out: InFlightTool[] = [];
         for (const id of ids) {
           const m = byId[id];
-          if (m?.senderType !== 'AGENT' || m.metadata?.['kind'] !== 'tool_call') continue;
-          const cid = m.metadata?.['tool_call_id'];
-          if (typeof cid !== 'string' || settledCallIds.has(cid)) continue;
-          const toolName = typeof m.metadata?.['tool_name'] === 'string' ? (m.metadata['tool_name'] as string) : 'tool';
-          const agentId = typeof m.metadata?.['agent_id'] === 'string' ? (m.metadata['agent_id'] as string) : m.senderId;
+          if (m?.senderType !== "AGENT" || m.metadata?.["kind"] !== "tool_call") continue;
+          const cid = m.metadata?.["tool_call_id"];
+          if (typeof cid !== "string" || settledCallIds.has(cid)) continue;
+          const toolName =
+            typeof m.metadata?.["tool_name"] === "string"
+              ? (m.metadata["tool_name"] as string)
+              : "tool";
+          const agentId =
+            typeof m.metadata?.["agent_id"] === "string"
+              ? (m.metadata["agent_id"] as string)
+              : m.senderId;
           out.push({ agentId, toolName, toolCallId: cid, startedAt: m.createdAt });
         }
         return out.length ? out : (EMPTY_INFLIGHT as InFlightTool[]);
@@ -595,30 +573,22 @@ export const selectInFlightToolsForChannel = (
   return selector(state);
 };
 
-export const selectHasMoreForChannel = (
-  state: RootState,
-  channelId: string,
-): boolean => state.chatMessages.hasMoreByChannel[channelId] ?? false;
+export const selectHasMoreForChannel = (state: RootState, channelId: string): boolean =>
+  state.chatMessages.hasMoreByChannel[channelId] ?? false;
 
-export const selectIsWindowedForChannel = (
-  state: RootState,
-  channelId: string,
-): boolean => state.chatMessages.windowedByChannel[channelId] ?? false;
+export const selectIsWindowedForChannel = (state: RootState, channelId: string): boolean =>
+  state.chatMessages.windowedByChannel[channelId] ?? false;
 
 export const selectUnreadSeparatorForChannel = (
   state: RootState,
   channelId: string,
 ): string | null => state.chatMessages.unreadSeparatorByChannel[channelId] ?? null;
 
-export const selectIsChannelLoading = (
-  state: RootState,
-  channelId: string,
-): boolean => state.chatMessages.isLoadingByChannel[channelId] ?? false;
+export const selectIsChannelLoading = (state: RootState, channelId: string): boolean =>
+  state.chatMessages.isLoadingByChannel[channelId] ?? false;
 
-export const selectPinnedCountForChannel = (
-  state: RootState,
-  channelId: string,
-): number => state.chatMessages.pinnedCountByChannel[channelId] ?? 0;
+export const selectPinnedCountForChannel = (state: RootState, channelId: string): number =>
+  state.chatMessages.pinnedCountByChannel[channelId] ?? 0;
 
 type TypingUser = { userId: string; displayName: string; isAgent?: boolean };
 
@@ -638,10 +608,7 @@ const stripExpiry = (entries: TypingEntry[]): TypingUser[] => {
 const typingChannelSelectorByKey = new Map<string, (state: RootState) => TypingUser[]>();
 const typingThreadSelectorByKey = new Map<string, (state: RootState) => TypingUser[]>();
 
-export const selectTypingUsers = (
-  state: RootState,
-  channelId: string,
-): TypingUser[] => {
+export const selectTypingUsers = (state: RootState, channelId: string): TypingUser[] => {
   let selector = typingChannelSelectorByKey.get(channelId);
   if (!selector) {
     selector = createSelector(
@@ -653,10 +620,7 @@ export const selectTypingUsers = (
   return selector(state);
 };
 
-export const selectTypingInThread = (
-  state: RootState,
-  rootId: string,
-): TypingUser[] => {
+export const selectTypingInThread = (state: RootState, rootId: string): TypingUser[] => {
   let selector = typingThreadSelectorByKey.get(rootId);
   if (!selector) {
     selector = createSelector(

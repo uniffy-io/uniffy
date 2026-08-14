@@ -6,7 +6,7 @@
  * Collapse/Expand) and a branch color picker.
  */
 
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from "react";
 import {
   Trash,
   CopySimple,
@@ -20,9 +20,12 @@ import {
   ArrowsOutSimple,
   Palette,
   ArrowsClockwise,
-} from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { MINDMAP_BRANCH_COLORS, MINDMAP_DIRECTIONS } from '@/features/notes/canvas/components/mindmapConstants';
+} from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import {
+  MINDMAP_BRANCH_COLORS,
+  MINDMAP_DIRECTIONS,
+} from "@/features/notes/canvas/components/mindmapConstants";
 
 export interface MindMapContextInfo {
   isRoot: boolean;
@@ -56,7 +59,7 @@ interface MenuItem {
   label: string;
   icon: React.ComponentType<{ size: number; weight: string; className?: string }>;
   action: () => void;
-  variant?: 'destructive';
+  variant?: "destructive";
   shortcut?: string;
 }
 
@@ -83,14 +86,14 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
       }
     };
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [onClose]);
 
@@ -101,10 +104,10 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
         key={item.label}
         onClick={item.action}
         className={cn(
-          'w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors',
-          item.variant === 'destructive'
-            ? 'text-red-500 hover:bg-red-500/10'
-            : 'text-foreground hover:bg-muted'
+          "w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
+          item.variant === "destructive"
+            ? "text-red-500 hover:bg-red-500/10"
+            : "text-foreground hover:bg-muted",
         )}
       >
         <Icon size={14} weight="duotone" />
@@ -120,9 +123,9 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
   if (mindMapInfo) {
     const treeItems: MenuItem[] = [
       {
-        label: 'Add child',
-        icon: TreeStructure as MenuItem['icon'],
-        shortcut: 'Tab',
+        label: "Add child",
+        icon: TreeStructure as MenuItem["icon"],
+        shortcut: "Tab",
         action: () => {
           mindMapInfo.onAddChild(nodeId);
           onClose();
@@ -132,9 +135,9 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
 
     if (!mindMapInfo.isRoot) {
       treeItems.push({
-        label: 'Add sibling',
-        icon: Plus as MenuItem['icon'],
-        shortcut: 'Enter',
+        label: "Add sibling",
+        icon: Plus as MenuItem["icon"],
+        shortcut: "Enter",
         action: () => {
           mindMapInfo.onAddSibling(nodeId);
           onClose();
@@ -145,9 +148,9 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
     const collapseItems: MenuItem[] = [];
     if (mindMapInfo.hasChildren) {
       collapseItems.push({
-        label: mindMapInfo.isCollapsed ? 'Expand' : 'Collapse',
-        icon: (mindMapInfo.isCollapsed ? ArrowsOutSimple : ArrowsInSimple) as MenuItem['icon'],
-        shortcut: 'Space',
+        label: mindMapInfo.isCollapsed ? "Expand" : "Collapse",
+        icon: (mindMapInfo.isCollapsed ? ArrowsOutSimple : ArrowsInSimple) as MenuItem["icon"],
+        shortcut: "Space",
         action: () => {
           mindMapInfo.onToggleCollapse(nodeId);
           onClose();
@@ -158,14 +161,14 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
     const deleteItems: MenuItem[] = [];
     if (!mindMapInfo.isRoot) {
       deleteItems.push({
-        label: 'Delete',
-        icon: Trash as MenuItem['icon'],
-        shortcut: 'Del',
+        label: "Delete",
+        icon: Trash as MenuItem["icon"],
+        shortcut: "Del",
         action: () => {
           mindMapInfo.onDeleteSubtree(nodeId);
           onClose();
         },
-        variant: 'destructive',
+        variant: "destructive",
       });
     }
 
@@ -183,31 +186,32 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
           </>
         )}
         {/* Rotate direction (root only) */}
-        {mindMapInfo.isRoot && (() => {
-          const curIdx = MINDMAP_DIRECTIONS.indexOf(
-            (mindMapInfo.direction as typeof MINDMAP_DIRECTIONS[number]) || 'right',
-          );
-          const nextDir = MINDMAP_DIRECTIONS[(curIdx + 1) % MINDMAP_DIRECTIONS.length];
-          const dirLabels: Record<string, string> = {
-            right: 'Right',
-            down: 'Down',
-            left: 'Left',
-            up: 'Up',
-          };
-          return (
-            <>
-              <div className="h-px bg-border my-1" />
-              {renderItem({
-                label: `Rotate (${dirLabels[nextDir]})`,
-                icon: ArrowsClockwise as MenuItem['icon'],
-                action: () => {
-                  mindMapInfo.onRotate();
-                  onClose();
-                },
-              })}
-            </>
-          );
-        })()}
+        {mindMapInfo.isRoot &&
+          (() => {
+            const curIdx = MINDMAP_DIRECTIONS.indexOf(
+              (mindMapInfo.direction as (typeof MINDMAP_DIRECTIONS)[number]) || "right",
+            );
+            const nextDir = MINDMAP_DIRECTIONS[(curIdx + 1) % MINDMAP_DIRECTIONS.length];
+            const dirLabels: Record<string, string> = {
+              right: "Right",
+              down: "Down",
+              left: "Left",
+              up: "Up",
+            };
+            return (
+              <>
+                <div className="h-px bg-border my-1" />
+                {renderItem({
+                  label: `Rotate (${dirLabels[nextDir]})`,
+                  icon: ArrowsClockwise as MenuItem["icon"],
+                  action: () => {
+                    mindMapInfo.onRotate();
+                    onClose();
+                  },
+                })}
+              </>
+            );
+          })()}
         {/* Branch color picker (non-root only) */}
         {!mindMapInfo.isRoot && (
           <>
@@ -226,8 +230,10 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
                       onClose();
                     }}
                     className={cn(
-                      'w-5 h-5 rounded border transition-transform',
-                      c === mindMapInfo.branchColor ? 'border-foreground scale-110' : 'border-border',
+                      "w-5 h-5 rounded border transition-transform",
+                      c === mindMapInfo.branchColor
+                        ? "border-foreground scale-110"
+                        : "border-border",
                     )}
                     style={{ backgroundColor: c }}
                   />
@@ -249,52 +255,52 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
   // Regular node context menu
   const editItems: MenuItem[] = [
     {
-      label: 'Duplicate',
-      icon: CopySimple as MenuItem['icon'],
+      label: "Duplicate",
+      icon: CopySimple as MenuItem["icon"],
       action: () => {
         onDuplicate(nodeId);
         onClose();
       },
     },
     {
-      label: 'Delete',
-      icon: Trash as MenuItem['icon'],
+      label: "Delete",
+      icon: Trash as MenuItem["icon"],
       action: () => {
         onDelete(nodeId);
         onClose();
       },
-      variant: 'destructive',
+      variant: "destructive",
     },
   ];
 
   const orderItems: MenuItem[] = [
     {
-      label: 'Bring to Front',
-      icon: ArrowLineUp as MenuItem['icon'],
+      label: "Bring to Front",
+      icon: ArrowLineUp as MenuItem["icon"],
       action: () => {
         onBringToFront(nodeId);
         onClose();
       },
     },
     {
-      label: 'Bring Forward',
-      icon: ArrowUp as MenuItem['icon'],
+      label: "Bring Forward",
+      icon: ArrowUp as MenuItem["icon"],
       action: () => {
         onBringForward(nodeId);
         onClose();
       },
     },
     {
-      label: 'Send Backward',
-      icon: ArrowDown as MenuItem['icon'],
+      label: "Send Backward",
+      icon: ArrowDown as MenuItem["icon"],
       action: () => {
         onSendBackward(nodeId);
         onClose();
       },
     },
     {
-      label: 'Send to Back',
-      icon: ArrowLineDown as MenuItem['icon'],
+      label: "Send to Back",
+      icon: ArrowLineDown as MenuItem["icon"],
       action: () => {
         onSendToBack(nodeId);
         onClose();

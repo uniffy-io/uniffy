@@ -1,14 +1,14 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { FileArrowDown, ArrowsOut } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { buildThumbnailUrl, buildMediaUrl } from '@/shared/utils/fileUrls';
-import { formatFileSize } from '@/shared/utils/dateFormatting';
-import { useAppDispatch } from '@/app/hooks';
-import { openViewerWithFetch } from '@/features/files/store/viewerThunks';
-import { AudioBlock } from '@/components/editor/plugins/audio/AudioBlock';
-import { VideoBlock } from '@/components/editor/plugins/video/VideoBlock';
-import { imageLoadLimiter } from '@/features/chat/utils/imageLoadLimiter';
-import type { MessageAttachment } from '@/features/chat/types';
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { FileArrowDown, ArrowsOut } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { buildThumbnailUrl, buildMediaUrl } from "@/shared/utils/fileUrls";
+import { formatFileSize } from "@/shared/utils/dateFormatting";
+import { useAppDispatch } from "@/app/hooks";
+import { openViewerWithFetch } from "@/features/files/store/viewerThunks";
+import { AudioBlock } from "@/components/editor/plugins/audio/AudioBlock";
+import { VideoBlock } from "@/components/editor/plugins/video/VideoBlock";
+import { imageLoadLimiter } from "@/features/chat/utils/imageLoadLimiter";
+import type { MessageAttachment } from "@/features/chat/types";
 
 interface MessageAttachmentsProps {
   attachments: MessageAttachment[];
@@ -16,15 +16,15 @@ interface MessageAttachmentsProps {
 }
 
 function isImage(mime: string): boolean {
-  return mime.startsWith('image/');
+  return mime.startsWith("image/");
 }
 
 function isAudio(mime: string): boolean {
-  return mime.startsWith('audio/');
+  return mime.startsWith("audio/");
 }
 
 function isVideo(mime: string): boolean {
-  return mime.startsWith('video/');
+  return mime.startsWith("video/");
 }
 
 interface ChatImageProps {
@@ -39,7 +39,7 @@ function ChatImage({ src, alt, className }: ChatImageProps) {
 
   useEffect(() => {
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- src changes require resetting the rendered <img> while we wait for a slot
+    // eslint-disable-next-line react/react-compiler -- src changes require resetting the rendered <img> while we wait for a slot
     setResolvedSrc(null);
     imageLoadLimiter.acquire().then((release) => {
       if (cancelled) {
@@ -80,16 +80,21 @@ function ChatImage({ src, alt, className }: ChatImageProps) {
 function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachmentsProps) {
   const dispatch = useAppDispatch();
 
-  const handleOpen = useCallback((fileId: string) => {
-    dispatch(openViewerWithFetch({ fileId }));
-  }, [dispatch]);
+  const handleOpen = useCallback(
+    (fileId: string) => {
+      dispatch(openViewerWithFetch({ fileId }));
+    },
+    [dispatch],
+  );
 
   if (attachments.length === 0) return null;
 
   const images = attachments.filter((a) => isImage(a.mimeType));
   const audios = attachments.filter((a) => isAudio(a.mimeType));
   const videos = attachments.filter((a) => isVideo(a.mimeType));
-  const files = attachments.filter((a) => !isImage(a.mimeType) && !isAudio(a.mimeType) && !isVideo(a.mimeType));
+  const files = attachments.filter(
+    (a) => !isImage(a.mimeType) && !isAudio(a.mimeType) && !isVideo(a.mimeType),
+  );
 
   return (
     <div className="mt-1.5 space-y-1.5">
@@ -98,9 +103,9 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
           type="button"
           onClick={() => handleOpen(images[0].fileId)}
           className={cn(
-            'block rounded-lg overflow-hidden border border-border',
-            'hover:border-primary/50 transition-colors cursor-pointer text-left',
-            'bg-muted max-w-[480px]',
+            "block rounded-lg overflow-hidden border border-border",
+            "hover:border-primary/50 transition-colors cursor-pointer text-left",
+            "bg-muted max-w-[480px]",
           )}
         >
           <ChatImage
@@ -114,8 +119,8 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
       {images.length >= 2 && (
         <div
           className={cn(
-            'grid gap-1 max-w-[480px]',
-            images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-2',
+            "grid gap-1 max-w-[480px]",
+            images.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-2",
           )}
         >
           {images.slice(0, 4).map((img, idx) => {
@@ -127,9 +132,9 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
                 type="button"
                 onClick={() => handleOpen(img.fileId)}
                 className={cn(
-                  'relative block rounded-lg overflow-hidden border border-border',
-                  'hover:border-primary/50 transition-colors cursor-pointer text-left',
-                  'aspect-square bg-muted',
+                  "relative block rounded-lg overflow-hidden border border-border",
+                  "hover:border-primary/50 transition-colors cursor-pointer text-left",
+                  "aspect-square bg-muted",
                 )}
               >
                 <ChatImage
@@ -150,19 +155,16 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
 
       {audios.map((att) => (
         <div key={att.id} className="relative max-w-md group/media">
-          <AudioBlock
-            src={buildMediaUrl(organizationId, att.fileId)}
-            title={att.filename}
-          />
+          <AudioBlock src={buildMediaUrl(organizationId, att.fileId)} title={att.filename} />
           <button
             type="button"
             onClick={() => handleOpen(att.fileId)}
             title="Open in viewer"
             className={cn(
-              'absolute top-1.5 right-1.5 p-1 rounded-md',
-              'bg-card/80 backdrop-blur-sm border border-border/50',
-              'text-muted-foreground hover:text-foreground',
-              'opacity-0 group-hover/media:opacity-100 transition-opacity',
+              "absolute top-1.5 right-1.5 p-1 rounded-md",
+              "bg-card/80 backdrop-blur-sm border border-border/50",
+              "text-muted-foreground hover:text-foreground",
+              "opacity-0 group-hover/media:opacity-100 transition-opacity",
             )}
           >
             <ArrowsOut size={14} />
@@ -171,20 +173,20 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
       ))}
 
       {videos.map((att) => (
-        <div key={att.id} className="relative max-w-lg rounded-lg overflow-hidden border border-border group/media">
-          <VideoBlock
-            src={buildMediaUrl(organizationId, att.fileId)}
-            title={att.filename}
-          />
+        <div
+          key={att.id}
+          className="relative max-w-lg rounded-lg overflow-hidden border border-border group/media"
+        >
+          <VideoBlock src={buildMediaUrl(organizationId, att.fileId)} title={att.filename} />
           <button
             type="button"
             onClick={() => handleOpen(att.fileId)}
             title="Open in viewer"
             className={cn(
-              'absolute top-1.5 right-1.5 z-10 p-1 rounded-md',
-              'bg-card/80 backdrop-blur-sm border border-border/50',
-              'text-muted-foreground hover:text-foreground',
-              'opacity-0 group-hover/media:opacity-100 transition-opacity',
+              "absolute top-1.5 right-1.5 z-10 p-1 rounded-md",
+              "bg-card/80 backdrop-blur-sm border border-border/50",
+              "text-muted-foreground hover:text-foreground",
+              "opacity-0 group-hover/media:opacity-100 transition-opacity",
             )}
           >
             <ArrowsOut size={14} />
@@ -200,9 +202,9 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
               type="button"
               onClick={() => handleOpen(file.fileId)}
               className={cn(
-                'inline-flex items-center gap-2 px-3 py-2 rounded-lg max-w-xs',
-                'bg-muted/30 border border-border hover:border-primary/50',
-                'transition-colors group cursor-pointer text-left',
+                "inline-flex items-center gap-2 px-3 py-2 rounded-lg max-w-xs",
+                "bg-muted/30 border border-border hover:border-primary/50",
+                "transition-colors group cursor-pointer text-left",
               )}
             >
               <FileArrowDown

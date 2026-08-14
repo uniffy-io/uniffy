@@ -32,7 +32,7 @@ export function upsertDraftInCache(
   draft: SerializedDraft,
 ) {
   queryClient.setQueryData<Record<string, SerializedDraft>>(draftsKey(orgId), (old) => ({
-    ...(old ?? {}),
+    ...old,
     [draftKey(draft.channelId, draft.rootMessageId)]: draft,
   }));
 }

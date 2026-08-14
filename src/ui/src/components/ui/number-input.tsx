@@ -13,11 +13,11 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
       inputMode="decimal"
       className={cn(
         "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  ),
 );
 
 NumberInput.displayName = "NumberInput";

@@ -178,6 +178,9 @@ function TextPreview({ uri }: { uri: string }) {
     let cancelled = false;
     (async () => {
       try {
+        // Not an RPC: asset read from the login server, authenticated by
+        // assetAuthHeaders instead of the Connect transport.
+        // eslint-disable-next-line no-restricted-globals
         const res = await fetch(uri, { headers: assetAuthHeaders() });
         if (!res.ok) throw new Error(String(res.status));
         const body = await res.text();

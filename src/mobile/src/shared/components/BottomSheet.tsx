@@ -77,6 +77,10 @@ export function BottomSheet({
 
   useEffect(() => {
     if (visible) {
+      // `mounted` is a latch, not derived state: it has to outlive `visible`
+      // going false so the exit animation can play to its end before the tree
+      // unmounts. Nothing pure can express "true now, and still true for the
+      // next 200ms", so the prop drives it from here.
       setMounted(true);
       translateY.value = reducedMotion ? 0 : withTiming(0, { duration: ENTER_MS });
       return;

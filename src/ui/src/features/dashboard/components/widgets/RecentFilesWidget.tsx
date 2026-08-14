@@ -1,11 +1,15 @@
-import { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FolderSimple, ArrowRight } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { WidgetCard, EmptyWidget, WidgetSkeleton } from '@/features/dashboard/components/widgets/WidgetCard';
-import { formatRelativeTime, formatFileSize } from '@/shared/utils/dateFormatting';
-import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
+import { useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { FolderSimple, ArrowRight } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import {
+  WidgetCard,
+  EmptyWidget,
+  WidgetSkeleton,
+} from "@/features/dashboard/components/widgets/WidgetCard";
+import { formatRelativeTime, formatFileSize } from "@/shared/utils/dateFormatting";
+import { useThumbnailUrl } from "@/features/files/hooks/useThumbnail";
 
 function timestampToIso(ts: { seconds: number; nanos: number } | undefined): string {
   if (!ts) return new Date(0).toISOString();
@@ -16,13 +20,7 @@ function FileThumbnail({ fileId, hasThumbnail }: { fileId: string; hasThumbnail:
   const { url } = useThumbnailUrl(hasThumbnail ? fileId : null);
 
   if (url) {
-    return (
-      <img
-        src={url}
-        alt=""
-        className="w-8 h-8 rounded-md object-cover bg-muted"
-      />
-    );
+    return <img src={url} alt="" className="w-8 h-8 rounded-md object-cover bg-muted" />;
   }
 
   return (
@@ -76,8 +74,8 @@ export function RecentFilesWidget() {
           title="No files yet"
           description="Upload files to get started"
           action={{
-            label: 'Upload a file',
-            onClick: () => navigate('/files?upload=true'),
+            label: "Upload a file",
+            onClick: () => navigate("/files?upload=true"),
           }}
         />
       ) : (
@@ -87,14 +85,11 @@ export function RecentFilesWidget() {
               key={file.id}
               to={`/files?file=${file.id}`}
               className={cn(
-                'group flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors',
-                'hover:bg-muted/50',
+                "group flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors",
+                "hover:bg-muted/50",
               )}
             >
-              <FileThumbnail
-                fileId={file.id}
-                hasThumbnail={file.metadata?.hasThumbnail ?? false}
-              />
+              <FileThumbnail fileId={file.id} hasThumbnail={file.metadata?.hasThumbnail ?? false} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
                   {file.filename}

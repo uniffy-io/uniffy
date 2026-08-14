@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -66,8 +66,10 @@ export function AuthScreen() {
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   // Animated pill indicator slides by measured pixels so it fills its half of
-  // the track exactly, gutter included on both sides.
-  const pillAnim = useRef(new Animated.Value(0)).current;
+  // the track exactly, gutter included on both sides. The lazy state initializer
+  // gives the driver one stable identity for the component's lifetime without
+  // parking it in a ref that render then has to read back.
+  const [pillAnim] = useState(() => new Animated.Value(0));
   const [pillTrackWidth, setPillTrackWidth] = useState(0);
 
   const switchMode = (newMode: Mode) => {

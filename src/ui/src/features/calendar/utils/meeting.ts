@@ -1,6 +1,6 @@
-import type { ChannelType } from '@/features/chat/types';
+import type { ChannelType } from "@/features/chat/types";
 
-export type MeetingMode = 'none' | 'link' | 'channel';
+export type MeetingMode = "none" | "link" | "channel";
 
 export interface MeetingSubmit {
   /** Empty string clears the URL; a value binds a link meeting. */
@@ -21,15 +21,15 @@ export function resolveMeetingSubmit(
   meetingUrl: string | undefined,
   prevChannelId: string | undefined,
 ): MeetingSubmit {
-  const desiredChannelId = mode === 'channel' ? selectedChannelId || '' : '';
+  const desiredChannelId = mode === "channel" ? selectedChannelId || "" : "";
   return {
-    meetingUrl: mode === 'link' ? meetingUrl || '' : '',
-    channelId: desiredChannelId !== (prevChannelId || '') ? desiredChannelId : undefined,
+    meetingUrl: mode === "link" ? meetingUrl || "" : "",
+    channelId: desiredChannelId !== (prevChannelId || "") ? desiredChannelId : undefined,
   };
 }
 
 interface DiffMember {
-  subjectType: 'USER' | 'AGENT';
+  subjectType: "USER" | "AGENT";
   userId: string;
 }
 
@@ -43,9 +43,7 @@ export function countMissingAttendees(
   members: DiffMember[] | undefined,
   attendeeIds: string[],
 ): number {
-  if (channelType === 'PUBLIC' || !members) return 0;
-  const memberIds = new Set(
-    members.filter((m) => m.subjectType === 'USER').map((m) => m.userId),
-  );
+  if (channelType === "PUBLIC" || !members) return 0;
+  const memberIds = new Set(members.filter((m) => m.subjectType === "USER").map((m) => m.userId));
   return attendeeIds.filter((id) => !memberIds.has(id)).length;
 }

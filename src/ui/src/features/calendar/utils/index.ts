@@ -21,13 +21,13 @@ export {
   parseISO,
   format,
   addMonths,
-} from '@/features/calendar/utils/dateUtils';
+} from "@/features/calendar/utils/dateUtils";
 
-export { matchesQuickAccess } from '@/features/calendar/utils/quickAccess';
+export { matchesQuickAccess } from "@/features/calendar/utils/quickAccess";
 
 export {
   findConflicts,
   getPositionedEventsForDay,
   getPositionedEventsForWeek,
   positionAllDayEvents,
-} from '@/features/calendar/utils/eventPositioning';
+} from "@/features/calendar/utils/eventPositioning";

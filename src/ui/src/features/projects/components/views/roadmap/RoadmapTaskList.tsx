@@ -70,10 +70,7 @@ export function RoadmapTaskList({
       </div>
 
       {/* Task List - no independent scroll, mirrors timeline via transform */}
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-hidden border-r border-border"
-      >
+      <div ref={containerRef} className="flex-1 overflow-hidden border-r border-border">
         <div style={{ transform: `translateY(-${scrollTop}px)` }}>
           {rows.map(({ task, depth, hasChildren }) => {
             const statusOption = statusOptions.find((s) => s.id === task.status);
@@ -138,15 +135,13 @@ function RoadmapTaskRow({
         "flex items-center gap-2 px-3 border-b border-border cursor-pointer",
         "hover:bg-muted/30 transition-colors",
         isSelected && "bg-primary/5",
-        !hasDates && "opacity-50"
+        !hasDates && "opacity-50",
       )}
       style={{ height: LAYOUT.ROADMAP_ROW_HEIGHT }}
       onClick={onClick}
     >
       {/* Selection indicator */}
-      {isSelected && (
-        <div className="absolute left-0 w-0.5 h-full bg-primary" />
-      )}
+      {isSelected && <div className="absolute left-0 w-0.5 h-full bg-primary" />}
 
       {/* Indent + expand/collapse toggle */}
       <div className="flex items-center shrink-0" style={{ paddingLeft: depth * 16 }}>
@@ -160,7 +155,11 @@ function RoadmapTaskRow({
             className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title={isCollapsed ? "Expand subtasks" : "Collapse subtasks"}
           >
-            {isCollapsed ? <CaretRight size={12} weight="bold" /> : <CaretDown size={12} weight="bold" />}
+            {isCollapsed ? (
+              <CaretRight size={12} weight="bold" />
+            ) : (
+              <CaretDown size={12} weight="bold" />
+            )}
           </button>
         ) : (
           <span className="w-5" />
@@ -180,11 +179,7 @@ function RoadmapTaskRow({
       />
 
       {/* Task type icon */}
-      <TypeIcon
-        size={14}
-        weight="fill"
-        className="text-muted-foreground shrink-0"
-      />
+      <TypeIcon size={14} weight="fill" className="text-muted-foreground shrink-0" />
 
       {/* Task ID */}
       <span className="text-xs font-mono text-muted-foreground shrink-0">
@@ -192,16 +187,13 @@ function RoadmapTaskRow({
       </span>
 
       {/* Status icon */}
-      <StatusIcon
-        statusId={statusOption?.id}
-        color={statusOption?.color || "#6b7280"}
-      />
+      <StatusIcon statusId={statusOption?.id} color={statusOption?.color || "#6b7280"} />
 
       {/* Task title */}
       <span
         className={cn(
           "flex-1 text-sm truncate",
-          hasDates ? "text-foreground" : "text-muted-foreground"
+          hasDates ? "text-foreground" : "text-muted-foreground",
         )}
       >
         {task.title}
@@ -210,15 +202,16 @@ function RoadmapTaskRow({
       {/* Subtask progress */}
       {task.subtaskTotal > 0 && (
         <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
-          <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
+          <CheckCircle
+            size={10}
+            className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""}
+          />
           {task.subtaskCompleted}/{task.subtaskTotal}
         </span>
       )}
 
       {/* No dates indicator */}
-      {!hasDates && (
-        <span className="text-xs text-muted-foreground italic">No dates</span>
-      )}
+      {!hasDates && <span className="text-xs text-muted-foreground italic">No dates</span>}
 
       {/* Assignee avatars */}
       {task.assigneeIds.length > 0 && (

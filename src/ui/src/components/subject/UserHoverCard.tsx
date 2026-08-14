@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { ChatCircle, ArrowSquareOut } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { useAppSelector } from '@/app/hooks';
-import { usePresence } from '@/features/presence/hooks/usePresence';
-import { useCustomStatus } from '@/features/presence/hooks/useCustomStatus';
-import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
-import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
-import { getAvatarGradientStyle, getInitials } from '@/components/subject/utils';
-import { peopleApi } from '@/features/people/api/peopleApi';
-import { formatTimeRemaining } from '@/shared/utils/dateFormatting';
-import { navigateTo } from '@/shared/utils/navigation';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { ChatCircle, ArrowSquareOut } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { useAppSelector } from "@/app/hooks";
+import { usePresence } from "@/features/presence/hooks/usePresence";
+import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
+import { useAvatarUrl } from "@/shared/hooks/useAvatarUrl";
+import { PresenceIndicator } from "@/components/subject/PresenceIndicator";
+import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
+import { peopleApi } from "@/features/people/api/peopleApi";
+import { formatTimeRemaining } from "@/shared/utils/dateFormatting";
+import { navigateTo } from "@/shared/utils/navigation";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 
 interface UserHoverCardProps {
   userId: string;
@@ -50,33 +50,38 @@ export function UserHoverCard({
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [profile, setProfile] = useState<UserProfileData | null>(null);
-  const [fetchedUserId, setFetchedUserId] = useState('');
+  const [fetchedUserId, setFetchedUserId] = useState("");
 
   const presenceStatus = usePresence(userId);
   const customStatus = useCustomStatus(userId);
-  const avatarUrl = useAvatarUrl(userId, 'md');
+  const avatarUrl = useAvatarUrl(userId, "md");
   const [avatarFailed, setAvatarFailed] = useState(false);
 
   useEffect(() => {
     if (!isVisible || !userId || !organizationId || fetchedUserId === userId) return;
     let cancelled = false;
 
-    peopleApi.getPerson(organizationId, userId).then((person) => {
-      if (cancelled) return;
-      setProfile({
-        displayName: person.displayName,
-        email: person.email,
-        username: person.username,
-        jobTitle: person.jobTitle,
-        department: person.department,
-        teamNames: person.teams.map((team) => team.name),
+    peopleApi
+      .getPerson(organizationId, userId)
+      .then((person) => {
+        if (cancelled) return;
+        setProfile({
+          displayName: person.displayName,
+          email: person.email,
+          username: person.username,
+          jobTitle: person.jobTitle,
+          department: person.department,
+          teamNames: person.teams.map((team) => team.name),
+        });
+        setFetchedUserId(userId);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedUserId(userId);
       });
-      setFetchedUserId(userId);
-    }).catch(() => {
-      if (!cancelled) setFetchedUserId(userId);
-    });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isVisible, userId, organizationId, fetchedUserId]);
 
   useEffect(() => {
@@ -86,9 +91,9 @@ export function UserHoverCard({
       }
     };
     if (isVisible) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose, isVisible]);
 
   const handleSendMessage = useCallback(() => {
@@ -109,20 +114,26 @@ export function UserHoverCard({
   const opensDownward = position.y + GAP + 220 <= window.innerHeight;
 
   const name = profile?.displayName || displayName;
-  const roleLine = [profile?.jobTitle, profile?.department].filter(Boolean).join(' · ');
+  const roleLine = [profile?.jobTitle, profile?.department].filter(Boolean).join(" · ");
   const subtitle = profile?.email || profile?.username;
 
   const presenceLabel =
-    presenceStatus === 'online' ? 'Online'
-      : presenceStatus === 'away' ? 'Away'
-        : presenceStatus === 'dnd' ? 'Do Not Disturb'
-          : 'Offline';
+    presenceStatus === "online"
+      ? "Online"
+      : presenceStatus === "away"
+        ? "Away"
+        : presenceStatus === "dnd"
+          ? "Do Not Disturb"
+          : "Offline";
 
   const presenceColor =
-    presenceStatus === 'online' ? 'text-green-600 dark:text-green-400'
-      : presenceStatus === 'away' ? 'text-amber-600 dark:text-amber-400'
-        : presenceStatus === 'dnd' ? 'text-red-600 dark:text-red-400'
-          : 'text-muted-foreground';
+    presenceStatus === "online"
+      ? "text-green-600 dark:text-green-400"
+      : presenceStatus === "away"
+        ? "text-amber-600 dark:text-amber-400"
+        : presenceStatus === "dnd"
+          ? "text-red-600 dark:text-red-400"
+          : "text-muted-foreground";
 
   return createPortal(
     <div
@@ -132,22 +143,21 @@ export function UserHoverCard({
         left: `${adjustedLeft}px`,
         ...(opensDownward
           ? { top: `${position.y}px`, paddingTop: `${GAP}px` }
-          : { bottom: `${window.innerHeight - position.y + GAP}px` }
-        ),
+          : { bottom: `${window.innerHeight - position.y + GAP}px` }),
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       <div
         className={cn(
-          'w-72',
-          'bg-card/95 backdrop-blur-xl',
-          'text-card-foreground',
-          'rounded-xl shadow-2xl',
-          'border border-border/50',
-          'overflow-hidden',
-          'animate-in fade-in-0 zoom-in-95 duration-200',
-          opensDownward ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2',
+          "w-72",
+          "bg-card/95 backdrop-blur-xl",
+          "text-card-foreground",
+          "rounded-xl shadow-2xl",
+          "border border-border/50",
+          "overflow-hidden",
+          "animate-in fade-in-0 zoom-in-95 duration-200",
+          opensDownward ? "slide-in-from-top-2" : "slide-in-from-bottom-2",
         )}
       >
         <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary" />
@@ -189,14 +199,10 @@ export function UserHoverCard({
 
                 <div className="flex-1 min-w-0 pt-0.5">
                   <h4 className="font-semibold text-sm truncate">{name}</h4>
-                  {roleLine && (
-                    <p className="text-xs text-muted-foreground truncate">{roleLine}</p>
-                  )}
-                  {subtitle && (
-                    <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
-                  )}
+                  {roleLine && <p className="text-xs text-muted-foreground truncate">{roleLine}</p>}
+                  {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span className={cn('text-xs font-medium', presenceColor)}>
+                    <span className={cn("text-xs font-medium", presenceColor)}>
                       {presenceLabel}
                     </span>
                     {customStatus && (
@@ -208,7 +214,8 @@ export function UserHoverCard({
                             {customStatus.text}
                             {customStatus.expiresAt && (
                               <span className="text-muted-foreground/60">
-                                {' '}{formatTimeRemaining(customStatus.expiresAt)}
+                                {" "}
+                                {formatTimeRemaining(customStatus.expiresAt)}
                               </span>
                             )}
                           </span>
@@ -238,8 +245,8 @@ export function UserHoverCard({
                   type="button"
                   onClick={handleSendMessage}
                   className={cn(
-                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
-                    'bg-primary text-primary-foreground hover:bg-primary/90 transition-colors',
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium",
+                    "bg-primary text-primary-foreground hover:bg-primary/90 transition-colors",
                   )}
                 >
                   <ChatCircle size={13} weight="fill" />

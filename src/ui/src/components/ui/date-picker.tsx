@@ -53,13 +53,12 @@ export function DatePicker({
     return isValid(parsed) ? parsed : null;
   }, [value]);
 
-  const [displayMonth, setDisplayMonth] = useState<Date>(
-    () => selectedDate || new Date()
-  );
+  const [displayMonth, setDisplayMonth] = useState<Date>(() => selectedDate || new Date());
 
   useEffect(() => {
     if (selectedDate) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting display month when selectedDate changes
+      // Follow the externally controlled value so the grid opens on the selected month.
+      // eslint-disable-next-line react/react-compiler
       setDisplayMonth(selectedDate);
     }
   }, [selectedDate]);
@@ -157,9 +156,7 @@ export function DatePicker({
           "z-[200] rounded-lg",
           "border border-border bg-card shadow-xl",
           "animate-in fade-in-0 duration-100",
-          position.openUpward
-            ? "slide-in-from-bottom-2"
-            : "slide-in-from-top-2"
+          position.openUpward ? "slide-in-from-bottom-2" : "slide-in-from-top-2",
         )}
       >
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
@@ -184,10 +181,7 @@ export function DatePicker({
 
         <div className="grid grid-cols-7 px-2 pt-2">
           {WEEKDAYS.map((day) => (
-            <div
-              key={day}
-              className="text-center text-xs font-medium text-muted-foreground py-1"
-            >
+            <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
               {day}
             </div>
           ))}
@@ -208,14 +202,9 @@ export function DatePicker({
                   "h-8 w-full rounded-md text-sm transition-colors",
                   "focus:outline-none focus:ring-1 focus:ring-primary",
                   !isCurrentMonth && "text-muted-foreground/40",
-                  isCurrentMonth &&
-                    !isSelected &&
-                    "text-foreground hover:bg-muted",
-                  isCurrentDay &&
-                    !isSelected &&
-                    "font-semibold text-primary",
-                  isSelected &&
-                    "bg-primary text-primary-foreground font-medium"
+                  isCurrentMonth && !isSelected && "text-foreground hover:bg-muted",
+                  isCurrentDay && !isSelected && "font-semibold text-primary",
+                  isSelected && "bg-primary text-primary-foreground font-medium",
                 )}
               >
                 {format(day, "d")}
@@ -269,7 +258,7 @@ export function DatePicker({
           "focus:outline-none focus:ring-2 focus:ring-ring",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           "hover:bg-muted/50",
-          value ? "text-foreground" : "text-muted-foreground"
+          value ? "text-foreground" : "text-muted-foreground",
         )}
       >
         <CalendarBlank size={16} className="text-muted-foreground shrink-0" />

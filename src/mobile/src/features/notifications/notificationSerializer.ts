@@ -4,7 +4,14 @@ import type { Notification as ProtoNotification } from "@uniffy/proto/notificati
 import { NotificationType } from "@uniffy/proto/notifications/v1/notifications_pb";
 
 export type NotificationIconKind =
-  "share" | "mention" | "edit" | "calendar" | "task" | "chat" | "permission" | "system";
+  | "share"
+  | "mention"
+  | "edit"
+  | "calendar"
+  | "task"
+  | "chat"
+  | "permission"
+  | "system";
 
 export interface SerializedNotification {
   id: string;

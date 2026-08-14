@@ -12,7 +12,7 @@ export function TagChip({ name, selected = false }: TagChipProps) {
         rounded-md
         cursor-pointer
         transition-all duration-150 ease-out
-        ${selected ? 'ring-1 ring-primary/50 ring-offset-1 ring-offset-background' : ''}
+        ${selected ? "ring-1 ring-primary/50 ring-offset-1 ring-offset-background" : ""}
       `}
       title={`View tag: #${name}`}
     >

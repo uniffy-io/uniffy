@@ -1,17 +1,30 @@
-import { CaretDown, TextT } from '@phosphor-icons/react';
-import { ToolbarButton } from '@/features/notes/components/editor/toolbar/ToolbarButton';
-import { ToolbarPopover } from '@/features/notes/components/editor/toolbar/ToolbarPopover';
-import { toolbarCommands } from '@/features/notes/components/editor/toolbar/toolbarCommands';
-import { useActiveMarks } from '@/features/notes/components/editor/toolbar/useActiveMarks';
-import { useEditorHandle } from '@/components/editor/EditorHandle';
-import { cn } from '@/shared/utils/cn';
+import type { ComponentProps } from "react";
+import { CaretDown, TextT } from "@phosphor-icons/react";
+import { ToolbarButton } from "@/features/notes/components/editor/toolbar/ToolbarButton";
+import { ToolbarPopover } from "@/features/notes/components/editor/toolbar/ToolbarPopover";
+import { toolbarCommands } from "@/features/notes/components/editor/toolbar/toolbarCommands";
+import { useActiveMarks } from "@/features/notes/components/editor/toolbar/useActiveMarks";
+import { useEditorHandle } from "@/components/editor/EditorHandle";
+import { cn } from "@/shared/utils/cn";
 
 const OPTIONS: Array<{ label: string; level: number | null; size: string }> = [
-  { label: 'Normal text', level: null, size: 'text-sm' },
-  { label: 'Heading 1', level: 1, size: 'text-xl font-semibold' },
-  { label: 'Heading 2', level: 2, size: 'text-lg font-semibold' },
-  { label: 'Heading 3', level: 3, size: 'text-base font-semibold' },
+  { label: "Normal text", level: null, size: "text-sm" },
+  { label: "Heading 1", level: 1, size: "text-xl font-semibold" },
+  { label: "Heading 2", level: 2, size: "text-lg font-semibold" },
+  { label: "Heading 3", level: 3, size: "text-base font-semibold" },
 ];
+
+type ToolbarTriggerProps = Parameters<ComponentProps<typeof ToolbarPopover>["trigger"]>[0];
+
+function headingTrigger({ label, disabled }: { label: string; disabled: boolean }) {
+  return ({ open, onClick, ref }: ToolbarTriggerProps) => (
+    <ToolbarButton ref={ref} onClick={onClick} active={open} disabled={disabled} className="px-2">
+      <TextT size={14} weight="bold" />
+      <span className="text-xs">{label}</span>
+      <CaretDown size={10} weight="bold" />
+    </ToolbarButton>
+  );
+}
 
 export function HeadingDropdown() {
   const handle = useEditorHandle();
@@ -19,15 +32,7 @@ export function HeadingDropdown() {
   const current = OPTIONS.find((o) => o.level === headingLevel) ?? OPTIONS[0];
 
   return (
-    <ToolbarPopover
-      trigger={({ open, onClick, ref }) => (
-        <ToolbarButton ref={ref} onClick={onClick} active={open} disabled={!handle} className="px-2">
-          <TextT size={14} weight="bold" />
-          <span className="text-xs">{current.label}</span>
-          <CaretDown size={10} weight="bold" />
-        </ToolbarButton>
-      )}
-    >
+    <ToolbarPopover trigger={headingTrigger({ label: current.label, disabled: !handle })}>
       {(close) => (
         <div className="flex flex-col">
           {OPTIONS.map((option) => (
@@ -41,8 +46,8 @@ export function HeadingDropdown() {
                 close();
               }}
               className={cn(
-                'flex items-center justify-between gap-3 px-3 py-1.5 rounded text-left hover:bg-muted',
-                option.level === headingLevel && 'bg-muted',
+                "flex items-center justify-between gap-3 px-3 py-1.5 rounded text-left hover:bg-muted",
+                option.level === headingLevel && "bg-muted",
               )}
             >
               <span className={option.size}>{option.label}</span>

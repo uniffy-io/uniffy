@@ -1,5 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { LinkBreak, ArrowRight, WarningCircle, CheckCircle, Plus, X, MagnifyingGlass } from "@phosphor-icons/react";
+import {
+  LinkBreak,
+  ArrowRight,
+  WarningCircle,
+  CheckCircle,
+  Plus,
+  X,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import {
   selectTasksMap,
@@ -17,7 +25,11 @@ interface DependenciesListProps {
   blocksTaskIds: string[];
 }
 
-export function DependenciesList({ taskId, blockedByTaskIds, blocksTaskIds }: DependenciesListProps) {
+export function DependenciesList({
+  taskId,
+  blockedByTaskIds,
+  blocksTaskIds,
+}: DependenciesListProps) {
   const dispatch = useAppDispatch();
   const hasBlockedBy = blockedByTaskIds.length > 0;
   const hasBlocks = blocksTaskIds.length > 0;
@@ -103,7 +115,7 @@ function TaskPicker({ taskId, excludeIds, onSelect, onClose }: TaskPickerProps) 
   const projectId = project?.id;
   const selectTasks = useMemo(
     () => (projectId ? selectTasksForProject(projectId) : () => [] as Task[]),
-    [projectId]
+    [projectId],
   );
   const allTasks = useAppSelector(selectTasks);
 
@@ -141,7 +153,10 @@ function TaskPicker({ taskId, excludeIds, onSelect, onClose }: TaskPickerProps) 
   };
 
   return (
-    <div ref={containerRef} className="rounded-lg border border-border bg-card shadow-md overflow-hidden">
+    <div
+      ref={containerRef}
+      className="rounded-lg border border-border bg-card shadow-md overflow-hidden"
+    >
       <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border">
         <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
         <input
@@ -177,7 +192,6 @@ function TaskPicker({ taskId, excludeIds, onSelect, onClose }: TaskPickerProps) 
   );
 }
 
-
 function BlockedByItem({ taskId, onRemove }: { taskId: string; onRemove: (id: string) => void }) {
   const task = useAppSelector((state) => selectTasksMap(state)[taskId]);
 
@@ -199,7 +213,15 @@ function BlockedByItem({ taskId, onRemove }: { taskId: string; onRemove: (id: st
             Done
           </Badge>
         ) : (
-          <Badge variant="outline" className="text-xs gap-1" style={{ color: 'var(--status-warning)', borderColor: 'color-mix(in srgb, var(--status-warning) 50%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }}>
+          <Badge
+            variant="outline"
+            className="text-xs gap-1"
+            style={{
+              color: "var(--status-warning)",
+              borderColor: "color-mix(in srgb, var(--status-warning) 50%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--status-warning) 10%, transparent)",
+            }}
+          >
             <WarningCircle size={10} weight="fill" />
             Blocking
           </Badge>
@@ -237,7 +259,10 @@ function BlocksItem({ taskId }: { taskId: string }) {
           Done
         </Badge>
       ) : (
-        <Badge variant="outline" className="text-xs border-blue-500/50 text-blue-600 bg-blue-500/10 gap-1 shrink-0">
+        <Badge
+          variant="outline"
+          className="text-xs border-blue-500/50 text-blue-600 bg-blue-500/10 gap-1 shrink-0"
+        >
           Waiting
         </Badge>
       )}

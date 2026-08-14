@@ -1,38 +1,38 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Microphone,
   MicrophoneSlash,
   VideoCamera,
   VideoCameraSlash,
   Warning,
-} from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { Select, type SelectOption } from '@/components/ui/select';
-import { cn } from '@/shared/utils/cn';
-import { getInitials } from '@/components/subject/utils';
-import { useCall } from '@/features/calls/components/callContext';
-import { useDevices } from '@/features/calls/hooks/useDevices';
+} from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Select, type SelectOption } from "@/components/ui/select";
+import { cn } from "@/shared/utils/cn";
+import { getInitials } from "@/components/subject/utils";
+import { useCall } from "@/features/calls/components/callContext";
+import { useDevices } from "@/features/calls/hooks/useDevices";
 import {
   prejoinClosed,
   selectActiveCallForChannel,
   selectPrejoinChannelId,
-} from '@/features/calls/store/callsSlice';
+} from "@/features/calls/store/callsSlice";
 import {
   audioInputSelected,
   audioOutputSelected,
   selectCallPreferences,
   videoInputSelected,
-} from '@/features/calls/store/callPreferencesSlice';
-import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
+} from "@/features/calls/store/callPreferencesSlice";
+import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
 
 function MicLevelMeter({ stream }: { stream: MediaStream | null }) {
   const [level, setLevel] = useState(0);
 
   useEffect(() => {
     if (!stream) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the meter when the mic stream detaches
+      // eslint-disable-next-line react/react-compiler -- reset the meter when the mic stream detaches
       setLevel(0);
       return;
     }
@@ -93,7 +93,7 @@ function DeviceSelect({
       <Select
         size="sm"
         ariaLabel={label}
-        value={known ? (value ?? '') : (devices[0]?.deviceId ?? '')}
+        value={known ? (value ?? "") : (devices[0]?.deviceId ?? "")}
         onChange={onChange}
         options={options}
         menuMinWidth={260}
@@ -107,14 +107,12 @@ export function PreJoinScreen() {
   const dispatch = useAppDispatch();
   const { joinChannelCall } = useCall();
   const channelId = useAppSelector(selectPrejoinChannelId);
-  const channel = useAppSelector((s) =>
-    channelId ? s.chatChannels.byId[channelId] : undefined,
-  );
+  const channel = useAppSelector((s) => (channelId ? s.chatChannels.byId[channelId] : undefined));
   const activeCall = useAppSelector((s) =>
     channelId ? selectActiveCallForChannel(s, channelId) : null,
   );
   const preferences = useAppSelector(selectCallPreferences);
-  const userName = useAppSelector((s) => s.auth.user?.fullName ?? '');
+  const userName = useAppSelector((s) => s.auth.user?.fullName ?? "");
   const { audioInputs, videoInputs, audioOutputs, refresh } = useDevices();
 
   const [micOn, setMicOn] = useState(false);
@@ -174,6 +172,8 @@ export function PreJoinScreen() {
 
   useEffect(() => {
     if (!micOn) {
+      // Stops the live capture tracks; the state clear is the bookkeeping half.
+      // eslint-disable-next-line react/react-compiler -- releasing the mic must happen the moment micOn flips
       stopMicStream();
       return;
     }
@@ -245,7 +245,7 @@ export function PreJoinScreen() {
   if (!channelId) return null;
 
   const alreadyIn = activeCall?.participants ?? [];
-  const channelName = channel ? getChannelDisplayName(channel) : 'this channel';
+  const channelName = channel ? getChannelDisplayName(channel) : "this channel";
 
   return (
     <Modal onClose={close} maxWidth="max-w-md">
@@ -263,7 +263,7 @@ export function PreJoinScreen() {
             autoPlay
             playsInline
             muted
-            className={cn('h-full w-full object-cover scale-x-[-1]', !camOn && 'hidden')}
+            className={cn("h-full w-full object-cover scale-x-[-1]", !camOn && "hidden")}
           />
           {!camOn && (
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary text-xl font-semibold">
@@ -275,12 +275,12 @@ export function PreJoinScreen() {
               type="button"
               onClick={() => setMicOn((v) => !v)}
               className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-full border',
+                "flex h-9 w-9 items-center justify-center rounded-full border",
                 micOn
-                  ? 'bg-card/90 border-border text-foreground'
-                  : 'bg-red-500/90 border-red-500 text-white',
+                  ? "bg-card/90 border-border text-foreground"
+                  : "bg-red-500/90 border-red-500 text-white",
               )}
-              aria-label={micOn ? 'Turn microphone off' : 'Turn microphone on'}
+              aria-label={micOn ? "Turn microphone off" : "Turn microphone on"}
               data-testid="call-prejoin-mic-toggle"
             >
               {micOn ? <Microphone size={16} /> : <MicrophoneSlash size={16} />}
@@ -289,12 +289,12 @@ export function PreJoinScreen() {
               type="button"
               onClick={() => setCamOn((v) => !v)}
               className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-full border',
+                "flex h-9 w-9 items-center justify-center rounded-full border",
                 camOn
-                  ? 'bg-card/90 border-border text-foreground'
-                  : 'bg-red-500/90 border-red-500 text-white',
+                  ? "bg-card/90 border-border text-foreground"
+                  : "bg-red-500/90 border-red-500 text-white",
               )}
-              aria-label={camOn ? 'Turn camera off' : 'Turn camera on'}
+              aria-label={camOn ? "Turn camera off" : "Turn camera on"}
               data-testid="call-prejoin-camera-toggle"
             >
               {camOn ? <VideoCamera size={16} /> : <VideoCameraSlash size={16} />}
@@ -309,8 +309,8 @@ export function PreJoinScreen() {
             <Warning size={14} className="mt-0.5 shrink-0" />
             <span>
               {micDenied
-                ? 'Microphone access was blocked by the browser. You can join listen-only, or allow access in site settings.'
-                : 'Camera access was blocked by the browser. You can join without video.'}
+                ? "Microphone access was blocked by the browser. You can join listen-only, or allow access in site settings."
+                : "Camera access was blocked by the browser. You can join without video."}
             </span>
           </div>
         )}
@@ -350,7 +350,7 @@ export function PreJoinScreen() {
               ))}
             </div>
             <span>
-              {alreadyIn.length} {alreadyIn.length === 1 ? 'person is' : 'people are'} in the call
+              {alreadyIn.length} {alreadyIn.length === 1 ? "person is" : "people are"} in the call
             </span>
           </div>
         )}
@@ -363,8 +363,12 @@ export function PreJoinScreen() {
           <Button variant="ghost" onClick={close} disabled={joining}>
             Cancel
           </Button>
-          <Button onClick={() => void handleJoin()} loading={joining} data-testid="call-prejoin-join">
-            {joinError ? 'Retry' : 'Join'}
+          <Button
+            onClick={() => void handleJoin()}
+            loading={joining}
+            data-testid="call-prejoin-join"
+          >
+            {joinError ? "Retry" : "Join"}
           </Button>
         </div>
       </div>

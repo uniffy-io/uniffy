@@ -1,5 +1,5 @@
-import { useAppSelector } from '@/app/hooks';
-import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
+import { useAppSelector } from "@/app/hooks";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 
 export function Home() {
   useDocumentTitle();
@@ -36,9 +36,7 @@ export function Home() {
             </svg>
           </div>
           <div className="text-2xl font-bold">0</div>
-          <p className="text-xs text-muted-foreground">
-            +0 from last week
-          </p>
+          <p className="text-xs text-muted-foreground">+0 from last week</p>
         </div>
 
         <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm p-6">
@@ -58,12 +56,10 @@ export function Home() {
             </svg>
           </div>
           <div className="text-2xl font-bold">0</div>
-          <p className="text-xs text-muted-foreground">
-            +0 since last hour
-          </p>
+          <p className="text-xs text-muted-foreground">+0 since last hour</p>
         </div>
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <div className="col-span-4 rounded-xl border border-border bg-card text-card-foreground shadow-sm">
           <div className="flex flex-col space-y-1.5 p-6">
@@ -76,16 +72,14 @@ export function Home() {
             <div className="text-sm text-muted-foreground">No recent activity.</div>
           </div>
         </div>
-        
+
         <div className="col-span-3 rounded-xl border border-border bg-card text-card-foreground shadow-sm">
           <div className="flex flex-col space-y-1.5 p-6">
             <h3 className="font-semibold leading-none tracking-tight">Quick Links</h3>
-            <p className="text-sm text-muted-foreground">
-              Jump to your favorite tools.
-            </p>
+            <p className="text-sm text-muted-foreground">Jump to your favorite tools.</p>
           </div>
           <div className="p-6 pt-0">
-             <div className="text-sm text-muted-foreground">No quick links configured.</div>
+            <div className="text-sm text-muted-foreground">No quick links configured.</div>
           </div>
         </div>
       </div>

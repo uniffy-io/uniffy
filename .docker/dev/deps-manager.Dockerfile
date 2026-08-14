@@ -25,7 +25,7 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates build-essential \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install -g pnpm@10.30.1 \
+    && npm install -g pnpm@11.20.0 \
     && uv python install 3.14 \
     && chmod -R a+rX /opt/uv-python
 

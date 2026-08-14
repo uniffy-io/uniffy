@@ -1,9 +1,9 @@
 /** Task status IDs come from the project's configurable status field (e.g. "status_todo"). */
 export type TaskStatus = string;
 
-export type FileProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
+export type FileProcessingStatus = "pending" | "processing" | "completed" | "failed" | "skipped";
 
-export type MentionStatus = 'ok' | 'deleted';
+export type MentionStatus = "ok" | "deleted";
 
 export interface MentionLiveState {
   urn: string;
@@ -146,7 +146,7 @@ export interface MentionChipBaseProps {
 
 export interface MentionChipProps extends MentionChipBaseProps {
   onClick?: (e?: React.MouseEvent) => void;
-  onReplaceWithMedia?: (mediaType: 'image' | 'video' | 'audio', url: string, title: string) => void;
+  onReplaceWithMedia?: (mediaType: "image" | "video" | "audio", url: string, title: string) => void;
   liveState?: MentionLiveState | null;
 }
 
@@ -159,7 +159,7 @@ export interface MentionChipCompactProps extends MentionChipBaseProps {
 
 function isCompletedStatus(status: string): boolean {
   const lower = status.toLowerCase();
-  return lower.includes('done') || lower.includes('complete') || lower.includes('closed');
+  return lower.includes("done") || lower.includes("complete") || lower.includes("closed");
 }
 
 export function isTaskDoneStatus(status: string | undefined): boolean {

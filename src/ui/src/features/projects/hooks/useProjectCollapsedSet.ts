@@ -24,7 +24,6 @@ export function useProjectCollapsedSet(scope: string, projectId: string) {
     const key = storageKey(scope, projectId);
     if (key === lastKeyRef.current) return;
     lastKeyRef.current = key;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reload persisted set when scope/projectId changes
     setSet(loadSet(scope, projectId));
   }, [scope, projectId]);
 

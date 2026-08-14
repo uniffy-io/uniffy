@@ -10,7 +10,7 @@ export function ScrollArea({ className, children, ...props }: ScrollAreaProps) {
     <div
       className={cn(
         "overflow-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
-        className
+        className,
       )}
       {...props}
     >

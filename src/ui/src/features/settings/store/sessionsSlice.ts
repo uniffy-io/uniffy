@@ -1,102 +1,96 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import type { SessionInfo } from '@uniffy/proto/auth/v1/auth_pb';
-import { sessionsApi } from '@/features/settings/api/sessionsApi';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import type { SessionInfo } from "@uniffy/proto/auth/v1/auth_pb";
+import { sessionsApi } from "@/features/settings/api/sessionsApi";
 
 export interface SessionsState {
-    sessions: Omit<SessionInfo, '$typeName'>[];
-    loading: boolean;
-    revoking: string | null;
-    revokingAll: boolean;
-    error: string | null;
+  sessions: Omit<SessionInfo, "$typeName">[];
+  loading: boolean;
+  revoking: string | null;
+  revokingAll: boolean;
+  error: string | null;
 }
 
 const initialState: SessionsState = {
-    sessions: [],
-    loading: false,
-    revoking: null,
-    revokingAll: false,
-    error: null,
+  sessions: [],
+  loading: false,
+  revoking: null,
+  revokingAll: false,
+  error: null,
 };
 
-export const fetchSessions = createAsyncThunk(
-    'sessions/fetchSessions',
-    async () => {
-        const response = await sessionsApi.listSessions();
-        return response.sessions.map((s) => ({
-            id: s.id,
-            userAgent: s.userAgent,
-            deviceLabel: s.deviceLabel,
-            createdAt: s.createdAt,
-            lastActivity: s.lastActivity,
-            isCurrent: s.isCurrent,
-        }));
-    },
-);
+export const fetchSessions = createAsyncThunk("sessions/fetchSessions", async () => {
+  const response = await sessionsApi.listSessions();
+  return response.sessions.map((s) => ({
+    id: s.id,
+    userAgent: s.userAgent,
+    deviceLabel: s.deviceLabel,
+    createdAt: s.createdAt,
+    lastActivity: s.lastActivity,
+    isCurrent: s.isCurrent,
+  }));
+});
 
 export const revokeSession = createAsyncThunk(
-    'sessions/revokeSession',
-    async (sessionId: string) => {
-        await sessionsApi.revokeSession(sessionId);
-        return sessionId;
-    },
+  "sessions/revokeSession",
+  async (sessionId: string) => {
+    await sessionsApi.revokeSession(sessionId);
+    return sessionId;
+  },
 );
 
-export const revokeOtherSessions = createAsyncThunk(
-    'sessions/revokeOtherSessions',
-    async () => {
-        const response = await sessionsApi.revokeOtherSessions();
-        return response.revokedCount;
-    },
-);
+export const revokeOtherSessions = createAsyncThunk("sessions/revokeOtherSessions", async () => {
+  const response = await sessionsApi.revokeOtherSessions();
+  return response.revokedCount;
+});
 
 export const sessionsSlice = createSlice({
-    name: 'sessions',
-    initialState,
-    reducers: {
-        clearSessionsError: (state) => {
-            state.error = null;
-        },
+  name: "sessions",
+  initialState,
+  reducers: {
+    clearSessionsError: (state) => {
+      state.error = null;
     },
-    extraReducers: (builder) => {
-        builder.addCase(fetchSessions.pending, (state) => {
-            state.loading = true;
-            state.error = null;
-        });
-        builder.addCase(fetchSessions.fulfilled, (state, action) => {
-            state.loading = false;
-            state.sessions = action.payload;
-        });
-        builder.addCase(fetchSessions.rejected, (state, action) => {
-            state.loading = false;
-            state.error = action.error.message || 'Failed to load sessions';
-        });
+  },
+  extraReducers: (builder) => {
+    builder.addCase(fetchSessions.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(fetchSessions.fulfilled, (state, action) => {
+      state.loading = false;
+      state.sessions = action.payload;
+    });
+    builder.addCase(fetchSessions.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message || "Failed to load sessions";
+    });
 
-        builder.addCase(revokeSession.pending, (state, action) => {
-            state.revoking = action.meta.arg;
-            state.error = null;
-        });
-        builder.addCase(revokeSession.fulfilled, (state, action) => {
-            state.revoking = null;
-            state.sessions = state.sessions.filter((s) => s.id !== action.payload);
-        });
-        builder.addCase(revokeSession.rejected, (state, action) => {
-            state.revoking = null;
-            state.error = action.error.message || 'Failed to revoke session';
-        });
+    builder.addCase(revokeSession.pending, (state, action) => {
+      state.revoking = action.meta.arg;
+      state.error = null;
+    });
+    builder.addCase(revokeSession.fulfilled, (state, action) => {
+      state.revoking = null;
+      state.sessions = state.sessions.filter((s) => s.id !== action.payload);
+    });
+    builder.addCase(revokeSession.rejected, (state, action) => {
+      state.revoking = null;
+      state.error = action.error.message || "Failed to revoke session";
+    });
 
-        builder.addCase(revokeOtherSessions.pending, (state) => {
-            state.revokingAll = true;
-            state.error = null;
-        });
-        builder.addCase(revokeOtherSessions.fulfilled, (state) => {
-            state.revokingAll = false;
-            state.sessions = state.sessions.filter((s) => s.isCurrent);
-        });
-        builder.addCase(revokeOtherSessions.rejected, (state, action) => {
-            state.revokingAll = false;
-            state.error = action.error.message || 'Failed to revoke other sessions';
-        });
-    },
+    builder.addCase(revokeOtherSessions.pending, (state) => {
+      state.revokingAll = true;
+      state.error = null;
+    });
+    builder.addCase(revokeOtherSessions.fulfilled, (state) => {
+      state.revokingAll = false;
+      state.sessions = state.sessions.filter((s) => s.isCurrent);
+    });
+    builder.addCase(revokeOtherSessions.rejected, (state, action) => {
+      state.revokingAll = false;
+      state.error = action.error.message || "Failed to revoke other sessions";
+    });
+  },
 });
 
 export const { clearSessionsError } = sessionsSlice.actions;

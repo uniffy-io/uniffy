@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router-dom';
-import { House, ArrowLeft } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
-import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
-import { cn } from '@/shared/utils/cn';
+import { useNavigate } from "react-router-dom";
+import { House, ArrowLeft } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { cn } from "@/shared/utils/cn";
 
 interface NotFoundPageProps {
   className?: string;
@@ -13,27 +13,26 @@ interface NotFoundPageProps {
 
 export function NotFoundPage({
   className,
-  heading = 'Page not found',
-  description = 'The page you are looking for does not exist or has been moved. Check the URL or navigate back to familiar territory.',
+  heading = "Page not found",
+  description = "The page you are looking for does not exist or has been moved. Check the URL or navigate back to familiar territory.",
   compact = false,
 }: NotFoundPageProps) {
-  useDocumentTitle('Page Not Found');
+  useDocumentTitle("Page Not Found");
   const navigate = useNavigate();
 
   return (
     <div
       className={cn(
-        'relative flex flex-col items-center justify-center overflow-hidden bg-background px-4',
-        compact ? 'min-h-[60vh]' : 'min-h-dvh',
+        "relative flex flex-col items-center justify-center overflow-hidden bg-background px-4",
+        compact ? "min-h-[60vh]" : "min-h-dvh",
         className,
       )}
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.03]"
         style={{
-          backgroundImage:
-            'radial-gradient(circle, currentColor 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
+          backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)",
+          backgroundSize: "24px 24px",
         }}
       />
 
@@ -76,19 +75,11 @@ export function NotFoundPage({
           </p>
 
           <div className="flex items-center justify-center gap-3">
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => window.history.back()}
-            >
+            <Button variant="outline" size="md" onClick={() => window.history.back()}>
               <ArrowLeft size={16} weight="bold" />
               Go Back
             </Button>
-            <Button
-              variant="default"
-              size="md"
-              onClick={() => navigate('/')}
-            >
+            <Button variant="default" size="md" onClick={() => navigate("/")}>
               <House size={16} weight="bold" />
               Go to Dashboard
             </Button>

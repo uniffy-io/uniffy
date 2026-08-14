@@ -109,9 +109,11 @@ function NotesFolderBody() {
 
     const children = folder.children ?? [];
     const subfolders = children.filter((n) => n.type === "folder");
-    const notes = [...children.filter((n) => n.type === "note")].sort((a, b) => {
-      return (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0);
-    });
+    const notes = children
+      .filter((n) => n.type === "note")
+      .sort((a, b) => {
+        return (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0);
+      });
 
     const listItems: ListItem[] = [
       ...subfolders.map((n) => ({ kind: "folder" as const, node: n })),

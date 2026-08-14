@@ -48,16 +48,11 @@ export function ParentPicker({
     return m;
   }, [allTasks]);
 
-  const excludedIds = useMemo(
-    () => computeDescendantIds(task.id, allTasks),
-    [task.id, allTasks],
-  );
+  const excludedIds = useMemo(() => computeDescendantIds(task.id, allTasks), [task.id, allTasks]);
 
-  const currentParent = task.parentId ? tasksMap.get(task.parentId) ?? null : null;
+  const currentParent = task.parentId ? (tasksMap.get(task.parentId) ?? null) : null;
 
-  const statusField = project?.fieldDefinitions.find(
-    (f) => f.id === SYSTEM_FIELD_IDS.STATUS,
-  );
+  const statusField = project?.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
 
   const results = useMemo(
     () =>
@@ -113,10 +108,7 @@ export function ParentPicker({
     if (!isOpen) return;
     const onPointerDown = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        triggerRef.current?.contains(target) ||
-        dropdownRef.current?.contains(target)
-      ) {
+      if (triggerRef.current?.contains(target) || dropdownRef.current?.contains(target)) {
         return;
       }
       setIsOpen(false);
@@ -170,12 +162,8 @@ export function ParentPicker({
 
     const TypeIcon = getTaskTypeConfig(currentParent.taskType || "task").icon;
     const ticket = `${project?.slug ?? ""}-${currentParent.number}`;
-    const statusOption = statusField?.config.options?.find(
-      (o) => o.id === currentParent.status,
-    );
-    const breadcrumbTitle = [...ancestorBreadcrumb, currentParent]
-      .map((a) => a.title)
-      .join(" / ");
+    const statusOption = statusField?.config.options?.find((o) => o.id === currentParent.status);
+    const breadcrumbTitle = [...ancestorBreadcrumb, currentParent].map((a) => a.title).join(" / ");
 
     return (
       <div className="group flex items-center gap-1 min-w-0 w-full">
@@ -185,17 +173,9 @@ export function ParentPicker({
           className="flex-1 min-w-0 flex items-center gap-2 rounded-md border border-border bg-muted/30 hover:bg-muted/60 px-2 py-1 text-left transition-colors"
           title={breadcrumbTitle}
         >
-          <TypeIcon
-            size={12}
-            weight="fill"
-            className="text-muted-foreground shrink-0"
-          />
-          <span className="font-mono text-xs text-muted-foreground shrink-0">
-            {ticket}
-          </span>
-          <span className="text-sm text-foreground truncate">
-            {currentParent.title}
-          </span>
+          <TypeIcon size={12} weight="fill" className="text-muted-foreground shrink-0" />
+          <span className="font-mono text-xs text-muted-foreground shrink-0">{ticket}</span>
+          <span className="text-sm text-foreground truncate">{currentParent.title}</span>
           {statusOption && (
             <span
               className="ml-auto text-[10px] px-1.5 py-0.5 rounded shrink-0"
@@ -250,10 +230,7 @@ export function ParentPicker({
           >
             <div className="px-2 py-2 border-b border-border">
               <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/40 border border-border focus-within:border-primary/40 transition-colors">
-                <MagnifyingGlass
-                  size={14}
-                  className="text-muted-foreground shrink-0"
-                />
+                <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
                 <input
                   ref={inputRef}
                   type="text"
@@ -291,10 +268,7 @@ export function ParentPicker({
                           : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
                       )}
                     >
-                      <Icon
-                        size={10}
-                        weight={active ? "fill" : "regular"}
-                      />
+                      <Icon size={10} weight={active ? "fill" : "regular"} />
                       Only {cfg.label}s
                     </button>
                   );
@@ -305,9 +279,7 @@ export function ParentPicker({
             <div className="flex-1 overflow-y-auto min-h-0">
               {results.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                  {query
-                    ? "No tasks match"
-                    : "No eligible tasks in this project"}
+                  {query ? "No tasks match" : "No eligible tasks in this project"}
                 </div>
               ) : (
                 <ul className="py-1">
@@ -332,9 +304,7 @@ export function ParentPicker({
                           <span className="font-mono text-xs text-muted-foreground shrink-0">
                             {ticket}
                           </span>
-                          <span className="text-sm text-foreground truncate flex-1">
-                            {t.title}
-                          </span>
+                          <span className="text-sm text-foreground truncate flex-1">{t.title}</span>
                           {statusOption && (
                             <span
                               className="text-[10px] px-1.5 py-0.5 rounded shrink-0"

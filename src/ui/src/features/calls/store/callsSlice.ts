@@ -1,6 +1,6 @@
-import { createSlice } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
-import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
+import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
 import type {
   CallData,
   CallParticipantData,
@@ -8,8 +8,8 @@ import type {
   CallEndedInfo,
   CallSessionStatus,
   RingInvite,
-} from '@/features/calls/types';
-import type { RootState } from '@/app/store';
+} from "@/features/calls/types";
+import type { RootState } from "@/app/store";
 
 export interface CallSessionState {
   status: CallSessionStatus;
@@ -31,7 +31,7 @@ interface CallsState {
 }
 
 const idleSession: CallSessionState = {
-  status: 'idle',
+  status: "idle",
   callId: null,
   channelId: null,
   micEnabled: false,
@@ -53,7 +53,7 @@ function findCallById(state: CallsState, callId: string): CallData | undefined {
 }
 
 const callsSlice = createSlice({
-  name: 'calls',
+  name: "calls",
   initialState,
   reducers: {
     callUpserted(state, action: PayloadAction<CallData>) {
@@ -77,7 +77,7 @@ const callsSlice = createSlice({
       // The session's call vanished while the stream was down: surface the
       // ended modal unless the SDK disconnect already reset the session.
       const { callId, channelId, status } = state.session;
-      if (callId && channelId && status !== 'idle' && !activeIds.has(callId)) {
+      if (callId && channelId && status !== "idle" && !activeIds.has(callId)) {
         state.endedInfo = { callId, channelId, reason: null };
       }
     },
@@ -91,7 +91,7 @@ const callsSlice = createSlice({
         delete state.activeByChannel[channelId];
       }
       state.ringInvites = state.ringInvites.filter((r) => r.callId !== callId);
-      if (state.session.callId === callId && state.session.status !== 'idle') {
+      if (state.session.callId === callId && state.session.status !== "idle") {
         state.endedInfo = { callId, channelId, reason };
       }
     },
@@ -109,20 +109,12 @@ const callsSlice = createSlice({
         call.participants.push(p);
       }
     },
-    participantLeft(
-      state,
-      action: PayloadAction<{ callId: string; identity: string }>,
-    ) {
+    participantLeft(state, action: PayloadAction<{ callId: string; identity: string }>) {
       const call = findCallById(state, action.payload.callId);
       if (!call) return;
-      call.participants = call.participants.filter(
-        (x) => x.identity !== action.payload.identity,
-      );
+      call.participants = call.participants.filter((x) => x.identity !== action.payload.identity);
     },
-    hostChanged(
-      state,
-      action: PayloadAction<{ callId: string; newHostUserId: string }>,
-    ) {
+    hostChanged(state, action: PayloadAction<{ callId: string; newHostUserId: string }>) {
       const call = findCallById(state, action.payload.callId);
       if (call) call.hostUserId = action.payload.newHostUserId;
     },
@@ -151,31 +143,31 @@ const callsSlice = createSlice({
     ) {
       state.session = {
         ...idleSession,
-        status: 'connecting',
+        status: "connecting",
         callId: action.payload.callId,
         channelId: action.payload.channelId,
         screenShareQualityCap: action.payload.screenShareQualityCap,
       };
       state.endedInfo = null;
-      state.ringInvites = state.ringInvites.filter(
-        (r) => r.callId !== action.payload.callId,
-      );
+      state.ringInvites = state.ringInvites.filter((r) => r.callId !== action.payload.callId);
     },
     sessionConnected(state) {
-      if (state.session.status !== 'idle') state.session.status = 'connected';
+      if (state.session.status !== "idle") state.session.status = "connected";
     },
     sessionReconnecting(state) {
-      if (state.session.status !== 'idle') state.session.status = 'reconnecting';
+      if (state.session.status !== "idle") state.session.status = "reconnecting";
     },
     sessionDisconnected(state) {
-      if (state.session.status !== 'idle') state.session.status = 'disconnected';
+      if (state.session.status !== "idle") state.session.status = "disconnected";
     },
     sessionReset(state) {
       state.session = idleSession;
     },
     localMediaChanged(
       state,
-      action: PayloadAction<Partial<Pick<CallSessionState, 'micEnabled' | 'cameraEnabled' | 'screenSharing'>>>,
+      action: PayloadAction<
+        Partial<Pick<CallSessionState, "micEnabled" | "cameraEnabled" | "screenSharing">>
+      >,
     ) {
       Object.assign(state.session, action.payload);
     },

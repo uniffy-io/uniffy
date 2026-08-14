@@ -1,15 +1,15 @@
-import { MapPin, VideoCamera, Users } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { prejoinOpened, selectActiveCallForChannel } from '@/features/calls/store/callsSlice';
-import { cn } from '@/shared/utils/cn';
-import type { RootState } from '@/app/store';
-import { formatTime } from '@/features/calendar/utils';
-import { getCategoryColor } from '@/features/calendar/constants';
-import type { CalendarEvent } from '@/features/calendar/types';
+import { MapPin, VideoCamera, Users } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { prejoinOpened, selectActiveCallForChannel } from "@/features/calls/store/callsSlice";
+import { cn } from "@/shared/utils/cn";
+import type { RootState } from "@/app/store";
+import { formatTime } from "@/features/calendar/utils";
+import { getCategoryColor } from "@/features/calendar/constants";
+import type { CalendarEvent } from "@/features/calendar/types";
 
 function formatCountdown(targetMs: number, nowMs: number): string {
   const diffMs = targetMs - nowMs;
-  if (diffMs <= 0) return 'now';
+  if (diffMs <= 0) return "now";
 
   const totalMinutes = Math.ceil(diffMs / 60_000);
   if (totalMinutes < 60) return `in ${totalMinutes}m`;
@@ -35,7 +35,7 @@ function AttendeesSummary({ event }: { event: CalendarEvent }) {
     return (
       <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
         <Users size={12} className="shrink-0" />
-        {event.attendees.map((a) => a.name.split(' ')[0]).join(', ')}
+        {event.attendees.map((a) => a.name.split(" ")[0]).join(", ")}
       </span>
     );
   }
@@ -43,7 +43,7 @@ function AttendeesSummary({ event }: { event: CalendarEvent }) {
   return (
     <span className="flex items-center gap-1 text-xs text-muted-foreground">
       <Users size={12} className="shrink-0" />
-      {event.attendees[0].name.split(' ')[0]} +{count - 1}
+      {event.attendees[0].name.split(" ")[0]} +{count - 1}
     </span>
   );
 }
@@ -83,7 +83,7 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
 
   const startLabel = formatTime(event.startTime);
   const endLabel = formatTime(event.endTime);
-  const timeRange = event.isAllDay ? 'All day' : `${startLabel} - ${endLabel}`;
+  const timeRange = event.isAllDay ? "All day" : `${startLabel} - ${endLabel}`;
 
   let countdown: string | null = null;
   if (!event.isAllDay) {
@@ -98,15 +98,15 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
     <button
       onClick={() => onClick(event)}
       className={cn(
-        'group w-full flex items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors',
-        'hover:bg-muted/50',
-        isCurrent && 'bg-primary/5'
+        "group w-full flex items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors",
+        "hover:bg-muted/50",
+        isCurrent && "bg-primary/5",
       )}
     >
       <div
         className={cn(
-          'w-0.5 shrink-0 rounded-full mt-0.5',
-          isCurrent ? 'h-full min-h-[40px]' : 'h-full min-h-[36px]'
+          "w-0.5 shrink-0 rounded-full mt-0.5",
+          isCurrent ? "h-full min-h-[40px]" : "h-full min-h-[36px]",
         )}
         style={{ backgroundColor: categoryColor }}
       />
@@ -119,16 +119,16 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
             </span>
           )}
-          <span className="text-[11px] font-medium text-muted-foreground">
-            {timeRange}
-          </span>
+          <span className="text-[11px] font-medium text-muted-foreground">{timeRange}</span>
           {countdown && (
             <>
               <span className="text-[11px] text-muted-foreground/40">·</span>
-              <span className={cn(
-                'text-[11px] font-medium',
-                isCurrent ? 'text-rose-500 dark:text-rose-400' : 'text-primary'
-              )}>
+              <span
+                className={cn(
+                  "text-[11px] font-medium",
+                  isCurrent ? "text-rose-500 dark:text-rose-400" : "text-primary",
+                )}
+              >
                 {countdown}
               </span>
             </>
@@ -141,15 +141,16 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
                 </span>
-                Live{activeCall && activeCall.participants.length > 0 ? ` · ${activeCall.participants.length}` : ''}
+                Live
+                {activeCall && activeCall.participants.length > 0
+                  ? ` · ${activeCall.participants.length}`
+                  : ""}
               </span>
             </>
           )}
         </div>
 
-        <p className="text-sm font-medium text-foreground truncate leading-snug">
-          {event.title}
-        </p>
+        <p className="text-sm font-medium text-foreground truncate leading-snug">{event.title}</p>
 
         <div className="mt-0.5">
           <ContextLine event={event} />
@@ -164,13 +165,13 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
             dispatch(prejoinOpened(event.channelId!));
           }}
           className={cn(
-            'shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium mt-0.5',
-            'transition-colors',
+            "shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium mt-0.5",
+            "transition-colors",
             isChannelLive
-              ? 'bg-rose-500 text-white hover:bg-rose-500/90'
+              ? "bg-rose-500 text-white hover:bg-rose-500/90"
               : isCurrent
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
           )}
         >
           <VideoCamera size={12} weight="fill" />
@@ -183,11 +184,11 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            'shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium mt-0.5',
-            'transition-colors',
+            "shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium mt-0.5",
+            "transition-colors",
             isCurrent
-              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-              : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
           )}
         >
           <VideoCamera size={12} weight="fill" />

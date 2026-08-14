@@ -1,10 +1,14 @@
-import { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { NotePencil, ArrowRight } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { WidgetCard, EmptyWidget, WidgetSkeleton } from '@/features/dashboard/components/widgets/WidgetCard';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
+import { useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { NotePencil, ArrowRight } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import {
+  WidgetCard,
+  EmptyWidget,
+  WidgetSkeleton,
+} from "@/features/dashboard/components/widgets/WidgetCard";
+import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 
 function timestampToIso(ts: { seconds: number; nanos: number } | undefined): string {
   if (!ts) return new Date(0).toISOString();
@@ -55,8 +59,8 @@ export function RecentNotesWidget() {
           title="No notes yet"
           description="Start writing! Your recent notes will appear here"
           action={{
-            label: 'Create a note',
-            onClick: () => navigate('/notes?new=true'),
+            label: "Create a note",
+            onClick: () => navigate("/notes?new=true"),
           }}
         />
       ) : (
@@ -66,8 +70,8 @@ export function RecentNotesWidget() {
               key={note.id}
               to={`/notes/${note.id}`}
               className={cn(
-                'group flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors',
-                'hover:bg-muted/50',
+                "group flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors",
+                "hover:bg-muted/50",
               )}
             >
               <div className="rounded-md p-1.5 bg-primary/10">
@@ -75,7 +79,7 @@ export function RecentNotesWidget() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                  {note.title || 'Untitled'}
+                  {note.title || "Untitled"}
                 </p>
               </div>
               <span className="text-xs text-muted-foreground flex-shrink-0">

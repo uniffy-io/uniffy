@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { Awareness } from 'y-protocols/awareness';
+import { useEffect, useState } from "react";
+import type { Awareness } from "y-protocols/awareness";
 
 export interface AwarenessPeer<T = Record<string, unknown>> {
   clientId: number;
@@ -13,7 +13,7 @@ export function useDocAwareness<T = Record<string, unknown>>(
 
   useEffect(() => {
     if (!awareness) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset peers when awareness detaches
+      // eslint-disable-next-line react/react-compiler -- reset peers when awareness detaches
       setPeers([]);
       return;
     }
@@ -30,9 +30,9 @@ export function useDocAwareness<T = Record<string, unknown>>(
     setPeers(compute());
 
     const onChange = () => setPeers(compute());
-    awareness.on('change', onChange);
+    awareness.on("change", onChange);
     return () => {
-      awareness.off('change', onChange);
+      awareness.off("change", onChange);
     };
   }, [awareness]);
 

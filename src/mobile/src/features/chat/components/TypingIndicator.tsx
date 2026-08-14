@@ -25,6 +25,9 @@ function Bar({ index, color }: { index: number; color: string }) {
 
   useEffect(() => {
     if (reducedMotion) return;
+    // A shared value is a mutable UI-thread box; assigning `.value` is the only
+    // way to drive it, and it is deliberately outside React's render state.
+    // eslint-disable-next-line react/react-compiler
     phase.value = 0;
     phase.value = withDelay(
       index * BAR_STAGGER_MS,

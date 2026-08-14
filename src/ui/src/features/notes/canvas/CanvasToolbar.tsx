@@ -3,7 +3,7 @@
  * media, shapes, mind maps) and editing per-canvas defaults.
  */
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   TextT,
   At,
@@ -24,18 +24,18 @@ import {
   Sparkle,
   Eye,
   EyeSlash,
-} from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { NODE_COLORS, BORDER_WIDTHS } from '@/features/notes/canvas/components/nodeStyleConstants';
-import type { CanvasDefaults, EdgeShape } from '@/features/notes/canvas/types';
-import type { CanvasCursorsMode } from '@/features/notes/store/editorSlice';
-import { AUTO_CURSORS_HIDE_THRESHOLD } from '@/features/notes/store/editorSlice';
+} from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { NODE_COLORS, BORDER_WIDTHS } from "@/features/notes/canvas/components/nodeStyleConstants";
+import type { CanvasDefaults, EdgeShape } from "@/features/notes/canvas/types";
+import type { CanvasCursorsMode } from "@/features/notes/store/editorSlice";
+import { AUTO_CURSORS_HIDE_THRESHOLD } from "@/features/notes/store/editorSlice";
 
 interface CanvasToolbarProps {
   onAddTextBlock: () => void;
   onOpenContentPicker?: () => void;
   onAddMediaFile?: (file: File) => void;
-  onAddShape?: (shape: 'rect' | 'ellipse' | 'diamond') => void;
+  onAddShape?: (shape: "rect" | "ellipse" | "diamond") => void;
   onAddMindMap?: () => void;
   canvasDefaults?: CanvasDefaults;
   onDefaultsChange?: (defaults: CanvasDefaults) => void;
@@ -55,8 +55,8 @@ const CURSOR_MODE_OPTIONS: Array<{
   description: (peerCount: number) => string;
 }> = [
   {
-    value: 'auto',
-    label: 'Auto',
+    value: "auto",
+    label: "Auto",
     icon: Sparkle,
     description: (peerCount) =>
       peerCount > AUTO_CURSORS_HIDE_THRESHOLD
@@ -64,16 +64,16 @@ const CURSOR_MODE_OPTIONS: Array<{
         : `Shown (up to ${AUTO_CURSORS_HIDE_THRESHOLD} peers)`,
   },
   {
-    value: 'on',
-    label: 'Always show',
+    value: "on",
+    label: "Always show",
     icon: Eye,
-    description: () => 'Render every collaborator cursor',
+    description: () => "Render every collaborator cursor",
   },
   {
-    value: 'off',
-    label: 'Always hide',
+    value: "off",
+    label: "Always hide",
     icon: EyeSlash,
-    description: () => 'Never render collaborator cursors',
+    description: () => "Never render collaborator cursors",
   },
 ];
 
@@ -94,7 +94,9 @@ export const CanvasToolbar = memo(function CanvasToolbar({
   const [showShapeMenu, setShowShapeMenu] = useState(false);
   const [showDefaultsMenu, setShowDefaultsMenu] = useState(false);
   const [showCursorsMenu, setShowCursorsMenu] = useState(false);
-  const [defaultsPanel, setDefaultsPanel] = useState<'bg' | 'border' | 'width' | 'edgeColor' | 'edgeWidth' | 'edgeShape' | false>(false);
+  const [defaultsPanel, setDefaultsPanel] = useState<
+    "bg" | "border" | "width" | "edgeColor" | "edgeWidth" | "edgeShape" | false
+  >(false);
 
   // Close every popover on outside mousedown. One ref covers triggers
   // + panels; per-button clicks already close sibling popovers.
@@ -110,8 +112,8 @@ export const CanvasToolbar = memo(function CanvasToolbar({
       setShowCursorsMenu(false);
       setDefaultsPanel(false);
     };
-    document.addEventListener('mousedown', handlePointerDown);
-    return () => document.removeEventListener('mousedown', handlePointerDown);
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [anyMenuOpen]);
 
   const handleFileSelect = useCallback(
@@ -120,28 +122,34 @@ export const CanvasToolbar = memo(function CanvasToolbar({
       if (!file || !onAddMediaFile) return;
       onAddMediaFile(file);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     },
-    [onAddMediaFile]
+    [onAddMediaFile],
   );
 
-  const currentBg = canvasDefaults?.bgColor || '';
-  const currentBorder = canvasDefaults?.borderColor || '';
+  const currentBg = canvasDefaults?.bgColor || "";
+  const currentBorder = canvasDefaults?.borderColor || "";
   const currentWidth = canvasDefaults?.borderWidth;
-  const currentEdgeColor = canvasDefaults?.edgeColor || '';
+  const currentEdgeColor = canvasDefaults?.edgeColor || "";
   const currentEdgeWidth = canvasDefaults?.edgeWidth;
-  const currentEdgeShape = canvasDefaults?.edgeShape || '';
-  const hasDefaults = currentBg || currentBorder || currentWidth !== undefined || currentEdgeColor || currentEdgeWidth !== undefined || currentEdgeShape;
+  const currentEdgeShape = canvasDefaults?.edgeShape || "";
+  const hasDefaults =
+    currentBg ||
+    currentBorder ||
+    currentWidth !== undefined ||
+    currentEdgeColor ||
+    currentEdgeWidth !== undefined ||
+    currentEdgeShape;
 
   return (
     <div
       ref={toolbarRef}
       className={cn(
-        'absolute bottom-4 left-1/2 -translate-x-1/2 z-10',
-        'flex items-center gap-1 px-2 py-1.5',
-        'bg-card border border-border rounded-lg shadow-lg',
-        className
+        "absolute bottom-4 left-1/2 -translate-x-1/2 z-10",
+        "flex items-center gap-1 px-2 py-1.5",
+        "bg-card border border-border rounded-lg shadow-lg",
+        className,
       )}
     >
       {/* Text */}
@@ -189,7 +197,11 @@ export const CanvasToolbar = memo(function CanvasToolbar({
       {onAddShape && (
         <div className="relative">
           <button
-            onClick={() => { setShowShapeMenu(!showShapeMenu); setShowDefaultsMenu(false); setShowCursorsMenu(false); }}
+            onClick={() => {
+              setShowShapeMenu(!showShapeMenu);
+              setShowDefaultsMenu(false);
+              setShowCursorsMenu(false);
+            }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors text-foreground"
             title="Add Shape (S)"
           >
@@ -199,21 +211,30 @@ export const CanvasToolbar = memo(function CanvasToolbar({
           {showShapeMenu && (
             <div className="absolute bottom-full left-0 mb-2 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
               <button
-                onClick={() => { onAddShape('rect'); setShowShapeMenu(false); }}
+                onClick={() => {
+                  onAddShape("rect");
+                  setShowShapeMenu(false);
+                }}
                 className="p-2 rounded hover:bg-muted transition-colors"
                 title="Rectangle"
               >
                 <Rectangle size={20} weight="duotone" />
               </button>
               <button
-                onClick={() => { onAddShape('ellipse'); setShowShapeMenu(false); }}
+                onClick={() => {
+                  onAddShape("ellipse");
+                  setShowShapeMenu(false);
+                }}
                 className="p-2 rounded hover:bg-muted transition-colors"
                 title="Ellipse"
               >
                 <Circle size={20} weight="duotone" />
               </button>
               <button
-                onClick={() => { onAddShape('diamond'); setShowShapeMenu(false); }}
+                onClick={() => {
+                  onAddShape("diamond");
+                  setShowShapeMenu(false);
+                }}
                 className="p-2 rounded hover:bg-muted transition-colors"
                 title="Diamond"
               >
@@ -245,10 +266,15 @@ export const CanvasToolbar = memo(function CanvasToolbar({
           <div className="w-px h-5 bg-border" />
           <div className="relative">
             <button
-              onClick={() => { setShowDefaultsMenu(!showDefaultsMenu); setShowShapeMenu(false); setShowCursorsMenu(false); setDefaultsPanel(false); }}
+              onClick={() => {
+                setShowDefaultsMenu(!showDefaultsMenu);
+                setShowShapeMenu(false);
+                setShowCursorsMenu(false);
+                setDefaultsPanel(false);
+              }}
               className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors',
-                hasDefaults ? 'text-primary' : 'text-foreground'
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors",
+                hasDefaults ? "text-primary" : "text-foreground",
               )}
               title="Default styles for new nodes"
             >
@@ -264,15 +290,20 @@ export const CanvasToolbar = memo(function CanvasToolbar({
 
                 {/* Background color */}
                 <button
-                  onClick={() => setDefaultsPanel(defaultsPanel === 'bg' ? false : 'bg')}
+                  onClick={() => setDefaultsPanel(defaultsPanel === "bg" ? false : "bg")}
                   className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors text-left"
                 >
                   <span
                     className="w-4 h-4 rounded border border-border shrink-0"
-                    style={{ backgroundColor: currentBg && currentBg !== 'transparent' ? currentBg : undefined }}
+                    style={{
+                      backgroundColor:
+                        currentBg && currentBg !== "transparent" ? currentBg : undefined,
+                    }}
                   >
-                    {(!currentBg || currentBg === 'transparent') && (
-                      <span className="flex items-center justify-center h-full text-[7px] text-muted-foreground">/</span>
+                    {(!currentBg || currentBg === "transparent") && (
+                      <span className="flex items-center justify-center h-full text-[7px] text-muted-foreground">
+                        /
+                      </span>
                     )}
                   </span>
                   <span>Background</span>
@@ -280,15 +311,16 @@ export const CanvasToolbar = memo(function CanvasToolbar({
 
                 {/* Border color */}
                 <button
-                  onClick={() => setDefaultsPanel(defaultsPanel === 'border' ? false : 'border')}
+                  onClick={() => setDefaultsPanel(defaultsPanel === "border" ? false : "border")}
                   className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors text-left"
                 >
                   <span
                     className="w-4 h-4 rounded shrink-0"
                     style={{
-                      border: currentBorder && currentBorder !== 'transparent'
-                        ? `2px solid ${currentBorder}`
-                        : '2px dashed hsl(var(--muted-foreground) / 0.4)',
+                      border:
+                        currentBorder && currentBorder !== "transparent"
+                          ? `2px solid ${currentBorder}`
+                          : "2px dashed hsl(var(--muted-foreground) / 0.4)",
                     }}
                   />
                   <span>Border</span>
@@ -296,11 +328,11 @@ export const CanvasToolbar = memo(function CanvasToolbar({
 
                 {/* Border width */}
                 <button
-                  onClick={() => setDefaultsPanel(defaultsPanel === 'width' ? false : 'width')}
+                  onClick={() => setDefaultsPanel(defaultsPanel === "width" ? false : "width")}
                   className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors text-left"
                 >
                   <span className="w-4 h-4 rounded border border-border flex items-center justify-center text-[9px] text-foreground shrink-0">
-                    {currentWidth ?? '-'}
+                    {currentWidth ?? "-"}
                   </span>
                   <span>Width</span>
                 </button>
@@ -312,7 +344,9 @@ export const CanvasToolbar = memo(function CanvasToolbar({
 
                 {/* Edge shape */}
                 <button
-                  onClick={() => setDefaultsPanel(defaultsPanel === 'edgeShape' ? false : 'edgeShape')}
+                  onClick={() =>
+                    setDefaultsPanel(defaultsPanel === "edgeShape" ? false : "edgeShape")
+                  }
                   className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors text-left"
                 >
                   <BezierCurve size={14} weight="duotone" className="shrink-0" />
@@ -321,15 +355,24 @@ export const CanvasToolbar = memo(function CanvasToolbar({
 
                 {/* Edge color */}
                 <button
-                  onClick={() => setDefaultsPanel(defaultsPanel === 'edgeColor' ? false : 'edgeColor')}
+                  onClick={() =>
+                    setDefaultsPanel(defaultsPanel === "edgeColor" ? false : "edgeColor")
+                  }
                   className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors text-left"
                 >
                   <span
                     className="w-4 h-4 rounded border border-border shrink-0"
-                    style={{ backgroundColor: currentEdgeColor && currentEdgeColor !== 'transparent' ? currentEdgeColor : undefined }}
+                    style={{
+                      backgroundColor:
+                        currentEdgeColor && currentEdgeColor !== "transparent"
+                          ? currentEdgeColor
+                          : undefined,
+                    }}
                   >
-                    {(!currentEdgeColor || currentEdgeColor === 'transparent') && (
-                      <span className="flex items-center justify-center h-full text-[7px] text-muted-foreground">/</span>
+                    {(!currentEdgeColor || currentEdgeColor === "transparent") && (
+                      <span className="flex items-center justify-center h-full text-[7px] text-muted-foreground">
+                        /
+                      </span>
                     )}
                   </span>
                   <span>Color</span>
@@ -337,11 +380,13 @@ export const CanvasToolbar = memo(function CanvasToolbar({
 
                 {/* Edge width */}
                 <button
-                  onClick={() => setDefaultsPanel(defaultsPanel === 'edgeWidth' ? false : 'edgeWidth')}
+                  onClick={() =>
+                    setDefaultsPanel(defaultsPanel === "edgeWidth" ? false : "edgeWidth")
+                  }
                   className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors text-left"
                 >
                   <span className="w-4 h-4 rounded border border-border flex items-center justify-center text-[9px] text-foreground shrink-0">
-                    {currentEdgeWidth ?? '-'}
+                    {currentEdgeWidth ?? "-"}
                   </span>
                   <span>Width</span>
                 </button>
@@ -352,7 +397,14 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                     <div className="h-px bg-border my-1.5" />
                     <button
                       onClick={() => {
-                        onDefaultsChange({ bgColor: undefined, borderColor: undefined, borderWidth: undefined, edgeColor: undefined, edgeWidth: undefined, edgeShape: undefined });
+                        onDefaultsChange({
+                          bgColor: undefined,
+                          borderColor: undefined,
+                          borderWidth: undefined,
+                          edgeColor: undefined,
+                          edgeWidth: undefined,
+                          edgeShape: undefined,
+                        });
                         setDefaultsPanel(false);
                       }}
                       className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors text-muted-foreground"
@@ -364,59 +416,72 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                 )}
 
                 {/* Sub-panels */}
-                {defaultsPanel === 'bg' && (
+                {defaultsPanel === "bg" && (
                   <div className="mt-1.5 pt-1.5 border-t border-border flex flex-wrap gap-1">
                     {NODE_COLORS.map((c) => (
                       <button
                         key={`dbg-${c}`}
-                        onClick={() => { onDefaultsChange({ bgColor: c }); setDefaultsPanel(false); }}
+                        onClick={() => {
+                          onDefaultsChange({ bgColor: c });
+                          setDefaultsPanel(false);
+                        }}
                         className={cn(
-                          'w-5 h-5 rounded border transition-transform',
-                          c === currentBg ? 'border-foreground scale-110' : 'border-border'
+                          "w-5 h-5 rounded border transition-transform",
+                          c === currentBg ? "border-foreground scale-110" : "border-border",
                         )}
-                        style={{ backgroundColor: c === 'transparent' ? undefined : c }}
-                        title={c === 'transparent' ? 'No fill' : c}
+                        style={{ backgroundColor: c === "transparent" ? undefined : c }}
+                        title={c === "transparent" ? "No fill" : c}
                       >
-                        {c === 'transparent' && (
-                          <span className="flex items-center justify-center text-[8px] text-muted-foreground">/</span>
+                        {c === "transparent" && (
+                          <span className="flex items-center justify-center text-[8px] text-muted-foreground">
+                            /
+                          </span>
                         )}
                       </button>
                     ))}
                   </div>
                 )}
 
-                {defaultsPanel === 'border' && (
+                {defaultsPanel === "border" && (
                   <div className="mt-1.5 pt-1.5 border-t border-border flex flex-wrap gap-1">
                     {NODE_COLORS.map((c) => (
                       <button
                         key={`dbd-${c}`}
-                        onClick={() => { onDefaultsChange({ borderColor: c }); setDefaultsPanel(false); }}
+                        onClick={() => {
+                          onDefaultsChange({ borderColor: c });
+                          setDefaultsPanel(false);
+                        }}
                         className={cn(
-                          'w-5 h-5 rounded border transition-transform',
-                          c === currentBorder ? 'border-foreground scale-110' : 'border-border'
+                          "w-5 h-5 rounded border transition-transform",
+                          c === currentBorder ? "border-foreground scale-110" : "border-border",
                         )}
-                        style={{ backgroundColor: c === 'transparent' ? undefined : c }}
-                        title={c === 'transparent' ? 'No border' : c}
+                        style={{ backgroundColor: c === "transparent" ? undefined : c }}
+                        title={c === "transparent" ? "No border" : c}
                       >
-                        {c === 'transparent' && (
-                          <span className="flex items-center justify-center text-[8px] text-muted-foreground">/</span>
+                        {c === "transparent" && (
+                          <span className="flex items-center justify-center text-[8px] text-muted-foreground">
+                            /
+                          </span>
                         )}
                       </button>
                     ))}
                   </div>
                 )}
 
-                {defaultsPanel === 'width' && (
+                {defaultsPanel === "width" && (
                   <div className="mt-1.5 pt-1.5 border-t border-border flex gap-1">
                     {BORDER_WIDTHS.map((w) => (
                       <button
                         key={`dw-${w}`}
-                        onClick={() => { onDefaultsChange({ borderWidth: w }); setDefaultsPanel(false); }}
+                        onClick={() => {
+                          onDefaultsChange({ borderWidth: w });
+                          setDefaultsPanel(false);
+                        }}
                         className={cn(
-                          'w-6 h-6 rounded border flex items-center justify-center text-xs transition-colors',
+                          "w-6 h-6 rounded border flex items-center justify-center text-xs transition-colors",
                           w === currentWidth
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border text-foreground hover:bg-muted'
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-foreground hover:bg-muted",
                         )}
                       >
                         {w}
@@ -425,22 +490,25 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                   </div>
                 )}
 
-                {defaultsPanel === 'edgeShape' && (
+                {defaultsPanel === "edgeShape" && (
                   <div className="mt-1.5 pt-1.5 border-t border-border flex gap-1">
-                    {([
-                      { value: 'default' as EdgeShape, label: 'Bezier', icon: BezierCurve },
-                      { value: 'straight' as EdgeShape, label: 'Straight', icon: LineSegment },
-                      { value: 'smoothstep' as EdgeShape, label: 'Smooth Step', icon: Path },
-                      { value: 'step' as EdgeShape, label: 'Step', icon: ArrowBendRightDown },
-                    ]).map(({ value, label, icon: Icon }) => (
+                    {[
+                      { value: "default" as EdgeShape, label: "Bezier", icon: BezierCurve },
+                      { value: "straight" as EdgeShape, label: "Straight", icon: LineSegment },
+                      { value: "smoothstep" as EdgeShape, label: "Smooth Step", icon: Path },
+                      { value: "step" as EdgeShape, label: "Step", icon: ArrowBendRightDown },
+                    ].map(({ value, label, icon: Icon }) => (
                       <button
                         key={`des-${value}`}
-                        onClick={() => { onDefaultsChange({ edgeShape: value }); setDefaultsPanel(false); }}
+                        onClick={() => {
+                          onDefaultsChange({ edgeShape: value });
+                          setDefaultsPanel(false);
+                        }}
                         className={cn(
-                          'p-1.5 rounded border transition-colors',
+                          "p-1.5 rounded border transition-colors",
                           value === currentEdgeShape
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border text-foreground hover:bg-muted'
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-foreground hover:bg-muted",
                         )}
                         title={label}
                       >
@@ -450,38 +518,46 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                   </div>
                 )}
 
-                {defaultsPanel === 'edgeColor' && (
+                {defaultsPanel === "edgeColor" && (
                   <div className="mt-1.5 pt-1.5 border-t border-border flex flex-wrap gap-1">
                     {NODE_COLORS.map((c) => (
                       <button
                         key={`dec-${c}`}
-                        onClick={() => { onDefaultsChange({ edgeColor: c }); setDefaultsPanel(false); }}
+                        onClick={() => {
+                          onDefaultsChange({ edgeColor: c });
+                          setDefaultsPanel(false);
+                        }}
                         className={cn(
-                          'w-5 h-5 rounded border transition-transform',
-                          c === currentEdgeColor ? 'border-foreground scale-110' : 'border-border'
+                          "w-5 h-5 rounded border transition-transform",
+                          c === currentEdgeColor ? "border-foreground scale-110" : "border-border",
                         )}
-                        style={{ backgroundColor: c === 'transparent' ? undefined : c }}
-                        title={c === 'transparent' ? 'Default' : c}
+                        style={{ backgroundColor: c === "transparent" ? undefined : c }}
+                        title={c === "transparent" ? "Default" : c}
                       >
-                        {c === 'transparent' && (
-                          <span className="flex items-center justify-center text-[8px] text-muted-foreground">/</span>
+                        {c === "transparent" && (
+                          <span className="flex items-center justify-center text-[8px] text-muted-foreground">
+                            /
+                          </span>
                         )}
                       </button>
                     ))}
                   </div>
                 )}
 
-                {defaultsPanel === 'edgeWidth' && (
+                {defaultsPanel === "edgeWidth" && (
                   <div className="mt-1.5 pt-1.5 border-t border-border flex gap-1">
                     {BORDER_WIDTHS.map((w) => (
                       <button
                         key={`dew-${w}`}
-                        onClick={() => { onDefaultsChange({ edgeWidth: w || undefined }); setDefaultsPanel(false); }}
+                        onClick={() => {
+                          onDefaultsChange({ edgeWidth: w || undefined });
+                          setDefaultsPanel(false);
+                        }}
                         className={cn(
-                          'w-6 h-6 rounded border flex items-center justify-center text-xs transition-colors',
+                          "w-6 h-6 rounded border flex items-center justify-center text-xs transition-colors",
                           w === currentEdgeWidth
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border text-foreground hover:bg-muted'
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-foreground hover:bg-muted",
                         )}
                       >
                         {w}
@@ -501,10 +577,8 @@ export const CanvasToolbar = memo(function CanvasToolbar({
           <div className="w-px h-5 bg-border" />
           <div className="relative">
             {(() => {
-              const autoHidden =
-                cursorsMode === 'auto' && peerCount > AUTO_CURSORS_HIDE_THRESHOLD;
-              const effectiveOn =
-                cursorsMode === 'on' || (cursorsMode === 'auto' && !autoHidden);
+              const autoHidden = cursorsMode === "auto" && peerCount > AUTO_CURSORS_HIDE_THRESHOLD;
+              const effectiveOn = cursorsMode === "on" || (cursorsMode === "auto" && !autoHidden);
               const TriggerIcon = effectiveOn ? Cursor : CursorClick;
               return (
                 <button
@@ -514,9 +588,9 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                     setShowDefaultsMenu(false);
                   }}
                   className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors',
-                    effectiveOn ? 'text-foreground' : 'text-muted-foreground',
-                    cursorsMode === 'on' && 'text-primary',
+                    "flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md hover:bg-muted transition-colors",
+                    effectiveOn ? "text-foreground" : "text-muted-foreground",
+                    cursorsMode === "on" && "text-primary",
                   )}
                   title="Collaborator cursors"
                   aria-haspopup="menu"
@@ -543,9 +617,9 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                         setShowCursorsMenu(false);
                       }}
                       className={cn(
-                        'flex items-center gap-2 w-full px-2 py-1.5 rounded text-left transition-colors',
-                        'hover:bg-muted',
-                        isSelected && 'bg-muted',
+                        "flex items-center gap-2 w-full px-2 py-1.5 rounded text-left transition-colors",
+                        "hover:bg-muted",
+                        isSelected && "bg-muted",
                       )}
                       role="menuitemradio"
                       aria-checked={isSelected}
@@ -553,13 +627,13 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                       <Icon
                         size={14}
                         weight="duotone"
-                        className={isSelected ? 'text-primary' : 'text-muted-foreground'}
+                        className={isSelected ? "text-primary" : "text-muted-foreground"}
                       />
                       <span className="flex-1 min-w-0">
                         <span
                           className={cn(
-                            'block text-xs font-medium',
-                            isSelected ? 'text-foreground' : 'text-foreground',
+                            "block text-xs font-medium",
+                            isSelected ? "text-foreground" : "text-foreground",
                           )}
                         >
                           {label}

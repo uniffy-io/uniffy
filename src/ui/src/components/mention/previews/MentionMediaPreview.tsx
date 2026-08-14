@@ -1,6 +1,6 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { VideoCamera } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
+import { VideoCamera } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
 
 /**
  * The visual half of an expanded mention card. When a thumbnail exists it is
@@ -24,7 +24,7 @@ export function MentionMediaPreview({
   className?: string;
 }) {
   return (
-    <span className={cn('block relative w-full bg-muted/40 overflow-hidden', className)}>
+    <span className={cn("block relative w-full bg-muted/40 overflow-hidden", className)}>
       <img
         src={src}
         alt=""

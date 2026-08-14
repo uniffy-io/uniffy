@@ -1,19 +1,19 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAppSelector } from '@/app/hooks';
-import { searchApi } from '@/features/search/api/searchApi';
-import type { UrnMetadata } from '@uniffy/proto/search/v1/search_pb';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useAppSelector } from "@/app/hooks";
+import { searchApi } from "@/features/search/api/searchApi";
+import type { UrnMetadata } from "@uniffy/proto/search/v1/search_pb";
 
 export interface UrnResolutionResult {
-  resolved: Map<string, Omit<UrnMetadata, '$typeName'>>;
+  resolved: Map<string, Omit<UrnMetadata, "$typeName">>;
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
 }
 
-const urnMetadataCache = new Map<string, Omit<UrnMetadata, '$typeName'>>();
+const urnMetadataCache = new Map<string, Omit<UrnMetadata, "$typeName">>();
 
 export function useUrnResolution(urns: string[]): UrnResolutionResult {
-  const [resolved, setResolved] = useState<Map<string, Omit<UrnMetadata, '$typeName'>>>(new Map());
+  const [resolved, setResolved] = useState<Map<string, Omit<UrnMetadata, "$typeName">>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -33,7 +33,7 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
     abortControllerRef.current = new AbortController();
     const currentFetchId = ++fetchIdRef.current;
 
-    const cachedResults = new Map<string, Omit<UrnMetadata, '$typeName'>>();
+    const cachedResults = new Map<string, Omit<UrnMetadata, "$typeName">>();
     const urnsToFetch: string[] = [];
 
     for (const urn of urns) {
@@ -73,7 +73,7 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
 
       if (response.resolved) {
         for (const [urn, metadata] of Object.entries(response.resolved)) {
-          const plainMetadata = metadata as Omit<UrnMetadata, '$typeName'>;
+          const plainMetadata = metadata as Omit<UrnMetadata, "$typeName">;
           urnMetadataCache.set(urn, plainMetadata);
           mergedResults.set(urn, plainMetadata);
         }
@@ -82,13 +82,13 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
       setResolved(mergedResults);
       setError(null);
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (err instanceof Error && err.name === "AbortError") {
         return;
       }
       if (currentFetchId !== fetchIdRef.current) {
         return;
       }
-      setError(err instanceof Error ? err.message : 'Failed to resolve URNs');
+      setError(err instanceof Error ? err.message : "Failed to resolve URNs");
     } finally {
       if (currentFetchId === fetchIdRef.current) {
         setIsLoading(false);
@@ -97,6 +97,7 @@ export function useUrnResolution(urns: string[]): UrnResolutionResult {
   }, [organizationId, urns]);
 
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- fetching the URN batch is the whole point of this effect; the setStates it reaches are the async results, not derived render state
     fetchMetadata();
 
     return () => {
@@ -126,7 +127,7 @@ export function invalidateUrnMetadataCache(urns: string[]): void {
 }
 
 export function hydrateUrnMetadataCache(
-  entries: Array<{ urn: string; metadata: Omit<UrnMetadata, '$typeName'> }>
+  entries: Array<{ urn: string; metadata: Omit<UrnMetadata, "$typeName"> }>,
 ): void {
   for (const { urn, metadata } of entries) {
     urnMetadataCache.set(urn, metadata);

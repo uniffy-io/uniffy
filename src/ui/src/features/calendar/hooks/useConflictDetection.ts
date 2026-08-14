@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-import { useAppSelector } from '@/app/hooks';
-import type { CalendarEvent } from '@/features/calendar/types';
+import { useMemo } from "react";
+import { useAppSelector } from "@/app/hooks";
+import type { CalendarEvent } from "@/features/calendar/types";
 
 /** All-day events are excluded since they do not block specific time slots. */
 export function useConflictDetection(

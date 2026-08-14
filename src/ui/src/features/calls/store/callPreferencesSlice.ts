@@ -1,7 +1,7 @@
-import { createSlice } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
-import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
-import type { RootState } from '@/app/store';
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
+import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
+import type { RootState } from "@/app/store";
 
 /** Persisted device picks and ring behavior; media state itself never persists. */
 export interface CallPreferencesState {
@@ -25,7 +25,7 @@ const initialState: CallPreferencesState = {
 };
 
 const callPreferencesSlice = createSlice({
-  name: 'callPreferences',
+  name: "callPreferences",
   initialState,
   reducers: {
     audioInputSelected(state, action: PayloadAction<string | null>) {

@@ -114,7 +114,6 @@ export interface Task {
   tagIds: string[];
 }
 
-
 export interface CreateProjectRequest {
   name: string;
   description?: string;

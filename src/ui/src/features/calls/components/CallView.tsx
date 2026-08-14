@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Track } from 'livekit-client';
-import type { Participant } from 'livekit-client';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Track } from "livekit-client";
+import type { Participant } from "livekit-client";
 import {
   ArrowsIn,
   ArrowsOut,
@@ -8,19 +8,16 @@ import {
   CaretUp,
   PushPinSlash,
   WifiSlash,
-} from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { useCall } from '@/features/calls/components/callContext';
-import { ControlsBar } from '@/features/calls/components/ControlsBar';
-import { ParticipantTile } from '@/features/calls/components/ParticipantTile';
-import { useRoomParticipants } from '@/features/calls/hooks/useRoomParticipants';
-import {
-  selectActiveCallForChannel,
-  selectCallSession,
-} from '@/features/calls/store/callsSlice';
-import { viewHeightChanged } from '@/features/calls/store/callPreferencesSlice';
-import { fetchActiveCall } from '@/features/calls/store/callsThunks';
+} from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { useCall } from "@/features/calls/components/callContext";
+import { ControlsBar } from "@/features/calls/components/ControlsBar";
+import { ParticipantTile } from "@/features/calls/components/ParticipantTile";
+import { useRoomParticipants } from "@/features/calls/hooks/useRoomParticipants";
+import { selectActiveCallForChannel, selectCallSession } from "@/features/calls/store/callsSlice";
+import { viewHeightChanged } from "@/features/calls/store/callPreferencesSlice";
+import { fetchActiveCall } from "@/features/calls/store/callsThunks";
 
 const SOLO_PROMPT_DELAY_MS = 60_000;
 const MIN_HEIGHT_PX = 220;
@@ -28,15 +25,15 @@ const MAX_HEIGHT_RATIO = 0.85;
 
 interface FocusTarget {
   identity: string;
-  source: 'camera' | 'screen';
+  source: "camera" | "screen";
 }
 
 function gridClassFor(count: number): string {
-  if (count <= 1) return 'grid-cols-1';
-  if (count === 2) return 'grid-cols-2';
-  if (count <= 4) return 'grid-cols-2';
-  if (count <= 9) return 'grid-cols-3';
-  return 'grid-cols-4';
+  if (count <= 1) return "grid-cols-1";
+  if (count === 2) return "grid-cols-2";
+  if (count <= 4) return "grid-cols-2";
+  if (count <= 9) return "grid-cols-3";
+  return "grid-cols-4";
 }
 
 function sameTarget(a: FocusTarget | null, b: FocusTarget): boolean {
@@ -60,23 +57,19 @@ function CallGrid({
     participants.some(
       (p) =>
         p.identity === pinned.identity &&
-        (pinned.source === 'camera' ||
-          !!p.getTrackPublication(Track.Source.ScreenShare)?.track),
+        (pinned.source === "camera" || !!p.getTrackPublication(Track.Source.ScreenShare)?.track),
     );
 
   // Pinned target wins; otherwise an active screen share auto-focuses.
   const focus: FocusTarget | null = pinnedValid
     ? pinned
     : screenShares.length > 0
-      ? { identity: screenShares[0].identity, source: 'screen' }
+      ? { identity: screenShares[0].identity, source: "screen" }
       : null;
 
-  const togglePin = useCallback(
-    (target: FocusTarget) => {
-      setPinned((prev) => (sameTarget(prev, target) ? null : target));
-    },
-    [],
-  );
+  const togglePin = useCallback((target: FocusTarget) => {
+    setPinned((prev) => (sameTarget(prev, target) ? null : target));
+  }, []);
 
   if (focus) {
     const focusedParticipant = participants.find((p) => p.identity === focus.identity);
@@ -84,11 +77,11 @@ function CallGrid({
     const strip: { participant: Participant; target: FocusTarget }[] = [
       ...screenShares.map((p) => ({
         participant: p,
-        target: { identity: p.identity, source: 'screen' as const },
+        target: { identity: p.identity, source: "screen" as const },
       })),
       ...participants.map((p) => ({
         participant: p,
-        target: { identity: p.identity, source: 'camera' as const },
+        target: { identity: p.identity, source: "camera" as const },
       })),
     ];
     return (
@@ -96,10 +89,10 @@ function CallGrid({
         <div className="relative flex-1 min-h-0">
           <ParticipantTile
             participant={focusedParticipant}
-            source={focus.source === 'screen' ? Track.Source.ScreenShare : Track.Source.Camera}
+            source={focus.source === "screen" ? Track.Source.ScreenShare : Track.Source.Camera}
             displayName={nameFor(focusedParticipant)}
             className="h-full"
-            zoomable={focus.source === 'screen'}
+            zoomable={focus.source === "screen"}
           />
           {pinnedValid && (
             <button
@@ -117,14 +110,12 @@ function CallGrid({
             <ParticipantTile
               key={`${target.identity}:${target.source}`}
               participant={participant}
-              source={
-                target.source === 'screen' ? Track.Source.ScreenShare : Track.Source.Camera
-              }
+              source={target.source === "screen" ? Track.Source.ScreenShare : Track.Source.Camera}
               displayName={nameFor(participant)}
               onClick={() => togglePin(target)}
               className={cn(
-                'aspect-video shrink-0',
-                sameTarget(focus, target) && 'ring-2 ring-primary/70',
+                "aspect-video shrink-0",
+                sameTarget(focus, target) && "ring-2 ring-primary/70",
               )}
             />
           ))}
@@ -136,7 +127,7 @@ function CallGrid({
   return (
     <div
       className={cn(
-        'grid h-full min-h-0 gap-2 auto-rows-fr overflow-y-auto',
+        "grid h-full min-h-0 gap-2 auto-rows-fr overflow-y-auto",
         gridClassFor(participants.length),
       )}
     >
@@ -145,7 +136,7 @@ function CallGrid({
           key={p.identity}
           participant={p}
           displayName={nameFor(p)}
-          onClick={() => togglePin({ identity: p.identity, source: 'camera' })}
+          onClick={() => togglePin({ identity: p.identity, source: "camera" })}
         />
       ))}
     </div>
@@ -156,15 +147,12 @@ function ReconnectingChip() {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
     const started = Date.now();
-    const timer = setInterval(
-      () => setSeconds(Math.floor((Date.now() - started) / 1000)),
-      1000,
-    );
+    const timer = setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
     return () => clearInterval(timer);
   }, []);
   return (
     <span className="flex items-center gap-1 rounded bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 text-yellow-800 dark:text-yellow-400">
-      <WifiSlash size={12} /> Reconnecting...{seconds > 2 ? ` ${seconds}s` : ''}
+      <WifiSlash size={12} /> Reconnecting...{seconds > 2 ? ` ${seconds}s` : ""}
     </span>
   );
 }
@@ -190,10 +178,10 @@ function CallViewInner({ channelId }: { channelId: string }) {
     return map;
   }, [call]);
 
-  const alone = session.status === 'connected' && participants.length === 1;
+  const alone = session.status === "connected" && participants.length === 1;
   useEffect(() => {
     if (!alone) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when someone joins
+      // eslint-disable-next-line react/react-compiler -- reset when someone joins
       setShowSoloPrompt(false);
       return;
     }
@@ -205,8 +193,8 @@ function CallViewInner({ channelId }: { channelId: string }) {
     const onChange = () => {
       setIsFullscreen(document.fullscreenElement === containerRef.current);
     };
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
   const toggleFullscreen = useCallback(() => {
@@ -224,8 +212,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
       if (!el) return;
       const startY = e.clientY;
       const startHeight = el.getBoundingClientRect().height;
-      const parentHeight =
-        el.parentElement?.getBoundingClientRect().height ?? window.innerHeight;
+      const parentHeight = el.parentElement?.getBoundingClientRect().height ?? window.innerHeight;
       const maxHeight = parentHeight * MAX_HEIGHT_RATIO;
       let latest = startHeight;
       const onMove = (ev: PointerEvent) => {
@@ -233,12 +220,13 @@ function CallViewInner({ channelId }: { channelId: string }) {
         setHeight(latest);
       };
       const onUp = () => {
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener("pointermove", onMove);
+        // eslint-disable-next-line react/react-compiler -- onUp is local to this drag, not a hook dependency
+        window.removeEventListener("pointerup", onUp);
         dispatch(viewHeightChanged(Math.round(latest)));
       };
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
     },
     [dispatch],
   );
@@ -247,9 +235,9 @@ function CallViewInner({ channelId }: { channelId: string }) {
     <div
       ref={containerRef}
       className={cn(
-        'flex flex-col border-b border-border/60',
-        isFullscreen ? 'h-full bg-background' : 'bg-background/60',
-        !isFullscreen && (collapsed ? 'h-12' : height === null && 'h-[40%] min-h-[220px]'),
+        "flex flex-col border-b border-border/60",
+        isFullscreen ? "h-full bg-background" : "bg-background/60",
+        !isFullscreen && (collapsed ? "h-12" : height === null && "h-[40%] min-h-[220px]"),
       )}
       style={
         !isFullscreen && !collapsed && height !== null
@@ -269,7 +257,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
           </span>
           Live call - {call?.participants.length ?? participants.length} in
-          {session.status === 'reconnecting' && <ReconnectingChip />}
+          {session.status === "reconnecting" && <ReconnectingChip />}
         </div>
         <div className="flex items-center gap-2">
           {!collapsed && <ControlsBar />}
@@ -278,7 +266,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
               type="button"
               onClick={toggleFullscreen}
               className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted"
-              aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}
+              aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
               data-testid="call-view-fullscreen"
             >
               {isFullscreen ? <ArrowsIn size={14} /> : <ArrowsOut size={14} />}
@@ -289,7 +277,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
               type="button"
               onClick={() => setCollapsed((v) => !v)}
               className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted"
-              aria-label={collapsed ? 'Expand call' : 'Collapse call'}
+              aria-label={collapsed ? "Expand call" : "Collapse call"}
               data-testid="call-view-collapse"
             >
               {collapsed ? <CaretDown size={14} /> : <CaretUp size={14} />}
@@ -300,10 +288,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
 
       {!collapsed && (
         <div className="relative flex-1 min-h-0 px-3 pb-3">
-          <CallGrid
-            participants={participants}
-            nameFor={(p) => rosterByIdentity.get(p.identity)}
-          />
+          <CallGrid participants={participants} nameFor={(p) => rosterByIdentity.get(p.identity)} />
           {showSoloPrompt && (
             <div className="absolute inset-x-0 bottom-6 flex justify-center">
               <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-lg">
@@ -348,9 +333,9 @@ export function CallSection({ channelId }: { channelId: string }) {
 
   const inSessionHere =
     session.channelId === channelId &&
-    (session.status === 'connected' ||
-      session.status === 'connecting' ||
-      session.status === 'reconnecting');
+    (session.status === "connected" ||
+      session.status === "connecting" ||
+      session.status === "reconnecting");
 
   if (!inSessionHere) return null;
   return <CallViewInner channelId={channelId} />;

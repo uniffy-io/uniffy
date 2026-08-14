@@ -285,7 +285,7 @@ function applyUserEvent(
       queryClient.setQueryData<Record<string, { unread: number; mentions: number }>>(
         ["chat", "unread", orgId],
         (old) => ({
-          ...(old ?? {}),
+          ...old,
           [p.channelId]: { unread: p.unreadCount, mentions: p.mentionCount },
         }),
       );
@@ -457,7 +457,7 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
           const nextBlocks = existing
             ? blocks.map((b) => (b.blockId === p.blockId ? updated : b))
             : [...blocks, updated];
-          return { ...(old ?? {}), [p.messageId]: nextBlocks };
+          return { ...old, [p.messageId]: nextBlocks };
         },
       );
       break;

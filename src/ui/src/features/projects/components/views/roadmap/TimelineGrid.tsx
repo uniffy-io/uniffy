@@ -53,9 +53,10 @@ export function TimelineGrid({
   }, [scrollLeft, scrollRef]);
 
   // Group columns for top header row: by year for month zoom, by month otherwise
-  const topGroups = zoom === "month"
-    ? groupColumnsByYear(columns, columnWidth)
-    : groupColumnsByMonth(columns, columnWidth);
+  const topGroups =
+    zoom === "month"
+      ? groupColumnsByYear(columns, columnWidth)
+      : groupColumnsByMonth(columns, columnWidth);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -103,7 +104,7 @@ export function TimelineGrid({
                 className={cn(
                   "flex items-center justify-center text-xs border-r border-border",
                   column.isToday && "bg-primary/10 font-semibold text-primary",
-                  zoom === "day" && column.isWeekend && !column.isToday && "bg-muted/30"
+                  zoom === "day" && column.isWeekend && !column.isToday && "bg-muted/30",
                 )}
                 style={{ width: columnWidth }}
               >
@@ -115,11 +116,7 @@ export function TimelineGrid({
       </div>
 
       {/* Grid body with task bars */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-auto"
-        onScroll={handleScroll}
-      >
+      <div ref={scrollRef} className="flex-1 overflow-auto" onScroll={handleScroll}>
         <div className="relative" style={{ width: totalWidth }}>
           {/* Vertical grid lines */}
           <div className="absolute inset-0 flex pointer-events-none">
@@ -128,7 +125,7 @@ export function TimelineGrid({
                 key={index}
                 className={cn(
                   "border-r border-border h-full",
-                  zoom === "day" && column.isWeekend && "bg-muted/20"
+                  zoom === "day" && column.isWeekend && "bg-muted/20",
                 )}
                 style={{ width: columnWidth }}
               />
@@ -151,17 +148,11 @@ export function TimelineGrid({
 
           {/* Sprint boundary lines */}
           {sprints && timelineStart && sprints.length > 0 && (
-            <SprintBoundaryLines
-              sprints={sprints}
-              timelineStart={timelineStart}
-              zoom={zoom}
-            />
+            <SprintBoundaryLines sprints={sprints} timelineStart={timelineStart} zoom={zoom} />
           )}
 
           {/* Task bars (children) */}
-          <div className="relative">
-            {children}
-          </div>
+          <div className="relative">{children}</div>
         </div>
       </div>
     </div>
@@ -231,7 +222,13 @@ interface SprintBoundaryLinesProps {
 
 function SprintBoundaryLines({ sprints, timelineStart, zoom }: SprintBoundaryLinesProps) {
   const lines = useMemo(() => {
-    const result: { key: string; left: number; label: string; isStart: boolean; isActive: boolean }[] = [];
+    const result: {
+      key: string;
+      left: number;
+      label: string;
+      isStart: boolean;
+      isActive: boolean;
+    }[] = [];
 
     for (const sprint of sprints) {
       if (sprint.status === "closed") continue;
@@ -305,9 +302,7 @@ function SprintBoundaryLines({ sprints, timelineStart, zoom }: SprintBoundaryLin
             )}
             style={{
               writingMode: "vertical-lr",
-              ...(line.isStart
-                ? { right: 4 }
-                : { left: 4 }),
+              ...(line.isStart ? { right: 4 } : { left: 4 }),
             }}
           >
             {line.label} {line.isStart ? "start" : "end"}

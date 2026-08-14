@@ -1,7 +1,7 @@
 /** Per-component wrapper around the batched resolver in `useBatchedSubjectResolver`; only owns local `{ preview, isLoading, error }`. */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useAppSelector } from '@/app/hooks';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useAppSelector } from "@/app/hooks";
 import {
   resolveUrnBatched,
   getCachedPreview,
@@ -10,15 +10,10 @@ import {
   invalidateNotePreviewCache,
   getResolvedUrl,
   type UrnPreviewData,
-} from '@/components/mention/useBatchedSubjectResolver';
+} from "@/components/mention/useBatchedSubjectResolver";
 
 export type { UrnPreviewData };
-export {
-  clearPreviewCache,
-  invalidatePreviewCache,
-  invalidateNotePreviewCache,
-  getResolvedUrl,
-};
+export { clearPreviewCache, invalidatePreviewCache, invalidateNotePreviewCache, getResolvedUrl };
 
 interface UseUrnPreviewResult {
   preview: UrnPreviewData | null;
@@ -46,7 +41,7 @@ export function useUrnPreview(): UseUrnPreviewResult {
       }
 
       if (!organizationId) {
-        setError('No organization selected');
+        setError("No organization selected");
         return;
       }
 
@@ -60,13 +55,13 @@ export function useUrnPreview(): UseUrnPreviewResult {
           if (data) {
             setPreview(data);
           } else {
-            setError('Invalid URN');
+            setError("Invalid URN");
           }
           setIsLoading(false);
         })
         .catch((err) => {
           if (activeUrnRef.current !== urn) return;
-          setError(err instanceof Error ? err.message : 'Failed to load preview');
+          setError(err instanceof Error ? err.message : "Failed to load preview");
           setIsLoading(false);
         });
     },

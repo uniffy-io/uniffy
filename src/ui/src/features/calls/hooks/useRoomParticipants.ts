@@ -1,6 +1,6 @@
-import { useEffect, useReducer } from 'react';
-import { RoomEvent } from 'livekit-client';
-import type { Participant, Room } from 'livekit-client';
+import { useEffect, useReducer } from "react";
+import { RoomEvent } from "livekit-client";
+import type { Participant, Room } from "livekit-client";
 
 const RERENDER_EVENTS = [
   RoomEvent.ParticipantConnected,

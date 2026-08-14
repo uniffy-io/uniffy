@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Trash, Check } from '@phosphor-icons/react';
-import { editorViewCtx } from '@milkdown/core';
-import { linkSchema } from '@milkdown/kit/preset/commonmark';
-import type { EditorView } from '@milkdown/prose/view';
-import type { EditorHandle } from '@/components/editor/EditorHandle';
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Trash, Check } from "@phosphor-icons/react";
+import { editorViewCtx } from "@milkdown/core";
+import { linkSchema } from "@milkdown/kit/preset/commonmark";
+import type { EditorView } from "@milkdown/prose/view";
+import type { EditorHandle } from "@/components/editor/EditorHandle";
 
 interface LinkPromptProps {
   handle: EditorHandle;
@@ -18,7 +18,7 @@ interface LinkPromptProps {
  * one wins, which is the same behavior as Crepe's link tooltip.
  */
 function readCurrentHref(handle: EditorHandle): string {
-  let found = '';
+  let found = "";
   handle.run((ctx) => {
     const view = ctx.get(editorViewCtx) as EditorView;
     if (!view) return;
@@ -29,7 +29,7 @@ function readCurrentHref(handle: EditorHandle): string {
       const link = node.marks.find((m) => m.type === markType);
       if (link) {
         const href = link.attrs.href;
-        if (typeof href === 'string') found = href;
+        if (typeof href === "string") found = href;
         return false;
       }
     });
@@ -39,7 +39,7 @@ function readCurrentHref(handle: EditorHandle): string {
 
 function normalizeHref(input: string): string {
   const trimmed = input.trim();
-  if (!trimmed) return '';
+  if (!trimmed) return "";
   if (/^(https?:|mailto:|tel:|\/|#)/i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
 }
@@ -48,7 +48,7 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [href, setHref] = useState(() => readCurrentHref(handle));
-  const hasExisting = href !== '';
+  const hasExisting = href !== "";
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -61,16 +61,16 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
       onClose();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         onClose();
       }
     };
-    document.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener('mousedown', onMouseDown);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
 
@@ -105,7 +105,7 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
     <div
       ref={containerRef}
       role="dialog"
-      style={{ position: 'fixed', top, left, zIndex: 1000, width: 320 }}
+      style={{ position: "fixed", top, left, zIndex: 1000, width: 320 }}
       className="rounded-md border border-border bg-card text-card-foreground shadow-lg p-2"
       onMouseDown={(e) => e.stopPropagation()}
     >
@@ -116,7 +116,7 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
           value={href}
           onChange={(e) => setHref(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
+            if (e.key === "Enter") {
               e.preventDefault();
               submit();
             }

@@ -5,9 +5,9 @@
  * in a floating toolbar above the selected node.
  */
 
-import { useState } from 'react';
-import { cn } from '@/shared/utils/cn';
-import { NODE_COLORS, BORDER_WIDTHS } from '@/features/notes/canvas/components/nodeStyleConstants';
+import { useState } from "react";
+import { cn } from "@/shared/utils/cn";
+import { NODE_COLORS, BORDER_WIDTHS } from "@/features/notes/canvas/components/nodeStyleConstants";
 
 interface NodeStyleToolbarProps {
   /** Current fill/background color */
@@ -29,41 +29,44 @@ export function NodeStyleToolbar({
   borderColor,
   borderWidth,
   onStyleChange,
-  fillFieldName = 'bgColor',
-  fillLabel = 'Background',
+  fillFieldName = "bgColor",
+  fillLabel = "Background",
 }: NodeStyleToolbarProps) {
-  const [activePanel, setActivePanel] = useState<'fill' | 'border' | 'width' | false>(false);
+  const [activePanel, setActivePanel] = useState<"fill" | "border" | "width" | false>(false);
 
   return (
     <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 nopan nodrag">
       <div className="flex items-center gap-1.5 px-2 py-1 bg-card border border-border rounded-lg shadow-lg">
         {/* Fill/background color */}
         <button
-          onClick={() => setActivePanel(activePanel === 'fill' ? false : 'fill')}
+          onClick={() => setActivePanel(activePanel === "fill" ? false : "fill")}
           className="relative w-5 h-5 rounded border border-border"
-          style={{ backgroundColor: fillColor === 'transparent' ? undefined : fillColor }}
+          style={{ backgroundColor: fillColor === "transparent" ? undefined : fillColor }}
           title={fillLabel}
         >
-          {fillColor === 'transparent' && (
-            <span className="absolute inset-0 flex items-center justify-center text-[8px] text-muted-foreground leading-none">/</span>
+          {fillColor === "transparent" && (
+            <span className="absolute inset-0 flex items-center justify-center text-[8px] text-muted-foreground leading-none">
+              /
+            </span>
           )}
         </button>
 
         {/* Border color */}
         <button
-          onClick={() => setActivePanel(activePanel === 'border' ? false : 'border')}
+          onClick={() => setActivePanel(activePanel === "border" ? false : "border")}
           className="relative w-5 h-5 rounded"
           style={{
-            border: borderColor === 'transparent'
-              ? '2px dashed hsl(var(--muted-foreground) / 0.4)'
-              : `2px solid ${borderColor}`,
+            border:
+              borderColor === "transparent"
+                ? "2px dashed hsl(var(--muted-foreground) / 0.4)"
+                : `2px solid ${borderColor}`,
           }}
           title="Border color"
         />
 
         {/* Border width */}
         <button
-          onClick={() => setActivePanel(activePanel === 'width' ? false : 'width')}
+          onClick={() => setActivePanel(activePanel === "width" ? false : "width")}
           className="flex items-center justify-center w-5 h-5 rounded border border-border text-[9px] text-foreground"
           title="Border width"
         >
@@ -72,21 +75,26 @@ export function NodeStyleToolbar({
       </div>
 
       {/* Fill/background color picker */}
-      {activePanel === 'fill' && (
+      {activePanel === "fill" && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
           {NODE_COLORS.map((c) => (
             <button
               key={`fill-${c}`}
-              onClick={() => { onStyleChange({ [fillFieldName]: c }); setActivePanel(false); }}
+              onClick={() => {
+                onStyleChange({ [fillFieldName]: c });
+                setActivePanel(false);
+              }}
               className={cn(
-                'w-5 h-5 rounded border transition-transform',
-                c === fillColor ? 'border-foreground scale-110' : 'border-border'
+                "w-5 h-5 rounded border transition-transform",
+                c === fillColor ? "border-foreground scale-110" : "border-border",
               )}
-              style={{ backgroundColor: c === 'transparent' ? undefined : c }}
-              title={c === 'transparent' ? 'No fill' : c}
+              style={{ backgroundColor: c === "transparent" ? undefined : c }}
+              title={c === "transparent" ? "No fill" : c}
             >
-              {c === 'transparent' && (
-                <span className="flex items-center justify-center text-[8px] text-muted-foreground">/</span>
+              {c === "transparent" && (
+                <span className="flex items-center justify-center text-[8px] text-muted-foreground">
+                  /
+                </span>
               )}
             </button>
           ))}
@@ -94,23 +102,28 @@ export function NodeStyleToolbar({
       )}
 
       {/* Border color picker */}
-      {activePanel === 'border' && (
+      {activePanel === "border" && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
           {NODE_COLORS.map((c) => (
             <button
               key={`border-${c}`}
-              onClick={() => { onStyleChange({ borderColor: c }); setActivePanel(false); }}
+              onClick={() => {
+                onStyleChange({ borderColor: c });
+                setActivePanel(false);
+              }}
               className={cn(
-                'w-5 h-5 rounded border transition-transform',
-                c === borderColor ? 'border-foreground scale-110' : 'border-border'
+                "w-5 h-5 rounded border transition-transform",
+                c === borderColor ? "border-foreground scale-110" : "border-border",
               )}
               style={{
-                backgroundColor: c === 'transparent' ? undefined : c,
+                backgroundColor: c === "transparent" ? undefined : c,
               }}
-              title={c === 'transparent' ? 'No border' : c}
+              title={c === "transparent" ? "No border" : c}
             >
-              {c === 'transparent' && (
-                <span className="flex items-center justify-center text-[8px] text-muted-foreground">/</span>
+              {c === "transparent" && (
+                <span className="flex items-center justify-center text-[8px] text-muted-foreground">
+                  /
+                </span>
               )}
             </button>
           ))}
@@ -118,17 +131,20 @@ export function NodeStyleToolbar({
       )}
 
       {/* Border width picker */}
-      {activePanel === 'width' && (
+      {activePanel === "width" && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
           {BORDER_WIDTHS.map((w) => (
             <button
               key={`width-${w}`}
-              onClick={() => { onStyleChange({ borderWidth: w }); setActivePanel(false); }}
+              onClick={() => {
+                onStyleChange({ borderWidth: w });
+                setActivePanel(false);
+              }}
               className={cn(
-                'w-6 h-6 rounded border flex items-center justify-center text-xs transition-colors',
+                "w-6 h-6 rounded border flex items-center justify-center text-xs transition-colors",
                 w === borderWidth
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border text-foreground hover:bg-muted'
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-foreground hover:bg-muted",
               )}
             >
               {w}

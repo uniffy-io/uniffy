@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": ["dist", "public"],
+  "plugins": ["typescript", "react", "oxc"],
+  "env": {
+    "browser": true
+  },
+  "categories": {
+    "correctness": "error"
+  },
+  "jsPlugins": [{ "name": "uniffy", "specifier": "../../lint/uniffy-oxlint-plugin.mjs" }],
+  "rules": {
+    "no-empty": ["error", { "allowEmptyCatch": true }],
+    "no-shadow": "error",
+    "react/no-unstable-nested-components": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/only-export-components": ["error", { "allowConstantExport": true }],
+    "react/react-compiler": "warn",
+    "react/react-in-jsx-scope": "off",
+    "react/no-children-prop": "off",
+    "uniffy/no-cdn-urls": "error",
+    "uniffy/no-raw-error-display": "error"
+  }
+}

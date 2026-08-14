@@ -1,14 +1,14 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import * as Y from 'yjs';
-import { Awareness } from 'y-protocols/awareness';
-import * as syncProtocol from 'y-protocols/sync';
-import * as encoding from 'lib0/encoding';
-import * as decoding from 'lib0/decoding';
-import { realtimeMultiplexer, type DocSubscription } from '@/features/realtime/multiplexer';
-import { encodeDocFrame, peekVarString } from '@/features/realtime/multiplex';
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import * as Y from "yjs";
+import { Awareness } from "y-protocols/awareness";
+import * as syncProtocol from "y-protocols/sync";
+import * as encoding from "lib0/encoding";
+import * as decoding from "lib0/decoding";
+import { realtimeMultiplexer, type DocSubscription } from "@/features/realtime/multiplexer";
+import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 
-vi.mock('@/config/api', () => ({
-  getAccessToken: () => 'test-token',
+vi.mock("@/config/api", () => ({
+  getAccessToken: () => "test-token",
 }));
 
 const MESSAGE_SYNC = 0;
@@ -25,7 +25,7 @@ class FakeWebSocket {
 
   readyState = FakeWebSocket.CONNECTING;
   bufferedAmount = 0;
-  binaryType = '';
+  binaryType = "";
   sent: Uint8Array[] = [];
   onopen: (() => void) | null = null;
   onmessage: ((event: MessageEvent<ArrayBuffer | Blob | string>) => void) | null = null;
@@ -65,7 +65,7 @@ class FakeWebSocket {
 
 function currentWs(): FakeWebSocket {
   const ws = FakeWebSocket.instances.at(-1);
-  if (!ws) throw new Error('no websocket opened');
+  if (!ws) throw new Error("no websocket opened");
   return ws;
 }
 
@@ -109,7 +109,7 @@ function applyClientFramesToServer(ws: FakeWebSocket, docName: string, serverDoc
     const decoder = decoding.createDecoder(payload);
     decoding.readVarUint(decoder);
     const replyEncoder = encoding.createEncoder();
-    syncProtocol.readSyncMessage(decoder, replyEncoder, serverDoc, 'server');
+    syncProtocol.readSyncMessage(decoder, replyEncoder, serverDoc, "server");
   }
 }
 
@@ -128,7 +128,7 @@ function attachDoc(contentId: string): AttachedDoc {
   const awareness = new Awareness(ydoc);
   const onSync = vi.fn();
   const subscription = realtimeMultiplexer.attach({
-    contentType: 'NOTE',
+    contentType: "NOTE",
     contentId,
     ydoc,
     awareness,
@@ -146,21 +146,21 @@ function attachDoc(contentId: string): AttachedDoc {
 }
 
 beforeAll(() => {
-  vi.stubGlobal('WebSocket', FakeWebSocket);
-  vi.stubGlobal('window', {
+  vi.stubGlobal("WebSocket", FakeWebSocket);
+  vi.stubGlobal("window", {
     addEventListener: () => {},
     removeEventListener: () => {},
-    location: { protocol: 'http:', host: 'test.local' },
+    location: { protocol: "http:", host: "test.local" },
   });
-  vi.stubGlobal('document', {
+  vi.stubGlobal("document", {
     addEventListener: () => {},
     removeEventListener: () => {},
-    visibilityState: 'visible',
+    visibilityState: "visible",
   });
-  vi.stubGlobal('localStorage', {
+  vi.stubGlobal("localStorage", {
     getItem: (key: string) =>
-      key === 'persist:root'
-        ? JSON.stringify({ auth: JSON.stringify({ currentOrganizationId: 'org-1' }) })
+      key === "persist:root"
+        ? JSON.stringify({ auth: JSON.stringify({ currentOrganizationId: "org-1" }) })
         : null,
   });
 });
@@ -180,13 +180,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('read-only docs', () => {
-  it('sends no SYNC write frames for local or hydration updates', () => {
-    const doc = attachDoc('viewer-updates');
+describe("read-only docs", () => {
+  it("sends no SYNC write frames for local or hydration updates", () => {
+    const doc = attachDoc("viewer-updates");
     currentWs().open();
     realtimeMultiplexer.setDocReadOnly(doc.docName, true);
 
-    doc.ydoc.getText('markdown').insert(0, 'replayed from idb', undefined);
+    doc.ydoc.getText("markdown").insert(0, "replayed from idb", undefined);
 
     const subtypes = sentSyncSubtypes(currentWs(), doc.docName);
     expect(subtypes).toContain(SYNC_STEP1);
@@ -195,11 +195,11 @@ describe('read-only docs', () => {
     expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
   });
 
-  it('suppresses the SyncStep2 reply even when the local doc has extra state', () => {
-    const doc = attachDoc('viewer-handshake');
+  it("suppresses the SyncStep2 reply even when the local doc has extra state", () => {
+    const doc = attachDoc("viewer-handshake");
     currentWs().open();
     realtimeMultiplexer.setDocReadOnly(doc.docName, true);
-    doc.ydoc.getText('markdown').insert(0, 'stale local state');
+    doc.ydoc.getText("markdown").insert(0, "stale local state");
 
     const serverDoc = new Y.Doc();
     currentWs().receive(serverSyncStep1Frame(doc.docName, serverDoc));
@@ -210,9 +210,9 @@ describe('read-only docs', () => {
   });
 });
 
-describe('handshake replies', () => {
-  it('suppresses the no-op empty SyncStep2 reply when the docs are in sync', () => {
-    const doc = attachDoc('in-sync');
+describe("handshake replies", () => {
+  it("suppresses the no-op empty SyncStep2 reply when the docs are in sync", () => {
+    const doc = attachDoc("in-sync");
     currentWs().open();
 
     const serverDoc = new Y.Doc();
@@ -221,26 +221,28 @@ describe('handshake replies', () => {
     expect(sentSyncSubtypes(currentWs(), doc.docName)).not.toContain(SYNC_STEP2);
   });
 
-  it('resolves sync when the server SyncStep2 arrives', () => {
-    const doc = attachDoc('sync-resolution');
+  it("resolves sync when the server SyncStep2 arrives", () => {
+    const doc = attachDoc("sync-resolution");
     currentWs().open();
 
     const serverDoc = new Y.Doc();
-    currentWs().receive(serverSyncStep2Frame(doc.docName, serverDoc, Y.encodeStateVector(doc.ydoc)));
+    currentWs().receive(
+      serverSyncStep2Frame(doc.docName, serverDoc, Y.encodeStateVector(doc.ydoc)),
+    );
 
     expect(doc.onSync).toHaveBeenCalledTimes(1);
   });
 });
 
-describe('outbound pending tracking', () => {
-  it('marks edits pending while connecting and clears them via the handshake reply', () => {
-    const doc = attachDoc('offline-edit');
+describe("outbound pending tracking", () => {
+  it("marks edits pending while connecting and clears them via the handshake reply", () => {
+    const doc = attachDoc("offline-edit");
     const pendingStates: boolean[] = [];
     const unsubscribe = realtimeMultiplexer.subscribeOutboundPending(doc.docName, (pending) =>
       pendingStates.push(pending),
     );
 
-    doc.ydoc.getText('markdown').insert(0, 'offline edit');
+    doc.ydoc.getText("markdown").insert(0, "offline edit");
     expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
     expect(pendingStates).toEqual([true]);
 
@@ -253,18 +255,18 @@ describe('outbound pending tracking', () => {
     expect(pendingStates).toEqual([true, false]);
 
     applyClientFramesToServer(currentWs(), doc.docName, serverDoc);
-    expect(serverDoc.getText('markdown').toString()).toBe('offline edit');
+    expect(serverDoc.getText("markdown").toString()).toBe("offline edit");
     unsubscribe();
   });
 
-  it('stays pending while socket bytes are buffered and clears once drained', () => {
+  it("stays pending while socket bytes are buffered and clears once drained", () => {
     vi.useFakeTimers();
-    const doc = attachDoc('buffered-edit');
+    const doc = attachDoc("buffered-edit");
     const ws = currentWs();
     ws.open();
 
     ws.bufferedAmount = 64;
-    doc.ydoc.getText('markdown').insert(0, 'buffered');
+    doc.ydoc.getText("markdown").insert(0, "buffered");
     expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
     expect(sentSyncSubtypes(ws, doc.docName)).toContain(SYNC_UPDATE);
 

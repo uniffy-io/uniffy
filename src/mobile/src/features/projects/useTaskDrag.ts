@@ -91,7 +91,15 @@ export function useTaskDrag(params: {
   // once at pick-up on the JS side, where the layout registry lives.
   const previewX = useSharedValue(0);
   const previewY = useSharedValue(0);
-  const [lift, setLift] = useState<{ grabX: number; grabY: number; width: number } | null>(null);
+  // Settled once at pick-up: the card's own size cannot change while it is in
+  // the air, so the gap the list opens is sized from here rather than from the
+  // measurement registry, which only the layout callbacks may read.
+  const [lift, setLift] = useState<{
+    grabX: number;
+    grabY: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [containerOrigin, setContainerOrigin] = useState({ x: 0, y: 0 });
 
   // A view switch relays everything from scratch; stale rects would otherwise
@@ -260,6 +268,7 @@ export function useTaskDrag(params: {
         grabX: absX - (origin.current.x + rect.x - scroll.current.x),
         grabY: absY - (origin.current.y + rect.y - scroll.current.y),
         width: rect.width,
+        height: rect.height,
       });
 
       finger.current = { x: absX, y: absY };
@@ -337,11 +346,16 @@ export function useTaskDrag(params: {
   const gestures = useMemo(() => {
     const built = new Map<string, ReturnType<typeof Gesture.Pan>>();
     for (const column of params.columns) {
+      // Building a Pan only stores its callbacks; nothing here reads the layout
+      // refs those callbacks close over until a finger is actually down.
+      // eslint-disable-next-line react/react-compiler
       for (const taskId of column.taskIds) built.set(taskId, buildGesture(taskId));
     }
     return built;
   }, [buildGesture, params.columns]);
 
+  // Gesture.* is gesture-handler's builder namespace, not a component factory.
+  // eslint-disable-next-line react/react-compiler
   const idleGesture = useMemo(() => Gesture.Pan().enabled(false), []);
 
   const gestureFor = useCallback(
@@ -358,7 +372,7 @@ export function useTaskDrag(params: {
     const sourceColumn = params.columns.findIndex((c) => c.taskIds.includes(draggingId));
     const destColumn = params.columns.findIndex((c) => c.statusId === dropTarget.statusId);
     if (sourceColumn < 0 || destColumn < 0) return null;
-    const height = (itemRects.current.get(draggingId)?.rect.height ?? 0) + itemGap;
+    const height = (lift?.height ?? 0) + itemGap;
     return {
       height,
       sourceColumn,
@@ -368,7 +382,7 @@ export function useTaskDrag(params: {
       destStatusId: dropTarget.statusId,
       destIndex: dropTarget.index,
     };
-  }, [draggingId, dropTarget, itemGap, params.columns]);
+  }, [draggingId, dropTarget, itemGap, lift, params.columns]);
 
   /**
    * How far the card at `index` slides to make room. Cards below the slot the

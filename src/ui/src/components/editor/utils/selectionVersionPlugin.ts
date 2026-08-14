@@ -1,6 +1,6 @@
-import { Plugin, PluginKey } from '@milkdown/prose/state';
+import { Plugin, PluginKey } from "@milkdown/prose/state";
 
-export const selectionVersionPluginKey = new PluginKey<number>('editor-selection-version');
+export const selectionVersionPluginKey = new PluginKey<number>("editor-selection-version");
 
 export type SelectionListener = () => void;
 

@@ -1,4 +1,4 @@
-import type { ChatChannel } from '@/features/chat/types';
+import type { ChatChannel } from "@/features/chat/types";
 
 /** Prefer the user's customName over the auto-generated `name`. */
 export function getChannelDisplayName(channel: ChatChannel): string {

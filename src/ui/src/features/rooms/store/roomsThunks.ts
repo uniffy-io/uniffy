@@ -1,19 +1,19 @@
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import { roomsApi } from '@/features/rooms/api/roomsApi';
-import type { RootState } from '@/app/store';
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { roomsApi } from "@/features/rooms/api/roomsApi";
+import type { RootState } from "@/app/store";
 import type {
   Room as ProtoRoom,
   RoomBooking as ProtoRoomBooking,
   TimeSlot as ProtoTimeSlot,
-} from '@uniffy/proto/rooms/v1/rooms_pb';
+} from "@uniffy/proto/rooms/v1/rooms_pb";
 import {
   RoomType as ProtoRoomType,
   RoomStatus as ProtoRoomStatus,
   BookingStatus as ProtoBookingStatus,
-} from '@uniffy/proto/rooms/v1/rooms_pb';
-import { AccessMode, ContentRole } from '@uniffy/proto/common/v1/common_pb';
-import { create } from '@bufbuild/protobuf';
-import { TimestampSchema, type Timestamp } from '@bufbuild/protobuf/wkt';
+} from "@uniffy/proto/rooms/v1/rooms_pb";
+import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
+import { create } from "@bufbuild/protobuf";
+import { TimestampSchema, type Timestamp } from "@bufbuild/protobuf/wkt";
 import type {
   Room,
   RoomType,
@@ -21,13 +21,12 @@ import type {
   RoomBooking,
   BookingStatus,
   TimeSlot,
-} from '@/features/rooms/types';
-import { DEFAULT_PAGE_SIZE } from '@/features/rooms/constants';
-
+} from "@/features/rooms/types";
+import { DEFAULT_PAGE_SIZE } from "@/features/rooms/constants";
 
 const timestampToIso = (ts: Timestamp | undefined): string => {
   if (!ts) return new Date().toISOString();
-  const seconds = typeof ts.seconds === 'bigint' ? Number(ts.seconds) : ts.seconds;
+  const seconds = typeof ts.seconds === "bigint" ? Number(ts.seconds) : ts.seconds;
   return new Date(seconds * 1000).toISOString();
 };
 
@@ -40,52 +39,55 @@ const isoToTimestamp = (iso: string): Timestamp => {
 };
 
 const ROOM_TYPE_FROM_PROTO: Record<ProtoRoomType, RoomType> = {
-  [ProtoRoomType.UNSPECIFIED]: 'meeting_room',
-  [ProtoRoomType.MEETING_ROOM]: 'meeting_room',
-  [ProtoRoomType.CONFERENCE_ROOM]: 'conference_room',
-  [ProtoRoomType.OFFICE]: 'office',
-  [ProtoRoomType.OTHER]: 'other',
+  [ProtoRoomType.UNSPECIFIED]: "meeting_room",
+  [ProtoRoomType.MEETING_ROOM]: "meeting_room",
+  [ProtoRoomType.CONFERENCE_ROOM]: "conference_room",
+  [ProtoRoomType.OFFICE]: "office",
+  [ProtoRoomType.OTHER]: "other",
 };
 
 const ROOM_TYPE_TO_PROTO: Record<RoomType, ProtoRoomType> = {
-  'meeting_room': ProtoRoomType.MEETING_ROOM,
-  'conference_room': ProtoRoomType.CONFERENCE_ROOM,
-  'office': ProtoRoomType.OFFICE,
-  'other': ProtoRoomType.OTHER,
+  meeting_room: ProtoRoomType.MEETING_ROOM,
+  conference_room: ProtoRoomType.CONFERENCE_ROOM,
+  office: ProtoRoomType.OFFICE,
+  other: ProtoRoomType.OTHER,
 };
 
 const ROOM_STATUS_FROM_PROTO: Record<ProtoRoomStatus, RoomStatus> = {
-  [ProtoRoomStatus.UNSPECIFIED]: 'active',
-  [ProtoRoomStatus.ACTIVE]: 'active',
-  [ProtoRoomStatus.MAINTENANCE]: 'maintenance',
-  [ProtoRoomStatus.RETIRED]: 'retired',
+  [ProtoRoomStatus.UNSPECIFIED]: "active",
+  [ProtoRoomStatus.ACTIVE]: "active",
+  [ProtoRoomStatus.MAINTENANCE]: "maintenance",
+  [ProtoRoomStatus.RETIRED]: "retired",
 };
 
 const ROOM_STATUS_TO_PROTO: Record<RoomStatus, ProtoRoomStatus> = {
-  'active': ProtoRoomStatus.ACTIVE,
-  'maintenance': ProtoRoomStatus.MAINTENANCE,
-  'retired': ProtoRoomStatus.RETIRED,
+  active: ProtoRoomStatus.ACTIVE,
+  maintenance: ProtoRoomStatus.MAINTENANCE,
+  retired: ProtoRoomStatus.RETIRED,
 };
 
 const BOOKING_STATUS_FROM_PROTO: Record<ProtoBookingStatus, BookingStatus> = {
-  [ProtoBookingStatus.UNSPECIFIED]: 'confirmed',
-  [ProtoBookingStatus.CONFIRMED]: 'confirmed',
-  [ProtoBookingStatus.CANCELLED]: 'cancelled',
+  [ProtoBookingStatus.UNSPECIFIED]: "confirmed",
+  [ProtoBookingStatus.CONFIRMED]: "confirmed",
+  [ProtoBookingStatus.CANCELLED]: "cancelled",
 };
 
 const BOOKING_STATUS_TO_PROTO: Record<BookingStatus, ProtoBookingStatus> = {
-  'confirmed': ProtoBookingStatus.CONFIRMED,
-  'cancelled': ProtoBookingStatus.CANCELLED,
+  confirmed: ProtoBookingStatus.CONFIRMED,
+  cancelled: ProtoBookingStatus.CANCELLED,
 };
 
-function frontendVisibilityToAccessMode(v: 'private' | 'organization'): { accessMode: number; baselineRole: number | undefined } {
-  return v === 'organization'
+function frontendVisibilityToAccessMode(v: "private" | "organization"): {
+  accessMode: number;
+  baselineRole: number | undefined;
+} {
+  return v === "organization"
     ? { accessMode: AccessMode.OPEN_TO_ORG, baselineRole: ContentRole.VIEWER }
     : { accessMode: AccessMode.OWNER_ONLY, baselineRole: undefined };
 }
 
-function accessModeToFrontendVisibility(mode: number): 'private' | 'organization' {
-  return mode === AccessMode.OPEN_TO_ORG ? 'organization' : 'private';
+function accessModeToFrontendVisibility(mode: number): "private" | "organization" {
+  return mode === AccessMode.OPEN_TO_ORG ? "organization" : "private";
 }
 
 const roomFromProto = (proto: ProtoRoom): Room => ({
@@ -94,8 +96,8 @@ const roomFromProto = (proto: ProtoRoom): Room => ({
   ownerId: proto.ownerId,
   name: proto.name,
   description: proto.description,
-  roomType: ROOM_TYPE_FROM_PROTO[proto.roomType] || 'meeting_room',
-  status: ROOM_STATUS_FROM_PROTO[proto.status] || 'active',
+  roomType: ROOM_TYPE_FROM_PROTO[proto.roomType] || "meeting_room",
+  status: ROOM_STATUS_FROM_PROTO[proto.status] || "active",
   capacity: proto.capacity,
   floor: proto.floor,
   building: proto.building,
@@ -116,7 +118,7 @@ const bookingFromProto = (proto: ProtoRoomBooking): RoomBooking => ({
   title: proto.title,
   startTime: timestampToIso(proto.startTime),
   endTime: timestampToIso(proto.endTime),
-  status: BOOKING_STATUS_FROM_PROTO[proto.status] || 'confirmed',
+  status: BOOKING_STATUS_FROM_PROTO[proto.status] || "confirmed",
   notes: proto.notes,
   bookerName: proto.bookerName,
   roomName: proto.roomName,
@@ -148,7 +150,7 @@ export const fetchRooms = createAsyncThunk<
     pageSize?: number;
   },
   { state: RootState; rejectValue: string }
->('rooms/fetchRooms', async (params, { rejectWithValue }) => {
+>("rooms/fetchRooms", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.listRooms({
       organizationId: params.organizationId,
@@ -170,7 +172,7 @@ export const fetchRooms = createAsyncThunk<
       totalPages: response.totalPages,
     };
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch rooms');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch rooms");
   }
 });
 
@@ -188,7 +190,7 @@ export const initializeRoomsData = createAsyncThunk<
     searchQuery?: string;
   },
   { state: RootState; rejectValue: string }
->('rooms/initializeRoomsData', async (params, { rejectWithValue }) => {
+>("rooms/initializeRoomsData", async (params, { rejectWithValue }) => {
   try {
     const firstResponse = await roomsApi.listRooms({
       organizationId: params.organizationId,
@@ -206,10 +208,7 @@ export const initializeRoomsData = createAsyncThunk<
     const allRooms = firstResponse.rooms.map(roomFromProto);
 
     if (firstResponse.totalPages > 1) {
-      const remainingPages = Array.from(
-        { length: firstResponse.totalPages - 1 },
-        (_, i) => i + 2,
-      );
+      const remainingPages = Array.from({ length: firstResponse.totalPages - 1 }, (_, i) => i + 2);
       const pageResponses = await Promise.all(
         remainingPages.map((page) =>
           roomsApi.listRooms({
@@ -233,7 +232,7 @@ export const initializeRoomsData = createAsyncThunk<
 
     return { rooms: allRooms, totalCount: firstResponse.totalCount };
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to load rooms');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to load rooms");
   }
 });
 
@@ -241,18 +240,18 @@ export const fetchRoom = createAsyncThunk<
   Room,
   { roomId: string; organizationId: string },
   { state: RootState; rejectValue: string }
->('rooms/fetchRoom', async (params, { rejectWithValue }) => {
+>("rooms/fetchRoom", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.getRoom({
       roomId: params.roomId,
       organizationId: params.organizationId,
     });
     if (!response.room) {
-      return rejectWithValue('Room not found');
+      return rejectWithValue("Room not found");
     }
     return roomFromProto(response.room);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch room');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch room");
   }
 });
 
@@ -266,10 +265,10 @@ export const openRoomViewer = createAsyncThunk<
   /** `inline` marks the room page, which renders the same state itself, so the modal stays out of its way. */
   { roomId: string; inline?: boolean },
   { state: RootState; rejectValue: string }
->('rooms/openRoomViewer', async ({ roomId }, { getState, rejectWithValue }) => {
+>("rooms/openRoomViewer", async ({ roomId }, { getState, rejectWithValue }) => {
   const organizationId = getState().auth.currentOrganizationId;
   if (!organizationId) {
-    return rejectWithValue('No organization selected');
+    return rejectWithValue("No organization selected");
   }
 
   const now = new Date();
@@ -280,7 +279,7 @@ export const openRoomViewer = createAsyncThunk<
   try {
     const roomResponse = await roomsApi.getRoom({ roomId, organizationId });
     if (!roomResponse.room) {
-      return rejectWithValue('Room not found');
+      return rejectWithValue("Room not found");
     }
 
     const [bookingsResponse, availabilityResponse] = await Promise.all([
@@ -307,7 +306,7 @@ export const openRoomViewer = createAsyncThunk<
       slots: availabilityResponse.slots.map(timeSlotFromProto),
     };
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to load room');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to load room");
   }
 });
 
@@ -327,7 +326,7 @@ export const createRoom = createAsyncThunk<
     groupIds?: string[];
   },
   { state: RootState; rejectValue: string }
->('rooms/createRoom', async (params, { rejectWithValue }) => {
+>("rooms/createRoom", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.createRoom({
       organizationId: params.organizationId,
@@ -340,16 +339,16 @@ export const createRoom = createAsyncThunk<
       location: params.location,
       amenities: params.amenities || [],
       ...(params.visibility
-        ? frontendVisibilityToAccessMode(params.visibility as 'private' | 'organization')
+        ? frontendVisibilityToAccessMode(params.visibility as "private" | "organization")
         : {}),
       groupIds: params.groupIds || [],
     });
     if (!response.room) {
-      return rejectWithValue('Failed to create room');
+      return rejectWithValue("Failed to create room");
     }
     return roomFromProto(response.room);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to create room');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to create room");
   }
 });
 
@@ -371,7 +370,7 @@ export const updateRoom = createAsyncThunk<
     visibility?: string;
   },
   { state: RootState; rejectValue: string }
->('rooms/updateRoom', async (params, { rejectWithValue }) => {
+>("rooms/updateRoom", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.updateRoom({
       roomId: params.roomId,
@@ -387,15 +386,15 @@ export const updateRoom = createAsyncThunk<
       amenities: params.amenities || [],
       replaceAmenities: params.replaceAmenities || false,
       ...(params.visibility
-        ? frontendVisibilityToAccessMode(params.visibility as 'private' | 'organization')
+        ? frontendVisibilityToAccessMode(params.visibility as "private" | "organization")
         : {}),
     });
     if (!response.room) {
-      return rejectWithValue('Failed to update room');
+      return rejectWithValue("Failed to update room");
     }
     return roomFromProto(response.room);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to update room');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to update room");
   }
 });
 
@@ -403,18 +402,18 @@ export const deleteRoom = createAsyncThunk<
   { roomId: string },
   { roomId: string; organizationId: string },
   { state: RootState; rejectValue: string }
->('rooms/deleteRoom', async (params, { rejectWithValue }) => {
+>("rooms/deleteRoom", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.deleteRoom({
       roomId: params.roomId,
       organizationId: params.organizationId,
     });
     if (!response.success) {
-      return rejectWithValue('Failed to delete room');
+      return rejectWithValue("Failed to delete room");
     }
     return { roomId: params.roomId };
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete room');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to delete room");
   }
 });
 
@@ -430,7 +429,7 @@ export const createBooking = createAsyncThunk<
     eventId?: string;
   },
   { state: RootState; rejectValue: string }
->('rooms/createBooking', async (params, { rejectWithValue }) => {
+>("rooms/createBooking", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.createBooking({
       organizationId: params.organizationId,
@@ -442,11 +441,11 @@ export const createBooking = createAsyncThunk<
       eventId: params.eventId,
     });
     if (!response.booking) {
-      return rejectWithValue('Failed to create booking');
+      return rejectWithValue("Failed to create booking");
     }
     return bookingFromProto(response.booking);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to create booking');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to create booking");
   }
 });
 
@@ -454,23 +453,29 @@ export const cancelBooking = createAsyncThunk<
   RoomBooking,
   { bookingId: string; organizationId: string },
   { state: RootState; rejectValue: string }
->('rooms/cancelBooking', async (params, { rejectWithValue }) => {
+>("rooms/cancelBooking", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.cancelBooking({
       bookingId: params.bookingId,
       organizationId: params.organizationId,
     });
     if (!response.booking) {
-      return rejectWithValue('Failed to cancel booking');
+      return rejectWithValue("Failed to cancel booking");
     }
     return bookingFromProto(response.booking);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to cancel booking');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to cancel booking");
   }
 });
 
 export const fetchBookings = createAsyncThunk<
-  { bookings: RoomBooking[]; totalCount: number; page: number; pageSize: number; totalPages: number },
+  {
+    bookings: RoomBooking[];
+    totalCount: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  },
   {
     organizationId: string;
     roomId?: string;
@@ -482,7 +487,7 @@ export const fetchBookings = createAsyncThunk<
     pageSize?: number;
   },
   { state: RootState; rejectValue: string }
->('rooms/fetchBookings', async (params, { rejectWithValue }) => {
+>("rooms/fetchBookings", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.listBookings({
       organizationId: params.organizationId,
@@ -502,7 +507,7 @@ export const fetchBookings = createAsyncThunk<
       totalPages: response.totalPages,
     };
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch bookings');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch bookings");
   }
 });
 
@@ -510,7 +515,7 @@ export const checkAvailability = createAsyncThunk<
   { roomId: string; slots: TimeSlot[] },
   { organizationId: string; roomId: string; startDate: string; endDate: string },
   { state: RootState; rejectValue: string }
->('rooms/checkAvailability', async (params, { rejectWithValue }) => {
+>("rooms/checkAvailability", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.checkAvailability({
       organizationId: params.organizationId,
@@ -523,7 +528,7 @@ export const checkAvailability = createAsyncThunk<
       slots: response.slots.map(timeSlotFromProto),
     };
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to check availability');
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to check availability");
   }
 });
 
@@ -538,7 +543,7 @@ export const findAvailableRooms = createAsyncThunk<
     roomType?: RoomType;
   },
   { state: RootState; rejectValue: string }
->('rooms/findAvailableRooms', async (params, { rejectWithValue }) => {
+>("rooms/findAvailableRooms", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.findAvailableRooms({
       organizationId: params.organizationId,
@@ -550,7 +555,9 @@ export const findAvailableRooms = createAsyncThunk<
     });
     return response.rooms.map(roomFromProto);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to find available rooms');
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to find available rooms",
+    );
   }
 });
 
@@ -563,7 +570,7 @@ export const fetchAvailableRoomIds = createAsyncThunk<
     endTime: string;
   },
   { state: RootState; rejectValue: string }
->('rooms/fetchAvailableRoomIds', async (params, { rejectWithValue }) => {
+>("rooms/fetchAvailableRoomIds", async (params, { rejectWithValue }) => {
   try {
     const response = await roomsApi.findAvailableRooms({
       organizationId: params.organizationId,
@@ -572,6 +579,8 @@ export const fetchAvailableRoomIds = createAsyncThunk<
     });
     return response.rooms.map((r) => r.id);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to check room availability');
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to check room availability",
+    );
   }
 });

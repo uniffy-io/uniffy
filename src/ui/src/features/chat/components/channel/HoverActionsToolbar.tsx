@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useRef, useEffect } from 'react';
+import { memo, useState, useCallback, useRef, useEffect } from "react";
 import {
   ArrowBendUpLeft,
   ChatText,
@@ -9,14 +9,19 @@ import {
   PushPin,
   Smiley,
   Trash,
-} from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { openThreadPanel } from '@/features/chat/store/chatUiSlice';
-import { setActiveThread } from '@/features/chat/store/chatThreadsSlice';
-import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { pinMessage, unpinMessage, addReaction, removeMessage } from '@/features/chat/store/chatThunks';
+} from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { openThreadPanel } from "@/features/chat/store/chatUiSlice";
+import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
+import { EmojiPicker } from "@/features/chat/components/compose/EmojiPicker";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  pinMessage,
+  unpinMessage,
+  addReaction,
+  removeMessage,
+} from "@/features/chat/store/chatThunks";
 
 interface HoverActionsToolbarProps {
   messageId: string;
@@ -57,24 +62,24 @@ function HoverActionsToolbarInner({
       }
     };
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowMoreMenu(false);
+      if (e.key === "Escape") setShowMoreMenu(false);
     };
 
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEsc);
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEsc);
     }, 0);
 
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEsc);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEsc);
     };
   }, [showMoreMenu]);
 
   const buttonClass = cn(
-    'p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted',
-    'transition-colors h-7 w-7 flex items-center justify-center',
+    "p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted",
+    "transition-colors h-7 w-7 flex items-center justify-center",
   );
 
   const handleReplyInThread = useCallback(() => {
@@ -94,10 +99,13 @@ function HoverActionsToolbarInner({
     onQuoteReply?.();
   }, [onQuoteReply]);
 
-  const handleEmojiSelect = useCallback((emoji: string) => {
-    dispatch(addReaction({ channelId, messageId, emoji }));
-    setShowEmojiPicker(false);
-  }, [dispatch, channelId, messageId]);
+  const handleEmojiSelect = useCallback(
+    (emoji: string) => {
+      dispatch(addReaction({ channelId, messageId, emoji }));
+      setShowEmojiPicker(false);
+    },
+    [dispatch, channelId, messageId],
+  );
 
   const handleCopyText = useCallback(() => {
     navigator.clipboard.writeText(content);
@@ -128,21 +136,24 @@ function HoverActionsToolbarInner({
     } finally {
       setIsDeleting(false);
     }
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
   }, [dispatch, channelId, messageId]);
 
   const menuItemClass = cn(
-    'flex items-center gap-2 px-3 py-1.5 text-sm text-foreground',
-    'hover:bg-muted cursor-pointer w-full text-left',
+    "flex items-center gap-2 px-3 py-1.5 text-sm text-foreground",
+    "hover:bg-muted cursor-pointer w-full text-left",
   );
 
   return (
     <div
       className={cn(
-        'absolute -top-4 right-4 flex items-center',
-        'bg-card border border-border rounded-lg shadow-md',
-        (showMoreMenu || showEmojiPicker)
-          ? 'opacity-100 z-50'
-          : 'opacity-0 group-hover:opacity-100 z-10 transition-opacity duration-150',
+        "absolute -top-4 right-4 flex items-center",
+        "bg-card border border-border rounded-lg shadow-md",
+        showMoreMenu || showEmojiPicker
+          ? "opacity-100 z-50"
+          : "opacity-0 group-hover:opacity-100 z-10 transition-opacity duration-150",
       )}
       data-testid={`chat-message-actions-${messageId}`}
     >
@@ -174,12 +185,12 @@ function HoverActionsToolbarInner({
 
       <button
         className={buttonClass}
-        title={isPinned ? 'Unpin message' : 'Pin message'}
+        title={isPinned ? "Unpin message" : "Pin message"}
         onClick={handleTogglePin}
         data-testid={`chat-message-pin-button-${messageId}`}
-        data-state={isPinned ? 'pinned' : 'unpinned'}
+        data-state={isPinned ? "pinned" : "unpinned"}
       >
-        <PushPin size={16} weight={isPinned ? 'fill' : 'regular'} />
+        <PushPin size={16} weight={isPinned ? "fill" : "regular"} />
       </button>
 
       <button
@@ -197,7 +208,7 @@ function HoverActionsToolbarInner({
           title="More actions"
           onClick={() => setShowMoreMenu((prev) => !prev)}
           data-testid={`chat-message-more-button-${messageId}`}
-          data-state={showMoreMenu ? 'open' : 'closed'}
+          data-state={showMoreMenu ? "open" : "closed"}
         >
           <DotsThreeVertical size={16} />
         </button>
@@ -205,30 +216,42 @@ function HoverActionsToolbarInner({
         {showMoreMenu && (
           <div
             className={cn(
-              'absolute top-full right-0 mt-1 z-[60]',
-              'bg-card border border-border rounded-lg shadow-lg py-1',
-              'min-w-[160px]',
+              "absolute top-full right-0 mt-1 z-[60]",
+              "bg-card border border-border rounded-lg shadow-lg py-1",
+              "min-w-[160px]",
             )}
             onMouseDown={(e) => e.stopPropagation()}
             data-testid={`chat-message-more-menu-${messageId}`}
           >
-            <button className={menuItemClass} onClick={handleCopyText} data-testid={`chat-message-copy-text-${messageId}`}>
+            <button
+              className={menuItemClass}
+              onClick={handleCopyText}
+              data-testid={`chat-message-copy-text-${messageId}`}
+            >
               <Copy size={14} />
               <span>Copy text</span>
             </button>
-            <button className={menuItemClass} onClick={handleCopyLink} data-testid={`chat-message-copy-link-${messageId}`}>
+            <button
+              className={menuItemClass}
+              onClick={handleCopyLink}
+              data-testid={`chat-message-copy-link-${messageId}`}
+            >
               <LinkSimple size={14} />
               <span>Copy link</span>
             </button>
             {isOwnMessage && (
               <>
                 <div className="my-1 border-t border-border" />
-                <button className={menuItemClass} onClick={handleEdit} data-testid={`chat-message-edit-button-${messageId}`}>
+                <button
+                  className={menuItemClass}
+                  onClick={handleEdit}
+                  data-testid={`chat-message-edit-button-${messageId}`}
+                >
                   <Pencil size={14} />
                   <span>Edit message</span>
                 </button>
                 <button
-                  className={cn(menuItemClass, 'text-red-500 hover:text-red-500')}
+                  className={cn(menuItemClass, "text-red-500 hover:text-red-500")}
                   onClick={handleDelete}
                   data-testid={`chat-message-delete-button-${messageId}`}
                 >

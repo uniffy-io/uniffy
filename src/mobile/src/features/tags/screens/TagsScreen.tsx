@@ -40,14 +40,20 @@ export function TagsScreen() {
   const { remove } = useTagMutations();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<SerializedTag | null>(null);
+  // Bumped on every open so the editor remounts and seeds its fields from `tag`
+  // on the first render. Without it the card paints the previous target's values
+  // for a frame. Closing leaves the key alone, keeping the fade-out animation.
+  const [editorSession, setEditorSession] = useState(0);
 
   const openCreate = () => {
     setEditing(null);
+    setEditorSession((n) => n + 1);
     setEditorOpen(true);
   };
 
   const openEdit = useCallback((tag: SerializedTag) => {
     setEditing(tag);
+    setEditorSession((n) => n + 1);
     setEditorOpen(true);
   }, []);
 
@@ -137,6 +143,7 @@ export function TagsScreen() {
       )}
 
       <TagEditorModal
+        key={editorSession}
         visible={editorOpen}
         T={T}
         tag={editing}
@@ -207,19 +214,10 @@ function TagEditorModal({
   onClose: () => void;
 }) {
   const { create, update } = useTagMutations();
-  const [name, setName] = useState("");
-  const [color, setColor] = useState(TAG_COLORS[0]);
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState(tag?.name ?? "");
+  const [color, setColor] = useState(tag?.color ?? TAG_COLORS[0]);
+  const [description, setDescription] = useState(tag?.description ?? "");
   const [busy, setBusy] = useState(false);
-
-  // Sync form when the target tag changes (open for edit vs create).
-  React.useEffect(() => {
-    if (visible) {
-      setName(tag?.name ?? "");
-      setColor(tag?.color ?? TAG_COLORS[0]);
-      setDescription(tag?.description ?? "");
-    }
-  }, [visible, tag]);
 
   const submit = async () => {
     if (!name.trim()) return;

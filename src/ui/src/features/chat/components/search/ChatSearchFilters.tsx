@@ -1,8 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
-import { X, Hash, Globe, User } from '@phosphor-icons/react';
-import { SubjectPicker } from '@/components/subject';
-import { cn } from '@/shared/utils/cn';
-import type { Subject } from '@/components/subject/types';
+import { useState, useCallback, useRef } from "react";
+import { X, Hash, Globe, User } from "@phosphor-icons/react";
+import { SubjectPicker } from "@/components/subject";
+import { cn } from "@/shared/utils/cn";
+import type { Subject } from "@/components/subject/types";
 
 export interface ChatSearchFilterValues {
   channelId?: string;
@@ -35,12 +35,15 @@ export function ChatSearchFilters({
     }
   }, [filters, isChannelScoped, activeChannelId, onFiltersChange]);
 
-  const handleSenderSelect = useCallback((_ids: string[], subjects: Subject[]) => {
-    if (subjects.length > 0) {
-      onFiltersChange({ ...filters, senderId: subjects[0].id });
-    }
-    setShowSenderPicker(false);
-  }, [filters, onFiltersChange]);
+  const handleSenderSelect = useCallback(
+    (_ids: string[], subjects: Subject[]) => {
+      if (subjects.length > 0) {
+        onFiltersChange({ ...filters, senderId: subjects[0].id });
+      }
+      setShowSenderPicker(false);
+    },
+    [filters, onFiltersChange],
+  );
 
   const handleClearSender = useCallback(() => {
     onFiltersChange({ ...filters, senderId: undefined });
@@ -52,9 +55,10 @@ export function ChatSearchFilters({
 
   const hasFilters = !!filters.channelId || !!filters.senderId;
 
-  const pillBase = 'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors';
-  const pillActive = 'bg-primary/10 text-primary border border-primary/30';
-  const pillInactive = 'bg-muted text-muted-foreground border border-border hover:bg-muted/80 cursor-pointer';
+  const pillBase = "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors";
+  const pillActive = "bg-primary/10 text-primary border border-primary/30";
+  const pillInactive =
+    "bg-muted text-muted-foreground border border-border hover:bg-muted/80 cursor-pointer";
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap px-1" data-testid="chat-search-filters">
@@ -64,10 +68,10 @@ export function ChatSearchFilters({
           onClick={handleToggleChannelScope}
           className={cn(pillBase, isChannelScoped ? pillActive : pillInactive)}
           data-testid="chat-search-filter-channel-scope"
-          data-active={isChannelScoped ? 'true' : 'false'}
+          data-active={isChannelScoped ? "true" : "false"}
         >
           {isChannelScoped ? <Hash size={12} /> : <Globe size={12} />}
-          <span>{isChannelScoped ? (activeChannelName ?? 'This channel') : 'All channels'}</span>
+          <span>{isChannelScoped ? (activeChannelName ?? "This channel") : "All channels"}</span>
         </button>
       )}
 
@@ -89,10 +93,10 @@ export function ChatSearchFilters({
           <button
             ref={senderBtnRef}
             type="button"
-            onClick={() => setShowSenderPicker(prev => !prev)}
+            onClick={() => setShowSenderPicker((prev) => !prev)}
             className={cn(pillBase, showSenderPicker ? pillActive : pillInactive)}
             data-testid="chat-search-filter-sender"
-            data-state={showSenderPicker ? 'open' : 'closed'}
+            data-state={showSenderPicker ? "open" : "closed"}
           >
             <User size={12} />
             <span>From</span>

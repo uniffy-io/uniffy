@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Brain, ArrowRight, Plus } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { WidgetCard, WidgetSkeleton } from '@/features/dashboard/components/widgets/WidgetCard';
-import { selectAllAgents, selectAgentsLoading } from '@/features/agents/store/agentsSlice';
-import { fetchAgents } from '@/features/agents/store/agentsThunks';
-import type { SerializedAgent } from '@/features/agents/store/agentsThunks';
-import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
-import { createAgentChat } from '@/features/chat/store/chatThunks';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Brain, ArrowRight, Plus } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { WidgetCard, WidgetSkeleton } from "@/features/dashboard/components/widgets/WidgetCard";
+import { selectAllAgents, selectAgentsLoading } from "@/features/agents/store/agentsSlice";
+import { fetchAgents } from "@/features/agents/store/agentsThunks";
+import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
+import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
+import { createAgentChat } from "@/features/chat/store/chatThunks";
 
 export function AgentQuickAccessWidget() {
   const dispatch = useAppDispatch();
@@ -56,7 +56,7 @@ export function AgentQuickAccessWidget() {
       priority={3}
       action={
         <button
-          onClick={() => navigate('/chat')}
+          onClick={() => navigate("/chat")}
           className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
         >
           <Plus size={12} />
@@ -84,8 +84,8 @@ export function AgentQuickAccessWidget() {
               onClick={() => handleOpenChat(agent.id)}
               disabled={openingId !== null}
               className={cn(
-                'group flex items-center gap-3 w-full text-left rounded-lg p-2 -mx-2 transition-colors',
-                'hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed',
+                "group flex items-center gap-3 w-full text-left rounded-lg p-2 -mx-2 transition-colors",
+                "hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed",
               )}
             >
               <AgentAvatar
@@ -99,11 +99,11 @@ export function AgentQuickAccessWidget() {
                   {agent.name}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {agent.isDefault ? 'Default agent' : agent.primaryModel || 'Agent'}
+                  {agent.isDefault ? "Default agent" : agent.primaryModel || "Agent"}
                 </p>
               </div>
               <span className="text-xs text-muted-foreground flex-shrink-0">
-                {openingId === agent.id ? 'Opening...' : 'Chat'}
+                {openingId === agent.id ? "Opening..." : "Chat"}
               </span>
             </button>
           ))}

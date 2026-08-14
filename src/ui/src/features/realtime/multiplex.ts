@@ -35,14 +35,14 @@ function readVarUint(buf: Uint8Array, offset = 0): { value: number; nextOffset: 
     }
     shift += 7;
     if (pos - offset > maxBytes) {
-      throw new Error('var_uint: encoding longer than supported max');
+      throw new Error("var_uint: encoding longer than supported max");
     }
   }
-  throw new Error('var_uint: buffer ended before varint terminator');
+  throw new Error("var_uint: buffer ended before varint terminator");
 }
 
 const utf8Encoder = new TextEncoder();
-const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+const utf8Decoder = new TextDecoder("utf-8", { fatal: true });
 
 function writeVarString(value: string): Uint8Array {
   const body = utf8Encoder.encode(value);
@@ -76,7 +76,7 @@ export function peekVarString(buf: Uint8Array): { docName: string; payloadOffset
   return { docName: value, payloadOffset: nextOffset };
 }
 
-export function encodeDocFrame(docName: string, body: Uint8Array): Uint8Array {
+export function encodeDocFrame(docName: string, body: Uint8Array): Uint8Array<ArrayBuffer> {
   const prefix = writeVarString(docName);
   const out = new Uint8Array(prefix.length + body.length);
   out.set(prefix, 0);

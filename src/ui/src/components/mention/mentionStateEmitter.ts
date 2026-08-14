@@ -1,4 +1,4 @@
-import type { MentionLiveState } from '@/components/mention/types';
+import type { MentionLiveState } from "@/components/mention/types";
 
 type MentionStateListener = (urn: string, changes: Partial<MentionLiveState>) => void;
 
@@ -6,7 +6,9 @@ const listeners = new Set<MentionStateListener>();
 
 export function onMentionStateChange(listener: MentionStateListener): () => void {
   listeners.add(listener);
-  return () => { listeners.delete(listener); };
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function emitMentionStateChange(urn: string, changes: Partial<MentionLiveState>): void {

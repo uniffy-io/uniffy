@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { realtimeMultiplexer } from '@/features/realtime/multiplexer';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { realtimeMultiplexer } from "@/features/realtime/multiplexer";
 import {
   createPendingHysteresis,
   type PendingHysteresis,
-} from '@/features/realtime/pendingHysteresis';
+} from "@/features/realtime/pendingHysteresis";
 
 /** Outbound backlog for a doc, smoothed so short per-keystroke spikes never
  * reach the UI. True only while edits stay unsent long enough to be worth

@@ -1,20 +1,16 @@
-import { useMemo } from 'react';
-import { CalendarDots, Clock, ArrowsClockwise, Bell } from '@phosphor-icons/react';
-import { Select } from '@/components/ui/select';
-import { SectionLabel } from '@/features/calendar/components/detail/SectionLabel';
-import { cn } from '@/shared/utils/cn';
-import { formatDateWithWeekday } from '@/shared/utils/dateFormatting';
-import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
-import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
-import { ReminderSelector } from '@/features/calendar/components/modals/ReminderSelector';
-import type { CalendarEvent, RecurrenceConfig } from '@/features/calendar/types';
-import { DAY_OF_WEEK_LABELS } from '@/features/calendar/constants';
-import {
-  formatDateWithDay,
-  formatTimeRange,
-  getTimezoneOffset,
-} from '@/features/calendar/utils';
-import type { EventPatch } from '@/features/calendar/hooks/useEventCommit';
+import { useMemo } from "react";
+import { CalendarDots, Clock, ArrowsClockwise, Bell } from "@phosphor-icons/react";
+import { Select } from "@/components/ui/select";
+import { SectionLabel } from "@/features/calendar/components/detail/SectionLabel";
+import { cn } from "@/shared/utils/cn";
+import { formatDateWithWeekday } from "@/shared/utils/dateFormatting";
+import { TimeSelect } from "@/features/calendar/components/modals/TimeSelect";
+import { RecurrenceSelector } from "@/features/calendar/components/modals/RecurrenceSelector";
+import { ReminderSelector } from "@/features/calendar/components/modals/ReminderSelector";
+import type { CalendarEvent, RecurrenceConfig } from "@/features/calendar/types";
+import { DAY_OF_WEEK_LABELS } from "@/features/calendar/constants";
+import { formatDateWithDay, formatTimeRange, getTimezoneOffset } from "@/features/calendar/utils";
+import type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
 
 /** Hours as a decimal in the local zone (9:15 -> 9.25). */
 function getTimeValue(isoString: string): number {
@@ -25,8 +21,8 @@ function getTimeValue(isoString: string): number {
 function getDateString(isoString: string): string {
   const date = new Date(isoString);
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -45,7 +41,8 @@ function generateDateOptions(): { value: string; label: string }[] {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
     const dateString = getDateString(date.toISOString());
-    const label = i === 0 ? `Today, ${formatDateWithWeekday(dateString)}` : formatDateWithWeekday(dateString);
+    const label =
+      i === 0 ? `Today, ${formatDateWithWeekday(dateString)}` : formatDateWithWeekday(dateString);
     options.push({ value: dateString, label });
   }
 
@@ -57,36 +54,42 @@ function describeRecurrence(r: RecurrenceConfig): string {
   const plural = interval > 1;
 
   switch (r.pattern) {
-    case 'daily': {
-      const base = plural ? `Every ${interval} days` : 'Daily';
+    case "daily": {
+      const base = plural ? `Every ${interval} days` : "Daily";
       if (r.daysOfWeek && r.daysOfWeek.length > 0 && r.daysOfWeek.length < 7) {
-        if (r.daysOfWeek.length === 5 && !r.daysOfWeek.includes('saturday') && !r.daysOfWeek.includes('sunday')) {
+        if (
+          r.daysOfWeek.length === 5 &&
+          !r.daysOfWeek.includes("saturday") &&
+          !r.daysOfWeek.includes("sunday")
+        ) {
           return `${base} (weekdays)`;
         }
-        const dayNames = r.daysOfWeek.map((d) => DAY_OF_WEEK_LABELS[d]?.full || d).join(', ');
+        const dayNames = r.daysOfWeek.map((d) => DAY_OF_WEEK_LABELS[d]?.full || d).join(", ");
         return `${base} on ${dayNames}`;
       }
       return base;
     }
-    case 'weekly':
-    case 'biweekly': {
-      const weeks = r.pattern === 'biweekly' ? interval * 2 : interval;
-      const prefix = weeks > 1 ? `Every ${weeks} weeks` : 'Weekly';
+    case "weekly":
+    case "biweekly": {
+      const weeks = r.pattern === "biweekly" ? interval * 2 : interval;
+      const prefix = weeks > 1 ? `Every ${weeks} weeks` : "Weekly";
       if (r.daysOfWeek && r.daysOfWeek.length > 0) {
-        const dayNames = r.daysOfWeek.map((d) => DAY_OF_WEEK_LABELS[d]?.full || d).join(', ');
+        const dayNames = r.daysOfWeek.map((d) => DAY_OF_WEEK_LABELS[d]?.full || d).join(", ");
         return `${prefix} on ${dayNames}`;
       }
       return prefix;
     }
-    case 'monthly':
+    case "monthly":
       if (r.dayOfMonth) {
-        return plural ? `Every ${interval} months on the ${r.dayOfMonth}th` : `Monthly on the ${r.dayOfMonth}th`;
+        return plural
+          ? `Every ${interval} months on the ${r.dayOfMonth}th`
+          : `Monthly on the ${r.dayOfMonth}th`;
       }
-      return plural ? `Every ${interval} months` : 'Monthly';
-    case 'yearly':
-      return plural ? `Every ${interval} years` : 'Yearly';
+      return plural ? `Every ${interval} months` : "Monthly";
+    case "yearly":
+      return plural ? `Every ${interval} years` : "Yearly";
     default:
-      return 'Does not repeat';
+      return "Does not repeat";
   }
 }
 
@@ -113,7 +116,7 @@ export function EventScheduleSection({
 
   const commitStartDate = (next: string) => {
     const current = new Date(event.startTime);
-    const [year, month, day] = next.split('-').map(Number);
+    const [year, month, day] = next.split("-").map(Number);
     current.setFullYear(year, month - 1, day);
     commit({ startTime: current.toISOString() });
   };
@@ -135,7 +138,7 @@ export function EventScheduleSection({
 
   const commitEndDate = (next: string) => {
     const current = new Date(event.endTime);
-    const [year, month, day] = next.split('-').map(Number);
+    const [year, month, day] = next.split("-").map(Number);
     current.setFullYear(year, month - 1, day);
     commit({ endTime: current.toISOString() });
   };
@@ -166,7 +169,7 @@ export function EventScheduleSection({
             </>
           )}
         </div>
-        {event.recurrence && event.recurrence.pattern !== 'none' && (
+        {event.recurrence && event.recurrence.pattern !== "none" && (
           <div className="flex items-center gap-3 text-sm">
             <ArrowsClockwise size={16} weight="duotone" className="text-muted-foreground" />
             <span className="text-foreground">{describeRecurrence(event.recurrence)}</span>
@@ -176,7 +179,7 @@ export function EventScheduleSection({
           <div className="flex items-center gap-3 text-sm">
             <Bell size={16} weight="duotone" className="text-muted-foreground" />
             <span className="text-foreground">
-              {event.reminders.map((m) => `${m} min before`).join(', ')}
+              {event.reminders.map((m) => `${m} min before`).join(", ")}
             </span>
           </div>
         )}
@@ -188,7 +191,7 @@ export function EventScheduleSection({
     <div className="space-y-3">
       <div>
         <SectionLabel
-          action={(
+          action={
             <button
               type="button"
               onClick={() => commit({ isAllDay: !event.isAllDay })}
@@ -196,13 +199,13 @@ export function EventScheduleSection({
             >
               <span
                 className={cn(
-                  'w-3 h-3 rounded-full border-2 transition-colors',
-                  event.isAllDay ? 'border-primary bg-primary' : 'border-muted-foreground'
+                  "w-3 h-3 rounded-full border-2 transition-colors",
+                  event.isAllDay ? "border-primary bg-primary" : "border-muted-foreground",
                 )}
               />
               <span>Multi-day</span>
             </button>
-          )}
+          }
         >
           When <span className="normal-case font-normal">({timezoneOffset})</span>
         </SectionLabel>
@@ -210,17 +213,35 @@ export function EventScheduleSection({
         {event.isAllDay ? (
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <Select value={startDate} onChange={commitStartDate} options={dateOptions} size="sm" className="w-full" />
+              <Select
+                value={startDate}
+                onChange={commitStartDate}
+                options={dateOptions}
+                size="sm"
+                className="w-full"
+              />
               <TimeSelect value={startTime} onChange={commitStartTime} className="w-full" compact />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Select value={endDate} onChange={commitEndDate} options={dateOptions} size="sm" className="w-full" />
+              <Select
+                value={endDate}
+                onChange={commitEndDate}
+                options={dateOptions}
+                size="sm"
+                className="w-full"
+              />
               <TimeSelect value={endTime} onChange={commitEndTime} className="w-full" compact />
             </div>
           </div>
         ) : (
           <div className="space-y-2">
-            <Select value={startDate} onChange={commitStartDate} options={dateOptions} size="sm" className="w-full" />
+            <Select
+              value={startDate}
+              onChange={commitStartDate}
+              options={dateOptions}
+              size="sm"
+              className="w-full"
+            />
             <div className="grid grid-cols-2 gap-2">
               <TimeSelect value={startTime} onChange={commitStartTime} className="w-full" compact />
               <TimeSelect value={endTime} onChange={commitEndTime} className="w-full" compact />

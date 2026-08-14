@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   X,
   Clock,
@@ -10,28 +10,28 @@ import {
   VideoCamera,
   Prohibit,
   Link as LinkIcon,
-} from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
-import { createEvent } from '@/features/calendar/store/calendarThunks';
-import { attachmentsApi } from '@/features/files/api/attachmentsApi';
-import { cn } from '@/shared/utils/cn';
-import { formatDateWithWeekday } from '@/shared/utils/dateFormatting';
-import { ExpandableEditor } from '@/components/editor/ExpandableEditor';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
-import { getInitials } from '@/components/subject/utils';
-import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
-import { RoomPicker } from '@/features/rooms/components/shared/RoomPicker';
-import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
-import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
-import { DatePicker } from '@/components/ui/date-picker';
-import { useConflictDetection } from '@/features/calendar/hooks/useConflictDetection';
-import { TagPicker } from '@/features/tags';
-import type { Attendee, RecurrenceConfig } from '@/features/calendar/types';
-import { MeetingChannelPicker } from '@/features/calendar/components/modals/MeetingChannelPicker';
-import type { MeetingMode } from '@/features/calendar/utils/meeting';
+} from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
+import { createEvent } from "@/features/calendar/store/calendarThunks";
+import { attachmentsApi } from "@/features/files/api/attachmentsApi";
+import { cn } from "@/shared/utils/cn";
+import { formatDateWithWeekday } from "@/shared/utils/dateFormatting";
+import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import { getInitials } from "@/components/subject/utils";
+import { AttendeesSelector } from "@/features/calendar/components/modals/AttendeesSelector";
+import { RoomPicker } from "@/features/rooms/components/shared/RoomPicker";
+import { RecurrenceSelector } from "@/features/calendar/components/modals/RecurrenceSelector";
+import { TimeSelect } from "@/features/calendar/components/modals/TimeSelect";
+import { DatePicker } from "@/components/ui/date-picker";
+import { useConflictDetection } from "@/features/calendar/hooks/useConflictDetection";
+import { TagPicker } from "@/features/tags";
+import type { Attendee, RecurrenceConfig } from "@/features/calendar/types";
+import { MeetingChannelPicker } from "@/features/calendar/components/modals/MeetingChannelPicker";
+import type { MeetingMode } from "@/features/calendar/utils/meeting";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -42,8 +42,8 @@ function isValidUuid(value: string): boolean {
 
 function getDateString(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -62,7 +62,8 @@ function generateDateOptions(): { value: string; label: string }[] {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
     const dateString = getDateString(date);
-    const label = i === 0 ? `Today, ${formatDateWithWeekday(dateString)}` : formatDateWithWeekday(dateString);
+    const label =
+      i === 0 ? `Today, ${formatDateWithWeekday(dateString)}` : formatDateWithWeekday(dateString);
     options.push({ value: dateString, label });
   }
 
@@ -85,20 +86,20 @@ export function QuickEventModal({
   initialEndHour = 10,
 }: QuickEventModalProps) {
   const dispatch = useAppDispatch();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [isMultiDay, setIsMultiDay] = useState(false);
   const [startDate, setStartDate] = useState(getDateString(initialDate || new Date()));
   const [endDate, setEndDate] = useState(getDateString(initialDate || new Date()));
   const [startHour, setStartHour] = useState(initialStartHour);
   const [endHour, setEndHour] = useState(initialEndHour);
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(undefined);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
-  const [meetingMode, setMeetingMode] = useState<MeetingMode>('none');
-  const [meetingUrl, setMeetingUrl] = useState('');
+  const [meetingMode, setMeetingMode] = useState<MeetingMode>("none");
+  const [meetingUrl, setMeetingUrl] = useState("");
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [channelAutoCreated, setChannelAutoCreated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,7 +115,7 @@ export function QuickEventModal({
   // Conflict detection
   const startIso = useMemo(() => {
     if (!startDate) return null;
-    const [y, m, d] = startDate.split('-').map(Number);
+    const [y, m, d] = startDate.split("-").map(Number);
     const dt = new Date(y, m - 1, d);
     dt.setHours(Math.floor(startHour), Math.round((startHour % 1) * 60), 0, 0);
     return dt.toISOString();
@@ -124,7 +125,7 @@ export function QuickEventModal({
     if (!isMultiDay && !startDate) return null;
     const dateStr = isMultiDay ? endDate : startDate;
     if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
+    const [y, m, d] = dateStr.split("-").map(Number);
     const dt = new Date(y, m - 1, d);
     dt.setHours(Math.floor(endHour), Math.round((endHour % 1) * 60), 0, 0);
     return dt.toISOString();
@@ -141,15 +142,17 @@ export function QuickEventModal({
         label: cat.name,
         color: cat.color,
       })),
-    [categories]
+    [categories],
   );
 
   // Reset form when modal opens + Escape key to close
   useEffect(() => {
     if (isOpen) {
       const date = initialDate || new Date();
-      setTitle('');
-      setDescription('');
+      // The modal stays mounted and only renders null while closed, so each open reseeds the form.
+      // eslint-disable-next-line react/react-compiler
+      setTitle("");
+      setDescription("");
       setIsMultiDay(false);
       setStartDate(getDateString(date));
       setEndDate(getDateString(date));
@@ -157,8 +160,8 @@ export function QuickEventModal({
       setEndHour(initialEndHour);
       setRecurrence(undefined);
       setTagIds([]);
-      setMeetingMode('none');
-      setMeetingUrl('');
+      setMeetingMode("none");
+      setMeetingUrl("");
       setSelectedChannelId(null);
       setChannelAutoCreated(false);
       setIsSubmitting(false);
@@ -171,12 +174,12 @@ export function QuickEventModal({
       pendingFileIdsRef.current = [];
 
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
+        if (e.key === "Escape") {
           onClose();
         }
       };
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialStartHour, initialEndHour]);
@@ -188,8 +191,8 @@ export function QuickEventModal({
       id: member.userId,
       name: member.displayName || member.email,
       email: member.email,
-      status: 'pending',
-      role: 'required',
+      status: "pending",
+      role: "required",
       initials: getInitials(member.displayName || member.email),
     };
 
@@ -202,8 +205,8 @@ export function QuickEventModal({
 
   const handleMeetingModeChange = (mode: MeetingMode) => {
     setMeetingMode(mode);
-    if (mode !== 'link') setMeetingUrl('');
-    if (mode !== 'channel') {
+    if (mode !== "link") setMeetingUrl("");
+    if (mode !== "channel") {
       setSelectedChannelId(null);
       setChannelAutoCreated(false);
     }
@@ -220,17 +223,17 @@ export function QuickEventModal({
     let eventEndTime: Date;
 
     if (isMultiDay) {
-      const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+      const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
       const startMinutes = Math.round((startHour % 1) * 60);
       eventStartTime = new Date(startYear, startMonth - 1, startDay);
       eventStartTime.setHours(Math.floor(startHour), startMinutes, 0, 0);
 
-      const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+      const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
       const endMinutes = Math.round((endHour % 1) * 60);
       eventEndTime = new Date(endYear, endMonth - 1, endDay);
       eventEndTime.setHours(Math.floor(endHour), endMinutes, 0, 0);
     } else {
-      const [year, month, day] = startDate.split('-').map(Number);
+      const [year, month, day] = startDate.split("-").map(Number);
 
       eventStartTime = new Date(year, month - 1, day);
       const startMinutes = Math.round((startHour % 1) * 60);
@@ -249,18 +252,18 @@ export function QuickEventModal({
         endTime: eventEndTime.toISOString(),
         isAllDay: isMultiDay,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        calendarId: '',
+        calendarId: "",
         categoryId: isValidUuid(selectedCategoryId) ? selectedCategoryId : undefined,
-        isFocusTime: selectedCategoryId === 'cat-deepwork',
+        isFocusTime: selectedCategoryId === "cat-deepwork",
         attendeeIds: attendees.map((a) => a.id),
         recurrence,
         roomId: selectedRoomId || undefined,
         tagIds,
-        meetingUrl: meetingMode === 'link' ? meetingUrl.trim() || undefined : undefined,
-        channelId: meetingMode === 'channel' ? selectedChannelId || undefined : undefined,
+        meetingUrl: meetingMode === "link" ? meetingUrl.trim() || undefined : undefined,
+        channelId: meetingMode === "channel" ? selectedChannelId || undefined : undefined,
         channelAutoCreated:
-          meetingMode === 'channel' && selectedChannelId ? channelAutoCreated : undefined,
-      })
+          meetingMode === "channel" && selectedChannelId ? channelAutoCreated : undefined,
+      }),
     );
 
     if (createEvent.fulfilled.match(result)) {
@@ -268,15 +271,17 @@ export function QuickEventModal({
       if (pendingFileIdsRef.current.length > 0 && organizationId) {
         await Promise.all(
           pendingFileIdsRef.current.map((fileId) =>
-            attachmentsApi.attachFile({
-              organizationId,
-              sourceFileId: fileId,
-              contentType: ContentType.CALENDAR_EVENT,
-              contentId: result.payload.id,
-            }).catch((err) => {
-              console.error('[QuickEventModal] Failed to attach file:', err);
-            })
-          )
+            attachmentsApi
+              .attachFile({
+                organizationId,
+                sourceFileId: fileId,
+                contentType: ContentType.CALENDAR_EVENT,
+                contentId: result.payload.id,
+              })
+              .catch((err) => {
+                console.error("[QuickEventModal] Failed to attach file:", err);
+              }),
+          ),
         );
         pendingFileIdsRef.current = [];
       }
@@ -355,29 +360,29 @@ export function QuickEventModal({
                   <span>Online meeting</span>
                 </div>
                 <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
-                  {([
-                    { mode: 'none' as const, icon: Prohibit, label: 'None' },
-                    { mode: 'link' as const, icon: LinkIcon, label: 'Link' },
-                    { mode: 'channel' as const, icon: VideoCamera, label: 'Uniffy meeting' },
-                  ]).map(({ mode, icon: Icon, label }) => (
+                  {[
+                    { mode: "none" as const, icon: Prohibit, label: "None" },
+                    { mode: "link" as const, icon: LinkIcon, label: "Link" },
+                    { mode: "channel" as const, icon: VideoCamera, label: "Uniffy meeting" },
+                  ].map(({ mode, icon: Icon, label }) => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => handleMeetingModeChange(mode)}
                       className={cn(
-                        'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
+                        "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all",
                         meetingMode === mode
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                       )}
                     >
-                      <Icon size={16} weight={meetingMode === mode ? 'fill' : 'duotone'} />
+                      <Icon size={16} weight={meetingMode === mode ? "fill" : "duotone"} />
                       <span>{label}</span>
                     </button>
                   ))}
                 </div>
 
-                {meetingMode === 'link' && (
+                {meetingMode === "link" && (
                   <input
                     type="url"
                     value={meetingUrl}
@@ -387,7 +392,7 @@ export function QuickEventModal({
                   />
                 )}
 
-                {meetingMode === 'channel' && (
+                {meetingMode === "channel" && (
                   <MeetingChannelPicker
                     selectedChannelId={selectedChannelId}
                     onSelect={(id) => {
@@ -417,10 +422,8 @@ export function QuickEventModal({
                   >
                     <span
                       className={cn(
-                        'w-3.5 h-3.5 rounded-full border-2 transition-colors',
-                        isMultiDay
-                          ? 'border-primary bg-primary'
-                          : 'border-muted-foreground'
+                        "w-3.5 h-3.5 rounded-full border-2 transition-colors",
+                        isMultiDay ? "border-primary bg-primary" : "border-muted-foreground",
                       )}
                     />
                     <span>Multi-day</span>
@@ -431,7 +434,9 @@ export function QuickEventModal({
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1.5">Start Date</label>
+                        <label className="block text-xs text-muted-foreground mb-1.5">
+                          Start Date
+                        </label>
                         <Select
                           value={startDate}
                           onChange={(value) => {
@@ -445,7 +450,9 @@ export function QuickEventModal({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1.5">Start Time</label>
+                        <label className="block text-xs text-muted-foreground mb-1.5">
+                          Start Time
+                        </label>
                         <TimeSelect
                           value={startHour}
                           onChange={(value) => {
@@ -460,7 +467,9 @@ export function QuickEventModal({
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1.5">End Date</label>
+                        <label className="block text-xs text-muted-foreground mb-1.5">
+                          End Date
+                        </label>
                         <Select
                           value={endDate}
                           onChange={setEndDate}
@@ -469,12 +478,10 @@ export function QuickEventModal({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1.5">End Time</label>
-                        <TimeSelect
-                          value={endHour}
-                          onChange={setEndHour}
-                          className="w-full"
-                        />
+                        <label className="block text-xs text-muted-foreground mb-1.5">
+                          End Time
+                        </label>
+                        <TimeSelect value={endHour} onChange={setEndHour} className="w-full" />
                       </div>
                     </div>
                   </div>
@@ -507,11 +514,7 @@ export function QuickEventModal({
                       </div>
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1.5">End</label>
-                        <TimeSelect
-                          value={endHour}
-                          onChange={setEndHour}
-                          className="w-full"
-                        />
+                        <TimeSelect value={endHour} onChange={setEndHour} className="w-full" />
                       </div>
                     </div>
                   </div>
@@ -532,10 +535,10 @@ export function QuickEventModal({
                       type="button"
                       onClick={() => setSelectedCategoryId(cat.value)}
                       className={cn(
-                        'px-3 py-1.5 text-sm rounded-lg border transition-all',
+                        "px-3 py-1.5 text-sm rounded-lg border transition-all",
                         selectedCategoryId === cat.value
-                          ? 'border-primary bg-primary/10 text-foreground'
-                          : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
                     >
                       <span
@@ -553,11 +556,7 @@ export function QuickEventModal({
                   <Tag size={16} weight="duotone" className="text-muted-foreground" />
                   <span>Tags</span>
                 </div>
-                <TagPicker
-                  selectedTagIds={tagIds}
-                  onChange={setTagIds}
-                  placeholder="Add tags..."
-                />
+                <TagPicker selectedTagIds={tagIds} onChange={setTagIds} placeholder="Add tags..." />
               </div>
 
               <div className="space-y-2">
@@ -583,8 +582,8 @@ export function QuickEventModal({
               <div
                 className="mx-5 mb-3 p-3 rounded-lg text-sm"
                 style={{
-                  backgroundColor: 'color-mix(in srgb, var(--status-warning) 8%, transparent)',
-                  color: 'var(--status-warning)',
+                  backgroundColor: "color-mix(in srgb, var(--status-warning) 8%, transparent)",
+                  color: "var(--status-warning)",
                 }}
               >
                 <div className="flex items-center gap-2 font-medium mb-1">
@@ -592,13 +591,19 @@ export function QuickEventModal({
                   Scheduling conflict ({conflicts.length})
                 </div>
                 <div className="text-xs opacity-80">
-                  Overlaps with: {conflicts.map(c => c.title).join(', ')}
+                  Overlaps with: {conflicts.map((c) => c.title).join(", ")}
                 </div>
               </div>
             )}
 
             <div className="flex gap-3 px-5 py-4 border-t border-border bg-muted/20">
-              <Button type="button" variant="outline" size="md" onClick={onClose} className="flex-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={onClose}
+                className="flex-1"
+              >
                 Cancel
               </Button>
               <Button
@@ -608,7 +613,7 @@ export function QuickEventModal({
                 disabled={!title.trim() || isSubmitting}
                 className="flex-1"
               >
-                {isSubmitting ? 'Creating...' : 'Create Event'}
+                {isSubmitting ? "Creating..." : "Create Event"}
               </Button>
             </div>
           </form>

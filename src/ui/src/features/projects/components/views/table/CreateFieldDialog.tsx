@@ -12,8 +12,16 @@ const CREATABLE_FIELDS: { type: FieldType; label: string; icon: React.ReactNode 
 ];
 
 const DEFAULT_OPTION_COLORS = [
-  "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#f97316", "#6b7280", "#14b8a6",
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#f97316",
+  "#6b7280",
+  "#14b8a6",
 ];
 
 interface CreateFieldDialogProps {
@@ -87,9 +95,8 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
       isRequired: false,
       isSystem: false,
       sortOrder: 100,
-      config: fieldType === "single_select"
-        ? { options: options.filter((o) => o.label.trim()) }
-        : {},
+      config:
+        fieldType === "single_select" ? { options: options.filter((o) => o.label.trim()) } : {},
       createdAt: now,
       updatedAt: now,
     };
@@ -115,7 +122,11 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
     >
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-foreground">Add Field</span>
-        <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-muted-foreground hover:text-foreground"
+        >
           <X size={14} />
         </button>
       </div>
@@ -149,7 +160,7 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
                 "flex items-center gap-2 px-2.5 py-1.5 rounded text-xs font-medium transition-colors",
                 fieldType === info.type
                   ? "bg-primary/10 text-primary border border-primary/30"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent",
               )}
             >
               <span className="shrink-0">{info.icon}</span>
@@ -174,20 +185,20 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
                     onClick={() => setColorPickerIdx(colorPickerIdx === idx ? null : idx)}
                     title="Pick color"
                   />
-                <input
-                  type="text"
-                  placeholder={`Option ${idx + 1}`}
-                  value={opt.label}
-                  onChange={(e) => handleOptionLabelChange(idx, e.target.value)}
-                  className="flex-1 h-7 px-2 text-xs bg-background border border-border rounded outline-none text-foreground focus:border-primary"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemoveOption(idx)}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <Trash size={12} />
-                </button>
+                  <input
+                    type="text"
+                    placeholder={`Option ${idx + 1}`}
+                    value={opt.label}
+                    onChange={(e) => handleOptionLabelChange(idx, e.target.value)}
+                    className="flex-1 h-7 px-2 text-xs bg-background border border-border rounded outline-none text-foreground focus:border-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveOption(idx)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash size={12} />
+                  </button>
                 </div>
                 {colorPickerIdx === idx && (
                   <div className="flex flex-wrap gap-1 pl-6 pb-1">
@@ -197,7 +208,9 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
                         type="button"
                         className={cn(
                           "w-4 h-4 rounded-full border transition-all",
-                          opt.color === c ? "border-foreground ring-1 ring-foreground" : "border-border hover:scale-110"
+                          opt.color === c
+                            ? "border-foreground ring-1 ring-foreground"
+                            : "border-border hover:scale-110",
                         )}
                         style={{ backgroundColor: c }}
                         onClick={() => handleOptionColorChange(idx, c)}
@@ -221,12 +234,7 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
       )}
 
       {/* Submit */}
-      <Button
-        size="sm"
-        className="w-full h-8"
-        disabled={!name.trim()}
-        onClick={handleSubmit}
-      >
+      <Button size="sm" className="w-full h-8" disabled={!name.trim()} onClick={handleSubmit}>
         Create Field
       </Button>
     </div>

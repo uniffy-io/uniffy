@@ -1,14 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
-import { X, CalendarPlus, Warning } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { DatePicker } from '@/components/ui/date-picker';
-import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
-import { selectRoomsLoading } from '@/features/rooms/store/roomsSlice';
-import { createBooking } from '@/features/rooms/store/roomsThunks';
-import { RoomPicker } from '@/features/rooms/components/shared/RoomPicker';
+import { useState, useEffect, useMemo } from "react";
+import { X, CalendarPlus, Warning } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimeSelect } from "@/features/calendar/components/modals/TimeSelect";
+import { selectRoomsLoading } from "@/features/rooms/store/roomsSlice";
+import { createBooking } from "@/features/rooms/store/roomsThunks";
+import { RoomPicker } from "@/features/rooms/components/shared/RoomPicker";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -30,41 +30,41 @@ interface BookingFormState {
 
 function getTodayString(): string {
   const now = new Date();
-  return now.toISOString().split('T')[0];
+  return now.toISOString().split("T")[0];
 }
 
 function decimalToTimeString(decimal: number): string {
   const hours = Math.floor(decimal);
   const minutes = Math.round((decimal % 1) * 60);
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
 export function BookingModal({ isOpen, onClose, onBooked, roomId, roomName }: BookingModalProps) {
   const dispatch = useAppDispatch();
   const loading = useAppSelector(selectRoomsLoading);
-  const orgId = useAppSelector((state) => state.auth.currentOrganizationId) || '';
+  const orgId = useAppSelector((state) => state.auth.currentOrganizationId) || "";
 
   const [form, setForm] = useState<BookingFormState>({
     selectedRoomId: roomId || null,
     date: getTodayString(),
     startTime: 9,
     endTime: 10,
-    title: '',
-    notes: '',
+    title: "",
+    notes: "",
   });
 
   const [conflict, setConflict] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting form state when modal opens
+      // eslint-disable-next-line react/react-compiler -- resetting form state when modal opens
       setForm({
         selectedRoomId: roomId || null,
         date: getTodayString(),
         startTime: 9,
         endTime: 10,
-        title: '',
-        notes: '',
+        title: "",
+        notes: "",
       });
       setConflict(false);
     }
@@ -72,7 +72,7 @@ export function BookingModal({ isOpen, onClose, onBooked, roomId, roomName }: Bo
 
   const timeError = useMemo(() => {
     if (form.startTime >= form.endTime) {
-      return 'End time must be after start time';
+      return "End time must be after start time";
     }
     return null;
   }, [form.startTime, form.endTime]);
@@ -100,8 +100,12 @@ export function BookingModal({ isOpen, onClose, onBooked, roomId, roomName }: Bo
       );
 
       if (createBooking.rejected.match(result)) {
-        const errorMsg = (result.payload as string) || '';
-        if (errorMsg.toLowerCase().includes('conflict') || errorMsg.toLowerCase().includes('booked') || errorMsg.toLowerCase().includes('overlap')) {
+        const errorMsg = (result.payload as string) || "";
+        if (
+          errorMsg.toLowerCase().includes("conflict") ||
+          errorMsg.toLowerCase().includes("booked") ||
+          errorMsg.toLowerCase().includes("overlap")
+        ) {
           setConflict(true);
           return;
         }
@@ -119,10 +123,10 @@ export function BookingModal({ isOpen, onClose, onBooked, roomId, roomName }: Bo
   useEffect(() => {
     if (!isOpen) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -144,10 +148,10 @@ export function BookingModal({ isOpen, onClose, onBooked, roomId, roomName }: Bo
 
       <div
         className={cn(
-          'relative bg-card w-[calc(100vw-2rem)] max-w-md mx-4',
-          'rounded-t-xl sm:rounded-xl',
-          'shadow-2xl border border-border overflow-hidden',
-          'animate-in zoom-in-95 fade-in duration-200',
+          "relative bg-card w-[calc(100vw-2rem)] max-w-md mx-4",
+          "rounded-t-xl sm:rounded-xl",
+          "shadow-2xl border border-border overflow-hidden",
+          "animate-in zoom-in-95 fade-in duration-200",
         )}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -232,15 +236,17 @@ export function BookingModal({ isOpen, onClose, onBooked, roomId, roomName }: Bo
               </div>
             </div>
 
-            {timeError && (
-              <p className="text-xs text-red-500">{timeError}</p>
-            )}
+            {timeError && <p className="text-xs text-red-500">{timeError}</p>}
 
             {conflict && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800">
-                <Warning size={16} className="text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
+                <Warning
+                  size={16}
+                  className="text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5"
+                />
                 <p className="text-xs text-yellow-800 dark:text-yellow-400">
-                  This room is already booked during the selected time. Please choose a different time or room.
+                  This room is already booked during the selected time. Please choose a different
+                  time or room.
                 </p>
               </div>
             )}
@@ -262,10 +268,10 @@ export function BookingModal({ isOpen, onClose, onBooked, roomId, roomName }: Bo
                 placeholder="Additional notes..."
                 rows={2}
                 className={cn(
-                  'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm',
-                  'placeholder:text-muted-foreground',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                  'resize-none',
+                  "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+                  "placeholder:text-muted-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  "resize-none",
                 )}
               />
             </div>

@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
-import { SubjectPicker, SubjectChip, useSubjectResolver, type Subject } from '@/components/subject';
-import { attendeeChipSubject } from '@/features/calendar/components/modals/attendeeChipSubject';
-import type { Attendee } from '@/features/calendar/types';
+import { useMemo, useState } from "react";
+import { SubjectPicker, SubjectChip, useSubjectResolver, type Subject } from "@/components/subject";
+import { attendeeChipSubject } from "@/features/calendar/components/modals/attendeeChipSubject";
+import type { Attendee } from "@/features/calendar/types";
 
 interface AttendeesSelectorProps {
   attendees: Attendee[];
@@ -11,7 +11,7 @@ interface AttendeesSelectorProps {
 
 export function AttendeesSelector({ attendees, onAdd, onRemove }: AttendeesSelectorProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const existingIds = attendees.map(a => a.id);
+  const existingIds = attendees.map((a) => a.id);
 
   const { subjects: resolvedSubjects } = useSubjectResolver(existingIds);
   const resolvedById = useMemo(
@@ -25,7 +25,7 @@ export function AttendeesSelector({ attendees, onAdd, onRemove }: AttendeesSelec
     onAdd({
       userId: subject.id,
       displayName: subject.name,
-      email: subject.email || '',
+      email: subject.email || "",
     });
   };
 

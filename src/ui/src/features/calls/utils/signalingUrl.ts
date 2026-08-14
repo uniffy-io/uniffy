@@ -6,8 +6,8 @@
  * override and is used verbatim.
  */
 export function resolveSignalingUrl(wsUrl: string): string {
-  if (wsUrl.startsWith('ws://') || wsUrl.startsWith('wss://')) return wsUrl;
-  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const path = wsUrl.startsWith('/') ? wsUrl : `/${wsUrl}`;
+  if (wsUrl.startsWith("ws://") || wsUrl.startsWith("wss://")) return wsUrl;
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const path = wsUrl.startsWith("/") ? wsUrl : `/${wsUrl}`;
   return `${proto}//${window.location.host}${path}`;
 }

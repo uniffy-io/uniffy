@@ -1,11 +1,11 @@
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { selectEvent, startDrag, endDrag } from '@/features/calendar/store';
-import type { PositionedEvent } from '@/features/calendar/types';
-import { ACCENT_EVENT_COLOR, eventTint } from '@/features/calendar/constants';
-import { formatTimeRange } from '@/features/calendar/utils';
-import { cn } from '@/shared/utils/cn';
-import { Warning, Users, ArrowsClockwise } from '@phosphor-icons/react';
-import { SubjectAvatar, SUBJECT_TYPE } from '@/components/subject';
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { selectEvent, startDrag, endDrag } from "@/features/calendar/store";
+import type { PositionedEvent } from "@/features/calendar/types";
+import { ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
+import { formatTimeRange } from "@/features/calendar/utils";
+import { cn } from "@/shared/utils/cn";
+import { Warning, Users, ArrowsClockwise } from "@phosphor-icons/react";
+import { SubjectAvatar, SUBJECT_TYPE } from "@/components/subject";
 
 interface EventBlockProps {
   event: PositionedEvent;
@@ -14,25 +14,24 @@ interface EventBlockProps {
 
 export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const dispatch = useAppDispatch();
-  const selectedEventId = useAppSelector(
-    (state) => state.calendarUi.selectedEventId
-  );
+  const selectedEventId = useAppSelector((state) => state.calendarUi.selectedEventId);
   const categories = useAppSelector((state) => state.calendar.categories);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
 
   const isSelected = selectedEventId === event.id;
   const isSharedEvent = event.organizerId !== currentUserId;
-  const multiDayPosition = event.multiDayPosition ?? 'single';
+  const multiDayPosition = event.multiDayPosition ?? "single";
 
   const currentUserAttendee = currentUserId
     ? event.attendees.find((a) => a.id === currentUserId)
     : null;
-  const isDeclined = currentUserAttendee?.status === 'declined';
-  const isPendingOrTentative = currentUserAttendee != null
-    && (currentUserAttendee.status === 'pending' || currentUserAttendee.status === 'tentative');
+  const isDeclined = currentUserAttendee?.status === "declined";
+  const isPendingOrTentative =
+    currentUserAttendee != null &&
+    (currentUserAttendee.status === "pending" || currentUserAttendee.status === "tentative");
 
   // Middle/end day segments of a multi-day event hide the label.
-  const showContent = multiDayPosition === 'start' || multiDayPosition === 'single';
+  const showContent = multiDayPosition === "start" || multiDayPosition === "single";
 
   const category = event.categoryId ? categories[event.categoryId] : null;
   const categoryColor = category?.color ?? ACCENT_EVENT_COLOR;
@@ -50,14 +49,14 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   // Multi-day spans round only on outer edges so adjacent day segments visually connect.
   const getBorderRadius = () => {
     switch (multiDayPosition) {
-      case 'start':
-        return '6px 0 0 6px';
-      case 'middle':
-        return '0';
-      case 'end':
-        return '0 6px 6px 0';
+      case "start":
+        return "6px 0 0 6px";
+      case "middle":
+        return "0";
+      case "end":
+        return "0 6px 6px 0";
       default:
-        return '6px';
+        return "6px";
     }
   };
 
@@ -65,29 +64,29 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const getSelectionBorderStyle = (): React.CSSProperties => {
     if (!isSelected) return {};
 
-    const borderColor = 'hsl(var(--primary))';
-    const borderWidth = '2px';
+    const borderColor = "hsl(var(--primary))";
+    const borderWidth = "2px";
 
     switch (multiDayPosition) {
-      case 'start':
+      case "start":
         return {
           borderTop: `${borderWidth} solid ${borderColor}`,
           borderBottom: `${borderWidth} solid ${borderColor}`,
           borderLeft: `${borderWidth} solid ${borderColor}`,
-          borderRight: 'none',
+          borderRight: "none",
         };
-      case 'middle':
+      case "middle":
         return {
           borderTop: `${borderWidth} solid ${borderColor}`,
           borderBottom: `${borderWidth} solid ${borderColor}`,
-          borderLeft: 'none',
-          borderRight: 'none',
+          borderLeft: "none",
+          borderRight: "none",
         };
-      case 'end':
+      case "end":
         return {
           borderTop: `${borderWidth} solid ${borderColor}`,
           borderBottom: `${borderWidth} solid ${borderColor}`,
-          borderLeft: 'none',
+          borderLeft: "none",
           borderRight: `${borderWidth} solid ${borderColor}`,
         };
       default:
@@ -106,9 +105,9 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
     dispatch(startDrag(event.id));
 
     if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = "move";
       // Firefox requires non-empty dataTransfer data to fire drag events.
-      e.dataTransfer.setData('text/plain', event.id);
+      e.dataTransfer.setData("text/plain", event.id);
     }
   };
 
@@ -123,9 +122,9 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={cn(
-        'absolute overflow-hidden text-left transition-all',
-        'hover:shadow-md hover:z-10 cursor-grab active:cursor-grabbing',
-        isSelected && 'z-20'
+        "absolute overflow-hidden text-left transition-all",
+        "hover:shadow-md hover:z-10 cursor-grab active:cursor-grabbing",
+        isSelected && "z-20",
       )}
       style={{
         top: event.top,
@@ -135,21 +134,22 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
         backgroundColor,
         borderRadius: getBorderRadius(),
         opacity: isDeclined ? 0.35 : isPendingOrTentative ? 0.6 : 1,
-        boxShadow: event.hasConflict && !isSelected
-          ? 'inset 0 0 0 1px color-mix(in srgb, var(--status-warning) 50%, transparent)'
-          : undefined,
+        boxShadow:
+          event.hasConflict && !isSelected
+            ? "inset 0 0 0 1px color-mix(in srgb, var(--status-warning) 50%, transparent)"
+            : undefined,
         ...getSelectionBorderStyle(),
       }}
     >
       {/* Shared events render the color bar as a dashed pattern. */}
-      {(multiDayPosition === 'start' || multiDayPosition === 'single') && (
+      {(multiDayPosition === "start" || multiDayPosition === "single") && (
         <div
           className={cn(
-            'absolute left-0 top-0 bottom-0 w-1',
-            multiDayPosition === 'single' && 'rounded-l-md'
+            "absolute left-0 top-0 bottom-0 w-1",
+            multiDayPosition === "single" && "rounded-l-md",
           )}
           style={{
-            backgroundColor: isSharedEvent ? 'transparent' : categoryColor,
+            backgroundColor: isSharedEvent ? "transparent" : categoryColor,
             backgroundImage: isSharedEvent
               ? `repeating-linear-gradient(to bottom, ${categoryColor} 0px, ${categoryColor} 4px, transparent 4px, transparent 8px)`
               : undefined,
@@ -158,42 +158,39 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
       )}
 
       {showContent && (
-        <div className={cn('pl-2.5 pr-2', isShort ? 'py-0.5' : 'py-1.5')}>
+        <div className={cn("pl-2.5 pr-2", isShort ? "py-0.5" : "py-1.5")}>
           <div
             className={cn(
-              'font-semibold text-foreground truncate flex items-center gap-1',
-              isShort ? 'text-[10px]' : 'text-xs'
+              "font-semibold text-foreground truncate flex items-center gap-1",
+              isShort ? "text-[10px]" : "text-xs",
             )}
           >
             {isSharedEvent && (
               <span title="Shared event">
-                <Users
-                  size={12}
-                  weight="duotone"
-                  className="text-muted-foreground flex-shrink-0"
-                />
+                <Users size={12} weight="duotone" className="text-muted-foreground flex-shrink-0" />
               </span>
             )}
-            {(event.isRecurring || (event.recurrence && event.recurrence.pattern !== 'none')) && !event.recurrenceId && (
-              <span title="Recurring event">
-                <ArrowsClockwise
-                  size={11}
-                  weight="bold"
-                  className="text-muted-foreground flex-shrink-0"
-                />
-              </span>
-            )}
+            {(event.isRecurring || (event.recurrence && event.recurrence.pattern !== "none")) &&
+              !event.recurrenceId && (
+                <span title="Recurring event">
+                  <ArrowsClockwise
+                    size={11}
+                    weight="bold"
+                    className="text-muted-foreground flex-shrink-0"
+                  />
+                </span>
+              )}
             {event.hasConflict && (
               <span title={`Conflicts with ${event.conflictingEvents?.length || 0} other event(s)`}>
                 <Warning
                   size={12}
                   weight="duotone"
                   className="flex-shrink-0"
-                  style={{ color: 'var(--status-warning)' }}
+                  style={{ color: "var(--status-warning)" }}
                 />
               </span>
             )}
-            <span className={cn('truncate', isDeclined && 'line-through')}>{event.title}</span>
+            <span className={cn("truncate", isDeclined && "line-through")}>{event.title}</span>
           </div>
 
           {!isShort && (
@@ -206,11 +203,7 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
             <div className="absolute bottom-1 right-2 flex gap-0.5 text-[10px] text-muted-foreground">
               {event.linkedResources.slice(0, 3).map((resource) => (
                 <span key={resource.id}>
-                  {resource.type === 'note'
-                    ? '📄'
-                    : resource.type === 'file'
-                    ? '📁'
-                    : '💬'}
+                  {resource.type === "note" ? "📄" : resource.type === "file" ? "📁" : "💬"}
                 </span>
               ))}
             </div>

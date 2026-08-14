@@ -1,17 +1,17 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
-import { X, At } from '@phosphor-icons/react';
-import { SearchResultsList, useSearch } from '@/features/search';
-import { FilterChip } from '@/features/search/components/FilterChip';
-import { FilterHints } from '@/features/search/components/FilterHints';
+import { useRef, useEffect, useState, useCallback } from "react";
+import { X, At } from "@phosphor-icons/react";
+import { SearchResultsList, useSearch } from "@/features/search";
+import { FilterChip } from "@/features/search/components/FilterChip";
+import { FilterHints } from "@/features/search/components/FilterHints";
 import {
   getTypeFilterLabel,
   removeTypeFilterFromQuery,
   removeTagFilterFromQuery,
   removeMyFilterFromQuery,
   removeProjectFilterFromQuery,
-} from '@/features/search/utils/queryParser';
-import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
-import { cn } from '@/shared/utils/cn';
+} from "@/features/search/utils/queryParser";
+import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
+import { cn } from "@/shared/utils/cn";
 
 interface MarkdownMentionSearchProps {
   initialQuery: string;
@@ -25,12 +25,24 @@ interface MarkdownMentionSearchProps {
  * because there is no rich editor to sync back into - the caller replaces
  * the `@query` range with the chosen markdown chip on `onSelect`.
  */
-export function MarkdownMentionSearch({ initialQuery, onClose, onSelect }: MarkdownMentionSearchProps) {
+export function MarkdownMentionSearch({
+  initialQuery,
+  onClose,
+  onSelect,
+}: MarkdownMentionSearchProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [localQuery, setLocalQuery] = useState(initialQuery);
 
-  const { setQuery, results, isLoading, query: currentSearchQuery, clearResults, parsedQuery, hasFilters } = useSearch();
+  const {
+    setQuery,
+    results,
+    isLoading,
+    query: currentSearchQuery,
+    clearResults,
+    parsedQuery,
+    hasFilters,
+  } = useSearch();
 
   const trimmedQuery = localQuery.trim();
   if (trimmedQuery !== currentSearchQuery) {
@@ -54,7 +66,7 @@ export function MarkdownMentionSearch({ initialQuery, onClose, onSelect }: Markd
   }, []);
 
   const handleFilterHintClick = useCallback((filter: string) => {
-    setLocalQuery(filter + ' ');
+    setLocalQuery(filter + " ");
     inputRef.current?.focus();
   }, []);
 
@@ -62,16 +74,19 @@ export function MarkdownMentionSearch({ initialQuery, onClose, onSelect }: Markd
     setLocalQuery(e.target.value);
   }, []);
 
-  const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      onClose();
-    }
-  }, [onClose]);
+  const handleInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    },
+    [onClose],
+  );
 
   const handleClear = useCallback(() => {
-    setLocalQuery('');
+    setLocalQuery("");
     clearResults();
     inputRef.current?.focus();
   }, [clearResults]);
@@ -87,8 +102,8 @@ export function MarkdownMentionSearch({ initialQuery, onClose, onSelect }: Markd
         onClose();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
   return (
@@ -112,9 +127,9 @@ export function MarkdownMentionSearch({ initialQuery, onClose, onSelect }: Markd
                 onKeyDown={handleInputKeyDown}
                 placeholder="Search to mention..."
                 className={cn(
-                  'w-full h-14 bg-transparent pl-12 pr-20 text-lg',
-                  'placeholder:text-muted-foreground/60',
-                  'focus:outline-none',
+                  "w-full h-14 bg-transparent pl-12 pr-20 text-lg",
+                  "placeholder:text-muted-foreground/60",
+                  "focus:outline-none",
                 )}
                 autoComplete="off"
                 autoCorrect="off"
@@ -160,10 +175,7 @@ export function MarkdownMentionSearch({ initialQuery, onClose, onSelect }: Markd
                   />
                 ))}
                 {parsedQuery.filters.myContentOnly && (
-                  <FilterChip
-                    label="My content"
-                    onRemove={handleRemoveMyFilter}
-                  />
+                  <FilterChip label="My content" onRemove={handleRemoveMyFilter} />
                 )}
               </div>
             )}
@@ -186,7 +198,11 @@ export function MarkdownMentionSearch({ initialQuery, onClose, onSelect }: Markd
                   Type to search for content to mention
                 </p>
                 <p className="text-xs text-muted-foreground/60 mt-2 mb-4">
-                  Use <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border/50 font-mono text-[10px]">@</kbd> to reference notes, files, users, and more
+                  Use{" "}
+                  <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border/50 font-mono text-[10px]">
+                    @
+                  </kbd>{" "}
+                  to reference notes, files, users, and more
                 </p>
                 <FilterHints onHintClick={handleFilterHintClick} />
               </div>

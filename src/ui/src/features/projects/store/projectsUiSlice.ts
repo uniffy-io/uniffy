@@ -32,9 +32,10 @@ export const projectsUiSlice = createSlice({
       } else {
         state.selectedTaskIds.splice(index, 1);
       }
-      state.selectedTaskId = state.selectedTaskIds.length > 0
-        ? state.selectedTaskIds[state.selectedTaskIds.length - 1]
-        : null;
+      state.selectedTaskId =
+        state.selectedTaskIds.length > 0
+          ? state.selectedTaskIds[state.selectedTaskIds.length - 1]
+          : null;
     },
 
     setMultiSelectMode: (state, action: PayloadAction<boolean>) => {
@@ -47,9 +48,8 @@ export const projectsUiSlice = createSlice({
     selectAllTasks: (state, action: PayloadAction<string[]>) => {
       state.selectedTaskIds = action.payload;
       state.isMultiSelectMode = action.payload.length > 1;
-      state.selectedTaskId = action.payload.length > 0
-        ? action.payload[action.payload.length - 1]
-        : null;
+      state.selectedTaskId =
+        action.payload.length > 0 ? action.payload[action.payload.length - 1] : null;
     },
 
     clearSelection: (state) => {
@@ -146,13 +146,19 @@ export const projectsUiSlice = createSlice({
       state.focusedCell = action.payload;
     },
 
-    setColumnWidths: (state, action: PayloadAction<{ projectId: string; widths: Record<string, number> }>) => {
+    setColumnWidths: (
+      state,
+      action: PayloadAction<{ projectId: string; widths: Record<string, number> }>,
+    ) => {
       if (!state.columnWidths) state.columnWidths = {};
       state.columnWidths[action.payload.projectId] = action.payload.widths;
       saveColumnWidths(state.columnWidths);
     },
 
-    setColumnWidth: (state, action: PayloadAction<{ projectId: string; fieldId: string; width: number }>) => {
+    setColumnWidth: (
+      state,
+      action: PayloadAction<{ projectId: string; fieldId: string; width: number }>,
+    ) => {
       const { projectId, fieldId, width } = action.payload;
       if (!state.columnWidths) state.columnWidths = {};
       if (!state.columnWidths[projectId]) {
@@ -345,7 +351,8 @@ export const selectSearchQuery = (state: RootState) => state.projectsUi.searchQu
 export const selectAutosaveState = (state: RootState) => state.projectsUi.autosave;
 export const selectActiveSortConfig = (state: RootState) => state.projectsUi.activeSortConfig;
 export const selectActiveFilterConfig = (state: RootState) => state.projectsUi.activeFilterConfig;
-export const selectActiveGroupByFieldId = (state: RootState) => state.projectsUi.activeGroupByFieldId;
+export const selectActiveGroupByFieldId = (state: RootState) =>
+  state.projectsUi.activeGroupByFieldId;
 export const selectTableOutlineEnabled = (state: RootState) => state.projectsUi.tableOutlineEnabled;
 export const selectSprintFilter = (state: RootState) => state.projectsUi.sprintFilter;
 export const selectTaskTypeFilter = (state: RootState) => state.projectsUi.taskTypeFilter;
@@ -353,10 +360,14 @@ export const selectRootOnlyFilter = (state: RootState) => state.projectsUi.rootO
 export const selectInEpicFilter = (state: RootState) => state.projectsUi.inEpicFilter;
 export const selectEditingCell = (state: RootState) => state.projectsUi.editingCell;
 export const selectFocusedCell = (state: RootState) => state.projectsUi.focusedCell;
-export const selectColumnWidthsForProject = (projectId: string) => (state: RootState): Record<string, number> =>
-  state.projectsUi.columnWidths?.[projectId] ?? {};
-export const selectHiddenColumnsForProject = (projectId: string) => (state: RootState): string[] =>
-  state.projectsUi.hiddenColumns?.[projectId] ?? [];
+export const selectColumnWidthsForProject =
+  (projectId: string) =>
+  (state: RootState): Record<string, number> =>
+    state.projectsUi.columnWidths?.[projectId] ?? {};
+export const selectHiddenColumnsForProject =
+  (projectId: string) =>
+  (state: RootState): string[] =>
+    state.projectsUi.hiddenColumns?.[projectId] ?? [];
 export const selectUndoStack = (state: RootState) => state.projectsUi.undoStack;
 export const selectRedoStack = (state: RootState) => state.projectsUi.redoStack;
 export const selectEditProjectId = (state: RootState) => state.projectsUi.editProjectId;

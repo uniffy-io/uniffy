@@ -1,61 +1,79 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER, createMigrate, createTransform } from 'redux-persist';
-import type { PersistedState, MigrationManifest } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
-import { authReducer } from '@/features/auth/store/authSlice';
-import type { AuthState } from '@/features/auth/store/authSlice';
-import { bookmarksReducer } from '@/features/bookmarks/store/bookmarksSlice';
-import { themeReducer } from '@/config/theme/themeSlice';
-import { notesReducer } from '@/features/notes/store/notesSlice';
-import { notesTreeReducer } from '@/features/notes/store/notesTreeSlice';
-import { editorReducer } from '@/features/notes/store/editorSlice';
-import { settingsReducer } from '@/features/settings/store/settingsSlice';
-import { permissionsReducer } from '@/features/permissions';
-import { adminReducer } from '@/features/admin/store/adminSlice';
-import { agentsGovernanceReducer } from '@/features/admin/store/agentsGovernanceSlice';
-import { agentRuntimeSettingsReducer } from '@/features/admin/store/agentRuntimeSettingsSlice';
-import { setStoreRef } from '@/app/storeRef';
-import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
-import { zenModeReducer } from '@/app/zenModeSlice';
-import { filesReducer, filesTreeReducer, uploadReducer, savedFiltersReducer, viewerReducer, trashReducer } from '@/features/files';
-import { imageEditorReducer } from '@/features/files/store/imageEditorSlice';
-import { notificationsReducer } from '@/features/notifications/store/notificationsSlice';
-import { notificationsPageReducer } from '@/features/notifications/store/notificationsPageSlice';
-import { sessionsReducer } from '@/features/settings/store/sessionsSlice';
-import { commentsReducer } from '@/features/comments/store/commentsSlice';
-import { projectsReducer } from '@/features/projects/store/projectsSlice';
-import { projectsUiReducer } from '@/features/projects/store/projectsUiSlice';
-import { loadColumnWidths, loadHiddenColumns } from '@/features/projects/utils/tableColumnStorage';
-import { agentsUiReducer } from '@/features/agents/store/agentsUiSlice';
-import { agentsReducer } from '@/features/agents/store/agentsSlice';
-import { agentSessionsReducer } from '@/features/agents/store/agentSessionsSlice';
-import { agentMessagesReducer } from '@/features/agents/store/agentMessagesSlice';
-import { agentSkillsReducer } from '@/features/agents/store/agentSkillsSlice';
-import { agentTemplatesReducer } from '@/features/agents/store/agentTemplatesSlice';
-import { agentToolsReducer } from '@/features/agents/store/agentToolsSlice';
-import { agentRunnableSkillsReducer } from '@/features/agents/store/agentRunnableSkillsSlice';
-import { agentSkillDraftsReducer } from '@/features/agents/store/agentSkillDraftsSlice';
-import { agentSkillVersionsReducer } from '@/features/agents/store/agentSkillVersionsSlice';
-import { agentSkillMetricsReducer } from '@/features/agents/store/agentSkillMetricsSlice';
-import { agentProvidersReducer } from '@/features/agents/store/agentProvidersSlice';
-import { agentUsageReducer } from '@/features/agents/store/agentUsageSlice';
-import { agentCronReducer } from '@/features/agents/store/agentCronSlice';
-import { agentMemoriesReducer } from '@/features/agents/store/agentMemoriesSlice';
-import { integrationsReducer } from '@/features/integrations/store/integrationsSlice';
-import { errorToastMiddleware } from '@/app/errorToastMiddleware';
-import { presenceReducer } from '@/features/presence/store/presenceSlice';
-import { sprintsReducer } from '@/features/projects/store/sprintsSlice';
-import { roomsReducer } from '@/features/rooms/store/roomsSlice';
-import { chatChannelsReducer } from '@/features/chat/store/chatChannelsSlice';
-import { chatMessagesReducer } from '@/features/chat/store/chatMessagesSlice';
-import { chatThreadsReducer } from '@/features/chat/store/chatThreadsSlice';
-import { chatUiReducer } from '@/features/chat/store/chatUiSlice';
-import { chatDraftsReducer } from '@/features/chat/store/chatDraftsSlice';
-import { tagsReducer } from '@/features/tags/store/tagsSlice';
-import { peopleReducer } from '@/features/people/store/peopleSlice';
-import { recordingReducer } from '@/features/recording';
-import { callsReducer } from '@/features/calls/store/callsSlice';
-import { callPreferencesReducer } from '@/features/calls/store/callPreferencesSlice';
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
+import {
+  persistStore,
+  persistReducer,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+  createMigrate,
+  createTransform,
+} from "redux-persist";
+import type { PersistedState, MigrationManifest } from "redux-persist";
+import storage from "redux-persist/lib/storage";
+import { authReducer } from "@/features/auth/store/authSlice";
+import type { AuthState } from "@/features/auth/store/authSlice";
+import { bookmarksReducer } from "@/features/bookmarks/store/bookmarksSlice";
+import { themeReducer } from "@/config/theme/themeSlice";
+import { notesReducer } from "@/features/notes/store/notesSlice";
+import { notesTreeReducer } from "@/features/notes/store/notesTreeSlice";
+import { editorReducer } from "@/features/notes/store/editorSlice";
+import { settingsReducer } from "@/features/settings/store/settingsSlice";
+import { permissionsReducer } from "@/features/permissions";
+import { adminReducer } from "@/features/admin/store/adminSlice";
+import { agentsGovernanceReducer } from "@/features/admin/store/agentsGovernanceSlice";
+import { agentRuntimeSettingsReducer } from "@/features/admin/store/agentRuntimeSettingsSlice";
+import { setStoreRef } from "@/app/storeRef";
+import { calendarReducer, calendarUiReducer } from "@/features/calendar/store";
+import { zenModeReducer } from "@/app/zenModeSlice";
+import {
+  filesReducer,
+  filesTreeReducer,
+  uploadReducer,
+  savedFiltersReducer,
+  viewerReducer,
+  trashReducer,
+} from "@/features/files";
+import { imageEditorReducer } from "@/features/files/store/imageEditorSlice";
+import { notificationsReducer } from "@/features/notifications/store/notificationsSlice";
+import { notificationsPageReducer } from "@/features/notifications/store/notificationsPageSlice";
+import { sessionsReducer } from "@/features/settings/store/sessionsSlice";
+import { commentsReducer } from "@/features/comments/store/commentsSlice";
+import { projectsReducer } from "@/features/projects/store/projectsSlice";
+import { projectsUiReducer } from "@/features/projects/store/projectsUiSlice";
+import { loadColumnWidths, loadHiddenColumns } from "@/features/projects/utils/tableColumnStorage";
+import { agentsUiReducer } from "@/features/agents/store/agentsUiSlice";
+import { agentsReducer } from "@/features/agents/store/agentsSlice";
+import { agentSessionsReducer } from "@/features/agents/store/agentSessionsSlice";
+import { agentMessagesReducer } from "@/features/agents/store/agentMessagesSlice";
+import { agentSkillsReducer } from "@/features/agents/store/agentSkillsSlice";
+import { agentTemplatesReducer } from "@/features/agents/store/agentTemplatesSlice";
+import { agentToolsReducer } from "@/features/agents/store/agentToolsSlice";
+import { agentRunnableSkillsReducer } from "@/features/agents/store/agentRunnableSkillsSlice";
+import { agentSkillDraftsReducer } from "@/features/agents/store/agentSkillDraftsSlice";
+import { agentSkillVersionsReducer } from "@/features/agents/store/agentSkillVersionsSlice";
+import { agentSkillMetricsReducer } from "@/features/agents/store/agentSkillMetricsSlice";
+import { agentProvidersReducer } from "@/features/agents/store/agentProvidersSlice";
+import { agentUsageReducer } from "@/features/agents/store/agentUsageSlice";
+import { agentCronReducer } from "@/features/agents/store/agentCronSlice";
+import { agentMemoriesReducer } from "@/features/agents/store/agentMemoriesSlice";
+import { integrationsReducer } from "@/features/integrations/store/integrationsSlice";
+import { errorToastMiddleware } from "@/app/errorToastMiddleware";
+import { presenceReducer } from "@/features/presence/store/presenceSlice";
+import { sprintsReducer } from "@/features/projects/store/sprintsSlice";
+import { roomsReducer } from "@/features/rooms/store/roomsSlice";
+import { chatChannelsReducer } from "@/features/chat/store/chatChannelsSlice";
+import { chatMessagesReducer } from "@/features/chat/store/chatMessagesSlice";
+import { chatThreadsReducer } from "@/features/chat/store/chatThreadsSlice";
+import { chatUiReducer } from "@/features/chat/store/chatUiSlice";
+import { chatDraftsReducer } from "@/features/chat/store/chatDraftsSlice";
+import { tagsReducer } from "@/features/tags/store/tagsSlice";
+import { peopleReducer } from "@/features/people/store/peopleSlice";
+import { recordingReducer } from "@/features/recording";
+import { callsReducer } from "@/features/calls/store/callsSlice";
+import { callPreferencesReducer } from "@/features/calls/store/callPreferencesSlice";
 
 /** Access tokens live in memory only to reduce XSS surface; refresh token recovers them on reload. */
 const authSecurityTransform = createTransform(
@@ -68,7 +86,7 @@ const authSecurityTransform = createTransform(
     accessToken: null,
     isAuthenticated: false,
   }),
-  { whitelist: ['auth'] }
+  { whitelist: ["auth"] },
 );
 
 /** Calendar opens to today, not the last viewed date; other UI prefs survive. */
@@ -78,9 +96,9 @@ const calendarUiTransform = createTransform(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (outboundState: any) => ({
     ...outboundState,
-    currentDate: new Date().toISOString().split('T')[0],
+    currentDate: new Date().toISOString().split("T")[0],
   }),
-  { whitelist: ['calendarUi'] }
+  { whitelist: ["calendarUi"] },
 );
 
 /** Preserve layout prefs; reset selections, modals, drag, undo, autosave. Column state lives in localStorage. */
@@ -108,12 +126,12 @@ const projectsUiTransform = createTransform(
     dragState: null,
     editingCell: null,
     focusedCell: null,
-    searchQuery: '',
+    searchQuery: "",
     undoStack: [],
     redoStack: [],
     autosave: { isSaving: {}, lastSaved: {}, hasChanges: {} },
   }),
-  { whitelist: ['projectsUi'] }
+  { whitelist: ["projectsUi"] },
 );
 
 /** Force `idle` on rehydrate - MediaRecorder/MediaStream can't survive a reload. Picker prefs persist. */
@@ -123,9 +141,9 @@ const recordingTransform = createTransform(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (outboundState: any) => ({
     ...outboundState,
-    state: 'idle',
-    network: 'online',
-    auth: 'ok',
+    state: "idle",
+    network: "online",
+    auth: "ok",
     uploadId: null,
     startedAt: null,
     pausedDurationMs: 0,
@@ -136,7 +154,7 @@ const recordingTransform = createTransform(
     error: null,
     firstUseModalOpen: false,
   }),
-  { whitelist: ['recording'] },
+  { whitelist: ["recording"] },
 );
 
 /** Keep layout prefs and the last-visited section; drop search and any stale keys. */
@@ -145,11 +163,11 @@ const agentsUiTransform = createTransform(
   (inboundState: any) => inboundState,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (outboundState: any) => ({
-    lastSection: outboundState.lastSection ?? 'agents',
+    lastSection: outboundState.lastSection ?? "agents",
     sidebarCollapsed: outboundState.sidebarCollapsed ?? false,
-    sidebarSearch: '',
+    sidebarSearch: "",
   }),
-  { whitelist: ['agentsUi'] }
+  { whitelist: ["agentsUi"] },
 );
 
 const rootReducer = combineReducers({
@@ -217,11 +235,11 @@ const migrations: MigrationManifest = {
     const s = state as any;
     if (s?.theme?.currentTheme && !s.theme.themeMode) {
       const oldTheme = s.theme.currentTheme;
-      let newMode: 'system' | 'light' | 'dark' = 'system';
-      if (oldTheme === 'dark') {
-        newMode = 'dark';
-      } else if (oldTheme === 'default' || oldTheme === 'light') {
-        newMode = 'light';
+      let newMode: "system" | "light" | "dark" = "system";
+      if (oldTheme === "dark") {
+        newMode = "dark";
+      } else if (oldTheme === "default" || oldTheme === "light") {
+        newMode = "light";
       }
       return {
         ...s,
@@ -254,11 +272,27 @@ const migrations: MigrationManifest = {
 type RootReducerState = ReturnType<typeof rootReducer>;
 
 const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
-  key: 'root',
+  key: "root",
   version: 3,
   storage,
-  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi', 'agentsUi', 'chatUi', 'recording', 'callPreferences'],
-  transforms: [authSecurityTransform, calendarUiTransform, projectsUiTransform, agentsUiTransform, recordingTransform],
+  whitelist: [
+    "auth",
+    "theme",
+    "editor",
+    "calendarUi",
+    "projectsUi",
+    "agentsUi",
+    "chatUi",
+    "recording",
+    "callPreferences",
+  ],
+  transforms: [
+    authSecurityTransform,
+    calendarUiTransform,
+    projectsUiTransform,
+    agentsUiTransform,
+    recordingTransform,
+  ],
   migrate: createMigrate(migrations, { debug: false }),
 };
 

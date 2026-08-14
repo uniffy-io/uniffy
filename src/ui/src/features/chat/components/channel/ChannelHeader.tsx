@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   Hash,
   Lock,
@@ -14,12 +14,10 @@ import {
   LinkSimple,
   Gauge,
   Phone,
-} from '@phosphor-icons/react';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { useTagsByIds } from '@/features/tags/store/selectors';
-import {
-  selectActiveChannel,
-} from '@/features/chat/store/chatChannelsSlice';
+} from "@phosphor-icons/react";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { useTagsByIds } from "@/features/tags/store/selectors";
+import { selectActiveChannel } from "@/features/chat/store/chatChannelsSlice";
 import {
   toggleChannelHeaderExpanded,
   selectChannelHeaderExpanded,
@@ -27,49 +25,46 @@ import {
   deactivateSplit,
   expandSidebar,
   selectSidebarOpen,
-} from '@/features/chat/store/chatUiSlice';
-import { ChatSearchPanel } from '@/features/chat/components/search/ChatSearchPanel';
-import {
-  setSplitChannel,
-  clearSplitChannel,
-} from '@/features/chat/store/chatChannelsSlice';
-import { activateSplit, openChannelSettingsModal } from '@/features/chat/store/chatUiSlice';
-import { openResourcePanel, selectResourcePanelOpen } from '@/features/chat/store/chatUiSlice';
-import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
-import { AgentContextBar } from '@/features/chat/components/channel/AgentContextBar';
-import { ChannelAgentsPopover } from '@/features/chat/components/channel/ChannelAgentsPopover';
-import { CustomStatusDisplay } from '@/features/presence/components/CustomStatusDisplay';
-import { cn } from '@/shared/utils/cn';
-import { formatDateFull } from '@/shared/utils/dateFormatting';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { SplitChannelPicker } from '@/features/chat/components/channel/SplitChannelPicker';
-import { PinnedMessagesPanel } from '@/features/chat/components/channel/PinnedMessagesPanel';
-import { selectPinnedCountForChannel } from '@/features/chat/store/chatMessagesSlice';
-import { Input } from '@/components/ui/input';
-import { renameAgentChat, jumpToChannelMessage } from '@/features/chat/store/chatThunks';
-import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
-import { TagChip } from '@/features/tags';
+} from "@/features/chat/store/chatUiSlice";
+import { ChatSearchPanel } from "@/features/chat/components/search/ChatSearchPanel";
+import { setSplitChannel, clearSplitChannel } from "@/features/chat/store/chatChannelsSlice";
+import { activateSplit, openChannelSettingsModal } from "@/features/chat/store/chatUiSlice";
+import { openResourcePanel, selectResourcePanelOpen } from "@/features/chat/store/chatUiSlice";
+import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
+import { AgentContextBar } from "@/features/chat/components/channel/AgentContextBar";
+import { ChannelAgentsPopover } from "@/features/chat/components/channel/ChannelAgentsPopover";
+import { CustomStatusDisplay } from "@/features/presence/components/CustomStatusDisplay";
+import { cn } from "@/shared/utils/cn";
+import { formatDateFull } from "@/shared/utils/dateFormatting";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { SplitChannelPicker } from "@/features/chat/components/channel/SplitChannelPicker";
+import { PinnedMessagesPanel } from "@/features/chat/components/channel/PinnedMessagesPanel";
+import { selectPinnedCountForChannel } from "@/features/chat/store/chatMessagesSlice";
+import { Input } from "@/components/ui/input";
+import { renameAgentChat, jumpToChannelMessage } from "@/features/chat/store/chatThunks";
+import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import { TagChip } from "@/features/tags";
 import {
   prejoinOpened,
   selectActiveCallForChannel,
   selectCallSession,
-} from '@/features/calls/store/callsSlice';
+} from "@/features/calls/store/callsSlice";
 
 const headerButtonClass = cn(
-  'group/btn relative flex items-center justify-center h-7 w-7 rounded-md',
-  'border border-foreground/15 bg-transparent text-muted-foreground',
-  'transition-all duration-300 ease-out',
-  'hover:border-foreground/30 hover:bg-muted hover:text-primary',
+  "group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
+  "border border-foreground/15 bg-transparent text-muted-foreground",
+  "transition-all duration-300 ease-out",
+  "hover:border-foreground/30 hover:bg-muted hover:text-primary",
 );
 
 const headerButtonActiveClass =
-  'text-primary bg-primary/10 border-primary/50 hover:border-primary/50 hover:bg-primary/10';
+  "text-primary bg-primary/10 border-primary/50 hover:border-primary/50 hover:bg-primary/10";
 
 const headerChipClass = cn(
-  'group/btn flex items-center gap-1 h-7 px-1.5 rounded-md',
-  'border border-foreground/15 bg-transparent text-xs text-muted-foreground',
-  'transition-all duration-300 ease-out',
-  'hover:border-foreground/30 hover:bg-muted hover:text-primary',
+  "group/btn flex items-center gap-1 h-7 px-1.5 rounded-md",
+  "border border-foreground/15 bg-transparent text-xs text-muted-foreground",
+  "transition-all duration-300 ease-out",
+  "hover:border-foreground/30 hover:bg-muted hover:text-primary",
 );
 
 interface ChannelHeaderProps {
@@ -105,10 +100,10 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   useEffect(() => {
     if (!showPicker) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowPicker(false);
+      if (e.key === "Escape") setShowPicker(false);
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showPicker]);
 
   const handleSplitClick = useCallback(() => {
@@ -120,37 +115,38 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
     }
   }, [dispatch, splitActive]);
 
-  const handlePickerSelect = useCallback((selectedChannelId: string) => {
-    dispatch(setSplitChannel(selectedChannelId));
-    dispatch(activateSplit());
-    setShowPicker(false);
-  }, [dispatch]);
+  const handlePickerSelect = useCallback(
+    (selectedChannelId: string) => {
+      dispatch(setSplitChannel(selectedChannelId));
+      dispatch(activateSplit());
+      setShowPicker(false);
+    },
+    [dispatch],
+  );
 
-  const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? '');
-  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
+  const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? "");
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
   const pinnedCount = useAppSelector((state) =>
     activeChannel ? selectPinnedCountForChannel(state, activeChannel.id) : 0,
   );
 
-  const isDm = activeChannel?.channelType === 'DIRECT' || activeChannel?.channelType === 'GROUP_DM';
-  const isOneOnOneDm = activeChannel?.channelType === 'DIRECT';
+  const isDm = activeChannel?.channelType === "DIRECT" || activeChannel?.channelType === "GROUP_DM";
+  const isOneOnOneDm = activeChannel?.channelType === "DIRECT";
   const isAgentDm = !!activeChannel?.isAgentDm;
 
   const dmPeerUserId = useMemo(() => {
-    if (!activeChannel || !isOneOnOneDm || isAgentDm) return '';
-    const peer = (activeChannel.dmMemberIds ?? []).find(
-      (id) => !!id && id !== currentUserId,
-    );
+    if (!activeChannel || !isOneOnOneDm || isAgentDm) return "";
+    const peer = (activeChannel.dmMemberIds ?? []).find((id) => !!id && id !== currentUserId);
     if (peer) return peer;
     if (activeChannel.ownerId && activeChannel.ownerId !== currentUserId) {
       return activeChannel.ownerId;
     }
-    return '';
+    return "";
   }, [activeChannel, isOneOnOneDm, isAgentDm, currentUserId]);
 
   const agent = useAppSelector((state) =>
     isAgentDm && activeChannel?.agentId
-      ? state.agents.agents[activeChannel.agentId] ?? null
+      ? (state.agents.agents[activeChannel.agentId] ?? null)
       : null,
   );
 
@@ -158,15 +154,15 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   const isGroupChannel = !isOneOnOneDm;
 
   const headerName = useMemo(() => {
-    if (!activeChannel) return '';
+    if (!activeChannel) return "";
     if (isAgentDm) return getChannelDisplayName(activeChannel);
     if (!isDm || !currentUserName) return activeChannel.name;
-    const parts = activeChannel.name.split(', ').filter((n) => n !== currentUserName);
-    return parts.length > 0 ? parts.join(', ') : activeChannel.name;
+    const parts = activeChannel.name.split(", ").filter((n) => n !== currentUserName);
+    return parts.length > 0 ? parts.join(", ") : activeChannel.name;
   }, [isDm, isAgentDm, activeChannel, currentUserName]);
 
   const [isEditingName, setIsEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState('');
+  const [nameDraft, setNameDraft] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -179,7 +175,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   const handleNameClick = useCallback(() => {
     if (!activeChannel) return;
     if (isAgentDm) {
-      setNameDraft(activeChannel.customName ?? '');
+      setNameDraft(activeChannel.customName ?? "");
       setIsEditingName(true);
       return;
     }
@@ -200,21 +196,22 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
     }
     setIsSavingName(true);
     try {
-      await dispatch(
-        renameAgentChat({ channelId: activeChannel.id, customName: next }),
-      ).unwrap();
+      await dispatch(renameAgentChat({ channelId: activeChannel.id, customName: next })).unwrap();
     } finally {
       setIsSavingName(false);
       setIsEditingName(false);
     }
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
   }, [activeChannel, isAgentDm, nameDraft, dispatch]);
 
   const handleNameKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         e.preventDefault();
         void submitNameDraft();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         e.preventDefault();
         setIsEditingName(false);
       }
@@ -228,12 +225,11 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
     activeChannel ? selectActiveCallForChannel(state, activeChannel.id) : null,
   );
   const callSession = useAppSelector(selectCallSession);
-  const inCallHere =
-    callSession.channelId === activeChannel?.id && callSession.status !== 'idle';
+  const inCallHere = callSession.channelId === activeChannel?.id && callSession.status !== "idle";
 
   if (!activeChannel) return null;
 
-  const isPrivate = activeChannel.channelType === 'PRIVATE';
+  const isPrivate = activeChannel.channelType === "PRIVATE";
   const ChannelIcon = isPrivate ? Lock : Hash;
   const createdDate = formatDateFull(activeChannel.createdAt);
   const currentChannelId = activeChannel.id;
@@ -250,16 +246,14 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           <button
             type="button"
             onClick={() => dispatch(expandSidebar())}
-            className={cn(headerButtonClass, 'shrink-0')}
+            className={cn(headerButtonClass, "shrink-0")}
             aria-label="Open chat navigation"
             data-testid="chat-channel-mobile-sidebar-toggle"
           >
             <SidebarSimple size={16} />
           </button>
         )}
-        {!isDm && (
-          <ChannelIcon size={16} className="text-muted-foreground shrink-0" />
-        )}
+        {!isDm && <ChannelIcon size={16} className="text-muted-foreground shrink-0" />}
         {isAgentDm && (
           <AgentAvatar
             avatarKey={agent?.avatarKey}
@@ -288,22 +282,20 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             onClick={handleNameClick}
             className="flex items-center gap-1 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
             data-testid="chat-channel-name"
-            title={isAgentDm ? 'Click to rename' : undefined}
+            title={isAgentDm ? "Click to rename" : undefined}
           >
             <span>{headerName}</span>
             {dmPeerUserId && (
               <CustomStatusDisplay userId={dmPeerUserId} className="text-sm" compact />
             )}
-            {!isDm && (
-              isExpanded ? <CaretUp size={12} /> : <CaretDown size={12} />
-            )}
+            {!isDm && (isExpanded ? <CaretUp size={12} /> : <CaretDown size={12} />)}
           </button>
         )}
 
-        {!(activeChannel.channelType === 'DIRECT') && (
+        {!(activeChannel.channelType === "DIRECT") && (
           <button
             type="button"
-            onClick={() => dispatch(openChannelSettingsModal('members'))}
+            onClick={() => dispatch(openChannelSettingsModal("members"))}
             className={headerChipClass}
             data-testid="chat-channel-members-button"
             title={`${activeChannel.memberCount} members`}
@@ -323,18 +315,16 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
               className={cn(
                 activeCall ? headerChipClass : headerButtonClass,
                 activeCall &&
-                  'text-emerald-500 border-emerald-500/40 hover:text-emerald-500 hover:border-emerald-500/60',
+                  "text-emerald-500 border-emerald-500/40 hover:text-emerald-500 hover:border-emerald-500/60",
               )}
-              aria-label={activeCall ? 'Join live call' : 'Start call'}
-              title={activeCall ? 'Join live call' : 'Start call'}
+              aria-label={activeCall ? "Join live call" : "Start call"}
+              title={activeCall ? "Join live call" : "Start call"}
               data-testid="chat-channel-call-button"
-              data-state={activeCall ? 'live' : 'idle'}
+              data-state={activeCall ? "live" : "idle"}
             >
-              <Phone size={16} weight={activeCall ? 'fill' : 'regular'} />
+              <Phone size={16} weight={activeCall ? "fill" : "regular"} />
               {activeCall && (
-                <span className="font-medium tabular-nums">
-                  {activeCall.participants.length}
-                </span>
+                <span className="font-medium tabular-nums">{activeCall.participants.length}</span>
               )}
             </button>
           )}
@@ -343,10 +333,10 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
               type="button"
               onClick={() => setShowContextBar((prev) => !prev)}
               className={cn(headerButtonClass, showContextBar && headerButtonActiveClass)}
-              aria-label={showContextBar ? 'Hide agent context' : 'Show agent context'}
+              aria-label={showContextBar ? "Hide agent context" : "Show agent context"}
               title="Agent context"
               data-testid="chat-channel-agent-context-toggle"
-              data-state={showContextBar ? 'open' : 'closed'}
+              data-state={showContextBar ? "open" : "closed"}
             >
               <Gauge size={16} />
             </button>
@@ -357,10 +347,10 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
               type="button"
               onClick={() => setShowAgentsPopover((prev) => !prev)}
               className={cn(headerButtonClass, showAgentsPopover && headerButtonActiveClass)}
-              aria-label={showAgentsPopover ? 'Hide agent context' : 'Show agent context'}
+              aria-label={showAgentsPopover ? "Hide agent context" : "Show agent context"}
               title="Agent context"
               data-testid="chat-channel-agents-toggle"
-              data-state={showAgentsPopover ? 'open' : 'closed'}
+              data-state={showAgentsPopover ? "open" : "closed"}
             >
               <Gauge size={16} />
             </button>
@@ -376,11 +366,11 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           <button
             ref={searchBtnRef}
             type="button"
-            onClick={() => setShowSearch(prev => !prev)}
+            onClick={() => setShowSearch((prev) => !prev)}
             className={cn(headerButtonClass, showSearch && headerButtonActiveClass)}
             aria-label="Search messages"
             data-testid="chat-channel-search-button"
-            data-state={showSearch ? 'open' : 'closed'}
+            data-state={showSearch ? "open" : "closed"}
           >
             <MagnifyingGlass size={16} />
           </button>
@@ -396,11 +386,11 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           <button
             ref={pinnedBtnRef}
             type="button"
-            onClick={() => setShowPinned(prev => !prev)}
+            onClick={() => setShowPinned((prev) => !prev)}
             className={cn(headerButtonClass, showPinned && headerButtonActiveClass)}
             aria-label="Pinned messages"
             data-testid="chat-channel-pinned-button"
-            data-state={showPinned ? 'open' : 'closed'}
+            data-state={showPinned ? "open" : "closed"}
           >
             <PushPin size={16} />
             {pinnedCount > 0 && !showPinned && (
@@ -429,7 +419,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             className={cn(headerButtonClass, resourcePanelOpen && headerButtonActiveClass)}
             aria-label="Channel resources"
             data-testid="chat-channel-resources-button"
-            data-state={resourcePanelOpen ? 'open' : 'closed'}
+            data-state={resourcePanelOpen ? "open" : "closed"}
           >
             <LinkSimple size={16} />
           </button>
@@ -441,9 +431,9 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
                 type="button"
                 onClick={handleSplitClick}
                 className={cn(headerButtonClass, splitActive && headerButtonActiveClass)}
-                aria-label={splitActive ? 'Close split view' : 'Open split view'}
+                aria-label={splitActive ? "Close split view" : "Open split view"}
                 data-testid="chat-channel-split-button"
-                data-state={splitActive ? 'active' : 'inactive'}
+                data-state={splitActive ? "active" : "inactive"}
               >
                 <SquareSplitHorizontal size={16} />
               </button>
@@ -458,10 +448,10 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             </div>
           )}
 
-          {activeChannel.channelType !== 'DIRECT' && activeChannel.channelType !== 'GROUP_DM' && (
+          {activeChannel.channelType !== "DIRECT" && activeChannel.channelType !== "GROUP_DM" && (
             <button
               type="button"
-              onClick={() => dispatch(openChannelSettingsModal('overview'))}
+              onClick={() => dispatch(openChannelSettingsModal("overview"))}
               className={headerButtonClass}
               aria-label="Channel settings"
               data-testid="chat-channel-settings-button"
@@ -481,30 +471,23 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
               <X size={16} />
             </button>
           )}
-
         </div>
       </div>
 
       {isAgentDm && agent && showContextBar && (
-        <AgentContextBar
-          channelId={activeChannel.id}
-          agentId={agent.id}
-          agentName={agent.name}
-        />
+        <AgentContextBar channelId={activeChannel.id} agentId={agent.id} agentName={agent.name} />
       )}
 
       {!isDm && (
         <div
           className={cn(
-            'overflow-hidden transition-[max-height,opacity] duration-200 ease-out',
-            isExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0',
+            "overflow-hidden transition-[max-height,opacity] duration-200 ease-out",
+            isExpanded ? "max-h-48 opacity-100" : "max-h-0 opacity-0",
           )}
         >
           <div className="px-4 py-2 border-t border-border/50 space-y-1.5">
             {activeChannel.description && (
-              <p className="text-sm text-muted-foreground">
-                {activeChannel.description}
-              </p>
+              <p className="text-sm text-muted-foreground">{activeChannel.description}</p>
             )}
             {channelTags.length > 0 && (
               <div
@@ -516,9 +499,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
                 ))}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              Created on {createdDate}
-            </p>
+            <p className="text-xs text-muted-foreground">Created on {createdDate}</p>
           </div>
         </div>
       )}

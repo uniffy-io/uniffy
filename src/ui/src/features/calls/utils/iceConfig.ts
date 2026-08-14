@@ -1,5 +1,5 @@
-import { IceTransportPolicy } from '@uniffy/proto/calls/v1/calls_pb';
-import type { IceServerData } from '@/features/calls/types';
+import { IceTransportPolicy } from "@uniffy/proto/calls/v1/calls_pb";
+import type { IceServerData } from "@/features/calls/types";
 
 /**
  * Maps JoinCall ICE config to the RTCConfiguration for Room.connect. An empty
@@ -14,6 +14,6 @@ export function buildRtcConfiguration(
   const config: RTCConfiguration = {
     iceServers: iceServers.map((server) => ({ ...server, urls: [...server.urls] })),
   };
-  if (policy === IceTransportPolicy.RELAY) config.iceTransportPolicy = 'relay';
+  if (policy === IceTransportPolicy.RELAY) config.iceTransportPolicy = "relay";
   return config;
 }

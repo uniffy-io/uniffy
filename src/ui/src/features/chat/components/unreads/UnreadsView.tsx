@@ -1,20 +1,14 @@
-import { useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Hash,
-  Lock,
-  Check,
-  ChatTeardrop,
-  Tray,
-} from '@phosphor-icons/react';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { SubjectAvatarById } from '@/components/subject';
-import { setActiveChannel, selectChannels } from '@/features/chat/store/chatChannelsSlice';
-import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { MessageContent } from '@/features/chat/components/channel/MessageContent';
-import { markChannelRead } from '@/features/chat/store/chatThunks';
-import type { ChatChannel, ChatMessage } from '@/features/chat/types';
+import { useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { Hash, Lock, Check, ChatTeardrop, Tray } from "@phosphor-icons/react";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { SubjectAvatarById } from "@/components/subject";
+import { setActiveChannel, selectChannels } from "@/features/chat/store/chatChannelsSlice";
+import { selectMessagesForChannel } from "@/features/chat/store/chatMessagesSlice";
+import { formatRelativeTime } from "@/shared/utils/dateFormatting";
+import { MessageContent } from "@/features/chat/components/channel/MessageContent";
+import { markChannelRead } from "@/features/chat/store/chatThunks";
+import type { ChatChannel, ChatMessage } from "@/features/chat/types";
 
 interface UnreadChannelSectionProps {
   channel: ChatChannel;
@@ -23,16 +17,21 @@ interface UnreadChannelSectionProps {
   onMarkRead: (channelId: string) => void;
 }
 
-function UnreadChannelSection({ channel, unreadCount, onNavigate, onMarkRead }: UnreadChannelSectionProps) {
+function UnreadChannelSection({
+  channel,
+  unreadCount,
+  onNavigate,
+  onMarkRead,
+}: UnreadChannelSectionProps) {
   const messages = useAppSelector((state) => selectMessagesForChannel(state, channel.id));
 
   const unreadMessages = useMemo(
-    () => messages.filter(m => m.rootId === null).slice(-unreadCount),
+    () => messages.filter((m) => m.rootId === null).slice(-unreadCount),
     [messages, unreadCount],
   );
 
-  const isDm = channel.channelType === 'DIRECT' || channel.channelType === 'GROUP_DM';
-  const isPrivate = channel.channelType === 'PRIVATE';
+  const isDm = channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM";
+  const isPrivate = channel.channelType === "PRIVATE";
   const ChannelIcon = isDm ? ChatTeardrop : isPrivate ? Lock : Hash;
 
   return (
@@ -59,7 +58,7 @@ function UnreadChannelSection({ channel, unreadCount, onNavigate, onMarkRead }: 
       </div>
 
       <div>
-        {unreadMessages.map(message => (
+        {unreadMessages.map((message) => (
           <UnreadMessageItem
             key={message.id}
             message={message}
@@ -72,12 +71,16 @@ function UnreadChannelSection({ channel, unreadCount, onNavigate, onMarkRead }: 
   );
 }
 
-function UnreadMessageItem({ message, channelId, onNavigate }: {
+function UnreadMessageItem({
+  message,
+  channelId,
+  onNavigate,
+}: {
   message: ChatMessage;
   channelId: string;
   onNavigate: (channelId: string) => void;
 }) {
-  const senderName = message.senderName ?? 'Unknown User';
+  const senderName = message.senderName ?? "Unknown User";
 
   return (
     <button
@@ -91,7 +94,9 @@ function UnreadMessageItem({ message, channelId, onNavigate }: {
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-semibold text-foreground">{senderName}</span>
-          <span className="text-xs text-muted-foreground">{formatRelativeTime(message.createdAt)}</span>
+          <span className="text-xs text-muted-foreground">
+            {formatRelativeTime(message.createdAt)}
+          </span>
         </div>
         <div className="mt-0.5 text-sm text-muted-foreground line-clamp-2">
           <MessageContent content={message.content} />
@@ -109,31 +114,38 @@ export function UnreadsView() {
   const [markedRead, setMarkedRead] = useState<Set<string>>(new Set());
 
   const unreadChannels = useMemo(
-    () => channels
-      .filter(c => (c.unreadCount ?? 0) > 0 && !markedRead.has(c.id))
-      .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')),
+    () =>
+      channels
+        .filter((c) => (c.unreadCount ?? 0) > 0 && !markedRead.has(c.id))
+        .sort((a, b) => (b.lastMessageAt ?? "").localeCompare(a.lastMessageAt ?? "")),
     [channels, markedRead],
   );
 
-  const handleNavigate = useCallback((channelId: string) => {
-    dispatch(setActiveChannel(channelId));
-    navigate(`/chat/${channelId}`);
-  }, [dispatch, navigate]);
+  const handleNavigate = useCallback(
+    (channelId: string) => {
+      dispatch(setActiveChannel(channelId));
+      navigate(`/chat/${channelId}`);
+    },
+    [dispatch, navigate],
+  );
 
-  const handleMarkRead = useCallback((channelId: string) => {
-    const state = channels.find(c => c.id === channelId);
-    if (state) {
-      dispatch(markChannelRead({ channelId, lastReadMessageId: '' }));
-    }
-    setMarkedRead(prev => new Set([...prev, channelId]));
-  }, [dispatch, channels]);
+  const handleMarkRead = useCallback(
+    (channelId: string) => {
+      const state = channels.find((c) => c.id === channelId);
+      if (state) {
+        dispatch(markChannelRead({ channelId, lastReadMessageId: "" }));
+      }
+      setMarkedRead((prev) => new Set([...prev, channelId]));
+    },
+    [dispatch, channels],
+  );
 
   const handleMarkAllRead = useCallback(() => {
-    const ids = unreadChannels.map(c => c.id);
+    const ids = unreadChannels.map((c) => c.id);
     for (const channelId of ids) {
-      dispatch(markChannelRead({ channelId, lastReadMessageId: '' }));
+      dispatch(markChannelRead({ channelId, lastReadMessageId: "" }));
     }
-    setMarkedRead(prev => new Set([...prev, ...ids]));
+    setMarkedRead((prev) => new Set([...prev, ...ids]));
   }, [dispatch, unreadChannels]);
 
   return (
@@ -161,7 +173,7 @@ export function UnreadsView() {
             </div>
           </div>
         ) : (
-          unreadChannels.map(channel => (
+          unreadChannels.map((channel) => (
             <UnreadChannelSection
               key={channel.id}
               channel={channel}

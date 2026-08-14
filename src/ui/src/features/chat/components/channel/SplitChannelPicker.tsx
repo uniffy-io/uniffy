@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Hash, Lock, MagnifyingGlass } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { selectChannels } from '@/features/chat/store/chatChannelsSlice';
-import { cn } from '@/shared/utils/cn';
-import { SubjectAvatarById } from '@/components/subject';
-import { Input } from '@/components/ui/input';
-import type { ChatChannel } from '@/features/chat/types';
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Hash, Lock, MagnifyingGlass } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { selectChannels } from "@/features/chat/store/chatChannelsSlice";
+import { cn } from "@/shared/utils/cn";
+import { SubjectAvatarById } from "@/components/subject";
+import { Input } from "@/components/ui/input";
+import type { ChatChannel } from "@/features/chat/types";
 
 interface SplitChannelPickerProps {
   onSelect: (channelId: string) => void;
@@ -13,8 +13,12 @@ interface SplitChannelPickerProps {
   currentChannelId: string;
 }
 
-export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: SplitChannelPickerProps) {
-  const [search, setSearch] = useState('');
+export function SplitChannelPicker({
+  onSelect,
+  onClose,
+  currentChannelId,
+}: SplitChannelPickerProps) {
+  const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -29,10 +33,10 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
 
   const channelGroups = useMemo(() => {
     const regular = filteredChannels.filter(
-      (c) => c.channelType === 'PUBLIC' || c.channelType === 'PRIVATE',
+      (c) => c.channelType === "PUBLIC" || c.channelType === "PRIVATE",
     );
     const dms = filteredChannels.filter(
-      (c) => c.channelType === 'DIRECT' || c.channelType === 'GROUP_DM',
+      (c) => c.channelType === "DIRECT" || c.channelType === "GROUP_DM",
     );
     return { regular, dms };
   }, [filteredChannels]);
@@ -49,20 +53,20 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
     };
     // Defer registration so the opening click doesn't immediately close the picker.
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClick);
+      document.addEventListener("mousedown", handleClick);
     }, 0);
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener("mousedown", handleClick);
     };
   }, [onClose]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   const handleSelect = useCallback(
@@ -73,8 +77,8 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
   );
 
   const renderChannelItem = (channel: ChatChannel) => {
-    const isPrivate = channel.channelType === 'PRIVATE';
-    const isDm = channel.channelType === 'DIRECT' || channel.channelType === 'GROUP_DM';
+    const isPrivate = channel.channelType === "PRIVATE";
+    const isDm = channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM";
     const Icon = isPrivate ? Lock : Hash;
 
     return (
@@ -127,7 +131,12 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
 
         {channelGroups.dms.length > 0 && (
           <div>
-            <div className={cn('px-3 py-1 text-[10px] uppercase font-medium tracking-wider text-muted-foreground', channelGroups.regular.length > 0 && 'mt-1')}>
+            <div
+              className={cn(
+                "px-3 py-1 text-[10px] uppercase font-medium tracking-wider text-muted-foreground",
+                channelGroups.regular.length > 0 && "mt-1",
+              )}
+            >
               Direct Messages
             </div>
             {channelGroups.dms.map(renderChannelItem)}

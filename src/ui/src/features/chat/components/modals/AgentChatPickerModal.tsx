@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MagnifyingGlass } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Modal } from '@/components/ui/modal';
-import { closeAgentChatPicker } from '@/features/chat/store/chatUiSlice';
-import { createAgentChat } from '@/features/chat/store/chatThunks';
-import { selectAllAgents } from '@/features/agents/store/agentsSlice';
-import { fetchAgents } from '@/features/agents/store/agentsThunks';
-import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
-import { cn } from '@/shared/utils/cn';
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { MagnifyingGlass } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { closeAgentChatPicker } from "@/features/chat/store/chatUiSlice";
+import { createAgentChat } from "@/features/chat/store/chatThunks";
+import { selectAllAgents } from "@/features/agents/store/agentsSlice";
+import { fetchAgents } from "@/features/agents/store/agentsThunks";
+import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
+import { cn } from "@/shared/utils/cn";
 
 export function AgentChatPickerModal() {
   const dispatch = useAppDispatch();
@@ -18,7 +18,7 @@ export function AgentChatPickerModal() {
   const agentsMap = useAppSelector(selectAllAgents);
   const agents = useMemo(() => Object.values(agentsMap), [agentsMap]);
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function AgentChatPickerModal() {
 
   const handleClose = useCallback(() => {
     dispatch(closeAgentChatPicker());
-    setQuery('');
+    setQuery("");
   }, [dispatch]);
 
   const handlePick = async (agentId: string) => {
@@ -78,7 +78,7 @@ export function AgentChatPickerModal() {
         <div className="max-h-[50vh] overflow-y-auto -mx-2">
           {filtered.length === 0 ? (
             <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-              {query ? 'No agents match your search.' : 'No agents available.'}
+              {query ? "No agents match your search." : "No agents available."}
             </div>
           ) : (
             <ul className="space-y-px">
@@ -91,8 +91,8 @@ export function AgentChatPickerModal() {
                       onClick={() => handlePick(agent.id)}
                       disabled={submittingId !== null}
                       className={cn(
-                        'flex items-center gap-3 w-full px-3 py-2 rounded-md text-left transition-colors',
-                        'hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed',
+                        "flex items-center gap-3 w-full px-3 py-2 rounded-md text-left transition-colors",
+                        "hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed",
                       )}
                       data-testid={`agent-chat-picker-option-${agent.id}`}
                     >
@@ -117,7 +117,12 @@ export function AgentChatPickerModal() {
         </div>
 
         <div className="flex justify-end">
-          <Button type="button" variant="ghost" onClick={handleClose} disabled={submittingId !== null}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleClose}
+            disabled={submittingId !== null}
+          >
             Cancel
           </Button>
         </div>

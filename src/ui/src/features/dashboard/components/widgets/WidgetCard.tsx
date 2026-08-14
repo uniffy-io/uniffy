@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
-import type { Icon } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import type { FetchPriority } from '@/features/dashboard/hooks/useDashboardData';
+import type { ReactNode } from "react";
+import type { Icon } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import type { FetchPriority } from "@/features/dashboard/hooks/useDashboardData";
 
 interface WidgetCardProps {
   title: string;
@@ -32,23 +32,23 @@ export function WidgetCard({
   minHeight,
 }: WidgetCardProps) {
   const colSpanClass = {
-    1: '',
-    2: 'md:col-span-2',
-    3: 'md:col-span-3',
-    4: 'md:col-span-4',
+    1: "",
+    2: "md:col-span-2",
+    3: "md:col-span-3",
+    4: "md:col-span-4",
   }[colSpan];
 
   return (
     <div
       className={cn(
-        'rounded-xl border border-border bg-card text-card-foreground shadow-sm',
-        'transition-shadow duration-200 hover:shadow-md',
+        "rounded-xl border border-border bg-card text-card-foreground shadow-sm",
+        "transition-shadow duration-200 hover:shadow-md",
         colSpanClass,
-        className
+        className,
       )}
       style={minHeight ? { minHeight } : undefined}
     >
-      <div className={cn('flex items-center justify-between', compact ? 'p-4 pb-2' : 'p-6 pb-4')}>
+      <div className={cn("flex items-center justify-between", compact ? "p-4 pb-2" : "p-6 pb-4")}>
         <div className="flex items-center gap-2.5 min-w-0">
           {IconComponent && (
             <div className="rounded-lg bg-muted p-1.5 shrink-0">
@@ -57,23 +57,18 @@ export function WidgetCard({
           )}
           <div className="space-y-0.5 min-w-0">
             <h3 className="font-semibold leading-none tracking-tight truncate">{title}</h3>
-            {subtitle && (
-              <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
-            )}
+            {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
           </div>
         </div>
         {action && <div className="flex-shrink-0 ml-2">{action}</div>}
       </div>
 
-      <div className={cn(compact ? 'px-4 pb-4' : 'px-6 pb-6', loading && 'animate-pulse')}>
+      <div className={cn(compact ? "px-4 pb-4" : "px-6 pb-6", loading && "animate-pulse")}>
         {children}
       </div>
 
       {footer && (
-        <div className={cn(
-          'border-t border-border',
-          compact ? 'px-4 py-3' : 'px-6 py-3',
-        )}>
+        <div className={cn("border-t border-border", compact ? "px-4 py-3" : "px-6 py-3")}>
           {footer}
         </div>
       )}
@@ -113,8 +108,14 @@ export function EmptyWidget({ icon: IconComp, title, description, action }: Empt
   );
 }
 
-export function WidgetSkeleton({ rows = 3, variant = 'list' }: { rows?: number; variant?: 'list' | 'stat' | 'timeline' }) {
-  if (variant === 'stat') {
+export function WidgetSkeleton({
+  rows = 3,
+  variant = "list",
+}: {
+  rows?: number;
+  variant?: "list" | "stat" | "timeline";
+}) {
+  if (variant === "stat") {
     return (
       <div className="grid grid-cols-2 gap-3">
         {Array.from({ length: rows }).map((_, i) => (
@@ -128,7 +129,7 @@ export function WidgetSkeleton({ rows = 3, variant = 'list' }: { rows?: number; 
     );
   }
 
-  if (variant === 'timeline') {
+  if (variant === "timeline") {
     return (
       <div className="space-y-4">
         {Array.from({ length: rows }).map((_, i) => (

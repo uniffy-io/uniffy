@@ -1,19 +1,17 @@
 /** Multi-select tag filter is logical AND. */
 
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { toggleTagFilter } from '@/features/calendar/store';
-import { useCalendarEvents } from '@/features/calendar/hooks';
-import { TagChip } from '@/features/tags';
-import type { SerializedTag } from '@/features/tags';
-import { cn } from '@/shared/utils/cn';
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { toggleTagFilter } from "@/features/calendar/store";
+import { useCalendarEvents } from "@/features/calendar/hooks";
+import { TagChip } from "@/features/tags";
+import type { SerializedTag } from "@/features/tags";
+import { cn } from "@/shared/utils/cn";
 
 export function TagCloud() {
   const dispatch = useAppDispatch();
   const { allTagIds } = useCalendarEvents();
   const tagsById = useAppSelector((state) => state.tags.byId);
-  const selectedTagIds = useAppSelector(
-    (state) => state.calendar.filters.tagIds
-  );
+  const selectedTagIds = useAppSelector((state) => state.calendar.filters.tagIds);
 
   const tags: SerializedTag[] = allTagIds
     .map((id) => tagsById[id])
@@ -26,9 +24,7 @@ export function TagCloud() {
         <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
           Tags
         </h3>
-        <p className="text-xs text-muted-foreground">
-          Tags you add to events will appear here
-        </p>
+        <p className="text-xs text-muted-foreground">Tags you add to events will appear here</p>
       </div>
     );
   }
@@ -52,8 +48,8 @@ export function TagCloud() {
               onClick={() => handleTagClick(tag.id)}
               aria-pressed={isSelected}
               className={cn(
-                'rounded-full transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                isSelected && 'ring-2 ring-primary/40 ring-offset-1 ring-offset-background'
+                "rounded-full transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                isSelected && "ring-2 ring-primary/40 ring-offset-1 ring-offset-background",
               )}
             >
               <TagChip tag={tag} nonInteractive className="cursor-pointer" />

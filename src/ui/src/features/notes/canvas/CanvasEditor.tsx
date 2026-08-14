@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -17,21 +17,21 @@ import {
   addEdge,
   type NodeChange,
   type EdgeChange,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import '@/features/notes/canvas/styles/canvas.css';
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import "@/features/notes/canvas/styles/canvas.css";
 
-import { TextNode } from '@/features/notes/canvas/nodes/TextNode';
-import { NoteNode } from '@/features/notes/canvas/nodes/NoteNode';
-import { MediaNode } from '@/features/notes/canvas/nodes/MediaNode';
-import { ShapeNode } from '@/features/notes/canvas/nodes/ShapeNode';
-import { MindMapNode } from '@/features/notes/canvas/nodes/MindMapNode';
-import { CanvasToolbar } from '@/features/notes/canvas/CanvasToolbar';
-import { CanvasContextMenu } from '@/features/notes/canvas/CanvasContextMenu';
-import { CustomEdge } from '@/features/notes/canvas/edges/CustomEdge';
-import { MindMapEdge } from '@/features/notes/canvas/edges/MindMapEdge';
-import { EdgeStyleToolbar } from '@/features/notes/canvas/components/EdgeStyleToolbar';
-import * as Y from 'yjs';
+import { TextNode } from "@/features/notes/canvas/nodes/TextNode";
+import { NoteNode } from "@/features/notes/canvas/nodes/NoteNode";
+import { MediaNode } from "@/features/notes/canvas/nodes/MediaNode";
+import { ShapeNode } from "@/features/notes/canvas/nodes/ShapeNode";
+import { MindMapNode } from "@/features/notes/canvas/nodes/MindMapNode";
+import { CanvasToolbar } from "@/features/notes/canvas/CanvasToolbar";
+import { CanvasContextMenu } from "@/features/notes/canvas/CanvasContextMenu";
+import { CustomEdge } from "@/features/notes/canvas/edges/CustomEdge";
+import { MindMapEdge } from "@/features/notes/canvas/edges/MindMapEdge";
+import { EdgeStyleToolbar } from "@/features/notes/canvas/components/EdgeStyleToolbar";
+import * as Y from "yjs";
 import {
   nodeTextFieldKey,
   readCanvasDefaults,
@@ -41,16 +41,16 @@ import {
   writeCanvasDefaults,
   writeCanvasToYDoc,
   writeNodeTextDiff,
-} from '@/features/notes/realtime/canvasBinding';
-import { HYDRATION_ORIGIN } from '@/features/realtime';
-import type { CanvasRealtimeBinding } from '@/features/notes/realtime/useCanvasRealtimeSession';
-import { CanvasAwarenessOverlay } from '@/features/notes/realtime/CanvasAwarenessOverlay';
+} from "@/features/notes/realtime/canvasBinding";
+import { HYDRATION_ORIGIN } from "@/features/realtime";
+import type { CanvasRealtimeBinding } from "@/features/notes/realtime/useCanvasRealtimeSession";
+import { CanvasAwarenessOverlay } from "@/features/notes/realtime/CanvasAwarenessOverlay";
 import {
   layoutMindMap,
   findMindMapRoot,
   collectDescendants,
   getBranchColorForNewChild,
-} from '@/features/notes/canvas/utils/mindmapLayout';
+} from "@/features/notes/canvas/utils/mindmapLayout";
 import type {
   CanvasState,
   CanvasNode,
@@ -63,20 +63,20 @@ import type {
   ShapeCanvasNode,
   MindMapCanvasNode,
   MindMapNodeData,
-} from '@/features/notes/canvas/types';
-import { cn } from '@/shared/utils/cn';
-import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
-import { useTheme } from '@/config/theme/ThemeProvider';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setCanvasCursorsMode } from '@/features/notes/store/editorSlice';
-import { uploadImage } from '@/components/editor/utils/imageUploader';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
-import { CanvasCallbacksContext } from '@/features/notes/canvas/hooks/useCanvasCallbacks';
-import { SearchResultsList } from '@/features/search/components/SearchResultsList';
-import { useSearch } from '@/features/search/hooks/useSearch';
-import { parseUrn, UrnType } from '@/shared/utils/urn';
-import { MagnifyingGlass } from '@phosphor-icons/react';
+} from "@/features/notes/canvas/types";
+import { cn } from "@/shared/utils/cn";
+import { sanitizeMentionLabel } from "@/shared/utils/mentionUtils";
+import { useTheme } from "@/config/theme/ThemeProvider";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { setCanvasCursorsMode } from "@/features/notes/store/editorSlice";
+import { uploadImage } from "@/components/editor/utils/imageUploader";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
+import { CanvasCallbacksContext } from "@/features/notes/canvas/hooks/useCanvasCallbacks";
+import { SearchResultsList } from "@/features/search/components/SearchResultsList";
+import { useSearch } from "@/features/search/hooks/useSearch";
+import { parseUrn, UrnType } from "@/shared/utils/urn";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 
 interface CanvasEditorProps {
   canvasState: CanvasState;
@@ -137,7 +137,7 @@ function CanvasEditorInner({
   const { resolvedTheme } = useTheme();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const dispatch = useAppDispatch();
-  const cursorsMode = useAppSelector((s) => s.editor.settings.canvasCursorsMode ?? 'auto');
+  const cursorsMode = useAppSelector((s) => s.editor.settings.canvasCursorsMode ?? "auto");
   const [peerCount, setPeerCount] = useState(0);
   const canvasStateRef = useRef(canvasState);
   useEffect(() => {
@@ -160,7 +160,13 @@ function CanvasEditorInner({
 
   const contentPickerInputRef = useRef<HTMLInputElement>(null);
   const contentPickerRef = useRef<HTMLDivElement>(null);
-  const { query: pickerQuery, setQuery: setPickerQuery, results: pickerResults, isLoading: pickerLoading, clearResults: clearPickerResults } = useSearch({ limit: 15 });
+  const {
+    query: pickerQuery,
+    setQuery: setPickerQuery,
+    results: pickerResults,
+    isLoading: pickerLoading,
+    clearResults: clearPickerResults,
+  } = useSearch({ limit: 15 });
 
   // Coalesce rapid interaction frames into one Y write per debounce window.
   const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -178,10 +184,7 @@ function CanvasEditorInner({
   // Diff text edits against last local snapshot (not live Y.Text) to preserve concurrent peer inserts.
   const localTextSnapshotsRef = useRef<Map<string, string>>(new Map());
 
-  const textSnapshotKey = useCallback(
-    (nodeId: string, field: string) => `${nodeId}:${field}`,
-    [],
-  );
+  const textSnapshotKey = useCallback((nodeId: string, field: string) => `${nodeId}:${field}`, []);
 
   const commitNodeTextField = useCallback(
     (nodeId: string, fieldKey: string, next: string) => {
@@ -191,7 +194,7 @@ function CanvasEditorInner({
       const prev =
         localTextSnapshotsRef.current.get(key) ??
         readNodeTextField(rt.ydoc, nodeId, fieldKey) ??
-        '';
+        "";
       writeNodeTextDiff(rt.ydoc, nodeId, fieldKey, prev, next, rt.sessionId);
       localTextSnapshotsRef.current.set(key, next);
     },
@@ -201,20 +204,20 @@ function CanvasEditorInner({
   const computeMmEdgesFromNodes = useCallback((nodeList: CanvasNode[]): CanvasEdge[] => {
     const result: CanvasEdge[] = [];
     for (const node of nodeList) {
-      if (node.data.type !== 'mindmap') continue;
+      if (node.data.type !== "mindmap") continue;
       const mmData = node.data as MindMapNodeData;
       if (mmData.collapsed) continue;
       for (const childId of mmData.children) {
         const child = nodeList.find((n) => n.id === childId);
-        if (!child || child.data.type !== 'mindmap') continue;
-        const childColor = (child.data as MindMapNodeData).branchColor || '';
+        if (!child || child.data.type !== "mindmap") continue;
+        const childColor = (child.data as MindMapNodeData).branchColor || "";
         result.push({
           id: `mm_edge_${node.id}_${childId}`,
           source: node.id,
           target: childId,
-          sourceHandle: 'mm-source',
-          targetHandle: 'mm-target',
-          type: 'mindmapEdge',
+          sourceHandle: "mm-source",
+          targetHandle: "mm-target",
+          type: "mindmapEdge",
           data: { branchColor: childColor },
           selectable: false,
           deletable: false,
@@ -227,7 +230,7 @@ function CanvasEditorInner({
   const commitChange = useCallback(
     (updatedNodes?: CanvasNode[], updatedEdges?: CanvasEdge[]) => {
       const finalNodes = updatedNodes ?? nodesRef.current;
-      const userEdges = (updatedEdges ?? edgesRef.current).filter((e) => e.type !== 'mindmapEdge');
+      const userEdges = (updatedEdges ?? edgesRef.current).filter((e) => e.type !== "mindmapEdge");
       const mmEdges = computeMmEdgesFromNodes(finalNodes);
       const finalEdges = [...userEdges, ...mmEdges] as CanvasEdge[];
       const rt = realtimeRef.current;
@@ -235,7 +238,7 @@ function CanvasEditorInner({
       // sessionId origin scopes UndoManager and lets peers skip self-echoes.
       writeCanvasToYDoc(rt.ydoc, finalNodes, finalEdges, rt.sessionId);
     },
-    [computeMmEdgesFromNodes]
+    [computeMmEdgesFromNodes],
   );
 
   const scheduleChange = useCallback(
@@ -247,7 +250,7 @@ function CanvasEditorInner({
         commitChange(updatedNodes, updatedEdges);
       }, 300);
     },
-    [commitChange]
+    [commitChange],
   );
 
   // Skip 300ms debounce for add/delete - a peer rebuild during the window could wipe the new node.
@@ -259,7 +262,7 @@ function CanvasEditorInner({
       }
       commitChange(updatedNodes, updatedEdges);
     },
-    [commitChange]
+    [commitChange],
   );
 
   // Realtime cold-start seed + peer-update mirror; without a binding, props-driven hydration stays in charge.
@@ -270,11 +273,10 @@ function CanvasEditorInner({
     void realtime.whenSynced.then(() => {
       if (cancelled) return;
       const { yNodes, yOrder, yDefaults } = realtime;
-      const empty =
-        yNodes.size === 0 && yOrder.length === 0 && yDefaults.size === 0;
+      const empty = yNodes.size === 0 && yOrder.length === 0 && yDefaults.size === 0;
       if (empty && canvasStateRef.current.nodes.length > 0) {
         const initial = canvasStateRef.current;
-        const userEdges = initial.edges.filter((e) => e.type !== 'mindmapEdge');
+        const userEdges = initial.edges.filter((e) => e.type !== "mindmapEdge");
         // Hydration origin: untracked by the UndoManager (undo must not wipe the seed) and filtered from IDB persistence.
         seedCanvasYDoc(
           realtime.ydoc,
@@ -300,7 +302,7 @@ function CanvasEditorInner({
         const key = textSnapshotKey(node.id, field);
         seen.add(key);
         const value = (node.data as Record<string, unknown> | undefined)?.[field];
-        snapshots.set(key, typeof value === 'string' ? value : '');
+        snapshots.set(key, typeof value === "string" ? value : "");
       }
       // Drop snapshots for removed nodes so the map does not leak across long sessions.
       for (const key of Array.from(snapshots.keys())) {
@@ -341,18 +343,10 @@ function CanvasEditorInner({
       if (transaction.origin === HYDRATION_ORIGIN) return;
       setDefaults(readCanvasDefaults(realtime.ydoc) ?? undefined);
     };
-    const handleDeep = (
-      _events: unknown,
-      transaction: Y.Transaction,
-    ) => rebuild(transaction);
-    const handleShallow = (
-      _event: unknown,
-      transaction: Y.Transaction,
-    ) => rebuild(transaction);
-    const handleDefaults = (
-      _event: unknown,
-      transaction: Y.Transaction,
-    ) => rebuildDefaults(transaction);
+    const handleDeep = (_events: unknown, transaction: Y.Transaction) => rebuild(transaction);
+    const handleShallow = (_event: unknown, transaction: Y.Transaction) => rebuild(transaction);
+    const handleDefaults = (_event: unknown, transaction: Y.Transaction) =>
+      rebuildDefaults(transaction);
 
     realtime.yNodes.observeDeep(handleDeep);
     realtime.yEdges.observeDeep(handleDeep);
@@ -371,20 +365,20 @@ function CanvasEditorInner({
   const computedMmEdges = useMemo(() => {
     const mmEdges: CanvasEdge[] = [];
     for (const node of nodes) {
-      if (node.data.type !== 'mindmap') continue;
+      if (node.data.type !== "mindmap") continue;
       const mmData = node.data as MindMapNodeData;
       if (mmData.collapsed) continue;
       for (const childId of mmData.children) {
         const child = nodes.find((n) => n.id === childId);
-        if (!child || child.data.type !== 'mindmap') continue;
-        const childColor = (child.data as MindMapNodeData).branchColor || '';
+        if (!child || child.data.type !== "mindmap") continue;
+        const childColor = (child.data as MindMapNodeData).branchColor || "";
         mmEdges.push({
           id: `mm_edge_${node.id}_${childId}`,
           source: node.id,
           target: childId,
-          sourceHandle: 'mm-source',
-          targetHandle: 'mm-target',
-          type: 'mindmapEdge',
+          sourceHandle: "mm-source",
+          targetHandle: "mm-target",
+          type: "mindmapEdge",
           data: { branchColor: childColor },
           selectable: false,
           deletable: false,
@@ -395,7 +389,7 @@ function CanvasEditorInner({
   }, [nodes]);
 
   const allEdges = useMemo(() => {
-    const userEdges = edges.filter((e) => e.type !== 'mindmapEdge');
+    const userEdges = edges.filter((e) => e.type !== "mindmapEdge");
     return [...userEdges, ...computedMmEdges] as CanvasEdge[];
   }, [edges, computedMmEdges]);
 
@@ -415,7 +409,8 @@ function CanvasEditorInner({
       const positioned = updatedNodes.map((n) => {
         const pos = result.positions.get(n.id);
         if (pos) {
-          const isRootNode = n.data.type === 'mindmap' && (n.data as MindMapNodeData).isRoot === true;
+          const isRootNode =
+            n.data.type === "mindmap" && (n.data as MindMapNodeData).isRoot === true;
           return {
             ...n,
             position: { x: pos.x + correctionX, y: pos.y + correctionY },
@@ -437,7 +432,7 @@ function CanvasEditorInner({
 
       return { nodes: positioned, edges: result.edges };
     },
-    []
+    [],
   );
 
   const handleNodesChange = useCallback(
@@ -445,20 +440,23 @@ function CanvasEditorInner({
       onNodesChange(changes);
 
       const hasStructuralChange = changes.some(
-        (c) => c.type === 'position' || c.type === 'dimensions' || c.type === 'remove'
+        (c) => c.type === "position" || c.type === "dimensions" || c.type === "remove",
       );
       if (!hasStructuralChange || readonly) return;
 
       const hasMmDimensionChange = changes.some(
-        (c) => c.type === 'dimensions' && c.id && nodes.find((n) => n.id === c.id)?.data.type === 'mindmap'
+        (c) =>
+          c.type === "dimensions" &&
+          c.id &&
+          nodes.find((n) => n.id === c.id)?.data.type === "mindmap",
       );
       if (hasMmDimensionChange) {
         setNodes((nds) => {
           const rootIds = new Set<string>();
           for (const c of changes) {
-            if (c.type !== 'dimensions') continue;
+            if (c.type !== "dimensions") continue;
             const node = nds.find((n) => n.id === c.id);
-            if (!node || node.data.type !== 'mindmap') continue;
+            if (!node || node.data.type !== "mindmap") continue;
             const rootId = findMindMapRoot(node.id, nds);
             if (rootId) rootIds.add(rootId);
           }
@@ -473,16 +471,20 @@ function CanvasEditorInner({
       }
 
       const hasMmRootPositionChange = changes.some(
-        (c) => c.type === 'position' && c.position &&
-          nodes.find((n) => n.id === c.id && n.data.type === 'mindmap' && (n.data as MindMapNodeData).isRoot)
+        (c) =>
+          c.type === "position" &&
+          c.position &&
+          nodes.find(
+            (n) => n.id === c.id && n.data.type === "mindmap" && (n.data as MindMapNodeData).isRoot,
+          ),
       );
       if (hasMmRootPositionChange) {
         setNodes((nds) => {
           const rootIds = new Set<string>();
           for (const c of changes) {
-            if (c.type !== 'position' || !c.position) continue;
+            if (c.type !== "position" || !c.position) continue;
             const node = nds.find((n) => n.id === c.id);
-            if (node?.data.type === 'mindmap' && (node.data as MindMapNodeData).isRoot) {
+            if (node?.data.type === "mindmap" && (node.data as MindMapNodeData).isRoot) {
               rootIds.add(c.id);
             }
           }
@@ -497,7 +499,7 @@ function CanvasEditorInner({
       }
 
       // Removes flush immediately - a peer rebuild in the debounce window would re-materialise the node.
-      const hasRemoval = changes.some((c) => c.type === 'remove');
+      const hasRemoval = changes.some((c) => c.type === "remove");
       if (hasRemoval) {
         requestAnimationFrame(() => {
           flushChange();
@@ -508,7 +510,7 @@ function CanvasEditorInner({
         });
       }
     },
-    [onNodesChange, readonly, scheduleChange, flushChange, nodes, setNodes, applyMindMapLayout]
+    [onNodesChange, readonly, scheduleChange, flushChange, nodes, setNodes, applyMindMapLayout],
   );
 
   // Publish selection into awareness for peer node rings. No throttle - selection only fires on click/lasso.
@@ -532,7 +534,7 @@ function CanvasEditorInner({
         });
       }
     },
-    [onEdgesChange, readonly, scheduleChange]
+    [onEdgesChange, readonly, scheduleChange],
   );
 
   const getEdgeDefaults = useCallback((): Partial<CanvasEdgeData> => {
@@ -553,7 +555,7 @@ function CanvasEditorInner({
         const newEdge = {
           ...connection,
           id: `edge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          type: 'custom',
+          type: "custom",
           data: { ...edgeDefaults },
         };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- addEdge generic constraint is stricter than Edge's optional `type` field
@@ -562,16 +564,16 @@ function CanvasEditorInner({
         return newEdges;
       });
     },
-    [setEdges, readonly, scheduleChange, getEdgeDefaults]
+    [setEdges, readonly, scheduleChange, getEdgeDefaults],
   );
 
   const handleEdgeClick = useCallback(
     (event: React.MouseEvent, edge: CanvasEdge) => {
-      if (readonly || edge.type === 'mindmapEdge') return;
+      if (readonly || edge.type === "mindmapEdge") return;
       setSelectedEdge({ edgeId: edge.id, x: event.clientX, y: event.clientY });
       setContextMenu(null);
     },
-    [readonly]
+    [readonly],
   );
 
   const handleEdgeStyleChange = useCallback(
@@ -588,21 +590,20 @@ function CanvasEditorInner({
         return updated;
       });
     },
-    [setEdges, readonly, scheduleChange]
+    [setEdges, readonly, scheduleChange],
   );
 
   // Per-node text is a Y.Text - commit minimal delta so concurrent typing merges char-by-char.
   const handleTextContentChange = useCallback(
     (nodeId: string, content: string) => {
       if (readonly) return;
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === nodeId && n.data.type === 'text'
-            ? { ...n, data: { ...n.data, content } }
-            : n,
-        ) as CanvasNode[],
+      setNodes(
+        (nds) =>
+          nds.map((n) =>
+            n.id === nodeId && n.data.type === "text" ? { ...n, data: { ...n.data, content } } : n,
+          ) as CanvasNode[],
       );
-      commitNodeTextField(nodeId, 'content', content);
+      commitNodeTextField(nodeId, "content", content);
     },
     [setNodes, readonly, commitNodeTextField],
   );
@@ -610,14 +611,13 @@ function CanvasEditorInner({
   const handleShapeLabelChange = useCallback(
     (nodeId: string, label: string) => {
       if (readonly) return;
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === nodeId && n.data.type === 'shape'
-            ? { ...n, data: { ...n.data, label } }
-            : n,
-        ) as CanvasNode[],
+      setNodes(
+        (nds) =>
+          nds.map((n) =>
+            n.id === nodeId && n.data.type === "shape" ? { ...n, data: { ...n.data, label } } : n,
+          ) as CanvasNode[],
       );
-      commitNodeTextField(nodeId, 'label', label);
+      commitNodeTextField(nodeId, "label", label);
     },
     [setNodes, readonly, commitNodeTextField],
   );
@@ -627,10 +627,10 @@ function CanvasEditorInner({
       if (readonly) return;
 
       // For mindmap branchColor change, propagate to descendants and re-layout.
-      if ('branchColor' in updates) {
+      if ("branchColor" in updates) {
         setNodes((nds) => {
           const node = nds.find((n) => n.id === nodeId);
-          if (!node || node.data.type !== 'mindmap') {
+          if (!node || node.data.type !== "mindmap") {
             const updated = nds.map((n) =>
               n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n,
             ) as CanvasNode[];
@@ -670,7 +670,7 @@ function CanvasEditorInner({
         return updated;
       });
     },
-    [setNodes, readonly, scheduleChange, applyMindMapLayout]
+    [setNodes, readonly, scheduleChange, applyMindMapLayout],
   );
 
   const getCenterPosition = useCallback(() => {
@@ -699,20 +699,20 @@ function CanvasEditorInner({
       if (!rt) return;
       writeCanvasDefaults(rt.ydoc, newDefaults, rt.sessionId);
     },
-    [readonly]
+    [readonly],
   );
 
   const handleAddTextBlock = useCallback(() => {
     if (readonly) return;
     const position = getCenterPosition();
-    const defaults = getStyleDefaults();
+    const styleDefaults = getStyleDefaults();
     const nodeId = generateNodeId();
     const newNode: TextCanvasNode = {
       id: nodeId,
-      type: 'text',
+      type: "text",
       position,
       selected: true,
-      data: { type: 'text', content: '', ...defaults },
+      data: { type: "text", content: "", ...styleDefaults },
       style: { width: 250, height: 40 },
     };
     setNodes((nds) => {
@@ -735,16 +735,22 @@ function CanvasEditorInner({
           contentType: ContentType.NOTE,
         });
         // URL shape: /api/files/{orgId}/{fileId}
-        const urlParts = result.split('/');
+        const urlParts = result.split("/");
         const fileId = urlParts[urlParts.length - 1];
 
         const position = getCenterPosition();
-        const defaults = getStyleDefaults();
+        const styleDefaults = getStyleDefaults();
         const newNode: MediaCanvasNode = {
           id: generateNodeId(),
-          type: 'media',
+          type: "media",
           position,
-          data: { type: 'media', fileId, mimeType: file.type, filename: file.name, ...defaults },
+          data: {
+            type: "media",
+            fileId,
+            mimeType: file.type,
+            filename: file.name,
+            ...styleDefaults,
+          },
           style: { width: 320, height: 240 },
         };
         setNodes((nds) => {
@@ -756,24 +762,33 @@ function CanvasEditorInner({
         // Upload failed
       }
     },
-    [readonly, organizationId, contentId, getCenterPosition, getStyleDefaults, setNodes, flushChange]
+    [
+      readonly,
+      organizationId,
+      contentId,
+      getCenterPosition,
+      getStyleDefaults,
+      setNodes,
+      flushChange,
+    ],
   );
 
   const handleAddShape = useCallback(
-    (shape: 'rect' | 'ellipse' | 'diamond') => {
+    (shape: "rect" | "ellipse" | "diamond") => {
       if (readonly) return;
       const position = getCenterPosition();
-      const defaults = getStyleDefaults();
+      const styleDefaults = getStyleDefaults();
       // Shapes use "color" for SVG fill; map bgColor -> color.
       const shapeDefaults: Record<string, unknown> = {};
-      if (defaults.bgColor) shapeDefaults.color = defaults.bgColor;
-      if (defaults.borderColor) shapeDefaults.borderColor = defaults.borderColor;
-      if (defaults.borderWidth !== undefined) shapeDefaults.borderWidth = defaults.borderWidth;
+      if (styleDefaults.bgColor) shapeDefaults.color = styleDefaults.bgColor;
+      if (styleDefaults.borderColor) shapeDefaults.borderColor = styleDefaults.borderColor;
+      if (styleDefaults.borderWidth !== undefined)
+        shapeDefaults.borderWidth = styleDefaults.borderWidth;
       const newNode: ShapeCanvasNode = {
         id: generateNodeId(),
-        type: 'shape',
+        type: "shape",
         position,
-        data: { type: 'shape', shape, label: '', ...shapeDefaults },
+        data: { type: "shape", shape, label: "", ...shapeDefaults },
         style: { width: 120, height: 120 },
       };
       setNodes((nds) => {
@@ -782,7 +797,7 @@ function CanvasEditorInner({
         return updated;
       });
     },
-    [readonly, getCenterPosition, getStyleDefaults, setNodes, flushChange]
+    [readonly, getCenterPosition, getStyleDefaults, setNodes, flushChange],
   );
 
   const handleAddMindMap = useCallback(() => {
@@ -795,11 +810,11 @@ function CanvasEditorInner({
 
     const rootNode: MindMapCanvasNode = {
       id: rootId,
-      type: 'mindmap',
+      type: "mindmap",
       position,
       data: {
-        type: 'mindmap',
-        label: 'Central Idea',
+        type: "mindmap",
+        label: "Central Idea",
         mindmapId,
         parentNodeId: null,
         children: [child1Id, child2Id],
@@ -811,11 +826,11 @@ function CanvasEditorInner({
 
     const child1: MindMapCanvasNode = {
       id: child1Id,
-      type: 'mindmap',
+      type: "mindmap",
       position: { x: position.x + 300, y: position.y - 40 },
       data: {
-        type: 'mindmap',
-        label: 'Branch 1',
+        type: "mindmap",
+        label: "Branch 1",
         mindmapId,
         parentNodeId: rootId,
         children: [],
@@ -826,11 +841,11 @@ function CanvasEditorInner({
 
     const child2: MindMapCanvasNode = {
       id: child2Id,
-      type: 'mindmap',
+      type: "mindmap",
       position: { x: position.x + 300, y: position.y + 40 },
       data: {
-        type: 'mindmap',
-        label: 'Branch 2',
+        type: "mindmap",
+        label: "Branch 2",
         mindmapId,
         parentNodeId: rootId,
         children: [],
@@ -851,17 +866,17 @@ function CanvasEditorInner({
   const handleMindMapAddChild = useCallback(
     (parentId: string) => {
       if (readonly) return;
-      let newChildId = '';
+      let newChildId = "";
       setNodes((nds) => {
         const parent = nds.find((n) => n.id === parentId) as MindMapCanvasNode | undefined;
-        if (!parent || parent.data.type !== 'mindmap') return nds;
+        if (!parent || parent.data.type !== "mindmap") return nds;
 
         const branchColor = getBranchColorForNewChild(parentId, nds);
         const childId = generateNodeId();
         newChildId = childId;
 
         const updatedNds = nds.map((n) => {
-          if (n.id === parentId && n.data.type === 'mindmap') {
+          if (n.id === parentId && n.data.type === "mindmap") {
             return {
               ...n,
               data: {
@@ -875,16 +890,18 @@ function CanvasEditorInner({
         }) as CanvasNode[];
 
         const rootId = findMindMapRoot(parentId, nds);
-        const rootNode = rootId ? nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined : undefined;
+        const rootNode = rootId
+          ? (nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined)
+          : undefined;
         const direction = rootNode ? (rootNode.data as MindMapNodeData).direction : undefined;
 
         const newChild: MindMapCanvasNode = {
           id: childId,
-          type: 'mindmap',
+          type: "mindmap",
           position: { x: parent.position.x + 300, y: parent.position.y },
           data: {
-            type: 'mindmap',
-            label: 'New idea',
+            type: "mindmap",
+            label: "New idea",
             mindmapId: parent.data.mindmapId,
             parentNodeId: parentId,
             children: [],
@@ -905,16 +922,16 @@ function CanvasEditorInner({
       });
       if (newChildId) setEditingNodeId(newChildId);
     },
-    [readonly, setNodes, flushChange, applyMindMapLayout]
+    [readonly, setNodes, flushChange, applyMindMapLayout],
   );
 
   const handleMindMapAddSibling = useCallback(
     (nodeId: string) => {
       if (readonly) return;
-      let newSiblingId = '';
+      let newSiblingId = "";
       setNodes((nds) => {
         const node = nds.find((n) => n.id === nodeId) as MindMapCanvasNode | undefined;
-        if (!node || node.data.type !== 'mindmap' || node.data.isRoot) return nds;
+        if (!node || node.data.type !== "mindmap" || node.data.isRoot) return nds;
 
         const parentId = node.data.parentNodeId;
         if (!parentId) return nds;
@@ -924,7 +941,7 @@ function CanvasEditorInner({
         newSiblingId = siblingId;
 
         const updatedNds = nds.map((n) => {
-          if (n.id === parentId && n.data.type === 'mindmap') {
+          if (n.id === parentId && n.data.type === "mindmap") {
             const parentData = n.data as MindMapNodeData;
             const idx = parentData.children.indexOf(nodeId);
             const newChildren = [...parentData.children];
@@ -935,16 +952,18 @@ function CanvasEditorInner({
         }) as CanvasNode[];
 
         const rootId = findMindMapRoot(nodeId, nds);
-        const rootNode = rootId ? nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined : undefined;
+        const rootNode = rootId
+          ? (nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined)
+          : undefined;
         const direction = rootNode ? (rootNode.data as MindMapNodeData).direction : undefined;
 
         const newSibling: MindMapCanvasNode = {
           id: siblingId,
-          type: 'mindmap',
+          type: "mindmap",
           position: { x: node.position.x, y: node.position.y + 50 },
           data: {
-            type: 'mindmap',
-            label: 'New idea',
+            type: "mindmap",
+            label: "New idea",
             mindmapId: node.data.mindmapId,
             parentNodeId: parentId,
             children: [],
@@ -965,7 +984,7 @@ function CanvasEditorInner({
       });
       if (newSiblingId) setEditingNodeId(newSiblingId);
     },
-    [readonly, setNodes, flushChange, applyMindMapLayout]
+    [readonly, setNodes, flushChange, applyMindMapLayout],
   );
 
   const handleMindMapDeleteNode = useCallback(
@@ -973,14 +992,17 @@ function CanvasEditorInner({
       if (readonly) return;
       setNodes((nds) => {
         const node = nds.find((n) => n.id === nodeId) as MindMapCanvasNode | undefined;
-        if (!node || node.data.type !== 'mindmap' || node.data.isRoot) return nds;
+        if (!node || node.data.type !== "mindmap" || node.data.isRoot) return nds;
 
         const descendants = collectDescendants(nodeId, nds);
 
         const cleaned = nds
           .filter((n) => !descendants.has(n.id))
           .map((n) => {
-            if (n.data.type === 'mindmap' && (n.data as MindMapNodeData).children.includes(nodeId)) {
+            if (
+              n.data.type === "mindmap" &&
+              (n.data as MindMapNodeData).children.includes(nodeId)
+            ) {
               return {
                 ...n,
                 data: {
@@ -992,7 +1014,7 @@ function CanvasEditorInner({
             return n;
           }) as CanvasNode[];
 
-        const rootId = findMindMapRoot(node.data.parentNodeId || '', cleaned);
+        const rootId = findMindMapRoot(node.data.parentNodeId || "", cleaned);
         if (!rootId) {
           flushChange(cleaned);
           return cleaned;
@@ -1003,7 +1025,7 @@ function CanvasEditorInner({
         return laid;
       });
     },
-    [readonly, setNodes, flushChange, applyMindMapLayout]
+    [readonly, setNodes, flushChange, applyMindMapLayout],
   );
 
   const handleMindMapToggleCollapse = useCallback(
@@ -1011,7 +1033,7 @@ function CanvasEditorInner({
       if (readonly) return;
       setNodes((nds) => {
         const node = nds.find((n) => n.id === nodeId) as MindMapCanvasNode | undefined;
-        if (!node || node.data.type !== 'mindmap') return nds;
+        if (!node || node.data.type !== "mindmap") return nds;
 
         const updatedNds = nds.map((n) => {
           if (n.id === nodeId) {
@@ -1034,21 +1056,20 @@ function CanvasEditorInner({
         return laid;
       });
     },
-    [readonly, setNodes, scheduleChange, applyMindMapLayout]
+    [readonly, setNodes, scheduleChange, applyMindMapLayout],
   );
 
   // Update label via Y.Text so concurrent renames merge instead of clobbering.
   const handleMindMapLabelChange = useCallback(
     (nodeId: string, label: string) => {
       if (readonly) return;
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === nodeId && n.data.type === 'mindmap'
-            ? { ...n, data: { ...n.data, label } }
-            : n,
-        ) as CanvasNode[],
+      setNodes(
+        (nds) =>
+          nds.map((n) =>
+            n.id === nodeId && n.data.type === "mindmap" ? { ...n, data: { ...n.data, label } } : n,
+          ) as CanvasNode[],
       );
-      commitNodeTextField(nodeId, 'label', label);
+      commitNodeTextField(nodeId, "label", label);
     },
     [setNodes, readonly, commitNodeTextField],
   );
@@ -1063,14 +1084,14 @@ function CanvasEditorInner({
         const rootNode = nds.find((n) => n.id === rootId) as MindMapCanvasNode | undefined;
         if (!rootNode) return nds;
 
-        const currentDir = (rootNode.data as MindMapNodeData).direction || 'right';
-        const dirs: Array<'right' | 'down' | 'left' | 'up'> = ['right', 'down', 'left', 'up'];
+        const currentDir = (rootNode.data as MindMapNodeData).direction || "right";
+        const dirs: Array<"right" | "down" | "left" | "up"> = ["right", "down", "left", "up"];
         const nextDir = dirs[(dirs.indexOf(currentDir) + 1) % dirs.length];
 
         const mmId = rootNode.data.mindmapId;
         const mmNodeIds: string[] = [];
         const updated = nds.map((n) => {
-          if (n.data.type === 'mindmap' && (n.data as MindMapNodeData).mindmapId === mmId) {
+          if (n.data.type === "mindmap" && (n.data as MindMapNodeData).mindmapId === mmId) {
             mmNodeIds.push(n.id);
             return { ...n, data: { ...n.data, direction: nextDir } } as CanvasNode;
           }
@@ -1089,7 +1110,7 @@ function CanvasEditorInner({
         return laid;
       });
     },
-    [readonly, setNodes, scheduleChange, applyMindMapLayout, updateNodeInternals]
+    [readonly, setNodes, scheduleChange, applyMindMapLayout, updateNodeInternals],
   );
 
   const handleContentPickerSelect = useCallback(
@@ -1097,14 +1118,20 @@ function CanvasEditorInner({
       if (readonly) return;
       const position = getCenterPosition();
       const parsed = parseUrn(result.urn);
-      const defaults = getStyleDefaults();
+      const styleDefaults = getStyleDefaults();
 
       if (parsed.type === UrnType.NOTE) {
         const newNode: NoteCanvasNode = {
           id: generateNodeId(),
-          type: 'note',
+          type: "note",
           position,
-          data: { type: 'note', noteId: parsed.id, title: result.title, urn: result.urn, ...defaults },
+          data: {
+            type: "note",
+            noteId: parsed.id,
+            title: result.title,
+            urn: result.urn,
+            ...styleDefaults,
+          },
           style: { width: 280, height: 200 },
         };
         setNodes((nds) => {
@@ -1113,12 +1140,18 @@ function CanvasEditorInner({
           return updated;
         });
       } else if (parsed.type === UrnType.FILE) {
-        const mime = result.metadata?.mime_type || result.metadata?.mimeType || '';
+        const mime = result.metadata?.mime_type || result.metadata?.mimeType || "";
         const newNode: MediaCanvasNode = {
           id: generateNodeId(),
-          type: 'media',
+          type: "media",
           position,
-          data: { type: 'media', fileId: parsed.id, mimeType: mime, filename: result.title, ...defaults },
+          data: {
+            type: "media",
+            fileId: parsed.id,
+            mimeType: mime,
+            filename: result.title,
+            ...styleDefaults,
+          },
           style: { width: 320, height: 240 },
         };
         setNodes((nds) => {
@@ -1130,9 +1163,9 @@ function CanvasEditorInner({
         const mentionMarkdown = `[[[${sanitizeMentionLabel(result.title)}|${result.urn}]]]`;
         const newNode: TextCanvasNode = {
           id: generateNodeId(),
-          type: 'text',
+          type: "text",
           position,
-          data: { type: 'text', content: mentionMarkdown, ...defaults },
+          data: { type: "text", content: mentionMarkdown, ...styleDefaults },
           style: { width: 300, height: 100 },
         };
         setNodes((nds) => {
@@ -1142,27 +1175,27 @@ function CanvasEditorInner({
         });
       }
     },
-    [readonly, getCenterPosition, getStyleDefaults, setNodes, scheduleChange]
+    [readonly, getCenterPosition, getStyleDefaults, setNodes, scheduleChange],
   );
 
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: CanvasNode) => {
       if (readonly) return;
       event.preventDefault();
-      let mindMapInfo: ContextMenuState['mindMapInfo'];
-      if (node.data.type === 'mindmap') {
+      let mindMapInfo: ContextMenuState["mindMapInfo"];
+      if (node.data.type === "mindmap") {
         const mmData = node.data as MindMapNodeData;
         mindMapInfo = {
           isRoot: mmData.isRoot === true,
           hasChildren: mmData.children.length > 0,
           isCollapsed: mmData.collapsed === true,
-          branchColor: mmData.branchColor || '',
-          direction: mmData.direction || 'right',
+          branchColor: mmData.branchColor || "",
+          direction: mmData.direction || "right",
         };
       }
       setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id, mindMapInfo });
     },
-    [readonly]
+    [readonly],
   );
 
   const handlePaneClick = useCallback(() => {
@@ -1178,7 +1211,7 @@ function CanvasEditorInner({
         return updated;
       });
     },
-    [setNodes, scheduleChange]
+    [setNodes, scheduleChange],
   );
 
   const handleBringToFront = useCallback(
@@ -1186,13 +1219,13 @@ function CanvasEditorInner({
       setNodes((nds) => {
         const maxZ = Math.max(...nds.map((n) => n.zIndex ?? 0));
         const updated = nds.map((n) =>
-          n.id === nodeId ? { ...n, zIndex: maxZ + 1 } : n
+          n.id === nodeId ? { ...n, zIndex: maxZ + 1 } : n,
         ) as CanvasNode[];
         scheduleChange(updated);
         return updated;
       });
     },
-    [setNodes, scheduleChange]
+    [setNodes, scheduleChange],
   );
 
   const handleSendToBack = useCallback(
@@ -1200,13 +1233,13 @@ function CanvasEditorInner({
       setNodes((nds) => {
         const minZ = Math.min(...nds.map((n) => n.zIndex ?? 0));
         const updated = nds.map((n) =>
-          n.id === nodeId ? { ...n, zIndex: minZ - 1 } : n
+          n.id === nodeId ? { ...n, zIndex: minZ - 1 } : n,
         ) as CanvasNode[];
         scheduleChange(updated);
         return updated;
       });
     },
-    [setNodes, scheduleChange]
+    [setNodes, scheduleChange],
   );
 
   const handleBringForward = useCallback(
@@ -1216,13 +1249,13 @@ function CanvasEditorInner({
         if (!node) return nds;
         const currentZ = node.zIndex ?? 0;
         const updated = nds.map((n) =>
-          n.id === nodeId ? { ...n, zIndex: currentZ + 1 } : n
+          n.id === nodeId ? { ...n, zIndex: currentZ + 1 } : n,
         ) as CanvasNode[];
         scheduleChange(updated);
         return updated;
       });
     },
-    [setNodes, scheduleChange]
+    [setNodes, scheduleChange],
   );
 
   const handleSendBackward = useCallback(
@@ -1232,13 +1265,13 @@ function CanvasEditorInner({
         if (!node) return nds;
         const currentZ = node.zIndex ?? 0;
         const updated = nds.map((n) =>
-          n.id === nodeId ? { ...n, zIndex: currentZ - 1 } : n
+          n.id === nodeId ? { ...n, zIndex: currentZ - 1 } : n,
         ) as CanvasNode[];
         scheduleChange(updated);
         return updated;
       });
     },
-    [setNodes, scheduleChange]
+    [setNodes, scheduleChange],
   );
 
   const handleDuplicateNode = useCallback(
@@ -1260,7 +1293,7 @@ function CanvasEditorInner({
         return updated;
       });
     },
-    [setNodes, scheduleChange]
+    [setNodes, scheduleChange],
   );
 
   // Origin-scoped per-doc UndoManager; observer effect mirrors the result back.
@@ -1277,68 +1310,80 @@ function CanvasEditorInner({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
         return;
       }
 
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
 
-      if (e.key === 't' || e.key === 'T') {
+      if (e.key === "t" || e.key === "T") {
         if (!isCtrlOrMeta) {
           e.preventDefault();
           handleAddTextBlock();
         }
-      } else if (e.key === 's' || e.key === 'S') {
+      } else if (e.key === "s" || e.key === "S") {
         if (!isCtrlOrMeta) {
           e.preventDefault();
-          handleAddShape('rect');
+          handleAddShape("rect");
         }
-      } else if (e.key === 'z' && isCtrlOrMeta && !e.shiftKey) {
+      } else if (e.key === "z" && isCtrlOrMeta && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
-      } else if (e.key === 'z' && isCtrlOrMeta && e.shiftKey) {
+      } else if (e.key === "z" && isCtrlOrMeta && e.shiftKey) {
         e.preventDefault();
         handleRedo();
-      } else if (e.key === '=' && isCtrlOrMeta && e.shiftKey) {
+      } else if (e.key === "=" && isCtrlOrMeta && e.shiftKey) {
         e.preventDefault();
         fitView({ duration: 300 });
-      } else if (e.key === '@') {
+      } else if (e.key === "@") {
         e.preventDefault();
         setShowContentPicker(true);
       }
 
       const selectedNode = nodes.find((n) => n.selected);
-      if (selectedNode?.data.type === 'mindmap') {
+      if (selectedNode?.data.type === "mindmap") {
         const mmData = selectedNode.data as MindMapNodeData;
-        if (e.key === 'Tab') {
+        if (e.key === "Tab") {
           e.preventDefault();
           handleMindMapAddChild(selectedNode.id);
-        } else if (e.key === 'Enter' && !mmData.isRoot) {
+        } else if (e.key === "Enter" && !mmData.isRoot) {
           e.preventDefault();
           handleMindMapAddSibling(selectedNode.id);
-        } else if (e.key === ' ' && mmData.children.length > 0) {
+        } else if (e.key === " " && mmData.children.length > 0) {
           e.preventDefault();
           handleMindMapToggleCollapse(selectedNode.id);
-        } else if (e.key === 'F2') {
+        } else if (e.key === "F2") {
           e.preventDefault();
           setEditingNodeId(selectedNode.id);
-        } else if ((e.key === 'Delete' || e.key === 'Backspace') && !mmData.isRoot) {
+        } else if ((e.key === "Delete" || e.key === "Backspace") && !mmData.isRoot) {
           e.preventDefault();
           handleMindMapDeleteNode(selectedNode.id);
         }
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [readonly, handleAddTextBlock, handleAddShape, handleUndo, handleRedo, fitView, nodes, handleMindMapAddChild, handleMindMapAddSibling, handleMindMapToggleCollapse, handleMindMapDeleteNode]);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    readonly,
+    handleAddTextBlock,
+    handleAddShape,
+    handleUndo,
+    handleRedo,
+    fitView,
+    nodes,
+    handleMindMapAddChild,
+    handleMindMapAddSibling,
+    handleMindMapToggleCollapse,
+    handleMindMapDeleteNode,
+  ]);
 
   useEffect(() => {
     if (!showContentPicker) return;
     const timer = setTimeout(() => contentPickerInputRef.current?.focus(), 10);
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         setShowContentPicker(false);
         clearPickerResults();
@@ -1352,12 +1397,12 @@ function CanvasEditorInner({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showContentPicker, clearPickerResults]);
 
@@ -1376,14 +1421,27 @@ function CanvasEditorInner({
       editingNodeId,
       clearEditingNodeId,
     }),
-    [handleTextContentChange, handleShapeLabelChange, handleNodeStyleChange, handleMindMapLabelChange, handleMindMapAddChild, handleMindMapAddSibling, handleMindMapDeleteNode, handleMindMapToggleCollapse, readonly, contentId, editingNodeId, clearEditingNodeId]
+    [
+      handleTextContentChange,
+      handleShapeLabelChange,
+      handleNodeStyleChange,
+      handleMindMapLabelChange,
+      handleMindMapAddChild,
+      handleMindMapAddSibling,
+      handleMindMapDeleteNode,
+      handleMindMapToggleCollapse,
+      readonly,
+      contentId,
+      editingNodeId,
+      clearEditingNodeId,
+    ],
   );
 
   const overlayContainerRef = useRef<HTMLDivElement>(null);
 
   return (
     <CanvasCallbacksContext.Provider value={callbacksValue}>
-      <div ref={overlayContainerRef} className={cn('relative w-full h-full bg-card')}>
+      <div ref={overlayContainerRef} className={cn("relative w-full h-full bg-card")}>
         <CanvasAwarenessOverlay
           binding={realtime ?? null}
           containerRef={overlayContainerRef}
@@ -1401,7 +1459,7 @@ function CanvasEditorInner({
           onPaneClick={handlePaneClick}
           nodeTypes={NODE_TYPES}
           edgeTypes={EDGE_TYPES}
-          defaultEdgeOptions={{ type: 'custom' }}
+          defaultEdgeOptions={{ type: "custom" }}
           defaultViewport={canvasState.viewport}
           fitView={canvasState.nodes.length > 0 && !canvasState.viewport.zoom}
           nodesDraggable={!readonly}
@@ -1460,15 +1518,20 @@ function CanvasEditorInner({
             onSendToBack={handleSendToBack}
             onBringForward={handleBringForward}
             onSendBackward={handleSendBackward}
-            mindMapInfo={contextMenu.mindMapInfo ? {
-              ...contextMenu.mindMapInfo,
-              onAddChild: handleMindMapAddChild,
-              onAddSibling: handleMindMapAddSibling,
-              onToggleCollapse: handleMindMapToggleCollapse,
-              onDeleteSubtree: handleMindMapDeleteNode,
-              onBranchColorChange: (color: string) => handleNodeStyleChange(contextMenu.nodeId, { branchColor: color }),
-              onRotate: () => handleMindMapRotate(contextMenu.nodeId),
-            } : undefined}
+            mindMapInfo={
+              contextMenu.mindMapInfo
+                ? {
+                    ...contextMenu.mindMapInfo,
+                    onAddChild: handleMindMapAddChild,
+                    onAddSibling: handleMindMapAddSibling,
+                    onToggleCollapse: handleMindMapToggleCollapse,
+                    onDeleteSubtree: handleMindMapDeleteNode,
+                    onBranchColorChange: (color: string) =>
+                      handleNodeStyleChange(contextMenu.nodeId, { branchColor: color }),
+                    onRotate: () => handleMindMapRotate(contextMenu.nodeId),
+                  }
+                : undefined
+            }
           />
         )}
         {showContentPicker && (
@@ -1481,7 +1544,11 @@ function CanvasEditorInner({
               >
                 <div className="rounded-2xl border-2 border-primary/50 bg-card shadow-2xl ring-4 ring-primary/10 overflow-hidden">
                   <div className="relative flex items-center border-b border-border/50">
-                    <MagnifyingGlass size={20} weight="bold" className="absolute left-4 text-muted-foreground" />
+                    <MagnifyingGlass
+                      size={20}
+                      weight="bold"
+                      className="absolute left-4 text-muted-foreground"
+                    />
                     <input
                       ref={contentPickerInputRef}
                       type="text"

@@ -1,4 +1,4 @@
-const STORAGE_KEY_PREFIX = 'uniffy-panel-layout';
+const STORAGE_KEY_PREFIX = "uniffy-panel-layout";
 
 export function loadPanelLayout(layoutId: string): Record<string, number> | undefined {
   try {

@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
-import { CrepeEditor, type CrepeRealtimeBinding } from '@/components/editor/CrepeEditor';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import type { SerializedNote } from '@/features/notes/store/notesThunks';
-import { useRealtimeMarkdownContent } from '@/features/notes/realtime/useMarkdownContent';
+import type { ReactNode } from "react";
+import { CrepeEditor, type CrepeRealtimeBinding } from "@/components/editor/CrepeEditor";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import type { SerializedNote } from "@/features/notes/store/notesThunks";
+import { useRealtimeMarkdownContent } from "@/features/notes/realtime/useMarkdownContent";
 
 interface ReadOnlyViewerProps {
   note: SerializedNote;

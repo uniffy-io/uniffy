@@ -1,21 +1,21 @@
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import { callsApi } from '@/features/calls/api/callsApi';
-import { callToPlain, iceServersToPlain } from '@/features/calls/api/callsConverters';
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { callsApi } from "@/features/calls/api/callsApi";
+import { callToPlain, iceServersToPlain } from "@/features/calls/api/callsConverters";
 import {
   activeCallsSynced,
   callCleared,
   callEnded,
   callUpserted,
   ringDismissed,
-} from '@/features/calls/store/callsSlice';
-import { getDeviceId, getDeviceLabel } from '@/shared/utils/deviceId';
-import { ScreenShareQuality, IceTransportPolicy } from '@uniffy/proto/calls/v1/calls_pb';
-import type { CallData, IceServerData } from '@/features/calls/types';
-import type { RootState } from '@/app/store';
+} from "@/features/calls/store/callsSlice";
+import { getDeviceId, getDeviceLabel } from "@/shared/utils/deviceId";
+import { ScreenShareQuality, IceTransportPolicy } from "@uniffy/proto/calls/v1/calls_pb";
+import type { CallData, IceServerData } from "@/features/calls/types";
+import type { RootState } from "@/app/store";
 
 const getOrganizationId = (state: RootState): string => {
   const orgId = state.auth.currentOrganizationId;
-  if (!orgId) throw new Error('No organization selected');
+  if (!orgId) throw new Error("No organization selected");
   return orgId;
 };
 
@@ -32,7 +32,7 @@ export interface CallJoinResult {
 }
 
 export const fetchActiveCall = createAsyncThunk(
-  'calls/fetchActiveCall',
+  "calls/fetchActiveCall",
   async (channelId: string, { getState, dispatch }) => {
     const organizationId = getOrganizationId(getState() as RootState);
     const res = await callsApi.getActiveCall({ organizationId, channelId });
@@ -55,7 +55,7 @@ export const fetchActiveCall = createAsyncThunk(
  * reconnect retries it.
  */
 export const syncActiveCalls = createAsyncThunk(
-  'calls/syncActiveCalls',
+  "calls/syncActiveCalls",
   async (_: void, { getState, dispatch }) => {
     try {
       const organizationId = getOrganizationId(getState() as RootState);
@@ -69,7 +69,7 @@ export const syncActiveCalls = createAsyncThunk(
 );
 
 export const initiateCall = createAsyncThunk(
-  'calls/initiateCall',
+  "calls/initiateCall",
   async (channelId: string, { getState, dispatch }): Promise<CallJoinResult> => {
     const organizationId = getOrganizationId(getState() as RootState);
     const res = await callsApi.initiateCall({
@@ -78,7 +78,7 @@ export const initiateCall = createAsyncThunk(
       deviceId: getDeviceId(),
       deviceLabel: getDeviceLabel(),
     });
-    if (!res.call) throw new Error('Call missing from response');
+    if (!res.call) throw new Error("Call missing from response");
     const call = callToPlain(res.call);
     dispatch(callUpserted(call));
     return {
@@ -94,7 +94,7 @@ export const initiateCall = createAsyncThunk(
 );
 
 export const joinCall = createAsyncThunk(
-  'calls/joinCall',
+  "calls/joinCall",
   async (callId: string, { getState, dispatch }): Promise<CallJoinResult> => {
     const organizationId = getOrganizationId(getState() as RootState);
     const res = await callsApi.joinCall({
@@ -103,7 +103,7 @@ export const joinCall = createAsyncThunk(
       deviceId: getDeviceId(),
       deviceLabel: getDeviceLabel(),
     });
-    if (!res.call) throw new Error('Call missing from response');
+    if (!res.call) throw new Error("Call missing from response");
     const call = callToPlain(res.call);
     dispatch(callUpserted(call));
     return {
@@ -134,7 +134,7 @@ export async function joinCallRequest(
     deviceId: getDeviceId(),
     deviceLabel: getDeviceLabel(),
   });
-  if (!res.call) throw new Error('Call missing from response');
+  if (!res.call) throw new Error("Call missing from response");
   return {
     call: callToPlain(res.call),
     wsUrl: res.wsUrl,
@@ -147,7 +147,7 @@ export async function joinCallRequest(
 }
 
 export const leaveCall = createAsyncThunk(
-  'calls/leaveCall',
+  "calls/leaveCall",
   async (callId: string, { getState }) => {
     const organizationId = getOrganizationId(getState() as RootState);
     await callsApi.leaveCall({ organizationId, callId, deviceId: getDeviceId() });
@@ -155,19 +155,16 @@ export const leaveCall = createAsyncThunk(
 );
 
 export const endCall = createAsyncThunk(
-  'calls/endCall',
-  async (
-    { callId, channelId }: { callId: string; channelId: string },
-    { getState, dispatch },
-  ) => {
+  "calls/endCall",
+  async ({ callId, channelId }: { callId: string; channelId: string }, { getState, dispatch }) => {
     const organizationId = getOrganizationId(getState() as RootState);
     await callsApi.endCall({ organizationId, callId });
-    dispatch(callEnded({ callId, channelId, reason: 'HOST_ENDED' }));
+    dispatch(callEnded({ callId, channelId, reason: "HOST_ENDED" }));
   },
 );
 
 export const refreshCallToken = createAsyncThunk(
-  'calls/refreshCallToken',
+  "calls/refreshCallToken",
   async (callId: string, { getState }): Promise<string> => {
     const organizationId = getOrganizationId(getState() as RootState);
     const res = await callsApi.refreshCallToken({
@@ -180,7 +177,7 @@ export const refreshCallToken = createAsyncThunk(
 );
 
 export const declineCall = createAsyncThunk(
-  'calls/declineCall',
+  "calls/declineCall",
   async (callId: string, { getState, dispatch }) => {
     const organizationId = getOrganizationId(getState() as RootState);
     dispatch(ringDismissed(callId));
@@ -189,7 +186,7 @@ export const declineCall = createAsyncThunk(
 );
 
 export const kickParticipant = createAsyncThunk(
-  'calls/kickParticipant',
+  "calls/kickParticipant",
   async ({ callId, identity }: { callId: string; identity: string }, { getState }) => {
     const organizationId = getOrganizationId(getState() as RootState);
     await callsApi.kickParticipant({ organizationId, callId, identity });
@@ -197,7 +194,7 @@ export const kickParticipant = createAsyncThunk(
 );
 
 export const muteParticipant = createAsyncThunk(
-  'calls/muteParticipant',
+  "calls/muteParticipant",
   async ({ callId, identity }: { callId: string; identity: string }, { getState }) => {
     const organizationId = getOrganizationId(getState() as RootState);
     await callsApi.muteParticipant({ organizationId, callId, identity });

@@ -24,9 +24,7 @@ export function SprintCompletionDialog({
 }: SprintCompletionDialogProps) {
   const dispatch = useAppDispatch();
   const allSprints = useAppSelector(selectSprintsForProject(projectId));
-  const plannedSprints = allSprints.filter(
-    (s) => s.status === "planned" && s.id !== sprint.id
-  );
+  const plannedSprints = allSprints.filter((s) => s.status === "planned" && s.id !== sprint.id);
 
   // For each incomplete task: "backlog" or a sprint ID
   const [dispositions, setDispositions] = useState<Record<string, string>>(() => {
@@ -47,9 +45,7 @@ export function SprintCompletionDialog({
         const destination = dispositions[task.id];
         const sprintId = destination === "backlog" ? null : destination;
         if (sprintId !== task.sprintId) {
-          await dispatch(
-            updateTask({ id: task.id, sprintId })
-          ).unwrap();
+          await dispatch(updateTask({ id: task.id, sprintId })).unwrap();
         }
       }
       // Complete the sprint
@@ -87,15 +83,13 @@ export function SprintCompletionDialog({
         ) : (
           <>
             <p className="text-sm text-muted-foreground mb-4 shrink-0">
-              {incompleteTasks.length} incomplete task{incompleteTasks.length !== 1 ? "s" : ""} will be moved. Choose a destination for each:
+              {incompleteTasks.length} incomplete task{incompleteTasks.length !== 1 ? "s" : ""} will
+              be moved. Choose a destination for each:
             </p>
 
             <div className="flex-1 overflow-y-auto divide-y divide-border border border-border rounded-lg mb-4">
               {incompleteTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-3 px-3 py-2.5"
-                >
+                <div key={task.id} className="flex items-center gap-3 px-3 py-2.5">
                   <span className="text-xs text-muted-foreground shrink-0 w-16">
                     {projectSlug}-{task.number}
                   </span>

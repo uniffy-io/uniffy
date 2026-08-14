@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   MapPin,
   Door,
@@ -6,23 +6,23 @@ import {
   VideoCamera,
   Link as LinkIcon,
   Prohibit,
-} from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
-import { RoomPicker } from '@/features/rooms/components/shared/RoomPicker';
-import { MeetingChannelPicker } from '@/features/calendar/components/modals/MeetingChannelPicker';
-import { EventMeetingJoin } from '@/features/calendar/components/layout/EventMeetingJoin';
-import { InlineTextField } from '@/features/calendar/components/detail/InlineTextField';
-import { SectionLabel } from '@/features/calendar/components/detail/SectionLabel';
-import { resolveMeetingSubmit, type MeetingMode } from '@/features/calendar/utils/meeting';
-import type { CalendarEvent } from '@/features/calendar/types';
-import type { EventPatch } from '@/features/calendar/hooks/useEventCommit';
+} from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { openRoomViewer } from "@/features/rooms/store/roomsThunks";
+import { RoomPicker } from "@/features/rooms/components/shared/RoomPicker";
+import { MeetingChannelPicker } from "@/features/calendar/components/modals/MeetingChannelPicker";
+import { EventMeetingJoin } from "@/features/calendar/components/layout/EventMeetingJoin";
+import { InlineTextField } from "@/features/calendar/components/detail/InlineTextField";
+import { SectionLabel } from "@/features/calendar/components/detail/SectionLabel";
+import { resolveMeetingSubmit, type MeetingMode } from "@/features/calendar/utils/meeting";
+import type { CalendarEvent } from "@/features/calendar/types";
+import type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
 
 const MEETING_MODES: { mode: MeetingMode; icon: typeof VideoCamera; label: string }[] = [
-  { mode: 'none', icon: Prohibit, label: 'None' },
-  { mode: 'link', icon: LinkIcon, label: 'Link' },
-  { mode: 'channel', icon: VideoCamera, label: 'Uniffy' },
+  { mode: "none", icon: Prohibit, label: "None" },
+  { mode: "link", icon: LinkIcon, label: "Link" },
+  { mode: "channel", icon: VideoCamera, label: "Uniffy" },
 ];
 
 interface EventPlaceSectionProps {
@@ -35,7 +35,7 @@ export function EventPlaceSection({ event, canEdit, commit }: EventPlaceSectionP
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
-  const storedMode: MeetingMode = event.channelId ? 'channel' : event.meetingUrl ? 'link' : 'none';
+  const storedMode: MeetingMode = event.channelId ? "channel" : event.meetingUrl ? "link" : "none";
 
   // "link with no URL yet" and "channel with none picked yet" have no server representation,
   // so the selected mode is local and only the payload (URL / channel) is persisted.
@@ -52,12 +52,13 @@ export function EventPlaceSection({ event, canEdit, commit }: EventPlaceSectionP
 
     // Only write when the switch actually drops an existing binding; adopting a new one
     // waits for the URL or the channel pick.
-    const dropsBinding = mode === 'none'
-      || (mode === 'link' && !!event.channelId)
-      || (mode === 'channel' && !!event.meetingUrl);
+    const dropsBinding =
+      mode === "none" ||
+      (mode === "link" && !!event.channelId) ||
+      (mode === "channel" && !!event.meetingUrl);
     if (!dropsBinding) return;
 
-    const { meetingUrl, channelId } = resolveMeetingSubmit(mode, null, '', event.channelId);
+    const { meetingUrl, channelId } = resolveMeetingSubmit(mode, null, "", event.channelId);
     commit({ meetingUrl, channelId, channelAutoCreated: false });
   };
 
@@ -86,32 +87,36 @@ export function EventPlaceSection({ event, canEdit, commit }: EventPlaceSectionP
                 type="button"
                 onClick={() => commitMeetingMode(mode)}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded-md',
-                  'text-xs font-medium whitespace-nowrap transition-all',
+                  "flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded-md",
+                  "text-xs font-medium whitespace-nowrap transition-all",
                   meetingMode === mode
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
               >
-                <Icon size={13} weight={meetingMode === mode ? 'fill' : 'duotone'} className="shrink-0" />
+                <Icon
+                  size={13}
+                  weight={meetingMode === mode ? "fill" : "duotone"}
+                  className="shrink-0"
+                />
                 <span>{label}</span>
               </button>
             ))}
           </div>
 
-          {meetingMode === 'link' && (
+          {meetingMode === "link" && (
             <InlineTextField
-              value={event.meetingUrl ?? ''}
+              value={event.meetingUrl ?? ""}
               onCommit={(meetingUrl) => commit({ meetingUrl })}
               placeholder="https://..."
               type="url"
             />
           )}
 
-          {meetingMode === 'channel' && (
+          {meetingMode === "channel" && (
             <MeetingChannelPicker
               selectedChannelId={event.channelId ?? null}
-              onSelect={(id) => commit({ channelId: id ?? '', channelAutoCreated: false })}
+              onSelect={(id) => commit({ channelId: id ?? "", channelAutoCreated: false })}
               onCreateRoom={(id) => commit({ channelId: id, channelAutoCreated: true })}
               attendeeIds={event.attendees.map((a) => a.id)}
               eventTitle={event.title}
@@ -125,7 +130,7 @@ export function EventPlaceSection({ event, canEdit, commit }: EventPlaceSectionP
           <SectionLabel>Room</SectionLabel>
           <RoomPicker
             selectedRoomId={event.roomId ?? null}
-            onSelect={(roomId) => commit({ roomId: roomId ?? '' })}
+            onSelect={(roomId) => commit({ roomId: roomId ?? "" })}
             organizationId={organizationId}
             startTime={event.startTime}
             endTime={event.endTime}
@@ -159,7 +164,7 @@ export function EventPlaceSection({ event, canEdit, commit }: EventPlaceSectionP
               {event.roomCapacity && event.roomCapacity > 0 && (
                 <span className="flex items-center gap-1">
                   <Users size={12} />
-                  {event.roomCapacity} {event.roomCapacity === 1 ? 'person' : 'people'}
+                  {event.roomCapacity} {event.roomCapacity === 1 ? "person" : "people"}
                 </span>
               )}
             </div>

@@ -1,7 +1,7 @@
-import { createContext, useContext } from 'react';
-import type { Crepe } from '@milkdown/crepe';
-import type { Ctx } from '@milkdown/kit/ctx';
-import type { EditorView } from '@milkdown/prose/view';
+import { createContext, useContext } from "react";
+import type { Crepe } from "@milkdown/crepe";
+import type { Ctx } from "@milkdown/kit/ctx";
+import type { EditorView } from "@milkdown/prose/view";
 
 export interface EditorHandle {
   readonly crepe: Crepe;

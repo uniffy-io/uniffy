@@ -1,9 +1,9 @@
-import { CaretDown } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { toggleSectionCollapse } from '@/features/calendar/store';
-import type { SidebarSectionId } from '@/features/calendar/types';
-import { cn } from '@/shared/utils/cn';
-import type { ReactNode } from 'react';
+import { CaretDown } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { toggleSectionCollapse } from "@/features/calendar/store";
+import type { SidebarSectionId } from "@/features/calendar/types";
+import { cn } from "@/shared/utils/cn";
+import type { ReactNode } from "react";
 
 interface SidebarSectionProps {
   id: SidebarSectionId;
@@ -12,16 +12,9 @@ interface SidebarSectionProps {
   action?: ReactNode;
 }
 
-export function SidebarSection({
-  id,
-  title,
-  children,
-  action,
-}: SidebarSectionProps) {
+export function SidebarSection({ id, title, children, action }: SidebarSectionProps) {
   const dispatch = useAppDispatch();
-  const collapsedSections = useAppSelector(
-    (state) => state.calendarUi.collapsedSections
-  );
+  const collapsedSections = useAppSelector((state) => state.calendarUi.collapsedSections);
 
   const isCollapsed = collapsedSections.includes(id);
 
@@ -40,20 +33,13 @@ export function SidebarSection({
           <CaretDown
             size={12}
             weight="bold"
-            className={cn(
-              'transition-transform',
-              isCollapsed && '-rotate-90'
-            )}
+            className={cn("transition-transform", isCollapsed && "-rotate-90")}
           />
         </button>
         {action}
       </div>
 
-      {!isCollapsed && (
-        <div className="space-y-1">
-          {children}
-        </div>
-      )}
+      {!isCollapsed && <div className="space-y-1">{children}</div>}
     </div>
   );
 }

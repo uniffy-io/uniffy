@@ -24,7 +24,15 @@ import { DangerZoneSection } from "@/features/projects/components/settings/Dange
 import { AuditLogSection } from "@/features/projects/components/settings/AuditLogSection";
 import type { Project } from "@/features/projects/types";
 
-type SettingsSection = "general" | "members" | "statuses" | "fields" | "types" | "sprints" | "audit" | "danger";
+type SettingsSection =
+  | "general"
+  | "members"
+  | "statuses"
+  | "fields"
+  | "types"
+  | "sprints"
+  | "audit"
+  | "danger";
 
 interface SectionDef {
   id: SettingsSection;
@@ -62,7 +70,8 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
   useEffect(() => {
     const section = searchParams.get("section");
     if (section && ALL_SECTION_IDS.has(section)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing URL search param to local state on navigation
+      // The URL owns the section on navigation; local state owns it between navigations.
+      // eslint-disable-next-line react/react-compiler
       setActiveSection(section as SettingsSection);
     }
   }, [searchParams]);
@@ -124,7 +133,7 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
                     ? "bg-primary text-primary-foreground"
                     : danger
                       ? "text-red-500 hover:bg-red-500/10"
-                      : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                      : "text-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
                 onClick={() => handleSectionChange(id)}
               >
@@ -137,9 +146,7 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 pb-8">
-        {renderContent()}
-      </main>
+      <main className="flex-1 min-w-0 pb-8">{renderContent()}</main>
     </div>
   );
 }

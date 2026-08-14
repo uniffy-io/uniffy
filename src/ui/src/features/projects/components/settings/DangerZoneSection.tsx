@@ -48,7 +48,8 @@ export function DangerZoneSection({ project }: DangerZoneSectionProps) {
         <div>
           <h3 className="text-sm font-medium text-foreground mb-1">Delete this project</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Permanently delete this project and all its tasks, sprints, custom fields, and views. This action cannot be undone.
+            Permanently delete this project and all its tasks, sprints, custom fields, and views.
+            This action cannot be undone.
           </p>
 
           {showDeleteConfirm ? (

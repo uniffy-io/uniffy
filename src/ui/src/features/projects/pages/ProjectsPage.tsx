@@ -5,10 +5,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useShortcutHandlers } from "@/features/settings";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ProjectsLayout } from "../components/layout/ProjectsLayout";
-import {
-  setCurrentProject,
-  selectCurrentProject,
-} from "../store/projectsSlice";
+import { setCurrentProject, selectCurrentProject } from "../store/projectsSlice";
 import {
   selectTask,
   openDetailPanel,
@@ -73,15 +70,21 @@ export function ProjectsPage() {
   // Live refresh on project access changes (shared / flipped to OPEN_TO_ORG ->
   // refetch the list) and on a task created in the open project (child_added ->
   // refetch that project's task board).
-  useContentAccessRefetch(ContentType.PROJECT, useCallback((change) => {
-    if (change.action === 'child_added') {
-      if (change.contentId === currentProjectId) {
-        dispatch(fetchProjectTasks(currentProjectId));
-      }
-      return;
-    }
-    dispatch(fetchProjects());
-  }, [dispatch, currentProjectId]));
+  useContentAccessRefetch(
+    ContentType.PROJECT,
+    useCallback(
+      (change) => {
+        if (change.action === "child_added") {
+          if (change.contentId === currentProjectId) {
+            dispatch(fetchProjectTasks(currentProjectId));
+          }
+          return;
+        }
+        dispatch(fetchProjects());
+      },
+      [dispatch, currentProjectId],
+    ),
+  );
 
   useEffect(() => {
     if (isProgrammaticNav.current) {
@@ -98,8 +101,8 @@ export function ProjectsPage() {
   }, [dispatch, taskId]);
 
   useEffect(() => {
-    const currentProjectId = currentProject?.id;
-    if (!currentProjectId) return;
+    const openProjectId = currentProject?.id;
+    if (!openProjectId) return;
 
     // URL represents single-task viewing; skip while multi-selecting.
     if (selectedTaskIds.length > 1) return;
@@ -107,13 +110,20 @@ export function ProjectsPage() {
     if (selectedTaskId && isDetailPanelOpen) {
       if (taskId !== selectedTaskId) {
         isProgrammaticNav.current = true;
-        navigate(`/projects/${currentProjectId}/tasks/${selectedTaskId}`, { replace: true });
+        navigate(`/projects/${openProjectId}/tasks/${selectedTaskId}`, { replace: true });
       }
     } else if (taskId) {
       isProgrammaticNav.current = true;
-      navigate(`/projects/${currentProjectId}`, { replace: true });
+      navigate(`/projects/${openProjectId}`, { replace: true });
     }
-  }, [selectedTaskId, selectedTaskIds.length, isDetailPanelOpen, currentProject?.id, taskId, navigate]);
+  }, [
+    selectedTaskId,
+    selectedTaskIds.length,
+    isDetailPanelOpen,
+    currentProject?.id,
+    taskId,
+    navigate,
+  ]);
 
   return (
     <>

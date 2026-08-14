@@ -35,6 +35,9 @@ export function DragShift({
   const shift = useSharedValue(0);
 
   useEffect(() => {
+    // A shared value is a mutable UI-thread box; assigning `.value` is the only
+    // way to drive it, and it is deliberately outside React's render state.
+    // eslint-disable-next-line react/react-compiler
     shift.value = animate ? withTiming(offset, { duration: SHIFT_MS }) : 0;
   }, [animate, offset, shift]);
 

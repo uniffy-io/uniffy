@@ -1,20 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Hash, Trash } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { ChannelHeader } from '@/features/chat/components/channel/ChannelHeader';
-import { AgentAuroraBackdrop, AgentDmGreeting, AgentDmHero } from '@/features/chat/components/channel/AgentDmHero';
-import { MessageList } from '@/features/chat/components/channel/MessageList';
-import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
-import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
-import { sendMessage, sendTyping, editMessage } from '@/features/chat/store/chatThunks';
-import { updateMessage } from '@/features/chat/store/chatMessagesSlice';
-import { selectReplyToMessage, clearReplyToMessage, selectEditingMessage, clearEditingMessage, setEditingMessage } from '@/features/chat/store/chatUiSlice';
-import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
-import { useDraftSync } from '@/features/chat/hooks/useDraftSync';
-import { attachmentsApi } from '@/features/files/api/attachmentsApi';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import { CallSection } from '@/features/calls/components/CallView';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Hash, Trash } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { ChannelHeader } from "@/features/chat/components/channel/ChannelHeader";
+import {
+  AgentAuroraBackdrop,
+  AgentDmGreeting,
+  AgentDmHero,
+} from "@/features/chat/components/channel/AgentDmHero";
+import { MessageList } from "@/features/chat/components/channel/MessageList";
+import { MessageCompose } from "@/features/chat/components/compose/MessageCompose";
+import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import { sendMessage, sendTyping, editMessage } from "@/features/chat/store/chatThunks";
+import { updateMessage } from "@/features/chat/store/chatMessagesSlice";
+import {
+  selectReplyToMessage,
+  clearReplyToMessage,
+  selectEditingMessage,
+  clearEditingMessage,
+  setEditingMessage,
+} from "@/features/chat/store/chatUiSlice";
+import { selectMessagesForChannel } from "@/features/chat/store/chatMessagesSlice";
+import { useDraftSync } from "@/features/chat/hooks/useDraftSync";
+import { attachmentsApi } from "@/features/files/api/attachmentsApi";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { CallSection } from "@/features/calls/components/CallView";
 
 const TYPING_THROTTLE_MS = 3000;
 
@@ -25,7 +35,12 @@ interface ChannelViewProps {
   onClose?: () => void;
 }
 
-export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton, onClose }: ChannelViewProps) {
+export function ChannelView({
+  channelId: channelIdProp,
+  onFocus,
+  showCloseButton,
+  onClose,
+}: ChannelViewProps) {
   const dispatch = useAppDispatch();
   const lastTypingSentRef = useRef(0);
 
@@ -48,15 +63,15 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   );
   const dmAgent = useAppSelector((state) =>
     activeChannel?.isAgentDm && activeChannel.agentId
-      ? state.agents.agents[activeChannel.agentId] ?? null
+      ? (state.agents.agents[activeChannel.agentId] ?? null)
       : null,
   );
 
   const isAgentDm = !!activeChannel?.isAgentDm && !!activeChannel?.agentId;
-  let heroPhase: 'off' | 'pending' | 'hero' = 'off';
+  let heroPhase: "off" | "pending" | "hero" = "off";
   if (isAgentDm) {
-    if (messageIds === undefined) heroPhase = 'pending';
-    else if (messageIds.length === 0) heroPhase = 'hero';
+    if (messageIds === undefined) heroPhase = "pending";
+    else if (messageIds.length === 0) heroPhase = "hero";
   }
 
   // Brief farewell overlay when the first message flips hero -> conversation:
@@ -66,8 +81,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   useEffect(() => {
     const prev = prevHeroPhaseRef.current;
     prevHeroPhaseRef.current = heroPhase;
-    if (prev === 'hero' && heroPhase === 'off') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- transition trigger on a derived phase flip, not derivable during render
+    if (prev === "hero" && heroPhase === "off") {
       setHeroExit(true);
       const timer = setTimeout(() => setHeroExit(false), 550);
       return () => clearTimeout(timer);
@@ -82,13 +96,15 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
     async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
       if (!activeChannel || !effectiveChannelId) return;
       flushOnSend();
-      const result = await dispatch(sendMessage({
-        channelId: effectiveChannelId,
-        content: content || '',
-        replyToId: replyToMessage?.id,
-        attachmentFileIds: fileIds,
-        metadata,
-      })).unwrap();
+      const result = await dispatch(
+        sendMessage({
+          channelId: effectiveChannelId,
+          content: content || "",
+          replyToId: replyToMessage?.id,
+          attachmentFileIds: fileIds,
+          metadata,
+        }),
+      ).unwrap();
       dispatch(clearReplyToMessage());
 
       if (fileIds.length > 0 && organizationId && result.id) {
@@ -107,13 +123,15 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
             sizeBytes: Number(a.sizeBytes),
           }));
           if (attachments.length > 0) {
-            dispatch(updateMessage({
-              channelId: effectiveChannelId,
-              message: { ...result, attachments },
-            }));
+            dispatch(
+              updateMessage({
+                channelId: effectiveChannelId,
+                message: { ...result, attachments },
+              }),
+            );
           }
         } catch (err) {
-          console.error('[ChannelView] Failed to load attachments for sent message:', err);
+          console.error("[ChannelView] Failed to load attachments for sent message:", err);
         }
       }
     },
@@ -124,15 +142,20 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
     dispatch(clearReplyToMessage());
   }, [dispatch]);
 
-  const handleEdit = useCallback(async (content: string) => {
-    if (!editingMessage) return;
-    await dispatch(editMessage({
-      channelId: editingMessage.channelId,
-      messageId: editingMessage.id,
-      content,
-    }));
-    dispatch(clearEditingMessage());
-  }, [editingMessage, dispatch]);
+  const handleEdit = useCallback(
+    async (content: string) => {
+      if (!editingMessage) return;
+      await dispatch(
+        editMessage({
+          channelId: editingMessage.channelId,
+          messageId: editingMessage.id,
+          content,
+        }),
+      );
+      dispatch(clearEditingMessage());
+    },
+    [editingMessage, dispatch],
+  );
 
   const handleCancelEdit = useCallback(() => {
     dispatch(clearEditingMessage());
@@ -143,11 +166,13 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
     for (let i = channelMessages.length - 1; i >= 0; i--) {
       const msg = channelMessages[i];
       if (msg.senderId === currentUserId && !msg.isDeleted) {
-        dispatch(setEditingMessage({
-          id: msg.id,
-          channelId: effectiveChannelId,
-          content: msg.content,
-        }));
+        dispatch(
+          setEditingMessage({
+            id: msg.id,
+            channelId: effectiveChannelId,
+            content: msg.content,
+          }),
+        );
         return;
       }
     }
@@ -175,7 +200,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
 
   const resolvedName = getChannelDisplayName(activeChannel);
   const channelDisplayName =
-    activeChannel.channelType === 'DIRECT' || activeChannel.channelType === 'GROUP_DM'
+    activeChannel.channelType === "DIRECT" || activeChannel.channelType === "GROUP_DM"
       ? resolvedName
       : `#${resolvedName}`;
 
@@ -196,11 +221,13 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
     </div>
   );
 
-  const compose = agentRetired ? retiredNotice : (
+  const compose = agentRetired ? (
+    retiredNotice
+  ) : (
     <MessageCompose
       // Remount per channel: the contentEditable DOM would otherwise carry
       // one channel's text into another and corrupt its draft.
-      key={effectiveChannelId ?? 'none'}
+      key={effectiveChannelId ?? "none"}
       channelName={channelDisplayName}
       channelId={effectiveChannelId ?? undefined}
       organizationId={organizationId ?? undefined}
@@ -215,7 +242,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
       initialDraft={initialDraft}
       remoteDraft={remoteDraft}
       onDraftChange={onDraftChange}
-      variant={heroPhase === 'hero' ? 'hero' : 'bar'}
+      variant={heroPhase === "hero" ? "hero" : "bar"}
     />
   );
 
@@ -224,20 +251,19 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
       className="relative isolate flex flex-col h-full"
       onMouseDown={onFocus}
       data-testid="chat-channel-view"
-      data-channel-id={effectiveChannelId ?? ''}
+      data-channel-id={effectiveChannelId ?? ""}
     >
       <AgentAuroraBackdrop
-        intensity={isAgentDm ? (heroPhase !== 'off' ? 'hero' : 'ambient') : 'flat'}
+        intensity={isAgentDm ? (heroPhase !== "off" ? "hero" : "ambient") : "flat"}
       />
-      <ChannelHeader channelId={effectiveChannelId ?? undefined} showCloseButton={showCloseButton} onClose={onClose} />
+      <ChannelHeader
+        channelId={effectiveChannelId ?? undefined}
+        showCloseButton={showCloseButton}
+        onClose={onClose}
+      />
       {effectiveChannelId && <CallSection channelId={effectiveChannelId} />}
-      {heroPhase === 'off' && (
-        <div
-          className={cn(
-            'relative flex min-h-0 flex-1 flex-col',
-            heroExit && 'hero-enter',
-          )}
-        >
+      {heroPhase === "off" && (
+        <div className={cn("relative flex min-h-0 flex-1 flex-col", heroExit && "hero-enter")}>
           <MessageList channelId={effectiveChannelId ?? undefined} />
           {compose}
           {heroExit && (
@@ -253,7 +279,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
           )}
         </div>
       )}
-      {heroPhase === 'hero' && (
+      {heroPhase === "hero" && (
         <AgentDmHero
           agentName={resolvedName}
           avatarKey={dmAgent?.avatarKey}
@@ -262,7 +288,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
           {compose}
         </AgentDmHero>
       )}
-      {heroPhase === 'pending' && <div className="flex-1" />}
+      {heroPhase === "pending" && <div className="flex-1" />}
     </div>
   );
 }

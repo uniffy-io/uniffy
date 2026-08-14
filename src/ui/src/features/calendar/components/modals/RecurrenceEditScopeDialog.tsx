@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import { ArrowsClockwise, Calendar, CalendarX, FastForward } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/shared/utils/cn';
-import type { RecurrenceEditScope } from '@/features/calendar/types';
+import { useState, useEffect } from "react";
+import { ArrowsClockwise, Calendar, CalendarX, FastForward } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/shared/utils/cn";
+import type { RecurrenceEditScope } from "@/features/calendar/types";
 
 interface RecurrenceEditScopeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (scope: RecurrenceEditScope) => void;
-  action: 'edit' | 'delete';
+  action: "edit" | "delete";
 }
 
 interface ScopeOption {
@@ -18,32 +18,28 @@ interface ScopeOption {
   description: string;
 }
 
-function getScopeOptions(action: 'edit' | 'delete'): ScopeOption[] {
-  const isDelete = action === 'delete';
+function getScopeOptions(action: "edit" | "delete"): ScopeOption[] {
+  const isDelete = action === "delete";
   return [
     {
-      value: 'this_event',
+      value: "this_event",
       icon: Calendar,
-      label: 'This event',
-      description: isDelete
-        ? 'Only cancel this occurrence'
-        : 'Only modify this occurrence',
+      label: "This event",
+      description: isDelete ? "Only cancel this occurrence" : "Only modify this occurrence",
     },
     {
-      value: 'all_events',
+      value: "all_events",
       icon: ArrowsClockwise,
-      label: 'All events',
-      description: isDelete
-        ? 'Delete the entire series'
-        : 'Modify the entire series',
+      label: "All events",
+      description: isDelete ? "Delete the entire series" : "Modify the entire series",
     },
     {
-      value: 'this_and_following',
+      value: "this_and_following",
       icon: FastForward,
-      label: 'This and following events',
+      label: "This and following events",
       description: isDelete
-        ? 'Cancel from this occurrence onwards'
-        : 'Modify from this occurrence onwards',
+        ? "Cancel from this occurrence onwards"
+        : "Modify from this occurrence onwards",
     },
   ];
 }
@@ -54,13 +50,13 @@ export function RecurrenceEditScopeDialog({
   onSelect,
   action,
 }: RecurrenceEditScopeDialogProps) {
-  const [selected, setSelected] = useState<RecurrenceEditScope>('this_event');
+  const [selected, setSelected] = useState<RecurrenceEditScope>("this_event");
   const [prevOpen, setPrevOpen] = useState(false);
 
   // Render-phase reset avoids an effect-loop.
   if (isOpen && !prevOpen) {
     setPrevOpen(true);
-    setSelected('this_event');
+    setSelected("this_event");
   } else if (!isOpen && prevOpen) {
     setPrevOpen(false);
   }
@@ -69,17 +65,17 @@ export function RecurrenceEditScopeDialog({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  const isDelete = action === 'delete';
+  const isDelete = action === "delete";
   const options = getScopeOptions(action);
 
   const handleConfirm = () => {
@@ -88,17 +84,14 @@ export function RecurrenceEditScopeDialog({
 
   return (
     <>
-      <div
-        className="fixed inset-0 bg-black/60 z-40"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} />
 
       <div
         className={cn(
-          'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50',
-          'w-[calc(100vw-2rem)] max-w-md',
-          'bg-background border border-border rounded-xl shadow-lg',
-          'animate-in zoom-in-95 fade-in duration-200',
+          "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
+          "w-[calc(100vw-2rem)] max-w-md",
+          "bg-background border border-border rounded-xl shadow-lg",
+          "animate-in zoom-in-95 fade-in duration-200",
         )}
       >
         <div className="flex items-center gap-2 p-4 border-b border-border">
@@ -108,7 +101,7 @@ export function RecurrenceEditScopeDialog({
             <ArrowsClockwise className="w-5 h-5 text-muted-foreground" weight="duotone" />
           )}
           <h2 className="text-lg font-semibold text-foreground">
-            {isDelete ? 'Delete recurring event' : 'Edit recurring event'}
+            {isDelete ? "Delete recurring event" : "Edit recurring event"}
           </h2>
         </div>
 
@@ -123,19 +116,19 @@ export function RecurrenceEditScopeDialog({
                 type="button"
                 onClick={() => setSelected(option.value)}
                 className={cn(
-                  'w-full flex items-start gap-3 p-3 rounded-lg text-left cursor-pointer',
-                  'border transition-all duration-150',
+                  "w-full flex items-start gap-3 p-3 rounded-lg text-left cursor-pointer",
+                  "border transition-all duration-150",
                   isSelected
-                    ? 'border-primary bg-primary/8 ring-1 ring-primary/30'
-                    : 'border-border bg-card hover:bg-muted',
+                    ? "border-primary bg-primary/8 ring-1 ring-primary/30"
+                    : "border-border bg-card hover:bg-muted",
                 )}
               >
                 <div
                   className={cn(
-                    'mt-0.5 flex-shrink-0 w-4 h-4 rounded-full border-2 transition-colors',
+                    "mt-0.5 flex-shrink-0 w-4 h-4 rounded-full border-2 transition-colors",
                     isSelected
-                      ? 'border-primary bg-primary'
-                      : 'border-muted-foreground/40 bg-transparent',
+                      ? "border-primary bg-primary"
+                      : "border-muted-foreground/40 bg-transparent",
                   )}
                 >
                   {isSelected && (
@@ -147,24 +140,22 @@ export function RecurrenceEditScopeDialog({
 
                 <Icon
                   className={cn(
-                    'mt-0.5 flex-shrink-0 w-4 h-4',
-                    isSelected ? 'text-primary' : 'text-muted-foreground',
+                    "mt-0.5 flex-shrink-0 w-4 h-4",
+                    isSelected ? "text-primary" : "text-muted-foreground",
                   )}
-                  weight={isSelected ? 'fill' : 'regular'}
+                  weight={isSelected ? "fill" : "regular"}
                 />
 
                 <div className="min-w-0">
                   <p
                     className={cn(
-                      'text-sm font-medium',
-                      isSelected ? 'text-foreground' : 'text-foreground',
+                      "text-sm font-medium",
+                      isSelected ? "text-foreground" : "text-foreground",
                     )}
                   >
                     {option.label}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {option.description}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{option.description}</p>
                 </div>
               </button>
             );
@@ -172,21 +163,16 @@ export function RecurrenceEditScopeDialog({
         </div>
 
         <div className="flex justify-end gap-2 p-4 border-t border-border">
-          <Button
-            type="button"
-            variant="ghost"
-            size="md"
-            onClick={onClose}
-          >
+          <Button type="button" variant="ghost" size="md" onClick={onClose}>
             Cancel
           </Button>
           <Button
             type="button"
-            variant={isDelete ? 'destructive' : 'default'}
+            variant={isDelete ? "destructive" : "default"}
             size="md"
             onClick={handleConfirm}
           >
-            {isDelete ? 'Delete' : 'Confirm'}
+            {isDelete ? "Delete" : "Confirm"}
           </Button>
         </div>
       </div>

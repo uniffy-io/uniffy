@@ -1,12 +1,12 @@
-import { useMemo } from 'react';
-import { CalendarBlank, MapPin, Clock, Users, ArrowsClockwise } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
-import { useCalendarEvents } from '@/features/calendar/hooks';
-import { ACCENT_EVENT_COLOR } from '@/features/calendar/constants';
-import { formatTimeRange } from '@/features/calendar/utils';
-import { formatDateWithWeekday } from '@/shared/utils/dateFormatting';
-import { cn } from '@/shared/utils/cn';
+import { useMemo } from "react";
+import { CalendarBlank, MapPin, Clock, Users, ArrowsClockwise } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
+import { useCalendarEvents } from "@/features/calendar/hooks";
+import { ACCENT_EVENT_COLOR } from "@/features/calendar/constants";
+import { formatTimeRange } from "@/features/calendar/utils";
+import { formatDateWithWeekday } from "@/shared/utils/dateFormatting";
+import { cn } from "@/shared/utils/cn";
 
 function getDateLabel(dateStr: string): string {
   const today = new Date();
@@ -14,7 +14,7 @@ function getDateLabel(dateStr: string): string {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const [y, m, d] = dateStr.split('-').map(Number);
+  const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
   date.setHours(0, 0, 0, 0);
 
@@ -30,14 +30,14 @@ function getDateLabel(dateStr: string): string {
 function toLocalDateString(isoString: string): string {
   const d = new Date(isoString);
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
 function isToday(dateStr: string): boolean {
   const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   return dateStr === todayStr;
 }
 
@@ -123,10 +123,8 @@ export function AgendaView() {
             <div key={group.date}>
               <div
                 className={cn(
-                  'sticky top-0 z-10 px-3 py-2 rounded-lg text-sm font-semibold mb-2',
-                  today
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-muted/50 text-foreground'
+                  "sticky top-0 z-10 px-3 py-2 rounded-lg text-sm font-semibold mb-2",
+                  today ? "bg-primary/10 text-primary" : "bg-muted/50 text-foreground",
                 )}
               >
                 {group.label}
@@ -138,11 +136,11 @@ export function AgendaView() {
                     key={event.id}
                     onClick={() => dispatch(selectEvent(event.id))}
                     className={cn(
-                      'w-full text-left flex items-start gap-3 p-3 rounded-lg border transition-colors',
-                      'hover:bg-muted/50',
+                      "w-full text-left flex items-start gap-3 p-3 rounded-lg border transition-colors",
+                      "hover:bg-muted/50",
                       selectedEventId === event.id
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border bg-card'
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-card",
                     )}
                   >
                     <div
@@ -158,7 +156,7 @@ export function AgendaView() {
                         <span className="flex items-center gap-1">
                           <Clock size={12} weight="duotone" />
                           {event.isAllDay
-                            ? 'All day'
+                            ? "All day"
                             : formatTimeRange(event.startTime, event.endTime)}
                         </span>
                         {event.location && (

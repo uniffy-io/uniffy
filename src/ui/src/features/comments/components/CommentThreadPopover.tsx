@@ -1,127 +1,126 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { X, CircleNotch } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { CommentThread } from '@/features/comments/components/CommentThread';
-import { serializeComment } from '@/features/comments/store/commentsSlice';
-import type { SerializedComment } from '@/features/comments/store/commentsSlice';
-import { commentsApi } from '@/features/comments/api/commentsApi';
-import { useAppSelector } from '@/app/hooks';
+import { useEffect, useRef, useCallback, useState } from "react";
+import { createPortal } from "react-dom";
+import { X, CircleNotch } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { CommentThread } from "@/features/comments/components/CommentThread";
+import { serializeComment } from "@/features/comments/store/commentsSlice";
+import type { SerializedComment } from "@/features/comments/store/commentsSlice";
+import { commentsApi } from "@/features/comments/api/commentsApi";
+import { useAppSelector } from "@/app/hooks";
 
 interface CommentThreadPopoverProps {
-    comment: SerializedComment;
-    contentType: number;
-    contentId: string;
-    anchorRect: DOMRect;
-    onClose: () => void;
-    onRefresh: () => void;
+  comment: SerializedComment;
+  contentType: number;
+  contentId: string;
+  anchorRect: DOMRect;
+  onClose: () => void;
+  onRefresh: () => void;
 }
 
 export function CommentThreadPopover({
-    comment,
-    contentType,
-    contentId,
-    anchorRect,
-    onClose,
-    onRefresh,
+  comment,
+  contentType,
+  contentId,
+  anchorRect,
+  onClose,
+  onRefresh,
 }: CommentThreadPopoverProps) {
-    const popoverRef = useRef<HTMLDivElement>(null);
-    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
-    const [fullComment, setFullComment] = useState<SerializedComment>(comment);
-    const [loading, setLoading] = useState(true);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const [fullComment, setFullComment] = useState<SerializedComment>(comment);
+  const [loading, setLoading] = useState(true);
 
-    const fetchFullComment = useCallback(async () => {
-        if (!organizationId) return;
-        try {
-            const response = await commentsApi.getComment({
-                organizationId,
-                commentId: comment.id,
-            });
-            if (response.comment) {
-                setFullComment(serializeComment(response.comment));
-            }
-        } catch {
-            // Fall through with the list-side comment (no replies).
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId, comment.id]);
+  const fetchFullComment = useCallback(async () => {
+    if (!organizationId) return;
+    try {
+      const response = await commentsApi.getComment({
+        organizationId,
+        commentId: comment.id,
+      });
+      if (response.comment) {
+        setFullComment(serializeComment(response.comment));
+      }
+    } catch {
+      // Fall through with the list-side comment (no replies).
+    } finally {
+      setLoading(false);
+    }
+  }, [organizationId, comment.id]);
 
-    useEffect(() => {
-        fetchFullComment();
-    }, [fetchFullComment]);
+  useEffect(() => {
+    // eslint-disable-next-line react/react-compiler -- pulling the comment with its replies is the whole point of this effect; the setStates it reaches are the async results, not derived render state
+    fetchFullComment();
+  }, [fetchFullComment]);
 
-    const top = anchorRect.bottom + 8 + window.scrollY;
-    const left = Math.max(16, anchorRect.left + anchorRect.width / 2);
+  const top = anchorRect.bottom + 8 + window.scrollY;
+  const left = Math.max(16, anchorRect.left + anchorRect.width / 2);
 
-    useEffect(() => {
-        const handleMouseDown = (e: MouseEvent) => {
-            if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-                onClose();
-            }
-        };
-        // Defer attach: the click that opens the popover would otherwise fire mousedown on document and close it.
-        const timer = setTimeout(() => {
-            document.addEventListener('mousedown', handleMouseDown);
-        }, 0);
-        return () => {
-            clearTimeout(timer);
-            document.removeEventListener('mousedown', handleMouseDown);
-        };
-    }, [onClose]);
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    // Defer attach: the click that opens the popover would otherwise fire mousedown on document and close it.
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleMouseDown);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleMouseDown);
+    };
+  }, [onClose]);
 
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                onClose();
-            }
-        };
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [onClose]);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
-    const handleRefresh = useCallback(() => {
-        onRefresh();
-        fetchFullComment();
-    }, [onRefresh, fetchFullComment]);
+  const handleRefresh = useCallback(() => {
+    onRefresh();
+    fetchFullComment();
+  }, [onRefresh, fetchFullComment]);
 
-    return createPortal(
-        <div
-            ref={popoverRef}
-            className={cn(
-                'fixed z-50 transform -translate-x-1/2',
-                'bg-card text-card-foreground border border-border rounded-lg shadow-xl',
-                'w-80 max-h-96 overflow-y-auto',
-                'animate-in fade-in-0 zoom-in-95 duration-150',
-            )}
-            style={{ top, left }}
+  return createPortal(
+    <div
+      ref={popoverRef}
+      className={cn(
+        "fixed z-50 transform -translate-x-1/2",
+        "bg-card text-card-foreground border border-border rounded-lg shadow-xl",
+        "w-80 max-h-96 overflow-y-auto",
+        "animate-in fade-in-0 zoom-in-95 duration-150",
+      )}
+      style={{ top, left }}
+    >
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+        <span className="text-xs font-medium text-muted-foreground">Comment Thread</span>
+        <button
+          onClick={onClose}
+          className="p-0.5 text-muted-foreground hover:text-foreground rounded transition-colors"
         >
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                <span className="text-xs font-medium text-muted-foreground">
-                    Comment Thread
-                </span>
-                <button
-                    onClick={onClose}
-                    className="p-0.5 text-muted-foreground hover:text-foreground rounded transition-colors"
-                >
-                    <X size={14} />
-                </button>
-            </div>
+          <X size={14} />
+        </button>
+      </div>
 
-            {loading ? (
-                <div className="flex items-center justify-center py-6">
-                    <CircleNotch size={20} className="animate-spin text-muted-foreground" />
-                </div>
-            ) : (
-                <CommentThread
-                    comment={fullComment}
-                    contentType={contentType}
-                    contentId={contentId}
-                    onRefresh={handleRefresh}
-                />
-            )}
-        </div>,
-        document.body,
-    );
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <CircleNotch size={20} className="animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <CommentThread
+          comment={fullComment}
+          contentType={contentType}
+          contentId={contentId}
+          onRefresh={handleRefresh}
+        />
+      )}
+    </div>,
+    document.body,
+  );
 }

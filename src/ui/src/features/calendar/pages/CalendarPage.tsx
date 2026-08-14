@@ -1,19 +1,30 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { useShortcutHandler } from '@/features/settings';
-import { cn } from '@/shared/utils/cn';
-import { AppHeader } from '@/components/layout/AppHeader';
-import { CalendarLayout, LeftSidebar, MainContent } from '@/features/calendar/components/layout';
-import { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
-import { AddCategoryModal } from '@/features/calendar/components/modals/AddCategoryModal';
-import { CreateTemplateModal } from '@/features/calendar/components/modals/CreateTemplateModal';
-import { closeEventModal, closeAddCategoryModal, closeCreateTemplateModal, selectEvent, setCurrentDate, toggleSidebar } from '@/features/calendar/store';
-import { fetchEventsInRange, fetchCategories, fetchEvent } from '@/features/calendar/store/calendarThunks';
-import { toDateString } from '@/features/calendar/utils';
-import { useContentAccessRefetch } from '@/features/notifications/hooks/useContentAccessRefetch';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+import { useEffect, useRef, useCallback } from "react";
+import { useParams } from "react-router-dom";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { useShortcutHandler } from "@/features/settings";
+import { cn } from "@/shared/utils/cn";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { CalendarLayout, LeftSidebar, MainContent } from "@/features/calendar/components/layout";
+import { QuickEventModal } from "@/features/calendar/components/modals/QuickEventModal";
+import { AddCategoryModal } from "@/features/calendar/components/modals/AddCategoryModal";
+import { CreateTemplateModal } from "@/features/calendar/components/modals/CreateTemplateModal";
+import {
+  closeEventModal,
+  closeAddCategoryModal,
+  closeCreateTemplateModal,
+  selectEvent,
+  setCurrentDate,
+  toggleSidebar,
+} from "@/features/calendar/store";
+import {
+  fetchEventsInRange,
+  fetchCategories,
+  fetchEvent,
+} from "@/features/calendar/store/calendarThunks";
+import { toDateString } from "@/features/calendar/utils";
+import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
 export function CalendarPage() {
   const dispatch = useAppDispatch();
@@ -34,14 +45,14 @@ export function CalendarPage() {
 
   const events = useAppSelector((state) => state.calendar.events);
   const selectedEvent = selectedEventId ? events[selectedEventId] : null;
-  const pageTitle = selectedEvent?.title || 'Calendar';
+  const pageTitle = selectedEvent?.title || "Calendar";
   useDocumentTitle(pageTitle);
 
   const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
   }, [dispatch]);
 
-  useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
+  useShortcutHandler("app.toggleSidebar", handleToggleSidebar);
 
   useEffect(() => {
     if (!currentOrganizationId) return;
@@ -79,10 +90,12 @@ export function CalendarPage() {
     const startDate = new Date(date.getFullYear(), date.getMonth() - 1, 1);
     const endDate = new Date(date.getFullYear(), date.getMonth() + 2, 0);
 
-    dispatch(fetchEventsInRange({
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    }));
+    dispatch(
+      fetchEventsInRange({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      }),
+    );
   }, [dispatch, currentDate, currentOrganizationId]);
 
   useEffect(() => {
@@ -96,26 +109,33 @@ export function CalendarPage() {
   return (
     <>
       <AppHeader />
-      <div className={cn(
-        "bg-background transition-[height] duration-300 ease-in-out",
-        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
-      )}>
-        <CalendarLayout
-          sidebar={<LeftSidebar />}
-          mainContent={<MainContent />}
-        />
+      <div
+        className={cn(
+          "bg-background transition-[height] duration-300 ease-in-out",
+          isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0",
+        )}
+      >
+        <CalendarLayout sidebar={<LeftSidebar />} mainContent={<MainContent />} />
       </div>
 
       <QuickEventModal
         isOpen={isEventModalOpen}
         onClose={() => dispatch(closeEventModal())}
-        initialDate={eventModalPrefill?.startTime ? new Date(eventModalPrefill.startTime) : undefined}
-        initialStartHour={eventModalPrefill?.startTime
-          ? new Date(eventModalPrefill.startTime).getHours() + new Date(eventModalPrefill.startTime).getMinutes() / 60
-          : undefined}
-        initialEndHour={eventModalPrefill?.endTime
-          ? new Date(eventModalPrefill.endTime).getHours() + new Date(eventModalPrefill.endTime).getMinutes() / 60
-          : undefined}
+        initialDate={
+          eventModalPrefill?.startTime ? new Date(eventModalPrefill.startTime) : undefined
+        }
+        initialStartHour={
+          eventModalPrefill?.startTime
+            ? new Date(eventModalPrefill.startTime).getHours() +
+              new Date(eventModalPrefill.startTime).getMinutes() / 60
+            : undefined
+        }
+        initialEndHour={
+          eventModalPrefill?.endTime
+            ? new Date(eventModalPrefill.endTime).getHours() +
+              new Date(eventModalPrefill.endTime).getMinutes() / 60
+            : undefined
+        }
       />
 
       <AddCategoryModal

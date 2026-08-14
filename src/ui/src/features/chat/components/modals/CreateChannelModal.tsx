@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, GlobeSimple, Lock, Check } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Modal } from '@/components/ui/modal';
-import { Select } from '@/components/ui/select';
-import { cn } from '@/shared/utils/cn';
-import { closeCreateChannelModal } from '@/features/chat/store/chatUiSlice';
-import { createChannel } from '@/features/chat/store/chatThunks';
-import { selectCategories } from '@/features/chat/store/chatChannelsSlice';
-import { ChannelType } from '@uniffy/proto/chat/v1/chat_pb';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { X, GlobeSimple, Lock, Check } from "@phosphor-icons/react";
+import { useNavigate } from "react-router-dom";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { Select } from "@/components/ui/select";
+import { cn } from "@/shared/utils/cn";
+import { closeCreateChannelModal } from "@/features/chat/store/chatUiSlice";
+import { createChannel } from "@/features/chat/store/chatThunks";
+import { selectCategories } from "@/features/chat/store/chatChannelsSlice";
+import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
 
 export function CreateChannelModal() {
   const dispatch = useAppDispatch();
@@ -18,9 +18,9 @@ export function CreateChannelModal() {
   const categories = useAppSelector(selectCategories);
   const defaultCategoryId = useAppSelector((state) => state.chatUi.createChannelCategoryId);
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [channelType, setChannelType] = useState<'public' | 'private'>('public');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [channelType, setChannelType] = useState<"public" | "private">("public");
   const [categoryId, setCategoryId] = useState<string | undefined>(defaultCategoryId ?? undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -36,9 +36,9 @@ export function CreateChannelModal() {
   }, []);
 
   const handleClose = useCallback(() => {
-    setName('');
-    setDescription('');
-    setChannelType('public');
+    setName("");
+    setDescription("");
+    setChannelType("public");
     setCategoryId(undefined);
     setTouched(false);
     dispatch(closeCreateChannelModal());
@@ -54,10 +54,10 @@ export function CreateChannelModal() {
       const result = await dispatch(
         createChannel({
           name: name.trim(),
-          channelType: channelType === 'public' ? ChannelType.PUBLIC : ChannelType.PRIVATE,
+          channelType: channelType === "public" ? ChannelType.PUBLIC : ChannelType.PRIVATE,
           description: description.trim() || undefined,
           categoryId: categoryId || undefined,
-        })
+        }),
       ).unwrap();
 
       navigate(`/chat/${result.id}`);
@@ -68,27 +68,25 @@ export function CreateChannelModal() {
   };
 
   const categoryOptions = [
-    { value: '', label: 'No category' },
-    ...categories.map(c => ({ value: c.id, label: c.name })),
+    { value: "", label: "No category" },
+    ...categories.map((c) => ({ value: c.id, label: c.name })),
   ];
 
   return (
     <Modal onClose={handleClose} closeDisabled={isSubmitting}>
       <div data-testid="chat-create-channel-modal">
-      <div className="flex items-center justify-between px-6 pt-6 pb-2">
-        <h2 className="text-xl font-semibold text-foreground">
-          Create a new channel
-        </h2>
-        <button
-          type="button"
-          onClick={handleClose}
-          disabled={isSubmitting}
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-          data-testid="chat-create-channel-close"
-        >
-          <X size={20} />
-        </button>
-      </div>
+        <div className="flex items-center justify-between px-6 pt-6 pb-2">
+          <h2 className="text-xl font-semibold text-foreground">Create a new channel</h2>
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            data-testid="chat-create-channel-close"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-4 space-y-5 max-h-[60vh] overflow-y-auto">
@@ -106,9 +104,7 @@ export function CreateChannelModal() {
                   if (!touched) setTouched(true);
                 }}
                 disabled={isSubmitting}
-                className={cn(
-                  showError && 'border-red-500 focus-visible:ring-red-500',
-                )}
+                className={cn(showError && "border-red-500 focus-visible:ring-red-500")}
                 data-testid="chat-create-channel-name-input"
               />
               <div className="flex items-center justify-between mt-1">
@@ -119,10 +115,12 @@ export function CreateChannelModal() {
                 ) : (
                   <span />
                 )}
-                <p className={cn(
-                  'text-xs tabular-nums',
-                  name.length >= MAX_NAME_LENGTH ? 'text-red-500' : 'text-muted-foreground',
-                )}>
+                <p
+                  className={cn(
+                    "text-xs tabular-nums",
+                    name.length >= MAX_NAME_LENGTH ? "text-red-500" : "text-muted-foreground",
+                  )}
+                >
                   {name.length}/{MAX_NAME_LENGTH}
                 </p>
               </div>
@@ -131,27 +129,31 @@ export function CreateChannelModal() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setChannelType('public')}
+                onClick={() => setChannelType("public")}
                 className={cn(
-                  'relative flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors',
-                  channelType === 'public'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border bg-muted/30 hover:border-muted-foreground/30'
+                  "relative flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors",
+                  channelType === "public"
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-muted/30 hover:border-muted-foreground/30",
                 )}
                 data-testid="chat-create-channel-type-public"
-                data-selected={channelType === 'public' ? 'true' : 'false'}
+                data-selected={channelType === "public" ? "true" : "false"}
               >
-                <div className={cn(
-                  'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                  channelType === 'public' ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
-                )}>
+                <div
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                    channelType === "public"
+                      ? "bg-primary/15 text-primary"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
                   <GlobeSimple size={22} weight="bold" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">Public Channel</p>
                   <p className="text-xs text-muted-foreground">Anyone can join</p>
                 </div>
-                {channelType === 'public' && (
+                {channelType === "public" && (
                   <div className="absolute top-2.5 right-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <Check size={12} weight="bold" />
                   </div>
@@ -160,27 +162,31 @@ export function CreateChannelModal() {
 
               <button
                 type="button"
-                onClick={() => setChannelType('private')}
+                onClick={() => setChannelType("private")}
                 className={cn(
-                  'relative flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors',
-                  channelType === 'private'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border bg-muted/30 hover:border-muted-foreground/30'
+                  "relative flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors",
+                  channelType === "private"
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-muted/30 hover:border-muted-foreground/30",
                 )}
                 data-testid="chat-create-channel-type-private"
-                data-selected={channelType === 'private' ? 'true' : 'false'}
+                data-selected={channelType === "private" ? "true" : "false"}
               >
-                <div className={cn(
-                  'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                  channelType === 'private' ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
-                )}>
+                <div
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                    channelType === "private"
+                      ? "bg-primary/15 text-primary"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
                   <Lock size={22} weight="bold" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">Private Channel</p>
                   <p className="text-xs text-muted-foreground">Only invited members</p>
                 </div>
-                {channelType === 'private' && (
+                {channelType === "private" && (
                   <div className="absolute top-2.5 right-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <Check size={12} weight="bold" />
                   </div>
@@ -195,7 +201,7 @@ export function CreateChannelModal() {
                   <span className="text-muted-foreground font-normal ml-1">(optional)</span>
                 </label>
                 <Select
-                  value={categoryId ?? ''}
+                  value={categoryId ?? ""}
                   onChange={(v) => setCategoryId(v || undefined)}
                   options={categoryOptions}
                   size="md"

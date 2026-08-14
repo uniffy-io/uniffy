@@ -1,6 +1,6 @@
 /** ContentEditable compose; mention chips serialize back to `[[[label|urn]]]` on send. */
 
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState } from "react";
 import {
   Plus,
   Smiley,
@@ -12,35 +12,38 @@ import {
   Pencil,
   Lightning,
   X,
-} from '@phosphor-icons/react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { cn } from '@/shared/utils/cn';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { ChatMentionPopup } from '@/features/agents/components/chat/ChatMentionPopup';
-import { SkillSlashPopup } from '@/features/agents/components/chat/SkillSlashPopup';
-import { computeSlashToken, matchLeadingSkillCommand } from '@/features/agents/utils/slashCommands';
-import { fetchRunnableSkills, type SerializedRunnableSkill } from '@/features/agents/store/agentRunnableSkillsThunks';
-import { selectRunnableSkillsForAgent } from '@/features/agents/store/agentRunnableSkillsSlice';
-import { parseUrn } from '@/shared/utils/urn';
-import { getContentTypeConfig } from '@/config/theme/contentTypes';
-import { isPeopleTokenType, peopleTokenClasses } from '@/components/mention/mentionConstants';
-import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
-import { useKeybinding, matchesShortcut } from '@/features/settings';
-import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
-import { AgentModelPicker } from '@/features/chat/components/compose/AgentModelPicker';
-import { AgentParamsPopover } from '@/features/chat/components/compose/AgentParamsPopover';
-import { useChannelAgentConfig } from '@/features/chat/hooks/useChannelAgentConfig';
-import { AttachmentPreviewBar } from '@/features/chat/components/compose/AttachmentPreviewBar';
+} from "@phosphor-icons/react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { cn } from "@/shared/utils/cn";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { ChatMentionPopup } from "@/features/agents/components/chat/ChatMentionPopup";
+import { SkillSlashPopup } from "@/features/agents/components/chat/SkillSlashPopup";
+import { computeSlashToken, matchLeadingSkillCommand } from "@/features/agents/utils/slashCommands";
+import {
+  fetchRunnableSkills,
+  type SerializedRunnableSkill,
+} from "@/features/agents/store/agentRunnableSkillsThunks";
+import { selectRunnableSkillsForAgent } from "@/features/agents/store/agentRunnableSkillsSlice";
+import { parseUrn } from "@/shared/utils/urn";
+import { getContentTypeConfig } from "@/config/theme/contentTypes";
+import { isPeopleTokenType, peopleTokenClasses } from "@/components/mention/mentionConstants";
+import { sanitizeMentionLabel } from "@/shared/utils/mentionUtils";
+import { useKeybinding, matchesShortcut } from "@/features/settings";
+import { EmojiPicker } from "@/features/chat/components/compose/EmojiPicker";
+import { AgentModelPicker } from "@/features/chat/components/compose/AgentModelPicker";
+import { AgentParamsPopover } from "@/features/chat/components/compose/AgentParamsPopover";
+import { useChannelAgentConfig } from "@/features/chat/hooks/useChannelAgentConfig";
+import { AttachmentPreviewBar } from "@/features/chat/components/compose/AttachmentPreviewBar";
 import {
   needsTeamMentionConfirm,
   resolveTeamMentionTotal,
   teamMentionsIn,
-} from '@/features/chat/utils/teamMentionGuard';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { uploadService } from '@/features/files/upload';
-import { attachmentsApi } from '@/features/files/api/attachmentsApi';
-import { randomUUID } from '@/shared/utils/uuid';
-import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
+} from "@/features/chat/utils/teamMentionGuard";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { uploadService } from "@/features/files/upload";
+import { attachmentsApi } from "@/features/files/api/attachmentsApi";
+import { randomUUID } from "@/shared/utils/uuid";
+import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
 
 interface PendingFile {
   id: string;
@@ -88,20 +91,20 @@ interface MessageComposeProps {
   remoteDraft?: string | null;
   onDraftChange?: (markdown: string) => void;
   /** 'hero' floats the composer as a glass card in the agent DM empty state. */
-  variant?: 'bar' | 'hero';
+  variant?: "bar" | "hero";
 }
 
 const MAX_HEIGHT = 200;
 const CHAR_WARN_THRESHOLD = 28_000;
-const MENTION_ATTR = 'data-mention-urn';
-const MENTION_LABEL_ATTR = 'data-mention-label';
+const MENTION_ATTR = "data-mention-urn";
+const MENTION_LABEL_ATTR = "data-mention-label";
 
 function serializeToMarkdown(container: HTMLDivElement): string {
-  let result = '';
+  let result = "";
 
   function walk(node: Node) {
     if (node.nodeType === Node.TEXT_NODE) {
-      result += node.textContent ?? '';
+      result += node.textContent ?? "";
       return;
     }
 
@@ -110,19 +113,19 @@ function serializeToMarkdown(container: HTMLDivElement): string {
 
       const urn = el.getAttribute(MENTION_ATTR);
       if (urn) {
-        const label = el.getAttribute(MENTION_LABEL_ATTR) ?? el.textContent ?? '';
+        const label = el.getAttribute(MENTION_LABEL_ATTR) ?? el.textContent ?? "";
         result += `[[[${sanitizeMentionLabel(label)}|${urn}]]]`;
         return;
       }
 
-      if (el.tagName === 'BR') {
-        result += '\n';
+      if (el.tagName === "BR") {
+        result += "\n";
         return;
       }
 
-      if (el.tagName === 'DIV' || el.tagName === 'P') {
-        if (result.length > 0 && !result.endsWith('\n')) {
-          result += '\n';
+      if (el.tagName === "DIV" || el.tagName === "P") {
+        if (result.length > 0 && !result.endsWith("\n")) {
+          result += "\n";
         }
         for (const child of el.childNodes) {
           walk(child);
@@ -160,20 +163,15 @@ function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }
   return (
     <span
       className={cn(
-        'mention-chip inline-flex items-center align-middle',
-        'gap-1.5 px-2 py-1 mx-0.5 my-0.5',
-        'rounded-md border',
+        "mention-chip inline-flex items-center align-middle",
+        "gap-1.5 px-2 py-1 mx-0.5 my-0.5",
+        "rounded-md border",
         theme.badgeBg,
         theme.border,
-        'cursor-default select-none',
+        "cursor-default select-none",
       )}
     >
-      <span
-        className={cn(
-          'grid place-items-center shrink-0 w-5 h-5 rounded',
-          theme.iconBoxAccent,
-        )}
-      >
+      <span className={cn("grid place-items-center shrink-0 w-5 h-5 rounded", theme.iconBoxAccent)}>
         <TypeIcon size={11} weight="duotone" />
       </span>
       <span className="text-sm font-medium text-foreground truncate max-w-[200px] leading-tight">
@@ -184,17 +182,15 @@ function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }
 }
 
 function createMentionElement(label: string, urn: string): HTMLSpanElement {
-  const wrapper = document.createElement('span');
+  const wrapper = document.createElement("span");
   wrapper.setAttribute(MENTION_ATTR, urn);
   wrapper.setAttribute(MENTION_LABEL_ATTR, label);
-  wrapper.contentEditable = 'false';
+  wrapper.contentEditable = "false";
   // Tokens flow with the text baseline; boxed chips keep the inline-block wrapper.
   wrapper.className = isPeopleTokenType(parseUrn(urn).type)
-    ? 'inline align-baseline'
-    : 'inline-block align-middle';
-  wrapper.innerHTML = renderToStaticMarkup(
-    <ComposeMentionChipStatic urn={urn} label={label} />,
-  );
+    ? "inline align-baseline"
+    : "inline-block align-middle";
+  wrapper.innerHTML = renderToStaticMarkup(<ComposeMentionChipStatic urn={urn} label={label} />);
   return wrapper;
 }
 
@@ -203,7 +199,7 @@ const MENTION_MARKDOWN_PATTERN = /\[\[\[([^[\]|]+)\|([^\]]+)\]\]\]/g;
 // Builds the DOM from text nodes + createMentionElement only; draft content is
 // synced from other sessions and must never be assigned as an HTML string.
 function hydrateFromMarkdown(container: HTMLDivElement, markdown: string): void {
-  container.innerHTML = '';
+  container.innerHTML = "";
   const parts = markdown.split(MENTION_MARKDOWN_PATTERN);
   for (let i = 0; i < parts.length; i += 3) {
     if (parts[i]) {
@@ -217,14 +213,31 @@ function hydrateFromMarkdown(container: HTMLDivElement, markdown: string): void 
   }
 }
 
-export function MessageCompose({ channelName, channelId, placeholder, organizationId, onSend, onTyping, replyTo, onCancelReply, editingMessage, onSaveEdit, onCancelEdit, onEditLast, initialDraft, remoteDraft, onDraftChange, variant = 'bar' }: MessageComposeProps) {
+export function MessageCompose({
+  channelName,
+  channelId,
+  placeholder,
+  organizationId,
+  onSend,
+  onTyping,
+  replyTo,
+  onCancelReply,
+  editingMessage,
+  onSaveEdit,
+  onCancelEdit,
+  onEditLast,
+  initialDraft,
+  remoteDraft,
+  onDraftChange,
+  variant = "bar",
+}: MessageComposeProps) {
   const dispatch = useAppDispatch();
   const channel = useAppSelector((state) =>
     channelId ? state.chatChannels.byId[channelId] : undefined,
   );
   const agentDmAgentId = channel?.isAgentDm ? channel.agentId : undefined;
   const agentDmAgent = useAppSelector((state) =>
-    agentDmAgentId ? state.agents.agents[agentDmAgentId] ?? null : null,
+    agentDmAgentId ? (state.agents.agents[agentDmAgentId] ?? null) : null,
   );
   // One shared config so a model switch in the picker immediately drives the
   // params popover's schema; the hook no-ops for non-agent channels.
@@ -236,21 +249,24 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
   const [charCount, setCharCount] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [mentionActive, setMentionActive] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionQuery, setMentionQuery] = useState("");
   const mentionStartNodeRef = useRef<Node | null>(null);
   const mentionStartOffsetRef = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [pendingTeamSend, setPendingTeamSend] = useState<PendingTeamSend | null>(null);
-  const editLastBinding = useKeybinding('chat.editLast');
+  const editLastBinding = useKeybinding("chat.editLast");
   // "/skill" typeahead, agent DMs only. The composer is a contentEditable, so
   // the token is tracked against the caret's text node like @-mentions rather
   // than through the textarea-bound hook the session chat uses.
   const [slashActive, setSlashActive] = useState(false);
-  const [slashQuery, setSlashQuery] = useState('');
+  const [slashQuery, setSlashQuery] = useState("");
   const slashStartNodeRef = useRef<Node | null>(null);
   const slashStartOffsetRef = useRef(0);
   const slashEndOffsetRef = useRef(0);
-  const [pendingInvokedSkill, setPendingInvokedSkill] = useState<{ id: string; name: string } | null>(null);
+  const [pendingInvokedSkill, setPendingInvokedSkill] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(agentDmAgentId));
 
   useEffect(() => {
@@ -259,56 +275,64 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     }
   }, [agentDmAgentId, dispatch]);
 
-  const uploadFile = useCallback(async (file: File, pendingId: string) => {
-    if (!organizationId) return;
-
-    try {
-      const folderRes = await attachmentsApi.getAttachmentsFolder({ organizationId });
-
-      // The shared engine does the slicing/POSTing in a worker (off the main thread) and keeps running
-      // across navigation. Chat consumes it directly - no Redux, and persist:false since the composer
-      // is ephemeral (no point auto-resuming an attachment whose message was never sent).
-      const [handle] = uploadService.enqueue([{
-        file,
-        filename: file.name,
-        mimeType: file.type || 'application/octet-stream',
-        organizationId,
-        context: 'chat',
-        folderId: folderRes.folderId,
-        persist: false,
-      }]);
-
-      const unsubscribe = uploadService.subscribe((records) => {
-        const record = records.find((r) => r.id === handle.id);
-        if (!record) return;
-        setPendingFiles((prev) =>
-          prev.map((pf) => (pf.id === pendingId ? { ...pf, progress: record.progress } : pf)),
-        );
-      });
+  const uploadFile = useCallback(
+    async (file: File, pendingId: string) => {
+      if (!organizationId) return;
 
       try {
-        const { fileId } = await handle.done;
-        setPendingFiles((prev) =>
-          prev.map((pf) => (pf.id === pendingId ? { ...pf, fileId, progress: 100 } : pf)),
-        );
-      } finally {
-        unsubscribe();
+        const folderRes = await attachmentsApi.getAttachmentsFolder({ organizationId });
+
+        // The shared engine does the slicing/POSTing in a worker (off the main thread) and keeps running
+        // across navigation. Chat consumes it directly - no Redux, and persist:false since the composer
+        // is ephemeral (no point auto-resuming an attachment whose message was never sent).
+        const [handle] = uploadService.enqueue([
+          {
+            file,
+            filename: file.name,
+            mimeType: file.type || "application/octet-stream",
+            organizationId,
+            context: "chat",
+            folderId: folderRes.folderId,
+            persist: false,
+          },
+        ]);
+
+        const unsubscribe = uploadService.subscribe((records) => {
+          const record = records.find((r) => r.id === handle.id);
+          if (!record) return;
+          setPendingFiles((prev) =>
+            prev.map((pf) => (pf.id === pendingId ? { ...pf, progress: record.progress } : pf)),
+          );
+        });
+
+        try {
+          const { fileId } = await handle.done;
+          setPendingFiles((prev) =>
+            prev.map((pf) => (pf.id === pendingId ? { ...pf, fileId, progress: 100 } : pf)),
+          );
+        } finally {
+          unsubscribe();
+        }
+      } catch (err) {
+        console.error("[MessageCompose] Upload failed:", err);
+        setPendingFiles((prev) => prev.filter((pf) => pf.id !== pendingId));
       }
-    } catch (err) {
-      console.error('[MessageCompose] Upload failed:', err);
-      setPendingFiles((prev) => prev.filter((pf) => pf.id !== pendingId));
-    }
-  }, [organizationId]);
+    },
+    [organizationId],
+  );
 
-  const handleFilesSelected = useCallback((files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const handleFilesSelected = useCallback(
+    (files: FileList | null) => {
+      if (!files || files.length === 0) return;
 
-    for (const file of Array.from(files)) {
-      const id = randomUUID();
-      setPendingFiles((prev) => [...prev, { id, name: file.name, size: file.size, progress: 0 }]);
-      uploadFile(file, id);
-    }
-  }, [uploadFile]);
+      for (const file of Array.from(files)) {
+        const id = randomUUID();
+        setPendingFiles((prev) => [...prev, { id, name: file.name, size: file.size, progress: 0 }]);
+        uploadFile(file, id);
+      }
+    },
+    [uploadFile],
+  );
 
   const handleRemovePendingFile = useCallback((id: string) => {
     setPendingFiles((prev) => prev.filter((f) => f.id !== id));
@@ -318,46 +342,58 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     fileInputRef.current?.click();
   }, []);
 
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFilesSelected(e.target.files);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [handleFilesSelected]);
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      handleFilesSelected(e.target.files);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    [handleFilesSelected],
+  );
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    handleFilesSelected(e.dataTransfer.files);
-  }, [handleFilesSelected]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      handleFilesSelected(e.dataTransfer.files);
+    },
+    [handleFilesSelected],
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
   }, []);
 
   // Route clipboard file items through the upload pipeline; plain text/HTML uses the default path.
-  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
-    const items = e.clipboardData?.items;
-    if (!items || items.length === 0) return;
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLDivElement>) => {
+      const items = e.clipboardData?.items;
+      if (!items || items.length === 0) return;
 
-    const files: File[] = [];
-    for (const item of Array.from(items)) {
-      if (item.kind === 'file') {
-        const file = item.getAsFile();
-        if (file) files.push(file);
+      const files: File[] = [];
+      for (const item of Array.from(items)) {
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) files.push(file);
+        }
       }
-    }
 
-    if (files.length === 0) return;
+      if (files.length === 0) return;
 
-    e.preventDefault();
-    const dt = new DataTransfer();
-    for (const f of files) {
-      // Stamp unique names; multiple pasted screenshots all arrive as "image.png".
-      const named = f.name && f.name !== 'image.png'
-        ? f
-        : new File([f], `pasted-${Date.now()}.${(f.type.split('/')[1] ?? 'png')}`, { type: f.type });
-      dt.items.add(named);
-    }
-    handleFilesSelected(dt.files);
-  }, [handleFilesSelected]);
+      e.preventDefault();
+      const dt = new DataTransfer();
+      for (const f of files) {
+        // Stamp unique names; multiple pasted screenshots all arrive as "image.png".
+        const named =
+          f.name && f.name !== "image.png"
+            ? f
+            : new File([f], `pasted-${Date.now()}.${f.type.split("/")[1] ?? "png"}`, {
+                type: f.type,
+              });
+        dt.items.add(named);
+      }
+      handleFilesSelected(dt.files);
+    },
+    [handleFilesSelected],
+  );
 
   useEffect(() => {
     if (replyTo) {
@@ -370,7 +406,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
   const updateState = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
-    const text = el.textContent ?? '';
+    const text = el.textContent ?? "";
     const hasText = text.trim().length > 0 || el.querySelectorAll(`[${MENTION_ATTR}]`).length > 0;
     setIsEmpty(!hasText && pendingFiles.length === 0);
     setCharCount(text.length);
@@ -402,7 +438,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
       sel?.addRange(range);
     } else if (!editingMessage && prevEditIdRef.current) {
       prevEditIdRef.current = null;
-      el.innerHTML = '';
+      el.innerHTML = "";
       // Let the draft effect below restore the unsent draft the edit replaced.
       userEditedRef.current = false;
       updateState();
@@ -413,7 +449,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     const el = editorRef.current;
     if (!el || editingMessage || !initialDraft || userEditedRef.current) return;
     const hasContent =
-      (el.textContent ?? '').trim().length > 0 ||
+      (el.textContent ?? "").trim().length > 0 ||
       el.querySelectorAll(`[${MENTION_ATTR}]`).length > 0;
     if (hasContent) return;
     hydrateFromMarkdown(el, initialDraft);
@@ -436,7 +472,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
 
   const closeSlash = useCallback(() => {
     setSlashActive(false);
-    setSlashQuery('');
+    setSlashQuery("");
     slashStartNodeRef.current = null;
   }, []);
 
@@ -455,18 +491,18 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
       return;
     }
 
-    const text = node.textContent ?? '';
+    const text = node.textContent ?? "";
     const offset = range.startOffset;
     const textBefore = text.slice(0, offset);
 
     // @ must be at start or after whitespace; the query is a single token.
-    const atIndex = textBefore.lastIndexOf('@');
+    const atIndex = textBefore.lastIndexOf("@");
     if (
-      atIndex !== -1
-      && (atIndex === 0 || textBefore[atIndex - 1] === ' ' || textBefore[atIndex - 1] === '\n')
+      atIndex !== -1 &&
+      (atIndex === 0 || textBefore[atIndex - 1] === " " || textBefore[atIndex - 1] === "\n")
     ) {
       const query = textBefore.slice(atIndex + 1);
-      if (!query.includes('\n') && !query.includes(' ')) {
+      if (!query.includes("\n") && !query.includes(" ")) {
         mentionStartNodeRef.current = node;
         mentionStartOffsetRef.current = atIndex;
         setMentionQuery(query);
@@ -488,112 +524,125 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     slashEndOffsetRef.current = offset;
     setSlashQuery(token.query);
     setSlashActive(true);
-  }, [updateState, emitDraftChange, mentionActive, onTyping, agentDmAgentId, slashActive, closeSlash]);
+  }, [
+    updateState,
+    emitDraftChange,
+    mentionActive,
+    onTyping,
+    agentDmAgentId,
+    slashActive,
+    closeSlash,
+  ]);
 
-  const handleMentionSelect = useCallback((result: SearchResultItem) => {
-    const el = editorRef.current;
-    if (!el) return;
+  const handleMentionSelect = useCallback(
+    (result: SearchResultItem) => {
+      const el = editorRef.current;
+      if (!el) return;
 
-    const startNode = mentionStartNodeRef.current;
-    if (!startNode || !startNode.parentNode) {
-      setMentionActive(false);
-      return;
-    }
-
-    const text = startNode.textContent ?? '';
-    const atOffset = mentionStartOffsetRef.current;
-
-    const sel = window.getSelection();
-    let endOffset = text.length;
-    if (sel && sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      if (range.startContainer === startNode) {
-        endOffset = range.startOffset;
+      const startNode = mentionStartNodeRef.current;
+      if (!startNode || !startNode.parentNode) {
+        setMentionActive(false);
+        return;
       }
-    }
 
-    const chip = createMentionElement(result.title, result.urn);
+      const text = startNode.textContent ?? "";
+      const atOffset = mentionStartOffsetRef.current;
 
-    // Split text into [before @] [chip] [after cursor].
-    const before = text.slice(0, atOffset);
-    const after = text.slice(endOffset);
+      const sel = window.getSelection();
+      let endOffset = text.length;
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        if (range.startContainer === startNode) {
+          endOffset = range.startOffset;
+        }
+      }
 
-    const parent = startNode.parentNode;
-    const beforeNode = document.createTextNode(before);
-    const afterNode = document.createTextNode(after.length > 0 ? after : '\u00A0'); // nbsp anchors the caret
+      const chip = createMentionElement(result.title, result.urn);
 
-    parent.insertBefore(beforeNode, startNode);
-    parent.insertBefore(chip, startNode);
-    parent.insertBefore(afterNode, startNode);
-    parent.removeChild(startNode);
+      // Split text into [before @] [chip] [after cursor].
+      const before = text.slice(0, atOffset);
+      const after = text.slice(endOffset);
 
-    const newRange = document.createRange();
-    newRange.setStart(afterNode, after.length > 0 ? 0 : 1);
-    newRange.collapse(true);
-    sel?.removeAllRanges();
-    sel?.addRange(newRange);
+      const parent = startNode.parentNode;
+      const beforeNode = document.createTextNode(before);
+      const afterNode = document.createTextNode(after.length > 0 ? after : "\u00A0"); // nbsp anchors the caret
 
-    setMentionActive(false);
-    setMentionQuery('');
-    mentionStartNodeRef.current = null;
-    updateState();
-    emitDraftChange();
-    el.focus();
-  }, [updateState, emitDraftChange]);
+      parent.insertBefore(beforeNode, startNode);
+      parent.insertBefore(chip, startNode);
+      parent.insertBefore(afterNode, startNode);
+      parent.removeChild(startNode);
+
+      const newRange = document.createRange();
+      newRange.setStart(afterNode, after.length > 0 ? 0 : 1);
+      newRange.collapse(true);
+      sel?.removeAllRanges();
+      sel?.addRange(newRange);
+
+      setMentionActive(false);
+      setMentionQuery("");
+      mentionStartNodeRef.current = null;
+      updateState();
+      emitDraftChange();
+      el.focus();
+    },
+    [updateState, emitDraftChange],
+  );
 
   const handleMentionClose = useCallback(() => {
     setMentionActive(false);
-    setMentionQuery('');
+    setMentionQuery("");
     mentionStartNodeRef.current = null;
     editorRef.current?.focus();
   }, []);
 
   // Remove the typed "/query" text; the chosen skill surfaces as a chip instead.
-  const handleSlashSelect = useCallback((skill: SerializedRunnableSkill) => {
-    const node = slashStartNodeRef.current;
-    if (node) {
-      const text = node.textContent ?? '';
-      const start = slashStartOffsetRef.current;
-      const sel = window.getSelection();
-      let end = slashEndOffsetRef.current;
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        if (range.startContainer === node) {
-          end = range.startOffset;
+  const handleSlashSelect = useCallback(
+    (skill: SerializedRunnableSkill) => {
+      const node = slashStartNodeRef.current;
+      if (node) {
+        const text = node.textContent ?? "";
+        const start = slashStartOffsetRef.current;
+        const sel = window.getSelection();
+        let end = slashEndOffsetRef.current;
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          if (range.startContainer === node) {
+            end = range.startOffset;
+          }
         }
+        node.textContent = text.slice(0, start) + text.slice(end);
+        const newRange = document.createRange();
+        newRange.setStart(node, Math.min(start, node.textContent.length));
+        newRange.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(newRange);
       }
-      node.textContent = text.slice(0, start) + text.slice(end);
-      const newRange = document.createRange();
-      newRange.setStart(node, Math.min(start, node.textContent.length));
-      newRange.collapse(true);
-      sel?.removeAllRanges();
-      sel?.addRange(newRange);
-    }
-    setPendingInvokedSkill({ id: skill.id, name: skill.name });
-    closeSlash();
-    updateState();
-    emitDraftChange();
-    editorRef.current?.focus();
-  }, [closeSlash, updateState, emitDraftChange]);
+      setPendingInvokedSkill({ id: skill.id, name: skill.name });
+      closeSlash();
+      updateState();
+      emitDraftChange();
+      editorRef.current?.focus();
+    },
+    [closeSlash, updateState, emitDraftChange],
+  );
 
   const handleSlashClose = useCallback(() => {
     closeSlash();
     editorRef.current?.focus();
   }, [closeSlash]);
 
-  const performSend = useCallback((
-    content: string,
-    fileIds: string[],
-    metadata?: Record<string, string>,
-  ) => {
-    onSend?.(content, fileIds, metadata);
-    const el = editorRef.current;
-    if (el) el.innerHTML = '';
-    setPendingFiles([]);
-    setPendingInvokedSkill(null);
-    closeSlash();
-    updateState();
-  }, [onSend, closeSlash, updateState]);
+  const performSend = useCallback(
+    (content: string, fileIds: string[], metadata?: Record<string, string>) => {
+      onSend?.(content, fileIds, metadata);
+      const el = editorRef.current;
+      if (el) el.innerHTML = "";
+      setPendingFiles([]);
+      setPendingInvokedSkill(null);
+      closeSlash();
+      updateState();
+    },
+    [onSend, closeSlash, updateState],
+  );
 
   const handleSend = useCallback(async () => {
     const el = editorRef.current;
@@ -608,7 +657,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
       } else {
         onCancelEdit?.();
       }
-      el.innerHTML = '';
+      el.innerHTML = "";
       updateState();
       return;
     }
@@ -631,7 +680,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     const attachmentMentions = pendingFiles
       .filter((f) => Boolean(f.fileId) && !body.includes(f.fileId!))
       .map((f) => `[[[${sanitizeMentionLabel(f.name)}|urn:uniffy:content:FILE:${f.fileId!}]]]`)
-      .join(' ');
+      .join(" ");
     const content = attachmentMentions
       ? body
         ? `${body} ${attachmentMentions}`
@@ -657,7 +706,17 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     }
 
     performSend(content, fileIds, metadata);
-  }, [performSend, updateState, pendingFiles, editingMessage, onSaveEdit, onCancelEdit, pendingInvokedSkill, runnableSkills, organizationId]);
+  }, [
+    performSend,
+    updateState,
+    pendingFiles,
+    editingMessage,
+    onSaveEdit,
+    onCancelEdit,
+    pendingInvokedSkill,
+    runnableSkills,
+    organizationId,
+  ]);
 
   const handleTeamSendConfirm = useCallback(() => {
     if (!pendingTeamSend) return;
@@ -671,119 +730,143 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     editorRef.current?.focus();
   }, []);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    // Backspace after a chip deletes it; contentEditable=false elements aren't auto-removed.
-    if (e.key === 'Backspace' && !e.shiftKey) {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
-        const range = sel.getRangeAt(0);
-        const node = range.startContainer;
-        const offset = range.startOffset;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      // Backspace after a chip deletes it; contentEditable=false elements aren't auto-removed.
+      if (e.key === "Backspace" && !e.shiftKey) {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
+          const range = sel.getRangeAt(0);
+          const node = range.startContainer;
+          const offset = range.startOffset;
 
-        const findChipBefore = (): HTMLElement | null => {
-          if (node.nodeType === Node.TEXT_NODE) {
-            if (offset !== 0) return null;
-            const prev = node.previousSibling;
-            return prev && prev.nodeType === Node.ELEMENT_NODE && (prev as HTMLElement).hasAttribute(MENTION_ATTR)
-              ? (prev as HTMLElement) : null;
-          }
-          if (node.nodeType === Node.ELEMENT_NODE && offset > 0) {
-            const prev = (node as HTMLElement).childNodes[offset - 1];
-            return prev && prev.nodeType === Node.ELEMENT_NODE && (prev as HTMLElement).hasAttribute(MENTION_ATTR)
-              ? (prev as HTMLElement) : null;
-          }
-          return null;
-        };
+          const findChipBefore = (): HTMLElement | null => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              if (offset !== 0) return null;
+              const prev = node.previousSibling;
+              return prev &&
+                prev.nodeType === Node.ELEMENT_NODE &&
+                (prev as HTMLElement).hasAttribute(MENTION_ATTR)
+                ? (prev as HTMLElement)
+                : null;
+            }
+            if (node.nodeType === Node.ELEMENT_NODE && offset > 0) {
+              const prev = (node as HTMLElement).childNodes[offset - 1];
+              return prev &&
+                prev.nodeType === Node.ELEMENT_NODE &&
+                (prev as HTMLElement).hasAttribute(MENTION_ATTR)
+                ? (prev as HTMLElement)
+                : null;
+            }
+            return null;
+          };
 
-        const chip = findChipBefore();
-        if (chip) {
-          e.preventDefault();
-          chip.remove();
-          updateState();
-          emitDraftChange();
+          const chip = findChipBefore();
+          if (chip) {
+            e.preventDefault();
+            chip.remove();
+            updateState();
+            emitDraftChange();
+            return;
+          }
+        }
+      }
+
+      // Edit-last (Slack-style) only fires when compose is idle; otherwise the keystroke belongs to the editor.
+      if (
+        onEditLast &&
+        editLastBinding &&
+        isEmpty &&
+        !editingMessage &&
+        !replyTo &&
+        !mentionActive &&
+        pendingFiles.length === 0 &&
+        matchesShortcut(e.nativeEvent, editLastBinding)
+      ) {
+        e.preventDefault();
+        onEditLast();
+        return;
+      }
+
+      if (mentionActive && e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        return;
+      }
+
+      // The slash popup's own document listener turns Enter into a selection and
+      // Escape into a close; the composer only has to not send / not cancel.
+      if (slashActive && e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        return;
+      }
+
+      if (e.key === "Escape") {
+        if (mentionActive) {
+          handleMentionClose();
+          return;
+        }
+        if (slashActive) {
+          return;
+        }
+        if (editingMessage) {
+          onCancelEdit?.();
+          return;
+        }
+        if (replyTo) {
+          onCancelReply?.();
           return;
         }
       }
-    }
 
-    // Edit-last (Slack-style) only fires when compose is idle; otherwise the keystroke belongs to the editor.
-    if (
-      onEditLast
-      && editLastBinding
-      && isEmpty
-      && !editingMessage
-      && !replyTo
-      && !mentionActive
-      && pendingFiles.length === 0
-      && matchesShortcut(e.nativeEvent, editLastBinding)
-    ) {
-      e.preventDefault();
-      onEditLast();
-      return;
-    }
-
-    if (mentionActive && e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      return;
-    }
-
-    // The slash popup's own document listener turns Enter into a selection and
-    // Escape into a close; the composer only has to not send / not cancel.
-    if (slashActive && e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      return;
-    }
-
-    if (e.key === 'Escape') {
-      if (mentionActive) {
-        handleMentionClose();
-        return;
-      }
-      if (slashActive) {
-        return;
-      }
-      if (editingMessage) {
-        onCancelEdit?.();
-        return;
-      }
-      if (replyTo) {
-        onCancelReply?.();
-        return;
-      }
-    }
-
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-      return;
-    }
-
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return;
-
-      const range = sel.getRangeAt(0);
-      const selected = range.toString();
-
-      let wrapped: string | null = null;
-
-      if (e.key === 'b') {
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        wrapped = `**${selected}**`;
-      } else if (e.key === 'i') {
-        e.preventDefault();
-        wrapped = `*${selected}*`;
+        handleSend();
+        return;
       }
 
-      if (wrapped !== null && selected.length > 0) {
-        range.deleteContents();
-        range.insertNode(document.createTextNode(wrapped));
-        range.collapse(false);
-        updateState();
-        emitDraftChange();
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+        const selected = range.toString();
+
+        let wrapped: string | null = null;
+
+        if (e.key === "b") {
+          e.preventDefault();
+          wrapped = `**${selected}**`;
+        } else if (e.key === "i") {
+          e.preventDefault();
+          wrapped = `*${selected}*`;
+        }
+
+        if (wrapped !== null && selected.length > 0) {
+          range.deleteContents();
+          range.insertNode(document.createTextNode(wrapped));
+          range.collapse(false);
+          updateState();
+          emitDraftChange();
+        }
       }
-    }
-  }, [mentionActive, slashActive, handleSend, handleMentionClose, updateState, emitDraftChange, replyTo, onCancelReply, editingMessage, onCancelEdit, isEmpty, pendingFiles.length, onEditLast, editLastBinding]);
+    },
+    [
+      mentionActive,
+      slashActive,
+      handleSend,
+      handleMentionClose,
+      updateState,
+      emitDraftChange,
+      replyTo,
+      onCancelReply,
+      editingMessage,
+      onCancelEdit,
+      isEmpty,
+      pendingFiles.length,
+      onEditLast,
+      editLastBinding,
+    ],
+  );
 
   const handleAtButtonClick = useCallback(() => {
     const el = editorRef.current;
@@ -796,7 +879,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
 
     const range = sel.getRangeAt(0);
 
-    const atText = document.createTextNode('@');
+    const atText = document.createTextNode("@");
     range.deleteContents();
     range.insertNode(atText);
 
@@ -807,33 +890,36 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
 
     mentionStartNodeRef.current = atText;
     mentionStartOffsetRef.current = 0;
-    setMentionQuery('');
+    setMentionQuery("");
     setMentionActive(true);
   }, []);
 
-  const handleEmojiSelect = useCallback((emoji: string) => {
-    const el = editorRef.current;
-    if (!el) return;
-    el.focus();
+  const handleEmojiSelect = useCallback(
+    (emoji: string) => {
+      const el = editorRef.current;
+      if (!el) return;
+      el.focus();
 
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const range = sel.getRangeAt(0);
-      range.deleteContents();
-      const textNode = document.createTextNode(emoji);
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    } else {
-      el.textContent += emoji;
-    }
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        const textNode = document.createTextNode(emoji);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        el.textContent += emoji;
+      }
 
-    updateState();
-    emitDraftChange();
-    setShowEmojiPicker(false);
-  }, [updateState, emitDraftChange]);
+      updateState();
+      emitDraftChange();
+      setShowEmojiPicker(false);
+    },
+    [updateState, emitDraftChange],
+  );
 
   const handleCodeBlockInsert = useCallback(() => {
     const el = editorRef.current;
@@ -843,7 +929,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
       const range = sel.getRangeAt(0);
-      const codeBlock = document.createTextNode('```\n\n```');
+      const codeBlock = document.createTextNode("```\n\n```");
       range.deleteContents();
       range.insertNode(codeBlock);
       range.setStart(codeBlock, 4); // after the opening ``` and newline
@@ -875,7 +961,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
       range.setStartAfter(textNode);
       range.collapse(true);
     } else {
-      const marker = document.createTextNode('**text**');
+      const marker = document.createTextNode("**text**");
       range.deleteContents();
       range.insertNode(marker);
       // Select "text" so the next keystroke replaces it.
@@ -896,10 +982,10 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     const observer = new ResizeObserver(() => {
       if (el.scrollHeight > MAX_HEIGHT) {
         el.style.maxHeight = `${MAX_HEIGHT}px`;
-        el.style.overflowY = 'auto';
+        el.style.overflowY = "auto";
       } else {
-        el.style.maxHeight = '';
-        el.style.overflowY = '';
+        el.style.maxHeight = "";
+        el.style.overflowY = "";
       }
     });
 
@@ -908,7 +994,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
   }, []);
 
   const toolbarButtonClass =
-    'p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors';
+    "p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors";
 
   return (
     <>
@@ -921,16 +1007,16 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
       />
       <div
         className={cn(
-          'relative border border-border/70 bg-card/75 backdrop-blur-xl dark:bg-card/60',
-          'focus-within:ring-1 focus-within:ring-ring focus-within:border-transparent transition-all',
-          variant === 'hero'
-            ? 'rounded-2xl shadow-[0_24px_80px_-20px_rgba(105,74,255,0.35)]'
-            : 'mx-4 mb-4 rounded-xl',
+          "relative border border-border/70 bg-card/75 backdrop-blur-xl dark:bg-card/60",
+          "focus-within:ring-1 focus-within:ring-ring focus-within:border-transparent transition-all",
+          variant === "hero"
+            ? "rounded-2xl shadow-[0_24px_80px_-20px_rgba(105,74,255,0.35)]"
+            : "mx-4 mb-4 rounded-xl",
         )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         data-testid="chat-compose-root"
-        data-mode={editingMessage ? 'edit' : replyTo ? 'reply' : 'normal'}
+        data-mode={editingMessage ? "edit" : replyTo ? "reply" : "normal"}
         data-variant={variant}
       >
         {slashActive && !!agentDmAgentId && (
@@ -949,7 +1035,9 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
             <div className="flex items-center gap-2 min-w-0 text-xs">
               <Pencil size={14} className="shrink-0 text-primary" />
               <span className="text-muted-foreground shrink-0">Editing message</span>
-              <span className="text-muted-foreground/60 hidden sm:inline">Escape to cancel, Enter to save</span>
+              <span className="text-muted-foreground/60 hidden sm:inline">
+                Escape to cancel, Enter to save
+              </span>
             </div>
             <button
               type="button"
@@ -971,7 +1059,9 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
               <ArrowBendUpLeft size={14} className="shrink-0 text-primary" />
               <span className="text-muted-foreground shrink-0">Replying to</span>
               <span className="font-semibold text-foreground truncate">{replyTo.senderName}</span>
-              <span className="text-muted-foreground/60 truncate hidden sm:inline">{replyTo.contentPreview}</span>
+              <span className="text-muted-foreground/60 truncate hidden sm:inline">
+                {replyTo.contentPreview}
+              </span>
             </div>
             <button
               type="button"
@@ -1029,14 +1119,11 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
             className="w-full px-4 pt-3 pb-2 text-sm min-h-[40px] outline-none text-foreground break-words whitespace-pre-wrap"
             suppressContentEditableWarning
             data-testid="chat-compose-input"
-            data-empty={isEmpty ? 'true' : 'false'}
+            data-empty={isEmpty ? "true" : "false"}
           />
         </div>
 
-        <AttachmentPreviewBar
-          files={pendingFiles}
-          onRemove={handleRemovePendingFile}
-        />
+        <AttachmentPreviewBar files={pendingFiles} onRemove={handleRemovePendingFile} />
 
         <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/50">
           <div className="flex items-center gap-0.5">
@@ -1056,7 +1143,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
               aria-label="Add emoji"
               onClick={() => setShowEmojiPicker((prev) => !prev)}
               data-testid="chat-compose-emoji-button"
-              data-state={showEmojiPicker ? 'open' : 'closed'}
+              data-state={showEmojiPicker ? "open" : "closed"}
             >
               <Smiley size={18} />
             </button>
@@ -1124,13 +1211,13 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
               disabled={isEmpty}
               aria-label="Send message"
               className={cn(
-                'p-1.5 rounded-md transition-colors',
+                "p-1.5 rounded-md transition-colors",
                 !isEmpty
-                  ? 'text-primary hover:bg-primary/10 cursor-pointer'
-                  : 'text-muted-foreground/50 cursor-not-allowed',
+                  ? "text-primary hover:bg-primary/10 cursor-pointer"
+                  : "text-muted-foreground/50 cursor-not-allowed",
               )}
               data-testid="chat-compose-send-button"
-              data-disabled={isEmpty ? 'true' : 'false'}
+              data-disabled={isEmpty ? "true" : "false"}
             >
               <PaperPlaneRight size={18} />
             </button>
@@ -1152,7 +1239,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
           onClose={handleTeamSendCancel}
           onConfirm={handleTeamSendConfirm}
           title="Notify team members?"
-          message={`This mentions ${pendingTeamSend.labels.join(', ')}. Up to ${pendingTeamSend.total} people will be notified.`}
+          message={`This mentions ${pendingTeamSend.labels.join(", ")}. Up to ${pendingTeamSend.total} people will be notified.`}
           confirmLabel="Send"
           variant="default"
         />

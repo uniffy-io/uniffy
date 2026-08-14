@@ -1,11 +1,11 @@
-import type { Timestamp } from '@bufbuild/protobuf/wkt';
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import {
   ChannelType as ProtoChannelType,
   ChannelRole as ProtoChannelRole,
   SenderType as ProtoSenderType,
   ChatNotificationLevel as ProtoNotificationLevel,
-} from '@uniffy/proto/chat/v1/chat_pb';
-import { SubjectType as ProtoSubjectType } from '@uniffy/proto/common/v1/common_pb';
+} from "@uniffy/proto/chat/v1/chat_pb";
+import { SubjectType as ProtoSubjectType } from "@uniffy/proto/common/v1/common_pb";
 import type {
   ChatChannel as ProtoChatChannel,
   ChatMessage as ProtoChatMessage,
@@ -14,7 +14,7 @@ import type {
   ChatDraft as ProtoChatDraft,
   ThreadInboxItem as ProtoThreadInboxItem,
   ReactionGroup as ProtoReactionGroup,
-} from '@uniffy/proto/chat/v1/chat_pb';
+} from "@uniffy/proto/chat/v1/chat_pb";
 import type {
   ChatChannel,
   ChatMessage,
@@ -25,38 +25,38 @@ import type {
   ChannelRole,
   SenderType,
   NotificationLevel,
-} from '@/features/chat/types';
+} from "@/features/chat/types";
 
 export function timestampToIso(ts: Timestamp | undefined): string | null {
   if (!ts) return null;
-  const ms = (typeof ts.seconds === 'bigint' ? Number(ts.seconds) : ts.seconds) * 1000;
+  const ms = (typeof ts.seconds === "bigint" ? Number(ts.seconds) : ts.seconds) * 1000;
   return new Date(ms).toISOString();
 }
 
 const CHANNEL_TYPE_MAP: Record<number, ChannelType> = {
-  [ProtoChannelType.PUBLIC]: 'PUBLIC',
-  [ProtoChannelType.PRIVATE]: 'PRIVATE',
-  [ProtoChannelType.DIRECT]: 'DIRECT',
-  [ProtoChannelType.GROUP_DM]: 'GROUP_DM',
+  [ProtoChannelType.PUBLIC]: "PUBLIC",
+  [ProtoChannelType.PRIVATE]: "PRIVATE",
+  [ProtoChannelType.DIRECT]: "DIRECT",
+  [ProtoChannelType.GROUP_DM]: "GROUP_DM",
 };
 
 const CHANNEL_ROLE_MAP: Record<number, ChannelRole> = {
-  [ProtoChannelRole.OWNER]: 'OWNER',
-  [ProtoChannelRole.ADMIN]: 'ADMIN',
-  [ProtoChannelRole.MEMBER]: 'MEMBER',
+  [ProtoChannelRole.OWNER]: "OWNER",
+  [ProtoChannelRole.ADMIN]: "ADMIN",
+  [ProtoChannelRole.MEMBER]: "MEMBER",
 };
 
 const SENDER_TYPE_MAP: Record<number, SenderType> = {
-  [ProtoSenderType.USER]: 'USER',
-  [ProtoSenderType.AGENT]: 'AGENT',
-  [ProtoSenderType.SYSTEM]: 'SYSTEM',
-  [ProtoSenderType.GUEST]: 'GUEST',
+  [ProtoSenderType.USER]: "USER",
+  [ProtoSenderType.AGENT]: "AGENT",
+  [ProtoSenderType.SYSTEM]: "SYSTEM",
+  [ProtoSenderType.GUEST]: "GUEST",
 };
 
 const NOTIFICATION_LEVEL_MAP: Record<number, NotificationLevel> = {
-  [ProtoNotificationLevel.ALL]: 'ALL',
-  [ProtoNotificationLevel.MENTIONS]: 'MENTIONS',
-  [ProtoNotificationLevel.NONE]: 'NONE',
+  [ProtoNotificationLevel.ALL]: "ALL",
+  [ProtoNotificationLevel.MENTIONS]: "MENTIONS",
+  [ProtoNotificationLevel.NONE]: "NONE",
 };
 
 export function channelToPlain(proto: ProtoChatChannel): ChatChannel {
@@ -67,7 +67,7 @@ export function channelToPlain(proto: ProtoChatChannel): ChatChannel {
     name: proto.name,
     slug: proto.slug,
     description: proto.description,
-    channelType: CHANNEL_TYPE_MAP[proto.channelType] ?? 'PUBLIC',
+    channelType: CHANNEL_TYPE_MAP[proto.channelType] ?? "PUBLIC",
     categoryId: proto.categoryId ?? null,
     isEncrypted: proto.isEncrypted,
     isArchived: proto.isArchived,
@@ -105,27 +105,32 @@ export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
     id: proto.id,
     channelId: proto.channelId,
     senderId: proto.senderId,
-    senderType: SENDER_TYPE_MAP[proto.senderType] ?? 'USER',
+    senderType: SENDER_TYPE_MAP[proto.senderType] ?? "USER",
     content: proto.content,
     rootId: proto.rootId ?? null,
     replyToId: proto.replyToId ?? null,
-    replyContext: proto.replyContext ? {
-      id: proto.replyContext.id,
-      senderName: proto.replyContext.senderName,
-      contentPreview: proto.replyContext.contentPreview,
-    } : undefined,
+    replyContext: proto.replyContext
+      ? {
+          id: proto.replyContext.id,
+          senderName: proto.replyContext.senderName,
+          contentPreview: proto.replyContext.contentPreview,
+        }
+      : undefined,
     editedAt: timestampToIso(proto.editedAt),
     isDeleted: proto.isDeleted,
     isPinned: proto.isPinned,
     metadata: { ...proto.metadata },
     createdAt: timestampToIso(proto.createdAt) ?? new Date().toISOString(),
-    updatedAt: timestampToIso(proto.editedAt) ?? timestampToIso(proto.createdAt) ?? new Date().toISOString(),
-    thread: proto.thread ? {
-      replyCount: proto.thread.replyCount,
-      lastReplyAt: timestampToIso(proto.thread.lastReplyAt) ?? new Date().toISOString(),
-      participantIds: [...proto.thread.participantIds],
-      hasUnread: proto.thread.hasUnread,
-    } : undefined,
+    updatedAt:
+      timestampToIso(proto.editedAt) ?? timestampToIso(proto.createdAt) ?? new Date().toISOString(),
+    thread: proto.thread
+      ? {
+          replyCount: proto.thread.replyCount,
+          lastReplyAt: timestampToIso(proto.thread.lastReplyAt) ?? new Date().toISOString(),
+          participantIds: [...proto.thread.participantIds],
+          hasUnread: proto.thread.hasUnread,
+        }
+      : undefined,
     reactions: proto.reactions.map(reactionGroupToPlain),
     senderName: proto.senderName || undefined,
     senderAvatarUrl: proto.senderAvatarUrl || undefined,
@@ -134,8 +139,8 @@ export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
 }
 
 export function memberToPlain(proto: ProtoChatChannelMember): ChatChannelMember {
-  const subjectType: 'USER' | 'AGENT' =
-    proto.subject?.type === ProtoSubjectType.AGENT ? 'AGENT' : 'USER';
+  const subjectType: "USER" | "AGENT" =
+    proto.subject?.type === ProtoSubjectType.AGENT ? "AGENT" : "USER";
   const subjectId = proto.subject?.id || proto.userId;
   return {
     channelId: proto.channelId,
@@ -144,8 +149,8 @@ export function memberToPlain(proto: ProtoChatChannelMember): ChatChannelMember 
     subjectId,
     displayName: proto.displayName || undefined,
     avatarUrl: proto.avatarUrl || undefined,
-    role: CHANNEL_ROLE_MAP[proto.role] ?? 'MEMBER',
-    notificationLevel: NOTIFICATION_LEVEL_MAP[proto.notificationLevel] ?? 'ALL',
+    role: CHANNEL_ROLE_MAP[proto.role] ?? "MEMBER",
+    notificationLevel: NOTIFICATION_LEVEL_MAP[proto.notificationLevel] ?? "ALL",
     isMuted: proto.isMuted,
     mutedUntil: timestampToIso(proto.mutedUntil),
     followAllThreads: proto.followAllThreads,
@@ -159,7 +164,7 @@ export function categoryToPlain(proto: ProtoChatChannelCategory): ChatChannelCat
     organizationId: proto.organizationId,
     name: proto.name,
     position: proto.position,
-    createdBy: '',
+    createdBy: "",
     createdAt: timestampToIso(proto.createdAt) ?? new Date().toISOString(),
     updatedAt: timestampToIso(proto.updatedAt) ?? new Date().toISOString(),
   };
@@ -186,8 +191,8 @@ export function threadInboxItemToPlain(proto: ProtoThreadInboxItem): ThreadInbox
     rootMessageId: proto.rootMessageId,
     channelId: proto.channelId,
     channelName: proto.channelName,
-    rootMessageContent: proto.rootMessage?.content ?? '',
-    rootMessageSenderId: proto.rootMessage?.senderId ?? '',
+    rootMessageContent: proto.rootMessage?.content ?? "",
+    rootMessageSenderId: proto.rootMessage?.senderId ?? "",
     rootMessageSenderName: proto.rootMessage?.senderName ?? undefined,
     replyCount: proto.replyCount,
     lastReplyAt: timestampToIso(proto.lastReplyAt) ?? new Date().toISOString(),

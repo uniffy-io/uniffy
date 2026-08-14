@@ -1,4 +1,4 @@
-import { ArrowClockwise, WarningCircle } from '@phosphor-icons/react';
+import { ArrowClockwise, WarningCircle } from "@phosphor-icons/react";
 
 interface EditorErrorFallbackProps {
   onRetry: () => void;
@@ -11,8 +11,8 @@ export function EditorErrorFallback({ onRetry }: EditorErrorFallbackProps) {
       <div>
         <h3 className="text-base font-semibold text-foreground">Editor crashed</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          The editor hit an unexpected error. Your latest edits are safe on the server;
-          retry to reload the document.
+          The editor hit an unexpected error. Your latest edits are safe on the server; retry to
+          reload the document.
         </p>
       </div>
       <button

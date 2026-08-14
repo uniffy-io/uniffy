@@ -3,6 +3,7 @@ import { Alert, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@core/providers/AuthContext";
 import { buildFileUrl, assetAuthHeaders } from "@features/files/fileUrls";
+import { userFacingError } from "@shared/lib/userFacingError";
 
 // Persisted Android SAF directory grant, so the second and later downloads skip
 // the "pick a folder" prompt.
@@ -127,7 +128,7 @@ export function useFileDownload() {
           Alert.alert("Downloaded", `Saved to ${uri}`);
         }
       } catch (err) {
-        Alert.alert("Share failed", err instanceof Error ? err.message : "Please try again.");
+        Alert.alert("Share failed", userFacingError(err, "The file was not shared."));
       } finally {
         setBusyId(null);
       }
@@ -158,7 +159,7 @@ export function useFileDownload() {
         const dest = await writeToSaf(mods.FileSystem, filename, mimeType, base64);
         if (dest) Alert.alert("Saved", `"${filename}" was saved to your device.`);
       } catch (err) {
-        Alert.alert("Download failed", err instanceof Error ? err.message : "Please try again.");
+        Alert.alert("Download failed", userFacingError(err, "The file was not downloaded."));
       } finally {
         setBusyId(null);
       }

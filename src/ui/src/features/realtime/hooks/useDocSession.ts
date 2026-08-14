@@ -1,20 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import * as Y from 'yjs';
-import { Awareness } from 'y-protocols/awareness';
-import { useAppSelector } from '@/app/hooks';
-import {
-  realtimeMultiplexer,
-  type DocSubscription,
-} from '@/features/realtime/multiplexer';
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as Y from "yjs";
+import { Awareness } from "y-protocols/awareness";
+import { useAppSelector } from "@/app/hooks";
+import { realtimeMultiplexer, type DocSubscription } from "@/features/realtime/multiplexer";
 import {
   attachEncryptedPersistence,
   type EncryptedPersistence,
-} from '@/features/realtime/persistence/encryptedYjsPersistence';
-import {
-  type RealtimeStatus,
-  statusFromCloseCode,
-} from '@/features/realtime/protocol';
-import { randomUUID } from '@/shared/utils/uuid';
+} from "@/features/realtime/persistence/encryptedYjsPersistence";
+import { type RealtimeStatus, statusFromCloseCode } from "@/features/realtime/protocol";
+import { randomUUID } from "@/shared/utils/uuid";
 
 export interface DocSession {
   ydoc: Y.Doc;
@@ -36,7 +30,6 @@ export interface UseDocSessionOptions {
   captureTimeout?: number;
 }
 
-
 // Seed-time writers gate on the composed promise. Resolving before the IDB
 // replay finishes lets a fast SyncStep2 race offline edits into a duplicated
 // document, and a failed hydrate must not wedge the gate.
@@ -45,7 +38,7 @@ export function composeWhenSynced(
   hydrated: Promise<void>,
 ): Promise<void> {
   const hydrationComplete = hydrated.catch((err) => {
-    console.warn('[realtime] persistence hydrate failed', err);
+    console.warn("[realtime] persistence hydrate failed", err);
   });
   return Promise.all([serverSynced, hydrationComplete]).then(() => undefined);
 }
@@ -54,7 +47,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
   const { contentType, contentId, enabled, undoTarget, captureTimeout } = opts;
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
-  const [status, setStatus] = useState<RealtimeStatus>('idle');
+  const [status, setStatus] = useState<RealtimeStatus>("idle");
   const sessionRef = useRef<{
     ydoc: Y.Doc;
     awareness: Awareness;
@@ -82,11 +75,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     });
     const whenHydrated = persistence.hydrate();
 
-    const targets = Array.isArray(undoTarget)
-      ? undoTarget
-      : undoTarget
-        ? [undoTarget]
-        : null;
+    const targets = Array.isArray(undoTarget) ? undoTarget : undoTarget ? [undoTarget] : null;
     const undoManager = targets
       ? new Y.UndoManager(targets, {
           trackedOrigins: new Set([sessionId]),
@@ -122,6 +111,9 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       persistence,
       whenSynced,
     };
+    // The effect owns the session objects, so a bump is the only way the memo
+    // below learns they exist. One extra render per session, not per keystroke.
+    // eslint-disable-next-line react/react-compiler -- republishes the effect-created session
     setTick((t) => t + 1);
 
     return () => {
@@ -135,6 +127,10 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, contentType, contentId, organizationId]);
 
+  // Y.Doc / Awareness / UndoManager identities must survive every re-render -
+  // recreating them would drop the CRDT state and the undo history - so the ref
+  // holds them and `tick` is the invalidation signal for this memo.
+  /* eslint-disable react/react-compiler -- ref-held session republished through `tick` */
   return useMemo<DocSession | null>(() => {
     const current = sessionRef.current;
     if (!current) return null;
@@ -148,4 +144,5 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, tick]);
+  /* eslint-enable react/react-compiler */
 }

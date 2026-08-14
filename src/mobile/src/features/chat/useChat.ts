@@ -287,7 +287,11 @@ export function useMessages(channelId: string | undefined) {
     return [...head, ...olderMessages.filter((m) => !headIds.has(m.id))];
   }, [headQuery.data, olderMessages]);
 
+  // Mirrored during render, not in an effect: `loadOlder` can fire from a list
+  // layout callback that runs before passive effects flush, and a stale mirror
+  // there would page from the wrong `beforeId` and append a duplicate batch.
   const dataRef = useRef(data);
+  // eslint-disable-next-line react/react-compiler
   dataRef.current = data;
 
   const loadOlder = useCallback(async () => {

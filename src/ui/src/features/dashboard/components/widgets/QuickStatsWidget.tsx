@@ -1,11 +1,11 @@
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Bell, Target, CalendarDots, Users, ArrowRight } from '@phosphor-icons/react';
-import type { Icon } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import type { CalendarEvent } from '@/features/calendar/types';
-import type { Task } from '@/features/projects/types/project';
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { Bell, Target, CalendarDots, Users, ArrowRight } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import type { CalendarEvent } from "@/features/calendar/types";
+import type { Task } from "@/features/projects/types/project";
 
 interface StatCardProps {
   icon: Icon;
@@ -21,11 +21,11 @@ function StatCard({ icon: IconComponent, label, value, href, iconColor, loading 
     <Link
       to={href}
       className={cn(
-        'group relative flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-all duration-200',
-        'hover:border-primary/30 hover:shadow-md',
+        "group relative flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-all duration-200",
+        "hover:border-primary/30 hover:shadow-md",
       )}
     >
-      <div className={cn('rounded-lg p-2', iconColor)}>
+      <div className={cn("rounded-lg p-2", iconColor)}>
         <IconComponent size={18} weight="fill" className="text-white" />
       </div>
       <div className="min-w-0">
@@ -50,7 +50,7 @@ export function QuickStatsWidget() {
 
   const tasks = useAppSelector((state) => state.projects?.tasks ?? {});
   const tasksLoading = useAppSelector((state) => state.projects?.loading?.tasks ?? false);
-  const userId = useAppSelector((state) => state.auth.user?.id ?? '');
+  const userId = useAppSelector((state) => state.auth.user?.id ?? "");
 
   const events = useAppSelector((state) => state.calendar?.events ?? {});
   const eventsLoading = useAppSelector((state) => state.calendar?.loading?.events ?? false);
@@ -86,41 +86,41 @@ export function QuickStatsWidget() {
 
   const teamOnline = useMemo(() => {
     return Object.values(presenceStatuses).filter(
-      (status) => status === 'online' || status === 'away' || status === 'dnd',
+      (status) => status === "online" || status === "away" || status === "dnd",
     ).length;
   }, [presenceStatuses]);
 
   const stats: StatCardProps[] = [
     {
       icon: Bell,
-      label: 'Unread',
+      label: "Unread",
       value: unreadCount,
-      href: '/notifications',
-      iconColor: 'bg-gradient-to-br from-amber-500 to-amber-600',
+      href: "/notifications",
+      iconColor: "bg-gradient-to-br from-amber-500 to-amber-600",
       loading: notificationsLoading,
     },
     {
       icon: Target,
-      label: 'Tasks due',
+      label: "Tasks due",
       value: tasksDueToday,
-      href: '/projects',
-      iconColor: 'bg-gradient-to-br from-teal-500 to-teal-600',
+      href: "/projects",
+      iconColor: "bg-gradient-to-br from-teal-500 to-teal-600",
       loading: tasksLoading,
     },
     {
       icon: CalendarDots,
-      label: 'Events today',
+      label: "Events today",
       value: eventsToday,
-      href: '/calendar',
-      iconColor: 'bg-gradient-to-br from-rose-500 to-rose-600',
+      href: "/calendar",
+      iconColor: "bg-gradient-to-br from-rose-500 to-rose-600",
       loading: eventsLoading,
     },
     {
       icon: Users,
-      label: 'Team online',
+      label: "Team online",
       value: teamOnline,
-      href: '/chat',
-      iconColor: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+      href: "/chat",
+      iconColor: "bg-gradient-to-br from-emerald-500 to-emerald-600",
       loading: false,
     },
   ];

@@ -1,23 +1,24 @@
-import { $mark, $remark } from '@milkdown/kit/utils';
-import { commandsCtx, editorViewCtx } from '@milkdown/core';
-import { $command } from '@milkdown/kit/utils';
-import { visit, SKIP } from 'unist-util-visit';
-import type { Parent } from 'unist';
-import type { Ctx } from '@milkdown/kit/ctx';
-import type { EditorView } from '@milkdown/prose/view';
+import { $mark, $remark } from "@milkdown/kit/utils";
+import { commandsCtx, editorViewCtx } from "@milkdown/core";
+import { $command } from "@milkdown/kit/utils";
+import { visit, SKIP } from "unist-util-visit";
+import type { Parent } from "unist";
+import type { Ctx } from "@milkdown/kit/ctx";
+import type { EditorView } from "@milkdown/prose/view";
 
-export const underlineMark = $mark('underline', () => ({
+export const underlineMark = $mark("underline", () => ({
   parseDOM: [
-    { tag: 'u' },
+    { tag: "u" },
     {
-      style: 'text-decoration',
+      style: "text-decoration",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      getAttrs: (value: any) => (typeof value === 'string' && value.includes('underline') ? {} : false),
+      getAttrs: (value: any) =>
+        typeof value === "string" && value.includes("underline") ? {} : false,
     },
   ],
-  toDOM: () => ['u', { class: 'text-underline' }, 0],
+  toDOM: () => ["u", { class: "text-underline" }, 0],
   parseMarkdown: {
-    match: (node) => node.type === 'underline',
+    match: (node) => node.type === "underline",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     runner: (state: any, node: any, type: any) => {
       state.openMark(type);
@@ -26,15 +27,15 @@ export const underlineMark = $mark('underline', () => ({
     },
   },
   toMarkdown: {
-    match: (mark) => mark.type.name === 'underline',
+    match: (mark) => mark.type.name === "underline",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     runner: (state: any, mark: any) => {
-      state.withMark(mark, 'underline');
+      state.withMark(mark, "underline");
     },
   },
 }));
 
-export const toggleUnderlineCommand = $command('ToggleUnderline', (ctx) => () => {
+export const toggleUnderlineCommand = $command("ToggleUnderline", (ctx) => () => {
   return (state, dispatch) => {
     const { from, to, empty } = state.selection;
     const markType = state.schema.marks.underline;
@@ -57,7 +58,7 @@ export const toggleUnderlineCommand = $command('ToggleUnderline', (ctx) => () =>
   };
 });
 
-export const underlineRemarkPlugin = $remark('underlineRemarkPlugin', () => {
+export const underlineRemarkPlugin = $remark("underlineRemarkPlugin", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function remarkUnderline(this: any) {
     const toMarkdownExtension = {
@@ -69,14 +70,14 @@ export const underlineRemarkPlugin = $remark('underlineRemarkPlugin', () => {
         },
       },
     };
-    const existing = (this.data('toMarkdownExtensions') as unknown[] | undefined) || [];
-    this.data('toMarkdownExtensions', [...existing, toMarkdownExtension]);
+    const existing = (this.data("toMarkdownExtensions") as unknown[] | undefined) || [];
+    this.data("toMarkdownExtensions", [...existing, toMarkdownExtension]);
 
     return (tree: Parent) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       visit(tree, (node: any, index: number | undefined, parent: any) => {
         if (!parent || index === undefined) return;
-        if (node.type !== 'html') return;
+        if (node.type !== "html") return;
 
         const value = node.value as string;
         if (!/^<u\b[^>]*>/i.test(value)) return;
@@ -86,9 +87,9 @@ export const underlineRemarkPlugin = $remark('underlineRemarkPlugin', () => {
         let depth = 1;
         for (let i = index + 1; i < children.length; i++) {
           const c = children[i];
-          if (c.type !== 'html') continue;
-          if (typeof c.value === 'string' && /^<u\b/i.test(c.value)) depth++;
-          else if (c.value === '</u>') {
+          if (c.type !== "html") continue;
+          if (typeof c.value === "string" && /^<u\b/i.test(c.value)) depth++;
+          else if (c.value === "</u>") {
             depth--;
             if (depth === 0) {
               closeIndex = i;
@@ -100,8 +101,8 @@ export const underlineRemarkPlugin = $remark('underlineRemarkPlugin', () => {
 
         const inner = children.slice(index + 1, closeIndex);
         const replacement = {
-          type: 'underline',
-          children: inner.length > 0 ? inner : [{ type: 'text', value: '' }],
+          type: "underline",
+          children: inner.length > 0 ? inner : [{ type: "text", value: "" }],
         };
         parent.children.splice(index, closeIndex - index + 1, replacement);
         return [SKIP, index] as [typeof SKIP, number];

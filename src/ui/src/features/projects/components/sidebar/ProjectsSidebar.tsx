@@ -10,7 +10,11 @@ import {
   setCurrentProject,
   selectProjectCompletion,
 } from "@/features/projects/store/projectsSlice";
-import { openCreateProjectModal, selectProjectScope, toggleSidebar } from "@/features/projects/store/projectsUiSlice";
+import {
+  openCreateProjectModal,
+  selectProjectScope,
+  toggleSidebar,
+} from "@/features/projects/store/projectsUiSlice";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
 import { ProjectScopeFilter } from "@/features/projects/components/sidebar/ProjectScopeFilter";
 import { Progress } from "@/components/ui/progress";
@@ -32,15 +36,18 @@ export function ProjectsSidebar() {
   const projectCompletion = useAppSelector(selectProjectCompletion);
   const projectScope = useAppSelector(selectProjectScope);
   const isSystemAdmin = useAppSelector((s) => s.auth.user?.isSystemAdmin ?? false);
-  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
 
   const filteredProjects = useMemo(() => {
     if (projectScope === "all") return projects;
-    return projects.filter((p) => bucketForContent({
-      ownerId: p.ownerId,
-      accessMode: p.accessMode,
-      currentUserId,
-    }) === projectScope);
+    return projects.filter(
+      (p) =>
+        bucketForContent({
+          ownerId: p.ownerId,
+          accessMode: p.accessMode,
+          currentUserId,
+        }) === projectScope,
+    );
   }, [projects, projectScope, currentUserId]);
 
   const handleProjectClick = (project: Project) => {
@@ -62,89 +69,88 @@ export function ProjectsSidebar() {
 
   return (
     <>
-    <div className="flex flex-col h-full">
-      {/* Header: scope filter + create button */}
-      <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
-        <ProjectScopeFilter />
+      <div className="flex flex-col h-full">
+        {/* Header: scope filter + create button */}
+        <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
+          <ProjectScopeFilter />
 
-        <button
-          type="button"
-          onClick={handleCreateProject}
-          className="group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden hover:px-2.5"
-        >
-          <span className="absolute inset-0 rounded-lg bg-transparent" />
-          <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground group-hover:text-primary transition-all duration-500 ease-out">
-            <Plus size={18} weight="bold" />
-          </span>
-          <span className="relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out group-hover:ml-1.5 group-hover:max-w-24 text-muted-foreground group-hover:text-foreground">
-            New
-          </span>
-        </button>
-        <div className="flex-1" />
-        {!isMobile && (
           <button
-            onClick={() => dispatch(toggleSidebar())}
-            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
-            title="Toggle sidebar"
+            type="button"
+            onClick={handleCreateProject}
+            className="group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden hover:px-2.5"
           >
-            <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
+            <span className="absolute inset-0 rounded-lg bg-transparent" />
+            <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground group-hover:text-primary transition-all duration-500 ease-out">
+              <Plus size={18} weight="bold" />
+            </span>
+            <span className="relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out group-hover:ml-1.5 group-hover:max-w-24 text-muted-foreground group-hover:text-foreground">
+              New
+            </span>
           </button>
-        )}
-      </div>
-
-      {/* Project List */}
-      <ScrollArea className="flex-1">
-        <div className="px-2 pt-1 pb-2 space-y-0.5">
-          {projectsLoading && projects.length === 0 ? (
-            <ProjectsListSkeleton />
-          ) : filteredProjects.length === 0 ? (
-            <div className="px-2 py-8 text-center text-xs text-muted-foreground">
-              {projects.length === 0 ? (
-                <>
-                  <p>No projects yet</p>
-                  <button
-                    type="button"
-                    className="mt-2 text-primary hover:underline text-xs"
-                    onClick={handleCreateProject}
-                  >
-                    Create your first project
-                  </button>
-                </>
-              ) : (
-                <p>No projects match this filter</p>
-              )}
-            </div>
-          ) : (
-            filteredProjects.map((project) => {
-              const canAccessSettings = roleCanManage(project.userRole) || isSystemAdmin;
-              return (
-                <ProjectListItem
-                  key={project.id}
-                  project={project}
-                  isActive={project.id === currentProjectId}
-                  onClick={() => handleProjectClick(project)}
-                  onEdit={canAccessSettings ? () => handleEditProject(project) : undefined}
-                  progress={projectCompletion[project.id] ?? 0}
-                />
-              );
-            })
+          <div className="flex-1" />
+          {!isMobile && (
+            <button
+              onClick={() => dispatch(toggleSidebar())}
+              className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
+              title="Toggle sidebar"
+            >
+              <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
+            </button>
           )}
         </div>
-      </ScrollArea>
 
-      {/* Portfolio link */}
-      <div className="px-3 py-2 border-t border-border">
-        <button
-          type="button"
-          onClick={() => navigate("/portfolio")}
-          className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-        >
-          <ChartPieSlice size={14} />
-          Portfolio Overview
-        </button>
+        {/* Project List */}
+        <ScrollArea className="flex-1">
+          <div className="px-2 pt-1 pb-2 space-y-0.5">
+            {projectsLoading && projects.length === 0 ? (
+              <ProjectsListSkeleton />
+            ) : filteredProjects.length === 0 ? (
+              <div className="px-2 py-8 text-center text-xs text-muted-foreground">
+                {projects.length === 0 ? (
+                  <>
+                    <p>No projects yet</p>
+                    <button
+                      type="button"
+                      className="mt-2 text-primary hover:underline text-xs"
+                      onClick={handleCreateProject}
+                    >
+                      Create your first project
+                    </button>
+                  </>
+                ) : (
+                  <p>No projects match this filter</p>
+                )}
+              </div>
+            ) : (
+              filteredProjects.map((project) => {
+                const canAccessSettings = roleCanManage(project.userRole) || isSystemAdmin;
+                return (
+                  <ProjectListItem
+                    key={project.id}
+                    project={project}
+                    isActive={project.id === currentProjectId}
+                    onClick={() => handleProjectClick(project)}
+                    onEdit={canAccessSettings ? () => handleEditProject(project) : undefined}
+                    progress={projectCompletion[project.id] ?? 0}
+                  />
+                );
+              })
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Portfolio link */}
+        <div className="px-3 py-2 border-t border-border">
+          <button
+            type="button"
+            onClick={() => navigate("/portfolio")}
+            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+          >
+            <ChartPieSlice size={14} />
+            Portfolio Overview
+          </button>
+        </div>
       </div>
-    </div>
-
     </>
   );
 }
@@ -166,7 +172,7 @@ function ProjectListItem({ project, isActive, onClick, onEdit, progress }: Proje
       className={cn(
         "group w-full flex flex-col gap-1 px-2 py-1.5 rounded-md text-left text-sm cursor-pointer",
         "hover:bg-accent transition-colors",
-        isActive && "bg-primary/10 text-primary"
+        isActive && "bg-primary/10 text-primary",
       )}
       onClick={onClick}
     >
@@ -175,10 +181,7 @@ function ProjectListItem({ project, isActive, onClick, onEdit, progress }: Proje
           icon={project.icon}
           size={16}
           weight={isActive ? "fill" : "duotone"}
-          className={cn(
-            "shrink-0",
-            isActive ? "text-primary" : "text-muted-foreground"
-          )}
+          className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")}
         />
         <span className="flex-1 truncate">{project.name}</span>
         {onEdit && (
@@ -207,15 +210,16 @@ function ProjectListItem({ project, isActive, onClick, onEdit, progress }: Proje
       {shownTags.length > 0 && (
         <div className="pl-7 pr-2 flex flex-wrap items-center gap-1">
           {shownTags.map((tag) => (
-            <TagChip
-              key={tag.id}
-              tag={tag}
-              nonInteractive
-              className="px-1.5 py-0 text-[10px]"
-            />
+            <TagChip key={tag.id} tag={tag} nonInteractive className="px-1.5 py-0 text-[10px]" />
           ))}
           {tagOverflow > 0 && (
-            <span className="text-[10px] text-muted-foreground" title={tags.slice(2).map((t) => t.name).join(", ")}>
+            <span
+              className="text-[10px] text-muted-foreground"
+              title={tags
+                .slice(2)
+                .map((t) => t.name)
+                .join(", ")}
+            >
               +{tagOverflow}
             </span>
           )}

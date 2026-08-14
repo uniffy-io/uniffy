@@ -1,35 +1,39 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Door, CalendarPlus, WarningCircle } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
-import { Button } from '@/components/ui/button';
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { Door, CalendarPlus, WarningCircle } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { Button } from "@/components/ui/button";
 import {
   closeRoomViewer,
   selectRoomById,
   selectRoomViewer,
   selectRoomAvailability,
-} from '@/features/rooms/store/roomsSlice';
-import { openRoomViewer, cancelBooking } from '@/features/rooms/store/roomsThunks';
-import { RoomOverview } from '@/features/rooms/components/detail/RoomOverview';
-import { BookingModal } from '@/features/rooms/components/modals/BookingModal';
-import type { RoomBooking } from '@/features/rooms/types';
-import type { RootState } from '@/app/store';
+} from "@/features/rooms/store/roomsSlice";
+import { openRoomViewer, cancelBooking } from "@/features/rooms/store/roomsThunks";
+import { RoomOverview } from "@/features/rooms/components/detail/RoomOverview";
+import { BookingModal } from "@/features/rooms/components/modals/BookingModal";
+import type { RoomBooking } from "@/features/rooms/types";
+import type { RootState } from "@/app/store";
 
 /** Standalone room view so a `/rooms/:roomId` link resolves instead of hitting the 404 page. */
 export function RoomPage() {
   const dispatch = useAppDispatch();
   const { roomId } = useParams<{ roomId: string }>();
   const viewer = useAppSelector(selectRoomViewer);
-  const room = useAppSelector((state: RootState) => (roomId ? selectRoomById(state, roomId) : undefined));
-  const availability = useAppSelector((state: RootState) => selectRoomAvailability(state, roomId ?? ''));
+  const room = useAppSelector((state: RootState) =>
+    roomId ? selectRoomById(state, roomId) : undefined,
+  );
+  const availability = useAppSelector((state: RootState) =>
+    selectRoomAvailability(state, roomId ?? ""),
+  );
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
   const organizationRole = useAppSelector((state) => state.auth.currentOrganizationRole);
 
   const [bookingOpen, setBookingOpen] = useState(false);
 
-  useDocumentTitle(room?.name ?? 'Room');
+  useDocumentTitle(room?.name ?? "Room");
 
   useEffect(() => {
     if (!roomId) return;
@@ -41,15 +45,18 @@ export function RoomPage() {
 
   const canCancelBooking = useCallback(
     (booking: RoomBooking) =>
-      booking.userId === userId || ['ADMIN', 'OWNER'].includes(organizationRole ?? ''),
+      booking.userId === userId || ["ADMIN", "OWNER"].includes(organizationRole ?? ""),
     [userId, organizationRole],
   );
 
-  const handleCancelBooking = useCallback(async (bookingId: string) => {
-    if (!organizationId || !roomId) return;
-    await dispatch(cancelBooking({ bookingId, organizationId }));
-    dispatch(openRoomViewer({ roomId, inline: true }));
-  }, [dispatch, organizationId, roomId]);
+  const handleCancelBooking = useCallback(
+    async (bookingId: string) => {
+      if (!organizationId || !roomId) return;
+      await dispatch(cancelBooking({ bookingId, organizationId }));
+      dispatch(openRoomViewer({ roomId, inline: true }));
+    },
+    [dispatch, organizationId, roomId],
+  );
 
   const handleBooked = useCallback(() => {
     if (roomId) dispatch(openRoomViewer({ roomId, inline: true }));
@@ -70,7 +77,11 @@ export function RoomPage() {
   if (!room) {
     return (
       <div className="p-4 md:p-6 max-w-2xl mx-auto">
-        <div className="flex flex-col gap-4 animate-pulse" aria-busy="true" aria-label="Loading room">
+        <div
+          className="flex flex-col gap-4 animate-pulse"
+          aria-busy="true"
+          aria-label="Loading room"
+        >
           <div className="h-6 w-1/2 rounded bg-muted" />
           <div className="h-4 w-1/4 rounded bg-muted" />
           <div className="h-3 w-full rounded bg-muted/60" />
@@ -98,7 +109,7 @@ export function RoomPage() {
           canCancelBooking={canCancelBooking}
         />
 
-        {room.status === 'active' && (
+        {room.status === "active" && (
           <div className="mt-5 pt-4 border-t border-border">
             <Button size="md" className="gap-1.5" onClick={() => setBookingOpen(true)}>
               <CalendarPlus size={16} />

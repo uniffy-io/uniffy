@@ -1,12 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import {
-  Kanban,
-  SidebarSimple,
-  SquaresFour,
-  LockSimple,
-  Buildings,
-} from "@phosphor-icons/react";
+import { Kanban, SidebarSimple, SquaresFour, LockSimple, Buildings } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
@@ -52,7 +46,6 @@ const PROJECTS_SECTIONS: SidebarSection[] = [
   { id: "organization", icon: Buildings, label: "Organization" },
 ];
 
-
 export function ProjectsLayout() {
   const dispatch = useAppDispatch();
   const { isMobile, isMobileOrTablet } = useBreakpoint();
@@ -64,7 +57,9 @@ export function ProjectsLayout() {
   const currentProject = useAppSelector(selectCurrentProject);
   const currentProjectId = currentProject?.id;
   const isCreateTaskModalOpen = useAppSelector((state) => state.projectsUi.isCreateTaskModalOpen);
-  const isCreateProjectModalOpen = useAppSelector((state) => state.projectsUi.isCreateProjectModalOpen);
+  const isCreateProjectModalOpen = useAppSelector(
+    (state) => state.projectsUi.isCreateProjectModalOpen,
+  );
   const editProjectId = useAppSelector(selectEditProjectId);
 
   // Fetch sprints whenever the current project changes
@@ -113,114 +108,116 @@ export function ProjectsLayout() {
 
   return (
     <>
-    <div
-      className={cn(
-        "relative flex flex-col bg-background text-foreground overflow-hidden",
-        "transition-[height] duration-300 ease-in-out",
-        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
-      )}
-    >
-      {/* Collapsed sidebar rail */}
-      {showCollapsedRail && (
-        <div className="absolute inset-y-0 left-0 z-30 w-12">
-          <CollapsibleSidebarRail
-            onExpand={handleExpandSidebar}
-            sections={PROJECTS_SECTIONS}
-          >
-            <ProjectsSidebar />
-          </CollapsibleSidebarRail>
-        </div>
-      )}
-
-      <Group
-        orientation="horizontal"
-        className="h-full w-full flex"
-        defaultLayout={defaultLayout}
-        onLayoutChange={handleLayoutChange}
+      <div
+        className={cn(
+          "relative flex flex-col bg-background text-foreground overflow-hidden",
+          "transition-[height] duration-300 ease-in-out",
+          isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0",
+        )}
       >
-        {/* Left Sidebar - inline on tablet/desktop */}
-        {showSidebar && !sidebarAsDrawer && (
-          <>
-            <Panel
-              id="projects-sidebar"
-              defaultSize={isMobileOrTablet ? 200 : LAYOUT.SIDEBAR_WIDTH}
-              minSize={LAYOUT.SIDEBAR_MIN_WIDTH}
-              maxSize={LAYOUT.SIDEBAR_MAX_WIDTH}
-              className="bg-background border-r border-border"
-            >
+        {/* Collapsed sidebar rail */}
+        {showCollapsedRail && (
+          <div className="absolute inset-y-0 left-0 z-30 w-12">
+            <CollapsibleSidebarRail onExpand={handleExpandSidebar} sections={PROJECTS_SECTIONS}>
               <ProjectsSidebar />
-            </Panel>
-
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
-          </>
+            </CollapsibleSidebarRail>
+          </div>
         )}
 
-        {/* Main Content */}
-        <Panel
-          id="projects-main"
-          minSize={isMobileOrTablet ? 100 : 400}
-          className="flex flex-col overflow-hidden"
+        <Group
+          orientation="horizontal"
+          className="h-full w-full flex"
+          defaultLayout={defaultLayout}
+          onLayoutChange={handleLayoutChange}
         >
-          {currentProject ? (
-            <div className={cn("h-full overflow-hidden bg-card flex flex-col", showCollapsedRail && "ml-12")}>
-              <ProjectHeader project={currentProject} taskCount={currentProject.taskCount} />
-              <div className="flex-1 overflow-hidden">
-                {viewMode === "table" && <TableView />}
-                {viewMode === "board" && <BoardView />}
-                {viewMode === "roadmap" && <RoadmapView />}
-                {viewMode === "backlog" && <BacklogView />}
-                {viewMode === "graph" && <DependencyGraphView />}
-                {viewMode === "resources" && <ResourceView />}
-              </div>
-            </div>
-          ) : (
-            <div className={cn(showCollapsedRail && "ml-12")}>
-              <NoProjectSelected />
-            </div>
+          {/* Left Sidebar - inline on tablet/desktop */}
+          {showSidebar && !sidebarAsDrawer && (
+            <>
+              <Panel
+                id="projects-sidebar"
+                defaultSize={isMobileOrTablet ? 200 : LAYOUT.SIDEBAR_WIDTH}
+                minSize={LAYOUT.SIDEBAR_MIN_WIDTH}
+                maxSize={LAYOUT.SIDEBAR_MAX_WIDTH}
+                className="bg-background border-r border-border"
+              >
+                <ProjectsSidebar />
+              </Panel>
+
+              <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+            </>
           )}
-        </Panel>
 
-        {/* Right Detail Panel - inline sidebar on desktop only when sidebar mode */}
-        {showDetailPanel && !useModalForDetail && (
-          <>
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+          {/* Main Content */}
+          <Panel
+            id="projects-main"
+            minSize={isMobileOrTablet ? 100 : 400}
+            className="flex flex-col overflow-hidden"
+          >
+            {currentProject ? (
+              <div
+                className={cn(
+                  "h-full overflow-hidden bg-card flex flex-col",
+                  showCollapsedRail && "ml-12",
+                )}
+              >
+                <ProjectHeader project={currentProject} taskCount={currentProject.taskCount} />
+                <div className="flex-1 overflow-hidden">
+                  {viewMode === "table" && <TableView />}
+                  {viewMode === "board" && <BoardView />}
+                  {viewMode === "roadmap" && <RoadmapView />}
+                  {viewMode === "backlog" && <BacklogView />}
+                  {viewMode === "graph" && <DependencyGraphView />}
+                  {viewMode === "resources" && <ResourceView />}
+                </div>
+              </div>
+            ) : (
+              <div className={cn(showCollapsedRail && "ml-12")}>
+                <NoProjectSelected />
+              </div>
+            )}
+          </Panel>
 
-            <Panel
-              id="projects-detail"
-              defaultSize={LAYOUT.DETAIL_PANEL_WIDTH}
-              minSize={LAYOUT.DETAIL_PANEL_MIN_WIDTH}
-              maxSize={LAYOUT.DETAIL_PANEL_MAX_WIDTH}
-              className="bg-card border-l border-border"
-            >
-              <TaskDetailPanel taskId={selectedTaskId} />
-            </Panel>
-          </>
-        )}
-      </Group>
-    </div>
+          {/* Right Detail Panel - inline sidebar on desktop only when sidebar mode */}
+          {showDetailPanel && !useModalForDetail && (
+            <>
+              <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
 
-    {/* Mobile sidebar drawer */}
-    {sidebarAsDrawer && (
-      <Drawer
-        open={showSidebar}
-        onClose={() => dispatch(toggleSidebar())}
-        side="left"
-        className="w-72"
-        ariaLabel="Projects sidebar"
-      >
-        <ProjectsSidebar />
-      </Drawer>
-    )}
+              <Panel
+                id="projects-detail"
+                defaultSize={LAYOUT.DETAIL_PANEL_WIDTH}
+                minSize={LAYOUT.DETAIL_PANEL_MIN_WIDTH}
+                maxSize={LAYOUT.DETAIL_PANEL_MAX_WIDTH}
+                className="bg-card border-l border-border"
+              >
+                <TaskDetailPanel taskId={selectedTaskId} />
+              </Panel>
+            </>
+          )}
+        </Group>
+      </div>
 
-    {/* Detail modal (modal mode on desktop, or always on mobile/tablet) */}
-    {showDetailPanel && useModalForDetail && selectedTaskId && (
-      <TaskDetailModal taskId={selectedTaskId} onClose={handleCloseDetailPanel} />
-    )}
+      {/* Mobile sidebar drawer */}
+      {sidebarAsDrawer && (
+        <Drawer
+          open={showSidebar}
+          onClose={() => dispatch(toggleSidebar())}
+          side="left"
+          className="w-72"
+          ariaLabel="Projects sidebar"
+        >
+          <ProjectsSidebar />
+        </Drawer>
+      )}
 
-    {/* Modals */}
-    {isCreateTaskModalOpen && <CreateTaskModal />}
-    {isCreateProjectModalOpen && <CreateProjectModal />}
-    {editProjectId && <EditProjectModal />}
+      {/* Detail modal (modal mode on desktop, or always on mobile/tablet) */}
+      {showDetailPanel && useModalForDetail && selectedTaskId && (
+        <TaskDetailModal taskId={selectedTaskId} onClose={handleCloseDetailPanel} />
+      )}
+
+      {/* Modals */}
+      {isCreateTaskModalOpen && <CreateTaskModal />}
+      {isCreateProjectModalOpen && <CreateProjectModal />}
+      {editProjectId && <EditProjectModal />}
     </>
   );
 }

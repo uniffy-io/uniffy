@@ -1,5 +1,5 @@
-import type { DayColumn } from '@/features/calendar/types';
-import { cn } from '@/shared/utils/cn';
+import type { DayColumn } from "@/features/calendar/types";
+import { cn } from "@/shared/utils/cn";
 
 interface DayHeaderProps {
   day: DayColumn;
@@ -10,8 +10,8 @@ export function DayHeader({ day }: DayHeaderProps) {
     <div className="flex flex-col items-center justify-center py-2">
       <span
         className={cn(
-          'text-xs font-medium',
-          day.isToday ? 'text-primary' : 'text-muted-foreground'
+          "text-xs font-medium",
+          day.isToday ? "text-primary" : "text-muted-foreground",
         )}
       >
         {day.dayName}
@@ -19,10 +19,10 @@ export function DayHeader({ day }: DayHeaderProps) {
 
       <span
         className={cn(
-          'w-9 h-9 flex items-center justify-center text-lg font-medium rounded-full',
+          "w-9 h-9 flex items-center justify-center text-lg font-medium rounded-full",
           day.isToday
-            ? 'bg-primary text-primary-foreground'
-            : 'text-foreground hover:bg-muted transition-colors'
+            ? "bg-primary text-primary-foreground"
+            : "text-foreground hover:bg-muted transition-colors",
         )}
       >
         {day.dayNumber}
@@ -41,10 +41,7 @@ export function DayHeadersRow({ days }: DayHeadersRowProps) {
   return (
     <div className="relative flex flex-1 h-full">
       {days.map((day) => (
-        <div
-          key={day.dateString}
-          className="flex-1 min-w-0"
-        >
+        <div key={day.dateString} className="flex-1 min-w-0">
           <DayHeader day={day} />
         </div>
       ))}

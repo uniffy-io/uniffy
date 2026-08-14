@@ -1,18 +1,12 @@
-import { useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  ArrowsClockwise,
-  CheckCircle,
-  ArrowRight,
-  Sun,
-  X,
-} from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { useTodayEvents } from '@/features/calendar/hooks/useTodayEvents';
-import { TodayEventItem } from '@/features/calendar/components/quick-view/TodayEventItem';
-import { formatTime } from '@/features/calendar/utils';
-import type { CalendarEvent } from '@/features/calendar/types';
+import { useEffect, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowsClockwise, CheckCircle, ArrowRight, Sun, X } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { useTodayEvents } from "@/features/calendar/hooks/useTodayEvents";
+import { TodayEventItem } from "@/features/calendar/components/quick-view/TodayEventItem";
+import { formatTime } from "@/features/calendar/utils";
+import type { CalendarEvent } from "@/features/calendar/types";
 
 interface TodayMeetingsPanelProps {
   onClose: () => void;
@@ -88,10 +82,10 @@ function PanelContent({
   const { groups, now, upcomingCount, loading, refresh } = useTodayEvents(true);
 
   const todayLabel = useMemo(() => {
-    return new Date().toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
+    return new Date().toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
     });
   }, []);
 
@@ -104,11 +98,7 @@ function PanelContent({
   const laterEvents = groups.later;
 
   const lastEndTime = useMemo(() => {
-    const allUpcoming = [
-      ...currentEvents,
-      ...(nextEvent ? [nextEvent] : []),
-      ...laterEvents,
-    ];
+    const allUpcoming = [...currentEvents, ...(nextEvent ? [nextEvent] : []), ...laterEvents];
     if (allUpcoming.length === 0) return null;
     const last = allUpcoming[allUpcoming.length - 1];
     return formatTime(last.endTime);
@@ -119,15 +109,11 @@ function PanelContent({
       <div className="px-3.5 pt-3.5 pb-2.5 border-b border-border shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              Today&apos;s Schedule
-            </h3>
+            <h3 className="text-sm font-semibold text-foreground">Today&apos;s Schedule</h3>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {todayLabel}
               {hasUpcoming && (
-                <span className="ml-1.5 text-foreground/60">
-                  - {upcomingCount} upcoming
-                </span>
+                <span className="ml-1.5 text-foreground/60">- {upcomingCount} upcoming</span>
               )}
             </p>
           </div>
@@ -136,8 +122,8 @@ function PanelContent({
               onClick={refresh}
               disabled={loading}
               className={cn(
-                'p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
-                loading && 'animate-spin'
+                "p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
+                loading && "animate-spin",
               )}
               title="Refresh"
             >
@@ -190,11 +176,7 @@ function PanelContent({
             {groups.next && (
               <div>
                 <SectionHeader label="Up next" />
-                <TodayEventItem
-                  event={groups.next}
-                  now={now}
-                  onClick={onEventClick}
-                />
+                <TodayEventItem event={groups.next} now={now} onClick={onEventClick} />
               </div>
             )}
 
@@ -202,12 +184,7 @@ function PanelContent({
               <div>
                 <SectionHeader label="Later today" />
                 {groups.later.map((event) => (
-                  <TodayEventItem
-                    key={event.id}
-                    event={event}
-                    now={now}
-                    onClick={onEventClick}
-                  />
+                  <TodayEventItem key={event.id} event={event} now={now} onClick={onEventClick} />
                 ))}
               </div>
             )}
@@ -236,27 +213,30 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
 
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
-      if (panelRef.current && !panelRef.current.contains(target)
-          && !(anchorRef?.current && anchorRef.current.contains(target))) {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(target) &&
+        !(anchorRef?.current && anchorRef.current.contains(target))
+      ) {
         onClose();
       }
     }
 
     const timeoutId = setTimeout(() => {
-      document.addEventListener('click', handleClickOutside, true);
+      document.addEventListener("click", handleClickOutside, true);
     }, 0);
 
     return () => {
       clearTimeout(timeoutId);
-      document.removeEventListener('click', handleClickOutside, true);
+      document.removeEventListener("click", handleClickOutside, true);
     };
   }, [onClose, isMobile, anchorRef]);
 
   useEffect(() => {
     if (!isMobile) return;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [isMobile]);
 
@@ -266,7 +246,7 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
   };
 
   const handleViewAll = () => {
-    navigate('/calendar');
+    navigate("/calendar");
     onClose();
   };
 
@@ -287,10 +267,10 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
         <div
           ref={panelRef}
           className={cn(
-            'fixed inset-x-0 bottom-0 z-[100] max-h-[85dvh]',
-            'bg-card border-t border-border rounded-t-2xl shadow-xl',
-            'animate-in slide-in-from-bottom duration-300',
-            'flex flex-col overflow-hidden'
+            "fixed inset-x-0 bottom-0 z-[100] max-h-[85dvh]",
+            "bg-card border-t border-border rounded-t-2xl shadow-xl",
+            "animate-in slide-in-from-bottom duration-300",
+            "flex flex-col overflow-hidden",
           )}
         >
           <div className="flex justify-center pt-2 pb-1 shrink-0">
@@ -306,10 +286,10 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
     <div
       ref={panelRef}
       className={cn(
-        'absolute right-0 z-[100] mt-1.5 w-[min(360px,calc(100vw-2rem))] max-h-[70vh] origin-top-right rounded-xl',
-        'bg-card shadow-xl border border-border',
-        'animate-in fade-in slide-in-from-top-2 duration-200',
-        'flex flex-col overflow-hidden'
+        "absolute right-0 z-[100] mt-1.5 w-[min(360px,calc(100vw-2rem))] max-h-[70vh] origin-top-right rounded-xl",
+        "bg-card shadow-xl border border-border",
+        "animate-in fade-in slide-in-from-top-2 duration-200",
+        "flex flex-col overflow-hidden",
       )}
     >
       <PanelContent {...contentProps} />

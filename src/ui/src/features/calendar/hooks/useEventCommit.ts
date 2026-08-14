@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
-import { useAppDispatch } from '@/app/hooks';
-import { updateEvent } from '@/features/calendar/store/calendarThunks';
+import { useState, useCallback } from "react";
+import { useAppDispatch } from "@/app/hooks";
+import { updateEvent } from "@/features/calendar/store/calendarThunks";
 import type {
   CalendarEvent,
   RecurrenceConfig,
   RecurrenceEditScope,
-} from '@/features/calendar/types';
+} from "@/features/calendar/types";
 
 /** Field subset of an event update; the routing fields are supplied by the commit hook. */
 export interface EventPatch {
@@ -35,21 +35,21 @@ export interface EventPatch {
  * `this_and_following` - so a patch touching one must never be offered a scope.
  */
 const OCCURRENCE_SCOPABLE_FIELDS: (keyof EventPatch)[] = [
-  'title',
-  'description',
-  'startTime',
-  'endTime',
-  'isAllDay',
-  'timezone',
-  'location',
-  'meetingUrl',
-  'categoryId',
-  'isFocusTime',
+  "title",
+  "description",
+  "startTime",
+  "endTime",
+  "isAllDay",
+  "timezone",
+  "location",
+  "meetingUrl",
+  "categoryId",
+  "isFocusTime",
 ];
 
 function isMasterOnly(patch: EventPatch): boolean {
   return (Object.keys(patch) as (keyof EventPatch)[]).some(
-    (field) => patch[field] !== undefined && !OCCURRENCE_SCOPABLE_FIELDS.includes(field)
+    (field) => patch[field] !== undefined && !OCCURRENCE_SCOPABLE_FIELDS.includes(field),
   );
 }
 
@@ -62,21 +62,24 @@ export function useEventCommit(event: CalendarEvent | null) {
   const dispatch = useAppDispatch();
   const [pendingPatch, setPendingPatch] = useState<EventPatch | null>(null);
 
-  const isRecurring = !!event
-    && (event.isRecurring || (event.recurrence != null && event.recurrence.pattern !== 'none'));
+  const isRecurring =
+    !!event &&
+    (event.isRecurring || (event.recurrence != null && event.recurrence.pattern !== "none"));
 
   const dispatchPatch = useCallback(
     (patch: EventPatch, scope?: RecurrenceEditScope) => {
       if (!event) return;
-      dispatch(updateEvent({
-        eventId: event.id,
-        ...patch,
-        recurrenceEditScope: scope,
-        // Only the per-occurrence scopes need the date; the master path ignores it.
-        occurrenceDate: scope && scope !== 'all_events' ? event.occurrenceDate : undefined,
-      }));
+      dispatch(
+        updateEvent({
+          eventId: event.id,
+          ...patch,
+          recurrenceEditScope: scope,
+          // Only the per-occurrence scopes need the date; the master path ignores it.
+          occurrenceDate: scope && scope !== "all_events" ? event.occurrenceDate : undefined,
+        }),
+      );
     },
-    [dispatch, event]
+    [dispatch, event],
   );
 
   const commit = useCallback(
@@ -90,7 +93,7 @@ export function useEventCommit(event: CalendarEvent | null) {
         dispatchPatch(patch);
       }
     },
-    [isRecurring, dispatchPatch]
+    [isRecurring, dispatchPatch],
   );
 
   const resolveScope = useCallback(
@@ -98,7 +101,7 @@ export function useEventCommit(event: CalendarEvent | null) {
       if (pendingPatch) dispatchPatch(pendingPatch, scope);
       setPendingPatch(null);
     },
-    [pendingPatch, dispatchPatch]
+    [pendingPatch, dispatchPatch],
   );
 
   const cancelScope = useCallback(() => setPendingPatch(null), []);

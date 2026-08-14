@@ -1,7 +1,7 @@
-import { Kanban } from '@phosphor-icons/react';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { useAppDispatch } from '@/app/hooks';
-import { openCreateProjectModal } from '@/features/projects/store/projectsUiSlice';
+import { Kanban } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/feedback/EmptyState";
+import { useAppDispatch } from "@/app/hooks";
+import { openCreateProjectModal } from "@/features/projects/store/projectsUiSlice";
 
 export function ProjectsEmptyState() {
   const dispatch = useAppDispatch();
@@ -16,20 +16,21 @@ export function ProjectsEmptyState() {
       shortcutKey="projects.newProject"
       tips={[
         {
-          color: 'primary',
+          color: "primary",
           text: (
             <>
-              Use <kbd className="px-1 rounded bg-muted text-xs">@</kbd> in task descriptions to reference Notes, Files, or People
+              Use <kbd className="px-1 rounded bg-muted text-xs">@</kbd> in task descriptions to
+              reference Notes, Files, or People
             </>
           ),
         },
         {
-          color: 'emerald-500',
-          text: 'Switch between Table, Board, Roadmap, and Graph views',
+          color: "emerald-500",
+          text: "Switch between Table, Board, Roadmap, and Graph views",
         },
         {
-          color: 'amber-500',
-          text: 'Add due dates and assignees to track team progress',
+          color: "amber-500",
+          text: "Add due dates and assignees to track team progress",
         },
       ]}
     />

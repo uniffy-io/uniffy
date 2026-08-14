@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { PencilSimple } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
+import { useState, useEffect, useRef } from "react";
+import { PencilSimple } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
 
 interface InlineTextFieldProps {
   value: string;
@@ -9,7 +9,7 @@ interface InlineTextFieldProps {
   readOnly?: boolean;
   /** Blocks committing an empty value, for fields like title that must stay set. */
   required?: boolean;
-  type?: 'text' | 'url';
+  type?: "text" | "url";
   className?: string;
   inputClassName?: string;
 }
@@ -18,10 +18,10 @@ interface InlineTextFieldProps {
 export function InlineTextField({
   value,
   onCommit,
-  placeholder = 'Not set',
+  placeholder = "Not set",
   readOnly = false,
   required = false,
-  type = 'text',
+  type = "text",
   className,
   inputClassName,
 }: InlineTextFieldProps) {
@@ -31,7 +31,8 @@ export function InlineTextField({
 
   useEffect(() => {
     if (!isEditing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resync when the value changes externally
+      // Resync the draft when the value changes externally, but never mid-edit.
+      // eslint-disable-next-line react/react-compiler
       setDraft(value);
     }
   }, [value, isEditing]);
@@ -54,9 +55,9 @@ export function InlineTextField({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleCommit();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       e.stopPropagation();
       setDraft(value);
       setIsEditing(false);
@@ -74,10 +75,10 @@ export function InlineTextField({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className={cn(
-          'w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground',
-          'placeholder-muted-foreground transition-all',
-          'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary',
-          inputClassName
+          "w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground",
+          "placeholder-muted-foreground transition-all",
+          "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
+          inputClassName,
         )}
       />
     );
@@ -85,7 +86,13 @@ export function InlineTextField({
 
   if (readOnly) {
     return (
-      <span className={cn('text-sm', value ? 'text-foreground' : 'text-muted-foreground italic', className)}>
+      <span
+        className={cn(
+          "text-sm",
+          value ? "text-foreground" : "text-muted-foreground italic",
+          className,
+        )}
+      >
         {value || placeholder}
       </span>
     );
@@ -96,11 +103,16 @@ export function InlineTextField({
       type="button"
       onClick={() => setIsEditing(true)}
       className={cn(
-        'group flex items-center gap-2 w-full text-left rounded px-2 py-1 -mx-2 hover:bg-muted/50 transition-colors',
-        className
+        "group flex items-center gap-2 w-full text-left rounded px-2 py-1 -mx-2 hover:bg-muted/50 transition-colors",
+        className,
       )}
     >
-      <span className={cn('text-sm flex-1 truncate', value ? 'text-foreground' : 'text-muted-foreground italic')}>
+      <span
+        className={cn(
+          "text-sm flex-1 truncate",
+          value ? "text-foreground" : "text-muted-foreground italic",
+        )}
+      >
         {value || placeholder}
       </span>
       <PencilSimple

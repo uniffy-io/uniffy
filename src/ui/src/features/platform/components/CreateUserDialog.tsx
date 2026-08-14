@@ -1,299 +1,296 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-import { ArrowsClockwise, UserPlus, X } from '@phosphor-icons/react';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { friendlyErrorMessage } from '@/config';
-import { platformOrgsApi, platformUsersApi } from '@/features/platform/api/systemDirectoryApi';
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { ArrowsClockwise, UserPlus, X } from "@phosphor-icons/react";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { friendlyErrorMessage } from "@/config";
+import { platformOrgsApi, platformUsersApi } from "@/features/platform/api/systemDirectoryApi";
 
 interface Props {
-    onClose: () => void;
-    onCreated: () => void;
+  onClose: () => void;
+  onCreated: () => void;
 }
 
-const NO_ORG = '';
+const NO_ORG = "";
 
 const ROLE_OPTIONS = [
-    { value: 'MEMBER', label: 'Member' },
-    { value: 'ADMIN', label: 'Admin' },
-    { value: 'OWNER', label: 'Owner' },
+  { value: "MEMBER", label: "Member" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "OWNER", label: "Owner" },
 ];
 
 function usernameFrom(email: string): string {
-    return email
-        .split('@')[0]
-        .toLowerCase()
-        .replace(/[^a-z0-9._-]/g, '')
-        .replace(/^[._-]+/, '');
+  return email
+    .split("@")[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "")
+    .replace(/^[._-]+/, "");
 }
 
 function generatePassword(): string {
-    const alphabet =
-        'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789-_!';
-    const bytes = new Uint32Array(16);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+  const alphabet = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789-_!";
+  const bytes = new Uint32Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
 export function CreateUserDialog({ onClose, onCreated }: Props) {
-    const [email, setEmail] = useState('');
-    const [username, setUsername] = useState('');
-    const [usernameEdited, setUsernameEdited] = useState(false);
-    const [fullName, setFullName] = useState('');
-    const [password, setPassword] = useState('');
-    const [emailVerified, setEmailVerified] = useState(true);
-    const [isSystemAdmin, setIsSystemAdmin] = useState(false);
-    const [organizationId, setOrganizationId] = useState(NO_ORG);
-    const [role, setRole] = useState('MEMBER');
-    const [reason, setReason] = useState('');
-    const [orgOptions, setOrgOptions] = useState<Array<{ value: string; label: string }>>([]);
-    const [submitting, setSubmitting] = useState(false);
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameEdited, setUsernameEdited] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailVerified, setEmailVerified] = useState(true);
+  const [isSystemAdmin, setIsSystemAdmin] = useState(false);
+  const [organizationId, setOrganizationId] = useState(NO_ORG);
+  const [role, setRole] = useState("MEMBER");
+  const [reason, setReason] = useState("");
+  const [orgOptions, setOrgOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        platformOrgsApi
-            .list({ page: 0, pageSize: 200 })
-            .then((response) => {
-                setOrgOptions([
-                    { value: NO_ORG, label: 'No organization' },
-                    ...response.organizations.map((o) => ({
-                        value: o.id,
-                        label: o.name,
-                    })),
-                ]);
-            })
-            .catch(() => {
-                setOrgOptions([{ value: NO_ORG, label: 'No organization' }]);
-            });
-    }, []);
+  useEffect(() => {
+    platformOrgsApi
+      .list({ page: 0, pageSize: 200 })
+      .then((response) => {
+        setOrgOptions([
+          { value: NO_ORG, label: "No organization" },
+          ...response.organizations.map((o) => ({
+            value: o.id,
+            label: o.name,
+          })),
+        ]);
+      })
+      .catch(() => {
+        setOrgOptions([{ value: NO_ORG, label: "No organization" }]);
+      });
+  }, []);
 
-    const effectiveUsername = usernameEdited ? username : usernameFrom(email);
-    const canSubmit =
-        email.trim().includes('@') && password.length >= 8 && reason.trim().length > 0;
+  const effectiveUsername = usernameEdited ? username : usernameFrom(email);
+  const canSubmit = email.trim().includes("@") && password.length >= 8 && reason.trim().length > 0;
 
-    const handleSubmit = async () => {
-        if (!canSubmit) return;
-        setSubmitting(true);
-        try {
-            await platformUsersApi.create({
-                email: email.trim(),
-                username: effectiveUsername,
-                fullName: fullName.trim(),
-                password,
-                emailVerified,
-                isSystemAdmin,
-                organizationId,
-                organizationRole: organizationId ? role : '',
-                reason: reason.trim(),
-            });
-            toast.success(`Created ${email.trim()}`);
-            onCreated();
-            onClose();
-        } catch (error) {
-            const message = friendlyErrorMessage((error as Error).message);
-            if (message) toast.error(message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    try {
+      await platformUsersApi.create({
+        email: email.trim(),
+        username: effectiveUsername,
+        fullName: fullName.trim(),
+        password,
+        emailVerified,
+        isSystemAdmin,
+        organizationId,
+        organizationRole: organizationId ? role : "",
+        reason: reason.trim(),
+      });
+      toast.success(`Created ${email.trim()}`);
+      onCreated();
+      onClose();
+    } catch (error) {
+      const message = friendlyErrorMessage((error as Error).message);
+      if (message) toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    return (
-        <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
-            <div className="flex items-start gap-3 p-4 border-b border-border">
-                <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                    <UserPlus size={20} weight="duotone" className="text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="text-base font-semibold text-foreground">Create user</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                        Direct provisioning, no invitation email. Hand the password
-                        over out of band.
-                    </div>
-                </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={submitting}
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label="Close"
-                >
-                    <X size={16} weight="bold" />
-                </button>
+  return (
+    <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
+      <div className="flex items-start gap-3 p-4 border-b border-border">
+        <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+          <UserPlus size={20} weight="duotone" className="text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-base font-semibold text-foreground">Create user</div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            Direct provisioning, no invitation email. Hand the password over out of band.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={submitting}
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Close"
+        >
+          <X size={16} weight="bold" />
+        </button>
+      </div>
+
+      <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+        <div>
+          <label
+            htmlFor="user-create-email"
+            className="text-xs font-medium text-muted-foreground block mb-1"
+          >
+            Email
+          </label>
+          <Input
+            id="user-create-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="jane@acme.com"
+            disabled={submitting}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label
+              htmlFor="user-create-username"
+              className="text-xs font-medium text-muted-foreground block mb-1"
+            >
+              Username
+            </label>
+            <Input
+              id="user-create-username"
+              value={effectiveUsername}
+              onChange={(e) => {
+                setUsernameEdited(true);
+                setUsername(e.target.value.toLowerCase());
+              }}
+              placeholder="jane"
+              className="font-mono"
+              disabled={submitting}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="user-create-name"
+              className="text-xs font-medium text-muted-foreground block mb-1"
+            >
+              Full name
+            </label>
+            <Input
+              id="user-create-name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Jane Doe"
+              disabled={submitting}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor="user-create-password"
+            className="text-xs font-medium text-muted-foreground block mb-1"
+          >
+            Password
+          </label>
+          <div className="flex gap-2">
+            <Input
+              id="user-create-password"
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="12+ characters"
+              className="font-mono"
+              disabled={submitting}
+            />
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setPassword(generatePassword())}
+              disabled={submitting}
+              aria-label="Generate password"
+            >
+              <ArrowsClockwise size={14} weight="bold" />
+              Generate
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            12+ characters, or 8-11 mixing case, digits and symbols.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1">
+              Organization
+            </label>
+            <Select
+              value={organizationId}
+              onChange={setOrganizationId}
+              options={orgOptions}
+              disabled={submitting}
+              ariaLabel="Organization"
+            />
+          </div>
+          {organizationId !== NO_ORG && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1">
+                Org role
+              </label>
+              <Select
+                value={role}
+                onChange={setRole}
+                options={ROLE_OPTIONS}
+                disabled={submitting}
+                ariaLabel="Organization role"
+              />
             </div>
+          )}
+        </div>
 
-            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-                <div>
-                    <label
-                        htmlFor="user-create-email"
-                        className="text-xs font-medium text-muted-foreground block mb-1"
-                    >
-                        Email
-                    </label>
-                    <Input
-                        id="user-create-email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="jane@acme.com"
-                        disabled={submitting}
-                    />
-                </div>
+        <div className="space-y-2">
+          <Checkbox
+            label="Email verified"
+            checked={emailVerified}
+            onChange={(e) => setEmailVerified(e.target.checked)}
+            disabled={submitting}
+          />
+          <Checkbox
+            label="System admin (platform operator)"
+            checked={isSystemAdmin}
+            onChange={(e) => setIsSystemAdmin(e.target.checked)}
+            disabled={submitting}
+          />
+        </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label
-                            htmlFor="user-create-username"
-                            className="text-xs font-medium text-muted-foreground block mb-1"
-                        >
-                            Username
-                        </label>
-                        <Input
-                            id="user-create-username"
-                            value={effectiveUsername}
-                            onChange={(e) => {
-                                setUsernameEdited(true);
-                                setUsername(e.target.value.toLowerCase());
-                            }}
-                            placeholder="jane"
-                            className="font-mono"
-                            disabled={submitting}
-                        />
-                    </div>
-                    <div>
-                        <label
-                            htmlFor="user-create-name"
-                            className="text-xs font-medium text-muted-foreground block mb-1"
-                        >
-                            Full name
-                        </label>
-                        <Input
-                            id="user-create-name"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            placeholder="Jane Doe"
-                            disabled={submitting}
-                        />
-                    </div>
-                </div>
+        <div>
+          <label
+            htmlFor="user-create-reason"
+            className="block text-xs font-medium text-foreground mb-1"
+          >
+            Reason
+          </label>
+          <Input
+            id="user-create-reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Why this account is being provisioned"
+            disabled={submitting}
+          />
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Recorded in the audit log alongside the new account.
+          </p>
+        </div>
 
-                <div>
-                    <label
-                        htmlFor="user-create-password"
-                        className="text-xs font-medium text-muted-foreground block mb-1"
-                    >
-                        Password
-                    </label>
-                    <div className="flex gap-2">
-                        <Input
-                            id="user-create-password"
-                            type="text"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="12+ characters"
-                            className="font-mono"
-                            disabled={submitting}
-                        />
-                        <Button
-                            variant="outline"
-                            size="lg"
-                            onClick={() => setPassword(generatePassword())}
-                            disabled={submitting}
-                            aria-label="Generate password"
-                        >
-                            <ArrowsClockwise size={14} weight="bold" />
-                            Generate
-                        </Button>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                        12+ characters, or 8-11 mixing case, digits and symbols.
-                    </p>
-                </div>
+        <p className="text-[10px] text-muted-foreground">
+          Two-factor enrollment happens at first sign-in when the organization's security policy
+          requires it.
+        </p>
+      </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="text-xs font-medium text-muted-foreground block mb-1">
-                            Organization
-                        </label>
-                        <Select
-                            value={organizationId}
-                            onChange={setOrganizationId}
-                            options={orgOptions}
-                            disabled={submitting}
-                            ariaLabel="Organization"
-                        />
-                    </div>
-                    {organizationId !== NO_ORG && (
-                        <div>
-                            <label className="text-xs font-medium text-muted-foreground block mb-1">
-                                Org role
-                            </label>
-                            <Select
-                                value={role}
-                                onChange={setRole}
-                                options={ROLE_OPTIONS}
-                                disabled={submitting}
-                                ariaLabel="Organization role"
-                            />
-                        </div>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <Checkbox
-                        label="Email verified"
-                        checked={emailVerified}
-                        onChange={(e) => setEmailVerified(e.target.checked)}
-                        disabled={submitting}
-                    />
-                    <Checkbox
-                        label="System admin (platform operator)"
-                        checked={isSystemAdmin}
-                        onChange={(e) => setIsSystemAdmin(e.target.checked)}
-                        disabled={submitting}
-                    />
-                </div>
-
-                <div>
-                    <label
-                        htmlFor="user-create-reason"
-                        className="block text-xs font-medium text-foreground mb-1"
-                    >
-                        Reason
-                    </label>
-                    <Input
-                        id="user-create-reason"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        placeholder="Why this account is being provisioned"
-                        disabled={submitting}
-                    />
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Recorded in the audit log alongside the new account.
-                    </p>
-                </div>
-
-                <p className="text-[10px] text-muted-foreground">
-                    Two-factor enrollment happens at first sign-in when the
-                    organization's security policy requires it.
-                </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
-                <Button variant="ghost" size="md" onClick={onClose} disabled={submitting}>
-                    Cancel
-                </Button>
-                <Button
-                    variant="default"
-                    size="md"
-                    onClick={handleSubmit}
-                    disabled={submitting || !canSubmit}
-                >
-                    <UserPlus size={14} weight="duotone" />
-                    Create user
-                </Button>
-            </div>
-        </Modal>
-    );
+      <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
+        <Button variant="ghost" size="md" onClick={onClose} disabled={submitting}>
+          Cancel
+        </Button>
+        <Button
+          variant="default"
+          size="md"
+          onClick={handleSubmit}
+          disabled={submitting || !canSubmit}
+        >
+          <UserPlus size={14} weight="duotone" />
+          Create user
+        </Button>
+      </div>
+    </Modal>
+  );
 }

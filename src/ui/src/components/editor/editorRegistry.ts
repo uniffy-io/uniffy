@@ -1,5 +1,5 @@
-import type { Editor } from '@milkdown/core';
-import type { EditorView } from '@milkdown/prose/view';
+import type { Editor } from "@milkdown/core";
+import type { EditorView } from "@milkdown/prose/view";
 
 export interface EditorRegistryEntry {
   editor: Editor;
@@ -37,10 +37,10 @@ export function registerEditor(entry: EditorRegistryEntry): () => void {
   setActive(entry);
 
   const onFocus = () => setActive(entry);
-  entry.view.dom.addEventListener('focusin', onFocus);
+  entry.view.dom.addEventListener("focusin", onFocus);
 
   return () => {
-    entry.view.dom.removeEventListener('focusin', onFocus);
+    entry.view.dom.removeEventListener("focusin", onFocus);
     entries.delete(entry);
     if (activeEntry === entry) {
       const next = entries.values().next().value ?? null;

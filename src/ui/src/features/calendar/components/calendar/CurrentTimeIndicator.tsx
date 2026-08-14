@@ -1,15 +1,12 @@
-import { useCurrentTime } from '@/features/calendar/hooks';
-import type { DayColumn } from '@/features/calendar/types';
+import { useCurrentTime } from "@/features/calendar/hooks";
+import type { DayColumn } from "@/features/calendar/types";
 
 interface CurrentTimeIndicatorProps {
   days: DayColumn[];
   topOffset?: number;
 }
 
-export function CurrentTimeIndicator({
-  days,
-  topOffset = 0,
-}: CurrentTimeIndicatorProps) {
+export function CurrentTimeIndicator({ days, topOffset = 0 }: CurrentTimeIndicatorProps) {
   const { position } = useCurrentTime();
 
   const todayIndex = days.findIndex((day) => day.isToday);
@@ -36,30 +33,25 @@ export function CurrentTimeIndicator({
             className="flex items-center"
             style={{ width: `${columnWidth}%` }}
           >
-            {isToday && (
-              <div className="w-3 h-3 rounded-full -ml-1.5 bg-primary flex-shrink-0" />
-            )}
+            {isToday && <div className="w-3 h-3 rounded-full -ml-1.5 bg-primary flex-shrink-0" />}
 
             <div
               className={`flex-1 h-0.5 ${
-                isPast
-                  ? 'bg-muted-foreground/40'
-                  : isToday
-                  ? 'bg-primary/80'
-                  : 'bg-primary/60'
+                isPast ? "bg-muted-foreground/40" : isToday ? "bg-primary/80" : "bg-primary/60"
               }`}
               style={{
-                backgroundImage: isPast || isFuture
-                  ? `repeating-linear-gradient(
+                backgroundImage:
+                  isPast || isFuture
+                    ? `repeating-linear-gradient(
                       to right,
                       currentColor,
                       currentColor 4px,
                       transparent 4px,
                       transparent 8px
                     )`
-                  : undefined,
-                backgroundColor: isPast || isFuture ? 'transparent' : undefined,
-                color: isPast ? 'hsl(var(--muted-foreground) / 0.4)' : 'hsl(var(--primary) / 0.6)',
+                    : undefined,
+                backgroundColor: isPast || isFuture ? "transparent" : undefined,
+                color: isPast ? "hsl(var(--muted-foreground) / 0.4)" : "hsl(var(--primary) / 0.6)",
               }}
             />
           </div>
@@ -82,7 +74,7 @@ export function DayCurrentTimeIndicator({
 }: DayCurrentTimeIndicatorProps) {
   const { position } = useCurrentTime(undefined, hourHeight);
 
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const dateObj = typeof date === "string" ? new Date(date) : date;
   const today = new Date();
   const isToday = dateObj.toDateString() === today.toDateString();
 

@@ -35,12 +35,8 @@ export const agentsUiSlice = createSlice({
   },
 });
 
-export const {
-  setLastSection,
-  toggleSidebar,
-  setSidebarCollapsed,
-  resetState,
-} = agentsUiSlice.actions;
+export const { setLastSection, toggleSidebar, setSidebarCollapsed, resetState } =
+  agentsUiSlice.actions;
 
 // A stale persisted value (removed section names, old tab ids) resolves to Agents.
 export const selectLastSection = (state: RootState): AgentsSection =>

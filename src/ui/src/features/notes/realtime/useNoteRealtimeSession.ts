@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import * as Y from 'yjs';
-import { useAppSelector } from '@/app/hooks';
+import { useEffect, useMemo, useState } from "react";
+import * as Y from "yjs";
+import { useAppSelector } from "@/app/hooks";
 import {
   realtimeMultiplexer,
   useDocSession,
   useOutboundSyncing,
   type RealtimeStatus,
-} from '@/features/realtime';
-import { PROSEMIRROR_FRAGMENT_FIELD } from '@/features/notes/realtime/markdown';
-import { registerLiveNoteDoc } from '@/features/notes/realtime/liveNoteDocs';
-import type { CrepeRealtimeBinding } from '@/components/editor/CrepeEditor';
+} from "@/features/realtime";
+import { PROSEMIRROR_FRAGMENT_FIELD } from "@/features/notes/realtime/markdown";
+import { registerLiveNoteDoc } from "@/features/notes/realtime/liveNoteDocs";
+import type { CrepeRealtimeBinding } from "@/components/editor/CrepeEditor";
 
 export function useNoteRealtimeSession(
   noteId: string | null,
@@ -20,7 +20,7 @@ export function useNoteRealtimeSession(
   status: RealtimeStatus;
 } {
   const session = useDocSession({
-    contentType: 'NOTE',
+    contentType: "NOTE",
     contentId: noteId,
     enabled: enabled && Boolean(noteId),
   });
@@ -48,7 +48,7 @@ export function useNoteRealtimeSession(
 
   useEffect(() => {
     if (!session || !canEdit) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset undo manager when the session drops
+      // eslint-disable-next-line react/react-compiler -- reset undo manager when the session drops
       setUndoManager(null);
       return;
     }
@@ -69,22 +69,15 @@ export function useNoteRealtimeSession(
   // Awareness user payload in its own effect so avatar/name changes do not rebuild UndoManager (would drop undo history).
   useEffect(() => {
     if (!session) return;
-    session.awareness.setLocalStateField('user', {
+    session.awareness.setLocalStateField("user", {
       id: user?.id ?? null,
       // Peers paint carets, labels and avatars from the name via
       // ``identityPaint``, so no color travels on the wire.
-      name: user?.fullName ?? user?.username ?? 'Anonymous',
+      name: user?.fullName ?? user?.username ?? "Anonymous",
       avatarUrl: user?.avatarUrl ?? null,
       hasAvatar: user?.hasAvatar ?? false,
     });
-  }, [
-    session,
-    user?.id,
-    user?.fullName,
-    user?.username,
-    user?.hasAvatar,
-    user?.avatarUrl,
-  ]);
+  }, [session, user?.id, user?.fullName, user?.username, user?.hasAvatar, user?.avatarUrl]);
 
   const syncing = useOutboundSyncing(docName);
 
@@ -99,11 +92,11 @@ export function useNoteRealtimeSession(
     };
   }, [session, undoManager]);
 
-  const baseStatus = session?.status ?? 'idle';
+  const baseStatus = session?.status ?? "idle";
   const status: RealtimeStatus =
     syncing &&
-    (baseStatus === 'connected' || baseStatus === 'connecting' || baseStatus === 'disconnected')
-      ? 'syncing'
+    (baseStatus === "connected" || baseStatus === "connecting" || baseStatus === "disconnected")
+      ? "syncing"
       : baseStatus;
 
   return { binding, status };

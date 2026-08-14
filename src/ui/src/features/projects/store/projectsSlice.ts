@@ -132,32 +132,47 @@ export const projectsSlice = createSlice({
       });
     },
 
-    addFieldDefinition: (state, action: PayloadAction<{ projectId: string; field: FieldDefinition }>) => {
+    addFieldDefinition: (
+      state,
+      action: PayloadAction<{ projectId: string; field: FieldDefinition }>,
+    ) => {
       const project = state.projects[action.payload.projectId];
       if (project) {
         project.fieldDefinitions.push(action.payload.field);
       }
     },
 
-    removeFieldDefinition: (state, action: PayloadAction<{ projectId: string; fieldId: string }>) => {
+    removeFieldDefinition: (
+      state,
+      action: PayloadAction<{ projectId: string; fieldId: string }>,
+    ) => {
       const project = state.projects[action.payload.projectId];
       if (project) {
         project.fieldDefinitions = project.fieldDefinitions.filter(
-          (f) => f.id !== action.payload.fieldId
+          (f) => f.id !== action.payload.fieldId,
         );
       }
     },
 
-    updateFieldDefinition: (state, action: PayloadAction<{ projectId: string; fieldId: string; changes: Partial<FieldDefinition> }>) => {
+    updateFieldDefinition: (
+      state,
+      action: PayloadAction<{
+        projectId: string;
+        fieldId: string;
+        changes: Partial<FieldDefinition>;
+      }>,
+    ) => {
       const project = state.projects[action.payload.projectId];
       if (project) {
         const idx = project.fieldDefinitions.findIndex((f) => f.id === action.payload.fieldId);
         if (idx !== -1) {
-          project.fieldDefinitions[idx] = { ...project.fieldDefinitions[idx], ...action.payload.changes };
+          project.fieldDefinitions[idx] = {
+            ...project.fieldDefinitions[idx],
+            ...action.payload.changes,
+          };
         }
       }
     },
-
   },
   extraReducers: (builder) => {
     builder
@@ -172,7 +187,7 @@ export const projectsSlice = createSlice({
             acc[project.id] = project;
             return acc;
           },
-          {} as Record<string, Project>
+          {} as Record<string, Project>,
         );
         if (!state.currentProjectId && action.payload.length > 0) {
           state.currentProjectId = action.payload[0].id;
@@ -180,15 +195,15 @@ export const projectsSlice = createSlice({
       })
       .addCase(fetchProjects.rejected, (state, action) => {
         state.loading.projects = false;
-        state.errors.projects = (action.payload as string) || action.error.message || "Failed to fetch projects";
+        state.errors.projects =
+          (action.payload as string) || action.error.message || "Failed to fetch projects";
       });
 
-    builder
-      .addCase(fetchProject.fulfilled, (state, action) => {
-        if (action.payload) {
-          state.projects[action.payload.id] = action.payload;
-        }
-      });
+    builder.addCase(fetchProject.fulfilled, (state, action) => {
+      if (action.payload) {
+        state.projects[action.payload.id] = action.payload;
+      }
+    });
 
     builder
       .addCase(fetchProjectTasks.pending, (state) => {
@@ -203,7 +218,8 @@ export const projectsSlice = createSlice({
       })
       .addCase(fetchProjectTasks.rejected, (state, action) => {
         state.loading.tasks = false;
-        state.errors.tasks = (action.payload as string) || action.error.message || "Failed to fetch tasks";
+        state.errors.tasks =
+          (action.payload as string) || action.error.message || "Failed to fetch tasks";
       });
 
     builder
@@ -217,7 +233,8 @@ export const projectsSlice = createSlice({
       })
       .addCase(createProject.rejected, (state, action) => {
         state.loading.creating = false;
-        state.errors.general = (action.payload as string) || action.error.message || "Failed to create project";
+        state.errors.general =
+          (action.payload as string) || action.error.message || "Failed to create project";
       });
 
     builder
@@ -230,7 +247,8 @@ export const projectsSlice = createSlice({
       })
       .addCase(updateProject.rejected, (state, action) => {
         state.loading.updating = null;
-        state.errors.general = (action.payload as string) || action.error.message || "Failed to update project";
+        state.errors.general =
+          (action.payload as string) || action.error.message || "Failed to update project";
       });
 
     builder
@@ -252,7 +270,8 @@ export const projectsSlice = createSlice({
       })
       .addCase(deleteProject.rejected, (state, action) => {
         state.loading.deleting = null;
-        state.errors.general = (action.payload as string) || action.error.message || "Failed to delete project";
+        state.errors.general =
+          (action.payload as string) || action.error.message || "Failed to delete project";
       });
 
     builder
@@ -269,7 +288,8 @@ export const projectsSlice = createSlice({
       })
       .addCase(createTask.rejected, (state, action) => {
         state.loading.creating = false;
-        state.errors.general = (action.payload as string) || action.error.message || "Failed to create task";
+        state.errors.general =
+          (action.payload as string) || action.error.message || "Failed to create task";
       });
 
     builder
@@ -291,7 +311,8 @@ export const projectsSlice = createSlice({
       })
       .addCase(updateTask.rejected, (state, action) => {
         state.loading.updating = null;
-        state.errors.general = (action.payload as string) || action.error.message || "Failed to update task";
+        state.errors.general =
+          (action.payload as string) || action.error.message || "Failed to update task";
         if (state._pendingTaskSnapshot) {
           const snapshot = state._pendingTaskSnapshot;
           state.tasks[snapshot.id] = snapshot;
@@ -319,7 +340,8 @@ export const projectsSlice = createSlice({
         state._pendingParentSnapshots = undefined;
       })
       .addCase(moveTask.rejected, (state, action) => {
-        state.errors.general = (action.payload as string) || action.error.message || "Failed to move task";
+        state.errors.general =
+          (action.payload as string) || action.error.message || "Failed to move task";
         if (state._pendingTaskSnapshot) {
           const snapshot = state._pendingTaskSnapshot;
           state.tasks[snapshot.id] = snapshot;
@@ -352,7 +374,8 @@ export const projectsSlice = createSlice({
       })
       .addCase(deleteTask.rejected, (state, action) => {
         state.loading.deleting = null;
-        state.errors.general = (action.payload as string) || action.error.message || "Failed to delete task";
+        state.errors.general =
+          (action.payload as string) || action.error.message || "Failed to delete task";
       });
 
     builder
@@ -375,92 +398,83 @@ export const projectsSlice = createSlice({
       })
       .addCase(deleteTasks.rejected, (state, action) => {
         state.loading.deleting = null;
-        state.errors.general = (action.payload as string) || action.error.message || "Failed to delete tasks";
+        state.errors.general =
+          (action.payload as string) || action.error.message || "Failed to delete tasks";
       });
 
-    builder
-      .addCase(createFieldThunk.fulfilled, (state, action) => {
-        const field = action.payload;
-        const project = state.projects[field.projectId];
-        if (project) {
-          const idx = project.fieldDefinitions.findIndex((f) => f.id === field.id);
-          if (idx !== -1) {
-            project.fieldDefinitions[idx] = field;
-          } else {
-            project.fieldDefinitions.push(field);
-          }
+    builder.addCase(createFieldThunk.fulfilled, (state, action) => {
+      const field = action.payload;
+      const project = state.projects[field.projectId];
+      if (project) {
+        const idx = project.fieldDefinitions.findIndex((f) => f.id === field.id);
+        if (idx !== -1) {
+          project.fieldDefinitions[idx] = field;
+        } else {
+          project.fieldDefinitions.push(field);
         }
-      });
+      }
+    });
 
-    builder
-      .addCase(updateFieldThunk.fulfilled, (state, action) => {
-        const field = action.payload;
-        const project = state.projects[field.projectId];
-        if (project) {
-          const idx = project.fieldDefinitions.findIndex((f) => f.id === field.id);
-          if (idx !== -1) {
-            project.fieldDefinitions[idx] = field;
-          }
+    builder.addCase(updateFieldThunk.fulfilled, (state, action) => {
+      const field = action.payload;
+      const project = state.projects[field.projectId];
+      if (project) {
+        const idx = project.fieldDefinitions.findIndex((f) => f.id === field.id);
+        if (idx !== -1) {
+          project.fieldDefinitions[idx] = field;
         }
-      });
+      }
+    });
 
-    builder
-      .addCase(deleteFieldThunk.fulfilled, (state, action) => {
-        const { projectId, fieldId } = action.payload;
-        const project = state.projects[projectId];
-        if (project) {
-          project.fieldDefinitions = project.fieldDefinitions.filter(
-            (f) => f.id !== fieldId
-          );
+    builder.addCase(deleteFieldThunk.fulfilled, (state, action) => {
+      const { projectId, fieldId } = action.payload;
+      const project = state.projects[projectId];
+      if (project) {
+        project.fieldDefinitions = project.fieldDefinitions.filter((f) => f.id !== fieldId);
+      }
+    });
+
+    builder.addCase(createViewThunk.fulfilled, (state, action) => {
+      const view = action.payload;
+      const project = state.projects[view.projectId];
+      if (project) {
+        const idx = project.views.findIndex((v) => v.id === view.id);
+        if (idx !== -1) {
+          project.views[idx] = view;
+        } else {
+          project.views.push(view);
         }
-      });
+      }
+    });
 
-    builder
-      .addCase(createViewThunk.fulfilled, (state, action) => {
-        const view = action.payload;
-        const project = state.projects[view.projectId];
-        if (project) {
-          const idx = project.views.findIndex((v) => v.id === view.id);
-          if (idx !== -1) {
-            project.views[idx] = view;
-          } else {
-            project.views.push(view);
-          }
+    builder.addCase(updateViewThunk.fulfilled, (state, action) => {
+      const view = action.payload;
+      const project = state.projects[view.projectId];
+      if (project) {
+        const idx = project.views.findIndex((v) => v.id === view.id);
+        if (idx !== -1) {
+          project.views[idx] = view;
         }
-      });
+      }
+    });
 
-    builder
-      .addCase(updateViewThunk.fulfilled, (state, action) => {
-        const view = action.payload;
-        const project = state.projects[view.projectId];
-        if (project) {
-          const idx = project.views.findIndex((v) => v.id === view.id);
-          if (idx !== -1) {
-            project.views[idx] = view;
-          }
-        }
-      });
+    builder.addCase(deleteViewThunk.fulfilled, (state, action) => {
+      const { projectId, viewId } = action.payload;
+      const project = state.projects[projectId];
+      if (project) {
+        project.views = project.views.filter((v) => v.id !== viewId);
+      }
+    });
 
-    builder
-      .addCase(deleteViewThunk.fulfilled, (state, action) => {
-        const { projectId, viewId } = action.payload;
-        const project = state.projects[projectId];
-        if (project) {
-          project.views = project.views.filter((v) => v.id !== viewId);
-        }
+    builder.addCase(bulkUpdateTasksThunk.fulfilled, (state, action) => {
+      action.payload.forEach((task) => {
+        state.tasks[task.id] = task;
       });
+    });
 
-    builder
-      .addCase(bulkUpdateTasksThunk.fulfilled, (state, action) => {
-        action.payload.forEach((task) => {
-          state.tasks[task.id] = task;
-        });
-      });
-
-    builder
-      .addCase(fetchActivities.fulfilled, (state, action) => {
-        state.activities[action.payload.taskId] = action.payload.activities;
-      });
+    builder.addCase(fetchActivities.fulfilled, (state, action) => {
+      state.activities[action.payload.taskId] = action.payload.activities;
+    });
   },
 });
 
@@ -477,51 +491,40 @@ export const {
 
 const selectProjectsState = (state: RootState) => state.projects;
 
-export const selectProjects = createSelector(
-  [selectProjectsState],
-  (state) => Object.values(state.projects)
+export const selectProjects = createSelector([selectProjectsState], (state) =>
+  Object.values(state.projects),
 );
 
-export const selectProjectById = (id: string) => createSelector(
-  [selectProjectsState],
-  (state) => state.projects[id]
-);
+export const selectProjectById = (id: string) =>
+  createSelector([selectProjectsState], (state) => state.projects[id]);
 
 export const selectCurrentProjectId = createSelector(
   [selectProjectsState],
-  (state) => state.currentProjectId
+  (state) => state.currentProjectId,
 );
 
 export const selectCurrentProject = createSelector(
   [selectProjectsState, selectCurrentProjectId],
-  (state, currentId) => (currentId ? state.projects[currentId] : null)
+  (state, currentId) => (currentId ? state.projects[currentId] : null),
 );
 
-export const selectAllTasks = createSelector(
-  [selectProjectsState],
-  (state) => Object.values(state.tasks)
+export const selectAllTasks = createSelector([selectProjectsState], (state) =>
+  Object.values(state.tasks),
 );
 
 export const selectTasksMap = (state: RootState) => state.projects.tasks;
 
-export const selectTaskById = (id: string) => createSelector(
-  [selectProjectsState],
-  (state) => state.tasks[id]
-);
+export const selectTaskById = (id: string) =>
+  createSelector([selectProjectsState], (state) => state.tasks[id]);
 
-export const selectSubtasksByParentId = (parentId: string) => createSelector(
-  [selectAllTasks],
-  (tasks) => tasks.filter((t) => t.parentId === parentId)
-);
+export const selectSubtasksByParentId = (parentId: string) =>
+  createSelector([selectAllTasks], (tasks) => tasks.filter((t) => t.parentId === parentId));
 
-export const selectTasksForProject = (projectId: string) => createSelector(
-  [selectAllTasks],
-  (tasks) => tasks.filter((t) => t.projectId === projectId)
-);
+export const selectTasksForProject = (projectId: string) =>
+  createSelector([selectAllTasks], (tasks) => tasks.filter((t) => t.projectId === projectId));
 
-export const selectTasksByStatus = (projectId: string) => createSelector(
-  [selectTasksForProject(projectId)],
-  (tasks) => {
+export const selectTasksByStatus = (projectId: string) =>
+  createSelector([selectTasksForProject(projectId)], (tasks) => {
     return tasks.reduce(
       (acc, task) => {
         if (!acc[task.status]) {
@@ -531,14 +534,12 @@ export const selectTasksByStatus = (projectId: string) => createSelector(
         acc[task.status].sort((a, b) => a.sortOrder - b.sortOrder);
         return acc;
       },
-      {} as Record<string, Task[]>
+      {} as Record<string, Task[]>,
     );
-  }
-);
+  });
 
-export const selectProjectTimeStats = (projectId: string) => createSelector(
-  [selectTasksForProject(projectId)],
-  (tasks) => {
+export const selectProjectTimeStats = (projectId: string) =>
+  createSelector([selectTasksForProject(projectId)], (tasks) => {
     let totalEstimated = 0;
     let totalSpent = 0;
 
@@ -553,39 +554,33 @@ export const selectProjectTimeStats = (projectId: string) => createSelector(
       remaining: Math.max(0, totalEstimated - totalSpent),
       hasTimeData: totalEstimated > 0 || totalSpent > 0,
     };
-  }
-);
+  });
 
-export const selectProjectCompletion = createSelector(
-  [selectAllTasks],
-  (tasks) => {
-    const projectStats: Record<string, { total: number; completed: number }> = {};
-  
-    tasks.forEach(task => {
-      if (task.parentId) return;
-      if (!projectStats[task.projectId]) {
-        projectStats[task.projectId] = { total: 0, completed: 0 };
-      }
-      projectStats[task.projectId].total++;
-      if (task.completedAt) {
-        projectStats[task.projectId].completed++;
-      }
-    });
-  
-    const completionRates: Record<string, number> = {};
-    Object.keys(projectStats).forEach(pid => {
-      const stats = projectStats[pid];
-      completionRates[pid] = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
-    });
-  
-    return completionRates;
-  }
-);
+export const selectProjectCompletion = createSelector([selectAllTasks], (tasks) => {
+  const projectStats: Record<string, { total: number; completed: number }> = {};
 
-export const selectActivitiesForTask = (taskId: string) => createSelector(
-  [selectProjectsState],
-  (state) => state.activities[taskId] ?? []
-);
+  tasks.forEach((task) => {
+    if (task.parentId) return;
+    if (!projectStats[task.projectId]) {
+      projectStats[task.projectId] = { total: 0, completed: 0 };
+    }
+    projectStats[task.projectId].total++;
+    if (task.completedAt) {
+      projectStats[task.projectId].completed++;
+    }
+  });
+
+  const completionRates: Record<string, number> = {};
+  Object.keys(projectStats).forEach((pid) => {
+    const stats = projectStats[pid];
+    completionRates[pid] = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+  });
+
+  return completionRates;
+});
+
+export const selectActivitiesForTask = (taskId: string) =>
+  createSelector([selectProjectsState], (state) => state.activities[taskId] ?? []);
 
 export const selectProjectsLoading = (state: RootState) => state.projects.loading;
 

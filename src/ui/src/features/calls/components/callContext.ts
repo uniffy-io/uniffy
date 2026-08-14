@@ -1,5 +1,5 @@
-import { createContext, useContext } from 'react';
-import type { Room } from 'livekit-client';
+import { createContext, useContext } from "react";
+import type { Room } from "livekit-client";
 
 export interface JoinMediaOptions {
   micEnabled: boolean;
@@ -24,6 +24,6 @@ export const CallContext = createContext<CallContextValue | null>(null);
 
 export function useCall(): CallContextValue {
   const ctx = useContext(CallContext);
-  if (!ctx) throw new Error('useCall must be used within CallProvider');
+  if (!ctx) throw new Error("useCall must be used within CallProvider");
   return ctx;
 }

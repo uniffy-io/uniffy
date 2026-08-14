@@ -21,29 +21,16 @@ export function BacklogView() {
 
   const allTasks = useFilteredTasks(project?.id ?? "");
 
-  const sprints = useAppSelector(
-    project ? selectSprintsForProject(project.id) : () => []
-  );
-  const activeSprint = useAppSelector(
-    project ? selectActiveSprint(project.id) : () => null
-  );
+  const sprints = useAppSelector(project ? selectSprintsForProject(project.id) : () => []);
+  const activeSprint = useAppSelector(project ? selectActiveSprint(project.id) : () => null);
 
   const [showClosed, setShowClosed] = useState(false);
 
-  const plannedSprints = useMemo(
-    () => sprints.filter((s) => s.status === "planned"),
-    [sprints]
-  );
+  const plannedSprints = useMemo(() => sprints.filter((s) => s.status === "planned"), [sprints]);
 
-  const closedSprints = useMemo(
-    () => sprints.filter((s) => s.status === "closed"),
-    [sprints]
-  );
+  const closedSprints = useMemo(() => sprints.filter((s) => s.status === "closed"), [sprints]);
 
-  const backlogTasks = useMemo(
-    () => allTasks.filter((t: Task) => t.sprintId === null),
-    [allTasks]
-  );
+  const backlogTasks = useMemo(() => allTasks.filter((t: Task) => t.sprintId === null), [allTasks]);
 
   if (!project) return null;
 
@@ -83,7 +70,9 @@ export function BacklogView() {
               onClick={() => setShowClosed(!showClosed)}
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-1 py-1"
             >
-              <span>{showClosed ? "Hide" : "Show"} closed sprints ({closedSprints.length})</span>
+              <span>
+                {showClosed ? "Hide" : "Show"} closed sprints ({closedSprints.length})
+              </span>
             </button>
             {showClosed &&
               closedSprints.map((sprint) => (

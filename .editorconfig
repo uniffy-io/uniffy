@@ -1,0 +1,28 @@
+# Editor-level mirror of the enforced formatters (oxfmt for TS/JS, ruff for
+# Python, gofmt for Go). On any conflict, the formatter wins.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{ts,tsx,js,jsx,mjs,cjs}]
+max_line_length = 100
+
+[*.py]
+indent_size = 4
+max_line_length = 101
+
+[*.go]
+indent_style = tab
+
+[*.sh]
+indent_size = 4
+
+# Trailing double-space is a hard line break in Markdown.
+[*.{md,mdx}]
+trim_trailing_whitespace = false

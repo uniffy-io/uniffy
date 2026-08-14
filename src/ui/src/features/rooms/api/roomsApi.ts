@@ -1,7 +1,20 @@
-import { createClient } from '@connectrpc/connect';
-import type { MessageInitShape } from '@bufbuild/protobuf';
-import { unaryTransport } from '@/config/api';
-import { RoomsService, CancelBookingRequestSchema, CheckAvailabilityRequestSchema, CreateBookingRequestSchema, CreateRoomRequestSchema, DeleteRoomRequestSchema, FindAvailableRoomsRequestSchema, GetBookingRequestSchema, GetRoomRequestSchema, ListBookingsRequestSchema, ListRoomsRequestSchema, UpdateRoomRequestSchema } from '@uniffy/proto/rooms/v1/rooms_pb';
+import { createClient } from "@connectrpc/connect";
+import type { MessageInitShape } from "@bufbuild/protobuf";
+import { unaryTransport } from "@/config/api";
+import {
+  RoomsService,
+  CancelBookingRequestSchema,
+  CheckAvailabilityRequestSchema,
+  CreateBookingRequestSchema,
+  CreateRoomRequestSchema,
+  DeleteRoomRequestSchema,
+  FindAvailableRoomsRequestSchema,
+  GetBookingRequestSchema,
+  GetRoomRequestSchema,
+  ListBookingsRequestSchema,
+  ListRoomsRequestSchema,
+  UpdateRoomRequestSchema,
+} from "@uniffy/proto/rooms/v1/rooms_pb";
 
 const roomsClient = createClient(RoomsService, unaryTransport);
 

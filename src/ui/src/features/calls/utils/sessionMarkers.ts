@@ -12,8 +12,8 @@ export interface CallSessionMarker {
   ts: number;
 }
 
-const SESSION_KEY = 'uniffy-call-session';
-const RECENT_KEY = 'uniffy-recent-call';
+const SESSION_KEY = "uniffy-call-session";
+const RECENT_KEY = "uniffy-recent-call";
 
 const SESSION_MARKER_TTL_MS = 5 * 60 * 1000;
 const RECENT_MARKER_TTL_MS = 10 * 60 * 1000;
@@ -22,7 +22,7 @@ function parse(raw: string | null, ttlMs: number): CallSessionMarker | null {
   if (!raw) return null;
   try {
     const marker = JSON.parse(raw) as CallSessionMarker;
-    if (!marker.callId || !marker.channelId || typeof marker.ts !== 'number') return null;
+    if (!marker.callId || !marker.channelId || typeof marker.ts !== "number") return null;
     if (Date.now() - marker.ts > ttlMs) return null;
     return marker;
   } catch {

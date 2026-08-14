@@ -12,13 +12,26 @@ import {
   type DragEndEvent,
   type DragMoveEvent,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, ArrowUp, ArrowDown, ArrowCounterClockwise, ArrowClockwise, CaretLeft, CaretRight, CaretDown, DotsSixVertical, X, Trash, CheckCircle, ArrowBendDownRight, EyeSlash, Eye, Columns } from "@phosphor-icons/react";
+import {
+  Plus,
+  ArrowUp,
+  ArrowDown,
+  ArrowCounterClockwise,
+  ArrowClockwise,
+  CaretLeft,
+  CaretRight,
+  CaretDown,
+  DotsSixVertical,
+  X,
+  Trash,
+  CheckCircle,
+  ArrowBendDownRight,
+  EyeSlash,
+  Eye,
+  Columns,
+} from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
@@ -167,9 +180,7 @@ export function TableView() {
   // user can hide it via the existing column visibility menu.
   const allNonTitleFields = useMemo(() => {
     if (!project) return [];
-    const real = project.fieldDefinitions.filter(
-      (f) => f.id !== SYSTEM_FIELD_IDS.TITLE
-    );
+    const real = project.fieldDefinitions.filter((f) => f.id !== SYSTEM_FIELD_IDS.TITLE);
     return [...real, TAGS_VIRTUAL_FIELD];
   }, [project]);
 
@@ -190,7 +201,10 @@ export function TableView() {
     // (cross-membership, mirrors Jira labels). Tasks with no tags fall
     // into a synthetic "Untagged" group rendered last.
     if (groupByFieldId === TAGS_COLUMN_KEY) {
-      const buckets = new Map<string, { label: string; color?: string; tasks: Task[]; count: number }>();
+      const buckets = new Map<
+        string,
+        { label: string; color?: string; tasks: Task[]; count: number }
+      >();
       const untagged: Task[] = [];
       for (const task of filteredTasks) {
         const taskTagIds = task.tagIds ?? [];
@@ -224,7 +238,7 @@ export function TableView() {
         }))
         // Order: tag count desc, then alpha. Untagged always last.
         .sort((a, b) => {
-          const countDiff = (b.tasks.length) - (a.tasks.length);
+          const countDiff = b.tasks.length - a.tasks.length;
           if (countDiff !== 0) return countDiff;
           return a.label.localeCompare(b.label);
         });
@@ -246,9 +260,7 @@ export function TableView() {
         label: s.name,
         tasks: filteredTasks.filter((t) => t.sprintId === s.id),
       }));
-      const backlog = filteredTasks.filter(
-        (t) => !t.sprintId || !sprintMap.has(t.sprintId)
-      );
+      const backlog = filteredTasks.filter((t) => !t.sprintId || !sprintMap.has(t.sprintId));
       if (backlog.length > 0) {
         grouped.push({ key: "__backlog__", label: "Backlog", tasks: backlog });
       }
@@ -396,9 +408,7 @@ export function TableView() {
   // Ordered task IDs for keyboard navigation (excludes collapsed groups)
   const orderedTaskIds = useMemo(() => {
     if (!groups) return filteredTasks.map((t) => t.id);
-    return groups.flatMap((g) =>
-      collapsedGroups.has(g.key) ? [] : g.tasks.map((t) => t.id)
-    );
+    return groups.flatMap((g) => (collapsedGroups.has(g.key) ? [] : g.tasks.map((t) => t.id)));
   }, [groups, filteredTasks, collapsedGroups]);
 
   // Ordered field IDs for keyboard navigation (title + visible fields)
@@ -407,14 +417,21 @@ export function TableView() {
   }, [visibleFields]);
 
   // Resolved widths for the two system columns (id, title)
-  const idColumnWidth = resolveSystemColumnWidth(ID_COLUMN_KEY, columnWidths, TABLE_COLUMNS.ID_WIDTH);
+  const idColumnWidth = resolveSystemColumnWidth(
+    ID_COLUMN_KEY,
+    columnWidths,
+    TABLE_COLUMNS.ID_WIDTH,
+  );
   const titleColumnWidth = resolveSystemColumnWidth(TITLE_COLUMN_KEY, columnWidths, 300);
 
   // Compute total table width for horizontal scroll
   const totalTableWidth = useMemo(() => {
     const dragCol = 28;
     const checkboxCol = TABLE_COLUMNS.CHECKBOX_WIDTH;
-    const fieldCols = visibleFields.reduce((sum, f) => sum + resolveColumnWidth(f, columnWidths), 0);
+    const fieldCols = visibleFields.reduce(
+      (sum, f) => sum + resolveColumnWidth(f, columnWidths),
+      0,
+    );
     const columnsMenuCol = 40;
     return dragCol + checkboxCol + idColumnWidth + titleColumnWidth + fieldCols + columnsMenuCol;
   }, [visibleFields, columnWidths, idColumnWidth, titleColumnWidth]);
@@ -423,7 +440,8 @@ export function TableView() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+      const isInput =
+        target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
 
       // Escape always clears editing and focus
       if (e.key === "Escape") {
@@ -444,7 +462,9 @@ export function TableView() {
         e.preventDefault();
         if (undoStack.length > 0) {
           const entry = undoStack[undoStack.length - 1];
-          const undoPayload = { id: entry.taskId, ...entry.previousValues } as Partial<Task> & { id: string };
+          const undoPayload = { id: entry.taskId, ...entry.previousValues } as Partial<Task> & {
+            id: string;
+          };
           dispatch(optimisticUpdateTask(undoPayload));
           dispatch(updateTask(undoPayload));
           dispatch(popUndo());
@@ -455,7 +475,9 @@ export function TableView() {
         e.preventDefault();
         if (redoStack.length > 0) {
           const entry = redoStack[redoStack.length - 1];
-          const redoPayload = { id: entry.taskId, ...entry.newValues } as Partial<Task> & { id: string };
+          const redoPayload = { id: entry.taskId, ...entry.newValues } as Partial<Task> & {
+            id: string;
+          };
           dispatch(optimisticUpdateTask(redoPayload));
           dispatch(updateTask(redoPayload));
           dispatch(popRedo());
@@ -480,7 +502,9 @@ export function TableView() {
           }
           const rowIdx = orderedTaskIds.indexOf(focusedCell.taskId);
           if (rowIdx < orderedTaskIds.length - 1) {
-            dispatch(setFocusedCell({ taskId: orderedTaskIds[rowIdx + 1], fieldId: focusedCell.fieldId }));
+            dispatch(
+              setFocusedCell({ taskId: orderedTaskIds[rowIdx + 1], fieldId: focusedCell.fieldId }),
+            );
           }
           break;
         }
@@ -488,13 +512,20 @@ export function TableView() {
           e.preventDefault();
           if (!focusedCell) {
             if (orderedTaskIds.length > 0 && orderedFieldIds.length > 0) {
-              dispatch(setFocusedCell({ taskId: orderedTaskIds[orderedTaskIds.length - 1], fieldId: orderedFieldIds[0] }));
+              dispatch(
+                setFocusedCell({
+                  taskId: orderedTaskIds[orderedTaskIds.length - 1],
+                  fieldId: orderedFieldIds[0],
+                }),
+              );
             }
             return;
           }
           const rowIdx = orderedTaskIds.indexOf(focusedCell.taskId);
           if (rowIdx > 0) {
-            dispatch(setFocusedCell({ taskId: orderedTaskIds[rowIdx - 1], fieldId: focusedCell.fieldId }));
+            dispatch(
+              setFocusedCell({ taskId: orderedTaskIds[rowIdx - 1], fieldId: focusedCell.fieldId }),
+            );
           }
           break;
         }
@@ -503,7 +534,9 @@ export function TableView() {
           if (!focusedCell) return;
           const colIdx = orderedFieldIds.indexOf(focusedCell.fieldId);
           if (colIdx < orderedFieldIds.length - 1) {
-            dispatch(setFocusedCell({ taskId: focusedCell.taskId, fieldId: orderedFieldIds[colIdx + 1] }));
+            dispatch(
+              setFocusedCell({ taskId: focusedCell.taskId, fieldId: orderedFieldIds[colIdx + 1] }),
+            );
           }
           break;
         }
@@ -512,7 +545,9 @@ export function TableView() {
           if (!focusedCell) return;
           const colIdx = orderedFieldIds.indexOf(focusedCell.fieldId);
           if (colIdx > 0) {
-            dispatch(setFocusedCell({ taskId: focusedCell.taskId, fieldId: orderedFieldIds[colIdx - 1] }));
+            dispatch(
+              setFocusedCell({ taskId: focusedCell.taskId, fieldId: orderedFieldIds[colIdx - 1] }),
+            );
           }
           break;
         }
@@ -522,20 +557,40 @@ export function TableView() {
           const colIdx = orderedFieldIds.indexOf(focusedCell.fieldId);
           if (e.shiftKey) {
             if (colIdx > 0) {
-              dispatch(setFocusedCell({ taskId: focusedCell.taskId, fieldId: orderedFieldIds[colIdx - 1] }));
+              dispatch(
+                setFocusedCell({
+                  taskId: focusedCell.taskId,
+                  fieldId: orderedFieldIds[colIdx - 1],
+                }),
+              );
             } else {
               const rowIdx = orderedTaskIds.indexOf(focusedCell.taskId);
               if (rowIdx > 0) {
-                dispatch(setFocusedCell({ taskId: orderedTaskIds[rowIdx - 1], fieldId: orderedFieldIds[orderedFieldIds.length - 1] }));
+                dispatch(
+                  setFocusedCell({
+                    taskId: orderedTaskIds[rowIdx - 1],
+                    fieldId: orderedFieldIds[orderedFieldIds.length - 1],
+                  }),
+                );
               }
             }
           } else {
             if (colIdx < orderedFieldIds.length - 1) {
-              dispatch(setFocusedCell({ taskId: focusedCell.taskId, fieldId: orderedFieldIds[colIdx + 1] }));
+              dispatch(
+                setFocusedCell({
+                  taskId: focusedCell.taskId,
+                  fieldId: orderedFieldIds[colIdx + 1],
+                }),
+              );
             } else {
               const rowIdx = orderedTaskIds.indexOf(focusedCell.taskId);
               if (rowIdx < orderedTaskIds.length - 1) {
-                dispatch(setFocusedCell({ taskId: orderedTaskIds[rowIdx + 1], fieldId: orderedFieldIds[0] }));
+                dispatch(
+                  setFocusedCell({
+                    taskId: orderedTaskIds[rowIdx + 1],
+                    fieldId: orderedFieldIds[0],
+                  }),
+                );
               }
             }
           }
@@ -564,19 +619,25 @@ export function TableView() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [editingCell, focusedCell, dispatch, orderedTaskIds, orderedFieldIds, undoStack, redoStack]);
 
-  const handleRowClick = useCallback((taskId: string, e: React.MouseEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      dispatch(toggleTaskSelection(taskId));
-    } else {
-      dispatch(selectTask(taskId));
-      dispatch(openDetailPanel());
-    }
-  }, [dispatch]);
+  const handleRowClick = useCallback(
+    (taskId: string, e: React.MouseEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        dispatch(toggleTaskSelection(taskId));
+      } else {
+        dispatch(selectTask(taskId));
+        dispatch(openDetailPanel());
+      }
+    },
+    [dispatch],
+  );
 
-  const handleCheckboxClick = useCallback((taskId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    dispatch(toggleTaskSelection(taskId));
-  }, [dispatch]);
+  const handleCheckboxClick = useCallback(
+    (taskId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      dispatch(toggleTaskSelection(taskId));
+    },
+    [dispatch],
+  );
 
   const handleSelectAll = useCallback(() => {
     if (selectedTaskIds.length === allVisibleTaskIds.length) {
@@ -590,85 +651,96 @@ export function TableView() {
     dispatch(openCreateTaskModal());
   }, [dispatch]);
 
-  const handleHeaderClick = useCallback((fieldId: string) => {
-    if (activeSortConfig?.fieldId === fieldId) {
-      if (activeSortConfig.direction === "asc") {
-        dispatch(setSortConfig({ fieldId, direction: "desc" }));
+  const handleHeaderClick = useCallback(
+    (fieldId: string) => {
+      if (activeSortConfig?.fieldId === fieldId) {
+        if (activeSortConfig.direction === "asc") {
+          dispatch(setSortConfig({ fieldId, direction: "desc" }));
+        } else {
+          dispatch(setSortConfig(null));
+        }
       } else {
-        dispatch(setSortConfig(null));
+        dispatch(setSortConfig({ fieldId, direction: "asc" }));
       }
-    } else {
-      dispatch(setSortConfig({ fieldId, direction: "asc" }));
-    }
-  }, [dispatch, activeSortConfig]);
+    },
+    [dispatch, activeSortConfig],
+  );
 
-  const handleStartEdit = useCallback((taskId: string, fieldId: string) => {
-    if (!canEdit) return;
-    dispatch(setEditingCell({ taskId, fieldId }));
-  }, [dispatch, canEdit]);
+  const handleStartEdit = useCallback(
+    (taskId: string, fieldId: string) => {
+      if (!canEdit) return;
+      dispatch(setEditingCell({ taskId, fieldId }));
+    },
+    [dispatch, canEdit],
+  );
 
   const handleEndEdit = useCallback(() => {
     dispatch(setEditingCell(null));
   }, [dispatch]);
 
-  const handleSaveField = useCallback((taskId: string, fieldId: string, value: unknown) => {
-    if (!canEdit) return;
-    const task = allTasks[taskId];
-    const update: Partial<Task> & { id: string } = { id: taskId };
-    const previousValues: Record<string, unknown> = {};
-    const newValues: Record<string, unknown> = {};
+  const handleSaveField = useCallback(
+    (taskId: string, fieldId: string, value: unknown) => {
+      if (!canEdit) return;
+      const task = allTasks[taskId];
+      const update: Partial<Task> & { id: string } = { id: taskId };
+      const previousValues: Record<string, unknown> = {};
+      const newValues: Record<string, unknown> = {};
 
-    switch (fieldId) {
-      case SYSTEM_FIELD_IDS.STATUS:
-        previousValues.status = task?.status;
-        newValues.status = value;
-        update.status = value as string;
-        break;
-      case SYSTEM_FIELD_IDS.PRIORITY:
-        previousValues.priority = task?.priority;
-        newValues.priority = value;
-        update.priority = value as string;
-        break;
-      case SYSTEM_FIELD_IDS.START_DATE:
-        previousValues.startDate = task?.startDate;
-        newValues.startDate = value;
-        update.startDate = (value as string) || null;
-        break;
-      case SYSTEM_FIELD_IDS.DUE_DATE:
-        previousValues.dueDate = task?.dueDate;
-        newValues.dueDate = value;
-        update.dueDate = (value as string) || null;
-        break;
-      case SYSTEM_FIELD_IDS.ASSIGNEE:
-        previousValues.assigneeIds = task?.assigneeIds;
-        newValues.assigneeIds = value;
-        update.assigneeIds = value as string[];
-        break;
-      default:
-        previousValues.fieldValues = { [fieldId]: task?.fieldValues?.[fieldId] };
-        newValues.fieldValues = { [fieldId]: value };
-        update.fieldValues = { [fieldId]: value as string };
-        break;
-    }
+      switch (fieldId) {
+        case SYSTEM_FIELD_IDS.STATUS:
+          previousValues.status = task?.status;
+          newValues.status = value;
+          update.status = value as string;
+          break;
+        case SYSTEM_FIELD_IDS.PRIORITY:
+          previousValues.priority = task?.priority;
+          newValues.priority = value;
+          update.priority = value as string;
+          break;
+        case SYSTEM_FIELD_IDS.START_DATE:
+          previousValues.startDate = task?.startDate;
+          newValues.startDate = value;
+          update.startDate = (value as string) || null;
+          break;
+        case SYSTEM_FIELD_IDS.DUE_DATE:
+          previousValues.dueDate = task?.dueDate;
+          newValues.dueDate = value;
+          update.dueDate = (value as string) || null;
+          break;
+        case SYSTEM_FIELD_IDS.ASSIGNEE:
+          previousValues.assigneeIds = task?.assigneeIds;
+          newValues.assigneeIds = value;
+          update.assigneeIds = value as string[];
+          break;
+        default:
+          previousValues.fieldValues = { [fieldId]: task?.fieldValues?.[fieldId] };
+          newValues.fieldValues = { [fieldId]: value };
+          update.fieldValues = { [fieldId]: value as string };
+          break;
+      }
 
-    // Push undo entry before applying
-    dispatch(pushUndo({
-      id: `undo-${Date.now()}`,
-      actionType: "updateField",
-      taskId,
-      previousValues,
-      newValues,
-      timestamp: Date.now(),
-      description: `Changed ${fieldId} of ${task?.title ?? taskId}`,
-    }));
+      // Push undo entry before applying
+      dispatch(
+        pushUndo({
+          id: `undo-${Date.now()}`,
+          actionType: "updateField",
+          taskId,
+          previousValues,
+          newValues,
+          timestamp: Date.now(),
+          description: `Changed ${fieldId} of ${task?.title ?? taskId}`,
+        }),
+      );
 
-    dispatch(optimisticUpdateTask(update));
-    dispatch(updateTask(update));
-    // Don't close editing cell for multi-select fields (assignee picker stays open)
-    if (fieldId !== SYSTEM_FIELD_IDS.ASSIGNEE) {
-      dispatch(setEditingCell(null));
-    }
-  }, [dispatch, allTasks, canEdit]);
+      dispatch(optimisticUpdateTask(update));
+      dispatch(updateTask(update));
+      // Don't close editing cell for multi-select fields (assignee picker stays open)
+      if (fieldId !== SYSTEM_FIELD_IDS.ASSIGNEE) {
+        dispatch(setEditingCell(null));
+      }
+    },
+    [dispatch, allTasks, canEdit],
+  );
 
   const toggleGroup = useCallback((groupKey: string) => {
     setCollapsedGroups((prev) => {
@@ -682,15 +754,21 @@ export function TableView() {
     });
   }, []);
 
-  const handleCellClick = useCallback((taskId: string, fieldId: string) => {
-    dispatch(setFocusedCell({ taskId, fieldId }));
-  }, [dispatch]);
+  const handleCellClick = useCallback(
+    (taskId: string, fieldId: string) => {
+      dispatch(setFocusedCell({ taskId, fieldId }));
+    },
+    [dispatch],
+  );
 
-  const handleTitleClick = useCallback((taskId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    dispatch(selectTask(taskId));
-    dispatch(openDetailPanel());
-  }, [dispatch]);
+  const handleTitleClick = useCallback(
+    (taskId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      dispatch(selectTask(taskId));
+      dispatch(openDetailPanel());
+    },
+    [dispatch],
+  );
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
@@ -699,7 +777,7 @@ export function TableView() {
   const allTasksList = useMemo(() => Object.values(allTasks), [allTasks]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor)
+    useSensor(KeyboardSensor),
   );
 
   useEffect(() => {
@@ -711,10 +789,13 @@ export function TableView() {
     return () => window.removeEventListener("pointermove", onPointerMove);
   }, [activeTask]);
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const task = filteredTasks.find((t) => t.id === event.active.id);
-    if (task) setActiveTask(task);
-  }, [filteredTasks]);
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const task = filteredTasks.find((t) => t.id === event.active.id);
+      if (task) setActiveTask(task);
+    },
+    [filteredTasks],
+  );
 
   const handleDragMove = useCallback((event: DragMoveEvent) => {
     const { active, over } = event;
@@ -729,7 +810,8 @@ export function TableView() {
     const overRect = over.rect;
     if (!overRect) return;
 
-    const pointerY = pointerYRef.current ??
+    const pointerY =
+      pointerYRef.current ??
       (active.rect.current.translated
         ? active.rect.current.translated.top + active.rect.current.translated.height / 2
         : null);
@@ -747,73 +829,75 @@ export function TableView() {
     }
   }, []);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    const indicator = dropIndicatorRef.current;
-    setActiveTask(null);
-    setDropIndicator(null);
-    dropIndicatorRef.current = null;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      const indicator = dropIndicatorRef.current;
+      setActiveTask(null);
+      setDropIndicator(null);
+      dropIndicatorRef.current = null;
 
-    if (!over || active.id === over.id) return;
+      if (!over || active.id === over.id) return;
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    const activeTaskRow = filteredTasks.find((t) => t.id === activeId);
-    if (!activeTaskRow) return;
+      const activeId = active.id as string;
+      const overId = over.id as string;
+      const activeTaskRow = filteredTasks.find((t) => t.id === activeId);
+      if (!activeTaskRow) return;
 
-    const overTask = allTasks[overId];
-    if (!overTask) return;
+      const overTask = allTasks[overId];
+      if (!overTask) return;
 
-    const zone: RowDropZone = indicator?.overId === overId ? indicator.zone : "reparent";
+      const zone: RowDropZone = indicator?.overId === overId ? indicator.zone : "reparent";
 
-    if (zone === "reparent") {
-      const check = checkReparent(activeId, overId, allTasksList, activeTaskRow.parentId);
-      if (!check.ok) return;
-      const warning = getHierarchyRuleViolation(
-        activeTaskRow.taskType || "task",
-        overTask.taskType || "task",
-      );
-      dispatch(optimisticUpdateTask({ id: activeId, parentId: overId }));
-      dispatch(updateTask({ id: activeId, parentId: overId }));
-      if (warning) toast.warning(warning);
-      return;
-    }
+      if (zone === "reparent") {
+        const check = checkReparent(activeId, overId, allTasksList, activeTaskRow.parentId);
+        if (!check.ok) return;
+        const warning = getHierarchyRuleViolation(
+          activeTaskRow.taskType || "task",
+          overTask.taskType || "task",
+        );
+        dispatch(optimisticUpdateTask({ id: activeId, parentId: overId }));
+        dispatch(updateTask({ id: activeId, parentId: overId }));
+        if (warning) toast.warning(warning);
+        return;
+      }
 
-    const activeIdx = orderedTaskIds.indexOf(activeId);
-    const overIdx = orderedTaskIds.indexOf(overId);
-    if (activeIdx === -1 || overIdx === -1) return;
+      const activeIdx = orderedTaskIds.indexOf(activeId);
+      const overIdx = orderedTaskIds.indexOf(overId);
+      if (activeIdx === -1 || overIdx === -1) return;
 
-    const orderedOver = filteredTasks[overIdx];
-    const insertBefore = zone === "before";
-    const direction = insertBefore ? -1 : 1;
-    let neighborIdx = overIdx + direction;
-    while (
-      neighborIdx >= 0 &&
-      neighborIdx < filteredTasks.length &&
-      filteredTasks[neighborIdx].id === activeId
-    ) {
-      neighborIdx += direction;
-    }
-    const neighbor =
-      neighborIdx >= 0 && neighborIdx < filteredTasks.length ? filteredTasks[neighborIdx] : null;
+      const orderedOver = filteredTasks[overIdx];
+      const insertBefore = zone === "before";
+      const direction = insertBefore ? -1 : 1;
+      let neighborIdx = overIdx + direction;
+      while (
+        neighborIdx >= 0 &&
+        neighborIdx < filteredTasks.length &&
+        filteredTasks[neighborIdx].id === activeId
+      ) {
+        neighborIdx += direction;
+      }
+      const neighbor =
+        neighborIdx >= 0 && neighborIdx < filteredTasks.length ? filteredTasks[neighborIdx] : null;
 
-    let newSortOrder: number;
-    if (insertBefore) {
-      newSortOrder = neighbor
-        ? (neighbor.sortOrder + orderedOver.sortOrder) / 2
-        : orderedOver.sortOrder / 2;
-    } else {
-      newSortOrder = neighbor
-        ? (orderedOver.sortOrder + neighbor.sortOrder) / 2
-        : orderedOver.sortOrder + 10000;
-    }
+      let newSortOrder: number;
+      if (insertBefore) {
+        newSortOrder = neighbor
+          ? (neighbor.sortOrder + orderedOver.sortOrder) / 2
+          : orderedOver.sortOrder / 2;
+      } else {
+        newSortOrder = neighbor
+          ? (orderedOver.sortOrder + neighbor.sortOrder) / 2
+          : orderedOver.sortOrder + 10000;
+      }
 
-    if (newSortOrder === activeTaskRow.sortOrder) return;
+      if (newSortOrder === activeTaskRow.sortOrder) return;
 
-    dispatch(optimisticUpdateTask({ id: activeId, sortOrder: newSortOrder }));
-    dispatch(moveTask({ id: activeId, status: activeTaskRow.status, sortOrder: newSortOrder }));
-  }, [dispatch, orderedTaskIds, filteredTasks, allTasks, allTasksList]);
-
+      dispatch(optimisticUpdateTask({ id: activeId, sortOrder: newSortOrder }));
+      dispatch(moveTask({ id: activeId, status: activeTaskRow.status, sortOrder: newSortOrder }));
+    },
+    [dispatch, orderedTaskIds, filteredTasks, allTasks, allTasksList],
+  );
 
   const getSubtasksForParent = useCallback(
     (parentId: string): Task[] => {
@@ -821,7 +905,7 @@ export function TableView() {
         .filter((t) => t.parentId === parentId && !t.deletedAt)
         .sort((a, b) => a.number - b.number);
     },
-    [allTasks]
+    [allTasks],
   );
 
   if (!project) {
@@ -920,11 +1004,15 @@ export function TableView() {
           priorityOptions={priorityOptions}
           onChangeStatus={(statusId) => {
             dispatch(bulkUpdateTasks({ ids: selectedTaskIds, changes: { status: statusId } }));
-            dispatch(bulkUpdateTasksThunk({ taskIds: selectedTaskIds, updates: { status: statusId } }));
+            dispatch(
+              bulkUpdateTasksThunk({ taskIds: selectedTaskIds, updates: { status: statusId } }),
+            );
           }}
           onChangePriority={(priorityId) => {
             dispatch(bulkUpdateTasks({ ids: selectedTaskIds, changes: { priority: priorityId } }));
-            dispatch(bulkUpdateTasksThunk({ taskIds: selectedTaskIds, updates: { priority: priorityId } }));
+            dispatch(
+              bulkUpdateTasksThunk({ taskIds: selectedTaskIds, updates: { priority: priorityId } }),
+            );
           }}
           onDelete={() => {
             dispatch(deleteTasks(selectedTaskIds));
@@ -943,10 +1031,7 @@ export function TableView() {
             style={{ height: LAYOUT.TABLE_HEADER_HEIGHT }}
           >
             {/* Drag Handle Column */}
-            <div
-              className="shrink-0 border-r border-border bg-muted/30"
-              style={{ width: 28 }}
-            />
+            <div className="shrink-0 border-r border-border bg-muted/30" style={{ width: 28 }} />
 
             {/* Checkbox Column */}
             <div
@@ -956,10 +1041,15 @@ export function TableView() {
               <input
                 type="checkbox"
                 className="h-4 w-4 rounded border-border"
-                checked={allVisibleTaskIds.length > 0 && selectedTaskIds.length === allVisibleTaskIds.length}
+                checked={
+                  allVisibleTaskIds.length > 0 &&
+                  selectedTaskIds.length === allVisibleTaskIds.length
+                }
                 ref={(el) => {
                   if (el) {
-                    el.indeterminate = selectedTaskIds.length > 0 && selectedTaskIds.length < allVisibleTaskIds.length;
+                    el.indeterminate =
+                      selectedTaskIds.length > 0 &&
+                      selectedTaskIds.length < allVisibleTaskIds.length;
                   }
                 }}
                 onChange={handleSelectAll}
@@ -989,11 +1079,12 @@ export function TableView() {
               onClick={() => handleHeaderClick(SYSTEM_FIELD_IDS.TITLE)}
             >
               <span className="text-xs font-medium text-muted-foreground flex-1">Title</span>
-              {activeSortConfig?.fieldId === SYSTEM_FIELD_IDS.TITLE && (
-                activeSortConfig.direction === "asc"
-                  ? <ArrowUp size={12} className="text-primary ml-1 shrink-0" />
-                  : <ArrowDown size={12} className="text-primary ml-1 shrink-0" />
-              )}
+              {activeSortConfig?.fieldId === SYSTEM_FIELD_IDS.TITLE &&
+                (activeSortConfig.direction === "asc" ? (
+                  <ArrowUp size={12} className="text-primary ml-1 shrink-0" />
+                ) : (
+                  <ArrowDown size={12} className="text-primary ml-1 shrink-0" />
+                ))}
               {project && (
                 <ColumnResizeHandle
                   columnKey={TITLE_COLUMN_KEY}
@@ -1015,11 +1106,12 @@ export function TableView() {
                 <span className="text-xs font-medium text-muted-foreground flex-1 truncate">
                   {field.name}
                 </span>
-                {activeSortConfig?.fieldId === field.id && (
-                  activeSortConfig.direction === "asc"
-                    ? <ArrowUp size={12} className="text-primary ml-1 shrink-0" />
-                    : <ArrowDown size={12} className="text-primary ml-1 shrink-0" />
-                )}
+                {activeSortConfig?.fieldId === field.id &&
+                  (activeSortConfig.direction === "asc" ? (
+                    <ArrowUp size={12} className="text-primary ml-1 shrink-0" />
+                  ) : (
+                    <ArrowDown size={12} className="text-primary ml-1 shrink-0" />
+                  ))}
                 <button
                   type="button"
                   className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground ml-1 shrink-0"
@@ -1064,112 +1156,109 @@ export function TableView() {
                 />
               )}
             </div>
-
           </div>
 
           {/* Table Body */}
           <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragMove={handleDragMove}
-          onDragEnd={handleDragEnd}
-        >
-          <div>
-            {groups ? (
-              // Grouped rendering with per-group SortableContext
-              groups.map((group) => {
-                const isCollapsed = collapsedGroups.has(group.key);
-                const groupTaskIds = group.tasks.map((t) => t.id);
-                return (
-                  <div key={group.key}>
-                    {/* Group Header */}
-                    <div
-                      className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 border-b border-border cursor-pointer hover:bg-muted/60 transition-colors select-none"
-                      style={{ height: LAYOUT.TABLE_ROW_HEIGHT }}
-                      onClick={() => toggleGroup(group.key)}
-                    >
-                      <div style={{ width: 28 }} className="shrink-0" />
-                      {isCollapsed
-                        ? <CaretRight size={14} className="text-muted-foreground shrink-0" />
-                        : <CaretDown size={14} className="text-muted-foreground shrink-0" />
-                      }
-                      {group.color && (
-                        <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: group.color }}
-                        />
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
+          >
+            <div>
+              {groups ? (
+                // Grouped rendering with per-group SortableContext
+                groups.map((group) => {
+                  const isCollapsed = collapsedGroups.has(group.key);
+                  const groupTaskIds = group.tasks.map((t) => t.id);
+                  return (
+                    <div key={group.key}>
+                      {/* Group Header */}
+                      <div
+                        className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 border-b border-border cursor-pointer hover:bg-muted/60 transition-colors select-none"
+                        style={{ height: LAYOUT.TABLE_ROW_HEIGHT }}
+                        onClick={() => toggleGroup(group.key)}
+                      >
+                        <div style={{ width: 28 }} className="shrink-0" />
+                        {isCollapsed ? (
+                          <CaretRight size={14} className="text-muted-foreground shrink-0" />
+                        ) : (
+                          <CaretDown size={14} className="text-muted-foreground shrink-0" />
+                        )}
+                        {group.color && (
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: group.color }}
+                          />
+                        )}
+                        {group.kind === "person" && group.key !== UNASSIGNED_GROUP_KEY ? (
+                          <PersonGroupHeader
+                            subject={personGroupSubjectMap.get(group.key)}
+                            fallbackKey={group.key}
+                          />
+                        ) : group.kind === "person" && group.key === UNASSIGNED_GROUP_KEY ? (
+                          <span className="text-sm font-medium italic text-muted-foreground">
+                            Unassigned
+                          </span>
+                        ) : (
+                          <span className="text-sm font-medium text-foreground">{group.label}</span>
+                        )}
+                        <span className="text-xs text-muted-foreground">{group.tasks.length}</span>
+                      </div>
+
+                      {/* Group Tasks - each group has its own sortable context */}
+                      {!isCollapsed && (
+                        <SortableContext
+                          items={groupTaskIds}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {group.tasks.map(renderSortableRowWithSubtasks)}
+                        </SortableContext>
                       )}
-                      {group.kind === "person" && group.key !== UNASSIGNED_GROUP_KEY ? (
-                        <PersonGroupHeader
-                          subject={personGroupSubjectMap.get(group.key)}
-                          fallbackKey={group.key}
-                        />
-                      ) : group.kind === "person" && group.key === UNASSIGNED_GROUP_KEY ? (
-                        <span className="text-sm font-medium italic text-muted-foreground">
-                          Unassigned
-                        </span>
-                      ) : (
-                        <span className="text-sm font-medium text-foreground">
-                          {group.label}
-                        </span>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {group.tasks.length}
-                      </span>
                     </div>
+                  );
+                })
+              ) : (
+                // Flat rendering with single SortableContext
+                <SortableContext items={orderedTaskIds} strategy={verticalListSortingStrategy}>
+                  {filteredTasks.map(renderSortableRowWithSubtasks)}
+                </SortableContext>
+              )}
 
-                    {/* Group Tasks - each group has its own sortable context */}
-                    {!isCollapsed && (
-                      <SortableContext items={groupTaskIds} strategy={verticalListSortingStrategy}>
-                        {group.tasks.map(renderSortableRowWithSubtasks)}
-                      </SortableContext>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              // Flat rendering with single SortableContext
-              <SortableContext items={orderedTaskIds} strategy={verticalListSortingStrategy}>
-                {filteredTasks.map(renderSortableRowWithSubtasks)}
-              </SortableContext>
-            )}
-
-            {/* Add Task Row */}
-            <div
-              className="flex items-center border-b border-border hover:bg-muted/30 cursor-pointer"
-              style={{ height: LAYOUT.TABLE_ROW_HEIGHT }}
-              onClick={handleAddTask}
-            >
-              <div className="shrink-0" style={{ width: 28 }} />
+              {/* Add Task Row */}
               <div
-                className="shrink-0 flex items-center justify-center border-r border-border"
-                style={{ width: TABLE_COLUMNS.CHECKBOX_WIDTH }}
-              />
-              <div className="flex items-center gap-2 px-3 text-muted-foreground">
-                <Plus size={14} />
-                <span className="text-sm">Add task</span>
+                className="flex items-center border-b border-border hover:bg-muted/30 cursor-pointer"
+                style={{ height: LAYOUT.TABLE_ROW_HEIGHT }}
+                onClick={handleAddTask}
+              >
+                <div className="shrink-0" style={{ width: 28 }} />
+                <div
+                  className="shrink-0 flex items-center justify-center border-r border-border"
+                  style={{ width: TABLE_COLUMNS.CHECKBOX_WIDTH }}
+                />
+                <div className="flex items-center gap-2 px-3 text-muted-foreground">
+                  <Plus size={14} />
+                  <span className="text-sm">Add task</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Drag Overlay */}
-          <DragOverlay>
-            {activeTask && (
-              <div
-                className="flex items-center bg-card border border-border shadow-lg rounded opacity-90"
-                style={{ height: LAYOUT.TABLE_ROW_HEIGHT }}
-              >
-                <div className="shrink-0 flex items-center justify-center" style={{ width: 28 }}>
-                  <DotsSixVertical size={14} className="text-muted-foreground" />
+            {/* Drag Overlay */}
+            <DragOverlay>
+              {activeTask && (
+                <div
+                  className="flex items-center bg-card border border-border shadow-lg rounded opacity-90"
+                  style={{ height: LAYOUT.TABLE_ROW_HEIGHT }}
+                >
+                  <div className="shrink-0 flex items-center justify-center" style={{ width: 28 }}>
+                    <DotsSixVertical size={14} className="text-muted-foreground" />
+                  </div>
+                  <div className="px-3 text-sm text-foreground truncate">{activeTask.title}</div>
                 </div>
-                <div className="px-3 text-sm text-foreground truncate">
-                  {activeTask.title}
-                </div>
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
+              )}
+            </DragOverlay>
+          </DndContext>
         </div>
       </ScrollArea>
 
@@ -1182,7 +1271,9 @@ export function TableView() {
             onClick={() => {
               if (undoStack.length > 0) {
                 const entry = undoStack[undoStack.length - 1];
-                const payload = { id: entry.taskId, ...entry.previousValues } as Partial<Task> & { id: string };
+                const payload = { id: entry.taskId, ...entry.previousValues } as Partial<Task> & {
+                  id: string;
+                };
                 dispatch(optimisticUpdateTask(payload));
                 dispatch(updateTask(payload));
                 dispatch(popUndo());
@@ -1200,7 +1291,9 @@ export function TableView() {
             onClick={() => {
               if (redoStack.length > 0) {
                 const entry = redoStack[redoStack.length - 1];
-                const payload = { id: entry.taskId, ...entry.newValues } as Partial<Task> & { id: string };
+                const payload = { id: entry.taskId, ...entry.newValues } as Partial<Task> & {
+                  id: string;
+                };
                 dispatch(optimisticUpdateTask(payload));
                 dispatch(updateTask(payload));
                 dispatch(popRedo());
@@ -1216,7 +1309,6 @@ export function TableView() {
     </div>
   );
 }
-
 
 interface BulkEditToolbarProps {
   count: number;
@@ -1274,10 +1366,16 @@ function BulkEditToolbar({
               <button
                 key={opt.id}
                 type="button"
-                onClick={() => { onChangeStatus(opt.id); setOpenDropdown(null); }}
+                onClick={() => {
+                  onChangeStatus(opt.id);
+                  setOpenDropdown(null);
+                }}
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
               >
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: opt.color }} />
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: opt.color }}
+                />
                 {opt.label}
               </button>
             ))}
@@ -1301,10 +1399,16 @@ function BulkEditToolbar({
               <button
                 key={opt.id}
                 type="button"
-                onClick={() => { onChangePriority(opt.id); setOpenDropdown(null); }}
+                onClick={() => {
+                  onChangePriority(opt.id);
+                  setOpenDropdown(null);
+                }}
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
               >
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: opt.color }} />
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: opt.color }}
+                />
                 {opt.label}
               </button>
             ))}
@@ -1326,18 +1430,12 @@ function BulkEditToolbar({
       <div className="flex-1" />
 
       {/* Clear Selection */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6"
-        onClick={onClearSelection}
-      >
+      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClearSelection}>
         <X size={14} />
       </Button>
     </div>
   );
 }
-
 
 interface TableRowProps {
   task: Task;
@@ -1368,15 +1466,12 @@ interface TableRowProps {
   dropZone?: RowDropZone | null;
 }
 
-function SortableTableRow(props: Omit<TableRowProps, "dragHandleProps" | "isDragging" | "style" | "rowRef">) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: props.task.id });
+function SortableTableRow(
+  props: Omit<TableRowProps, "dragHandleProps" | "isDragging" | "style" | "rowRef">,
+) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.task.id,
+  });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -1433,15 +1528,13 @@ function TableRow({
         isSelected && "bg-primary/5",
         isDragging && "bg-muted/50",
         isSubtask && "bg-muted/10",
-        dropZone === "reparent" && "bg-primary/10 ring-2 ring-primary/50 ring-inset"
+        dropZone === "reparent" && "bg-primary/10 ring-2 ring-primary/50 ring-inset",
       )}
       style={{ height: LAYOUT.TABLE_ROW_HEIGHT, ...style }}
       onClick={onClick}
     >
       {/* Selection Indicator */}
-      {isSelected && (
-        <div className="absolute left-0 w-0.5 h-full bg-primary" />
-      )}
+      {isSelected && <div className="absolute left-0 w-0.5 h-full bg-primary" />}
       {dropZone === "before" && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary pointer-events-none" />
       )}
@@ -1455,16 +1548,17 @@ function TableRow({
           "shrink-0 flex items-center justify-center",
           isSubtask
             ? "text-muted-foreground/30"
-            : "cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
+            : "cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground",
         )}
         style={{ width: 28 }}
         {...(isSubtask ? {} : dragHandleProps)}
         onClick={(e) => e.stopPropagation()}
       >
-        {isSubtask
-          ? <ArrowBendDownRight size={12} className="text-muted-foreground/40" />
-          : <DotsSixVertical size={14} />
-        }
+        {isSubtask ? (
+          <ArrowBendDownRight size={12} className="text-muted-foreground/40" />
+        ) : (
+          <DotsSixVertical size={14} />
+        )}
       </div>
 
       {/* Checkbox Column */}
@@ -1495,9 +1589,12 @@ function TableRow({
         className={cn(
           "shrink-0 flex items-center border-r border-border overflow-hidden",
           focusedFieldId === SYSTEM_FIELD_IDS.TITLE && "ring-2 ring-inset ring-primary",
-          !isSubtask && "px-3"
+          !isSubtask && "px-3",
         )}
-        style={{ width: titleColumnWidth, ...(isSubtask ? { paddingLeft: 24 + (subtaskDepth ?? 1) * 16, paddingRight: 12 } : {}) }}
+        style={{
+          width: titleColumnWidth,
+          ...(isSubtask ? { paddingLeft: 24 + (subtaskDepth ?? 1) * 16, paddingRight: 12 } : {}),
+        }}
         onClick={onTitleClick}
       >
         {/* Expand/collapse chevron for parent tasks */}
@@ -1510,15 +1607,15 @@ function TableRow({
               onToggleExpand?.();
             }}
           >
-            {isExpanded
-              ? <CaretDown size={12} />
-              : <CaretRight size={12} />
-            }
+            {isExpanded ? <CaretDown size={12} /> : <CaretRight size={12} />}
           </button>
         )}
         {task.subtaskTotal > 0 && (
           <span className="mr-1.5 flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
-            <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
+            <CheckCircle
+              size={10}
+              className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""}
+            />
             {task.subtaskCompleted}/{task.subtaskTotal}
           </span>
         )}
@@ -1541,42 +1638,52 @@ function TableRow({
               key={field.id}
               className={cn(
                 "shrink-0 flex items-center px-3 border-r border-border relative overflow-hidden",
-                focusedFieldId === field.id && "ring-2 ring-inset ring-primary"
+                focusedFieldId === field.id && "ring-2 ring-inset ring-primary",
               )}
               style={{ width: resolveColumnWidth(field, columnWidths) }}
-              onClick={(e) => { e.stopPropagation(); onCellClick(field.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onCellClick(field.id);
+              }}
             >
               <TagsRowCell task={task} />
             </div>
           );
         }
-        const isDropdownOpen = editingFieldId === field.id && (field.type === "single_select" || field.type === "multi_select" || field.type === "date" || field.type === "person");
+        const isDropdownOpen =
+          editingFieldId === field.id &&
+          (field.type === "single_select" ||
+            field.type === "multi_select" ||
+            field.type === "date" ||
+            field.type === "person");
         return (
-        <div
-          key={field.id}
-          className={cn(
-            "shrink-0 flex items-center px-3 border-r border-border relative",
-            isDropdownOpen ? "overflow-visible" : "overflow-hidden",
-            focusedFieldId === field.id && "ring-2 ring-inset ring-primary"
-          )}
-          style={{ width: resolveColumnWidth(field, columnWidths) }}
-          onClick={(e) => { e.stopPropagation(); onCellClick(field.id); }}
-        >
-          <EditableFieldCell
-            task={task}
-            field={field}
-            isEditing={editingFieldId === field.id}
-            onStartEdit={() => onStartEdit(field.id)}
-            onEndEdit={onEndEdit}
-            onSave={(value) => onSaveField(field.id, value)}
-          />
-        </div>
+          <div
+            key={field.id}
+            className={cn(
+              "shrink-0 flex items-center px-3 border-r border-border relative",
+              isDropdownOpen ? "overflow-visible" : "overflow-hidden",
+              focusedFieldId === field.id && "ring-2 ring-inset ring-primary",
+            )}
+            style={{ width: resolveColumnWidth(field, columnWidths) }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCellClick(field.id);
+            }}
+          >
+            <EditableFieldCell
+              task={task}
+              field={field}
+              isEditing={editingFieldId === field.id}
+              onStartEdit={() => onStartEdit(field.id)}
+              onEndEdit={onEndEdit}
+              onSave={(value) => onSaveField(field.id, value)}
+            />
+          </div>
         );
       })}
     </div>
   );
 }
-
 
 interface EditableFieldCellProps {
   task: Task;
@@ -1587,7 +1694,14 @@ interface EditableFieldCellProps {
   onSave: (value: unknown) => void;
 }
 
-function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onSave }: EditableFieldCellProps) {
+function EditableFieldCell({
+  task,
+  field,
+  isEditing,
+  onStartEdit,
+  onEndEdit,
+  onSave,
+}: EditableFieldCellProps) {
   const isSelectField = field.type === "single_select";
   const isMultiSelectField = field.type === "multi_select";
   const isDateField = field.type === "date";
@@ -1598,7 +1712,10 @@ function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onS
     return (
       <div
         className="w-full h-full flex items-center justify-between cursor-pointer relative"
-        onClick={(e) => { e.stopPropagation(); if (!isEditing) onStartEdit(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isEditing) onStartEdit();
+        }}
       >
         <FieldCell task={task} field={field} />
         <CaretDown size={12} className="text-muted-foreground shrink-0 ml-1" />
@@ -1619,7 +1736,10 @@ function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onS
     return (
       <div
         className="w-full h-full flex items-center justify-between cursor-pointer relative"
-        onClick={(e) => { e.stopPropagation(); if (!isEditing) onStartEdit(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isEditing) onStartEdit();
+        }}
       >
         <FieldCell task={task} field={field} />
         <CaretDown size={12} className="text-muted-foreground shrink-0 ml-1" />
@@ -1640,7 +1760,10 @@ function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onS
     return (
       <div
         className="w-full h-full flex items-center justify-between cursor-pointer relative"
-        onClick={(e) => { e.stopPropagation(); if (!isEditing) onStartEdit(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isEditing) onStartEdit();
+        }}
       >
         <FieldCell task={task} field={field} />
         <CaretDown size={12} className="text-muted-foreground shrink-0 ml-1" />
@@ -1657,11 +1780,18 @@ function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onS
 
   // Person fields: avatar stack + "+" trigger, assignee picker appears below when editing
   if (isPersonField) {
-    const assigneeIds = (Array.isArray(getFieldValue(task, field.id)) ? getFieldValue(task, field.id) : task.assigneeIds) as string[];
+    const assigneeIds = (
+      Array.isArray(getFieldValue(task, field.id))
+        ? getFieldValue(task, field.id)
+        : task.assigneeIds
+    ) as string[];
     return (
       <div
         className="w-full h-full flex items-center justify-between cursor-pointer relative"
-        onClick={(e) => { e.stopPropagation(); if (!isEditing) onStartEdit(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isEditing) onStartEdit();
+        }}
       >
         <FieldCell task={task} field={field} />
         <Plus size={12} weight="bold" className="text-muted-foreground shrink-0 ml-1" />
@@ -1680,7 +1810,10 @@ function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onS
     return (
       <div
         className="w-full h-full flex items-center"
-        onDoubleClick={(e) => { e.stopPropagation(); onStartEdit(); }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onStartEdit();
+        }}
       >
         <FieldCell task={task} field={field} />
       </div>
@@ -1690,7 +1823,6 @@ function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onS
   const value = getFieldValue(task, field.id);
 
   switch (field.type) {
-
     case "text":
     case "number":
       return (
@@ -1709,8 +1841,12 @@ function EditableFieldCell({ task, field, isEditing, onStartEdit, onEndEdit, onS
   }
 }
 
-
-function InlineTextInput({ initialValue, type, onSave, onCancel }: {
+function InlineTextInput({
+  initialValue,
+  type,
+  onSave,
+  onCancel,
+}: {
   initialValue: string;
   type: "text" | "number";
   onSave: (value: unknown) => void;
@@ -1747,7 +1883,12 @@ function InlineTextInput({ initialValue, type, onSave, onCancel }: {
   );
 }
 
-function InlineSelectEditor({ options, currentValue, onSave, onClose }: {
+function InlineSelectEditor({
+  options,
+  currentValue,
+  onSave,
+  onClose,
+}: {
   options: SelectOption[];
   currentValue: string;
   onSave: (value: unknown) => void;
@@ -1781,7 +1922,9 @@ function InlineSelectEditor({ options, currentValue, onSave, onClose }: {
           }}
           className={cn(
             "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
-            option.id === currentValue ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
+            option.id === currentValue
+              ? "bg-primary/10 text-primary"
+              : "text-foreground hover:bg-muted",
           )}
         >
           <span
@@ -1795,7 +1938,12 @@ function InlineSelectEditor({ options, currentValue, onSave, onClose }: {
   );
 }
 
-function InlineMultiSelectEditor({ options, currentValue, onSave, onClose }: {
+function InlineMultiSelectEditor({
+  options,
+  currentValue,
+  onSave,
+  onClose,
+}: {
   options: SelectOption[];
   currentValue: string[];
   onSave: (ids: string[]) => void;
@@ -1840,16 +1988,18 @@ function InlineMultiSelectEditor({ options, currentValue, onSave, onClose }: {
             onClick={() => toggle(option.id)}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
-              isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
+              isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted",
             )}
           >
             <span
               className={cn(
                 "w-3.5 h-3.5 rounded-sm border shrink-0 flex items-center justify-center",
-                isSelected ? "bg-primary border-primary" : "border-border"
+                isSelected ? "bg-primary border-primary" : "border-border",
               )}
             >
-              {isSelected && <span className="text-primary-foreground text-[10px] font-bold">&#10003;</span>}
+              {isSelected && (
+                <span className="text-primary-foreground text-[10px] font-bold">&#10003;</span>
+              )}
             </span>
             <span
               className="w-2 h-2 rounded-full shrink-0"
@@ -1863,7 +2013,11 @@ function InlineMultiSelectEditor({ options, currentValue, onSave, onClose }: {
   );
 }
 
-function InlineDateEditor({ currentValue, onSave, onClose }: {
+function InlineDateEditor({
+  currentValue,
+  onSave,
+  onClose,
+}: {
   currentValue: string;
   onSave: (value: unknown) => void;
   onClose: () => void;
@@ -1878,9 +2032,7 @@ function InlineDateEditor({ currentValue, onSave, onClose }: {
     return isNaN(d.getTime()) ? null : d;
   }, [currentValue]);
 
-  const [displayMonth, setDisplayMonth] = useState<Date>(
-    () => selectedDate || new Date()
-  );
+  const [displayMonth, setDisplayMonth] = useState<Date>(() => selectedDate || new Date());
 
   // Position the dropdown to the left, aligned to the right edge of the cell
   useEffect(() => {
@@ -1904,8 +2056,10 @@ function InlineDateEditor({ currentValue, onSave, onClose }: {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
-        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
       ) {
         onClose();
       }
@@ -1956,94 +2110,109 @@ function InlineDateEditor({ currentValue, onSave, onClose }: {
   };
 
   const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
 
   const today = new Date();
 
-  const dropdown = position ? createPortal(
-    <div
-      ref={dropdownRef}
-      style={{ position: "fixed", top: position.top, left: position.left, width: 280 }}
-      className="z-200 rounded-lg border border-border bg-card shadow-xl"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* Month navigation */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
-        <button
-          type="button"
-          onClick={() => setDisplayMonth(new Date(displayMonth.getFullYear(), displayMonth.getMonth() - 1, 1))}
-          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+  const dropdown = position
+    ? createPortal(
+        <div
+          ref={dropdownRef}
+          style={{ position: "fixed", top: position.top, left: position.left, width: 280 }}
+          className="z-200 rounded-lg border border-border bg-card shadow-xl"
+          onClick={(e) => e.stopPropagation()}
         >
-          <CaretLeft size={16} weight="bold" />
-        </button>
-        <span className="text-sm font-medium text-foreground">
-          {displayMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-        </span>
-        <button
-          type="button"
-          onClick={() => setDisplayMonth(new Date(displayMonth.getFullYear(), displayMonth.getMonth() + 1, 1))}
-          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-        >
-          <CaretRight size={16} weight="bold" />
-        </button>
-      </div>
-
-      {/* Weekday headers */}
-      <div className="grid grid-cols-7 px-2 pt-2">
-        {weekdays.map((day) => (
-          <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
-            {day}
-          </div>
-        ))}
-      </div>
-
-      {/* Days grid */}
-      <div className="grid grid-cols-7 px-2 pb-2">
-        {calendarDays.map((day) => {
-          const isCurrentMonth = day.getMonth() === displayMonth.getMonth();
-          const isSelected = selectedDate && isSameDay(day, selectedDate);
-          const isCurrentDay = isSameDay(day, today);
-          return (
+          {/* Month navigation */}
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
             <button
-              key={day.toISOString()}
               type="button"
-              onClick={() => handleDayClick(day)}
-              className={cn(
-                "h-8 w-full rounded-md text-sm transition-colors",
-                !isCurrentMonth && "text-muted-foreground/40",
-                isCurrentMonth && !isSelected && "text-foreground hover:bg-muted",
-                isCurrentDay && !isSelected && "font-semibold text-primary",
-                isSelected && "bg-primary text-primary-foreground font-medium"
-              )}
+              onClick={() =>
+                setDisplayMonth(
+                  new Date(displayMonth.getFullYear(), displayMonth.getMonth() - 1, 1),
+                )
+              }
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
-              {day.getDate()}
+              <CaretLeft size={16} weight="bold" />
             </button>
-          );
-        })}
-      </div>
+            <span className="text-sm font-medium text-foreground">
+              {displayMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setDisplayMonth(
+                  new Date(displayMonth.getFullYear(), displayMonth.getMonth() + 1, 1),
+                )
+              }
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <CaretRight size={16} weight="bold" />
+            </button>
+          </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between px-3 py-2 border-t border-border">
-        <button
-          type="button"
-          onClick={() => handleDayClick(today)}
-          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          Today
-        </button>
-        {currentValue && (
-          <button
-            type="button"
-            onClick={() => { onSave(null); onClose(); }}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Clear
-          </button>
-        )}
-      </div>
-    </div>,
-    document.body
-  ) : null;
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 px-2 pt-2">
+            {weekdays.map((day) => (
+              <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Days grid */}
+          <div className="grid grid-cols-7 px-2 pb-2">
+            {calendarDays.map((day) => {
+              const isCurrentMonth = day.getMonth() === displayMonth.getMonth();
+              const isSelected = selectedDate && isSameDay(day, selectedDate);
+              const isCurrentDay = isSameDay(day, today);
+              return (
+                <button
+                  key={day.toISOString()}
+                  type="button"
+                  onClick={() => handleDayClick(day)}
+                  className={cn(
+                    "h-8 w-full rounded-md text-sm transition-colors",
+                    !isCurrentMonth && "text-muted-foreground/40",
+                    isCurrentMonth && !isSelected && "text-foreground hover:bg-muted",
+                    isCurrentDay && !isSelected && "font-semibold text-primary",
+                    isSelected && "bg-primary text-primary-foreground font-medium",
+                  )}
+                >
+                  {day.getDate()}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-3 py-2 border-t border-border">
+            <button
+              type="button"
+              onClick={() => handleDayClick(today)}
+              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Today
+            </button>
+            {currentValue && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSave(null);
+                  onClose();
+                }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
     <>
@@ -2053,16 +2222,23 @@ function InlineDateEditor({ currentValue, onSave, onClose }: {
   );
 }
 
-function InlineAssigneeEditor({ currentAssigneeIds, onSave, onClose }: {
+function InlineAssigneeEditor({
+  currentAssigneeIds,
+  onSave,
+  onClose,
+}: {
   currentAssigneeIds: string[];
   onSave: (value: unknown) => void;
   onClose: () => void;
 }) {
   const triggerRef = useRef<HTMLDivElement>(null);
 
-  const handleChange = useCallback((ids: string[]) => {
-    onSave(ids);
-  }, [onSave]);
+  const handleChange = useCallback(
+    (ids: string[]) => {
+      onSave(ids);
+    },
+    [onSave],
+  );
 
   return (
     <>
@@ -2081,7 +2257,6 @@ function InlineAssigneeEditor({ currentAssigneeIds, onSave, onClose }: {
   );
 }
 
-
 function TaskIdCell({ task }: { task: Task }) {
   const project = useAppSelector(selectCurrentProject);
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
@@ -2096,7 +2271,6 @@ function TaskIdCell({ task }: { task: Task }) {
   );
 }
 
-
 function TaskTitleCell({ task }: { task: Task }) {
   return (
     <div className="flex items-center min-w-0">
@@ -2104,7 +2278,6 @@ function TaskTitleCell({ task }: { task: Task }) {
     </div>
   );
 }
-
 
 interface FieldCellProps {
   task: Task;
@@ -2155,11 +2328,7 @@ function FieldCell({ task, field }: FieldCellProps) {
     }
 
     default:
-      return (
-        <span className="text-sm text-foreground truncate">
-          {value?.toString() || "-"}
-        </span>
-      );
+      return <span className="text-sm text-foreground truncate">{value?.toString() || "-"}</span>;
   }
 }
 
@@ -2197,9 +2366,7 @@ function PersonGroupHeader({ subject, fallbackKey }: PersonGroupHeaderProps) {
   return (
     <span className="flex items-center gap-2 min-w-0">
       <SubjectAvatar subject={subject} size="xs" />
-      <span className="text-sm font-medium text-foreground truncate">
-        {subject.name}
-      </span>
+      <span className="text-sm font-medium text-foreground truncate">{subject.name}</span>
     </span>
   );
 }
@@ -2234,15 +2401,16 @@ function TagsRowCell({ task }: { task: Task }) {
   return (
     <div className="flex flex-wrap items-center gap-1 overflow-hidden">
       {shown.map((tag) => (
-        <TagChip
-          key={tag.id}
-          tag={tag}
-          nonInteractive
-          className="px-1.5 py-0 text-[10px]"
-        />
+        <TagChip key={tag.id} tag={tag} nonInteractive className="px-1.5 py-0 text-[10px]" />
       ))}
       {overflow > 0 && (
-        <span className="text-[10px] text-muted-foreground" title={tags.slice(3).map((t) => t.name).join(", ")}>
+        <span
+          className="text-[10px] text-muted-foreground"
+          title={tags
+            .slice(3)
+            .map((t) => t.name)
+            .join(", ")}
+        >
           +{overflow}
         </span>
       )}
@@ -2289,7 +2457,6 @@ function resolveSystemColumnWidth(
   return defaultWidth;
 }
 
-
 interface ColumnsVisibilityMenuProps {
   projectId: string;
   allFields: FieldDefinition[];
@@ -2297,7 +2464,12 @@ interface ColumnsVisibilityMenuProps {
   onClose: () => void;
 }
 
-function ColumnsVisibilityMenu({ projectId, allFields, hiddenIds, onClose }: ColumnsVisibilityMenuProps) {
+function ColumnsVisibilityMenu({
+  projectId,
+  allFields,
+  hiddenIds,
+  onClose,
+}: ColumnsVisibilityMenuProps) {
   const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenSet = useMemo(() => new Set(hiddenIds), [hiddenIds]);
@@ -2331,9 +2503,7 @@ function ColumnsVisibilityMenu({ projectId, allFields, hiddenIds, onClose }: Col
       </div>
       <div className="max-h-80 overflow-y-auto py-1">
         {allFields.length === 0 && (
-          <div className="px-3 py-2 text-xs text-muted-foreground">
-            No columns available
-          </div>
+          <div className="px-3 py-2 text-xs text-muted-foreground">No columns available</div>
         )}
         {allFields.map((field) => {
           const isVisible = !hiddenSet.has(field.id);
@@ -2345,10 +2515,11 @@ function ColumnsVisibilityMenu({ projectId, allFields, hiddenIds, onClose }: Col
               className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-sm text-left text-foreground hover:bg-muted transition-colors"
             >
               <span className="truncate">{field.name}</span>
-              {isVisible
-                ? <Eye size={14} className="text-muted-foreground shrink-0" />
-                : <EyeSlash size={14} className="text-muted-foreground/50 shrink-0" />
-              }
+              {isVisible ? (
+                <Eye size={14} className="text-muted-foreground shrink-0" />
+              ) : (
+                <EyeSlash size={14} className="text-muted-foreground/50 shrink-0" />
+              )}
             </button>
           );
         })}
@@ -2356,7 +2527,6 @@ function ColumnsVisibilityMenu({ projectId, allFields, hiddenIds, onClose }: Col
     </div>
   );
 }
-
 
 interface ColumnResizeHandleProps {
   columnKey: string;
@@ -2388,7 +2558,7 @@ function ColumnResizeHandle({
       latestWidthRef.current = currentWidth;
       setIsResizing(true);
     },
-    [currentWidth]
+    [currentWidth],
   );
 
   useEffect(() => {
@@ -2396,10 +2566,7 @@ function ColumnResizeHandle({
 
     const handleMouseMove = (e: MouseEvent) => {
       const delta = e.clientX - startXRef.current;
-      const nextWidth = Math.min(
-        maxWidth,
-        Math.max(minWidth, startWidthRef.current + delta)
-      );
+      const nextWidth = Math.min(maxWidth, Math.max(minWidth, startWidthRef.current + delta));
       if (nextWidth !== latestWidthRef.current) {
         latestWidthRef.current = nextWidth;
         dispatch(setColumnWidth({ projectId, fieldId: columnKey, width: nextWidth }));
@@ -2433,11 +2600,10 @@ function ColumnResizeHandle({
       className={cn(
         "absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none z-10",
         "hover:bg-primary/60 transition-colors",
-        isResizing && "bg-primary"
+        isResizing && "bg-primary",
       )}
       onMouseDown={handleMouseDown}
       onClick={(e) => e.stopPropagation()}
     />
   );
 }
-

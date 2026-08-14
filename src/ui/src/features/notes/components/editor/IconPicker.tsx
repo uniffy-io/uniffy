@@ -5,4 +5,4 @@
  * For new code, import directly from '@/components/icon-picker'.
  */
 
-export { IconPicker } from '@/components/icon-picker';
+export { IconPicker } from "@/components/icon-picker";

@@ -1,16 +1,16 @@
 /** Set/clear the user's customName for an agent chat; empty restores the server-generated default. */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Modal } from '@/components/ui/modal';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import {
   closeRenameAgentChatDialog,
   selectRenameAgentChatChannelId,
-} from '@/features/chat/store/chatUiSlice';
-import { selectChannelById } from '@/features/chat/store/chatChannelsSlice';
-import { renameAgentChat } from '@/features/chat/store/chatThunks';
+} from "@/features/chat/store/chatUiSlice";
+import { selectChannelById } from "@/features/chat/store/chatChannelsSlice";
+import { renameAgentChat } from "@/features/chat/store/chatThunks";
 
 const MAX_NAME_LENGTH = 200;
 
@@ -22,14 +22,10 @@ export function RenameAgentChatDialog() {
   );
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [value, setValue] = useState('');
+  // ChatPage mounts this dialog only while a rename target is set, so the seed runs once per open.
+  // Re-seeding from the channel row would wipe what the user typed whenever that row updates.
+  const [value, setValue] = useState(() => channel?.customName ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (channel) {
-      setValue(channel.customName ?? '');
-    }
-  }, [channel]);
 
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
@@ -38,7 +34,7 @@ export function RenameAgentChatDialog() {
 
   const handleClose = useCallback(() => {
     dispatch(closeRenameAgentChatDialog());
-    setValue('');
+    setValue("");
   }, [dispatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,9 +59,7 @@ export function RenameAgentChatDialog() {
     if (!channel) return;
     setIsSubmitting(true);
     try {
-      await dispatch(
-        renameAgentChat({ channelId: channel.id, customName: null }),
-      ).unwrap();
+      await dispatch(renameAgentChat({ channelId: channel.id, customName: null })).unwrap();
       handleClose();
     } finally {
       setIsSubmitting(false);
@@ -78,7 +72,11 @@ export function RenameAgentChatDialog() {
 
   return (
     <Modal onClose={handleClose} maxWidth="max-w-md" closeDisabled={isSubmitting}>
-      <form onSubmit={handleSubmit} className="p-5 space-y-4" data-testid="rename-agent-chat-dialog">
+      <form
+        onSubmit={handleSubmit}
+        className="p-5 space-y-4"
+        data-testid="rename-agent-chat-dialog"
+      >
         <div>
           <h2 className="text-lg font-semibold text-foreground">Rename chat</h2>
           <p className="text-sm text-muted-foreground mt-1">

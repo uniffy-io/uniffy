@@ -12,7 +12,7 @@ export interface EventModalPrefill {
   durationMinutes?: number;
   /** Event id when opening in edit mode. */
   eventId?: string;
-  context?: 'calendar' | 'chat' | 'note';
+  context?: "calendar" | "chat" | "note";
   suggestedAttendees?: string[];
   suggestedResources?: string[];
 }
@@ -26,13 +26,13 @@ export interface DropTarget {
 }
 
 export type SidebarSectionId =
-  | 'quick_access'
-  | 'mini_calendar'
-  | 'calendars'
-  | 'organization'
-  | 'categories'
-  | 'templates'
-  | 'tags';
+  | "quick_access"
+  | "mini_calendar"
+  | "calendars"
+  | "organization"
+  | "categories"
+  | "templates"
+  | "tags";
 
 export interface EventFilters {
   /** Empty = all visible. */

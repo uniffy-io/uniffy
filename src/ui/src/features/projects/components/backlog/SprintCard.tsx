@@ -3,10 +3,7 @@ import { Play, CheckCircle, DotsThree, CaretDown, CaretRight } from "@phosphor-i
 import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
-import {
-  startSprint,
-  deleteSprint,
-} from "@/features/projects/store/sprintsThunks";
+import { startSprint, deleteSprint } from "@/features/projects/store/sprintsThunks";
 import { SprintCompletionDialog } from "@/features/projects/components/modals/SprintCompletionDialog";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { BacklogTaskRow } from "@/features/projects/components/backlog/BacklogTaskRow";
@@ -37,10 +34,10 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
     sprint.startDate && sprint.endDate
       ? `${sprint.startDate} – ${sprint.endDate}`
       : sprint.startDate
-      ? `From ${sprint.startDate}`
-      : sprint.endDate
-      ? `Until ${sprint.endDate}`
-      : null;
+        ? `From ${sprint.startDate}`
+        : sprint.endDate
+          ? `Until ${sprint.endDate}`
+          : null;
 
   const handleStartSprint = async () => {
     setIsStarting(true);
@@ -83,13 +80,9 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
           {isCollapsed ? <CaretRight size={14} /> : <CaretDown size={14} />}
         </button>
 
-        <span className="font-medium text-foreground flex-1 min-w-0 truncate">
-          {sprint.name}
-        </span>
+        <span className="font-medium text-foreground flex-1 min-w-0 truncate">{sprint.name}</span>
 
-        {dateRange && (
-          <span className="text-xs text-muted-foreground shrink-0">{dateRange}</span>
-        )}
+        {dateRange && <span className="text-xs text-muted-foreground shrink-0">{dateRange}</span>}
 
         <span className="text-xs text-muted-foreground shrink-0">
           {completedCount}/{totalCount} ({progressPct}%)

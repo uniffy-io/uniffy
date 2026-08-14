@@ -1,8 +1,8 @@
 /** Plain action creators dispatchable via storeRef so api.ts avoids a circular import on authSlice. */
 
-import type { GetCurrentUserResponse } from '@uniffy/proto/auth/v1/auth_pb';
+import type { GetCurrentUserResponse } from "@uniffy/proto/auth/v1/auth_pb";
 
-const AUTH_SLICE_NAME = 'auth';
+const AUTH_SLICE_NAME = "auth";
 
 export const AUTH_ACTION_TYPES = {
   SET_CREDENTIALS: `${AUTH_SLICE_NAME}/setCredentials`,
@@ -13,7 +13,7 @@ export const AUTH_ACTION_TYPES = {
 } as const;
 
 export interface SetCredentialsPayload {
-  user: Omit<GetCurrentUserResponse, '$typeName'>;
+  user: Omit<GetCurrentUserResponse, "$typeName">;
   accessToken: string;
   refreshToken: string;
   organizationId?: string;
@@ -24,7 +24,7 @@ export interface SetCredentialsPayload {
 }
 
 export interface RehydrateCompletePayload {
-  user: Omit<GetCurrentUserResponse, '$typeName'>;
+  user: Omit<GetCurrentUserResponse, "$typeName">;
   accessToken: string;
   refreshToken: string;
   organizationId?: string;

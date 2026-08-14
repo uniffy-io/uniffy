@@ -1,5 +1,5 @@
-import type { CalendarEvent } from '@/features/calendar/types';
-import { roleCanEdit, roleCanDelete, roleCanManage } from '@/shared/utils/contentRoles';
+import type { CalendarEvent } from "@/features/calendar/types";
+import { roleCanEdit, roleCanDelete, roleCanManage } from "@/shared/utils/contentRoles";
 
 export function useEventPermission(event: CalendarEvent | null): {
   canEdit: boolean;

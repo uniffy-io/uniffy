@@ -4,7 +4,10 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { closeEditProjectModal, selectEditProjectId } from "@/features/projects/store/projectsUiSlice";
+import {
+  closeEditProjectModal,
+  selectEditProjectId,
+} from "@/features/projects/store/projectsUiSlice";
 import { selectProjects } from "@/features/projects/store/projectsSlice";
 import { updateProject } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
@@ -40,9 +43,10 @@ export function EditProjectModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Populate form when project changes
+  // The modal stays mounted and only renders null while closed, so seed the form per project.
   useEffect(() => {
     if (project) {
+      // eslint-disable-next-line react/react-compiler
       setName(project.name);
       setDescription(project.description || "");
       setIcon((project.icon || "kanban") as ProjectIconName);
@@ -80,7 +84,7 @@ export function EditProjectModal() {
           icon,
           typeFieldSchemas,
           ...(tagsDirty ? { tagIds } : {}),
-        })
+        }),
       ).unwrap();
       handleClose();
     } finally {
@@ -94,9 +98,7 @@ export function EditProjectModal() {
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div className="flex items-center gap-2">
           <PencilSimple size={20} weight="bold" className="text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">
-            Edit Project
-          </h3>
+          <h3 className="text-lg font-semibold text-foreground">Edit Project</h3>
         </div>
         <button
           type="button"
@@ -108,107 +110,94 @@ export function EditProjectModal() {
         </button>
       </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit}>
-          <div className="p-4 md:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Project Name
-              </label>
-              <Input
-                ref={inputRef}
-                type="text"
-                placeholder="e.g. Product Launch Q2"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Description
-                <span className="text-muted-foreground font-normal ml-1">
-                  (optional)
-                </span>
-              </label>
-              <textarea
-                placeholder="What is this project about?"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={isSubmitting}
-                rows={2}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-              />
-            </div>
-
-            {/* Tags */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Tags
-                <span className="text-muted-foreground font-normal ml-1">
-                  (optional)
-                </span>
-              </label>
-              <TagPicker
-                selectedTagIds={tagIds}
-                onChange={(next) => {
-                  setTagIds(next);
-                  setTagsDirty(true);
-                }}
-                disabled={isSubmitting}
-                placeholder="Add a tag"
-              />
-            </div>
-
-            {/* Icon Picker */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Icon
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {ICON_OPTIONS.map((iconName) => (
-                  <button
-                    key={iconName}
-                    type="button"
-                    onClick={() => setIcon(iconName)}
-                    className={`p-2 rounded-md border transition-colors ${
-                      icon === iconName
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <ProjectIcon icon={iconName} size={20} weight="duotone" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Type Field Schemas */}
-            <TypeFieldSchemasSection
-              fieldDefinitions={project.fieldDefinitions}
-              typeFieldSchemas={typeFieldSchemas}
-              onChange={setTypeFieldSchemas}
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <div className="p-4 md:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Project Name</label>
+            <Input
+              ref={inputRef}
+              type="text"
+              placeholder="e.g. Product Launch Q2"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Description
+              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+            </label>
+            <textarea
+              placeholder="What is this project about?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!name.trim() || isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
+              rows={2}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+            />
           </div>
-        </form>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Tags
+              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+            </label>
+            <TagPicker
+              selectedTagIds={tagIds}
+              onChange={(next) => {
+                setTagIds(next);
+                setTagsDirty(true);
+              }}
+              disabled={isSubmitting}
+              placeholder="Add a tag"
+            />
+          </div>
+
+          {/* Icon Picker */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Icon</label>
+            <div className="flex flex-wrap gap-2">
+              {ICON_OPTIONS.map((iconName) => (
+                <button
+                  key={iconName}
+                  type="button"
+                  onClick={() => setIcon(iconName)}
+                  className={`p-2 rounded-md border transition-colors ${
+                    icon === iconName
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <ProjectIcon icon={iconName} size={20} weight="duotone" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Type Field Schemas */}
+          <TypeFieldSchemasSection
+            fieldDefinitions={project.fieldDefinitions}
+            typeFieldSchemas={typeFieldSchemas}
+            onChange={setTypeFieldSchemas}
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!name.trim() || isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }

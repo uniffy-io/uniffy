@@ -1,8 +1,8 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { RootState } from '@/app/store';
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { RootState } from "@/app/store";
 
-type ChatDensity = 'comfortable' | 'compact';
-type ChatActivePanel = 'thread' | 'resources' | null;
+type ChatDensity = "comfortable" | "compact";
+type ChatActivePanel = "thread" | "resources" | null;
 
 interface ChatUiState {
   sidebarOpen: boolean;
@@ -20,7 +20,7 @@ interface ChatUiState {
   agentChatPickerOpen: boolean;
   renameAgentChatChannelId: string | null;
   splitActive: boolean;
-  focusedPane: 'left' | 'right';
+  focusedPane: "left" | "right";
   jumpToMessageId: string | null;
   createChannelModalOpen: boolean;
   createChannelCategoryId: string | null;
@@ -28,7 +28,7 @@ interface ChatUiState {
   browseChannelsModalOpen: boolean;
   newDmModalOpen: boolean;
   channelSettingsModalOpen: boolean;
-  channelSettingsModalTab: 'overview' | 'members';
+  channelSettingsModalTab: "overview" | "members";
   replyToMessage: {
     id: string;
     channelId: string;
@@ -47,7 +47,7 @@ const initialState: ChatUiState = {
   sidebarCollapsed: false,
   threadPanelOpen: false,
   resourcePanelOpen: false,
-  density: 'comfortable',
+  density: "comfortable",
   activePanel: null,
   selectedMessageIds: [],
   channelHeaderExpanded: false,
@@ -58,7 +58,7 @@ const initialState: ChatUiState = {
   agentChatPickerOpen: false,
   renameAgentChatChannelId: null,
   splitActive: false,
-  focusedPane: 'left',
+  focusedPane: "left",
   jumpToMessageId: null,
   createChannelModalOpen: false,
   createChannelCategoryId: null,
@@ -66,13 +66,13 @@ const initialState: ChatUiState = {
   browseChannelsModalOpen: false,
   newDmModalOpen: false,
   channelSettingsModalOpen: false,
-  channelSettingsModalTab: 'overview' as const,
+  channelSettingsModalTab: "overview" as const,
   replyToMessage: null,
   editingMessage: null,
 };
 
 export const chatUiSlice = createSlice({
-  name: 'chatUi',
+  name: "chatUi",
   initialState,
   reducers: {
     toggleSidebar: (state) => {
@@ -96,22 +96,22 @@ export const chatUiSlice = createSlice({
     openThreadPanel: (state) => {
       state.threadPanelOpen = true;
       state.resourcePanelOpen = false;
-      state.activePanel = 'thread';
+      state.activePanel = "thread";
     },
     closeThreadPanel: (state) => {
       state.threadPanelOpen = false;
-      if (state.activePanel === 'thread') {
+      if (state.activePanel === "thread") {
         state.activePanel = null;
       }
     },
     openResourcePanel: (state) => {
       state.resourcePanelOpen = true;
       state.threadPanelOpen = false;
-      state.activePanel = 'resources';
+      state.activePanel = "resources";
     },
     closeResourcePanel: (state) => {
       state.resourcePanelOpen = false;
-      if (state.activePanel === 'resources') {
+      if (state.activePanel === "resources") {
         state.activePanel = null;
       }
     },
@@ -119,7 +119,7 @@ export const chatUiSlice = createSlice({
       state.density = action.payload;
     },
     toggleDensity: (state) => {
-      state.density = state.density === 'comfortable' ? 'compact' : 'comfortable';
+      state.density = state.density === "comfortable" ? "compact" : "comfortable";
     },
     selectMessage: (state, action: PayloadAction<string>) => {
       if (!state.selectedMessageIds.includes(action.payload)) {
@@ -127,9 +127,7 @@ export const chatUiSlice = createSlice({
       }
     },
     deselectMessage: (state, action: PayloadAction<string>) => {
-      state.selectedMessageIds = state.selectedMessageIds.filter(
-        (id) => id !== action.payload,
-      );
+      state.selectedMessageIds = state.selectedMessageIds.filter((id) => id !== action.payload);
     },
     clearSelection: (state) => {
       state.selectedMessageIds = [];
@@ -174,9 +172,9 @@ export const chatUiSlice = createSlice({
     },
     deactivateSplit: (state) => {
       state.splitActive = false;
-      state.focusedPane = 'left';
+      state.focusedPane = "left";
     },
-    setFocusedPane: (state, action: PayloadAction<'left' | 'right'>) => {
+    setFocusedPane: (state, action: PayloadAction<"left" | "right">) => {
       state.focusedPane = action.payload;
     },
     jumpToMessage: (state, action: PayloadAction<string>) => {
@@ -211,30 +209,36 @@ export const chatUiSlice = createSlice({
     closeNewDmModal: (state) => {
       state.newDmModalOpen = false;
     },
-    openChannelSettingsModal: (state, action: PayloadAction<'overview' | 'members'>) => {
+    openChannelSettingsModal: (state, action: PayloadAction<"overview" | "members">) => {
       state.channelSettingsModalOpen = true;
       state.channelSettingsModalTab = action.payload;
     },
     closeChannelSettingsModal: (state) => {
       state.channelSettingsModalOpen = false;
-      state.channelSettingsModalTab = 'overview';
+      state.channelSettingsModalTab = "overview";
     },
-    setReplyToMessage: (state, action: PayloadAction<{
-      id: string;
-      channelId: string;
-      senderName: string;
-      contentPreview: string;
-    }>) => {
+    setReplyToMessage: (
+      state,
+      action: PayloadAction<{
+        id: string;
+        channelId: string;
+        senderName: string;
+        contentPreview: string;
+      }>,
+    ) => {
       state.replyToMessage = action.payload;
     },
     clearReplyToMessage: (state) => {
       state.replyToMessage = null;
     },
-    setEditingMessage: (state, action: PayloadAction<{
-      id: string;
-      channelId: string;
-      content: string;
-    }>) => {
+    setEditingMessage: (
+      state,
+      action: PayloadAction<{
+        id: string;
+        channelId: string;
+        content: string;
+      }>,
+    ) => {
       state.editingMessage = action.payload;
       state.replyToMessage = null;
     },
@@ -293,23 +297,18 @@ export const {
   clearChatUi,
 } = chatUiSlice.actions;
 
-export const selectSidebarOpen = (state: RootState): boolean =>
-  state.chatUi.sidebarOpen;
+export const selectSidebarOpen = (state: RootState): boolean => state.chatUi.sidebarOpen;
 
-export const selectSidebarCollapsed = (state: RootState): boolean =>
-  state.chatUi.sidebarCollapsed;
+export const selectSidebarCollapsed = (state: RootState): boolean => state.chatUi.sidebarCollapsed;
 
-export const selectThreadPanelOpen = (state: RootState): boolean =>
-  state.chatUi.threadPanelOpen;
+export const selectThreadPanelOpen = (state: RootState): boolean => state.chatUi.threadPanelOpen;
 
 export const selectResourcePanelOpen = (state: RootState): boolean =>
   state.chatUi.resourcePanelOpen;
 
-export const selectDensity = (state: RootState): ChatDensity =>
-  state.chatUi.density;
+export const selectDensity = (state: RootState): ChatDensity => state.chatUi.density;
 
-export const selectActivePanel = (state: RootState): ChatActivePanel =>
-  state.chatUi.activePanel;
+export const selectActivePanel = (state: RootState): ChatActivePanel => state.chatUi.activePanel;
 
 export const selectSelectedMessageIds = (state: RootState): string[] =>
   state.chatUi.selectedMessageIds;
@@ -332,11 +331,9 @@ export const selectAgentChatPickerOpen = (state: RootState): boolean =>
 export const selectRenameAgentChatChannelId = (state: RootState): string | null =>
   state.chatUi.renameAgentChatChannelId;
 
-export const selectSplitActive = (state: RootState): boolean =>
-  state.chatUi.splitActive;
+export const selectSplitActive = (state: RootState): boolean => state.chatUi.splitActive;
 
-export const selectFocusedPane = (state: RootState): 'left' | 'right' =>
-  state.chatUi.focusedPane;
+export const selectFocusedPane = (state: RootState): "left" | "right" => state.chatUi.focusedPane;
 
 export const selectJumpToMessageId = (state: RootState): string | null =>
   state.chatUi.jumpToMessageId;
@@ -344,13 +341,11 @@ export const selectJumpToMessageId = (state: RootState): string | null =>
 export const selectChannelSettingsModalOpen = (state: RootState): boolean =>
   state.chatUi.channelSettingsModalOpen;
 
-export const selectChannelSettingsModalTab = (state: RootState): 'overview' | 'members' =>
+export const selectChannelSettingsModalTab = (state: RootState): "overview" | "members" =>
   state.chatUi.channelSettingsModalTab;
 
-export const selectReplyToMessage = (state: RootState) =>
-  state.chatUi.replyToMessage;
+export const selectReplyToMessage = (state: RootState) => state.chatUi.replyToMessage;
 
-export const selectEditingMessage = (state: RootState) =>
-  state.chatUi.editingMessage;
+export const selectEditingMessage = (state: RootState) => state.chatUi.editingMessage;
 
 export const chatUiReducer = chatUiSlice.reducer;

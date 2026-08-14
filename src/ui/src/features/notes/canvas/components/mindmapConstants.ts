@@ -6,23 +6,23 @@
  */
 
 /** Layout direction for mind map trees. */
-export type MindMapDirection = 'right' | 'down' | 'left' | 'up';
+export type MindMapDirection = "right" | "down" | "left" | "up";
 
 /** Ordered list of directions for cycling with the rotate action. */
-export const MINDMAP_DIRECTIONS: MindMapDirection[] = ['right', 'down', 'left', 'up'];
+export const MINDMAP_DIRECTIONS: MindMapDirection[] = ["right", "down", "left", "up"];
 
 /** Branch color palette. Each top-level child of the root gets a distinct color. */
 export const MINDMAP_BRANCH_COLORS = [
-  '#3b82f6', // blue-500
-  '#10b981', // emerald-500
-  '#f59e0b', // amber-500
-  '#ef4444', // red-500
-  '#8b5cf6', // violet-500
-  '#ec4899', // pink-500
-  '#06b6d4', // cyan-500
-  '#f97316', // orange-500
-  '#14b8a6', // teal-500
-  '#6366f1', // indigo-500
+  "#3b82f6", // blue-500
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#ef4444", // red-500
+  "#8b5cf6", // violet-500
+  "#ec4899", // pink-500
+  "#06b6d4", // cyan-500
+  "#f97316", // orange-500
+  "#14b8a6", // teal-500
+  "#6366f1", // indigo-500
 ] as const;
 
 /** Horizontal gap between parent and child columns (px). */

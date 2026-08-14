@@ -30,7 +30,7 @@ export function lastEndedCallKey(orgId: string) {
 
 export function upsertActiveCall(qc: QueryClient, orgId: string, call: PlainCall) {
   qc.setQueryData<ActiveCallsMap>(activeCallsKey(orgId), (old) => ({
-    ...(old ?? {}),
+    ...old,
     [call.channelId]: call,
   }));
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { X, Kanban, LockSimple, Buildings } from "@phosphor-icons/react";
 import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +7,10 @@ import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { closeCreateProjectModal, selectProjectScope } from "@/features/projects/store/projectsUiSlice";
+import {
+  closeCreateProjectModal,
+  selectProjectScope,
+} from "@/features/projects/store/projectsUiSlice";
 import { createProject, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
 import { TagPicker } from "@/features/tags";
@@ -35,23 +38,26 @@ export function CreateProjectModal() {
   const [icon, setIcon] = useState<ProjectIconName>("kanban");
   const [isOrgScope, setIsOrgScope] = useState(projectScope === "organization");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [slug, setSlug] = useState("");
-  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+  // Null until the user types a key of their own; the name-derived suggestion applies until then.
+  const [manualSlug, setManualSlug] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-generate slug from name when not manually edited
-  useEffect(() => {
-    if (isSlugManuallyEdited) return;
+  const slug = useMemo(() => {
+    if (manualSlug !== null) return manualSlug;
     const words = name.trim().split(/\s+/).filter(Boolean);
-    let candidate: string;
     if (words.length >= 2) {
-      candidate = words.map((w) => w[0]).join("").slice(0, 5).toUpperCase();
-    } else {
-      candidate = name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase();
+      return words
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 5)
+        .toUpperCase();
     }
-    setSlug(candidate);
-  }, [name, isSlugManuallyEdited]);
+    return name
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(0, 3)
+      .toUpperCase();
+  }, [manualSlug, name]);
 
   // Focus input on mount
   useEffect(() => {
@@ -64,12 +70,10 @@ export function CreateProjectModal() {
     setDescription("");
     setIcon("kanban");
     setIsOrgScope(projectScope === "organization");
-    setIsSlugManuallyEdited(false);
-    setSlug("");
+    setManualSlug(null);
     setTagIds([]);
     dispatch(closeCreateProjectModal());
   }, [dispatch, projectScope]);
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +90,7 @@ export function CreateProjectModal() {
           baselineRole: isOrgScope ? ContentRole.EDITOR : null,
           slug: slug || undefined,
           tagIds: tagIds.length ? tagIds : undefined,
-        })
+        }),
       ).unwrap();
       // Load tasks for the new project and navigate to it
       dispatch(fetchProjectTasks(result.id));
@@ -103,9 +107,7 @@ export function CreateProjectModal() {
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Kanban size={20} weight="bold" className="text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">
-            New Project
-          </h3>
+          <h3 className="text-lg font-semibold text-foreground">New Project</h3>
         </div>
         <button
           type="button"
@@ -117,156 +119,143 @@ export function CreateProjectModal() {
         </button>
       </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit}>
-          <div className="p-4 md:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Project Name
-              </label>
-              <Input
-                ref={inputRef}
-                type="text"
-                placeholder="e.g. Product Launch Q2"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {/* Slug (key/identifier) */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Project Key
-              </label>
-              <div className="flex items-center gap-3">
-                <Input
-                  type="text"
-                  value={slug}
-                  onChange={(e) => {
-                    setSlug(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5));
-                    setIsSlugManuallyEdited(true);
-                  }}
-                  maxLength={5}
-                  disabled={isSubmitting}
-                  className="w-32 font-mono"
-                  placeholder="KEY"
-                />
-                <span className="text-xs text-muted-foreground">
-                  Used for task IDs like {slug || "KEY"}-1
-                </span>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Description
-                <span className="text-muted-foreground font-normal ml-1">
-                  (optional)
-                </span>
-              </label>
-              <textarea
-                placeholder="What is this project about?"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={isSubmitting}
-                rows={2}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-              />
-            </div>
-
-            {/* Tags */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Tags
-                <span className="text-muted-foreground font-normal ml-1">
-                  (optional)
-                </span>
-              </label>
-              <TagPicker
-                selectedTagIds={tagIds}
-                onChange={setTagIds}
-                disabled={isSubmitting}
-                placeholder="Add a tag"
-              />
-            </div>
-
-            {/* Access */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Access
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsOrgScope(false)}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
-                    !isOrgScope
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <LockSimple size={16} weight="duotone" />
-                  Personal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsOrgScope(true)}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
-                    isOrgScope
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <Buildings size={16} weight="duotone" />
-                  Organization
-                </button>
-              </div>
-            </div>
-
-            {/* Icon Picker */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Icon
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {ICON_OPTIONS.map((iconName) => (
-                  <button
-                    key={iconName}
-                    type="button"
-                    onClick={() => setIcon(iconName)}
-                    className={`p-2 rounded-md border transition-colors ${
-                      icon === iconName
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <ProjectIcon icon={iconName} size={20} weight="duotone" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <div className="p-4 md:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Project Name</label>
+            <Input
+              ref={inputRef}
+              type="text"
+              placeholder="e.g. Product Launch Q2"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!name.trim() || isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Project"}
-            </Button>
+            />
           </div>
-        </form>
+
+          {/* Slug (key/identifier) */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Project Key</label>
+            <div className="flex items-center gap-3">
+              <Input
+                type="text"
+                value={slug}
+                onChange={(e) =>
+                  setManualSlug(
+                    e.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, "")
+                      .slice(0, 5),
+                  )
+                }
+                maxLength={5}
+                disabled={isSubmitting}
+                className="w-32 font-mono"
+                placeholder="KEY"
+              />
+              <span className="text-xs text-muted-foreground">
+                Used for task IDs like {slug || "KEY"}-1
+              </span>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Description
+              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+            </label>
+            <textarea
+              placeholder="What is this project about?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={isSubmitting}
+              rows={2}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+            />
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Tags
+              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+            </label>
+            <TagPicker
+              selectedTagIds={tagIds}
+              onChange={setTagIds}
+              disabled={isSubmitting}
+              placeholder="Add a tag"
+            />
+          </div>
+
+          {/* Access */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Access</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsOrgScope(false)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
+                  !isOrgScope
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                )}
+              >
+                <LockSimple size={16} weight="duotone" />
+                Personal
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOrgScope(true)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors flex-1",
+                  isOrgScope
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                )}
+              >
+                <Buildings size={16} weight="duotone" />
+                Organization
+              </button>
+            </div>
+          </div>
+
+          {/* Icon Picker */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Icon</label>
+            <div className="flex flex-wrap gap-2">
+              {ICON_OPTIONS.map((iconName) => (
+                <button
+                  key={iconName}
+                  type="button"
+                  onClick={() => setIcon(iconName)}
+                  className={`p-2 rounded-md border transition-colors ${
+                    icon === iconName
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <ProjectIcon icon={iconName} size={20} weight="duotone" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!name.trim() || isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Project"}
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }

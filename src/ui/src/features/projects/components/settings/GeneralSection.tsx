@@ -41,8 +41,9 @@ export function GeneralSection({ project }: GeneralSectionProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Reset form when project changes
+  // The section stays mounted across project switches and external edits win over an unsaved draft.
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler
     setName(project.name);
     setDescription(project.description || "");
     setSlug(project.slug || "");
@@ -68,7 +69,7 @@ export function GeneralSection({ project }: GeneralSectionProps) {
           description: description.trim(),
           icon,
           slug: slug.trim(),
-        })
+        }),
       ).unwrap();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -85,9 +86,7 @@ export function GeneralSection({ project }: GeneralSectionProps) {
           <Gear size={24} weight="duotone" className="text-primary shrink-0" />
           General
         </h1>
-        <p className="text-muted-foreground">
-          Basic project information.
-        </p>
+        <p className="text-muted-foreground">Basic project information.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -130,7 +129,9 @@ export function GeneralSection({ project }: GeneralSectionProps) {
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
                 Slug
-                <span className="text-muted-foreground font-normal ml-1">(used in task IDs like SLUG-123)</span>
+                <span className="text-muted-foreground font-normal ml-1">
+                  (used in task IDs like SLUG-123)
+                </span>
               </label>
               <Input
                 type="text"
@@ -157,7 +158,7 @@ export function GeneralSection({ project }: GeneralSectionProps) {
                     "p-2 rounded-md border transition-colors",
                     icon === iconName
                       ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
                   )}
                 >
                   <ProjectIcon icon={iconName} size={20} weight="duotone" />

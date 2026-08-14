@@ -186,6 +186,6 @@ function applyPresenceChange(
     const idsPart = key[2];
     if (typeof idsPart !== "string") continue;
     if (!idsPart.split(",").includes(userId)) continue;
-    queryClient.setQueryData(key, { ...(value ?? {}), [userId]: status });
+    queryClient.setQueryData(key, { ...value, [userId]: status });
   }
 }

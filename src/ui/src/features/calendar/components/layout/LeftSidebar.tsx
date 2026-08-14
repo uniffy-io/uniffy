@@ -1,13 +1,13 @@
-import { Plus, CalendarBlank, CaretDoubleLeft } from '@phosphor-icons/react';
-import { useAppDispatch } from '@/app/hooks';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { openEventModal, toggleSidebar } from '@/features/calendar/store';
-import { useBookmarks } from '@/features/bookmarks';
-import { QuickAccess } from '@/features/calendar/components/sidebar/QuickAccess';
-import { MiniCalendar } from '@/features/calendar/components/sidebar/MiniCalendar';
-import { CategoryList } from '@/features/calendar/components/sidebar/CategoryList';
-import { TagCloud } from '@/features/calendar/components/sidebar/TagCloud';
-import { TemplateList } from '@/features/calendar/components/sidebar/TemplateList';
+import { Plus, CalendarBlank, CaretDoubleLeft } from "@phosphor-icons/react";
+import { useAppDispatch } from "@/app/hooks";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { openEventModal, toggleSidebar } from "@/features/calendar/store";
+import { useBookmarks } from "@/features/bookmarks";
+import { QuickAccess } from "@/features/calendar/components/sidebar/QuickAccess";
+import { MiniCalendar } from "@/features/calendar/components/sidebar/MiniCalendar";
+import { CategoryList } from "@/features/calendar/components/sidebar/CategoryList";
+import { TagCloud } from "@/features/calendar/components/sidebar/TagCloud";
+import { TemplateList } from "@/features/calendar/components/sidebar/TemplateList";
 
 export function LeftSidebar() {
   const dispatch = useAppDispatch();
@@ -17,7 +17,7 @@ export function LeftSidebar() {
   useBookmarks();
 
   const handleNewEvent = () => {
-    dispatch(openEventModal({ mode: 'create' }));
+    dispatch(openEventModal({ mode: "create" }));
   };
 
   return (

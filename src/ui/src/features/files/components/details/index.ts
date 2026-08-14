@@ -1,1 +1,1 @@
-export { FileDetailsPanel } from '@/features/files/components/details/FileDetailsPanel';
+export { FileDetailsPanel } from "@/features/files/components/details/FileDetailsPanel";

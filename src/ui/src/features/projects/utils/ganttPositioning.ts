@@ -44,11 +44,7 @@ export function addPeriods(date: Date, count: number, zoom: ZoomLevel): Date {
   }
 }
 
-export function getDifferenceInPeriods(
-  startDate: Date,
-  endDate: Date,
-  zoom: ZoomLevel
-): number {
+export function getDifferenceInPeriods(startDate: Date, endDate: Date, zoom: ZoomLevel): number {
   const days = differenceInDays(endDate, startDate);
   switch (zoom) {
     case "day":
@@ -84,11 +80,7 @@ const DAYS_PER_COLUMN: Record<ZoomLevel, number> = {
 const MIN_BAR_WIDTH = 20;
 
 /** Month zoom uses fractional day-in-month to align bars across variable month lengths. */
-export function dateToPixelX(
-  date: Date,
-  viewStartDate: Date,
-  zoom: ZoomLevel,
-): number {
+export function dateToPixelX(date: Date, viewStartDate: Date, zoom: ZoomLevel): number {
   const columnWidth = COLUMN_WIDTHS[zoom];
 
   if (zoom === "month") {
@@ -116,7 +108,7 @@ export function calculateBarPosition(
   taskEndDate: string | null,
   viewStartDate: Date,
   viewEndDate: Date,
-  zoom: ZoomLevel
+  zoom: ZoomLevel,
 ): GanttBarPosition | null {
   if (!taskStartDate || !taskEndDate) {
     return null;
@@ -145,11 +137,7 @@ export function calculateBarPosition(
   };
 }
 
-export function pixelToDate(
-  pixelX: number,
-  viewStartDate: Date,
-  zoom: ZoomLevel
-): Date {
+export function pixelToDate(pixelX: number, viewStartDate: Date, zoom: ZoomLevel): Date {
   const columnWidth = COLUMN_WIDTHS[zoom];
 
   if (zoom === "month") {
@@ -181,7 +169,7 @@ export interface TimelineColumn {
 export function generateTimelineColumns(
   startDate: Date,
   endDate: Date,
-  zoom: ZoomLevel
+  zoom: ZoomLevel,
 ): TimelineColumn[] {
   const columns: TimelineColumn[] = [];
   const today = startOfDay(new Date());
@@ -221,7 +209,7 @@ export function calculateVisibleRange(
   scrollLeft: number,
   containerWidth: number,
   zoom: ZoomLevel,
-  baseDate: Date
+  baseDate: Date,
 ): { start: Date; end: Date } {
   const columnWidth = COLUMN_WIDTHS[zoom];
   const startOffset = Math.floor(scrollLeft / columnWidth);
@@ -237,7 +225,7 @@ export function isTaskVisible(
   taskStartDate: string | null,
   taskEndDate: string | null,
   viewStartDate: Date,
-  viewEndDate: Date
+  viewEndDate: Date,
 ): boolean {
   if (!taskStartDate && !taskEndDate) {
     return false;

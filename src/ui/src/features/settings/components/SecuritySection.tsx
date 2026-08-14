@@ -1,17 +1,17 @@
-import { useState } from 'react';
-import { HardDrives, Warning } from '@phosphor-icons/react';
-import { createClient } from '@connectrpc/connect';
-import { unaryTransport } from '@/config/api';
-import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';
-import { useAppSelector } from '@/app/hooks';
+import { useState } from "react";
+import { HardDrives, Warning } from "@phosphor-icons/react";
+import { createClient } from "@connectrpc/connect";
+import { unaryTransport } from "@/config/api";
+import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
+import { useAppSelector } from "@/app/hooks";
 import {
   clearLocalEncryptedStorage,
   rotateAndClearAll,
   isStorageEncryptionReady,
-} from '@/shared/crypto/storageEncryption';
-import { MfaSettingsCard } from '@/features/mfa/components/MfaSettingsCard';
-import { SessionsSection } from '@/features/settings/components/SessionsSection';
-import { toast } from 'sonner';
+} from "@/shared/crypto/storageEncryption";
+import { MfaSettingsCard } from "@/features/mfa/components/MfaSettingsCard";
+import { SessionsSection } from "@/features/settings/components/SessionsSection";
+import { toast } from "sonner";
 
 export function SecuritySection() {
   const { user } = useAppSelector((state) => state.auth);
@@ -25,9 +25,9 @@ export function SecuritySection() {
     setClearingDevice(true);
     try {
       await clearLocalEncryptedStorage();
-      toast.success('Local cache cleared. Data will reload from the server.');
+      toast.success("Local cache cleared. Data will reload from the server.");
     } catch {
-      toast.error('Failed to clear local cache.');
+      toast.error("Failed to clear local cache.");
     } finally {
       setClearingDevice(false);
     }
@@ -41,9 +41,9 @@ export function SecuritySection() {
       if (response.newCacheKeySeed.length > 0 && user) {
         await rotateAndClearAll(new Uint8Array(response.newCacheKeySeed), user.id);
       }
-      toast.success('Encryption key rotated. All device caches have been invalidated.');
+      toast.success("Encryption key rotated. All device caches have been invalidated.");
     } catch {
-      toast.error('Failed to rotate encryption key.');
+      toast.error("Failed to rotate encryption key.");
     } finally {
       setClearingAll(false);
       setShowConfirmAll(false);
@@ -65,16 +65,20 @@ export function SecuritySection() {
         <h2 className="text-lg font-semibold text-foreground">Client-Side Data</h2>
         <div className="bg-card rounded-lg border border-border p-4 md:p-6 space-y-4">
           <div className="flex items-start gap-3">
-            <HardDrives size={20} weight="duotone" className="text-muted-foreground mt-0.5 shrink-0" />
+            <HardDrives
+              size={20}
+              weight="duotone"
+              className="text-muted-foreground mt-0.5 shrink-0"
+            />
             <div className="space-y-1">
               <p className="text-sm text-foreground">
-                Uniffy caches content locally on your devices for faster access.
-                All cached data is encrypted at rest using AES-256-GCM.
+                Uniffy caches content locally on your devices for faster access. All cached data is
+                encrypted at rest using AES-256-GCM.
               </p>
               <p className="text-xs text-muted-foreground">
                 {encryptionReady
-                  ? 'Encryption is active on this device.'
-                  : 'Encryption is not initialized on this device.'}
+                  ? "Encryption is active on this device."
+                  : "Encryption is not initialized on this device."}
               </p>
             </div>
           </div>
@@ -95,7 +99,7 @@ export function SecuritySection() {
                   bg-card text-foreground hover:bg-accent transition-colors
                   disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {clearingDevice ? 'Clearing...' : 'Clear This Device'}
+                {clearingDevice ? "Clearing..." : "Clear This Device"}
               </button>
             </div>
 
@@ -103,7 +107,8 @@ export function SecuritySection() {
               <div>
                 <p className="text-sm font-medium text-foreground">Clear All Devices</p>
                 <p className="text-xs text-muted-foreground">
-                  Rotates your encryption key, making cached data on all devices unreadable on next login.
+                  Rotates your encryption key, making cached data on all devices unreadable on next
+                  login.
                 </p>
               </div>
               {!showConfirmAll ? (
@@ -138,7 +143,7 @@ export function SecuritySection() {
                       disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                   >
                     <Warning size={14} />
-                    {clearingAll ? 'Rotating...' : 'Confirm'}
+                    {clearingAll ? "Rotating..." : "Confirm"}
                   </button>
                 </div>
               )}

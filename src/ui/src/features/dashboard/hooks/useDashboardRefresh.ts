@@ -1,6 +1,6 @@
 // Auto-refresh is gated on document visibility - timers pause when the tab is hidden.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const ACTIVITY_INTERVAL = 60_000;
 const PRESENCE_INTERVAL = 30_000;
@@ -70,11 +70,11 @@ export function useDashboardRefresh(options: UseDashboardRefreshOptions = {}) {
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     startTimers();
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearTimers();
     };
   }, [clearTimers, startTimers, onRefreshActivity, onRefreshPresence]);

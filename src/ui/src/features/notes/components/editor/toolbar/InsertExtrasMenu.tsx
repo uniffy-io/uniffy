@@ -1,7 +1,14 @@
-import { Plus, ListBullets, VideoCamera, SpeakerHigh, Microphone, Image as ImageIcon } from '@phosphor-icons/react';
-import { ToolbarButton } from '@/features/notes/components/editor/toolbar/ToolbarButton';
-import { ToolbarPopover } from '@/features/notes/components/editor/toolbar/ToolbarPopover';
-import { useEditorHandle } from '@/components/editor/EditorHandle';
+import {
+  Plus,
+  ListBullets,
+  VideoCamera,
+  SpeakerHigh,
+  Microphone,
+  Image as ImageIcon,
+} from "@phosphor-icons/react";
+import { ToolbarButton } from "@/features/notes/components/editor/toolbar/ToolbarButton";
+import { ToolbarPopover } from "@/features/notes/components/editor/toolbar/ToolbarPopover";
+import { useEditorHandle } from "@/components/editor/EditorHandle";
 import {
   insertTocBlock,
   insertVideoBlock,
@@ -9,9 +16,9 @@ import {
   insertAudioRecording,
   insertImageBlock,
   type UploadHandler,
-} from '@/components/editor/commands/insertBlocks';
-import { cn } from '@/shared/utils/cn';
-import type { ReactNode } from 'react';
+} from "@/components/editor/commands/insertBlocks";
+import { cn } from "@/shared/utils/cn";
+import type { ComponentProps, ReactNode } from "react";
 
 interface InsertExtrasMenuProps {
   videoUpload?: UploadHandler;
@@ -33,8 +40,8 @@ function MenuItem({ icon, label, onClick, disabled }: MenuItemProps) {
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex items-center gap-2 px-3 py-1.5 rounded text-sm w-full text-left hover:bg-muted',
-        disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent',
+        "flex items-center gap-2 px-3 py-1.5 rounded text-sm w-full text-left hover:bg-muted",
+        disabled && "opacity-50 cursor-not-allowed hover:bg-transparent",
       )}
     >
       <span className="text-muted-foreground">{icon}</span>
@@ -43,17 +50,27 @@ function MenuItem({ icon, label, onClick, disabled }: MenuItemProps) {
   );
 }
 
+type ToolbarTriggerProps = Parameters<ComponentProps<typeof ToolbarPopover>["trigger"]>[0];
+
+function insertTrigger({ disabled }: { disabled: boolean }) {
+  return ({ open, onClick, ref }: ToolbarTriggerProps) => (
+    <ToolbarButton
+      ref={ref}
+      onClick={onClick}
+      active={open}
+      disabled={disabled}
+      label="Insert block"
+    >
+      <Plus size={14} weight="bold" />
+    </ToolbarButton>
+  );
+}
+
 export function InsertExtrasMenu({ videoUpload, audioUpload, imageUpload }: InsertExtrasMenuProps) {
   const handle = useEditorHandle();
 
   return (
-    <ToolbarPopover
-      trigger={({ open, onClick, ref }) => (
-        <ToolbarButton ref={ref} onClick={onClick} active={open} disabled={!handle} label="Insert block">
-          <Plus size={14} weight="bold" />
-        </ToolbarButton>
-      )}
-    >
+    <ToolbarPopover trigger={insertTrigger({ disabled: !handle })}>
       {(close) => (
         <div className="flex flex-col">
           <MenuItem

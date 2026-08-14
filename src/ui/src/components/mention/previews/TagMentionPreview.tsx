@@ -1,15 +1,10 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { useState, useCallback } from 'react';
-import {
-  ArrowSquareOut,
-  CopySimple,
-  Check,
-  Tag as TagIcon,
-} from '@phosphor-icons/react';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { MetaSeparator } from '@/components/mention/previews/ParentBadge';
-import { tagColorClasses } from '@/features/tags/utils/colors';
-import type { MentionLiveState } from '@/components/mention/types';
+import { useState, useCallback } from "react";
+import { ArrowSquareOut, CopySimple, Check, Tag as TagIcon } from "@phosphor-icons/react";
+import { formatRelativeTime } from "@/shared/utils/dateFormatting";
+import { MetaSeparator } from "@/components/mention/previews/ParentBadge";
+import { tagColorClasses } from "@/features/tags/utils/colors";
+import type { MentionLiveState } from "@/components/mention/types";
 
 interface TagMentionPreviewProps {
   urn: string;
@@ -36,17 +31,19 @@ export function TagMentionPreview({
     setTimeout(() => setCopied(false), 2000);
   }, [urn, onCopyLink]);
 
-  const palette = tagColorClasses(liveState.tagSlug ?? '', liveState.tagColor ?? undefined);
+  const palette = tagColorClasses(liveState.tagSlug ?? "", liveState.tagColor ?? undefined);
   const totalUsage = liveState.tagUsageCount ?? 0;
-  const slug = liveState.tagSlug ?? '';
-  const tagPath = slug ? `/tags/${slug}` : '/tags';
+  const slug = liveState.tagSlug ?? "";
+  const tagPath = slug ? `/tags/${slug}` : "/tags";
   const lastAddedAt = liveState.tagRecentAssignmentAt?.[0];
 
   return (
     <>
       <span className="block relative px-4 pr-10 pt-3 pb-1 pl-5">
         <span className="flex items-center gap-2.5">
-          <span className={`grid place-items-center shrink-0 w-7 h-7 rounded-md border ${palette.bg} ${palette.text} ${palette.border}`}>
+          <span
+            className={`grid place-items-center shrink-0 w-7 h-7 rounded-md border ${palette.bg} ${palette.text} ${palette.border}`}
+          >
             <TagIcon size={16} weight="duotone" />
           </span>
           <span className="block flex-1 min-w-0">
@@ -66,13 +63,15 @@ export function TagMentionPreview({
 
       {description && (
         <span className="block px-4 pb-2 pl-[3.375rem]">
-          <span className="block text-xs text-muted-foreground/70 leading-relaxed line-clamp-3">{description}</span>
+          <span className="block text-xs text-muted-foreground/70 leading-relaxed line-clamp-3">
+            {description}
+          </span>
         </span>
       )}
 
       <span className="flex px-4 pb-2 pl-[3.375rem] items-center gap-2 flex-wrap">
         <span className="text-[11px] font-medium text-foreground">
-          {totalUsage === 1 ? '1 item' : `${totalUsage} items`}
+          {totalUsage === 1 ? "1 item" : `${totalUsage} items`}
         </span>
         {lastAddedAt && (
           <>
@@ -91,12 +90,23 @@ export function TagMentionPreview({
         </span>
         <span className="flex items-center gap-1">
           <button
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy(); }}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleCopy();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title="Copy URN"
           >
-            {copied ? <Check size={11} weight="bold" className="text-green-500" /> : <CopySimple size={11} weight="bold" />}
+            {copied ? (
+              <Check size={11} weight="bold" className="text-green-500" />
+            ) : (
+              <CopySimple size={11} weight="bold" />
+            )}
           </button>
           <a
             href={tagPath}

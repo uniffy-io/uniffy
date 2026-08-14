@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
-import { getCurrentTimeInfo } from '@/features/calendar/utils';
-import { GRID } from '@/features/calendar/constants';
+import { useState, useEffect, useMemo } from "react";
+import { getCurrentTimeInfo } from "@/features/calendar/utils";
+import { GRID } from "@/features/calendar/constants";
 
 interface CurrentTimeInfo {
   hour: number;
@@ -12,29 +12,28 @@ interface CurrentTimeInfo {
 
 export function useCurrentTime(
   startHour: number = GRID.START_HOUR,
-  hourHeight: number = GRID.HOUR_HEIGHT
+  hourHeight: number = GRID.HOUR_HEIGHT,
 ): CurrentTimeInfo {
   const [timeInfo, setTimeInfo] = useState(() => getCurrentTimeInfo());
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing with external clock
-    setTimeInfo(getCurrentTimeInfo());
-
     const now = new Date();
     const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
 
     // Align the first tick to the next minute boundary, then tick every minute.
+    let interval: ReturnType<typeof setInterval> | null = null;
     const syncTimeout = setTimeout(() => {
       setTimeInfo(getCurrentTimeInfo());
 
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         setTimeInfo(getCurrentTimeInfo());
       }, 60000);
-
-      return () => clearInterval(interval);
     }, msUntilNextMinute);
 
-    return () => clearTimeout(syncTimeout);
+    return () => {
+      clearTimeout(syncTimeout);
+      if (interval !== null) clearInterval(interval);
+    };
   }, []);
 
   const position = useMemo(() => {
@@ -45,8 +44,8 @@ export function useCurrentTime(
   const formattedTime = useMemo(() => {
     const { hour, minutes } = timeInfo;
     const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    const period = hour < 12 ? 'AM' : 'PM';
-    const minuteStr = minutes.toString().padStart(2, '0');
+    const period = hour < 12 ? "AM" : "PM";
+    const minuteStr = minutes.toString().padStart(2, "0");
     return `${displayHour}:${minuteStr} ${period}`;
   }, [timeInfo]);
 
@@ -56,4 +55,3 @@ export function useCurrentTime(
     formattedTime,
   };
 }
-

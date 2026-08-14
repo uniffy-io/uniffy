@@ -1,18 +1,25 @@
-import { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlass, Tag, Hash, ChatCircle, Folder, PresentationChart } from '@phosphor-icons/react';
-import type { Icon } from '@phosphor-icons/react';
-import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
-import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
-import { cn } from '@/shared/utils/cn';
-import { parseUrn, UrnType } from '@/shared/utils/urn';
-import { type UrnTypeTheme } from '@/config/theme/urnColors';
-import { getContentTypeConfig } from '@/config/theme/contentTypes';
-import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
-import { hasHighlight, renderHighlightedText } from '@/features/search/utils/highlight';
-import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
-import { SubjectAvatar } from '@/components/subject/SubjectAvatar';
-import { SUBJECT_TYPE } from '@/components/subject/types';
-import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
+import { useState, useEffect, useRef } from "react";
+import {
+  MagnifyingGlass,
+  Tag,
+  Hash,
+  ChatCircle,
+  Folder,
+  PresentationChart,
+} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
+import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
+import { cn } from "@/shared/utils/cn";
+import { parseUrn, UrnType } from "@/shared/utils/urn";
+import { type UrnTypeTheme } from "@/config/theme/urnColors";
+import { getContentTypeConfig } from "@/config/theme/contentTypes";
+import { stripMarkdown } from "@/features/search/utils/stripMarkdown";
+import { hasHighlight, renderHighlightedText } from "@/features/search/utils/highlight";
+import { useThumbnailUrl } from "@/features/files/hooks/useThumbnail";
+import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
+import { SUBJECT_TYPE } from "@/components/subject/types";
+import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 
 /** SearchResultType to UrnType. Update when adding a new content type. */
 const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
@@ -45,12 +52,12 @@ function getResultTheme(result: SearchResultItem): ResultTheme {
   // Notes-tree folders and canvases index as NOTE; the node_type metadata
   // distinguishes them so the badge does not claim "Note".
   if (result.type === SearchResultType.NOTE) {
-    const nodeType = result.metadata['node_type'];
-    if (nodeType === 'FOLDER') {
-      return { ...config.theme, icon: Folder, label: 'Folder' };
+    const nodeType = result.metadata["node_type"];
+    if (nodeType === "FOLDER") {
+      return { ...config.theme, icon: Folder, label: "Folder" };
     }
-    if (nodeType === 'CANVAS') {
-      return { ...config.theme, icon: PresentationChart, label: 'Canvas' };
+    if (nodeType === "CANVAS") {
+      return { ...config.theme, icon: PresentationChart, label: "Canvas" };
     }
   }
 
@@ -61,29 +68,33 @@ function getResultTheme(result: SearchResultItem): ResultTheme {
   };
 }
 
-function SearchFileIcon({ urn, isSelected, fallback }: {
-    urn: string;
-    isSelected: boolean;
-    fallback: React.ReactNode;
+function SearchFileIcon({
+  urn,
+  isSelected,
+  fallback,
+}: {
+  urn: string;
+  isSelected: boolean;
+  fallback: React.ReactNode;
 }) {
-    const { id: fileId } = parseUrn(urn);
-    const { url } = useThumbnailUrl(fileId || null);
-    const [error, setError] = useState(false);
+  const { id: fileId } = parseUrn(urn);
+  const { url } = useThumbnailUrl(fileId || null);
+  const [error, setError] = useState(false);
 
-    if (!url || error) return <>{fallback}</>;
+  if (!url || error) return <>{fallback}</>;
 
-    return (
-        <img
-            src={url}
-            alt=""
-            className={cn(
-                'w-8 h-8 object-cover rounded-md shrink-0',
-                isSelected ? 'ring-1 ring-white/20' : ''
-            )}
-            loading="lazy"
-            onError={() => setError(true)}
-        />
-    );
+  return (
+    <img
+      src={url}
+      alt=""
+      className={cn(
+        "w-8 h-8 object-cover rounded-md shrink-0",
+        isSelected ? "ring-1 ring-white/20" : "",
+      )}
+      loading="lazy"
+      onError={() => setError(true)}
+    />
+  );
 }
 
 interface SearchResultsListProps {
@@ -107,19 +118,19 @@ function resultCountLabel(shown: number, totalCount?: number): string {
   if (totalCount !== undefined && totalCount > shown) {
     return `${shown} of ${totalCount} results`;
   }
-  return `${shown} result${shown !== 1 ? 's' : ''}`;
+  return `${shown} result${shown !== 1 ? "s" : ""}`;
 }
 
 export function SearchResultsList({
   results,
   isLoading,
-  query = '',
+  query = "",
   onSelect,
   onClose,
   className,
   showHeader = true,
   showFooter = true,
-  emptyMessage = 'No results found',
+  emptyMessage = "No results found",
   selectedIndex: controlledIndex,
   onSelectedIndexChange,
   copiedUrn = false,
@@ -138,7 +149,7 @@ export function SearchResultsList({
   const scrollToIndex = (index: number) => {
     const item = itemRefs.current.get(index);
     if (item) {
-      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      item.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   };
 
@@ -147,44 +158,44 @@ export function SearchResultsList({
       if (results.length === 0) return;
 
       switch (e.key) {
-        case 'ArrowDown': {
+        case "ArrowDown": {
           e.preventDefault();
           const nextIndex = (selectedIndex + 1) % results.length;
           setSelectedIndex(nextIndex);
           scrollToIndex(nextIndex);
           break;
         }
-        case 'ArrowUp': {
+        case "ArrowUp": {
           e.preventDefault();
           const prevIndex = (selectedIndex - 1 + results.length) % results.length;
           setSelectedIndex(prevIndex);
           scrollToIndex(prevIndex);
           break;
         }
-        case 'Enter':
+        case "Enter":
           e.preventDefault();
           if (results[selectedIndex]) {
             onSelect(results[selectedIndex]);
           }
           break;
-        case 'Escape':
+        case "Escape":
           e.preventDefault();
           onClose?.();
           break;
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [results, selectedIndex, onSelect, onClose, setSelectedIndex]);
 
   return (
     <div
       className={cn(
-        'rounded-xl bg-card border border-border/80 shadow-xl',
-        'overflow-hidden',
-        'animate-in fade-in-0 slide-in-from-top-1 duration-200',
-        className
+        "rounded-xl bg-card border border-border/80 shadow-xl",
+        "overflow-hidden",
+        "animate-in fade-in-0 slide-in-from-top-1 duration-200",
+        className,
       )}
     >
       {showHeader && (
@@ -192,7 +203,7 @@ export function SearchResultsList({
           <div className="flex items-center gap-2">
             <MagnifyingGlass size={14} weight="duotone" className="text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">
-              {query ? `"${query}"` : 'Search'}
+              {query ? `"${query}"` : "Search"}
             </span>
             {results.length > 0 && (
               <span className="text-[10px] text-muted-foreground/70 ml-auto">
@@ -227,24 +238,25 @@ export function SearchResultsList({
               const theme = getResultTheme(result);
               const Icon = theme.icon;
               const isSelected = index === selectedIndex;
-              const description = result.description ? stripMarkdown(result.description) : '';
+              const description = result.description ? stripMarkdown(result.description) : "";
               // Chat messages index their content as both title and description;
               // the duplicate line is noise unless the crop adds context.
               const showDescription = !!description && description !== result.title;
-              const personRole = result.type === SearchResultType.USER
-                ? [result.metadata['job_title'], result.metadata['department']]
-                    .filter(Boolean)
-                    .join(' · ')
-                : result.type === SearchResultType.TEAM
-                  ? [
-                      result.metadata['member_count']
-                        ? `${result.metadata['member_count']} member${result.metadata['member_count'] === '1' ? '' : 's'}`
-                        : '',
-                      result.metadata['parent_label'],
-                    ]
+              const personRole =
+                result.type === SearchResultType.USER
+                  ? [result.metadata["job_title"], result.metadata["department"]]
                       .filter(Boolean)
-                      .join(' · ')
-                  : '';
+                      .join(" · ")
+                  : result.type === SearchResultType.TEAM
+                    ? [
+                        result.metadata["member_count"]
+                          ? `${result.metadata["member_count"]} member${result.metadata["member_count"] === "1" ? "" : "s"}`
+                          : "",
+                        result.metadata["parent_label"],
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : "";
 
               return (
                 <li
@@ -261,11 +273,11 @@ export function SearchResultsList({
                     onClick={() => onSelect(result)}
                     onMouseEnter={() => setSelectedIndex(index)}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2 mx-1.5 rounded-lg text-left',
-                      'transition-all duration-150 relative',
-                      isSelected ? 'bg-muted/80' : 'hover:bg-muted/40'
+                      "w-full flex items-center gap-3 px-3 py-2 mx-1.5 rounded-lg text-left",
+                      "transition-all duration-150 relative",
+                      isSelected ? "bg-muted/80" : "hover:bg-muted/40",
                     )}
-                    style={{ width: 'calc(100% - 12px)' }}
+                    style={{ width: "calc(100% - 12px)" }}
                   >
                     {isSelected && (
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full bg-primary" />
@@ -276,46 +288,52 @@ export function SearchResultsList({
                         urn={result.urn}
                         isSelected={isSelected}
                         fallback={
-                          <div className={cn(
-                            'grid place-items-center w-8 h-8 rounded-md shrink-0 transition-all duration-200',
-                            isSelected ? theme.iconBoxAccent : 'bg-muted text-muted-foreground'
-                          )}>
-                            <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} />
+                          <div
+                            className={cn(
+                              "grid place-items-center w-8 h-8 rounded-md shrink-0 transition-all duration-200",
+                              isSelected ? theme.iconBoxAccent : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            <Icon size={16} weight={isSelected ? "fill" : "duotone"} />
                           </div>
                         }
                       />
                     ) : result.type === SearchResultType.USER ? (
                       <SubjectAvatar
                         subject={{
-                          id: parseUrn(result.urn).id || '',
+                          id: parseUrn(result.urn).id || "",
                           type: SUBJECT_TYPE.USER,
                           name: result.title,
                         }}
                         size="md"
                         className="shrink-0"
                       />
-                    ) : result.type === SearchResultType.AGENT
-                      || result.type === SearchResultType.AGENT_CHAT ? (
+                    ) : result.type === SearchResultType.AGENT ||
+                      result.type === SearchResultType.AGENT_CHAT ? (
                       <AgentAvatar
-                        agentName={result.metadata['agent_name'] || result.title}
-                        avatarEmoji={result.metadata['emoji']}
+                        agentName={result.metadata["agent_name"] || result.title}
+                        avatarEmoji={result.metadata["emoji"]}
                         size="md"
                       />
                     ) : (
-                      <div className={cn(
-                        'grid place-items-center w-8 h-8 rounded-md shrink-0 transition-all duration-200',
-                        isSelected ? theme.iconBoxAccent : 'bg-muted text-muted-foreground'
-                      )}>
-                        <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} />
+                      <div
+                        className={cn(
+                          "grid place-items-center w-8 h-8 rounded-md shrink-0 transition-all duration-200",
+                          isSelected ? theme.iconBoxAccent : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        <Icon size={16} weight={isSelected ? "fill" : "duotone"} />
                       </div>
                     )}
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={cn(
-                          'text-sm font-medium truncate',
-                          isSelected ? 'text-foreground' : 'text-foreground/80'
-                        )}>
+                        <span
+                          className={cn(
+                            "text-sm font-medium truncate",
+                            isSelected ? "text-foreground" : "text-foreground/80",
+                          )}
+                        >
                           {hasHighlight(result.titleHighlighted)
                             ? renderHighlightedText(result.titleHighlighted)
                             : result.title}
@@ -325,33 +343,44 @@ export function SearchResultsList({
                             {personRole}
                           </span>
                         )}
-                        <span className={cn(
-                          'text-[10px] font-medium shrink-0 px-1.5 py-0.5 rounded',
-                          isSelected ? theme.badgeBg + ' ' + theme.accentText : 'text-muted-foreground/60'
-                        )}>
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium shrink-0 px-1.5 py-0.5 rounded",
+                            isSelected
+                              ? theme.badgeBg + " " + theme.accentText
+                              : "text-muted-foreground/60",
+                          )}
+                        >
                           {theme.label}
                         </span>
                       </div>
-                      {result.type === SearchResultType.CHAT_MESSAGE && result.metadata['channel_name'] && (
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {result.metadata['channel_type'] === 'PUBLIC' || result.metadata['channel_type'] === 'PRIVATE' ? (
-                            <Hash size={11} weight="bold" className="text-violet-400 shrink-0" />
-                          ) : (
-                            <ChatCircle size={11} weight="fill" className="text-violet-400 shrink-0" />
-                          )}
-                          <span className="text-xs text-violet-400 font-medium truncate">
-                            {result.metadata['channel_name']}
-                          </span>
-                        </div>
-                      )}
+                      {result.type === SearchResultType.CHAT_MESSAGE &&
+                        result.metadata["channel_name"] && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {result.metadata["channel_type"] === "PUBLIC" ||
+                            result.metadata["channel_type"] === "PRIVATE" ? (
+                              <Hash size={11} weight="bold" className="text-violet-400 shrink-0" />
+                            ) : (
+                              <ChatCircle
+                                size={11}
+                                weight="fill"
+                                className="text-violet-400 shrink-0"
+                              />
+                            )}
+                            <span className="text-xs text-violet-400 font-medium truncate">
+                              {result.metadata["channel_name"]}
+                            </span>
+                          </div>
+                        )}
                       {result.tags && result.tags.length > 0 && (
                         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                          <Tag size={10} weight="duotone" className="text-muted-foreground/50 shrink-0" />
+                          <Tag
+                            size={10}
+                            weight="duotone"
+                            className="text-muted-foreground/50 shrink-0"
+                          />
                           {result.tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="text-[10px] text-muted-foreground/60"
-                            >
+                            <span key={tag} className="text-[10px] text-muted-foreground/60">
                               {tag}
                             </span>
                           ))}
@@ -394,7 +423,7 @@ export function SearchResultsList({
               <span className="flex items-center gap-1">
                 <kbd className="px-1 py-0.5 rounded bg-muted/50 font-mono">⌘C</kbd>
                 {copiedUrn ? (
-                  <span style={{ color: 'var(--status-success)' }}>copied!</span>
+                  <span style={{ color: "var(--status-success)" }}>copied!</span>
                 ) : (
                   <span>copy</span>
                 )}

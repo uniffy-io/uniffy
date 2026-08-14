@@ -49,7 +49,7 @@ Uniffy supports development fully in docker, and that is the recommended mode fo
 
 You can also run only the infrastructure in docker and develop natively on the host with uv and pnpm. This is handy for editor integration, but understand the tradeoff: package code executes on your host. The lockfile review and the two guards above still apply, the container isolation does not.
 
-Editor IntelliSense does not require the native mode. The repo ships a dev container (`.devcontainer/`) that attaches your editor to a container holding the full workspace `node_modules` and `.venv`, so pyright, tsserver, ruff, and eslint all resolve from inside it:
+Editor IntelliSense does not require the native mode. The repo ships a dev container (`.devcontainer/`) that attaches your editor to a container holding the full workspace `node_modules` and `.venv`, so pyright, tsserver, ruff, and oxlint all resolve from inside it:
 
 - **VS Code**: install the "Dev Containers" extension, open the repo, accept the "Reopen in Container" popup (or run "Dev Containers: Reopen in Container" from the command palette).
 - **Zed** (v0.218+): open the repo and accept the dev container prompt, or run "Project: Open Remote" from the command palette and choose "Connect Dev Container". Docker must be in your PATH.

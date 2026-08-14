@@ -1,5 +1,5 @@
-declare module 'react-force-graph-2d' {
-  import type { MutableRefObject } from 'react';
+declare module "react-force-graph-2d" {
+  import type { MutableRefObject } from "react";
 
   export interface NodeObject {
     id: string | number;
@@ -55,9 +55,18 @@ declare module 'react-force-graph-2d' {
     nodeVisibility?: boolean | string | ((node: NodeObject) => boolean);
     nodeColor?: string | ((node: NodeObject) => string);
     nodeAutoColorBy?: string | ((node: NodeObject) => string | null);
-    nodeCanvasObject?: (node: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => void;
+    nodeCanvasObject?: (
+      node: NodeObject,
+      ctx: CanvasRenderingContext2D,
+      globalScale: number,
+    ) => void;
     nodeCanvasObjectMode?: string | ((node: NodeObject) => string);
-    nodePointerAreaPaint?: (node: NodeObject, color: string, ctx: CanvasRenderingContext2D, globalScale: number) => void;
+    nodePointerAreaPaint?: (
+      node: NodeObject,
+      color: string,
+      ctx: CanvasRenderingContext2D,
+      globalScale: number,
+    ) => void;
 
     // Link styling
     linkLabel?: string | ((link: LinkObject) => string);
@@ -67,7 +76,11 @@ declare module 'react-force-graph-2d' {
     linkLineDash?: number[] | string | ((link: LinkObject) => number[] | null);
     linkWidth?: number | string | ((link: LinkObject) => number);
     linkCurvature?: number | string | ((link: LinkObject) => number);
-    linkCanvasObject?: (link: LinkObject, ctx: CanvasRenderingContext2D, globalScale: number) => void;
+    linkCanvasObject?: (
+      link: LinkObject,
+      ctx: CanvasRenderingContext2D,
+      globalScale: number,
+    ) => void;
     linkCanvasObjectMode?: string | ((link: LinkObject) => string);
     linkDirectionalArrowLength?: number | string | ((link: LinkObject) => number);
     linkDirectionalArrowColor?: string | ((link: LinkObject) => string);
@@ -76,7 +89,12 @@ declare module 'react-force-graph-2d' {
     linkDirectionalParticleSpeed?: number | string | ((link: LinkObject) => number);
     linkDirectionalParticleWidth?: number | string | ((link: LinkObject) => number);
     linkDirectionalParticleColor?: string | ((link: LinkObject) => string);
-    linkPointerAreaPaint?: (link: LinkObject, color: string, ctx: CanvasRenderingContext2D, globalScale: number) => void;
+    linkPointerAreaPaint?: (
+      link: LinkObject,
+      color: string,
+      ctx: CanvasRenderingContext2D,
+      globalScale: number,
+    ) => void;
 
     // Interaction
     onNodeClick?: (node: NodeObject, event: MouseEvent) => void;
@@ -109,7 +127,7 @@ declare module 'react-force-graph-2d' {
     enablePointerInteraction?: boolean;
 
     // Misc
-    dagMode?: 'td' | 'bu' | 'lr' | 'rl' | 'radialout' | 'radialin' | null;
+    dagMode?: "td" | "bu" | "lr" | "rl" | "radialout" | "radialin" | null;
     dagLevelDistance?: number | null;
     autoPauseRedraw?: boolean;
     minZoom?: number;
@@ -119,6 +137,8 @@ declare module 'react-force-graph-2d' {
     ref?: MutableRefObject<ForceGraphMethods | undefined>;
   }
 
-  const ForceGraph2D: React.ForwardRefExoticComponent<ForceGraph2DProps & React.RefAttributes<ForceGraphMethods>>;
+  const ForceGraph2D: React.ForwardRefExoticComponent<
+    ForceGraph2DProps & React.RefAttributes<ForceGraphMethods>
+  >;
   export default ForceGraph2D;
 }

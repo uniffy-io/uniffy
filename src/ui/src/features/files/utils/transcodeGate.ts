@@ -6,28 +6,28 @@
  * actually WebM - unplayable in QuickTime / Finder / iOS.
  */
 
-import { TranscodeStatus } from '@uniffy/proto/files/v1/files_pb';
+import { TranscodeStatus } from "@uniffy/proto/files/v1/files_pb";
 
 export interface DownloadGateState {
-    disabled: boolean;
-    tooltip: string | null;
-    failed: boolean;
+  disabled: boolean;
+  tooltip: string | null;
+  failed: boolean;
 }
 
-const PENDING_TOOLTIP = 'Optimising for download. Try again shortly.';
-const FAILED_TOOLTIP = 'Optimisation failed - plays in browser';
+const PENDING_TOOLTIP = "Optimising for download. Try again shortly.";
+const FAILED_TOOLTIP = "Optimisation failed - plays in browser";
 
 export function getDownloadGateState(
-    transcodeStatus: TranscodeStatus | undefined | null,
+  transcodeStatus: TranscodeStatus | undefined | null,
 ): DownloadGateState {
-    if (
-        transcodeStatus === TranscodeStatus.PENDING
-        || transcodeStatus === TranscodeStatus.PROCESSING
-    ) {
-        return { disabled: true, tooltip: PENDING_TOOLTIP, failed: false };
-    }
-    if (transcodeStatus === TranscodeStatus.FAILED) {
-        return { disabled: false, tooltip: FAILED_TOOLTIP, failed: true };
-    }
-    return { disabled: false, tooltip: null, failed: false };
+  if (
+    transcodeStatus === TranscodeStatus.PENDING ||
+    transcodeStatus === TranscodeStatus.PROCESSING
+  ) {
+    return { disabled: true, tooltip: PENDING_TOOLTIP, failed: false };
+  }
+  if (transcodeStatus === TranscodeStatus.FAILED) {
+    return { disabled: false, tooltip: FAILED_TOOLTIP, failed: true };
+  }
+  return { disabled: false, tooltip: null, failed: false };
 }

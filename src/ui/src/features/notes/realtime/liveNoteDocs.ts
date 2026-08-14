@@ -1,6 +1,6 @@
-import { useCallback, useSyncExternalStore } from 'react';
-import type * as Y from 'yjs';
-import { useRealtimeMarkdownContent } from '@/features/notes/realtime/useMarkdownContent';
+import { useCallback, useSyncExternalStore } from "react";
+import type * as Y from "yjs";
+import { useRealtimeMarkdownContent } from "@/features/notes/realtime/useMarkdownContent";
 
 export interface LiveNoteDoc {
   ydoc: Y.Doc;

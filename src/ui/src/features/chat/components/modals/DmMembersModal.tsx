@@ -1,29 +1,41 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
-import { X, Users, UserPlus, UserMinus, MagnifyingGlass, Crown, ChatsCircle, ArrowsLeftRight, GlobeSimple, Lock, Check } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { SubjectAvatar, SubjectAvatarById } from '@/components/subject/SubjectAvatar';
-import { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';
-import { useSubjectSearch } from '@/components/subject/hooks/useSubjectSearch';
-import { SUBJECT_TYPE } from '@/components/subject/types';
-import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
-import { selectAllAgents } from '@/features/agents/store/agentsSlice';
-import { cn } from '@/shared/utils/cn';
-import { selectActiveChannel, selectChannelMembers } from '@/features/chat/store/chatChannelsSlice';
-import { closeChannelSettingsModal } from '@/features/chat/store/chatUiSlice';
+import { useEffect, useMemo, useState, useRef } from "react";
+import {
+  X,
+  Users,
+  UserPlus,
+  UserMinus,
+  MagnifyingGlass,
+  Crown,
+  ChatsCircle,
+  ArrowsLeftRight,
+  GlobeSimple,
+  Lock,
+  Check,
+} from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SubjectAvatar, SubjectAvatarById } from "@/components/subject/SubjectAvatar";
+import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
+import { useSubjectSearch } from "@/components/subject/hooks/useSubjectSearch";
+import { SUBJECT_TYPE } from "@/components/subject/types";
+import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
+import { selectAllAgents } from "@/features/agents/store/agentsSlice";
+import { cn } from "@/shared/utils/cn";
+import { selectActiveChannel, selectChannelMembers } from "@/features/chat/store/chatChannelsSlice";
+import { closeChannelSettingsModal } from "@/features/chat/store/chatUiSlice";
 import {
   fetchMembers,
   addMembersThunk,
   removeMemberThunk,
   updateMemberRoleThunk,
   convertGroupDmToChannel,
-} from '@/features/chat/store/chatThunks';
-import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
-import { ChannelType } from '@uniffy/proto/chat/v1/chat_pb';
-import type { ChatChannelMember } from '@/features/chat/types';
+} from "@/features/chat/store/chatThunks";
+import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
+import type { ChatChannelMember } from "@/features/chat/types";
 
 const GROUP_DM_MEMBER_CAP = 4;
 const MAX_NAME_LENGTH = 50;
@@ -33,23 +45,23 @@ export function DmMembersModal() {
   const dispatch = useAppDispatch();
   const channel = useAppSelector(selectActiveChannel);
   const currentUserId = useAppSelector((s) => s.auth.user?.id);
-  const channelId = channel?.id ?? '';
+  const channelId = channel?.id ?? "";
   const members = useAppSelector((s) => selectChannelMembers(s, channelId));
   const agentsMap = useAppSelector(selectAllAgents);
 
-  const [addMemberQuery, setAddMemberQuery] = useState('');
+  const [addMemberQuery, setAddMemberQuery] = useState("");
   const [showAddMember, setShowAddMember] = useState(false);
   const [isAddingMembers, setIsAddingMembers] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<ChatChannelMember | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
   const [showConvert, setShowConvert] = useState(false);
-  const [convertName, setConvertName] = useState('');
-  const [convertType, setConvertType] = useState<'public' | 'private'>('private');
+  const [convertName, setConvertName] = useState("");
+  const [convertType, setConvertType] = useState<"public" | "private">("private");
   const [isConverting, setIsConverting] = useState(false);
   const addInputRef = useRef<HTMLInputElement>(null);
 
-  const isGroupDm = channel?.channelType === 'GROUP_DM';
+  const isGroupDm = channel?.channelType === "GROUP_DM";
 
   useEffect(() => {
     if (channelId) {
@@ -58,7 +70,7 @@ export function DmMembersModal() {
   }, [dispatch, channelId]);
 
   const userIds = useMemo(
-    () => members.filter((m) => m.subjectType === 'USER').map((m) => m.userId),
+    () => members.filter((m) => m.subjectType === "USER").map((m) => m.userId),
     [members],
   );
   const { subjects: memberSubjects } = useSubjectResolver(userIds);
@@ -72,16 +84,20 @@ export function DmMembersModal() {
     () => members.find((m) => m.userId === currentUserId)?.role,
     [members, currentUserId],
   );
-  const isOwner = currentUserRole === 'OWNER';
+  const isOwner = currentUserRole === "OWNER";
   const ownerCount = useMemo(
-    () => members.filter((m) => m.subjectType === 'USER' && m.role === 'OWNER').length,
+    () => members.filter((m) => m.subjectType === "USER" && m.role === "OWNER").length,
     [members],
   );
   const atCap = isGroupDm && userIds.length >= GROUP_DM_MEMBER_CAP;
   const canAdd = isGroupDm && !atCap;
 
-  const { results: searchResults, loading: searchLoading, search } = useSubjectSearch({
-    subjectTypes: 'users',
+  const {
+    results: searchResults,
+    loading: searchLoading,
+    search,
+  } = useSubjectSearch({
+    subjectTypes: "users",
     excludeIds: userIds,
   });
 
@@ -89,12 +105,7 @@ export function DmMembersModal() {
     search(addMemberQuery);
   }, [addMemberQuery, search]);
 
-  const displayTitle = channel ? getChannelDisplayName(channel) : '';
-
-  useEffect(() => {
-    if (showConvert) setConvertName(displayTitle.slice(0, MAX_NAME_LENGTH));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- prefill once per open
-  }, [showConvert]);
+  const displayTitle = channel ? getChannelDisplayName(channel) : "";
 
   if (!channel) return null;
 
@@ -103,11 +114,13 @@ export function DmMembersModal() {
   const handleAdd = async (subjectId: string) => {
     setIsAddingMembers(true);
     try {
-      await dispatch(addMembersThunk({
-        channelId,
-        subjects: [{ type: 'USER', id: subjectId }],
-      })).unwrap();
-      setAddMemberQuery('');
+      await dispatch(
+        addMembersThunk({
+          channelId,
+          subjects: [{ type: "USER", id: subjectId }],
+        }),
+      ).unwrap();
+      setAddMemberQuery("");
       dispatch(fetchMembers(channelId));
       addInputRef.current?.focus();
     } finally {
@@ -119,10 +132,12 @@ export function DmMembersModal() {
     if (!memberToRemove) return;
     setIsRemoving(true);
     try {
-      await dispatch(removeMemberThunk({
-        channelId,
-        userId: memberToRemove.userId,
-      })).unwrap();
+      await dispatch(
+        removeMemberThunk({
+          channelId,
+          userId: memberToRemove.userId,
+        }),
+      ).unwrap();
       setMemberToRemove(null);
       dispatch(fetchMembers(channelId));
     } finally {
@@ -130,7 +145,7 @@ export function DmMembersModal() {
     }
   };
 
-  const handleRoleChange = async (userId: string, role: 'MEMBER' | 'OWNER') => {
+  const handleRoleChange = async (userId: string, role: "MEMBER" | "OWNER") => {
     setChangingRoleId(userId);
     try {
       await dispatch(updateMemberRoleThunk({ channelId, userId, role })).unwrap();
@@ -144,11 +159,13 @@ export function DmMembersModal() {
     if (!name) return;
     setIsConverting(true);
     try {
-      await dispatch(convertGroupDmToChannel({
-        channelId,
-        name,
-        channelType: convertType === 'public' ? ChannelType.PUBLIC : ChannelType.PRIVATE,
-      })).unwrap();
+      await dispatch(
+        convertGroupDmToChannel({
+          channelId,
+          name,
+          channelType: convertType === "public" ? ChannelType.PUBLIC : ChannelType.PRIVATE,
+        }),
+      ).unwrap();
       handleClose();
     } finally {
       setIsConverting(false);
@@ -156,8 +173,8 @@ export function DmMembersModal() {
   };
 
   const removeTargetName = memberToRemove
-    ? (memberSubjectMap[memberToRemove.userId]?.name ?? memberToRemove.displayName ?? 'this member')
-    : '';
+    ? (memberSubjectMap[memberToRemove.userId]?.name ?? memberToRemove.displayName ?? "this member")
+    : "";
 
   const sortedMembers = [...members].sort((a, b) => {
     const order: Record<string, number> = { OWNER: 0, ADMIN: 1, MEMBER: 2 };
@@ -167,10 +184,14 @@ export function DmMembersModal() {
   return (
     <>
       <Modal onClose={handleClose} closeDisabled={isConverting} maxWidth="max-w-lg">
-        <div className="flex flex-col" style={{ maxHeight: '75vh' }} data-testid="chat-dm-members-modal">
+        <div
+          className="flex flex-col"
+          style={{ maxHeight: "75vh" }}
+          data-testid="chat-dm-members-modal"
+        >
           <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
             <h2 className="text-xl font-semibold text-foreground">
-              {isGroupDm ? 'Group chat' : 'Direct message'}
+              {isGroupDm ? "Group chat" : "Direct message"}
             </h2>
             <button
               type="button"
@@ -186,13 +207,17 @@ export function DmMembersModal() {
           <div className="mx-6 mt-2 mb-4 shrink-0">
             <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3.5">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                {isGroupDm ? <Users size={22} weight="bold" /> : <ChatsCircle size={22} weight="bold" />}
+                {isGroupDm ? (
+                  <Users size={22} weight="bold" />
+                ) : (
+                  <ChatsCircle size={22} weight="bold" />
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground truncate">{displayTitle}</p>
                 <p className="text-xs text-muted-foreground">
-                  {isGroupDm ? 'Group chat' : 'Direct message'}
-                  {' '}&middot;{' '}{members.length} {members.length === 1 ? 'member' : 'members'}
+                  {isGroupDm ? "Group chat" : "Direct message"} &middot; {members.length}{" "}
+                  {members.length === 1 ? "member" : "members"}
                   {isGroupDm && ` of ${GROUP_DM_MEMBER_CAP}`}
                 </p>
               </div>
@@ -225,9 +250,13 @@ export function DmMembersModal() {
                 {showAddMember && addMemberQuery.length >= 2 && (
                   <div className="mt-1 rounded-lg border border-border bg-card shadow-lg max-h-[220px] overflow-y-auto">
                     {searchLoading && searchResults.length === 0 ? (
-                      <div className="px-4 py-6 text-center text-sm text-muted-foreground">Searching...</div>
+                      <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                        Searching...
+                      </div>
                     ) : searchResults.filter((r) => r.type === SUBJECT_TYPE.USER).length === 0 ? (
-                      <div className="px-4 py-6 text-center text-sm text-muted-foreground">No results found</div>
+                      <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                        No results found
+                      </div>
                     ) : (
                       <div className="py-1">
                         {searchResults
@@ -243,9 +272,13 @@ export function DmMembersModal() {
                             >
                               <SubjectAvatar subject={subject} size="sm" />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{subject.name}</p>
+                                <p className="text-sm font-medium text-foreground truncate">
+                                  {subject.name}
+                                </p>
                                 {subject.email && (
-                                  <p className="text-xs text-muted-foreground truncate">{subject.email}</p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {subject.email}
+                                  </p>
                                 )}
                               </div>
                               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
@@ -261,30 +294,37 @@ export function DmMembersModal() {
             )}
 
             {atCap && (
-              <div className="mx-6 mt-4 rounded-lg border border-yellow-300 bg-yellow-100 p-3.5 text-sm text-yellow-800 dark:border-yellow-900/50 dark:bg-yellow-900/30 dark:text-yellow-400" data-testid="chat-dm-members-cap-notice">
+              <div
+                className="mx-6 mt-4 rounded-lg border border-yellow-300 bg-yellow-100 p-3.5 text-sm text-yellow-800 dark:border-yellow-900/50 dark:bg-yellow-900/30 dark:text-yellow-400"
+                data-testid="chat-dm-members-cap-notice"
+              >
                 Group chats are limited to {GROUP_DM_MEMBER_CAP} people.
                 {isOwner
-                  ? ' Convert this conversation to a channel to keep adding people.'
-                  : ' The conversation owner can convert it to a channel to keep adding people.'}
+                  ? " Convert this conversation to a channel to keep adding people."
+                  : " The conversation owner can convert it to a channel to keep adding people."}
               </div>
             )}
 
             <div className="px-3 py-4">
               {sortedMembers.map((member) => {
-                const isAgentMember = member.subjectType === 'AGENT';
+                const isAgentMember = member.subjectType === "AGENT";
                 const agent = isAgentMember ? agentsMap[member.subjectId] : null;
                 const subject = memberSubjectMap[member.userId];
                 const displayName = isAgentMember
-                  ? (agent?.name ?? member.displayName ?? 'Agent')
+                  ? (agent?.name ?? member.displayName ?? "Agent")
                   : (subject?.name ?? member.displayName ?? member.userId.slice(-6));
                 const isSelf = !isAgentMember && member.userId === currentUserId;
                 const canRemove =
-                  isGroupDm && isOwner && !isAgentMember && member.role !== 'OWNER' && !isSelf;
+                  isGroupDm && isOwner && !isAgentMember && member.role !== "OWNER" && !isSelf;
                 const canPromote =
-                  isGroupDm && isOwner && !isAgentMember && !isSelf && member.role !== 'OWNER';
+                  isGroupDm && isOwner && !isAgentMember && !isSelf && member.role !== "OWNER";
                 const canDemote =
-                  isGroupDm && isOwner && !isAgentMember && !isSelf &&
-                  member.role === 'OWNER' && ownerCount > 1;
+                  isGroupDm &&
+                  isOwner &&
+                  !isAgentMember &&
+                  !isSelf &&
+                  member.role === "OWNER" &&
+                  ownerCount > 1;
                 const isChangingRole = changingRoleId === member.userId;
 
                 return (
@@ -311,8 +351,12 @@ export function DmMembersModal() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-medium text-foreground truncate">{displayName}</span>
-                          {isSelf && <span className="text-xs text-muted-foreground shrink-0">(you)</span>}
+                          <span className="text-sm font-medium text-foreground truncate">
+                            {displayName}
+                          </span>
+                          {isSelf && (
+                            <span className="text-xs text-muted-foreground shrink-0">(you)</span>
+                          )}
                           {isAgentMember && (
                             <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded-full shrink-0">
                               Agent
@@ -323,7 +367,7 @@ export function DmMembersModal() {
                           <p className="text-xs text-muted-foreground truncate">{subject.email}</p>
                         )}
                       </div>
-                      {member.role === 'OWNER' && (
+                      {member.role === "OWNER" && (
                         <span
                           className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 shrink-0"
                           title="Owner"
@@ -335,7 +379,7 @@ export function DmMembersModal() {
                       {canPromote && (
                         <button
                           type="button"
-                          onClick={() => handleRoleChange(member.userId, 'OWNER')}
+                          onClick={() => handleRoleChange(member.userId, "OWNER")}
                           disabled={isChangingRole}
                           title="Make owner"
                           aria-label={`Make ${displayName} an owner`}
@@ -348,7 +392,7 @@ export function DmMembersModal() {
                       {canDemote && (
                         <button
                           type="button"
-                          onClick={() => handleRoleChange(member.userId, 'MEMBER')}
+                          onClick={() => handleRoleChange(member.userId, "MEMBER")}
                           disabled={isChangingRole}
                           title="Remove owner status"
                           aria-label={`Remove owner status from ${displayName}`}
@@ -382,7 +426,8 @@ export function DmMembersModal() {
                   <p className="text-sm font-medium text-foreground">Convert to channel</p>
                 </div>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Members and message history carry over. Channels have no member limit and support tags and categories.
+                  Members and message history carry over. Channels have no member limit and support
+                  tags and categories.
                 </p>
                 {showConvert ? (
                   <div className="space-y-3">
@@ -396,28 +441,44 @@ export function DmMembersModal() {
                     />
 
                     <div className="grid grid-cols-2 gap-3">
-                      {([
-                        { id: 'public', label: 'Public Channel', hint: 'Anyone can join', icon: GlobeSimple },
-                        { id: 'private', label: 'Private Channel', hint: 'Only invited members', icon: Lock },
-                      ] as const).map(({ id, label, hint, icon: TypeIcon }) => (
+                      {(
+                        [
+                          {
+                            id: "public",
+                            label: "Public Channel",
+                            hint: "Anyone can join",
+                            icon: GlobeSimple,
+                          },
+                          {
+                            id: "private",
+                            label: "Private Channel",
+                            hint: "Only invited members",
+                            icon: Lock,
+                          },
+                        ] as const
+                      ).map(({ id, label, hint, icon: TypeIcon }) => (
                         <button
                           key={id}
                           type="button"
                           onClick={() => setConvertType(id)}
                           disabled={isConverting}
                           className={cn(
-                            'relative flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors',
+                            "relative flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors",
                             convertType === id
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border bg-muted/30 hover:border-muted-foreground/30',
+                              ? "border-primary bg-primary/5"
+                              : "border-border bg-muted/30 hover:border-muted-foreground/30",
                           )}
                           data-testid={`chat-dm-convert-type-${id}`}
-                          data-selected={convertType === id ? 'true' : 'false'}
+                          data-selected={convertType === id ? "true" : "false"}
                         >
-                          <div className={cn(
-                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                            convertType === id ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
-                          )}>
+                          <div
+                            className={cn(
+                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                              convertType === id
+                                ? "bg-primary/15 text-primary"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
                             <TypeIcon size={22} weight="bold" />
                           </div>
                           <div className="min-w-0">
@@ -448,7 +509,7 @@ export function DmMembersModal() {
                         disabled={isConverting || !convertName.trim()}
                         data-testid="chat-dm-convert-confirm"
                       >
-                        {isConverting ? 'Converting...' : 'Convert'}
+                        {isConverting ? "Converting..." : "Convert"}
                       </Button>
                     </div>
                   </div>
@@ -456,7 +517,10 @@ export function DmMembersModal() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowConvert(true)}
+                    onClick={() => {
+                      setConvertName(displayTitle.slice(0, MAX_NAME_LENGTH));
+                      setShowConvert(true);
+                    }}
                     data-testid="chat-dm-convert-button"
                   >
                     Convert to channel

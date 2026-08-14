@@ -1,19 +1,19 @@
-import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
-import type { UrnMetadata } from '@uniffy/proto/search/v1/search_pb';
-import { parseUrn, UrnType } from '@/shared/utils/urn';
-import type { SerializedNote } from '@/features/notes/store/notesThunks';
-import { URN_TYPE_HEX_COLORS } from '@/config/theme/urnColors';
-import { getContentTypeLabel } from '@/config/theme/contentTypes';
+import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
+import type { UrnMetadata } from "@uniffy/proto/search/v1/search_pb";
+import { parseUrn, UrnType } from "@/shared/utils/urn";
+import type { SerializedNote } from "@/features/notes/store/notesThunks";
+import { URN_TYPE_HEX_COLORS } from "@/config/theme/urnColors";
+import { getContentTypeLabel } from "@/config/theme/contentTypes";
 
 export interface NoteIconData {
-  type: 'icon' | 'emoji';
+  type: "icon" | "emoji";
   value: string;
 }
 
 export interface GraphNode {
   id: string;
   label: string;
-  type: UrnType | 'note';
+  type: UrnType | "note";
   urn?: string;
   isInternal: boolean;
   connections: number;
@@ -55,17 +55,17 @@ export function parseMentionsFromContent(content: string): Array<{ label: string
   return mentions;
 }
 
-function getNodeColor(type: UrnType | 'note', isInternal: boolean): string {
+function getNodeColor(type: UrnType | "note", isInternal: boolean): string {
   // Internal notes use a marker resolved at render time.
   if (isInternal) {
-    return '__PRIMARY__';
+    return "__PRIMARY__";
   }
   return URN_TYPE_HEX_COLORS[type as UrnType] || URN_TYPE_HEX_COLORS[UrnType.UNKNOWN];
 }
 
 export function buildGraphData(
   notes: SerializedNote[],
-  urnMetadata?: Map<string, Omit<UrnMetadata, '$typeName'>>
+  urnMetadata?: Map<string, Omit<UrnMetadata, "$typeName">>,
 ): GraphData {
   const nodes: GraphNode[] = [];
   const links: GraphLink[] = [];
@@ -77,7 +77,7 @@ export function buildGraphData(
 
   const noteTitles = new Map<string, string>();
   for (const note of contentNotes) {
-    noteTitles.set(note.id, note.title || 'Untitled');
+    noteTitles.set(note.id, note.title || "Untitled");
   }
 
   for (const note of contentNotes) {
@@ -101,14 +101,14 @@ export function buildGraphData(
 
     const node: GraphNode = {
       id: note.id,
-      label: note.title || 'Untitled',
-      type: 'note',
+      label: note.title || "Untitled",
+      type: "note",
       urn: noteUrn,
       isInternal: true,
       connections: connectionCount.get(note.id) || 0,
-      color: getNodeColor('note', true),
+      color: getNodeColor("note", true),
       customIcon,
-      emoji: customIcon?.type === 'emoji' ? customIcon.value : undefined,
+      emoji: customIcon?.type === "emoji" ? customIcon.value : undefined,
     };
 
     nodes.push(node);
@@ -131,7 +131,7 @@ export function buildGraphData(
         if (resolvedMeta?.title) {
           label = resolvedMeta.title;
         } else if (parsed.type === UrnType.NOTE) {
-          label = noteTitles.get(parsed.id) || 'Note';
+          label = noteTitles.get(parsed.id) || "Note";
         } else {
           label = getTypeLabel(parsed.type);
         }
@@ -157,7 +157,7 @@ export function buildGraphData(
   }
 
   // Workaround: react-force-graph-2d hit detection fails on target-only nodes; add invisible self-links.
-  const sourceNodeIds = new Set(links.map(l => l.source));
+  const sourceNodeIds = new Set(links.map((l) => l.source));
   for (const node of nodes) {
     if (!sourceNodeIds.has(node.id)) {
       links.push({
@@ -187,8 +187,8 @@ export function getGraphStats(data: GraphData): {
   totalLinks: number;
   avgConnections: number;
 } {
-  const internalNotes = data.nodes.filter(n => n.isInternal).length;
-  const externalReferences = data.nodes.filter(n => !n.isInternal).length;
+  const internalNotes = data.nodes.filter((n) => n.isInternal).length;
+  const externalReferences = data.nodes.filter((n) => !n.isInternal).length;
   const totalConnections = data.nodes.reduce((sum, n) => sum + n.connections, 0);
 
   return {

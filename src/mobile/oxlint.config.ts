@@ -1,0 +1,151 @@
+import { defineConfig } from 'oxlint';
+import native from 'oxlint-config-universe/native';
+
+export default defineConfig({
+  extends: [native],
+  ignorePatterns: ['dist'],
+  plugins: ['unicorn'],
+  jsPlugins: [{ name: 'uniffy', specifier: '../../lint/uniffy-oxlint-plugin.mjs' }],
+  rules: {
+    curly: 'off',
+    'no-void': 'off',
+    'react/jsx-curly-brace-presence': 'off',
+    'react/rules-of-hooks': 'error',
+    'react/exhaustive-deps': 'warn',
+    'react/react-compiler': 'warn',
+    'uniffy/no-cdn-urls': 'error',
+    'uniffy/no-expo-public-env': 'error',
+    'uniffy/no-raw-error-display': 'error',
+  },
+  overrides: [
+    {
+      // Every RPC rides the shared transports in core/api (bounded timeouts, auth,
+      // connectivity wiring). The sanctioned raw-fetch exceptions (asset reads,
+      // local file:// URIs) carry an inline disable stating why.
+      files: ['src/features/**/*.{ts,tsx}', 'src/shared/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-globals': [
+          'error',
+          {
+            name: 'fetch',
+            message:
+              'Use the shared transports/helpers in core/api instead of raw fetch. If this is genuinely not an RPC (asset read, local file URI), add a disable comment stating why.',
+          },
+        ],
+      },
+    },
+    // Layering: app -> features -> shared -> core -> theme. Dependencies point one
+    // way; lower layers must never import from higher ones, or the layering rots
+    // into a cycle. Rules are inlined (not built by a helper) so defineConfig can
+    // contextually type the severity tuples.
+    {
+      files: ['src/shared/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['@features/**', '@/features/**', '@app/**', '@/app/**'],
+                message:
+                  'Layer violation: shared/ must not import from features/ or app/. Promote the shared code down to shared/, core/, or theme/.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ['src/core/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: [
+                  '@features/**',
+                  '@/features/**',
+                  '@app/**',
+                  '@/app/**',
+                  '@shared/**',
+                  '@/shared/**',
+                ],
+                message:
+                  'Layer violation: core/ is app infrastructure and must not import from features/, app/, or shared/.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ['src/theme/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: [
+                  '@features/**',
+                  '@/features/**',
+                  '@app/**',
+                  '@/app/**',
+                  '@shared/**',
+                  '@/shared/**',
+                  '@core/**',
+                  '@/core/**',
+                ],
+                message:
+                  'Layer violation: theme/ holds pure design tokens and must not import from any other layer.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      // Reanimated shared values are mutable UI-thread boxes and gesture-handler
+      // builds gestures through a capitalized `Gesture.*` namespace, so worklets,
+      // `.value` writes, and builder chains all sit outside the compiler's model.
+      // These files are gesture and animation surfaces where per-line disables
+      // would outnumber the code they annotate.
+      files: [
+        'src/features/calendar/screens/CalendarScreen.tsx',
+        'src/features/calls/components/DraggablePip.tsx',
+        'src/features/chat/components/SwipeToReply.tsx',
+        'src/features/files/components/FullscreenViewer.tsx',
+        'src/features/notes/components/NoteDrag.tsx',
+        'src/features/notes/screens/NotesGraphScreen.tsx',
+        'src/features/projects/components/ProjectGraphView.tsx',
+        'src/features/projects/components/ProjectRoadmapView.tsx',
+        'src/shared/components/BottomNav.tsx',
+        'src/shared/components/BottomSheet.tsx',
+      ],
+      rules: {
+        'react/react-compiler': 'off',
+      },
+    },
+    {
+      // Filenames are PascalCase (React component modules) or camelCase (everything else);
+      // kebab-case is banned. app/ is exempt on purpose: Expo Router maps a file path to a URL,
+      // so it owns its own naming (kebab URLs plus framework specials like +not-found, [id], (tabs)).
+      files: [
+        'src/features/**/*.{ts,tsx}',
+        'src/shared/**/*.{ts,tsx}',
+        'src/core/**/*.{ts,tsx}',
+        'src/theme/**/*.{ts,tsx}',
+      ],
+      rules: {
+        'unicorn/filename-case': [
+          'error',
+          {
+            cases: { camelCase: true, pascalCase: true },
+            ignore: [String.raw`\.(native|ios|android|web)\.`],
+          },
+        ],
+      },
+    },
+  ],
+});

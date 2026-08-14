@@ -30,21 +30,21 @@ export function useProjects() {
     (data: CreateProjectRequest) => {
       return dispatch(createProject(data));
     },
-    [dispatch]
+    [dispatch],
   );
 
   const editProject = useCallback(
     (data: UpdateProjectRequest) => {
       return dispatch(updateProject(data));
     },
-    [dispatch]
+    [dispatch],
   );
 
   const removeProject = useCallback(
     (id: string) => {
       return dispatch(deleteProject(id));
     },
-    [dispatch]
+    [dispatch],
   );
 
   return {

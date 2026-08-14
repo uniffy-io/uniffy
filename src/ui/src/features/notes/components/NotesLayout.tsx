@@ -1,27 +1,22 @@
-import { type ReactNode, useState, useCallback } from 'react';
-import { Panel, Group, Separator } from 'react-resizable-panels';
-import {
-  BookmarkSimple,
-  LockSimple,
-  UsersThree,
-  Buildings,
-} from '@phosphor-icons/react';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { Drawer } from '@/components/ui/drawer';
-import { toggleSidebar } from '@/features/notes/store/editorSlice';
+import { type ReactNode, useState, useCallback } from "react";
+import { Panel, Group, Separator } from "react-resizable-panels";
+import { BookmarkSimple, LockSimple, UsersThree, Buildings } from "@phosphor-icons/react";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { Drawer } from "@/components/ui/drawer";
+import { toggleSidebar } from "@/features/notes/store/editorSlice";
 import {
   CollapsibleSidebarRail,
   type SidebarSection,
-} from '@/components/layout/CollapsibleSidebarRail';
+} from "@/components/layout/CollapsibleSidebarRail";
 
 const NOTES_SECTIONS: SidebarSection[] = [
-  { id: 'bookmarked', icon: BookmarkSimple, label: 'Bookmarks' },
-  { id: 'personal', icon: LockSimple, label: 'Personal' },
-  { id: 'shared', icon: UsersThree, label: 'Shared' },
-  { id: 'organization', icon: Buildings, label: 'Organization' },
+  { id: "bookmarked", icon: BookmarkSimple, label: "Bookmarks" },
+  { id: "personal", icon: LockSimple, label: "Personal" },
+  { id: "shared", icon: UsersThree, label: "Shared" },
+  { id: "organization", icon: Buildings, label: "Organization" },
 ];
 
 interface NotesLayoutProps {
@@ -46,10 +41,10 @@ export function NotesLayout({
   const dispatch = useAppDispatch();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const { isMobile, isMobileOrTablet } = useBreakpoint();
-  const [defaultLayout] = useState(() => loadPanelLayout('notes'));
+  const [defaultLayout] = useState(() => loadPanelLayout("notes"));
 
   const handleLayoutChange = useCallback((layout: Record<string, number>) => {
-    savePanelLayout('notes', layout);
+    savePanelLayout("notes", layout);
   }, []);
 
   const handleExpandSidebar = useCallback(() => {
@@ -64,15 +59,12 @@ export function NotesLayout({
     <div
       className={cn(
         "relative bg-background overflow-hidden transition-[height] duration-300 ease-in-out",
-        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
+        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0",
       )}
     >
       {showCollapsedRail && (
         <div className="absolute inset-y-0 left-0 z-30 w-12">
-          <CollapsibleSidebarRail
-            onExpand={handleExpandSidebar}
-            sections={NOTES_SECTIONS}
-          >
+          <CollapsibleSidebarRail onExpand={handleExpandSidebar} sections={NOTES_SECTIONS}>
             {sidebar}
           </CollapsibleSidebarRail>
         </div>

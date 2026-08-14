@@ -130,6 +130,9 @@ export function ChatComposer({
   const progress = useSharedValue(expanded ? 1 : 0);
   useEffect(() => {
     const target = expanded ? 1 : 0;
+    // A shared value is a mutable UI-thread box; assigning `.value` is the only
+    // way to drive it, and it is deliberately outside React's render state.
+    // eslint-disable-next-line react/react-compiler
     progress.value = reducedMotion ? target : withTiming(target, { duration: COLLAPSE_MS });
   }, [expanded, reducedMotion, progress]);
 

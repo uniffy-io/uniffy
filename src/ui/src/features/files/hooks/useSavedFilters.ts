@@ -1,127 +1,137 @@
-import { useCallback, useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { useCallback, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
-    fetchSavedFilters,
-    createSavedFilter,
-    updateSavedFilter,
-    deleteSavedFilter,
-    selectSavedFiltersArray,
-    selectUserFilters,
-    selectPresetFilters,
-    selectSavedFiltersLoading,
-    selectSavedFiltersError,
-    selectSavingFilter,
-    clearError,
-    type SerializedFilterCriteria,
-    type SerializedIconValue,
-} from '@/features/files/store/savedFiltersSlice';
+  fetchSavedFilters,
+  createSavedFilter,
+  updateSavedFilter,
+  deleteSavedFilter,
+  selectSavedFiltersArray,
+  selectUserFilters,
+  selectPresetFilters,
+  selectSavedFiltersLoading,
+  selectSavedFiltersError,
+  selectSavingFilter,
+  clearError,
+  type SerializedFilterCriteria,
+  type SerializedIconValue,
+} from "@/features/files/store/savedFiltersSlice";
 
 export function useSavedFilters() {
-    const dispatch = useAppDispatch();
-    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
-    const filters = useAppSelector(selectSavedFiltersArray);
-    const userFilters = useAppSelector(selectUserFilters);
-    const presetFilters = useAppSelector(selectPresetFilters);
-    const loading = useAppSelector(selectSavedFiltersLoading);
-    const error = useAppSelector(selectSavedFiltersError);
-    const saving = useAppSelector(selectSavingFilter);
+  const dispatch = useAppDispatch();
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const filters = useAppSelector(selectSavedFiltersArray);
+  const userFilters = useAppSelector(selectUserFilters);
+  const presetFilters = useAppSelector(selectPresetFilters);
+  const loading = useAppSelector(selectSavedFiltersLoading);
+  const error = useAppSelector(selectSavedFiltersError);
+  const saving = useAppSelector(selectSavingFilter);
 
-    useEffect(() => {
-        if (organizationId) {
-            dispatch(fetchSavedFilters({
-                organizationId,
-                includePresets: true,
-            }));
-        }
-    }, [dispatch, organizationId]);
+  useEffect(() => {
+    if (organizationId) {
+      dispatch(
+        fetchSavedFilters({
+          organizationId,
+          includePresets: true,
+        }),
+      );
+    }
+  }, [dispatch, organizationId]);
 
-    const create = useCallback(
-        async (params: {
-            name: string;
-            description?: string;
-            icon?: SerializedIconValue;
-            criteria: SerializedFilterCriteria;
-            sortBy?: string;
-            sortOrder?: string;
-        }) => {
-            if (!organizationId) return null;
+  const create = useCallback(
+    async (params: {
+      name: string;
+      description?: string;
+      icon?: SerializedIconValue;
+      criteria: SerializedFilterCriteria;
+      sortBy?: string;
+      sortOrder?: string;
+    }) => {
+      if (!organizationId) return null;
 
-            const result = await dispatch(createSavedFilter({
-                organizationId,
-                ...params,
-            }));
+      const result = await dispatch(
+        createSavedFilter({
+          organizationId,
+          ...params,
+        }),
+      );
 
-            if (createSavedFilter.fulfilled.match(result)) {
-                return result.payload;
-            }
-            return null;
-        },
-        [dispatch, organizationId]
-    );
+      if (createSavedFilter.fulfilled.match(result)) {
+        return result.payload;
+      }
+      return null;
+    },
+    [dispatch, organizationId],
+  );
 
-    const update = useCallback(
-        async (params: {
-            filterId: string;
-            name?: string;
-            description?: string;
-            icon?: SerializedIconValue;
-            criteria?: SerializedFilterCriteria;
-            sortBy?: string;
-            sortOrder?: string;
-        }) => {
-            if (!organizationId) return null;
+  const update = useCallback(
+    async (params: {
+      filterId: string;
+      name?: string;
+      description?: string;
+      icon?: SerializedIconValue;
+      criteria?: SerializedFilterCriteria;
+      sortBy?: string;
+      sortOrder?: string;
+    }) => {
+      if (!organizationId) return null;
 
-            const result = await dispatch(updateSavedFilter({
-                organizationId,
-                ...params,
-            }));
+      const result = await dispatch(
+        updateSavedFilter({
+          organizationId,
+          ...params,
+        }),
+      );
 
-            if (updateSavedFilter.fulfilled.match(result)) {
-                return result.payload;
-            }
-            return null;
-        },
-        [dispatch, organizationId]
-    );
+      if (updateSavedFilter.fulfilled.match(result)) {
+        return result.payload;
+      }
+      return null;
+    },
+    [dispatch, organizationId],
+  );
 
-    const remove = useCallback(
-        async (filterId: string) => {
-            if (!organizationId) return false;
+  const remove = useCallback(
+    async (filterId: string) => {
+      if (!organizationId) return false;
 
-            const result = await dispatch(deleteSavedFilter({
-                organizationId,
-                filterId,
-            }));
+      const result = await dispatch(
+        deleteSavedFilter({
+          organizationId,
+          filterId,
+        }),
+      );
 
-            return deleteSavedFilter.fulfilled.match(result);
-        },
-        [dispatch, organizationId]
-    );
+      return deleteSavedFilter.fulfilled.match(result);
+    },
+    [dispatch, organizationId],
+  );
 
-    const refresh = useCallback(() => {
-        if (organizationId) {
-            dispatch(fetchSavedFilters({
-                organizationId,
-                includePresets: true,
-            }));
-        }
-    }, [dispatch, organizationId]);
+  const refresh = useCallback(() => {
+    if (organizationId) {
+      dispatch(
+        fetchSavedFilters({
+          organizationId,
+          includePresets: true,
+        }),
+      );
+    }
+  }, [dispatch, organizationId]);
 
-    const dismissError = useCallback(() => {
-        dispatch(clearError());
-    }, [dispatch]);
+  const dismissError = useCallback(() => {
+    dispatch(clearError());
+  }, [dispatch]);
 
-    return {
-        filters,
-        userFilters,
-        presetFilters,
-        loading,
-        saving,
-        error,
-        create,
-        update,
-        remove,
-        refresh,
-        dismissError,
-    };
+  return {
+    filters,
+    userFilters,
+    presetFilters,
+    loading,
+    saving,
+    error,
+    create,
+    update,
+    remove,
+    refresh,
+    dismissError,
+  };
 }

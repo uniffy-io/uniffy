@@ -26,7 +26,6 @@ import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { computeCriticalPath } from "@/features/projects/utils/criticalPath";
 import type { CriticalPathResult } from "@/features/projects/utils/criticalPath";
 
-
 const NODE_W = 280;
 const NODE_H = 100;
 const H_GAP = 100;
@@ -40,7 +39,6 @@ const GROUP_GAP = 40;
 const MIN_ZOOM = 0.15;
 const MAX_ZOOM = 2.5;
 const ZOOM_SENSITIVITY = 0.002;
-
 
 type NodeState = "completed" | "blocker" | "blocked" | "free" | "neutral";
 
@@ -103,13 +101,11 @@ interface PanState {
 function computeNodeState(
   task: Task,
   blockerSet: Set<string>,
-  tasksMap: Map<string, Task>
+  tasksMap: Map<string, Task>,
 ): NodeState {
   if (task.completedAt) return "completed";
 
-  const hasPendingBlockers = task.blockedByTaskIds.some(
-    (bid) => !tasksMap.get(bid)?.completedAt
-  );
+  const hasPendingBlockers = task.blockedByTaskIds.some((bid) => !tasksMap.get(bid)?.completedAt);
 
   if (hasPendingBlockers) return "blocked";
   if (blockerSet.has(task.id)) return "blocker";
@@ -124,7 +120,7 @@ function layoutTaskGroup(
   tasksMap: Map<string, Task>,
   stateMap: Map<string, NodeState>,
   startX: number,
-  startY: number
+  startY: number,
 ): { nodes: LayoutNode[]; width: number; height: number } {
   if (groupTasks.length === 0) return { nodes: [], width: 0, height: 0 };
 
@@ -137,7 +133,7 @@ function layoutTaskGroup(
   for (const t of groupTasks) rank[t.id] = 0;
 
   const rankingEdges = [...allEdges, ...containmentEdges].filter(
-    (e) => groupSet.has(e.fromId) && groupSet.has(e.toId)
+    (e) => groupSet.has(e.fromId) && groupSet.has(e.toId),
   );
 
   for (let iter = 0; iter < 100; iter++) {
@@ -161,9 +157,7 @@ function layoutTaskGroup(
 
   // Sort within each rank by number
   for (const ids of Object.values(byRank)) {
-    ids.sort(
-      (a, b) => (tasksMap.get(a)?.number ?? 0) - (tasksMap.get(b)?.number ?? 0)
-    );
+    ids.sort((a, b) => (tasksMap.get(a)?.number ?? 0) - (tasksMap.get(b)?.number ?? 0));
   }
 
   const nodes: LayoutNode[] = [];
@@ -207,10 +201,7 @@ function layoutTaskGroup(
   };
 }
 
-function buildGraphLayout(
-  tasks: Task[],
-  sprints: Sprint[]
-): GraphLayout | null {
+function buildGraphLayout(tasks: Task[], sprints: Sprint[]): GraphLayout | null {
   if (tasks.length === 0) return null;
 
   const tasksMap = new Map(tasks.map((t) => [t.id, t]));
@@ -248,9 +239,7 @@ function buildGraphLayout(
   }
 
   // Compute critical path
-  const completedIds = new Set(
-    tasks.filter((t) => t.completedAt).map((t) => t.id)
-  );
+  const completedIds = new Set(tasks.filter((t) => t.completedAt).map((t) => t.id));
   const critPath = computeCriticalPath(
     tasks.map((t) => t.id),
     allEdges,
@@ -266,7 +255,7 @@ function buildGraphLayout(
       tasksMap,
       stateMap,
       MARGIN,
-      MARGIN
+      MARGIN,
     );
     return {
       nodes: result.nodes,
@@ -312,7 +301,7 @@ function buildGraphLayout(
     const groupTasks = tasks.filter((t) =>
       group.sprintId === null
         ? t.sprintId === null || t.sprintId === ""
-        : t.sprintId === group.sprintId
+        : t.sprintId === group.sprintId,
     );
 
     if (groupTasks.length === 0) continue;
@@ -327,7 +316,7 @@ function buildGraphLayout(
       tasksMap,
       stateMap,
       contentStartX,
-      contentStartY
+      contentStartY,
     );
 
     const groupWidth = Math.max(result.width + GROUP_PADDING * 2, 300);
@@ -373,13 +362,11 @@ export function DependencyGraphView() {
   // hides their blockers too. The "Top-level only" filter is the opt-in for a
   // root-only view.
   const tasks = useFilteredTasks(projectId ?? "", { includeSubtasks: true });
-  const sprints = useAppSelector(
-    selectSprintsForProject(currentProject?.id ?? "")
-  );
+  const sprints = useAppSelector(selectSprintsForProject(currentProject?.id ?? ""));
 
   const statusOptions = useMemo(() => {
     const statusField = currentProject?.fieldDefinitions.find(
-      (f) => f.id === SYSTEM_FIELD_IDS.STATUS
+      (f) => f.id === SYSTEM_FIELD_IDS.STATUS,
     );
     const map: Record<string, { color: string; label: string }> = {};
     for (const opt of statusField?.config.options ?? []) {
@@ -388,10 +375,7 @@ export function DependencyGraphView() {
     return map;
   }, [currentProject]);
 
-  const layout = useMemo(
-    () => buildGraphLayout(tasks, sprints),
-    [tasks, sprints]
-  );
+  const layout = useMemo(() => buildGraphLayout(tasks, sprints), [tasks, sprints]);
 
   // Critical path toggle
   const [showCriticalPath, setShowCriticalPath] = useState(false);
@@ -426,10 +410,7 @@ export function DependencyGraphView() {
       const prev = transformRef.current;
 
       const factor = 1 - e.deltaY * ZOOM_SENSITIVITY;
-      const newScale = Math.min(
-        Math.max(prev.scale * factor, MIN_ZOOM),
-        MAX_ZOOM
-      );
+      const newScale = Math.min(Math.max(prev.scale * factor, MIN_ZOOM), MAX_ZOOM);
 
       // Zoom toward cursor
       const canvasX = (mouseX - prev.offsetX) / prev.scale;
@@ -461,7 +442,7 @@ export function DependencyGraphView() {
       };
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
-    [transform.offsetX, transform.offsetY]
+    [transform.offsetX, transform.offsetY],
   );
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
@@ -494,7 +475,7 @@ export function DependencyGraphView() {
       dispatch(selectTask(id));
       dispatch(openDetailPanel());
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Zoom controls
@@ -566,21 +547,17 @@ export function DependencyGraphView() {
   if (!layout) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-8">
-        <ShareNetwork
-          size={48}
-          weight="duotone"
-          className="text-muted-foreground mb-4"
-        />
+        <ShareNetwork size={48} weight="duotone" className="text-muted-foreground mb-4" />
         <h3 className="text-lg font-medium text-foreground mb-2">No Tasks</h3>
         <p className="text-sm text-muted-foreground text-center max-w-sm">
-          Create tasks to visualize them and their dependency relationships
-          here.
+          Create tasks to visualize them and their dependency relationships here.
         </p>
       </div>
     );
   }
 
-  const { nodes, edges, containmentEdges, groups, canvasWidth, canvasHeight, criticalPath } = layout;
+  const { nodes, edges, containmentEdges, groups, canvasWidth, canvasHeight, criticalPath } =
+    layout;
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-muted/30">
@@ -599,7 +576,7 @@ export function DependencyGraphView() {
         ref={containerRef}
         className={cn(
           "flex-1 relative overflow-hidden",
-          isPanning ? "cursor-grabbing" : "cursor-grab"
+          isPanning ? "cursor-grabbing" : "cursor-grab",
         )}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -636,11 +613,7 @@ export function DependencyGraphView() {
                 refY="3"
                 orient="auto"
               >
-                <polygon
-                  points="0 0, 8 3, 0 6"
-                  fill="#ef4444"
-                  opacity="0.85"
-                />
+                <polygon points="0 0, 8 3, 0 6" fill="#ef4444" opacity="0.85" />
               </marker>
               <marker
                 id="dg-arrow-done"
@@ -650,11 +623,7 @@ export function DependencyGraphView() {
                 refY="3"
                 orient="auto"
               >
-                <polygon
-                  points="0 0, 8 3, 0 6"
-                  fill="#22c55e"
-                  opacity="0.65"
-                />
+                <polygon points="0 0, 8 3, 0 6" fill="#22c55e" opacity="0.65" />
               </marker>
               <marker
                 id="dg-arrow-critical"
@@ -664,11 +633,7 @@ export function DependencyGraphView() {
                 refY="4"
                 orient="auto"
               >
-                <polygon
-                  points="0 0, 10 4, 0 8"
-                  fill="hsl(var(--primary))"
-                  opacity="1"
-                />
+                <polygon points="0 0, 10 4, 0 8" fill="hsl(var(--primary))" opacity="1" />
               </marker>
               <marker
                 id="dg-contain"
@@ -687,36 +652,37 @@ export function DependencyGraphView() {
             </defs>
 
             {/* Containment links sit beneath dependency arrows, visually recessive */}
-            {showHierarchy && containmentEdges.map((edge) => {
-              const fromNode = nodes.find((n) => n.id === edge.fromId);
-              const toNode = nodes.find((n) => n.id === edge.toId);
-              if (!fromNode || !toNode) return null;
+            {showHierarchy &&
+              containmentEdges.map((edge) => {
+                const fromNode = nodes.find((n) => n.id === edge.fromId);
+                const toNode = nodes.find((n) => n.id === edge.toId);
+                if (!fromNode || !toNode) return null;
 
-              const sx = fromNode.x + NODE_W;
-              const sy = fromNode.y + NODE_H / 2;
-              const ex = toNode.x;
-              const ey = toNode.y + NODE_H / 2;
-              const absDx = Math.abs(ex - sx);
-              const absDy = Math.abs(ey - sy);
-              const dy = ey - sy;
-              const cpOffset = Math.max(absDx * 0.4, absDy * 0.25, H_GAP * 0.4);
-              const cp1x = sx + cpOffset;
-              const cp2x = ex - cpOffset;
-              const cp2y = ey - dy * 0.2;
+                const sx = fromNode.x + NODE_W;
+                const sy = fromNode.y + NODE_H / 2;
+                const ex = toNode.x;
+                const ey = toNode.y + NODE_H / 2;
+                const absDx = Math.abs(ex - sx);
+                const absDy = Math.abs(ey - sy);
+                const dy = ey - sy;
+                const cpOffset = Math.max(absDx * 0.4, absDy * 0.25, H_GAP * 0.4);
+                const cp1x = sx + cpOffset;
+                const cp2x = ex - cpOffset;
+                const cp2y = ey - dy * 0.2;
 
-              return (
-                <path
-                  key={`contain-${edge.fromId}-${edge.toId}`}
-                  d={`M ${sx} ${sy} C ${cp1x} ${sy}, ${cp2x} ${cp2y}, ${ex} ${ey}`}
-                  fill="none"
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeWidth={1.25}
-                  strokeDasharray="2 5"
-                  opacity={0.45}
-                  markerStart="url(#dg-contain)"
-                />
-              );
-            })}
+                return (
+                  <path
+                    key={`contain-${edge.fromId}-${edge.toId}`}
+                    d={`M ${sx} ${sy} C ${cp1x} ${sy}, ${cp2x} ${cp2y}, ${ex} ${ey}`}
+                    fill="none"
+                    stroke="hsl(var(--muted-foreground))"
+                    strokeWidth={1.25}
+                    strokeDasharray="2 5"
+                    opacity={0.45}
+                    markerStart="url(#dg-contain)"
+                  />
+                );
+              })}
 
             {edges.map((edge) => {
               const fromNode = nodes.find((n) => n.id === edge.fromId);
@@ -731,19 +697,23 @@ export function DependencyGraphView() {
               const absDy = Math.abs(ey - sy);
               const edgeKey = `${edge.fromId}->${edge.toId}`;
               const isOnCritPath = showCriticalPath && criticalPath.pathEdges.has(edgeKey);
-              const color = isOnCritPath ? "hsl(var(--primary))" : (edge.satisfied ? "#22c55e" : "#ef4444");
-              const opacity = isOnCritPath ? 1 : (edge.satisfied ? 0.5 : 0.8);
-              const markerId = isOnCritPath ? "dg-arrow-critical" : (edge.satisfied ? "dg-arrow-done" : "dg-arrow-active");
+              const color = isOnCritPath
+                ? "hsl(var(--primary))"
+                : edge.satisfied
+                  ? "#22c55e"
+                  : "#ef4444";
+              const opacity = isOnCritPath ? 1 : edge.satisfied ? 0.5 : 0.8;
+              const markerId = isOnCritPath
+                ? "dg-arrow-critical"
+                : edge.satisfied
+                  ? "dg-arrow-done"
+                  : "dg-arrow-active";
 
               // Control point offset accounts for both horizontal and vertical
               // distance so cross-group edges (large dy, small dx) still curve
               // smoothly instead of degenerating into straight lines.
               const dy = ey - sy;
-              const cpOffset = Math.max(
-                absDx * 0.4,
-                absDy * 0.25,
-                H_GAP * 0.4
-              );
+              const cpOffset = Math.max(absDx * 0.4, absDy * 0.25, H_GAP * 0.4);
               const cp1x = sx + cpOffset;
               const cp2x = ex - cpOffset;
               // Offset cp2 Y toward the source so the curve (and arrow
@@ -758,7 +728,7 @@ export function DependencyGraphView() {
                   fill="none"
                   stroke={color}
                   strokeWidth={isOnCritPath ? 3 : 1.5}
-                  strokeDasharray={isOnCritPath ? undefined : (edge.satisfied ? "5 3" : undefined)}
+                  strokeDasharray={isOnCritPath ? undefined : edge.satisfied ? "5 3" : undefined}
                   opacity={opacity}
                   markerEnd={`url(#${markerId})`}
                 />
@@ -807,10 +777,7 @@ const STATE_CLASSES: Record<NodeState, string> = {
   neutral: "bg-card border-border hover:bg-muted",
 };
 
-const STATE_BADGE: Record<
-  NodeState,
-  { label: string; className: string } | null
-> = {
+const STATE_BADGE: Record<NodeState, { label: string; className: string } | null> = {
   completed: null,
   blocker: {
     label: "Blocker",
@@ -864,7 +831,7 @@ function GraphNode({
         STATE_CLASSES[node.state],
         isOnCriticalPath
           ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
-          : isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background"
+          : isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
       )}
       style={{
         left: node.x,
@@ -893,11 +860,7 @@ function GraphNode({
                 aria-label="Subtask"
               />
             )}
-            <TypeIcon
-              size={12}
-              weight="fill"
-              className="text-muted-foreground shrink-0"
-            />
+            <TypeIcon size={12} weight="fill" className="text-muted-foreground shrink-0" />
             <span className="text-[10px] font-mono text-muted-foreground leading-none whitespace-nowrap">
               {projectSlug}-{node.number}
             </span>
@@ -906,7 +869,7 @@ function GraphNode({
             <span
               className={cn(
                 "shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded border leading-none whitespace-nowrap",
-                badge.className
+                badge.className,
               )}
             >
               {badge.label}
@@ -918,7 +881,7 @@ function GraphNode({
         <p
           className={cn(
             "text-xs font-medium leading-snug line-clamp-2 flex-1 mt-1",
-            node.state === "completed" && "line-through opacity-60"
+            node.state === "completed" && "line-through opacity-60",
           )}
         >
           {node.title}
@@ -933,9 +896,7 @@ function GraphNode({
                   className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ backgroundColor: statusColor }}
                 />
-                <span className="text-[10px] text-muted-foreground truncate">
-                  {statusLabel}
-                </span>
+                <span className="text-[10px] text-muted-foreground truncate">{statusLabel}</span>
               </>
             )}
             {node.dueDate && (
@@ -949,7 +910,12 @@ function GraphNode({
             )}
           </div>
           {node.assigneeIds.length > 0 && (
-            <SubjectAvatarStack subjectIds={node.assigneeIds} maxDisplay={3} size="xs" className="shrink-0" />
+            <SubjectAvatarStack
+              subjectIds={node.assigneeIds}
+              maxDisplay={3}
+              size="xs"
+              className="shrink-0"
+            />
           )}
         </div>
       </div>
@@ -961,9 +927,7 @@ function GraphNode({
 
 function SprintGroupRegion({ group }: { group: SprintGroup }) {
   const borderClass =
-    group.status === "active"
-      ? "border-primary/30 bg-primary/5"
-      : "border-border bg-muted/10";
+    group.status === "active" ? "border-primary/30 bg-primary/5" : "border-border bg-muted/10";
 
   return (
     <div
@@ -976,9 +940,7 @@ function SprintGroupRegion({ group }: { group: SprintGroup }) {
       }}
     >
       <div className="px-3 py-2 flex items-center gap-2">
-        {group.status === "active" && (
-          <span className="w-2 h-2 rounded-full bg-primary" />
-        )}
+        {group.status === "active" && <span className="w-2 h-2 rounded-full bg-primary" />}
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           {group.label}
         </span>
@@ -988,7 +950,7 @@ function SprintGroupRegion({ group }: { group: SprintGroup }) {
               "text-[10px] px-1.5 py-0.5 rounded-full",
               group.status === "active"
                 ? "text-primary bg-primary/10"
-                : "text-muted-foreground bg-muted"
+                : "text-muted-foreground bg-muted",
             )}
           >
             {group.status}
@@ -1092,7 +1054,7 @@ function LegendBar({
               "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
               showHierarchy
                 ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:text-foreground"
+                : "bg-muted text-muted-foreground hover:text-foreground",
             )}
           >
             <TreeStructure size={12} weight={showHierarchy ? "fill" : "regular"} />
@@ -1106,7 +1068,7 @@ function LegendBar({
             "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
             showCriticalPath
               ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:text-foreground"
+              : "bg-muted text-muted-foreground hover:text-foreground",
           )}
         >
           <Lightning size={12} weight={showCriticalPath ? "fill" : "regular"} />

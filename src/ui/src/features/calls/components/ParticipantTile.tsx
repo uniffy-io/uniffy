@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ConnectionQuality, Track } from 'livekit-client';
-import type { Participant } from 'livekit-client';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ConnectionQuality, Track } from "livekit-client";
+import type { Participant } from "livekit-client";
 import {
   MicrophoneSlash,
   CellSignalLow,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
-} from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { getInitials } from '@/components/subject/utils';
+} from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { getInitials } from "@/components/subject/utils";
 
 interface ParticipantTileProps {
   participant: Participant;
@@ -48,7 +48,13 @@ export function ParticipantTile({
 }: ParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const zoomRef = useRef<HTMLDivElement>(null);
-  const panRef = useRef<{ pointerId: number; startX: number; startY: number; tx: number; ty: number } | null>(null);
+  const panRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    tx: number;
+    ty: number;
+  } | null>(null);
   const [zoom, setZoom] = useState<ZoomState>(ZOOM_FIT);
   const isScreen = source === Track.Source.ScreenShare;
 
@@ -61,8 +67,7 @@ export function ParticipantTile({
 
   const name = displayName || participant.name || participant.identity;
   const speaking = participant.isSpeaking && !isScreen;
-  const poorConnection =
-    participant.connectionQuality === ConnectionQuality.Poor;
+  const poorConnection = participant.connectionQuality === ConnectionQuality.Poor;
 
   const canZoom = zoomable && isScreen && hasVideo;
   const zoomed = zoom.scale > 1;
@@ -77,7 +82,7 @@ export function ParticipantTile({
   }, [videoTrack]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset zoom when the track changes
+    // eslint-disable-next-line react/react-compiler -- reset zoom when the track changes
     setZoom(ZOOM_FIT);
   }, [videoTrack]);
 
@@ -105,8 +110,8 @@ export function ParticipantTile({
         };
       });
     };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, [canZoom]);
 
   const stepZoom = useCallback((dir: 1 | -1) => {
@@ -175,21 +180,21 @@ export function ParticipantTile({
   return (
     <div
       className={cn(
-        'relative flex items-center justify-center overflow-hidden rounded-lg bg-muted/60 border border-border/60',
-        'transition-shadow duration-150',
-        speaking && 'ring-2 ring-emerald-400/80',
-        onClick && 'cursor-pointer hover:border-primary/60',
+        "relative flex items-center justify-center overflow-hidden rounded-lg bg-muted/60 border border-border/60",
+        "transition-shadow duration-150",
+        speaking && "ring-2 ring-emerald-400/80",
+        onClick && "cursor-pointer hover:border-primary/60",
         className,
       )}
       data-testid="call-participant-tile"
       data-identity={participant.identity}
       onClick={onClick}
-      role={onClick ? 'button' : undefined}
+      role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={
         onClick
           ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 onClick();
               }
@@ -200,9 +205,9 @@ export function ParticipantTile({
       <div
         ref={zoomRef}
         className={cn(
-          'absolute inset-0',
-          !hasVideo && 'hidden',
-          canZoom && (zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'),
+          "absolute inset-0",
+          !hasVideo && "hidden",
+          canZoom && (zoomed ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"),
         )}
         onPointerDown={canZoom ? onPointerDown : undefined}
         onPointerMove={canZoom ? onPointerMove : undefined}
@@ -216,9 +221,9 @@ export function ParticipantTile({
           playsInline
           muted
           className={cn(
-            'h-full w-full',
-            isScreen ? 'object-contain bg-black' : 'object-cover',
-            !isScreen && participant.isLocal && 'scale-x-[-1]',
+            "h-full w-full",
+            isScreen ? "object-contain bg-black" : "object-cover",
+            !isScreen && participant.isLocal && "scale-x-[-1]",
           )}
           style={
             canZoom && zoomed
@@ -236,8 +241,8 @@ export function ParticipantTile({
       <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center gap-1.5 pointer-events-none">
         <span className="max-w-full truncate rounded bg-black/50 px-1.5 py-0.5 text-[11px] font-medium text-white">
           {name}
-          {participant.isLocal && !isScreen ? ' (you)' : ''}
-          {isScreen ? ' - screen' : ''}
+          {participant.isLocal && !isScreen ? " (you)" : ""}
+          {isScreen ? " - screen" : ""}
         </span>
         {micMuted && !isScreen && (
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-black/50 text-red-400">
@@ -278,11 +283,11 @@ export function ParticipantTile({
               setZoom(ZOOM_FIT);
             }}
             className={cn(
-              'min-w-9 rounded px-1 text-center text-[10px] font-medium tabular-nums text-white/90',
-              zoomed && 'hover:bg-white/15',
+              "min-w-9 rounded px-1 text-center text-[10px] font-medium tabular-nums text-white/90",
+              zoomed && "hover:bg-white/15",
             )}
             disabled={!zoomed}
-            title={zoomed ? 'Reset to fit' : undefined}
+            title={zoomed ? "Reset to fit" : undefined}
             aria-label="Reset zoom"
           >
             {Math.round(zoom.scale * 100)}%

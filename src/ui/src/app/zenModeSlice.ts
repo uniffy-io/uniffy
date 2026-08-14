@@ -1,21 +1,21 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 
 interface ZenModeState {
-    isActive: boolean;
+  isActive: boolean;
 }
 
 const initialState: ZenModeState = {
-    isActive: false,
+  isActive: false,
 };
 
 const zenModeSlice = createSlice({
-    name: 'zenMode',
-    initialState,
-    reducers: {
-        toggleZenMode: (state) => {
-            state.isActive = !state.isActive;
-        },
+  name: "zenMode",
+  initialState,
+  reducers: {
+    toggleZenMode: (state) => {
+      state.isActive = !state.isActive;
     },
+  },
 });
 
 export const { toggleZenMode } = zenModeSlice.actions;

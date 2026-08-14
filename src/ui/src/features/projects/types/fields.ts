@@ -41,11 +41,7 @@ export interface FieldDefinition {
   updatedAt: string;
 }
 
-export type FieldValue =
-  | string
-  | number
-  | string[]
-  | null;
+export type FieldValue = string | number | string[] | null;
 
 export interface FieldTypeInfo {
   type: FieldType;

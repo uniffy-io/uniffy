@@ -1,21 +1,17 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { useState, useCallback } from 'react';
-import {
-  ArrowSquareOut,
-  CopySimple,
-  Check,
-} from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { parseUrn } from '@/shared/utils/urn';
-import { usePresence } from '@/features/presence/hooks/usePresence';
-import { useCustomStatus } from '@/features/presence/hooks/useCustomStatus';
-import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
-import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
-import { getInitials } from '@/components/subject/utils';
-import { formatTimeRemaining } from '@/shared/utils/dateFormatting';
-import { navigateTo } from '@/shared/utils/navigation';
-import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
-import type { MentionLiveState } from '@/components/mention/types';
+import { useState, useCallback } from "react";
+import { ArrowSquareOut, CopySimple, Check } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { parseUrn } from "@/shared/utils/urn";
+import { usePresence } from "@/features/presence/hooks/usePresence";
+import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
+import { useAvatarUrl } from "@/shared/hooks/useAvatarUrl";
+import { PresenceIndicator } from "@/components/subject/PresenceIndicator";
+import { getInitials } from "@/components/subject/utils";
+import { formatTimeRemaining } from "@/shared/utils/dateFormatting";
+import { navigateTo } from "@/shared/utils/navigation";
+import { ParentBadge, MetaSeparator } from "@/components/mention/previews/ParentBadge";
+import type { MentionLiveState } from "@/components/mention/types";
 
 interface UserMentionPreviewProps {
   urn: string;
@@ -25,19 +21,14 @@ interface UserMentionPreviewProps {
   onCopyLink: () => void;
 }
 
-export function UserMentionPreview({
-  urn,
-  title,
-  liveState,
-  onCopyLink,
-}: UserMentionPreviewProps) {
+export function UserMentionPreview({ urn, title, liveState, onCopyLink }: UserMentionPreviewProps) {
   const [copied, setCopied] = useState(false);
   const parsed = parseUrn(urn);
-  const userId = parsed.id || '';
+  const userId = parsed.id || "";
 
   const presenceStatus = usePresence(userId);
   const customStatus = useCustomStatus(userId);
-  const avatarUrl = useAvatarUrl(userId, 'md');
+  const avatarUrl = useAvatarUrl(userId, "md");
 
   const [avatarFailed, setAvatarFailed] = useState(false);
 
@@ -49,16 +40,22 @@ export function UserMentionPreview({
   }, [urn, onCopyLink]);
 
   const presenceLabel =
-    presenceStatus === 'online' ? 'Online'
-      : presenceStatus === 'away' ? 'Away'
-        : presenceStatus === 'dnd' ? 'Do Not Disturb'
-          : 'Offline';
+    presenceStatus === "online"
+      ? "Online"
+      : presenceStatus === "away"
+        ? "Away"
+        : presenceStatus === "dnd"
+          ? "Do Not Disturb"
+          : "Offline";
 
   const presenceColor =
-    presenceStatus === 'online' ? 'text-green-600 dark:text-green-400'
-      : presenceStatus === 'away' ? 'text-amber-600 dark:text-amber-400'
-        : presenceStatus === 'dnd' ? 'text-red-600 dark:text-red-400'
-          : 'text-muted-foreground';
+    presenceStatus === "online"
+      ? "text-green-600 dark:text-green-400"
+      : presenceStatus === "away"
+        ? "text-amber-600 dark:text-amber-400"
+        : presenceStatus === "dnd"
+          ? "text-red-600 dark:text-red-400"
+          : "text-muted-foreground";
 
   return (
     <>
@@ -84,12 +81,12 @@ export function UserMentionPreview({
           <span className="block flex-1 min-w-0 pt-0.5">
             <span className="block font-semibold text-sm truncate">{title}</span>
             {liveState.userEmail && (
-              <span className="block text-xs text-muted-foreground truncate">{liveState.userEmail}</span>
+              <span className="block text-xs text-muted-foreground truncate">
+                {liveState.userEmail}
+              </span>
             )}
             <span className="flex items-center gap-1.5 mt-1 flex-wrap">
-              <span className={cn('text-xs font-medium', presenceColor)}>
-                {presenceLabel}
-              </span>
+              <span className={cn("text-xs font-medium", presenceColor)}>{presenceLabel}</span>
               {customStatus && (
                 <>
                   <span className="text-muted-foreground/40">.</span>
@@ -99,7 +96,8 @@ export function UserMentionPreview({
                       {customStatus.text}
                       {customStatus.expiresAt && (
                         <span className="text-muted-foreground/60">
-                          {' '}{formatTimeRemaining(customStatus.expiresAt)}
+                          {" "}
+                          {formatTimeRemaining(customStatus.expiresAt)}
                         </span>
                       )}
                     </span>
@@ -115,13 +113,17 @@ export function UserMentionPreview({
               {liveState.userJobTitle && (
                 <>
                   <MetaSeparator />
-                  <span className="text-xs text-muted-foreground truncate">{liveState.userJobTitle}</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {liveState.userJobTitle}
+                  </span>
                 </>
               )}
               {liveState.userDepartment && (
                 <>
                   <MetaSeparator />
-                  <span className="text-xs text-muted-foreground truncate">{liveState.userDepartment}</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {liveState.userDepartment}
+                  </span>
                 </>
               )}
             </span>
@@ -132,7 +134,10 @@ export function UserMentionPreview({
       {/* Footer */}
       <span className="flex px-4 py-2.5 pl-5 bg-muted/30 border-t border-border/50 items-center gap-2">
         <button
-          onClick={(e) => { e.stopPropagation(); navigateTo(`/people/${userId}`); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigateTo(`/people/${userId}`);
+          }}
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowSquareOut size={12} />
@@ -140,11 +145,18 @@ export function UserMentionPreview({
         </button>
         <span className="flex-1" />
         <button
-          onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCopy();
+          }}
           className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
           title="Copy URN"
         >
-          {copied ? <Check size={12} weight="bold" className="text-green-500" /> : <CopySimple size={12} weight="bold" />}
+          {copied ? (
+            <Check size={12} weight="bold" className="text-green-500" />
+          ) : (
+            <CopySimple size={12} weight="bold" />
+          )}
         </button>
       </span>
     </>

@@ -1,13 +1,13 @@
-import { useRef, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { PushPin, X } from '@phosphor-icons/react';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { SubjectAvatarById } from '@/components/subject';
-import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
-import { fetchPinnedMessages } from '@/features/chat/store/chatThunks';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { MessageContent } from '@/features/chat/components/channel/MessageContent';
-import type { ChatMessage } from '@/features/chat/types';
+import { useRef, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { PushPin, X } from "@phosphor-icons/react";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { SubjectAvatarById } from "@/components/subject";
+import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
+import { fetchPinnedMessages } from "@/features/chat/store/chatThunks";
+import { formatRelativeTime } from "@/shared/utils/dateFormatting";
+import { MessageContent } from "@/features/chat/components/channel/MessageContent";
+import type { ChatMessage } from "@/features/chat/types";
 
 interface PinnedMessagesPanelProps {
   channelId: string;
@@ -16,7 +16,12 @@ interface PinnedMessagesPanelProps {
   onJumpToMessage?: (messageId: string) => void;
 }
 
-export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMessage }: PinnedMessagesPanelProps) {
+export function PinnedMessagesPanel({
+  channelId,
+  anchorRef,
+  onClose,
+  onJumpToMessage,
+}: PinnedMessagesPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -27,14 +32,22 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
   useEffect(() => {
     if (!organizationId) return;
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state tied to async fetch lifecycle
+    // eslint-disable-next-line react/react-compiler -- loading state tied to async fetch lifecycle
     setIsLoading(true);
     dispatch(fetchPinnedMessages(channelId))
       .unwrap()
-      .then((messages) => { if (!cancelled) setPinnedMessages(messages); })
-      .catch(() => { if (!cancelled) setPinnedMessages([]); })
-      .finally(() => { if (!cancelled) setIsLoading(false); });
-    return () => { cancelled = true; };
+      .then((messages) => {
+        if (!cancelled) setPinnedMessages(messages);
+      })
+      .catch(() => {
+        if (!cancelled) setPinnedMessages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [channelId, organizationId, dispatch]);
 
   const [position, setPosition] = useState({ top: 100, left: 100 });
@@ -62,20 +75,20 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
       }
     };
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }, 0);
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [onClose]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
   return createPortal(
@@ -87,12 +100,8 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <PushPin size={16} className="text-muted-foreground" />
-          <span className="text-sm font-semibold text-foreground">
-            Pinned Messages
-          </span>
-          <span className="text-xs text-muted-foreground">
-            ({pinnedMessages.length})
-          </span>
+          <span className="text-sm font-semibold text-foreground">Pinned Messages</span>
+          <span className="text-xs text-muted-foreground">({pinnedMessages.length})</span>
         </div>
         <button
           onClick={onClose}
@@ -116,13 +125,13 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
             </p>
           </div>
         ) : (
-          pinnedMessages.map(message => {
-            const isAgent = message.senderType === 'AGENT';
-            const agent = isAgent ? agentsById[message.senderId] ?? null : null;
+          pinnedMessages.map((message) => {
+            const isAgent = message.senderType === "AGENT";
+            const agent = isAgent ? (agentsById[message.senderId] ?? null) : null;
             const senderName =
               (isAgent ? agent?.name : null) ??
               message.senderName ??
-              (isAgent ? 'Agent' : 'Unknown User');
+              (isAgent ? "Agent" : "Unknown User");
 
             return (
               <div
@@ -150,7 +159,9 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
                     />
                   )}
                   <span className="text-sm font-semibold text-foreground">{senderName}</span>
-                  <span className="text-xs text-muted-foreground">{formatRelativeTime(message.createdAt)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatRelativeTime(message.createdAt)}
+                  </span>
                 </div>
 
                 <div className="ml-8 text-sm line-clamp-3">

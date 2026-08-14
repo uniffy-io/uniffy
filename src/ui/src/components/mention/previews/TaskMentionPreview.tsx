@@ -1,5 +1,5 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 import {
   Clock,
   ArrowSquareOut,
@@ -7,14 +7,14 @@ import {
   Check,
   CalendarDots,
   Warning,
-} from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { formatRelativeTime, formatDateShort, isOverdue } from '@/shared/utils/dateFormatting';
-import { getTaskTypeConfig } from '@/features/projects/utils/taskTypes';
-import { isTaskDoneStatus } from '@/components/mention/types';
-import { SubjectAvatarStack } from '@/components/subject';
-import { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';
-import type { MentionLiveState } from '@/components/mention/types';
+} from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { formatRelativeTime, formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
+import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { isTaskDoneStatus } from "@/components/mention/types";
+import { SubjectAvatarStack } from "@/components/subject";
+import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
+import type { MentionLiveState } from "@/components/mention/types";
 
 interface TaskMentionPreviewProps {
   urn: string;
@@ -42,7 +42,7 @@ export function TaskMentionPreview({
   }, [urn, onCopyLink]);
 
   const isDone = isTaskDoneStatus(liveState.taskStatus);
-  const taskTypeConfig = getTaskTypeConfig(liveState.taskType || 'task');
+  const taskTypeConfig = getTaskTypeConfig(liveState.taskType || "task");
   const TaskTypeIcon = taskTypeConfig.icon;
   const hasSubtasks = (liveState.taskSubtaskTotal ?? 0) > 0;
   const subtaskPct = hasSubtasks
@@ -53,12 +53,13 @@ export function TaskMentionPreview({
 
   const { subjects: assigneeSubjects } = useSubjectResolver(liveState.taskAssigneeIds ?? []);
 
-  const statusColor = liveState.taskStatusColor || '#6b7280';
+  const statusColor = liveState.taskStatusColor || "#6b7280";
   const priorityColor = liveState.taskPriorityColor;
 
-  const taskId = liveState.taskProjectSlug && liveState.taskNumber
-    ? `${liveState.taskProjectSlug}-${liveState.taskNumber}`
-    : null;
+  const taskId =
+    liveState.taskProjectSlug && liveState.taskNumber
+      ? `${liveState.taskProjectSlug}-${liveState.taskNumber}`
+      : null;
 
   return (
     <>
@@ -68,9 +69,7 @@ export function TaskMentionPreview({
           <span className="flex items-center gap-1.5 text-muted-foreground min-w-0">
             <TaskTypeIcon size={13} weight="duotone" className="shrink-0" />
             {taskId && (
-              <span className="text-[11px] font-mono font-medium tracking-wide">
-                {taskId}
-              </span>
+              <span className="text-[11px] font-mono font-medium tracking-wide">{taskId}</span>
             )}
           </span>
 
@@ -92,10 +91,12 @@ export function TaskMentionPreview({
 
       {/* Title */}
       <span className="block px-4 pb-2 pl-5">
-        <span className={cn(
-          'block font-semibold text-sm leading-snug line-clamp-2',
-          isDone && 'line-through text-muted-foreground',
-        )}>
+        <span
+          className={cn(
+            "block font-semibold text-sm leading-snug line-clamp-2",
+            isDone && "line-through text-muted-foreground",
+          )}
+        >
           {title}
         </span>
       </span>
@@ -131,16 +132,18 @@ export function TaskMentionPreview({
               size={12}
               weight="duotone"
               className={cn(
-                'shrink-0',
-                dueDateOverdue && !isDone ? 'text-red-500' : 'text-muted-foreground',
+                "shrink-0",
+                dueDateOverdue && !isDone ? "text-red-500" : "text-muted-foreground",
               )}
             />
-            <span className={cn(
-              'text-xs truncate',
-              dueDateOverdue && !isDone
-                ? 'text-red-600 dark:text-red-400 font-medium'
-                : 'text-muted-foreground',
-            )}>
+            <span
+              className={cn(
+                "text-xs truncate",
+                dueDateOverdue && !isDone
+                  ? "text-red-600 dark:text-red-400 font-medium"
+                  : "text-muted-foreground",
+              )}
+            >
               {formatDateShort(liveState.taskDueDate)}
             </span>
           </span>
@@ -149,7 +152,11 @@ export function TaskMentionPreview({
         {/* Assignees */}
         {assigneeSubjects.length > 0 && (
           <span className="flex items-center gap-1.5">
-            <SubjectAvatarStack subjectIds={liveState.taskAssigneeIds ?? []} maxDisplay={3} size="xs" />
+            <SubjectAvatarStack
+              subjectIds={liveState.taskAssigneeIds ?? []}
+              maxDisplay={3}
+              size="xs"
+            />
             {assigneeSubjects.length === 1 && (
               <span className="text-xs text-muted-foreground truncate">
                 {assigneeSubjects[0].name}
@@ -163,7 +170,7 @@ export function TaskMentionPreview({
           <span className="flex items-center gap-1.5">
             <span
               className="w-2 h-2 rounded-sm shrink-0"
-              style={{ backgroundColor: liveState.taskProjectColor || '#3b82f6' }}
+              style={{ backgroundColor: liveState.taskProjectColor || "#3b82f6" }}
             />
             <span className="text-xs text-muted-foreground truncate">
               {liveState.taskProjectName}
@@ -204,7 +211,7 @@ export function TaskMentionPreview({
       <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
-          <span>{formatRelativeTime(liveState.updatedAt) || 'No date'}</span>
+          <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>
           {liveState.updatedByName && (
             <>
               <span className="text-muted-foreground/40">.</span>
@@ -214,7 +221,10 @@ export function TaskMentionPreview({
         </span>
         <span className="flex items-center gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopy();
+            }}
             className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title="Copy URN"
           >

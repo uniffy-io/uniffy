@@ -1,15 +1,10 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { useState, useCallback } from 'react';
-import {
-  ArrowSquareOut,
-  CopySimple,
-  Check,
-  UsersThree,
-} from '@phosphor-icons/react';
-import { parseUrn } from '@/shared/utils/urn';
-import { navigateTo } from '@/shared/utils/navigation';
-import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
-import type { MentionLiveState } from '@/components/mention/types';
+import { useState, useCallback } from "react";
+import { ArrowSquareOut, CopySimple, Check, UsersThree } from "@phosphor-icons/react";
+import { parseUrn } from "@/shared/utils/urn";
+import { navigateTo } from "@/shared/utils/navigation";
+import { ParentBadge, MetaSeparator } from "@/components/mention/previews/ParentBadge";
+import type { MentionLiveState } from "@/components/mention/types";
 
 interface TeamMentionPreviewProps {
   urn: string;
@@ -28,7 +23,7 @@ export function TeamMentionPreview({
   onCopyLink,
 }: TeamMentionPreviewProps) {
   const [copied, setCopied] = useState(false);
-  const teamId = parseUrn(urn).id || '';
+  const teamId = parseUrn(urn).id || "";
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(urn);
@@ -58,7 +53,7 @@ export function TeamMentionPreview({
                 <>
                   <MetaSeparator />
                   <span className="text-xs text-muted-foreground">
-                    {liveState.teamMemberCount} member{liveState.teamMemberCount !== 1 ? 's' : ''}
+                    {liveState.teamMemberCount} member{liveState.teamMemberCount !== 1 ? "s" : ""}
                   </span>
                 </>
               )}
@@ -69,13 +64,18 @@ export function TeamMentionPreview({
 
       {description && (
         <span className="block px-4 pb-2.5 pl-5">
-          <span className="block text-xs text-muted-foreground leading-relaxed line-clamp-3">{description}</span>
+          <span className="block text-xs text-muted-foreground leading-relaxed line-clamp-3">
+            {description}
+          </span>
         </span>
       )}
 
       <span className="flex px-4 py-2.5 pl-5 bg-muted/30 border-t border-border/50 items-center gap-2">
         <button
-          onClick={(e) => { e.stopPropagation(); navigateTo(`/people?team=${teamId}`); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigateTo(`/people?team=${teamId}`);
+          }}
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowSquareOut size={12} />
@@ -83,11 +83,18 @@ export function TeamMentionPreview({
         </button>
         <span className="flex-1" />
         <button
-          onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCopy();
+          }}
           className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
           title="Copy URN"
         >
-          {copied ? <Check size={12} weight="bold" className="text-green-500" /> : <CopySimple size={12} weight="bold" />}
+          {copied ? (
+            <Check size={12} weight="bold" className="text-green-500" />
+          ) : (
+            <CopySimple size={12} weight="bold" />
+          )}
         </button>
       </span>
     </>

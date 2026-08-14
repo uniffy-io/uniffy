@@ -1,10 +1,14 @@
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { CopySimple, Plus, PencilSimple, Trash } from '@phosphor-icons/react';
-import { openCreateTemplateModal, openEditTemplateModal, openEventModal } from '@/features/calendar/store';
-import { SidebarSection } from '@/features/calendar/components/sidebar/SidebarSection';
-import { listEventTemplates, deleteEventTemplate } from '@/features/calendar/store/calendarThunks';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { CopySimple, Plus, PencilSimple, Trash } from "@phosphor-icons/react";
+import {
+  openCreateTemplateModal,
+  openEditTemplateModal,
+  openEventModal,
+} from "@/features/calendar/store";
+import { SidebarSection } from "@/features/calendar/components/sidebar/SidebarSection";
+import { listEventTemplates, deleteEventTemplate } from "@/features/calendar/store/calendarThunks";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useEffect, useState } from "react";
 
 export function TemplateList() {
   const dispatch = useAppDispatch();
@@ -20,7 +24,7 @@ export function TemplateList() {
     if (template) {
       dispatch(
         openEventModal({
-          mode: 'create',
+          mode: "create",
           prefill: {
             title: template.title,
             description: template.description,
@@ -29,7 +33,7 @@ export function TemplateList() {
             meetingUrl: template.meetingUrl,
             durationMinutes: template.durationMinutes,
           },
-        })
+        }),
       );
     }
   };
@@ -85,33 +89,33 @@ export function TemplateList() {
             className="group w-full flex items-center justify-between px-2 py-1.5 rounded-md text-sm hover:bg-muted transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2 overflow-hidden">
-                <CopySimple size={16} weight="duotone" className="shrink-0 text-muted-foreground" />
-                <span className="truncate text-muted-foreground group-hover:text-foreground transition-colors">{template.title}</span>
+              <CopySimple size={16} weight="duotone" className="shrink-0 text-muted-foreground" />
+              <span className="truncate text-muted-foreground group-hover:text-foreground transition-colors">
+                {template.title}
+              </span>
             </div>
 
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                    onClick={(e) => handleEdit(e, template.id)}
-                    className="p-0.5 hover:bg-background rounded text-muted-foreground hover:text-foreground transition-colors"
-                    title="Edit"
-                >
-                    <PencilSimple size={14} weight="duotone" />
-                </button>
-                <button
-                    onClick={(e) => handleDelete(e, template.id, template.title)}
-                    className="p-0.5 hover:bg-background rounded text-muted-foreground hover-destructive transition-colors"
-                    title="Delete"
-                >
-                    <Trash size={14} weight="duotone" />
-                </button>
+              <button
+                onClick={(e) => handleEdit(e, template.id)}
+                className="p-0.5 hover:bg-background rounded text-muted-foreground hover:text-foreground transition-colors"
+                title="Edit"
+              >
+                <PencilSimple size={14} weight="duotone" />
+              </button>
+              <button
+                onClick={(e) => handleDelete(e, template.id, template.title)}
+                className="p-0.5 hover:bg-background rounded text-muted-foreground hover-destructive transition-colors"
+                title="Delete"
+              >
+                <Trash size={14} weight="duotone" />
+              </button>
             </div>
           </div>
         ))}
 
         {templateList.length === 0 && !isLoading && (
-            <div className="text-xs text-muted-foreground px-2 py-1 italic">
-                No templates yet
-            </div>
+          <div className="text-xs text-muted-foreground px-2 py-1 italic">No templates yet</div>
         )}
       </div>
 
@@ -125,7 +129,7 @@ export function TemplateList() {
         message={
           pendingDelete
             ? `Delete the "${pendingDelete.title}" template? Events created from it are not affected.`
-            : ''
+            : ""
         }
         confirmLabel="Delete"
         variant="danger"

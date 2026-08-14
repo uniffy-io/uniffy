@@ -36,7 +36,7 @@ export function BacklogTaskRow({
 
   const allSprints = useAppSelector(selectSprintsForProject(projectId));
   const availableSprints = allSprints.filter(
-    (s) => s.status !== "closed" && s.id !== currentSprintId
+    (s) => s.status !== "closed" && s.id !== currentSprintId,
   );
 
   // Field definitions for status/priority labels and colors
@@ -52,12 +52,12 @@ export function BacklogTaskRow({
 
   const statusOption = useMemo(
     () => statusOptions.find((o) => o.id === task.status),
-    [statusOptions, task.status]
+    [statusOptions, task.status],
   );
 
   const priorityOption = useMemo(
     () => priorityOptions.find((o) => o.id === task.priority),
-    [priorityOptions, task.priority]
+    [priorityOptions, task.priority],
   );
 
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
@@ -133,9 +133,7 @@ export function BacklogTaskRow({
         }}
         className="z-200 rounded-md border border-border bg-card shadow-xl py-1 animate-in fade-in-0 slide-in-from-top-2 duration-100"
       >
-        <div className="px-3 py-1 text-xs font-medium text-muted-foreground">
-          Move to
-        </div>
+        <div className="px-3 py-1 text-xs font-medium text-muted-foreground">Move to</div>
         {currentSprintId !== null && (
           <button
             type="button"
@@ -156,7 +154,7 @@ export function BacklogTaskRow({
           </button>
         ))}
       </div>,
-      document.body
+      document.body,
     );
   };
 
@@ -165,11 +163,7 @@ export function BacklogTaskRow({
   return (
     <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors">
       {/* Type icon */}
-      <TypeIcon
-        size={14}
-        weight="fill"
-        className="text-muted-foreground shrink-0"
-      />
+      <TypeIcon size={14} weight="fill" className="text-muted-foreground shrink-0" />
 
       {/* Task ID */}
       <span className="text-xs font-mono text-muted-foreground w-20 shrink-0">
@@ -177,18 +171,14 @@ export function BacklogTaskRow({
       </span>
 
       {/* Title */}
-      <span className="text-sm text-foreground truncate flex-1 min-w-0">
-        {task.title}
-      </span>
+      <span className="text-sm text-foreground truncate flex-1 min-w-0">{task.title}</span>
 
       {/* Due date */}
       {task.dueDate && (
         <span
           className={cn(
             "flex items-center gap-1 text-xs shrink-0",
-            dueDateOverdue
-              ? "text-red-500 dark:text-red-400"
-              : "text-muted-foreground"
+            dueDateOverdue ? "text-red-500 dark:text-red-400" : "text-muted-foreground",
           )}
           title={`Due: ${task.dueDate}`}
         >
@@ -233,7 +223,10 @@ export function BacklogTaskRow({
       {/* Subtask progress */}
       {task.subtaskTotal > 0 && (
         <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-          <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
+          <CheckCircle
+            size={10}
+            className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""}
+          />
           {task.subtaskCompleted}/{task.subtaskTotal}
         </span>
       )}
@@ -264,7 +257,7 @@ export function BacklogTaskRow({
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className={cn(
               "p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0",
-              isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100",
             )}
             title="Move to..."
           >
@@ -276,4 +269,3 @@ export function BacklogTaskRow({
     </div>
   );
 }
-

@@ -74,6 +74,17 @@ function getFileColor(ext: string) {
   return FILE_COLORS[ext.toLowerCase()] ?? FILE_COLORS.default;
 }
 
+function findFolder(nodes: PlainTreeNode[], id: string): PlainTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    if (node.isFolder && node.children.length > 0) {
+      const found = findFolder(node.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 type FolderOption = { id: string; name: string; depth: number };
 
 // Flat list of folders for the move picker. Skips any subtree rooted at an id
@@ -224,19 +235,7 @@ export function FilesListScreen() {
   const currentChildren = useMemo(() => {
     if (!filesTree.data) return [];
     if (!currentFolderId) return filesTree.data;
-    // Walk the tree to find the current folder
-    const findFolder = (nodes: PlainTreeNode[]): PlainTreeNode | null => {
-      for (const node of nodes) {
-        if (node.id === currentFolderId) return node;
-        if (node.isFolder && node.children.length > 0) {
-          const found = findFolder(node.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    const folder = findFolder(filesTree.data);
-    return folder?.children ?? [];
+    return findFolder(filesTree.data, currentFolderId)?.children ?? [];
   }, [filesTree.data, currentFolderId]);
 
   const query = searchQuery.trim().toLowerCase();

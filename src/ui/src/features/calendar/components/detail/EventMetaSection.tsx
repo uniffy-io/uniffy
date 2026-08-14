@@ -1,12 +1,12 @@
-import { useMemo } from 'react';
-import { Timer } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { TagChip, TagPicker } from '@/features/tags';
-import { useTagsByIds } from '@/features/tags/store/selectors';
-import { SectionLabel } from '@/features/calendar/components/detail/SectionLabel';
-import type { CalendarEvent } from '@/features/calendar/types';
-import type { EventPatch } from '@/features/calendar/hooks/useEventCommit';
+import { useMemo } from "react";
+import { Timer } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { TagChip, TagPicker } from "@/features/tags";
+import { useTagsByIds } from "@/features/tags/store/selectors";
+import { SectionLabel } from "@/features/calendar/components/detail/SectionLabel";
+import type { CalendarEvent } from "@/features/calendar/types";
+import type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
 
 interface EventMetaSectionProps {
   event: CalendarEvent;
@@ -19,12 +19,13 @@ export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionPro
   const eventTags = useTagsByIds(event.tagIds);
 
   const categoryOptions = useMemo(
-    () => Object.entries(categories).map(([id, cat]) => ({
-      value: id,
-      label: cat.name,
-      color: cat.color,
-    })),
-    [categories]
+    () =>
+      Object.entries(categories).map(([id, cat]) => ({
+        value: id,
+        label: cat.name,
+        color: cat.color,
+      })),
+    [categories],
   );
 
   if (!canEdit) {
@@ -48,10 +49,10 @@ export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionPro
               type="button"
               onClick={() => commit({ categoryId: cat.value })}
               className={cn(
-                'px-2 py-1 text-xs rounded-lg border transition-all',
+                "px-2 py-1 text-xs rounded-lg border transition-all",
                 event.categoryId === cat.value
-                  ? 'border-primary bg-primary/10 text-foreground'
-                  : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               <span
@@ -81,8 +82,8 @@ export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionPro
         <Timer size={16} weight="duotone" className="text-muted-foreground" />
         <span
           className={cn(
-            'w-3 h-3 rounded-full border-2 transition-colors',
-            event.isFocusTime ? 'border-primary bg-primary' : 'border-muted-foreground'
+            "w-3 h-3 rounded-full border-2 transition-colors",
+            event.isFocusTime ? "border-primary bg-primary" : "border-muted-foreground",
           )}
         />
         <span className="text-xs text-foreground">Focus / Deep Work</span>

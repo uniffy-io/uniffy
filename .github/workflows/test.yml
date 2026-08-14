@@ -108,8 +108,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -121,8 +119,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter uniffy-ui...
 
-      - name: Run ESLint
+      - name: Run lint
         run: pnpm --filter uniffy-ui lint
+
+      - name: Check formatting
+        run: pnpm --filter uniffy-ui format:check
 
   build-frontend:
     needs: changes
@@ -135,8 +136,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -164,8 +163,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -177,8 +174,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter uniffy-mobile...
 
-      - name: Run ESLint
+      - name: Run lint
         run: pnpm --filter uniffy-mobile lint
+
+      # `run` is required: bare `pnpm doctor` resolves to pnpm's own builtin,
+      # not the expo-doctor script. Advisory for now: the version check tracks
+      # the live registry, so Expo patch waves redden it with no repo change.
+      - name: Expo doctor (advisory)
+        continue-on-error: true
+        run: pnpm --filter uniffy-mobile run doctor
 
   format-mobile:
     needs: changes
@@ -191,8 +195,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -218,8 +220,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -299,8 +299,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

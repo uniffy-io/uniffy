@@ -1,14 +1,17 @@
-import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { updateEventThunk, openEventModal } from '@/features/calendar/store';
-import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
-import { TimeColumn, TIME_COLUMN_TOP_PADDING } from '@/features/calendar/components/calendar/TimeColumn';
-import { DayHeader } from '@/features/calendar/components/calendar/DayHeader';
-import { GridLines } from '@/features/calendar/components/calendar/GridLines';
-import { DayCurrentTimeIndicator } from '@/features/calendar/components/calendar/CurrentTimeIndicator';
-import { EventBlock } from '@/features/calendar/components/calendar/EventBlock';
-import { GRID, LAYOUT } from '@/features/calendar/constants';
-import { parseISO, format } from '@/features/calendar/utils';
+import { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { updateEventThunk, openEventModal } from "@/features/calendar/store";
+import { useCalendarNavigation, useCalendarEvents } from "@/features/calendar/hooks";
+import {
+  TimeColumn,
+  TIME_COLUMN_TOP_PADDING,
+} from "@/features/calendar/components/calendar/TimeColumn";
+import { DayHeader } from "@/features/calendar/components/calendar/DayHeader";
+import { GridLines } from "@/features/calendar/components/calendar/GridLines";
+import { DayCurrentTimeIndicator } from "@/features/calendar/components/calendar/CurrentTimeIndicator";
+import { EventBlock } from "@/features/calendar/components/calendar/EventBlock";
+import { GRID, LAYOUT } from "@/features/calendar/constants";
+import { parseISO, format } from "@/features/calendar/utils";
 
 export function DayView() {
   const dispatch = useAppDispatch();
@@ -28,19 +31,19 @@ export function DayView() {
     () => ({
       date: currentDateObj,
       dayOfWeek: currentDateObj.getDay(),
-      dayName: format(currentDateObj, 'EEEE'),
+      dayName: format(currentDateObj, "EEEE"),
       dayNumber: currentDateObj.getDate(),
       isToday: new Date().toDateString() === currentDateObj.toDateString(),
       isCurrentMonth: true,
       isWeekend: [0, 6].includes(currentDateObj.getDay()),
       dateString: currentDate,
     }),
-    [currentDateObj, currentDate]
+    [currentDateObj, currentDate],
   );
 
   const positionedEvents = useMemo(
     () => getPositionedEvents(currentDate),
-    [getPositionedEvents, currentDate]
+    [getPositionedEvents, currentDate],
   );
 
   const hourCount = GRID.END_HOUR - GRID.START_HOUR + 1;
@@ -62,98 +65,110 @@ export function DayView() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && selectedSlot) {
+      if (e.key === "Escape" && selectedSlot) {
         setSelectedSlot(null);
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [selectedSlot]);
 
-  const getSlotFromCoordinates = useCallback((clientY: number) => {
-    if (!gridRef.current || !scrollRef.current) return null;
+  const getSlotFromCoordinates = useCallback(
+    (clientY: number) => {
+      if (!gridRef.current || !scrollRef.current) return null;
 
-    const scrollRect = scrollRef.current.getBoundingClientRect();
-    const clickY = clientY - scrollRect.top + scrollRef.current.scrollTop - TIME_COLUMN_TOP_PADDING;
-    
-    if (clickY < 0) return null;
+      const scrollRect = scrollRef.current.getBoundingClientRect();
+      const clickY =
+        clientY - scrollRect.top + scrollRef.current.scrollTop - TIME_COLUMN_TOP_PADDING;
 
-    const halfHourSlotHeight = hourHeight / 2;
-    const halfHourOffset = Math.floor(clickY / halfHourSlotHeight);
-    const hour = GRID.START_HOUR + Math.floor(halfHourOffset / 2);
-    const isHalf = halfHourOffset % 2 === 1;
+      if (clickY < 0) return null;
 
-    if (hour < GRID.START_HOUR || hour >= GRID.END_HOUR) return null;
+      const halfHourSlotHeight = hourHeight / 2;
+      const halfHourOffset = Math.floor(clickY / halfHourSlotHeight);
+      const hour = GRID.START_HOUR + Math.floor(halfHourOffset / 2);
+      const isHalf = halfHourOffset % 2 === 1;
 
-    return { hour, isHalf };
-  }, [hourHeight]);
+      if (hour < GRID.START_HOUR || hour >= GRID.END_HOUR) return null;
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
+      return { hour, isHalf };
+    },
+    [hourHeight],
+  );
 
-    if (!draggedEventId) return;
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
 
-    const slot = getSlotFromCoordinates(e.clientY);
-    if (slot) {
-      setDropPreview(slot);
-    } else {
+      if (!draggedEventId) return;
+
+      const slot = getSlotFromCoordinates(e.clientY);
+      if (slot) {
+        setDropPreview(slot);
+      } else {
+        setDropPreview(null);
+      }
+    },
+    [draggedEventId, getSlotFromCoordinates],
+  );
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
       setDropPreview(null);
-    }
-  }, [draggedEventId, getSlotFromCoordinates]);
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    setDropPreview(null);
+      if (!draggedEventId) return;
 
-    if (!draggedEventId) return;
+      const slot = getSlotFromCoordinates(e.clientY);
+      if (!slot) return;
 
-    const slot = getSlotFromCoordinates(e.clientY);
-    if (!slot) return;
+      const newStartDate = new Date(currentDate);
+      newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
 
-    const newStartDate = new Date(currentDate);
-    newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
+      const match = positionedEvents.find((event) => event.id === draggedEventId);
+      if (!match) return;
 
-    const match = positionedEvents.find(e => e.id === draggedEventId);
-    if (!match) return;
+      const start = new Date(match.startTime);
+      const end = new Date(match.endTime);
+      const durationMs = end.getTime() - start.getTime();
 
-    const start = new Date(match.startTime);
-    const end = new Date(match.endTime);
-    const durationMs = end.getTime() - start.getTime();
+      const newStartTime = newStartDate.toISOString();
+      const newEndTime = new Date(newStartDate.getTime() + durationMs).toISOString();
 
-    const newStartTime = newStartDate.toISOString();
-    const newEndTime = new Date(newStartDate.getTime() + durationMs).toISOString();
-
-    try {
-      await dispatch(updateEventThunk({
-        eventId: draggedEventId,
-        startTime: newStartTime,
-        endTime: newEndTime,
-      })).unwrap();
-    } catch {
-    }
-  }, [draggedEventId, getSlotFromCoordinates, currentDate, positionedEvents, dispatch]);
+      try {
+        await dispatch(
+          updateEventThunk({
+            eventId: draggedEventId,
+            startTime: newStartTime,
+            endTime: newEndTime,
+          }),
+        ).unwrap();
+      } catch {}
+    },
+    [draggedEventId, getSlotFromCoordinates, currentDate, positionedEvents, dispatch],
+  );
 
   const handleGridClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
 
     if (
-      target.closest('[data-event-block]') ||
-      target.closest('[data-event]') ||
-      target.closest('button') ||
-      target.closest('a')
+      target.closest("[data-event-block]") ||
+      target.closest("[data-event]") ||
+      target.closest("button") ||
+      target.closest("a")
     ) {
       return;
     }
 
     const slot = getSlotFromCoordinates(e.clientY);
     if (!slot) return;
-    
+
     const { hour, isHalf } = slot;
     const currentTime = Date.now();
-    const isDoubleClick = currentTime - lastClickTimeRef.current < 300 && 
-                          selectedSlot?.hour === hour && 
-                          selectedSlot?.isHalf === isHalf;
+    const isDoubleClick =
+      currentTime - lastClickTimeRef.current < 300 &&
+      selectedSlot?.hour === hour &&
+      selectedSlot?.isHalf === isHalf;
 
     if (isDoubleClick) {
       const clickedHour = hour + (isHalf ? 0.5 : 0);
@@ -167,15 +182,17 @@ export function DayView() {
       const endDt = new Date(dayDate);
       endDt.setHours(Math.floor(endHourVal), endMinutes, 0, 0);
 
-      const dateStr = format(dayDate, 'yyyy-MM-dd');
-      dispatch(openEventModal({
-        mode: 'create',
-        prefill: {
-          date: dateStr,
-          startTime: startDt.toISOString(),
-          endTime: endDt.toISOString(),
-        },
-      }));
+      const dateStr = format(dayDate, "yyyy-MM-dd");
+      dispatch(
+        openEventModal({
+          mode: "create",
+          prefill: {
+            date: dateStr,
+            startTime: startDt.toISOString(),
+            endTime: endDt.toISOString(),
+          },
+        }),
+      );
       setSelectedSlot(null);
     } else {
       setSelectedSlot({ hour, isHalf });
@@ -209,7 +226,12 @@ export function DayView() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
-              <GridLines columnCount={1} hourCount={hourCount} topOffset={TIME_COLUMN_TOP_PADDING} hourHeight={hourHeight} />
+              <GridLines
+                columnCount={1}
+                hourCount={hourCount}
+                topOffset={TIME_COLUMN_TOP_PADDING}
+                hourHeight={hourHeight}
+              />
 
               {selectedSlot && (
                 <div
@@ -226,8 +248,8 @@ export function DayView() {
                   className="absolute bg-primary/20 border-2 border-dashed border-primary z-20 pointer-events-none rounded transition-all duration-75"
                   style={{
                     top: `${TIME_COLUMN_TOP_PADDING + (dropPreview.hour - GRID.START_HOUR) * hourHeight + (dropPreview.isHalf ? hourHeight / 2 : 0)}px`,
-                    height: positionedEvents.find(e => e.id === draggedEventId) 
-                      ? `${(positionedEvents.find(e => e.id === draggedEventId)!.height / GRID.HOUR_HEIGHT) * hourHeight}px`
+                    height: positionedEvents.find((e) => e.id === draggedEventId)
+                      ? `${(positionedEvents.find((e) => e.id === draggedEventId)!.height / GRID.HOUR_HEIGHT) * hourHeight}px`
                       : `${hourHeight}px`,
                     left: 0,
                     right: 0,
@@ -243,11 +265,7 @@ export function DayView() {
               )}
 
               {positionedEvents.map((event) => (
-                <div
-                  key={event.id}
-                  data-event-block
-                  className="pointer-events-auto"
-                >
+                <div key={event.id} data-event-block className="pointer-events-auto">
                   <EventBlock
                     event={{
                       ...event,
@@ -260,12 +278,15 @@ export function DayView() {
                 </div>
               ))}
 
-              <DayCurrentTimeIndicator date={currentDate} topOffset={TIME_COLUMN_TOP_PADDING} hourHeight={hourHeight} />
+              <DayCurrentTimeIndicator
+                date={currentDate}
+                topOffset={TIME_COLUMN_TOP_PADDING}
+                hourHeight={hourHeight}
+              />
             </div>
           </div>
         </div>
       </div>
-
     </>
   );
 }

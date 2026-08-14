@@ -1,10 +1,10 @@
-import { ChatEventType } from '@uniffy/proto/chat/v1/chat_stream_pb';
-import type { ChatEvent } from '@uniffy/proto/chat/v1/chat_stream_pb';
+import { ChatEventType } from "@uniffy/proto/chat/v1/chat_stream_pb";
+import type { ChatEvent } from "@uniffy/proto/chat/v1/chat_stream_pb";
 import {
   callToPlain,
   participantToPlain,
   ringPayloadToInvite,
-} from '@/features/calls/api/callsConverters';
+} from "@/features/calls/api/callsConverters";
 import {
   callUpserted,
   callEnded,
@@ -12,8 +12,8 @@ import {
   participantLeft,
   hostChanged,
   ringReceived,
-} from '@/features/calls/store/callsSlice';
-import type { AppDispatch } from '@/app/store';
+} from "@/features/calls/store/callsSlice";
+import type { AppDispatch } from "@/app/store";
 
 /**
  * Call events apply globally (channel indicators, ringing, the session the
@@ -23,23 +23,21 @@ import type { AppDispatch } from '@/app/store';
 export function handleCallStreamEvent(ce: ChatEvent, dispatch: AppDispatch): boolean {
   switch (ce.eventType) {
     case ChatEventType.CALL_STARTED: {
-      if (ce.payload.case === 'callLifecycle' && ce.payload.value.call) {
+      if (ce.payload.case === "callLifecycle" && ce.payload.value.call) {
         dispatch(callUpserted(callToPlain(ce.payload.value.call)));
       }
       return true;
     }
     case ChatEventType.CALL_ENDED: {
-      if (ce.payload.case === 'callLifecycle' && ce.payload.value.call) {
+      if (ce.payload.case === "callLifecycle" && ce.payload.value.call) {
         const call = callToPlain(ce.payload.value.call);
-        dispatch(
-          callEnded({ callId: call.id, channelId: call.channelId, reason: call.endReason }),
-        );
+        dispatch(callEnded({ callId: call.id, channelId: call.channelId, reason: call.endReason }));
       }
       return true;
     }
     case ChatEventType.CALL_PARTICIPANT_JOINED:
     case ChatEventType.CALL_PARTICIPANT_STATE: {
-      if (ce.payload.case === 'callParticipant' && ce.payload.value.participant) {
+      if (ce.payload.case === "callParticipant" && ce.payload.value.participant) {
         dispatch(
           participantUpserted({
             callId: ce.payload.value.callId,
@@ -50,7 +48,7 @@ export function handleCallStreamEvent(ce: ChatEvent, dispatch: AppDispatch): boo
       return true;
     }
     case ChatEventType.CALL_PARTICIPANT_LEFT: {
-      if (ce.payload.case === 'callParticipant' && ce.payload.value.participant) {
+      if (ce.payload.case === "callParticipant" && ce.payload.value.participant) {
         dispatch(
           participantLeft({
             callId: ce.payload.value.callId,
@@ -61,13 +59,13 @@ export function handleCallStreamEvent(ce: ChatEvent, dispatch: AppDispatch): boo
       return true;
     }
     case ChatEventType.CALL_RING: {
-      if (ce.payload.case === 'callRing') {
+      if (ce.payload.case === "callRing") {
         dispatch(ringReceived(ringPayloadToInvite(ce.payload.value, ce.channelId)));
       }
       return true;
     }
     case ChatEventType.CALL_HOST_CHANGED: {
-      if (ce.payload.case === 'callHostChanged') {
+      if (ce.payload.case === "callHostChanged") {
         dispatch(
           hostChanged({
             callId: ce.payload.value.callId,

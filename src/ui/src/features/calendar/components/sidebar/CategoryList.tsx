@@ -1,22 +1,20 @@
-import { useState } from 'react';
-import { PencilSimple, Plus, Trash } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { useState } from "react";
+import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   toggleCategoryFilter,
   openAddCategoryModal,
   openEditCategoryModal,
   deleteCategory,
-} from '@/features/calendar/store';
-import { SidebarSection } from '@/features/calendar/components/sidebar/SidebarSection';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { cn } from '@/shared/utils/cn';
+} from "@/features/calendar/store";
+import { SidebarSection } from "@/features/calendar/components/sidebar/SidebarSection";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { cn } from "@/shared/utils/cn";
 
 export function CategoryList() {
   const dispatch = useAppDispatch();
   const categories = useAppSelector((state) => state.calendar.categories);
-  const selectedCategoryIds = useAppSelector(
-    (state) => state.calendar.filters.categoryIds
-  );
+  const selectedCategoryIds = useAppSelector((state) => state.calendar.filters.categoryIds);
 
   const handleToggle = (categoryId: string) => {
     dispatch(toggleCategoryFilter(categoryId));
@@ -71,10 +69,10 @@ export function CategoryList() {
             <div
               key={category.id}
               className={cn(
-                'group w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors',
+                "group w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors",
                 isSelected
-                  ? 'bg-primary/20 text-primary'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? "bg-primary/20 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               <button
@@ -119,7 +117,7 @@ export function CategoryList() {
         message={
           pendingDelete
             ? `Delete the "${pendingDelete.name}" category? Events keep their data but lose this label.`
-            : ''
+            : ""
         }
         confirmLabel="Delete"
         variant="danger"

@@ -7,13 +7,12 @@ import { SKILL_NAME_CONFLICT_FIELD } from "@/config/errorMessages";
 const EXISTING_SKILL_NAME = /A skill named '([^']+)'/;
 
 export interface SkillNameConflict {
-    existingSkillName: string;
+  existingSkillName: string;
 }
 
 /** Null when the rejection is something other than the name-collision refusal. */
 export function parseSkillNameConflict(error: unknown): SkillNameConflict | null {
-    const message =
-        typeof error === "string" ? error : error instanceof Error ? error.message : "";
-    if (!message.includes(SKILL_NAME_CONFLICT_FIELD)) return null;
-    return { existingSkillName: EXISTING_SKILL_NAME.exec(message)?.[1] ?? "" };
+  const message = typeof error === "string" ? error : error instanceof Error ? error.message : "";
+  if (!message.includes(SKILL_NAME_CONFLICT_FIELD)) return null;
+  return { existingSkillName: EXISTING_SKILL_NAME.exec(message)?.[1] ?? "" };
 }

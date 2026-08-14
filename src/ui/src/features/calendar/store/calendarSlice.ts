@@ -1,13 +1,13 @@
-import { createSlice } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
 import type {
   CalendarEvent,
   Category,
   EventTemplate,
   EventFilters,
   EventActivity,
-} from '@/features/calendar/types';
-import { DEFAULT_CATEGORIES } from '@/features/calendar/constants';
+} from "@/features/calendar/types";
+import { DEFAULT_CATEGORIES } from "@/features/calendar/constants";
 import {
   fetchEventsInRange,
   fetchEvent,
@@ -26,7 +26,7 @@ import {
   deleteEventTemplate,
   listEventTemplates,
   fetchEventActivities,
-} from '@/features/calendar/store/calendarThunks';
+} from "@/features/calendar/store/calendarThunks";
 
 interface CalendarState {
   events: Record<string, CalendarEvent>;
@@ -68,7 +68,7 @@ function createDefaultCategories(): Record<string, Category> {
   DEFAULT_CATEGORIES.forEach((cat) => {
     result[cat.id] = {
       ...cat,
-      organizationId: '',
+      organizationId: "",
       createdAt: now,
       updatedAt: now,
     };
@@ -87,7 +87,7 @@ const initialState: CalendarState = {
     calendarIds: [],
     categoryIds: [],
     tagIds: [],
-    searchQuery: '',
+    searchQuery: "",
     focusTimeOnly: false,
   },
   loading: {
@@ -116,14 +116,17 @@ const initialState: CalendarState = {
 };
 
 const calendarSlice = createSlice({
-  name: 'calendar',
+  name: "calendar",
   initialState,
   reducers: {
     setEvents: (state, action: PayloadAction<CalendarEvent[]>) => {
-      state.events = action.payload.reduce((acc, event) => {
-        acc[event.id] = event;
-        return acc;
-      }, {} as Record<string, CalendarEvent>);
+      state.events = action.payload.reduce(
+        (acc, event) => {
+          acc[event.id] = event;
+          return acc;
+        },
+        {} as Record<string, CalendarEvent>,
+      );
       state.visibleEventIds = action.payload.map((e) => e.id);
     },
 
@@ -142,9 +145,7 @@ const calendarSlice = createSlice({
 
     removeEvent: (state, action: PayloadAction<string>) => {
       delete state.events[action.payload];
-      state.visibleEventIds = state.visibleEventIds.filter(
-        (id) => id !== action.payload
-      );
+      state.visibleEventIds = state.visibleEventIds.filter((id) => id !== action.payload);
     },
 
     updateCategory: (state, action: PayloadAction<Category>) => {
@@ -191,10 +192,7 @@ const calendarSlice = createSlice({
       state.errors = initialState.errors;
     },
 
-    setPagination: (
-      state,
-      action: PayloadAction<Partial<CalendarState['pagination']>>
-    ) => {
+    setPagination: (state, action: PayloadAction<Partial<CalendarState["pagination"]>>) => {
       state.pagination = { ...state.pagination, ...action.payload };
     },
 
@@ -218,7 +216,7 @@ const calendarSlice = createSlice({
       })
       .addCase(fetchEventsInRange.rejected, (state, action) => {
         state.loading.events = false;
-        state.errors.events = action.payload || 'Failed to fetch events';
+        state.errors.events = action.payload || "Failed to fetch events";
       });
 
     builder
@@ -250,7 +248,7 @@ const calendarSlice = createSlice({
       })
       .addCase(createEventThunk.rejected, (state, action) => {
         state.loading.creating = false;
-        state.errors.creating = action.payload || 'Failed to create event';
+        state.errors.creating = action.payload || "Failed to create event";
       });
 
     builder
@@ -266,7 +264,7 @@ const calendarSlice = createSlice({
       })
       .addCase(updateEventThunk.rejected, (state, action) => {
         state.loading.updating = false;
-        state.errors.updating = action.payload || 'Failed to update event';
+        state.errors.updating = action.payload || "Failed to update event";
       });
 
     builder
@@ -277,13 +275,11 @@ const calendarSlice = createSlice({
       .addCase(deleteEventThunk.fulfilled, (state, action) => {
         state.loading.deleting = false;
         delete state.events[action.payload.eventId];
-        state.visibleEventIds = state.visibleEventIds.filter(
-          (id) => id !== action.payload.eventId
-        );
+        state.visibleEventIds = state.visibleEventIds.filter((id) => id !== action.payload.eventId);
       })
       .addCase(deleteEventThunk.rejected, (state, action) => {
         state.loading.deleting = false;
-        state.errors.deleting = action.payload || 'Failed to delete event';
+        state.errors.deleting = action.payload || "Failed to delete event";
       });
 
     builder
@@ -293,60 +289,55 @@ const calendarSlice = createSlice({
       })
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.loading.categories = false;
-        state.categories = action.payload.reduce((acc, cat) => {
-          acc[cat.id] = cat;
-          return acc;
-        }, {} as Record<string, Category>);
+        state.categories = action.payload.reduce(
+          (acc, cat) => {
+            acc[cat.id] = cat;
+            return acc;
+          },
+          {} as Record<string, Category>,
+        );
       })
       .addCase(fetchCategories.rejected, (state, action) => {
         state.loading.categories = false;
-        state.errors.categories = action.payload || 'Failed to fetch categories';
+        state.errors.categories = action.payload || "Failed to fetch categories";
       });
 
-    builder
-      .addCase(createCategoryThunk.fulfilled, (state, action) => {
+    builder.addCase(createCategoryThunk.fulfilled, (state, action) => {
+      state.categories[action.payload.id] = action.payload;
+    });
+
+    builder.addCase(updateCategoryThunk.fulfilled, (state, action) => {
+      if (state.categories[action.payload.id]) {
         state.categories[action.payload.id] = action.payload;
-      });
+      }
+    });
 
-    builder
-      .addCase(updateCategoryThunk.fulfilled, (state, action) => {
-        if (state.categories[action.payload.id]) {
-          state.categories[action.payload.id] = action.payload;
-        }
-      });
+    builder.addCase(deleteCategoryThunk.fulfilled, (state, action) => {
+      delete state.categories[action.payload.categoryId];
+    });
 
-    builder
-      .addCase(deleteCategoryThunk.fulfilled, (state, action) => {
-        delete state.categories[action.payload.categoryId];
-      });
+    builder.addCase(addAttendees.fulfilled, (state, action) => {
+      if (state.events[action.payload.id]) {
+        state.events[action.payload.id] = action.payload;
+      }
+    });
 
-    builder
-      .addCase(addAttendees.fulfilled, (state, action) => {
-        if (state.events[action.payload.id]) {
-          state.events[action.payload.id] = action.payload;
-        }
-      });
+    builder.addCase(removeAttendees.fulfilled, (state, action) => {
+      if (state.events[action.payload.id]) {
+        state.events[action.payload.id] = action.payload;
+      }
+    });
 
-    builder
-      .addCase(removeAttendees.fulfilled, (state, action) => {
-        if (state.events[action.payload.id]) {
-          state.events[action.payload.id] = action.payload;
-        }
-      });
-
-    builder
-      .addCase(updateAttendeeStatus.fulfilled, (state, action) => {
-        const { eventId, userId, status } = action.payload;
-        const event = state.events[eventId];
-        if (event) {
-          state.events[eventId] = {
-            ...event,
-            attendees: event.attendees.map((a) =>
-              a.id === userId ? { ...a, status } : a
-            ),
-          };
-        }
-      });
+    builder.addCase(updateAttendeeStatus.fulfilled, (state, action) => {
+      const { eventId, userId, status } = action.payload;
+      const event = state.events[eventId];
+      if (event) {
+        state.events[eventId] = {
+          ...event,
+          attendees: event.attendees.map((a) => (a.id === userId ? { ...a, status } : a)),
+        };
+      }
+    });
 
     builder
       .addCase(createEventTemplate.fulfilled, (state, action) => {
@@ -364,20 +355,22 @@ const calendarSlice = createSlice({
       })
       .addCase(listEventTemplates.fulfilled, (state, action) => {
         state.loading.templates = false;
-        state.templates = action.payload.reduce((acc, t) => {
-          acc[t.id] = t;
-          return acc;
-        }, {} as Record<string, EventTemplate>);
+        state.templates = action.payload.reduce(
+          (acc, t) => {
+            acc[t.id] = t;
+            return acc;
+          },
+          {} as Record<string, EventTemplate>,
+        );
       })
       .addCase(listEventTemplates.rejected, (state, action) => {
         state.loading.templates = false;
-        state.errors.templates = action.payload || 'Failed to fetch templates';
+        state.errors.templates = action.payload || "Failed to fetch templates";
       });
 
-    builder
-      .addCase(fetchEventActivities.fulfilled, (state, action) => {
-        state.activities[action.payload.eventId] = action.payload.activities;
-      });
+    builder.addCase(fetchEventActivities.fulfilled, (state, action) => {
+      state.activities[action.payload.eventId] = action.payload.activities;
+    });
   },
 });
 

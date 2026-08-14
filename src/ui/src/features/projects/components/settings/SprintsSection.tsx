@@ -66,7 +66,8 @@ export function SprintsSection({ project }: SprintsSectionProps) {
           Sprints
         </h1>
         <p className="text-muted-foreground">
-          Sprints are time-boxed work cycles. Create sprints here and use the Backlog view to plan, start, and complete them.
+          Sprints are time-boxed work cycles. Create sprints here and use the Backlog view to plan,
+          start, and complete them.
         </p>
       </div>
 
@@ -107,9 +108,7 @@ export function SprintsSection({ project }: SprintsSectionProps) {
         </div>
         <div className="bg-card rounded-lg border border-border p-4 md:p-6 space-y-2">
           {plannedSprints.length === 0 && !isCreating && (
-            <p className="text-sm text-muted-foreground">
-              No planned sprints. Create one below.
-            </p>
+            <p className="text-sm text-muted-foreground">No planned sprints. Create one below.</p>
           )}
           {plannedSprints.map((sprint) => (
             <SprintRow
@@ -211,7 +210,7 @@ export function SprintsSection({ project }: SprintsSectionProps) {
               id: startTarget.id,
               startDate: startTarget.startDate || undefined,
               endDate: startTarget.endDate || undefined,
-            })
+            }),
           );
           setStartTarget(null);
         }}
@@ -249,7 +248,6 @@ export function SprintsSection({ project }: SprintsSectionProps) {
   );
 }
 
-
 interface SprintRowProps {
   sprint: Sprint;
   projectId: string;
@@ -281,9 +279,10 @@ function SprintRow({
   const [endDate, setEndDate] = useState(sprint.endDate || "");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Reset form when entering edit mode
+  // The row stays mounted when edit mode toggles, so each entry reseeds from the sprint.
   useEffect(() => {
     if (isEditing) {
+      // eslint-disable-next-line react/react-compiler
       setName(sprint.name);
       setGoal(sprint.goal || "");
       setStartDate(sprint.startDate || "");
@@ -302,7 +301,7 @@ function SprintRow({
           goal: goal.trim(),
           startDate: startDate || null,
           endDate: endDate || null,
-        })
+        }),
       ).unwrap();
       onEndEdit();
     } finally {
@@ -332,9 +331,7 @@ function SprintRow({
             <DatePicker value={startDate} onChange={setStartDate} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">
-              End date
-            </label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">End date</label>
             <DatePicker value={endDate} onChange={setEndDate} />
           </div>
         </div>
@@ -351,9 +348,7 @@ function SprintRow({
   }
 
   const completionPct =
-    sprint.taskCount > 0
-      ? Math.round((sprint.completedTaskCount / sprint.taskCount) * 100)
-      : 0;
+    sprint.taskCount > 0 ? Math.round((sprint.completedTaskCount / sprint.taskCount) * 100) : 0;
 
   return (
     <div className="group flex items-center gap-3 p-3 rounded-lg border border-transparent hover:bg-muted/40 transition-colors">
@@ -434,7 +429,6 @@ function SprintRow({
   );
 }
 
-
 interface CreateSprintInlineProps {
   projectId: string;
   onCancel: () => void;
@@ -460,7 +454,7 @@ function CreateSprintInline({ projectId, onCancel, onCreated }: CreateSprintInli
           goal: goal.trim() || undefined,
           startDate: startDate || null,
           endDate: endDate || null,
-        })
+        }),
       ).unwrap();
       onCreated();
     } finally {
@@ -486,15 +480,11 @@ function CreateSprintInline({ projectId, onCancel, onCreated }: CreateSprintInli
       />
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Start date
-          </label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Start date</label>
           <DatePicker value={startDate} onChange={setStartDate} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            End date
-          </label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">End date</label>
           <DatePicker value={endDate} onChange={setEndDate} />
         </div>
       </div>
@@ -510,7 +500,6 @@ function CreateSprintInline({ projectId, onCancel, onCreated }: CreateSprintInli
   );
 }
 
-
 function StatusBadge({ status }: { status: Sprint["status"] }) {
   const config = {
     active: { label: "Active", className: "bg-green-500/10 text-green-600 dark:text-green-400" },
@@ -522,7 +511,7 @@ function StatusBadge({ status }: { status: Sprint["status"] }) {
     <span
       className={cn(
         "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider shrink-0",
-        config.className
+        config.className,
       )}
     >
       {config.label}

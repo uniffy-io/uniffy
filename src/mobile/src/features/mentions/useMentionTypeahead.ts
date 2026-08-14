@@ -43,10 +43,14 @@ export function useMentionTypeahead(text: string, cursor: number) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestSeq = useRef(0);
 
+  // Debounced fetch: suggestions come from the search service, so they cannot be
+  // derived in render. Clearing them as soon as the caret leaves the token is
+  // what stops a dead overlay from lingering over the composer.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (tokenQuery === null || !organizationId) {
+      // eslint-disable-next-line react/react-compiler
       setResults([]);
       setIsLoading(false);
       return;

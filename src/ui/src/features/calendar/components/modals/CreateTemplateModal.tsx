@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { Button } from '@/components/ui/button';
-import { NumberInput } from '@/components/ui/number-input';
-import { createEventTemplate, updateEventTemplate } from '@/features/calendar/store/calendarThunks';
-import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
+import { useState, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
+import { NumberInput } from "@/components/ui/number-input";
+import { createEventTemplate, updateEventTemplate } from "@/features/calendar/store/calendarThunks";
+import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 
 interface CreateTemplateModalProps {
   isOpen: boolean;
@@ -17,31 +17,31 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
   const editingTemplateId = useAppSelector((state) => state.calendarUi.editingTemplateId);
   const isLoading = useAppSelector((state) => state.calendar.loading.templates);
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [duration, setDuration] = useState(60);
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState("");
 
   // Render-phase reset keyed on (open + edit target) avoids an effect-loop.
-  const [formKey, setFormKey] = useState('');
-  const currentFormKey = isOpen ? `open-${editingTemplateId ?? 'new'}` : 'closed';
+  const [formKey, setFormKey] = useState("");
+  const currentFormKey = isOpen ? `open-${editingTemplateId ?? "new"}` : "closed";
   if (currentFormKey !== formKey) {
     setFormKey(currentFormKey);
     if (isOpen) {
       if (editingTemplateId && templates[editingTemplateId]) {
         const t = templates[editingTemplateId];
         setName(t.title);
-        setDescription(t.description || '');
-        setSelectedCategoryId(t.categoryId || '');
+        setDescription(t.description || "");
+        setSelectedCategoryId(t.categoryId || "");
         setDuration(t.durationMinutes || 60);
-        setLocation(t.location || '');
+        setLocation(t.location || "");
       } else {
-        setName('');
-        setDescription('');
-        setSelectedCategoryId('');
+        setName("");
+        setDescription("");
+        setSelectedCategoryId("");
         setDuration(60);
-        setLocation('');
+        setLocation("");
       }
     }
   }
@@ -49,12 +49,12 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
   useEffect(() => {
     if (isOpen) {
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
+        if (e.key === "Escape") {
           onClose();
         }
       };
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
     }
   }, [isOpen, onClose]);
 
@@ -66,31 +66,34 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
     }
 
     try {
-        if (editingTemplateId) {
-            await dispatch(updateEventTemplate({
-                id: editingTemplateId,
-                title: name.trim(),
-                description,
-                durationMinutes: duration,
-                categoryId: selectedCategoryId || undefined,
-                location,
-            })).unwrap();
-        } else {
-            await dispatch(createEventTemplate({
-                title: name.trim(),
-                description,
-                durationMinutes: duration,
-                categoryId: selectedCategoryId || undefined,
-                location,
-                meetingUrl: '', 
-                visibility: AccessMode.OWNER_ONLY,
-                tags: [],
-            })).unwrap();
-        }
+      if (editingTemplateId) {
+        await dispatch(
+          updateEventTemplate({
+            id: editingTemplateId,
+            title: name.trim(),
+            description,
+            durationMinutes: duration,
+            categoryId: selectedCategoryId || undefined,
+            location,
+          }),
+        ).unwrap();
+      } else {
+        await dispatch(
+          createEventTemplate({
+            title: name.trim(),
+            description,
+            durationMinutes: duration,
+            categoryId: selectedCategoryId || undefined,
+            location,
+            meetingUrl: "",
+            visibility: AccessMode.OWNER_ONLY,
+            tags: [],
+          }),
+        ).unwrap();
+      }
 
-        onClose();
-    } catch {
-    }
+      onClose();
+    } catch {}
   };
 
   if (!isOpen) return null;
@@ -100,26 +103,18 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
 
   return (
     <>
-      <div
-        className="fixed inset-0 bg-black/50 z-40"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] max-w-96 border border-border">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">
-            {isEditing ? 'Edit Template' : 'New Template'}
+            {isEditing ? "Edit Template" : "New Template"}
           </h2>
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -132,9 +127,7 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Template Name
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-1">Template Name</label>
             <input
               type="text"
               value={name}
@@ -159,22 +152,20 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
           </div>
 
           <div>
-             <label className="block text-sm font-medium text-foreground mb-1">
-               Location (optional)
-             </label>
-             <input
-               type="text"
-               value={location}
-               onChange={(e) => setLocation(e.target.value)}
-               placeholder="e.g. Conference Room A or Zoom Link"
-               className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-             />
-          </div>
-          
-          <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Category
+              Location (optional)
             </label>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. Conference Room A or Zoom Link"
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Category</label>
             <select
               value={selectedCategoryId}
               onChange={(e) => setSelectedCategoryId(e.target.value)}
@@ -202,11 +193,23 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
           </div>
 
           <div className="flex gap-2 pt-4 border-t border-border">
-            <Button variant="outline" size="md" className="flex-1" onClick={onClose} disabled={isLoading}>
+            <Button
+              variant="outline"
+              size="md"
+              className="flex-1"
+              onClick={onClose}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
-            <Button type="submit" size="md" className="flex-1" loading={isLoading} disabled={!name.trim() || isLoading}>
-              {isLoading ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create')}
+            <Button
+              type="submit"
+              size="md"
+              className="flex-1"
+              loading={isLoading}
+              disabled={!name.trim() || isLoading}
+            >
+              {isLoading ? "Saving..." : isEditing ? "Save Changes" : "Create"}
             </Button>
           </div>
         </form>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { ArrowsClockwise, Image as ImageIcon } from "phosphor-react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { userFacingError } from "@shared/lib/userFacingError";
 import { useAuth } from "@core/providers/AuthContext";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
@@ -72,10 +73,7 @@ export function GeneratedImageCard({
         paramsPatch: JSON.stringify(patch),
       });
     } catch (error) {
-      Alert.alert(
-        "Could not regenerate",
-        error instanceof Error ? error.message : "Please try again.",
-      );
+      Alert.alert("Could not regenerate", userFacingError(error, "The image was not regenerated."));
     } finally {
       setPending(false);
     }

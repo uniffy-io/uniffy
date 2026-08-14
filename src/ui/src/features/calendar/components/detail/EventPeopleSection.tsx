@@ -1,14 +1,14 @@
-import { useMemo } from 'react';
-import { Check, X, Question } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { SubjectAvatar, SUBJECT_TYPE, useSubjectResolver } from '@/components/subject';
-import { getInitials } from '@/components/subject/utils';
-import { updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
-import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
-import type { CalendarEvent, Attendee } from '@/features/calendar/types';
-import type { EventPatch } from '@/features/calendar/hooks/useEventCommit';
-import { SectionLabel } from '@/features/calendar/components/detail/SectionLabel';
+import { useMemo } from "react";
+import { Check, X, Question } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { SubjectAvatar, SUBJECT_TYPE, useSubjectResolver } from "@/components/subject";
+import { getInitials } from "@/components/subject/utils";
+import { updateAttendeeStatus } from "@/features/calendar/store/calendarThunks";
+import { AttendeesSelector } from "@/features/calendar/components/modals/AttendeesSelector";
+import type { CalendarEvent, Attendee } from "@/features/calendar/types";
+import type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
+import { SectionLabel } from "@/features/calendar/components/detail/SectionLabel";
 
 interface EventPeopleSectionProps {
   event: CalendarEvent;
@@ -22,18 +22,18 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
 
   // The organizer's own attendance is implied, so RSVP counts exclude them.
   const rsvpSummary = useMemo(() => {
-    const nonOrganizer = event.attendees.filter((a) => a.role !== 'organizer');
+    const nonOrganizer = event.attendees.filter((a) => a.role !== "organizer");
     return {
-      accepted: nonOrganizer.filter((a) => a.status === 'accepted').length,
-      declined: nonOrganizer.filter((a) => a.status === 'declined').length,
-      tentative: nonOrganizer.filter((a) => a.status === 'tentative').length,
-      pending: nonOrganizer.filter((a) => a.status === 'pending').length,
+      accepted: nonOrganizer.filter((a) => a.status === "accepted").length,
+      declined: nonOrganizer.filter((a) => a.status === "declined").length,
+      tentative: nonOrganizer.filter((a) => a.status === "tentative").length,
+      pending: nonOrganizer.filter((a) => a.status === "pending").length,
     };
   }, [event.attendees]);
 
   const currentUserAttendee = useMemo(() => {
     if (!currentUserId) return null;
-    return event.attendees.find((a) => a.id === currentUserId && a.role !== 'organizer') ?? null;
+    return event.attendees.find((a) => a.id === currentUserId && a.role !== "organizer") ?? null;
   }, [event.attendees, currentUserId]);
 
   const invitedViaGroupIds = useMemo(
@@ -50,7 +50,7 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
     return names;
   }, [viaSubjects]);
 
-  const handleRsvp = (status: 'accepted' | 'tentative' | 'declined') => {
+  const handleRsvp = (status: "accepted" | "tentative" | "declined") => {
     dispatch(updateAttendeeStatus({ eventId: event.id, status }));
   };
 
@@ -66,8 +66,8 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
         id: member.userId,
         name: member.displayName || member.email,
         email: member.email,
-        status: 'pending',
-        role: 'required',
+        status: "pending",
+        role: "required",
         initials: getInitials(member.displayName || member.email),
       },
     ]);
@@ -83,20 +83,20 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
         <div>
           <SectionLabel>Your Response</SectionLabel>
           <div className="flex items-center gap-1.5">
-            {([
-              { status: 'accepted' as const, label: 'Accept', active: 'status-success border' },
-              { status: 'tentative' as const, label: 'Maybe', active: 'status-warning border' },
-              { status: 'declined' as const, label: 'Decline', active: 'status-error border' },
-            ]).map(({ status, label, active }) => (
+            {[
+              { status: "accepted" as const, label: "Accept", active: "status-success border" },
+              { status: "tentative" as const, label: "Maybe", active: "status-warning border" },
+              { status: "declined" as const, label: "Decline", active: "status-error border" },
+            ].map(({ status, label, active }) => (
               <button
                 key={status}
                 type="button"
                 onClick={() => handleRsvp(status)}
                 className={cn(
-                  'flex-1 px-2 py-1 text-xs font-medium rounded-lg border transition-colors',
+                  "flex-1 px-2 py-1 text-xs font-medium rounded-lg border transition-colors",
                   currentUserAttendee.status === status
                     ? active
-                    : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                    : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 {label}
@@ -109,10 +109,10 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
       <div>
         <SectionLabel>Attendees</SectionLabel>
 
-        {(rsvpSummary.accepted > 0
-          || rsvpSummary.declined > 0
-          || rsvpSummary.tentative > 0
-          || rsvpSummary.pending > 0) && (
+        {(rsvpSummary.accepted > 0 ||
+          rsvpSummary.declined > 0 ||
+          rsvpSummary.tentative > 0 ||
+          rsvpSummary.pending > 0) && (
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             {rsvpSummary.accepted > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium status-success">
@@ -153,33 +153,35 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
                 ? viaGroupNames.get(attendee.invitedViaGroupId)
                 : undefined;
               return (
-              <div key={attendee.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <SubjectAvatar
-                    subject={{
-                      id: attendee.id,
-                      type: SUBJECT_TYPE.USER,
-                      name: attendee.name,
-                      email: attendee.email,
-                      avatarUrl: attendee.avatarUrl,
-                    }}
-                    size="sm"
-                  />
-                  <div className="min-w-0">
-                    <span className="block text-sm text-foreground truncate">{attendee.name}</span>
-                    {viaName && (
-                      <span className="block text-xs text-muted-foreground truncate">
-                        via {viaName}
+                <div key={attendee.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <SubjectAvatar
+                      subject={{
+                        id: attendee.id,
+                        type: SUBJECT_TYPE.USER,
+                        name: attendee.name,
+                        email: attendee.email,
+                        avatarUrl: attendee.avatarUrl,
+                      }}
+                      size="sm"
+                    />
+                    <div className="min-w-0">
+                      <span className="block text-sm text-foreground truncate">
+                        {attendee.name}
                       </span>
-                    )}
+                      {viaName && (
+                        <span className="block text-xs text-muted-foreground truncate">
+                          via {viaName}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  {attendee.role === "organizer" ? (
+                    <span className="text-xs text-muted-foreground">Organizer</span>
+                  ) : (
+                    <AttendeeStatusLabel status={attendee.status} />
+                  )}
                 </div>
-                {attendee.role === 'organizer' ? (
-                  <span className="text-xs text-muted-foreground">Organizer</span>
-                ) : (
-                  <AttendeeStatusLabel status={attendee.status} />
-                )}
-              </div>
               );
             })}
           </div>
@@ -189,25 +191,25 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
   );
 }
 
-function AttendeeStatusLabel({ status }: { status: Attendee['status'] }) {
+function AttendeeStatusLabel({ status }: { status: Attendee["status"] }) {
   switch (status) {
-    case 'accepted':
+    case "accepted":
       return (
-        <span className="inline-flex items-center gap-1" style={{ color: 'var(--status-success)' }}>
+        <span className="inline-flex items-center gap-1" style={{ color: "var(--status-success)" }}>
           <Check size={14} weight="bold" />
           <span className="text-xs">Accepted</span>
         </span>
       );
-    case 'declined':
+    case "declined":
       return (
-        <span className="inline-flex items-center gap-1" style={{ color: 'var(--status-error)' }}>
+        <span className="inline-flex items-center gap-1" style={{ color: "var(--status-error)" }}>
           <X size={14} weight="bold" />
           <span className="text-xs">Declined</span>
         </span>
       );
-    case 'tentative':
+    case "tentative":
       return (
-        <span className="inline-flex items-center gap-1" style={{ color: 'var(--status-warning)' }}>
+        <span className="inline-flex items-center gap-1" style={{ color: "var(--status-warning)" }}>
           <Question size={14} weight="bold" />
           <span className="text-xs">Maybe</span>
         </span>

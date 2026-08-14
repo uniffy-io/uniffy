@@ -33,7 +33,7 @@ export const fetchSprints = createAsyncThunk(
     } finally {
       dispatch(setSprintsLoading(false));
     }
-  }
+  },
 );
 
 export const createSprint = createAsyncThunk(
@@ -46,7 +46,7 @@ export const createSprint = createAsyncThunk(
     const result = await projectsApi.createSprint(request, organizationId);
     dispatch(upsertSprint(result.sprint));
     return result.sprint;
-  }
+  },
 );
 
 export const updateSprint = createAsyncThunk(
@@ -59,7 +59,7 @@ export const updateSprint = createAsyncThunk(
     const result = await projectsApi.updateSprint(request, organizationId);
     dispatch(upsertSprint(result.sprint));
     return result.sprint;
-  }
+  },
 );
 
 export const startSprint = createAsyncThunk(
@@ -72,7 +72,7 @@ export const startSprint = createAsyncThunk(
     const result = await projectsApi.startSprint(request, organizationId);
     dispatch(upsertSprint(result.sprint));
     return result.sprint;
-  }
+  },
 );
 
 export const completeSprint = createAsyncThunk(
@@ -85,14 +85,14 @@ export const completeSprint = createAsyncThunk(
     const result = await projectsApi.completeSprint(sprintId, organizationId);
     dispatch(upsertSprint(result.sprint));
     return result.sprint;
-  }
+  },
 );
 
 export const deleteSprint = createAsyncThunk(
   "sprints/deleteSprint",
   async (
     { sprintId, projectId }: { sprintId: string; projectId: string },
-    { dispatch, getState }
+    { dispatch, getState },
   ) => {
     const state = getState() as RootState;
     const organizationId = state.auth.currentOrganizationId;
@@ -110,5 +110,5 @@ export const deleteSprint = createAsyncThunk(
     if (affectedTaskIds.length > 0) {
       dispatch(bulkUpdateTasks({ ids: affectedTaskIds, changes: { sprintId: null } }));
     }
-  }
+  },
 );

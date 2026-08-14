@@ -38,7 +38,9 @@ export function GanttBar({
   onResizeEnd,
 }: GanttBarProps) {
   const barColor = statusOption?.color || "#6b7280";
-  const top = rowIndex * LAYOUT.ROADMAP_ROW_HEIGHT + (LAYOUT.ROADMAP_ROW_HEIGHT - LAYOUT.GANTT_BAR_HEIGHT) / 2;
+  const top =
+    rowIndex * LAYOUT.ROADMAP_ROW_HEIGHT +
+    (LAYOUT.ROADMAP_ROW_HEIGHT - LAYOUT.GANTT_BAR_HEIGHT) / 2;
 
   // Resolve assignee IDs to display names
   const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
@@ -65,9 +67,27 @@ export function GanttBar({
   const didDragRef = useRef(false);
 
   // Keep stable refs for values needed in event handlers
-  const propsRef = useRef({ viewStartDate, zoom, taskId: task.id, startDate: task.startDate, dueDate: task.dueDate, onResizeEnd, positionLeft: position.left, positionWidth: position.width });
+  const propsRef = useRef({
+    viewStartDate,
+    zoom,
+    taskId: task.id,
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    onResizeEnd,
+    positionLeft: position.left,
+    positionWidth: position.width,
+  });
   useEffect(() => {
-    propsRef.current = { viewStartDate, zoom, taskId: task.id, startDate: task.startDate, dueDate: task.dueDate, onResizeEnd, positionLeft: position.left, positionWidth: position.width };
+    propsRef.current = {
+      viewStartDate,
+      zoom,
+      taskId: task.id,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      onResizeEnd,
+      positionLeft: position.left,
+      positionWidth: position.width,
+    };
   });
 
   useEffect(() => {
@@ -102,7 +122,16 @@ export function GanttBar({
     const onMouseUp = () => {
       if (!dragRef.current) return;
       const { edge } = dragRef.current;
-      const { positionLeft, positionWidth, viewStartDate: vsd, zoom: z, taskId, startDate: sd, dueDate: dd, onResizeEnd: handler } = propsRef.current;
+      const {
+        positionLeft,
+        positionWidth,
+        viewStartDate: vsd,
+        zoom: z,
+        taskId,
+        startDate: sd,
+        dueDate: dd,
+        onResizeEnd: handler,
+      } = propsRef.current;
       const delta = dragDeltaRef.current;
 
       if (didDragRef.current && handler) {
@@ -145,38 +174,47 @@ export function GanttBar({
     };
   }, [isDragging]);
 
-  const handleEdgeMouseDown = useCallback((edge: "start" | "end", e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    didDragRef.current = false;
-    dragRef.current = {
-      edge,
-      initialMouseX: e.clientX,
-      initialLeft: position.left,
-      initialWidth: position.width,
-    };
-    setDragEdge(edge);
-    setIsDragging(true);
-  }, [position.left, position.width]);
+  const handleEdgeMouseDown = useCallback(
+    (edge: "start" | "end", e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      didDragRef.current = false;
+      dragRef.current = {
+        edge,
+        initialMouseX: e.clientX,
+        initialLeft: position.left,
+        initialWidth: position.width,
+      };
+      setDragEdge(edge);
+      setIsDragging(true);
+    },
+    [position.left, position.width],
+  );
 
-  const handleBarMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    didDragRef.current = false;
-    dragRef.current = {
-      edge: "move",
-      initialMouseX: e.clientX,
-      initialLeft: position.left,
-      initialWidth: position.width,
-    };
-    setDragEdge("move");
-    setIsDragging(true);
-  }, [position.left, position.width]);
+  const handleBarMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      didDragRef.current = false;
+      dragRef.current = {
+        edge: "move",
+        initialMouseX: e.clientX,
+        initialLeft: position.left,
+        initialWidth: position.width,
+      };
+      setDragEdge("move");
+      setIsDragging(true);
+    },
+    [position.left, position.width],
+  );
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (didDragRef.current) return;
-    onClick(e);
-  }, [onClick]);
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (didDragRef.current) return;
+      onClick(e);
+    },
+    [onClick],
+  );
 
   // Apply drag delta to position
   const displayLeft = position.left + (dragDelta?.left ?? 0);
@@ -190,7 +228,7 @@ export function GanttBar({
         !isDragging && "transition-all",
         isDragging && dragEdge === "move" ? "cursor-grabbing" : "cursor-grab",
         isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
-        isOverdue && !isSelected && "ring-2 ring-destructive ring-dashed"
+        isOverdue && !isSelected && "ring-2 ring-destructive ring-dashed",
       )}
       style={{
         left: displayLeft,
@@ -227,32 +265,38 @@ export function GanttBar({
       )}
 
       {/* Task title */}
-      <span className="text-xs font-medium text-white truncate flex-1" style={{ marginLeft: task.isMilestone ? 0 : HANDLE_WIDTH - 8 }}>
+      <span
+        className="text-xs font-medium text-white truncate flex-1"
+        style={{ marginLeft: task.isMilestone ? 0 : HANDLE_WIDTH - 8 }}
+      >
         {task.title}
       </span>
 
       {/* Assignee avatar */}
-      {task.assigneeIds.length > 0 && displayWidth > 80 && (() => {
-        const member = memberMap[task.assigneeIds[0]];
-        const name = member?.displayName;
-        let initials: string;
-        if (!name) {
-          initials = task.assigneeIds[0].slice(-2).toUpperCase();
-        } else {
-          const parts = name.split(" ").filter(Boolean);
-          initials = parts.length >= 2
-            ? (parts[0][0] + parts[1][0]).toUpperCase()
-            : name.slice(0, 2).toUpperCase();
-        }
-        return (
-          <div
-            className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[9px] text-white shrink-0"
-            title={name}
-          >
-            {initials}
-          </div>
-        );
-      })()}
+      {task.assigneeIds.length > 0 &&
+        displayWidth > 80 &&
+        (() => {
+          const member = memberMap[task.assigneeIds[0]];
+          const name = member?.displayName;
+          let initials: string;
+          if (!name) {
+            initials = task.assigneeIds[0].slice(-2).toUpperCase();
+          } else {
+            const parts = name.split(" ").filter(Boolean);
+            initials =
+              parts.length >= 2
+                ? (parts[0][0] + parts[1][0]).toUpperCase()
+                : name.slice(0, 2).toUpperCase();
+          }
+          return (
+            <div
+              className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[9px] text-white shrink-0"
+              title={name}
+            >
+              {initials}
+            </div>
+          );
+        })()}
 
       {/* Right resize handle */}
       {!position.isPartialEnd && (

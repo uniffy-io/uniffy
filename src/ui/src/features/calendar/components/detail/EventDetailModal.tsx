@@ -1,36 +1,28 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import {
-  BookmarkSimple,
-  Trash,
-  X,
-  Link,
-  Warning,
-  Clock,
-  MapPin,
-} from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { deselectEvent } from '@/features/calendar/store';
-import { deleteEvent as deleteEventThunk } from '@/features/calendar/store/calendarThunks';
-import { RecurrenceEditScopeDialog } from '@/features/calendar/components/modals/RecurrenceEditScopeDialog';
-import type { RecurrenceEditScope } from '@/features/calendar/types';
-import { Button } from '@/components/ui/button';
-import { useCalendarEvents } from '@/features/calendar/hooks';
-import { useEventCommit } from '@/features/calendar/hooks/useEventCommit';
-import { useEventPermission } from '@/features/calendar/hooks/useEventPermission';
-import { ACCENT_EVENT_COLOR } from '@/features/calendar/constants';
-import { useBookmarkToggle } from '@/features/bookmarks';
-import { ExpandableEditor } from '@/components/editor/ExpandableEditor';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import { MentionChipCompact } from '@/components/mention';
-import { formatTimeRange } from '@/features/calendar/utils';
-import { findConflicts } from '@/features/calendar/utils/eventPositioning';
-import { extractMentionsFromMarkdown } from '@/shared/utils/mentionUtils';
-import { InlineTextField } from '@/features/calendar/components/detail/InlineTextField';
-import { EventScheduleSection } from '@/features/calendar/components/detail/EventScheduleSection';
-import { EventPlaceSection } from '@/features/calendar/components/detail/EventPlaceSection';
-import { EventPeopleSection } from '@/features/calendar/components/detail/EventPeopleSection';
-import { EventMetaSection } from '@/features/calendar/components/detail/EventMetaSection';
-import { EventActivityLog } from '@/features/calendar/components/detail/EventActivityLog';
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { BookmarkSimple, Trash, X, Link, Warning, Clock, MapPin } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { deselectEvent } from "@/features/calendar/store";
+import { deleteEvent as deleteEventThunk } from "@/features/calendar/store/calendarThunks";
+import { RecurrenceEditScopeDialog } from "@/features/calendar/components/modals/RecurrenceEditScopeDialog";
+import type { RecurrenceEditScope } from "@/features/calendar/types";
+import { Button } from "@/components/ui/button";
+import { useCalendarEvents } from "@/features/calendar/hooks";
+import { useEventCommit } from "@/features/calendar/hooks/useEventCommit";
+import { useEventPermission } from "@/features/calendar/hooks/useEventPermission";
+import { ACCENT_EVENT_COLOR } from "@/features/calendar/constants";
+import { useBookmarkToggle } from "@/features/bookmarks";
+import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { MentionChipCompact } from "@/components/mention";
+import { formatTimeRange } from "@/features/calendar/utils";
+import { findConflicts } from "@/features/calendar/utils/eventPositioning";
+import { extractMentionsFromMarkdown } from "@/shared/utils/mentionUtils";
+import { InlineTextField } from "@/features/calendar/components/detail/InlineTextField";
+import { EventScheduleSection } from "@/features/calendar/components/detail/EventScheduleSection";
+import { EventPlaceSection } from "@/features/calendar/components/detail/EventPlaceSection";
+import { EventPeopleSection } from "@/features/calendar/components/detail/EventPeopleSection";
+import { EventMetaSection } from "@/features/calendar/components/detail/EventMetaSection";
+import { EventActivityLog } from "@/features/calendar/components/detail/EventActivityLog";
 
 export function EventDetailModal() {
   const dispatch = useAppDispatch();
@@ -46,18 +38,19 @@ export function EventDetailModal() {
   const { commit, pendingPatch, resolveScope, cancelScope, isRecurring } =
     useEventCommit(selectedEvent);
 
-  const eventUrn = selectedEvent
-    ? `urn:uniffy:content:CALENDAR_EVENT:${selectedEvent.id}`
-    : '';
-  const { isBookmarked, toggling: bookmarkToggling, toggle: toggleBookmark } =
-    useBookmarkToggle(eventUrn);
+  const eventUrn = selectedEvent ? `urn:uniffy:content:CALENDAR_EVENT:${selectedEvent.id}` : "";
+  const {
+    isBookmarked,
+    toggling: bookmarkToggling,
+    toggle: toggleBookmark,
+  } = useBookmarkToggle(eventUrn);
 
   const handleClose = useCallback(() => {
     dispatch(deselectEvent());
   }, [dispatch]);
 
   // Called before the early return so hook order stays stable across renders.
-  const eventDescription = selectedEvent?.description ?? '';
+  const eventDescription = selectedEvent?.description ?? "";
   const mentionsFromDescription = useMemo(() => {
     if (!eventDescription) return [];
     return extractMentionsFromMarkdown(eventDescription);
@@ -71,7 +64,7 @@ export function EventDetailModal() {
   // Escape unwinds the innermost surface first so a nested dialog is not skipped.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== "Escape") return;
       if (pendingPatch) {
         cancelScope();
       } else if (showDeleteScopeDialog) {
@@ -82,13 +75,15 @@ export function EventDetailModal() {
         handleClose();
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showDeleteConfirm, showDeleteScopeDialog, pendingPatch, cancelScope, handleClose]);
 
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, []);
 
   const category = selectedEvent?.categoryId ? categories[selectedEvent.categoryId] : null;
@@ -112,11 +107,13 @@ export function EventDetailModal() {
   const handleDeleteScopeSelect = async (scope: RecurrenceEditScope) => {
     if (!selectedEvent) return;
     setShowDeleteScopeDialog(false);
-    await dispatch(deleteEventThunk({
-      eventId: selectedEvent.id,
-      recurrenceEditScope: scope,
-      occurrenceDate: selectedEvent.occurrenceDate,
-    }));
+    await dispatch(
+      deleteEventThunk({
+        eventId: selectedEvent.id,
+        recurrenceEditScope: scope,
+        occurrenceDate: selectedEvent.occurrenceDate,
+      }),
+    );
     handleClose();
   };
 
@@ -134,17 +131,14 @@ export function EventDetailModal() {
       aria-modal="true"
       aria-label="Event details"
     >
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={handleClose}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
       <div className="relative bg-background w-[calc(100vw-2rem)] max-w-3xl rounded-t-xl sm:rounded-xl shadow-2xl border border-border overflow-hidden max-h-[85vh] flex flex-col min-h-0">
         {!selectedEvent ? (
           // The modal opens on selection, so a missing row means the deep-link
           // fetch is still in flight or the event is not reachable.
           <div className="flex flex-col items-center justify-center gap-4 py-16 text-muted-foreground">
-            <p>{isLoadingDetail ? 'Loading event...' : 'This event is unavailable.'}</p>
+            <p>{isLoadingDetail ? "Loading event..." : "This event is unavailable."}</p>
             {!isLoadingDetail && (
               <Button variant="outline" size="md" onClick={handleClose}>
                 Close
@@ -158,9 +152,13 @@ export function EventDetailModal() {
                 onClick={toggleBookmark}
                 disabled={bookmarkToggling}
                 className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
-                title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                title={isBookmarked ? "Remove bookmark" : "Add bookmark"}
               >
-                <BookmarkSimple size={20} weight={isBookmarked ? 'fill' : 'duotone'} className="text-primary" />
+                <BookmarkSimple
+                  size={20}
+                  weight={isBookmarked ? "fill" : "duotone"}
+                  className="text-primary"
+                />
               </button>
               {canDelete && (
                 <button
@@ -226,11 +224,13 @@ export function EventDetailModal() {
               {conflictingEvents.length > 0 && (
                 <div
                   className="px-5 py-3 border-b border-border"
-                  style={{ backgroundColor: 'color-mix(in srgb, var(--status-warning) 5%, transparent)' }}
+                  style={{
+                    backgroundColor: "color-mix(in srgb, var(--status-warning) 5%, transparent)",
+                  }}
                 >
                   <h3
                     className="text-xs font-semibold uppercase tracking-wide mb-2 flex items-center gap-2"
-                    style={{ color: 'var(--status-warning)' }}
+                    style={{ color: "var(--status-warning)" }}
                   >
                     <Warning size={14} weight="duotone" />
                     Scheduling Conflicts ({conflictingEvents.length})
@@ -240,7 +240,9 @@ export function EventDetailModal() {
                       <div
                         key={conflict.id}
                         className="flex flex-col gap-1 p-2 rounded-md bg-card border"
-                        style={{ borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)' }}
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--status-warning) 30%, transparent)",
+                        }}
                       >
                         <span className="text-sm font-medium text-foreground truncate">
                           {conflict.title}
@@ -285,7 +287,11 @@ export function EventDetailModal() {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {mentionsFromDescription.map((mention) => (
-                      <MentionChipCompact key={mention.urn} urn={mention.urn} label={mention.label} />
+                      <MentionChipCompact
+                        key={mention.urn}
+                        urn={mention.urn}
+                        label={mention.label}
+                      />
                     ))}
                   </div>
                 </div>
@@ -305,10 +311,16 @@ export function EventDetailModal() {
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] max-w-96 border border-border p-4 md:p-6">
             <h3 className="text-lg font-semibold text-foreground mb-2">Delete Event?</h3>
             <p className="text-sm text-muted-foreground mb-6">
-              Are you sure you want to delete &quot;{selectedEvent.title}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{selectedEvent.title}&quot;? This action cannot
+              be undone.
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="md" className="flex-1" onClick={() => setShowDeleteConfirm(false)}>
+              <Button
+                variant="outline"
+                size="md"
+                className="flex-1"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
                 Cancel
               </Button>
               <Button variant="destructive" size="md" className="flex-1" onClick={handleDelete}>

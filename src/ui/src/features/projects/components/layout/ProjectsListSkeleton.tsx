@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function ProjectsListSkeleton() {
   return (
@@ -9,7 +9,7 @@ export function ProjectsListSkeleton() {
             <Skeleton variant="rectangular" className="w-4 h-4 shrink-0" />
             <Skeleton
               variant="text"
-              className={`h-3.5 ${i % 3 === 0 ? 'w-32' : i % 3 === 1 ? 'w-24' : 'w-28'}`}
+              className={`h-3.5 ${i % 3 === 0 ? "w-32" : i % 3 === 1 ? "w-24" : "w-28"}`}
             />
           </div>
           <div className="pl-7 pr-2 flex items-center gap-2">

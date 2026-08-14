@@ -45,34 +45,40 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
           title,
           parentId: addingForParentId || taskId,
           status: STATUS_TODO,
-        })
+        }),
       );
     }
     setNewTitle("");
     setAddingForParentId(null);
   }, [newTitle, project, addingForParentId, taskId, dispatch]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSubmit();
-    } else if (e.key === "Escape") {
-      setNewTitle("");
-      setAddingForParentId(null);
-    }
-  }, [handleSubmit]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        handleSubmit();
+      } else if (e.key === "Escape") {
+        setNewTitle("");
+        setAddingForParentId(null);
+      }
+    },
+    [handleSubmit],
+  );
 
-  const handleToggle = useCallback((subtask: Task) => {
-    const isDone = !!subtask.completedAt;
-    const newStatus = isDone ? STATUS_TODO : STATUS_DONE;
-    dispatch(
-      optimisticUpdateTask({
-        id: subtask.id,
-        status: newStatus,
-        completedAt: isDone ? null : new Date().toISOString(),
-      })
-    );
-    dispatch(updateTask({ id: subtask.id, status: newStatus }));
-  }, [dispatch]);
+  const handleToggle = useCallback(
+    (subtask: Task) => {
+      const isDone = !!subtask.completedAt;
+      const newStatus = isDone ? STATUS_TODO : STATUS_DONE;
+      dispatch(
+        optimisticUpdateTask({
+          id: subtask.id,
+          status: newStatus,
+          completedAt: isDone ? null : new Date().toISOString(),
+        }),
+      );
+      dispatch(updateTask({ id: subtask.id, status: newStatus }));
+    },
+    [dispatch],
+  );
 
   const handleCreateSubtask = useCallback((parentId: string) => {
     setAddingForParentId(parentId);
@@ -223,7 +229,7 @@ function SubtaskItem({
           onClick={() => dispatch(selectTask(task.id))}
           className={cn(
             "text-sm flex-1 truncate text-left hover:underline hover:text-foreground transition-colors",
-            isCompleted ? "text-muted-foreground line-through" : "text-foreground"
+            isCompleted ? "text-muted-foreground line-through" : "text-foreground",
           )}
         >
           {task.title}
@@ -260,22 +266,24 @@ function SubtaskItem({
       </div>
 
       {/* Recursive children */}
-      {isExpanded && canExpand && subtasks.map((child) => (
-        <SubtaskItem
-          key={child.id}
-          task={child}
-          depth={depth + 1}
-          onToggle={onToggle}
-          onCreateSubtask={onCreateSubtask}
-          parentCompleted={parentCompleted || isCompleted}
-          addingForParentId={addingForParentId}
-          newTitle={newTitle}
-          onNewTitleChange={onNewTitleChange}
-          onKeyDown={onKeyDown}
-          onSubmit={onSubmit}
-          inputRef={inputRef}
-        />
-      ))}
+      {isExpanded &&
+        canExpand &&
+        subtasks.map((child) => (
+          <SubtaskItem
+            key={child.id}
+            task={child}
+            depth={depth + 1}
+            onToggle={onToggle}
+            onCreateSubtask={onCreateSubtask}
+            parentCompleted={parentCompleted || isCompleted}
+            addingForParentId={addingForParentId}
+            newTitle={newTitle}
+            onNewTitleChange={onNewTitleChange}
+            onKeyDown={onKeyDown}
+            onSubmit={onSubmit}
+            inputRef={inputRef}
+          />
+        ))}
 
       {/* Inline input for adding child to this item */}
       {isAddingHere && (

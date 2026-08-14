@@ -1,5 +1,5 @@
-export type RoomType = 'meeting_room' | 'conference_room' | 'office' | 'other';
-export type RoomStatus = 'active' | 'maintenance' | 'retired';
+export type RoomType = "meeting_room" | "conference_room" | "office" | "other";
+export type RoomStatus = "active" | "maintenance" | "retired";
 
 export interface Room {
   id: string;
@@ -15,32 +15,32 @@ export interface Room {
   location: string;
   amenities: string[];
   imageFileId: string | null;
-  visibility: 'private' | 'organization';
+  visibility: "private" | "organization";
   createdAt: string;
   updatedAt: string;
 }
 
 export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
-  meeting_room: 'Meeting Room',
-  conference_room: 'Conference Room',
-  office: 'Office',
-  other: 'Other',
+  meeting_room: "Meeting Room",
+  conference_room: "Conference Room",
+  office: "Office",
+  other: "Other",
 };
 
 export const ROOM_STATUS_LABELS: Record<RoomStatus, string> = {
-  active: 'Active',
-  maintenance: 'Maintenance',
-  retired: 'Retired',
+  active: "Active",
+  maintenance: "Maintenance",
+  retired: "Retired",
 };
 
 export const AMENITY_OPTIONS: string[] = [
-  'Projector',
-  'Whiteboard',
-  'Video Conferencing',
-  'Speaker Phone',
-  'TV Screen',
-  'Standing Desks',
-  'Air Conditioning',
-  'Natural Light',
-  'Wheelchair Accessible',
+  "Projector",
+  "Whiteboard",
+  "Video Conferencing",
+  "Speaker Phone",
+  "TV Screen",
+  "Standing Desks",
+  "Air Conditioning",
+  "Natural Light",
+  "Wheelchair Accessible",
 ];

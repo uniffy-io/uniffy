@@ -38,7 +38,7 @@ export function CreateSprintModal({ projectId, onClose, onCreated }: CreateSprin
           goal: goal.trim() || undefined,
           startDate: startDate || null,
           endDate: endDate || null,
-        })
+        }),
       ).unwrap();
       onCreated?.();
       onClose();

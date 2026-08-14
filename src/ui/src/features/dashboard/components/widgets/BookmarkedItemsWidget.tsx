@@ -1,13 +1,17 @@
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { BookmarkSimple, ArrowRight } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { parseUrn, urnToPath } from '@/shared/utils/urn';
-import { UrnType } from '@/shared/utils/urnTypes';
-import { getContentTypeConfig } from '@/config/theme/contentTypes';
-import { WidgetCard, EmptyWidget, WidgetSkeleton } from '@/features/dashboard/components/widgets/WidgetCard';
-import type { SerializedBookmark } from '@/features/bookmarks/store/bookmarksSlice';
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { BookmarkSimple, ArrowRight } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { parseUrn, urnToPath } from "@/shared/utils/urn";
+import { UrnType } from "@/shared/utils/urnTypes";
+import { getContentTypeConfig } from "@/config/theme/contentTypes";
+import {
+  WidgetCard,
+  EmptyWidget,
+  WidgetSkeleton,
+} from "@/features/dashboard/components/widgets/WidgetCard";
+import type { SerializedBookmark } from "@/features/bookmarks/store/bookmarksSlice";
 
 interface BookmarkedItem {
   urn: string;
@@ -25,11 +29,11 @@ function BookmarkListItem({ item }: { item: BookmarkedItem }) {
     <Link
       to={item.href}
       className={cn(
-        'group flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors',
-        'hover:bg-muted/50',
+        "group flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors",
+        "hover:bg-muted/50",
       )}
     >
-      <div className={cn('rounded-md p-1.5', config.theme.badgeBg)}>
+      <div className={cn("rounded-md p-1.5", config.theme.badgeBg)}>
         <Icon size={16} weight="duotone" className={config.theme.accentText} />
       </div>
       <div className="flex-1 min-w-0">
@@ -39,7 +43,7 @@ function BookmarkListItem({ item }: { item: BookmarkedItem }) {
       </div>
       <span
         className={cn(
-          'text-[10px] font-medium rounded px-1.5 py-0.5 shrink-0',
+          "text-[10px] font-medium rounded px-1.5 py-0.5 shrink-0",
           config.theme.badgeBg,
           config.theme.accentText,
         )}
@@ -67,42 +71,42 @@ export function BookmarkedItemsWidget() {
       const parsed = parseUrn(bookmark.urn);
       if (!parsed) return;
 
-      let title = 'Unknown';
-      let href = '/';
+      let title = "Unknown";
+      let href = "/";
 
       switch (parsed.type) {
         case UrnType.NOTE: {
           const note = notes[parsed.id];
-          title = note?.title || 'Untitled Note';
+          title = note?.title || "Untitled Note";
           href = `/notes/${parsed.id}`;
           break;
         }
         case UrnType.FILE: {
           const file = files[parsed.id];
-          title = file?.filename || 'Unknown File';
+          title = file?.filename || "Unknown File";
           href = `/files?file=${parsed.id}`;
           break;
         }
         case UrnType.CALENDAR_EVENT: {
           const event = events[parsed.id];
-          title = event?.title || 'Unknown Event';
+          title = event?.title || "Unknown Event";
           href = `/calendar?event=${parsed.id}`;
           break;
         }
         case UrnType.TASK: {
           const task = tasks[parsed.id];
-          title = task?.title || 'Unknown Task';
-          href = task ? `/projects/${task.projectId}?task=${parsed.id}` : '/projects';
+          title = task?.title || "Unknown Task";
+          href = task ? `/projects/${task.projectId}?task=${parsed.id}` : "/projects";
           break;
         }
         case UrnType.PROJECT: {
           const project = projects[parsed.id];
-          title = project?.name || 'Unknown Project';
+          title = project?.name || "Unknown Project";
           href = `/projects/${parsed.id}`;
           break;
         }
         default:
-          href = urnToPath(bookmark.urn) || '/';
+          href = urnToPath(bookmark.urn) || "/";
       }
 
       items.push({

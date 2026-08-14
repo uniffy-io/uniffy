@@ -1,5 +1,10 @@
 // Works in abstract (depth, span) coords then maps to (x, y) per direction.
-import type { CanvasNode, CanvasEdge, MindMapNodeData, MindMapCanvasNode } from '@/features/notes/canvas/types';
+import type {
+  CanvasNode,
+  CanvasEdge,
+  MindMapNodeData,
+  MindMapCanvasNode,
+} from "@/features/notes/canvas/types";
 import {
   MINDMAP_BRANCH_COLORS,
   MINDMAP_HORIZONTAL_GAP,
@@ -9,7 +14,7 @@ import {
   MINDMAP_ROOT_WIDTH,
   MINDMAP_ROOT_HEIGHT,
   type MindMapDirection,
-} from '@/features/notes/canvas/components/mindmapConstants';
+} from "@/features/notes/canvas/components/mindmapConstants";
 
 export interface MindMapLayoutResult {
   positions: Map<string, { x: number; y: number }>;
@@ -24,13 +29,13 @@ function toXY(
   nodeDepthSize: number,
 ): { x: number; y: number } {
   switch (direction) {
-    case 'right':
+    case "right":
       return { x: depth, y: span };
-    case 'down':
+    case "down":
       return { x: span, y: depth };
-    case 'left':
+    case "left":
       return { x: -depth - nodeDepthSize, y: span };
-    case 'up':
+    case "up":
       return { x: span, y: -depth - nodeDepthSize };
   }
 }
@@ -42,16 +47,16 @@ export function layoutMindMap(
 ): MindMapLayoutResult {
   const nodeMap = new Map<string, MindMapCanvasNode>();
   const rootNode = allNodes.find((n) => n.id === rootNodeId) as MindMapCanvasNode | undefined;
-  if (!rootNode || rootNode.data.type !== 'mindmap') {
+  if (!rootNode || rootNode.data.type !== "mindmap") {
     return { positions: new Map(), edges: [], nodeUpdates: new Map() };
   }
 
   const mindmapId = rootNode.data.mindmapId;
-  const direction: MindMapDirection = rootNode.data.direction || 'right';
-  const isHorizontal = direction === 'right' || direction === 'left';
+  const direction: MindMapDirection = rootNode.data.direction || "right";
+  const isHorizontal = direction === "right" || direction === "left";
 
   for (const n of allNodes) {
-    if (n.data.type === 'mindmap' && (n.data as MindMapNodeData).mindmapId === mindmapId) {
+    if (n.data.type === "mindmap" && (n.data as MindMapNodeData).mindmapId === mindmapId) {
       nodeMap.set(n.id, n as MindMapCanvasNode);
     }
   }
@@ -71,9 +76,7 @@ export function layoutMindMap(
     const isRoot = node.data.isRoot === true;
     const w = node.measured?.width ?? (isRoot ? MINDMAP_ROOT_WIDTH : MINDMAP_NODE_WIDTH);
     const h = node.measured?.height ?? (isRoot ? MINDMAP_ROOT_HEIGHT : MINDMAP_NODE_HEIGHT);
-    return isHorizontal
-      ? { depthSize: w, spanSize: h }
-      : { depthSize: h, spanSize: w };
+    return isHorizontal ? { depthSize: w, spanSize: h } : { depthSize: h, spanSize: w };
   }
 
   function layoutSubtree(
@@ -88,9 +91,7 @@ export function layoutMindMap(
     const data = node.data;
     const { depthSize, spanSize } = getNodeSizes(node);
 
-    const visibleChildren = data.collapsed
-      ? []
-      : data.children.filter((id) => nodeMap.has(id));
+    const visibleChildren = data.collapsed ? [] : data.children.filter((id) => nodeMap.has(id));
 
     if (visibleChildren.length === 0) {
       const pos = toXY(depthStart, spanStart, direction, depthSize);
@@ -127,9 +128,9 @@ export function layoutMindMap(
         id: `mm_edge_${nodeId}_${childId}`,
         source: nodeId,
         target: childId,
-        sourceHandle: 'mm-source',
-        targetHandle: 'mm-target',
-        type: 'mindmapEdge',
+        sourceHandle: "mm-source",
+        targetHandle: "mm-target",
+        type: "mindmapEdge",
         data: { branchColor: childColor },
         selectable: false,
         deletable: false,
@@ -139,7 +140,7 @@ export function layoutMindMap(
     return totalChildrenSpan;
   }
 
-  layoutSubtree(rootNodeId, 0, 0, '');
+  layoutSubtree(rootNodeId, 0, 0, "");
 
   return { positions, edges, nodeUpdates };
 }
@@ -160,13 +161,10 @@ function assignBranchColor(
   }
 }
 
-export function findMindMapRoot(
-  nodeId: string,
-  allNodes: CanvasNode[],
-): string | null {
+export function findMindMapRoot(nodeId: string, allNodes: CanvasNode[]): string | null {
   const nodeMap = new Map<string, MindMapCanvasNode>();
   for (const n of allNodes) {
-    if (n.data.type === 'mindmap') {
+    if (n.data.type === "mindmap") {
       nodeMap.set(n.id, n as MindMapCanvasNode);
     }
   }
@@ -180,13 +178,10 @@ export function findMindMapRoot(
   return null;
 }
 
-export function collectDescendants(
-  nodeId: string,
-  allNodes: CanvasNode[],
-): Set<string> {
+export function collectDescendants(nodeId: string, allNodes: CanvasNode[]): Set<string> {
   const nodeMap = new Map<string, MindMapCanvasNode>();
   for (const n of allNodes) {
-    if (n.data.type === 'mindmap') {
+    if (n.data.type === "mindmap") {
       nodeMap.set(n.id, n as MindMapCanvasNode);
     }
   }
@@ -206,12 +201,9 @@ export function collectDescendants(
   return result;
 }
 
-export function getBranchColorForNewChild(
-  parentId: string,
-  allNodes: CanvasNode[],
-): string {
+export function getBranchColorForNewChild(parentId: string, allNodes: CanvasNode[]): string {
   const parent = allNodes.find((n) => n.id === parentId) as MindMapCanvasNode | undefined;
-  if (!parent || parent.data.type !== 'mindmap') return MINDMAP_BRANCH_COLORS[0];
+  if (!parent || parent.data.type !== "mindmap") return MINDMAP_BRANCH_COLORS[0];
 
   if (parent.data.isRoot) {
     const childCount = parent.data.children.length;

@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
-import type { Awareness } from 'y-protocols/awareness';
-import { useDocAwareness } from '@/features/realtime';
-import { PeerAvatar } from '@/features/realtime/components/PeerAvatar';
-import { identityPaint } from '@/config/theme/brandGradients';
-import { cn } from '@/shared/utils/cn';
+import { useMemo } from "react";
+import type { Awareness } from "y-protocols/awareness";
+import { useDocAwareness } from "@/features/realtime";
+import { PeerAvatar } from "@/features/realtime/components/PeerAvatar";
+import { identityPaint } from "@/config/theme/brandGradients";
+import { cn } from "@/shared/utils/cn";
 
 interface AwarenessUser {
   id?: string | null;
@@ -57,7 +57,7 @@ export function RealtimePresence({
     if (includeSelf && localUserName) {
       if (localUserId) seenUserIds.add(localUserId);
       out.push({
-        key: 'self',
+        key: "self",
         userId: localUserId,
         name: localUserName,
         gradient: identityPaint(localUserName).gradient,
@@ -72,7 +72,7 @@ export function RealtimePresence({
         if (seenUserIds.has(userId)) continue;
         seenUserIds.add(userId);
       }
-      const name = user?.name ?? 'Anonymous';
+      const name = user?.name ?? "Anonymous";
       out.push({
         key: userId ?? String(peer.clientId),
         userId,
@@ -90,13 +90,11 @@ export function RealtimePresence({
   const visible = participants.slice(0, max);
   const overflow = participants.length - visible.length;
 
-  const tooltipNames = participants
-    .map((p) => (p.isSelf ? `${p.name} (you)` : p.name))
-    .join(', ');
+  const tooltipNames = participants.map((p) => (p.isSelf ? `${p.name} (you)` : p.name)).join(", ");
 
   return (
     <div
-      className={cn('flex items-center gap-1.5', className)}
+      className={cn("flex items-center gap-1.5", className)}
       title={`${participants.length} active: ${tooltipNames}`}
       aria-label={`${participants.length} active editors`}
     >
@@ -109,10 +107,7 @@ export function RealtimePresence({
             gradient={participant.gradient}
             hasAvatar={participant.hasAvatar}
             sizeClass="h-5 w-5 text-[10px]"
-            className={cn(
-              'ring-2 ring-card',
-              participant.isSelf && 'ring-card/60',
-            )}
+            className={cn("ring-2 ring-card", participant.isSelf && "ring-card/60")}
             title={participant.isSelf ? `${participant.name} (you)` : participant.name}
           />
         ))}

@@ -1,7 +1,7 @@
-import { Phone } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { getInitials } from '@/components/subject/utils';
-import { selectActiveCallForChannel } from '@/features/calls/store/callsSlice';
+import { Phone } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { getInitials } from "@/components/subject/utils";
+import { selectActiveCallForChannel } from "@/features/calls/store/callsSlice";
 
 /** Sidebar "live call" pill with participant count; avatars on hover. */
 export function ChannelCallIndicator({ channelId }: { channelId: string }) {
@@ -14,9 +14,7 @@ export function ChannelCallIndicator({ channelId }: { channelId: string }) {
       data-testid={`chat-sidebar-channel-call-${channelId}`}
     >
       <Phone size={12} weight="fill" />
-      <span className="text-[10px] font-semibold tabular-nums">
-        {call.participants.length}
-      </span>
+      <span className="text-[10px] font-semibold tabular-nums">{call.participants.length}</span>
       <span className="pointer-events-none absolute bottom-full right-0 z-50 mb-1 hidden w-max max-w-56 flex-col gap-1 rounded-lg border border-border bg-card p-2 shadow-lg group-hover/call:flex">
         {call.participants.slice(0, 6).map((p) => (
           <span key={p.identity} className="flex items-center gap-1.5 text-xs text-foreground">

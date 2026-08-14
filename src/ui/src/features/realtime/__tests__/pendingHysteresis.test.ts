@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createPendingHysteresis } from '@/features/realtime/pendingHysteresis';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createPendingHysteresis } from "@/features/realtime/pendingHysteresis";
 
 const DELAY = 1000;
 const MIN_VISIBLE = 500;
 
-describe('createPendingHysteresis', () => {
+describe("createPendingHysteresis", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -13,7 +13,7 @@ describe('createPendingHysteresis', () => {
     vi.useRealTimers();
   });
 
-  it('stays quiet while pending flips faster than the delay', () => {
+  it("stays quiet while pending flips faster than the delay", () => {
     const changes: boolean[] = [];
     const h = createPendingHysteresis((v) => changes.push(v), DELAY, MIN_VISIBLE);
 
@@ -29,7 +29,7 @@ describe('createPendingHysteresis', () => {
     h.destroy();
   });
 
-  it('surfaces a backlog that outlives the delay', () => {
+  it("surfaces a backlog that outlives the delay", () => {
     const changes: boolean[] = [];
     const h = createPendingHysteresis((v) => changes.push(v), DELAY, MIN_VISIBLE);
 
@@ -42,7 +42,7 @@ describe('createPendingHysteresis', () => {
     h.destroy();
   });
 
-  it('holds visible for the minimum window after the backlog clears', () => {
+  it("holds visible for the minimum window after the backlog clears", () => {
     const changes: boolean[] = [];
     const h = createPendingHysteresis((v) => changes.push(v), DELAY, MIN_VISIBLE);
 
@@ -57,7 +57,7 @@ describe('createPendingHysteresis', () => {
     h.destroy();
   });
 
-  it('keeps showing when the backlog returns inside the minimum window', () => {
+  it("keeps showing when the backlog returns inside the minimum window", () => {
     const changes: boolean[] = [];
     const h = createPendingHysteresis((v) => changes.push(v), DELAY, MIN_VISIBLE);
 
@@ -72,7 +72,7 @@ describe('createPendingHysteresis', () => {
     h.destroy();
   });
 
-  it('emits nothing after destroy', () => {
+  it("emits nothing after destroy", () => {
     const changes: boolean[] = [];
     const h = createPendingHysteresis((v) => changes.push(v), DELAY, MIN_VISIBLE);
 

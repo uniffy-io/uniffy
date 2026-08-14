@@ -1,7 +1,7 @@
-import { useCallback, useMemo } from 'react';
-import { CaretUp } from '@phosphor-icons/react';
-import { parseUrn, UrnType } from '@/shared/utils/urn';
-import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
+import { useCallback, useMemo } from "react";
+import { CaretUp } from "@phosphor-icons/react";
+import { parseUrn, UrnType } from "@/shared/utils/urn";
+import { stripMarkdown } from "@/features/search/utils/stripMarkdown";
 import {
   TaskMentionPreview,
   CalendarMentionPreview,
@@ -15,9 +15,9 @@ import {
   ChatMessageMentionPreview,
   AgentMentionPreview,
   TagMentionPreview,
-} from '@/components/mention/previews';
-import type { MentionLiveState } from '@/components/mention/types';
-import { cn } from '@/shared/utils/cn';
+} from "@/components/mention/previews";
+import type { MentionLiveState } from "@/components/mention/types";
+import { cn } from "@/shared/utils/cn";
 
 interface MentionExpandedCardProps {
   urn: string;
@@ -45,7 +45,7 @@ export function MentionExpandedCard({
   }, [urn]);
 
   const strippedDesc = useMemo(
-    () => description ? stripMarkdown(description) : undefined,
+    () => (description ? stripMarkdown(description) : undefined),
     [description],
   );
 
@@ -92,28 +92,37 @@ export function MentionExpandedCard({
   return (
     <span
       className={cn(
-        'mention-expanded-card not-prose group/card relative block',
-        'w-full max-w-md my-2',
-        'bg-card',
-        'text-card-foreground',
-        'rounded-lg shadow-xs',
-        'border border-border',
-        'overflow-hidden',
-        'cursor-pointer',
-        'transition-shadow duration-200',
-        'hover:shadow-sm',
+        "mention-expanded-card not-prose group/card relative block",
+        "w-full max-w-md my-2",
+        "bg-card",
+        "text-card-foreground",
+        "rounded-lg shadow-xs",
+        "border border-border",
+        "overflow-hidden",
+        "cursor-pointer",
+        "transition-shadow duration-200",
+        "hover:shadow-sm",
       )}
       onClick={(e) => {
-        if ((e.target as HTMLElement).closest('button, a')) return;
+        if ((e.target as HTMLElement).closest("button, a")) return;
         onClick?.(e);
       }}
       role="link"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onClick?.();
+      }}
     >
       <button
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onCollapse(); }}
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onCollapse();
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 transition-opacity"
         title="Collapse to chip"
       >

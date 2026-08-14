@@ -11,302 +11,295 @@ import { Select } from "@/components/ui/select";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { createCronTask } from "@/features/agents/store/agentCronThunks";
 import {
-    DEFAULT_SCHEDULE,
-    FREQUENCY_OPTIONS,
-    HOUR_OPTIONS,
-    MINUTE_INTERVAL_OPTIONS,
-    MINUTE_OPTIONS,
-    MONTH_DAY_OPTIONS,
-    TIMEZONE_OPTIONS,
-    WEEKDAY_LABELS,
-    cronToHuman,
-    scheduleToCron,
+  DEFAULT_SCHEDULE,
+  FREQUENCY_OPTIONS,
+  HOUR_OPTIONS,
+  MINUTE_INTERVAL_OPTIONS,
+  MINUTE_OPTIONS,
+  MONTH_DAY_OPTIONS,
+  TIMEZONE_OPTIONS,
+  WEEKDAY_LABELS,
+  cronToHuman,
+  scheduleToCron,
 } from "@/features/agents/utils/cronSchedule";
 import type { Frequency, ScheduleConfig } from "@/features/agents/utils/cronSchedule";
 
 function ScheduleBuilder({
-    value,
-    onChange,
+  value,
+  onChange,
 }: {
-    value: ScheduleConfig;
-    onChange: (config: ScheduleConfig) => void;
+  value: ScheduleConfig;
+  onChange: (config: ScheduleConfig) => void;
 }) {
-    const toggleWeekday = (day: number) => {
-        const next = value.weekdays.includes(day)
-            ? value.weekdays.filter((d) => d !== day)
-            : [...value.weekdays, day];
-        onChange({ ...value, weekdays: next });
+  const toggleWeekday = (day: number) => {
+    const next = value.weekdays.includes(day)
+      ? value.weekdays.filter((d) => d !== day)
+      : [...value.weekdays, day];
+    onChange({ ...value, weekdays: next });
+  };
+
+  const selectWeekdayPreset = (preset: "weekdays" | "everyday" | "weekends") => {
+    const map = {
+      weekdays: [1, 2, 3, 4, 5],
+      everyday: [0, 1, 2, 3, 4, 5, 6],
+      weekends: [0, 6],
     };
+    onChange({ ...value, weekdays: map[preset] });
+  };
 
-    const selectWeekdayPreset = (preset: "weekdays" | "everyday" | "weekends") => {
-        const map = {
-            weekdays: [1, 2, 3, 4, 5],
-            everyday: [0, 1, 2, 3, 4, 5, 6],
-            weekends: [0, 6],
-        };
-        onChange({ ...value, weekdays: map[preset] });
-    };
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm text-muted-foreground mb-1.5">Repeat</label>
+        <Select<string>
+          value={value.frequency}
+          onChange={(f) => onChange({ ...value, frequency: f as Frequency })}
+          options={FREQUENCY_OPTIONS}
+        />
+      </div>
 
-    return (
-        <div className="space-y-4">
-            <div>
-                <label className="block text-sm text-muted-foreground mb-1.5">Repeat</label>
-                <Select<string>
-                    value={value.frequency}
-                    onChange={(f) => onChange({ ...value, frequency: f as Frequency })}
-                    options={FREQUENCY_OPTIONS}
-                />
-            </div>
-
-            {value.frequency === "minutes" && (
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1.5">Interval</label>
-                    <Select<number>
-                        value={value.minuteInterval}
-                        onChange={(v) => onChange({ ...value, minuteInterval: v })}
-                        options={MINUTE_INTERVAL_OPTIONS}
-                    />
-                </div>
-            )}
-
-            {value.frequency !== "minutes" && (
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1.5">
-                        {value.frequency === "hourly" ? "At minute" : "Time"}
-                    </label>
-                    {value.frequency === "hourly" ? (
-                        <Select<number>
-                            value={value.minute}
-                            onChange={(m) => onChange({ ...value, minute: m })}
-                            options={MINUTE_OPTIONS}
-                        />
-                    ) : (
-                        <div className="flex gap-2">
-                            <div className="flex-1">
-                                <Select<number>
-                                    value={value.hour}
-                                    onChange={(h) => onChange({ ...value, hour: h })}
-                                    options={HOUR_OPTIONS}
-                                />
-                            </div>
-                            <div className="w-24">
-                                <Select<number>
-                                    value={value.minute}
-                                    onChange={(m) => onChange({ ...value, minute: m })}
-                                    options={MINUTE_OPTIONS}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {value.frequency === "weekly" && (
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1.5">Days</label>
-                    <div className="flex gap-1 mb-2">
-                        {WEEKDAY_LABELS.map((label, i) => {
-                            const active = value.weekdays.includes(i);
-                            return (
-                                <button
-                                    key={i}
-                                    type="button"
-                                    onClick={() => toggleWeekday(i)}
-                                    className={cn(
-                                        "flex-1 py-1.5 rounded-md text-xs font-medium transition-colors",
-                                        active
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted text-muted-foreground hover:text-foreground",
-                                    )}
-                                >
-                                    {label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => selectWeekdayPreset("weekdays")}
-                            className="text-xs text-primary hover:underline"
-                        >
-                            Weekdays
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => selectWeekdayPreset("weekends")}
-                            className="text-xs text-primary hover:underline"
-                        >
-                            Weekends
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => selectWeekdayPreset("everyday")}
-                            className="text-xs text-primary hover:underline"
-                        >
-                            Every day
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {value.frequency === "monthly" && (
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1.5">Day of month</label>
-                    <Select<number>
-                        value={value.monthDay}
-                        onChange={(d) => onChange({ ...value, monthDay: d })}
-                        options={MONTH_DAY_OPTIONS}
-                    />
-                </div>
-            )}
-
-            <div className="bg-muted/50 border border-border rounded-lg px-3 py-2">
-                <span className="text-xs text-muted-foreground">Schedule: </span>
-                <span className="text-sm font-medium text-foreground">
-                    {cronToHuman(scheduleToCron(value))}
-                </span>
-            </div>
+      {value.frequency === "minutes" && (
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1.5">Interval</label>
+          <Select<number>
+            value={value.minuteInterval}
+            onChange={(v) => onChange({ ...value, minuteInterval: v })}
+            options={MINUTE_INTERVAL_OPTIONS}
+          />
         </div>
-    );
+      )}
+
+      {value.frequency !== "minutes" && (
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1.5">
+            {value.frequency === "hourly" ? "At minute" : "Time"}
+          </label>
+          {value.frequency === "hourly" ? (
+            <Select<number>
+              value={value.minute}
+              onChange={(m) => onChange({ ...value, minute: m })}
+              options={MINUTE_OPTIONS}
+            />
+          ) : (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Select<number>
+                  value={value.hour}
+                  onChange={(h) => onChange({ ...value, hour: h })}
+                  options={HOUR_OPTIONS}
+                />
+              </div>
+              <div className="w-24">
+                <Select<number>
+                  value={value.minute}
+                  onChange={(m) => onChange({ ...value, minute: m })}
+                  options={MINUTE_OPTIONS}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {value.frequency === "weekly" && (
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1.5">Days</label>
+          <div className="flex gap-1 mb-2">
+            {WEEKDAY_LABELS.map((label, i) => {
+              const active = value.weekdays.includes(i);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => toggleWeekday(i)}
+                  className={cn(
+                    "flex-1 py-1.5 rounded-md text-xs font-medium transition-colors",
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => selectWeekdayPreset("weekdays")}
+              className="text-xs text-primary hover:underline"
+            >
+              Weekdays
+            </button>
+            <button
+              type="button"
+              onClick={() => selectWeekdayPreset("weekends")}
+              className="text-xs text-primary hover:underline"
+            >
+              Weekends
+            </button>
+            <button
+              type="button"
+              onClick={() => selectWeekdayPreset("everyday")}
+              className="text-xs text-primary hover:underline"
+            >
+              Every day
+            </button>
+          </div>
+        </div>
+      )}
+
+      {value.frequency === "monthly" && (
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1.5">Day of month</label>
+          <Select<number>
+            value={value.monthDay}
+            onChange={(d) => onChange({ ...value, monthDay: d })}
+            options={MONTH_DAY_OPTIONS}
+          />
+        </div>
+      )}
+
+      <div className="bg-muted/50 border border-border rounded-lg px-3 py-2">
+        <span className="text-xs text-muted-foreground">Schedule: </span>
+        <span className="text-sm font-medium text-foreground">
+          {cronToHuman(scheduleToCron(value))}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function CreateTaskModalContent({ onClose }: { onClose: () => void }) {
-    const dispatch = useAppDispatch();
-    const navigate = useNavigate();
-    const agents = useAppSelector((state) => state.agents.agents);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const agents = useAppSelector((state) => state.agents.agents);
 
-    const agentOptions = useMemo(
-        () => Object.values(agents).map((a) => ({ value: a.id, label: a.name })),
-        [agents],
-    );
+  const agentOptions = useMemo(
+    () => Object.values(agents).map((a) => ({ value: a.id, label: a.name })),
+    [agents],
+  );
 
-    const [agentId, setAgentId] = useState("");
-    const [name, setName] = useState("");
-    const [prompt, setPrompt] = useState("");
-    const [schedule, setSchedule] = useState<ScheduleConfig>(DEFAULT_SCHEDULE);
-    const [timezone, setTimezone] = useState("UTC");
-    const [submitting, setSubmitting] = useState(false);
+  const [agentId, setAgentId] = useState("");
+  const [name, setName] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [schedule, setSchedule] = useState<ScheduleConfig>(DEFAULT_SCHEDULE);
+  const [timezone, setTimezone] = useState("UTC");
+  const [submitting, setSubmitting] = useState(false);
 
-    const effectiveAgentId = agentId || agentOptions[0]?.value || "";
-    const cronExpression = scheduleToCron(schedule);
-    const canSubmit = Boolean(effectiveAgentId) && Boolean(name.trim()) && Boolean(prompt.trim()) && !submitting;
+  const effectiveAgentId = agentId || agentOptions[0]?.value || "";
+  const cronExpression = scheduleToCron(schedule);
+  const canSubmit =
+    Boolean(effectiveAgentId) && Boolean(name.trim()) && Boolean(prompt.trim()) && !submitting;
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!canSubmit) return;
-        setSubmitting(true);
-        try {
-            const task = await dispatch(
-                createCronTask({
-                    agentId: effectiveAgentId,
-                    name: name.trim(),
-                    prompt: prompt.trim(),
-                    cronExpression,
-                    timezone,
-                }),
-            ).unwrap();
-            navigate(`/agents/automations/${task.id}`);
-            onClose();
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    if (agentOptions.length === 0) {
-        return (
-            <>
-                <div className="px-6 py-4 border-b border-border">
-                    <h2 className="text-xl font-semibold text-foreground">New automation</h2>
-                </div>
-                <div className="flex flex-col items-center justify-center px-6 py-12">
-                    <Robot size={32} className="text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                        Create an agent first to schedule tasks
-                    </p>
-                </div>
-                <div className="px-6 py-4 border-t border-border flex justify-end">
-                    <Button variant="ghost" onClick={onClose}>
-                        Close
-                    </Button>
-                </div>
-            </>
-        );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setSubmitting(true);
+    try {
+      const task = await dispatch(
+        createCronTask({
+          agentId: effectiveAgentId,
+          name: name.trim(),
+          prompt: prompt.trim(),
+          cronExpression,
+          timezone,
+        }),
+      ).unwrap();
+      navigate(`/agents/automations/${task.id}`);
+      onClose();
+    } finally {
+      setSubmitting(false);
     }
+  };
 
+  if (agentOptions.length === 0) {
     return (
-        <form onSubmit={handleSubmit}>
-            <div className="px-6 py-4 border-b border-border">
-                <h2 className="text-xl font-semibold text-foreground">New automation</h2>
-                <p className="text-sm text-muted-foreground">
-                    Runs an agent with your prompt on a recurring schedule.
-                </p>
-            </div>
-
-            <div className="max-h-[65dvh] overflow-y-auto px-6 py-5 space-y-5">
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1">Agent</label>
-                    <Select value={effectiveAgentId} onChange={setAgentId} options={agentOptions} />
-                </div>
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1">Task Name</label>
-                    <Input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Daily standup summary"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1">Prompt</label>
-                    <div className="border border-border rounded-lg overflow-hidden bg-muted">
-                        <CrepeEditor
-                            contentType={ContentType.AGENT}
-                            contentId={effectiveAgentId}
-                            value={prompt}
-                            onChange={setPrompt}
-                            enableUpload={false}
-                            compact
-                            minHeight="100px"
-                            placeholder="The instruction sent to the agent on each execution..."
-                        />
-                    </div>
-                </div>
-
-                <div>
-                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
-                        Schedule
-                    </h3>
-                    <ScheduleBuilder value={schedule} onChange={setSchedule} />
-                </div>
-
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1">Timezone</label>
-                    <Select value={timezone} onChange={setTimezone} options={TIMEZONE_OPTIONS} />
-                </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-border flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={onClose}>
-                    Cancel
-                </Button>
-                <Button type="submit" disabled={!canSubmit}>
-                    {submitting ? (
-                        <CircleNotch size={16} className="animate-spin" />
-                    ) : (
-                        <Plus size={16} />
-                    )}
-                    Create Task
-                </Button>
-            </div>
-        </form>
+      <>
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-xl font-semibold text-foreground">New automation</h2>
+        </div>
+        <div className="flex flex-col items-center justify-center px-6 py-12">
+          <Robot size={32} className="text-muted-foreground mb-2" />
+          <p className="text-sm text-muted-foreground">Create an agent first to schedule tasks</p>
+        </div>
+        <div className="px-6 py-4 border-t border-border flex justify-end">
+          <Button variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </>
     );
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="px-6 py-4 border-b border-border">
+        <h2 className="text-xl font-semibold text-foreground">New automation</h2>
+        <p className="text-sm text-muted-foreground">
+          Runs an agent with your prompt on a recurring schedule.
+        </p>
+      </div>
+
+      <div className="max-h-[65dvh] overflow-y-auto px-6 py-5 space-y-5">
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1">Agent</label>
+          <Select value={effectiveAgentId} onChange={setAgentId} options={agentOptions} />
+        </div>
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1">Task Name</label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Daily standup summary"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1">Prompt</label>
+          <div className="border border-border rounded-lg overflow-hidden bg-muted">
+            <CrepeEditor
+              contentType={ContentType.AGENT}
+              contentId={effectiveAgentId}
+              value={prompt}
+              onChange={setPrompt}
+              enableUpload={false}
+              compact
+              minHeight="100px"
+              placeholder="The instruction sent to the agent on each execution..."
+            />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Schedule</h3>
+          <ScheduleBuilder value={schedule} onChange={setSchedule} />
+        </div>
+
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1">Timezone</label>
+          <Select value={timezone} onChange={setTimezone} options={TIMEZONE_OPTIONS} />
+        </div>
+      </div>
+
+      <div className="px-6 py-4 border-t border-border flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={!canSubmit}>
+          {submitting ? <CircleNotch size={16} className="animate-spin" /> : <Plus size={16} />}
+          Create Task
+        </Button>
+      </div>
+    </form>
+  );
 }
 
 export function CreateTaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-    if (!open) return null;
-    return (
-        <Modal onClose={onClose} maxWidth="max-w-xl">
-            <CreateTaskModalContent onClose={onClose} />
-        </Modal>
-    );
+  if (!open) return null;
+  return (
+    <Modal onClose={onClose} maxWidth="max-w-xl">
+      <CreateTaskModalContent onClose={onClose} />
+    </Modal>
+  );
 }

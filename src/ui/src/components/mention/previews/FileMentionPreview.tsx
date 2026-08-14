@@ -1,5 +1,5 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 import {
   Clock,
   ArrowSquareOut,
@@ -10,16 +10,16 @@ import {
   VideoCamera,
   MusicNote,
   FrameCorners,
-} from '@phosphor-icons/react';
-import { formatRelativeTime, formatFileSize } from '@/shared/utils/dateFormatting';
-import { FileProcessingIndicator } from '@/components/mention/LiveIndicators';
-import { parseUrn } from '@/shared/utils/urn';
-import { useAppSelector } from '@/app/hooks';
-import { buildThumbnailUrl } from '@/shared/utils/fileUrls';
-import { cn } from '@/shared/utils/cn';
-import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
-import { MentionMediaPreview } from '@/components/mention/previews/MentionMediaPreview';
-import type { MentionLiveState } from '@/components/mention/types';
+} from "@phosphor-icons/react";
+import { formatRelativeTime, formatFileSize } from "@/shared/utils/dateFormatting";
+import { FileProcessingIndicator } from "@/components/mention/LiveIndicators";
+import { parseUrn } from "@/shared/utils/urn";
+import { useAppSelector } from "@/app/hooks";
+import { buildThumbnailUrl } from "@/shared/utils/fileUrls";
+import { cn } from "@/shared/utils/cn";
+import { ParentBadge, MetaSeparator } from "@/components/mention/previews/ParentBadge";
+import { MentionMediaPreview } from "@/components/mention/previews/MentionMediaPreview";
+import type { MentionLiveState } from "@/components/mention/types";
 
 interface FileMentionPreviewProps {
   urn: string;
@@ -32,17 +32,17 @@ interface FileMentionPreviewProps {
 }
 
 function FileIconBadge({ mime }: { mime?: string }) {
-  if (mime?.startsWith('image/')) return <Image size={18} weight="duotone" />;
-  if (mime?.startsWith('video/')) return <VideoCamera size={18} weight="duotone" />;
-  if (mime?.startsWith('audio/')) return <MusicNote size={18} weight="duotone" />;
+  if (mime?.startsWith("image/")) return <Image size={18} weight="duotone" />;
+  if (mime?.startsWith("video/")) return <VideoCamera size={18} weight="duotone" />;
+  if (mime?.startsWith("audio/")) return <MusicNote size={18} weight="duotone" />;
   return <FileText size={18} weight="duotone" />;
 }
 
 function getMediaLabel(mime?: string): string | null {
   if (!mime) return null;
-  if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('video/')) return 'video';
-  if (mime.startsWith('audio/')) return 'audio';
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
   return null;
 }
 
@@ -69,20 +69,25 @@ export function FileMentionPreview({
 
   const mime = liveState.fileMimeType;
   const mediaLabel = getMediaLabel(mime);
-  const typeLabel = mime?.split('/')[1]?.toUpperCase() || 'File';
+  const typeLabel = mime?.split("/")[1]?.toUpperCase() || "File";
   const sizeLabel = liveState.fileSize ? formatFileSize(liveState.fileSize) : null;
-  const isProcessing = liveState.fileProcessingStatus === 'processing' || liveState.fileProcessingStatus === 'pending';
+  const isProcessing =
+    liveState.fileProcessingStatus === "processing" || liveState.fileProcessingStatus === "pending";
   // With a thumbnail the card is the picture; the metadata drops to a caption.
-  const mediaForward = !isProcessing && !thumbFailed && organizationId && fileId && (mime?.startsWith('image/') || mime?.startsWith('video/') || mime === 'application/pdf');
+  const mediaForward =
+    !isProcessing &&
+    !thumbFailed &&
+    organizationId &&
+    fileId &&
+    (mime?.startsWith("image/") || mime?.startsWith("video/") || mime === "application/pdf");
   const thumbnailUrl = organizationId && fileId ? buildThumbnailUrl(organizationId, fileId) : null;
 
   return (
     <>
-
       {mediaForward && thumbnailUrl && (
         <MentionMediaPreview
           src={thumbnailUrl}
-          isVideo={mime?.startsWith('video/')}
+          isVideo={mime?.startsWith("video/")}
           onError={() => setThumbFailed(true)}
         />
       )}
@@ -91,8 +96,8 @@ export function FileMentionPreview({
           (the image already says what the file is) and stays on one line. */}
       <span
         className={cn(
-          'block relative pr-10',
-          mediaForward ? 'px-3 pt-2 pb-1.5 pl-4' : 'px-4 pt-3 pb-2 pl-5',
+          "block relative pr-10",
+          mediaForward ? "px-3 pt-2 pb-1.5 pl-4" : "px-4 pt-3 pb-2 pl-5",
         )}
       >
         <span className="flex items-start gap-3">
@@ -110,7 +115,9 @@ export function FileMentionPreview({
                   <MetaSeparator />
                 </>
               )}
-              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{typeLabel}</span>
+              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                {typeLabel}
+              </span>
               {sizeLabel && (
                 <>
                   <MetaSeparator />
@@ -148,8 +155,15 @@ export function FileMentionPreview({
       {onEmbed && mediaLabel && !isProcessing && (
         <span className="block px-4 pb-2.5 pl-5">
           <button
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onEmbed(); }}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEmbed();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
           >
             <FrameCorners size={13} weight="duotone" />
@@ -162,15 +176,22 @@ export function FileMentionPreview({
       <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
-          <span>{formatRelativeTime(liveState.updatedAt) || 'No date'}</span>
+          <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>
         </span>
         <span className="flex items-center gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopy();
+            }}
             className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title="Copy URN"
           >
-            {copied ? <Check size={12} weight="bold" className="text-green-500" /> : <CopySimple size={12} weight="bold" />}
+            {copied ? (
+              <Check size={12} weight="bold" className="text-green-500" />
+            ) : (
+              <CopySimple size={12} weight="bold" />
+            )}
           </button>
           <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
             <ArrowSquareOut size={11} weight="bold" />

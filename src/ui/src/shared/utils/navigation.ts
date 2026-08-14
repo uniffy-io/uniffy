@@ -2,15 +2,15 @@
 // The popstate dispatch is what triggers React Router to re-render.
 
 export function navigateTo(path: string): void {
-  window.history.pushState({}, '', path);
-  window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate", { state: {} }));
 }
 
 export function navigateReplace(path: string): void {
-  window.history.replaceState({}, '', path);
-  window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+  window.history.replaceState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate", { state: {} }));
 }
 
 export function openInNewTab(path: string): void {
-  window.open(path, '_blank', 'noopener,noreferrer');
+  window.open(path, "_blank", "noopener,noreferrer");
 }

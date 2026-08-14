@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   TextB,
   TextItalic,
@@ -15,30 +15,30 @@ import {
   Highlighter,
   Smiley,
   ChatCircle,
-} from '@phosphor-icons/react';
-import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
-import { LinkPrompt } from '@/features/notes/components/editor/toolbar/LinkPrompt';
-import { useFormattedKeybinding } from '@/features/settings';
-import { editorViewCtx } from '@milkdown/core';
-import { useAppSelector } from '@/app/hooks';
-import { useEditorHandle } from '@/components/editor/EditorHandle';
-import { useActiveMarks } from '@/features/notes/components/editor/toolbar/useActiveMarks';
-import { toolbarCommands } from '@/features/notes/components/editor/toolbar/toolbarCommands';
+} from "@phosphor-icons/react";
+import { EmojiPicker } from "@/features/chat/components/compose/EmojiPicker";
+import { LinkPrompt } from "@/features/notes/components/editor/toolbar/LinkPrompt";
+import { useFormattedKeybinding } from "@/features/settings";
+import { editorViewCtx } from "@milkdown/core";
+import { useAppSelector } from "@/app/hooks";
+import { useEditorHandle } from "@/components/editor/EditorHandle";
+import { useActiveMarks } from "@/features/notes/components/editor/toolbar/useActiveMarks";
+import { toolbarCommands } from "@/features/notes/components/editor/toolbar/toolbarCommands";
 import {
   ToolbarButton,
   ToolbarGroup,
   ToolbarSeparator,
-} from '@/features/notes/components/editor/toolbar/ToolbarButton';
-import { HeadingDropdown } from '@/features/notes/components/editor/toolbar/HeadingDropdown';
-import { TablePopover } from '@/features/notes/components/editor/toolbar/TablePopover';
-import { InsertExtrasMenu } from '@/features/notes/components/editor/toolbar/InsertExtrasMenu';
-import { HighlightPicker } from '@/components/editor/plugins/highlight/HighlightPicker';
-import { highlightMark } from '@/components/editor/plugins/highlight';
-import { createImageUploadHandler } from '@/components/editor/utils/imageUploader';
-import { createVideoUploadHandler } from '@/components/editor/utils/videoUploader';
-import { createAudioUploadHandler } from '@/components/editor/utils/audioUploader';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import type { EditorView } from '@milkdown/prose/view';
+} from "@/features/notes/components/editor/toolbar/ToolbarButton";
+import { HeadingDropdown } from "@/features/notes/components/editor/toolbar/HeadingDropdown";
+import { TablePopover } from "@/features/notes/components/editor/toolbar/TablePopover";
+import { InsertExtrasMenu } from "@/features/notes/components/editor/toolbar/InsertExtrasMenu";
+import { HighlightPicker } from "@/components/editor/plugins/highlight/HighlightPicker";
+import { highlightMark } from "@/components/editor/plugins/highlight";
+import { createImageUploadHandler } from "@/components/editor/utils/imageUploader";
+import { createVideoUploadHandler } from "@/components/editor/utils/videoUploader";
+import { createAudioUploadHandler } from "@/components/editor/utils/audioUploader";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import type { EditorView } from "@milkdown/prose/view";
 
 interface EditorFormattingToolbarProps {
   noteId: string;
@@ -52,8 +52,8 @@ export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps
   const [linkAnchor, setLinkAnchor] = useState<DOMRect | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
-  const undoShortcut = useFormattedKeybinding('editor.undo');
-  const redoShortcut = useFormattedKeybinding('editor.redo');
+  const undoShortcut = useFormattedKeybinding("editor.undo");
+  const redoShortcut = useFormattedKeybinding("editor.redo");
 
   const uploads = useMemo(() => {
     if (!organizationId) return null;
@@ -66,40 +66,49 @@ export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps
 
   const ready = handle !== null;
 
-  const onHighlightClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!handle) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHighlightAnchor(rect);
-  }, [handle]);
+  const onHighlightClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (!handle) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      setHighlightAnchor(rect);
+    },
+    [handle],
+  );
 
-  const insertEmoji = useCallback((emoji: string) => {
-    if (!handle) return;
-    handle.run((ctx) => {
-      const view = ctx.get(editorViewCtx) as EditorView;
-      if (!view) return;
-      view.dispatch(view.state.tr.insertText(emoji));
-    });
-    handle.focus();
-  }, [handle]);
+  const insertEmoji = useCallback(
+    (emoji: string) => {
+      if (!handle) return;
+      handle.run((ctx) => {
+        const view = ctx.get(editorViewCtx) as EditorView;
+        if (!view) return;
+        view.dispatch(view.state.tr.insertText(emoji));
+      });
+      handle.focus();
+    },
+    [handle],
+  );
 
-  const applyHighlight = useCallback((color: string | null) => {
-    if (!handle) {
+  const applyHighlight = useCallback(
+    (color: string | null) => {
+      if (!handle) {
+        setHighlightAnchor(null);
+        return;
+      }
+      handle.run((ctx) => {
+        const view = ctx.get(editorViewCtx) as EditorView;
+        if (!view) return;
+        const { from, to } = view.state.selection;
+        if (from === to) return;
+        const markType = highlightMark.type(ctx);
+        let tr = view.state.tr.removeMark(from, to, markType);
+        if (color !== null) tr = tr.addMark(from, to, markType.create({ color }));
+        view.dispatch(tr);
+      });
+      handle.focus();
       setHighlightAnchor(null);
-      return;
-    }
-    handle.run((ctx) => {
-      const view = ctx.get(editorViewCtx) as EditorView;
-      if (!view) return;
-      const { from, to } = view.state.selection;
-      if (from === to) return;
-      const markType = highlightMark.type(ctx);
-      let tr = view.state.tr.removeMark(from, to, markType);
-      if (color !== null) tr = tr.addMark(from, to, markType.create({ color }));
-      view.dispatch(tr);
-    });
-    handle.focus();
-    setHighlightAnchor(null);
-  }, [handle]);
+    },
+    [handle],
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-1 px-3 py-1 bg-muted/40 border-b border-border/50">
@@ -107,20 +116,45 @@ export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps
       <ToolbarSeparator />
 
       <ToolbarGroup>
-        <ToolbarButton active={active.bold} disabled={!ready} onClick={() => handle && toolbarCommands.toggleBold(handle)} label="Bold">
+        <ToolbarButton
+          active={active.bold}
+          disabled={!ready}
+          onClick={() => handle && toolbarCommands.toggleBold(handle)}
+          label="Bold"
+        >
           <TextB size={14} weight="bold" />
         </ToolbarButton>
-        <ToolbarButton active={active.italic} disabled={!ready} onClick={() => handle && toolbarCommands.toggleItalic(handle)} label="Italic">
+        <ToolbarButton
+          active={active.italic}
+          disabled={!ready}
+          onClick={() => handle && toolbarCommands.toggleItalic(handle)}
+          label="Italic"
+        >
           <TextItalic size={14} weight="bold" />
         </ToolbarButton>
-        <ToolbarButton active={active.underline} disabled={!ready} onClick={() => handle && toolbarCommands.toggleUnderline(handle)} label="Underline">
+        <ToolbarButton
+          active={active.underline}
+          disabled={!ready}
+          onClick={() => handle && toolbarCommands.toggleUnderline(handle)}
+          label="Underline"
+        >
           <TextUnderline size={14} weight="bold" />
         </ToolbarButton>
         <span className="hidden sm:contents">
-          <ToolbarButton active={active.strike} disabled={!ready} onClick={() => handle && toolbarCommands.toggleStrike(handle)} label="Strikethrough">
+          <ToolbarButton
+            active={active.strike}
+            disabled={!ready}
+            onClick={() => handle && toolbarCommands.toggleStrike(handle)}
+            label="Strikethrough"
+          >
             <TextStrikethrough size={14} weight="bold" />
           </ToolbarButton>
-          <ToolbarButton active={active.code} disabled={!ready} onClick={() => handle && toolbarCommands.toggleInlineCode(handle)} label="Inline code">
+          <ToolbarButton
+            active={active.code}
+            disabled={!ready}
+            onClick={() => handle && toolbarCommands.toggleInlineCode(handle)}
+            label="Inline code"
+          >
             <Code size={14} weight="bold" />
           </ToolbarButton>
           <ToolbarButton
@@ -141,13 +175,28 @@ export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps
         <ToolbarSeparator />
 
         <ToolbarGroup>
-          <ToolbarButton active={active.bulletList} disabled={!ready} onClick={() => handle && toolbarCommands.toggleBulletList(handle)} label="Bulleted list">
+          <ToolbarButton
+            active={active.bulletList}
+            disabled={!ready}
+            onClick={() => handle && toolbarCommands.toggleBulletList(handle)}
+            label="Bulleted list"
+          >
             <ListBullets size={14} weight="bold" />
           </ToolbarButton>
-          <ToolbarButton active={active.orderedList} disabled={!ready} onClick={() => handle && toolbarCommands.toggleOrderedList(handle)} label="Numbered list">
+          <ToolbarButton
+            active={active.orderedList}
+            disabled={!ready}
+            onClick={() => handle && toolbarCommands.toggleOrderedList(handle)}
+            label="Numbered list"
+          >
             <ListNumbers size={14} weight="bold" />
           </ToolbarButton>
-          <ToolbarButton active={active.codeBlock} disabled={!ready} onClick={() => handle && toolbarCommands.insertCodeBlock(handle)} label="Code block">
+          <ToolbarButton
+            active={active.codeBlock}
+            disabled={!ready}
+            onClick={() => handle && toolbarCommands.insertCodeBlock(handle)}
+            label="Code block"
+          >
             <CodeBlock size={14} weight="bold" />
           </ToolbarButton>
           <TablePopover />
@@ -168,7 +217,11 @@ export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps
           >
             <Smiley size={14} weight="bold" />
           </ToolbarButton>
-          <ToolbarButton disabled={!ready} onClick={() => handle && toolbarCommands.triggerMention(handle)} label="Mention">
+          <ToolbarButton
+            disabled={!ready}
+            onClick={() => handle && toolbarCommands.triggerMention(handle)}
+            label="Mention"
+          >
             <At size={14} weight="bold" />
           </ToolbarButton>
           {handle?.triggerComment && (
@@ -202,14 +255,14 @@ export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps
         <ToolbarButton
           disabled={!ready}
           onClick={() => handle && toolbarCommands.undo(handle)}
-          label={undoShortcut ? `Undo (${undoShortcut})` : 'Undo'}
+          label={undoShortcut ? `Undo (${undoShortcut})` : "Undo"}
         >
           <ArrowCounterClockwise size={14} weight="bold" />
         </ToolbarButton>
         <ToolbarButton
           disabled={!ready}
           onClick={() => handle && toolbarCommands.redo(handle)}
-          label={redoShortcut ? `Redo (${redoShortcut})` : 'Redo'}
+          label={redoShortcut ? `Redo (${redoShortcut})` : "Redo"}
         >
           <ArrowClockwise size={14} weight="bold" />
         </ToolbarButton>
@@ -232,11 +285,7 @@ export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps
       )}
 
       {linkAnchor && handle && (
-        <LinkPrompt
-          handle={handle}
-          anchorRect={linkAnchor}
-          onClose={() => setLinkAnchor(null)}
-        />
+        <LinkPrompt handle={handle} anchorRect={linkAnchor} onClose={() => setLinkAnchor(null)} />
       )}
     </div>
   );

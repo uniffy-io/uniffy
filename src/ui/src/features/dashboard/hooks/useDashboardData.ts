@@ -1,11 +1,11 @@
 // Staggered priority gates throttle widget render order: P1 immediate, P2 +200ms, P3 +500ms.
 
-import { useMemo, useRef, useEffect, useState } from 'react';
-import { createSelector } from '@reduxjs/toolkit';
-import { useAppSelector } from '@/app/hooks';
-import type { RootState } from '@/app/store';
-import type { CalendarEvent } from '@/features/calendar/types';
-import type { Task } from '@/features/projects/types/project';
+import { useMemo, useRef, useEffect, useState } from "react";
+import { createSelector } from "@reduxjs/toolkit";
+import { useAppSelector } from "@/app/hooks";
+import type { RootState } from "@/app/store";
+import type { CalendarEvent } from "@/features/calendar/types";
+import type { Task } from "@/features/projects/types/project";
 
 export type FetchPriority = 1 | 2 | 3;
 
@@ -48,7 +48,7 @@ const selectTodayEvents = createSelector(
 const selectMyTasks = createSelector(
   [
     (state: RootState) => state.projects?.tasks ?? {},
-    (state: RootState) => state.auth.user?.id ?? '',
+    (state: RootState) => state.auth.user?.id ?? "",
   ],
   (tasks, userId): { overdue: Task[]; dueToday: Task[]; inProgress: Task[] } => {
     const now = new Date();
@@ -76,7 +76,7 @@ const selectMyTasks = createSelector(
     });
 
     overdue.sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
-    dueToday.sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''));
+    dueToday.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
     inProgress.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
     return { overdue, dueToday, inProgress };
@@ -87,7 +87,7 @@ const selectOnlineUserIds = createSelector(
   [(state: RootState) => state.presence?.statuses ?? {}],
   (statuses): string[] =>
     Object.entries(statuses)
-      .filter(([, status]) => status === 'online' || status === 'away' || status === 'dnd')
+      .filter(([, status]) => status === "online" || status === "away" || status === "dnd")
       .map(([userId]) => userId),
 );
 
@@ -182,7 +182,13 @@ export function useDashboardData() {
       unreadNotificationsCount: unreadCount,
       teamOnlineCount: onlineUserIds.length,
     }),
-    [todayEvents.length, myTasks.dueToday.length, myTasks.overdue.length, unreadCount, onlineUserIds.length],
+    [
+      todayEvents.length,
+      myTasks.dueToday.length,
+      myTasks.overdue.length,
+      unreadCount,
+      onlineUserIds.length,
+    ],
   );
 
   return {

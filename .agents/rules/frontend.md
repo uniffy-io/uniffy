@@ -48,7 +48,9 @@ Absolute `@/` imports (maps to `src/`); relative imports rot on file moves. Comm
 
 ## React hooks footguns (lint-enforced)
 
-- **No synchronous setState in useEffect** (`react-hooks/set-state-in-effect`). One-time reads -> `useState` initializer; derived values -> `useMemo`. The legitimate exception is resetting local state when a prop like an id changes - add the eslint-disable with an explanation.
+The linter is oxlint (`.oxlintrc.json` + the shared custom plugin `lint/uniffy-oxlint-plugin.mjs` at the repo root). Its experimental `react/react-compiler` rule carries the React Compiler diagnostics below at warn level - treat those warnings as real findings, not noise.
+
+- **No synchronous setState in useEffect** (the `EffectSetState` diagnostic). One-time reads -> `useState` initializer; derived values -> `useMemo`. The legitimate exception is resetting local state when a prop like an id changes - add an `eslint-disable`-style suppression comment (oxlint honors them) with an explanation.
 - **No ref reads during render.** Track dimensions in state via `ResizeObserver` in an effect; refs are reliable only in effects and event handlers.
 
 ## Responsive design
@@ -112,6 +114,7 @@ Global pipeline: rejected thunk -> `errorToastMiddleware` -> `friendlyErrorMessa
 - No manual `toast.error()` in thunks; no custom error copy in thunks - `rejectWithValue(error.message)` is enough.
 - New mappings go in `errorMessages.ts` (`STATUS_CODE_MESSAGES`, `HTTP_STATUS_MESSAGES`, `MESSAGE_PATTERNS`); suppression = return `null`.
 - Rare manual toasts outside Redux: `friendlyErrorMessage` from `@/config`, toast only when non-null.
+- Lint-enforced by `uniffy/no-raw-error-display` (shared plugin, web + mobile): `toast.error`/`toast.warning`/`Alert.alert` arguments and JSX may not carry raw `err.message`, `String(err)`, or interpolated `.status`/`.statusCode`. Helper calls are the sanctioned transformation; dev-gated diagnostic surfaces carry an inline disable stating the gate.
 
 ## Authentication
 

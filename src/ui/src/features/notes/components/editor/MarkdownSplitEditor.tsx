@@ -1,23 +1,23 @@
-import { useRef, useEffect, useCallback, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { sanitizeMentionLabel } from '@/shared/utils/mentionUtils';
-import { EditorView, keymap } from '@codemirror/view';
-import { EditorState, Compartment } from '@codemirror/state';
-import { basicSetup } from 'codemirror';
-import { markdown } from '@codemirror/lang-markdown';
-import { languages } from '@codemirror/language-data';
-import { defaultKeymap } from '@codemirror/commands';
-import { useAppSelector } from '@/app/hooks';
-import { CrepeEditor, type CrepeRealtimeBinding } from '@/components/editor/CrepeEditor';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import type { SerializedNote } from '@/features/notes/store/notesThunks';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { MarkdownMentionSearch } from '@/components/editor/plugins/mention/MarkdownMentionSearch';
-import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
-import { useTheme } from '@/config/theme/ThemeProvider';
-import { createMarkdownEditorTheme } from '@/features/notes/components/editor/markdownEditorTheme';
-import { useRealtimeMarkdownContent } from '@/features/notes/realtime/useMarkdownContent';
-import { replaceMarkdownYText } from '@/features/notes/realtime/markdown';
+import { useRef, useEffect, useCallback, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { sanitizeMentionLabel } from "@/shared/utils/mentionUtils";
+import { EditorView, keymap } from "@codemirror/view";
+import { EditorState, Compartment } from "@codemirror/state";
+import { basicSetup } from "codemirror";
+import { markdown } from "@codemirror/lang-markdown";
+import { languages } from "@codemirror/language-data";
+import { defaultKeymap } from "@codemirror/commands";
+import { useAppSelector } from "@/app/hooks";
+import { CrepeEditor, type CrepeRealtimeBinding } from "@/components/editor/CrepeEditor";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import type { SerializedNote } from "@/features/notes/store/notesThunks";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { MarkdownMentionSearch } from "@/components/editor/plugins/mention/MarkdownMentionSearch";
+import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
+import { useTheme } from "@/config/theme/ThemeProvider";
+import { createMarkdownEditorTheme } from "@/features/notes/components/editor/markdownEditorTheme";
+import { useRealtimeMarkdownContent } from "@/features/notes/realtime/useMarkdownContent";
+import { replaceMarkdownYText } from "@/features/notes/realtime/markdown";
 
 interface MarkdownSplitEditorProps {
   note: SerializedNote;
@@ -28,7 +28,14 @@ interface MarkdownSplitEditorProps {
 
 const MIN_PANE_WIDTH = 200;
 
-const defaultSettings = { editorMode: 'markdown' as const, showMarkdownPreview: true, showMarkdownLineNumbers: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
+const defaultSettings = {
+  editorMode: "markdown" as const,
+  showMarkdownPreview: true,
+  showMarkdownLineNumbers: true,
+  fontSize: 16,
+  lineHeight: 1.6,
+  spellCheck: true,
+};
 
 export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplitEditorProps) {
   const editorState = useAppSelector((state) => state.editor);
@@ -58,12 +65,20 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
   const [isDragging, setIsDragging] = useState(false);
 
   // Track `@` position so we know what range to overwrite with `[[[label|urn]]]`.
-  const [mentionPopup, setMentionPopup] = useState<{ triggerFrom: number; triggerTo: number; query: string } | null>(null);
+  const [mentionPopup, setMentionPopup] = useState<{
+    triggerFrom: number;
+    triggerTo: number;
+    query: string;
+  } | null>(null);
+  // The textarea handlers below stay identity-stable so a re-render never
+  // remounts them mid-keystroke; current values reach them through these refs.
+  /* eslint-disable react/react-compiler -- latest-value refs for stable textarea handlers */
   const mentionPopupRef = useRef(mentionPopup);
   mentionPopupRef.current = mentionPopup;
 
   const realtimeRef = useRef(realtime);
   realtimeRef.current = realtime;
+  /* eslint-enable react/react-compiler */
 
   const handleContentChange = useCallback((newContent: string) => {
     const rt = realtimeRef.current;
@@ -86,7 +101,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
       if (!ch || /\s/.test(ch)) break;
       to += 1;
     }
-    const label = sanitizeMentionLabel(result.title || 'Untitled');
+    const label = sanitizeMentionLabel(result.title || "Untitled");
     const insertion = `[[[${label}|${result.urn}]]] `;
     view.dispatch({
       changes: { from: popup.triggerFrom, to, insert: insertion },
@@ -111,7 +126,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
-      
+
       const containerRect = containerRef.current.getBoundingClientRect();
       const containerWidth = containerRect.width;
       const mouseX = e.clientX - containerRect.left;
@@ -127,12 +142,12 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
       setIsDragging(false);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging]);
 
@@ -150,13 +165,15 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
         basicSetup,
         markdown({ codeLanguages: languages }),
         keymap.of(defaultKeymap),
-        themeCompartmentRef.current.of(createMarkdownEditorTheme({
-          isDark: resolvedTheme === 'dark',
-          fontSize: settings?.fontSize || 16,
-          lineHeight: settings?.lineHeight || 1.6,
-          showLineNumbers,
-          isMobile,
-        })),
+        themeCompartmentRef.current.of(
+          createMarkdownEditorTheme({
+            isDark: resolvedTheme === "dark",
+            fontSize: settings?.fontSize || 16,
+            lineHeight: settings?.lineHeight || 1.6,
+            showLineNumbers,
+            isMobile,
+          }),
+        ),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const newContent = update.state.doc.toString();
@@ -165,12 +182,12 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
           // After-change detection avoids races with beforeinput.
           if (update.docChanged && !mentionPopupRef.current) {
             update.changes.iterChanges((_fromA, _toA, fromB, _toB, inserted) => {
-              if (inserted.length !== 1 || inserted.sliceString(0) !== '@') return;
+              if (inserted.length !== 1 || inserted.sliceString(0) !== "@") return;
               const doc = update.state.doc;
-              const charBefore = fromB > 0 ? doc.sliceString(fromB - 1, fromB) : '';
+              const charBefore = fromB > 0 ? doc.sliceString(fromB - 1, fromB) : "";
               const atWordBoundary = !charBefore || /\s/.test(charBefore);
               if (!atWordBoundary) return;
-              setMentionPopup({ triggerFrom: fromB, triggerTo: fromB + 1, query: '' });
+              setMentionPopup({ triggerFrom: fromB, triggerTo: fromB + 1, query: "" });
             });
           }
         }),
@@ -198,7 +215,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
     view.dispatch({
       effects: themeCompartmentRef.current.reconfigure(
         createMarkdownEditorTheme({
-          isDark: resolvedTheme === 'dark',
+          isDark: resolvedTheme === "dark",
           fontSize: settings?.fontSize || 16,
           lineHeight: settings?.lineHeight || 1.6,
           showLineNumbers,
@@ -225,12 +242,16 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
 
   return (
     <div className="flex flex-col h-full">
-      <div ref={containerRef} className={`flex-1 overflow-hidden relative ${stackVertically ? 'flex flex-col' : 'flex'}`}>
+      <div
+        ref={containerRef}
+        className={`flex-1 overflow-hidden relative ${stackVertically ? "flex flex-col" : "flex"}`}
+      >
         <div
           className="overflow-hidden"
-          style={stackVertically
-            ? { height: showMarkdownPreview ? '50%' : '100%', width: '100%' }
-            : { width: showMarkdownPreview ? `${splitRatio * 100}%` : '100%', height: '100%' }
+          style={
+            stackVertically
+              ? { height: showMarkdownPreview ? "50%" : "100%", width: "100%" }
+              : { width: showMarkdownPreview ? `${splitRatio * 100}%` : "100%", height: "100%" }
           }
         >
           <div ref={editorContainerRef} className="h-full" />
@@ -241,7 +262,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
             onMouseDown={handleMouseDown}
             className={`
               w-1 h-full cursor-col-resize flex-shrink-0 relative group
-              ${isDragging ? 'bg-primary' : 'bg-border hover:bg-primary/50'}
+              ${isDragging ? "bg-primary" : "bg-border hover:bg-primary/50"}
               transition-colors
             `}
           >
@@ -250,7 +271,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
               className={`
                 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                 w-1 h-8 rounded-full
-                ${isDragging ? 'bg-primary-foreground' : 'bg-transparent group-hover:bg-primary'}
+                ${isDragging ? "bg-primary-foreground" : "bg-transparent group-hover:bg-primary"}
                 transition-colors
               `}
             />
@@ -264,9 +285,10 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
         {showMarkdownPreview && (
           <div
             className="overflow-hidden"
-            style={stackVertically
-              ? { height: '50%', width: '100%' }
-              : { width: `${(1 - splitRatio) * 100}%`, height: '100%' }
+            style={
+              stackVertically
+                ? { height: "50%", width: "100%" }
+                : { width: `${(1 - splitRatio) * 100}%`, height: "100%" }
             }
           >
             <CrepeEditor
@@ -280,19 +302,18 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
           </div>
         )}
 
-        {isDragging && (
-          <div className="absolute inset-0 cursor-col-resize z-50" />
-        )}
+        {isDragging && <div className="absolute inset-0 cursor-col-resize z-50" />}
       </div>
 
-      {mentionPopup && createPortal(
-        <MarkdownMentionSearch
-          initialQuery={mentionPopup.query}
-          onSelect={handleMentionSelect}
-          onClose={handleMentionClose}
-        />,
-        document.body,
-      )}
+      {mentionPopup &&
+        createPortal(
+          <MarkdownMentionSearch
+            initialQuery={mentionPopup.query}
+            onSelect={handleMentionSelect}
+            onClose={handleMentionClose}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

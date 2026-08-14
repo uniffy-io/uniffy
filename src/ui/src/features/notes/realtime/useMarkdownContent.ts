@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import * as Y from 'yjs';
-import { getMarkdownYText } from '@/features/notes/realtime/markdown';
+import { useEffect, useRef, useState } from "react";
+import * as Y from "yjs";
+import { getMarkdownYText } from "@/features/notes/realtime/markdown";
 
 interface RealtimeMarkdownOptions {
   // Before resolution we return `fallback` to avoid a blank-content flash; after, Y.Text is authoritative.
@@ -15,7 +15,7 @@ export function useRealtimeMarkdownContent(
   options: RealtimeMarkdownOptions | number = {},
 ): string {
   const { whenSynced, debounceMs } =
-    typeof options === 'number' ? { whenSynced: null, debounceMs: options } : options;
+    typeof options === "number" ? { whenSynced: null, debounceMs: options } : options;
   const debounce = debounceMs ?? 0;
 
   const fallbackRef = useRef(fallback);

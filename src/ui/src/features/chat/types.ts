@@ -1,8 +1,8 @@
-export type ChannelType = 'PUBLIC' | 'PRIVATE' | 'DIRECT' | 'GROUP_DM';
-export type ChannelRole = 'OWNER' | 'ADMIN' | 'MEMBER';
-export type SenderType = 'USER' | 'AGENT' | 'SYSTEM' | 'GUEST';
-export type NotificationLevel = 'ALL' | 'MENTIONS' | 'NONE';
-export type MessageDensity = 'comfortable' | 'compact';
+export type ChannelType = "PUBLIC" | "PRIVATE" | "DIRECT" | "GROUP_DM";
+export type ChannelRole = "OWNER" | "ADMIN" | "MEMBER";
+export type SenderType = "USER" | "AGENT" | "SYSTEM" | "GUEST";
+export type NotificationLevel = "ALL" | "MENTIONS" | "NONE";
+export type MessageDensity = "comfortable" | "compact";
 
 export interface MessageAttachment {
   id: string;
@@ -108,7 +108,7 @@ export interface ChatMessage {
 export interface ChatChannelMember {
   channelId: string;
   userId: string;
-  subjectType: 'USER' | 'AGENT';
+  subjectType: "USER" | "AGENT";
   subjectId: string;
   displayName?: string;
   avatarUrl?: string;

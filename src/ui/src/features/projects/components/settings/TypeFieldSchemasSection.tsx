@@ -41,7 +41,7 @@ export function TypeFieldSchemasSection({
         },
       });
     },
-    [typeFieldSchemas, onChange]
+    [typeFieldSchemas, onChange],
   );
 
   const toggleRequired = useCallback(
@@ -65,7 +65,7 @@ export function TypeFieldSchemasSection({
         },
       });
     },
-    [typeFieldSchemas, onChange]
+    [typeFieldSchemas, onChange],
   );
 
   if (customFields.length === 0) {
@@ -75,7 +75,8 @@ export function TypeFieldSchemasSection({
           Type Field Schemas
         </label>
         <p className="text-xs text-muted-foreground">
-          Add custom fields to the project first, then configure which fields are shown and required per task type.
+          Add custom fields to the project first, then configure which fields are shown and required
+          per task type.
         </p>
       </div>
     );
@@ -83,9 +84,7 @@ export function TypeFieldSchemasSection({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-foreground mb-1.5">
-        Type Field Schemas
-      </label>
+      <label className="block text-sm font-medium text-foreground mb-1.5">Type Field Schemas</label>
       <p className="text-xs text-muted-foreground mb-3">
         Configure which custom fields are shown and required for each task type.
       </p>
@@ -94,7 +93,10 @@ export function TypeFieldSchemasSection({
         {TASK_TYPES.map((taskType) => {
           const config = getTaskTypeConfig(taskType.value);
           const TypeIcon = config.icon;
-          const schema = typeFieldSchemas[taskType.value] || { shownFieldIds: [], requiredFieldIds: [] };
+          const schema = typeFieldSchemas[taskType.value] || {
+            shownFieldIds: [],
+            requiredFieldIds: [],
+          };
           const shownSet = new Set(schema.shownFieldIds);
           const requiredSet = new Set(schema.requiredFieldIds);
 
@@ -106,13 +108,8 @@ export function TypeFieldSchemasSection({
               </div>
 
               {customFields.map((field) => (
-                <div
-                  key={field.id}
-                  className="flex items-center justify-between py-1.5 px-1"
-                >
-                  <span className="text-sm text-foreground truncate flex-1 mr-2">
-                    {field.name}
-                  </span>
+                <div key={field.id} className="flex items-center justify-between py-1.5 px-1">
+                  <span className="text-sm text-foreground truncate flex-1 mr-2">{field.name}</span>
                   <div className="flex items-center gap-3 shrink-0">
                     <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
                       <input
@@ -123,10 +120,14 @@ export function TypeFieldSchemasSection({
                       />
                       Show
                     </label>
-                    <label className={cn(
-                      "flex items-center gap-1.5 text-xs cursor-pointer",
-                      shownSet.has(field.id) ? "text-muted-foreground" : "text-muted-foreground/40"
-                    )}>
+                    <label
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs cursor-pointer",
+                        shownSet.has(field.id)
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground/40",
+                      )}
+                    >
                       <input
                         type="checkbox"
                         checked={requiredSet.has(field.id)}

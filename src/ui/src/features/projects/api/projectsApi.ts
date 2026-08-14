@@ -1,15 +1,15 @@
-import { createClient } from '@connectrpc/connect';
-import { unaryTransport } from '@/config/api';
-import { create } from '@bufbuild/protobuf';
-import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { ProjectsService, TypeFieldSchemaSchema } from '@uniffy/proto/projects/v1/projects_pb';
+import { createClient } from "@connectrpc/connect";
+import { unaryTransport } from "@/config/api";
+import { create } from "@bufbuild/protobuf";
+import { timestampDate } from "@bufbuild/protobuf/wkt";
+import { ProjectsService, TypeFieldSchemaSchema } from "@uniffy/proto/projects/v1/projects_pb";
 import {
   FieldType as ProtoFieldType,
   ViewType as ProtoViewType,
   ActivityAction as ProtoActivityAction,
   TagFilterMode as ProtoTagFilterMode,
-} from '@uniffy/proto/projects/v1/projects_pb';
-import type { TypeFieldSchema as ProtoTypeFieldSchema } from '@uniffy/proto/projects/v1/projects_pb';
+} from "@uniffy/proto/projects/v1/projects_pb";
+import type { TypeFieldSchema as ProtoTypeFieldSchema } from "@uniffy/proto/projects/v1/projects_pb";
 import type {
   Project as ProtoProject,
   Task as ProtoTask,
@@ -17,7 +17,7 @@ import type {
   ViewConfig as ProtoViewConfig,
   TaskActivity as ProtoTaskActivity,
   Sprint as ProtoSprint,
-} from '@uniffy/proto/projects/v1/projects_pb';
+} from "@uniffy/proto/projects/v1/projects_pb";
 import type {
   Project,
   Task,
@@ -30,28 +30,28 @@ import type {
   CreateSprintRequest as FrontendCreateSprintRequest,
   UpdateSprintRequest as FrontendUpdateSprintRequest,
   StartSprintRequest as FrontendStartSprintRequest,
-} from '../types/project';
-import type { FieldDefinition, FieldValue } from '../types/fields';
-import type { ViewConfig, ViewSpecificConfig } from '../types/views';
-import type { TaskActivity, ActivityAction } from '../types/activity';
+} from "../types/project";
+import type { FieldDefinition, FieldValue } from "../types/fields";
+import type { ViewConfig, ViewSpecificConfig } from "../types/views";
+import type { TaskActivity, ActivityAction } from "../types/activity";
 
 const projectsClient = createClient(ProjectsService, unaryTransport);
 
 function frontendFieldTypeToProto(type: string): ProtoFieldType {
   switch (type.toLowerCase()) {
-    case 'text':
+    case "text":
       return ProtoFieldType.TEXT;
-    case 'number':
+    case "number":
       return ProtoFieldType.NUMBER;
-    case 'single_select':
+    case "single_select":
       return ProtoFieldType.SINGLE_SELECT;
-    case 'multi_select':
+    case "multi_select":
       return ProtoFieldType.MULTI_SELECT;
-    case 'date':
+    case "date":
       return ProtoFieldType.DATE;
-    case 'person':
+    case "person":
       return ProtoFieldType.PERSON;
-    case 'reference':
+    case "reference":
       return ProtoFieldType.REFERENCE;
     default:
       return ProtoFieldType.TEXT;
@@ -61,31 +61,31 @@ function frontendFieldTypeToProto(type: string): ProtoFieldType {
 function protoFieldTypeToFrontend(type: ProtoFieldType): string {
   switch (type) {
     case ProtoFieldType.TEXT:
-      return 'text';
+      return "text";
     case ProtoFieldType.NUMBER:
-      return 'number';
+      return "number";
     case ProtoFieldType.SINGLE_SELECT:
-      return 'single_select';
+      return "single_select";
     case ProtoFieldType.MULTI_SELECT:
-      return 'multi_select';
+      return "multi_select";
     case ProtoFieldType.DATE:
-      return 'date';
+      return "date";
     case ProtoFieldType.PERSON:
-      return 'person';
+      return "person";
     case ProtoFieldType.REFERENCE:
-      return 'reference';
+      return "reference";
     default:
-      return 'text';
+      return "text";
   }
 }
 
 function frontendViewTypeToProto(type: string): ProtoViewType {
   switch (type.toLowerCase()) {
-    case 'table':
+    case "table":
       return ProtoViewType.TABLE;
-    case 'board':
+    case "board":
       return ProtoViewType.BOARD;
-    case 'roadmap':
+    case "roadmap":
       return ProtoViewType.ROADMAP;
     default:
       return ProtoViewType.TABLE;
@@ -95,13 +95,13 @@ function frontendViewTypeToProto(type: string): ProtoViewType {
 function protoViewTypeToFrontend(type: ProtoViewType): string {
   switch (type) {
     case ProtoViewType.TABLE:
-      return 'table';
+      return "table";
     case ProtoViewType.BOARD:
-      return 'board';
+      return "board";
     case ProtoViewType.ROADMAP:
-      return 'roadmap';
+      return "roadmap";
     default:
-      return 'table';
+      return "table";
   }
 }
 
@@ -120,9 +120,13 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
     fieldDefinitions: proto.fieldDefinitions.map(protoFieldDefinitionToFrontend),
     views: proto.views.map(protoViewConfigToFrontend),
     defaultViewId: proto.defaultViewId,
-    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
-    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
-    deletedAt: (proto.deletedAt ? timestampDate(proto.deletedAt).toISOString() : null),
+    createdAt: proto.createdAt
+      ? timestampDate(proto.createdAt).toISOString()
+      : new Date().toISOString(),
+    updatedAt: proto.updatedAt
+      ? timestampDate(proto.updatedAt).toISOString()
+      : new Date().toISOString(),
+    deletedAt: proto.deletedAt ? timestampDate(proto.deletedAt).toISOString() : null,
     urn: proto.urn,
     slug: proto.slug,
     typeFieldSchemas: Object.fromEntries(
@@ -132,7 +136,7 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
           shownFieldIds: [...schema.shownFieldIds],
           requiredFieldIds: [...schema.requiredFieldIds],
         },
-      ])
+      ]),
     ),
     tagIds: proto.tags.map((t) => t.id),
     taskCount: proto.taskCount,
@@ -174,9 +178,13 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     sortOrder: proto.sortOrder,
     fieldValues,
     outgoingReferences: proto.outgoingReferences,
-    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
-    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
-    deletedAt: (proto.deletedAt ? timestampDate(proto.deletedAt).toISOString() : null),
+    createdAt: proto.createdAt
+      ? timestampDate(proto.createdAt).toISOString()
+      : new Date().toISOString(),
+    updatedAt: proto.updatedAt
+      ? timestampDate(proto.updatedAt).toISOString()
+      : new Date().toISOString(),
+    deletedAt: proto.deletedAt ? timestampDate(proto.deletedAt).toISOString() : null,
     urn: proto.urn,
     userRole: proto.userRole,
     number: proto.number,
@@ -204,13 +212,17 @@ function protoFieldDefinitionToFrontend(proto: ProtoFieldDefinition): FieldDefin
     id: proto.id,
     projectId: proto.projectId,
     name: proto.name,
-    type: protoFieldTypeToFrontend(proto.type) as FieldDefinition['type'],
+    type: protoFieldTypeToFrontend(proto.type) as FieldDefinition["type"],
     isRequired: proto.isRequired,
     isSystem: proto.isSystem,
     sortOrder: proto.sortOrder,
     config,
-    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
-    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
+    createdAt: proto.createdAt
+      ? timestampDate(proto.createdAt).toISOString()
+      : new Date().toISOString(),
+    updatedAt: proto.updatedAt
+      ? timestampDate(proto.updatedAt).toISOString()
+      : new Date().toISOString(),
   };
 }
 
@@ -228,34 +240,38 @@ function protoViewConfigToFrontend(proto: ProtoViewConfig): ViewConfig {
     id: proto.id,
     projectId: proto.projectId,
     name: proto.name,
-    type: protoViewTypeToFrontend(proto.type) as ViewConfig['type'],
+    type: protoViewTypeToFrontend(proto.type) as ViewConfig["type"],
     isDefault: proto.isDefault,
     config: config as unknown as ViewSpecificConfig,
-    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
-    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
+    createdAt: proto.createdAt
+      ? timestampDate(proto.createdAt).toISOString()
+      : new Date().toISOString(),
+    updatedAt: proto.updatedAt
+      ? timestampDate(proto.updatedAt).toISOString()
+      : new Date().toISOString(),
   };
 }
 
 function protoActivityActionToFrontend(action: ProtoActivityAction): ActivityAction {
   switch (action) {
     case ProtoActivityAction.CREATED:
-      return 'created';
+      return "created";
     case ProtoActivityAction.STATUS_CHANGED:
-      return 'status_changed';
+      return "status_changed";
     case ProtoActivityAction.PRIORITY_CHANGED:
-      return 'priority_changed';
+      return "priority_changed";
     case ProtoActivityAction.FIELD_UPDATED:
-      return 'field_updated';
+      return "field_updated";
     case ProtoActivityAction.BLOCKED_BY_ADDED:
-      return 'blocked_by_added';
+      return "blocked_by_added";
     case ProtoActivityAction.BLOCKED_BY_REMOVED:
-      return 'blocked_by_removed';
+      return "blocked_by_removed";
     case ProtoActivityAction.ASSIGNED:
-      return 'assigned';
+      return "assigned";
     case ProtoActivityAction.TYPE_CHANGED:
-      return 'type_changed';
+      return "type_changed";
     default:
-      return 'created';
+      return "created";
   }
 }
 
@@ -265,7 +281,9 @@ function protoActivityToFrontend(proto: ProtoTaskActivity): TaskActivity {
     taskId: proto.taskId,
     actorId: proto.actorId,
     action: protoActivityActionToFrontend(proto.action),
-    timestamp: proto.timestamp ? timestampDate(proto.timestamp).toISOString() : new Date().toISOString(),
+    timestamp: proto.timestamp
+      ? timestampDate(proto.timestamp).toISOString()
+      : new Date().toISOString(),
     fieldId: proto.fieldId,
     previousValue: proto.previousValue,
     newValue: proto.newValue,
@@ -279,21 +297,27 @@ function protoSprintToFrontend(proto: ProtoSprint): Sprint {
     organizationId: proto.organizationId,
     name: proto.name,
     goal: proto.goal,
-    status: proto.status as Sprint['status'],
+    status: proto.status as Sprint["status"],
     startDate: proto.startDate ?? null,
     endDate: proto.endDate ?? null,
     sortOrder: proto.sortOrder,
     taskCount: proto.taskCount,
     completedTaskCount: proto.completedTaskCount,
-    createdAt: (proto.createdAt ? timestampDate(proto.createdAt).toISOString() : new Date().toISOString()),
-    updatedAt: (proto.updatedAt ? timestampDate(proto.updatedAt).toISOString() : new Date().toISOString()),
+    createdAt: proto.createdAt
+      ? timestampDate(proto.createdAt).toISOString()
+      : new Date().toISOString(),
+    updatedAt: proto.updatedAt
+      ? timestampDate(proto.updatedAt).toISOString()
+      : new Date().toISOString(),
   };
 }
 
-function frontendFieldValuesToProto(fieldValues: Record<string, FieldValue>): Record<string, string> {
+function frontendFieldValuesToProto(
+  fieldValues: Record<string, FieldValue>,
+): Record<string, string> {
   const result: Record<string, string> = {};
   Object.entries(fieldValues).forEach(([key, value]) => {
-    if (Array.isArray(value) || typeof value === 'object') {
+    if (Array.isArray(value) || typeof value === "object") {
       result[key] = JSON.stringify(value);
     } else {
       result[key] = String(value);
@@ -331,7 +355,7 @@ export const projectsApi = {
 
   createProject: async (
     data: FrontendCreateProjectRequest,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ project: Project; protoProject: ProtoProject }> => {
     const response = await projectsClient.createProject({
       organizationId,
@@ -340,7 +364,9 @@ export const projectsApi = {
       icon: data.icon,
       color: data.color,
       ...(data.accessMode !== undefined ? { accessMode: data.accessMode } : {}),
-      ...(data.baselineRole !== undefined && data.baselineRole !== null ? { baselineRole: data.baselineRole } : {}),
+      ...(data.baselineRole !== undefined && data.baselineRole !== null
+        ? { baselineRole: data.baselineRole }
+        : {}),
       ...(data.slug ? { slug: data.slug } : {}),
       ...(data.tagIds ? { tagIds: data.tagIds } : {}),
     });
@@ -352,7 +378,7 @@ export const projectsApi = {
 
   updateProject: async (
     data: FrontendUpdateProjectRequest,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ project: Project; protoProject: ProtoProject }> => {
     const typeFieldSchemas: Record<string, ProtoTypeFieldSchema> = {};
     if (data.typeFieldSchemas) {
@@ -396,7 +422,7 @@ export const projectsApi = {
     organizationId: string,
     options: {
       tagIds?: string[];
-      tagFilterMode?: 'all' | 'any' | 'none';
+      tagFilterMode?: "all" | "any" | "none";
       inEpicId?: string;
       rootOnly?: boolean;
       hasSubtasks?: boolean;
@@ -405,17 +431,15 @@ export const projectsApi = {
     } = {},
   ): Promise<{ tasks: Task[]; protoTasks: ProtoTask[] }> => {
     const tagFilterMode =
-      options.tagFilterMode === 'any'
+      options.tagFilterMode === "any"
         ? ProtoTagFilterMode.ANY
-        : options.tagFilterMode === 'none'
+        : options.tagFilterMode === "none"
           ? ProtoTagFilterMode.NONE
           : ProtoTagFilterMode.ALL;
     const response = await projectsClient.listTasks({
       organizationId,
       projectId,
-      ...(options.tagIds && options.tagIds.length
-        ? { tagIds: options.tagIds, tagFilterMode }
-        : {}),
+      ...(options.tagIds && options.tagIds.length ? { tagIds: options.tagIds, tagFilterMode } : {}),
       ...(options.inEpicId ? { inEpicId: options.inEpicId } : {}),
       ...(options.rootOnly ? { rootOnly: true } : {}),
       ...(options.hasSubtasks !== undefined ? { hasSubtasks: options.hasSubtasks } : {}),
@@ -444,7 +468,7 @@ export const projectsApi = {
 
   createTask: async (
     data: FrontendCreateTaskRequest,
-    organizationId: string
+    organizationId: string,
   ): Promise<{
     task: Task;
     updatedParent?: Task;
@@ -471,7 +495,9 @@ export const projectsApi = {
     });
     return {
       task: protoTaskToFrontend(response.task!),
-      updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
+      updatedParent: response.updatedParent
+        ? protoTaskToFrontend(response.updatedParent)
+        : undefined,
       protoTask: response.task!,
       protoUpdatedParent: response.updatedParent,
     };
@@ -479,7 +505,7 @@ export const projectsApi = {
 
   updateTask: async (
     data: FrontendUpdateTaskRequest,
-    organizationId: string
+    organizationId: string,
   ): Promise<{
     task: Task;
     updatedParent?: Task;
@@ -504,14 +530,20 @@ export const projectsApi = {
       ...(data.sprintId !== undefined ? { sprintId: data.sprintId ?? "" } : {}),
       ...(data.parentId !== undefined ? { parentId: data.parentId ?? "" } : {}),
       ...(data.blockedByTaskIds !== undefined ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
-      ...(data.estimatedMinutes !== undefined ? { estimatedMinutes: data.estimatedMinutes ?? 0 } : {}),
-      ...(data.timeSpentMinutes !== undefined ? { timeSpentMinutes: data.timeSpentMinutes ?? 0 } : {}),
+      ...(data.estimatedMinutes !== undefined
+        ? { estimatedMinutes: data.estimatedMinutes ?? 0 }
+        : {}),
+      ...(data.timeSpentMinutes !== undefined
+        ? { timeSpentMinutes: data.timeSpentMinutes ?? 0 }
+        : {}),
       ...(data.recurrenceRule !== undefined ? { recurrenceRule: data.recurrenceRule ?? "" } : {}),
       ...(data.tagIds !== undefined ? { tagIds: { ids: data.tagIds } } : {}),
     });
     return {
       task: protoTaskToFrontend(response.task!),
-      updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
+      updatedParent: response.updatedParent
+        ? protoTaskToFrontend(response.updatedParent)
+        : undefined,
       spawnedTask: response.spawnedTask ? protoTaskToFrontend(response.spawnedTask) : undefined,
       protoTask: response.task!,
       protoUpdatedParent: response.updatedParent,
@@ -522,7 +554,7 @@ export const projectsApi = {
   /** Optimized path for drag-and-drop reorder. */
   moveTask: async (
     data: FrontendMoveTaskRequest,
-    organizationId: string
+    organizationId: string,
   ): Promise<{
     task: Task;
     updatedParent?: Task;
@@ -539,7 +571,9 @@ export const projectsApi = {
     });
     return {
       task: protoTaskToFrontend(response.task!),
-      updatedParent: response.updatedParent ? protoTaskToFrontend(response.updatedParent) : undefined,
+      updatedParent: response.updatedParent
+        ? protoTaskToFrontend(response.updatedParent)
+        : undefined,
       spawnedTask: response.spawnedTask ? protoTaskToFrontend(response.spawnedTask) : undefined,
       protoTask: response.task!,
       protoUpdatedParent: response.updatedParent,
@@ -558,7 +592,10 @@ export const projectsApi = {
     };
   },
 
-  deleteTasks: async (taskIds: string[], organizationId: string): Promise<{ success: boolean; deletedCount: number }> => {
+  deleteTasks: async (
+    taskIds: string[],
+    organizationId: string,
+  ): Promise<{ success: boolean; deletedCount: number }> => {
     const response = await projectsClient.deleteTasks({
       organizationId,
       taskIds,
@@ -572,8 +609,13 @@ export const projectsApi = {
 
   bulkUpdateTasks: async (
     taskIds: string[],
-    updates: { status?: string; priority?: string; assigneeIds?: string[]; sprintId?: string | null },
-    organizationId: string
+    updates: {
+      status?: string;
+      priority?: string;
+      assigneeIds?: string[];
+      sprintId?: string | null;
+    },
+    organizationId: string,
   ): Promise<{ tasks: Task[]; updatedCount: number; protoTasks: ProtoTask[] }> => {
     const response = await projectsClient.bulkUpdateTasks({
       organizationId,
@@ -592,8 +634,8 @@ export const projectsApi = {
 
   createField: async (
     projectId: string,
-    field: Omit<FieldDefinition, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>,
-    organizationId: string
+    field: Omit<FieldDefinition, "id" | "projectId" | "createdAt" | "updatedAt">,
+    organizationId: string,
   ): Promise<{ field: FieldDefinition }> => {
     const response = await projectsClient.createField({
       organizationId,
@@ -613,7 +655,7 @@ export const projectsApi = {
     projectId: string,
     fieldId: string,
     updates: Partial<FieldDefinition>,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ field: FieldDefinition }> => {
     const response = await projectsClient.updateField({
       organizationId,
@@ -632,7 +674,7 @@ export const projectsApi = {
   deleteField: async (
     projectId: string,
     fieldId: string,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ success: boolean }> => {
     const response = await projectsClient.deleteField({
       organizationId,
@@ -646,8 +688,8 @@ export const projectsApi = {
 
   createView: async (
     projectId: string,
-    view: Omit<ViewConfig, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>,
-    organizationId: string
+    view: Omit<ViewConfig, "id" | "projectId" | "createdAt" | "updatedAt">,
+    organizationId: string,
   ): Promise<{ view: ViewConfig }> => {
     const response = await projectsClient.createView({
       organizationId,
@@ -666,7 +708,7 @@ export const projectsApi = {
     projectId: string,
     viewId: string,
     updates: Partial<ViewConfig>,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ view: ViewConfig }> => {
     const response = await projectsClient.updateView({
       organizationId,
@@ -684,7 +726,7 @@ export const projectsApi = {
   deleteView: async (
     projectId: string,
     viewId: string,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ success: boolean }> => {
     const response = await projectsClient.deleteView({
       organizationId,
@@ -698,7 +740,7 @@ export const projectsApi = {
 
   listActivities: async (
     taskId: string,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ activities: TaskActivity[] }> => {
     const response = await projectsClient.listActivities({
       organizationId,
@@ -712,12 +754,15 @@ export const projectsApi = {
   /** Stubbed until a dedicated members endpoint exists. */
   getProjectMembers: async (
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _projectId: string
+    _projectId: string,
   ): Promise<{ members: Array<{ id: string; name: string; initials: string; color: string }> }> => {
     return { members: [] };
   },
 
-  listSprints: async (projectId: string, organizationId: string): Promise<{ sprints: Sprint[] }> => {
+  listSprints: async (
+    projectId: string,
+    organizationId: string,
+  ): Promise<{ sprints: Sprint[] }> => {
     const response = await projectsClient.listSprints({
       organizationId,
       projectId,
@@ -728,7 +773,7 @@ export const projectsApi = {
 
   createSprint: async (
     data: FrontendCreateSprintRequest,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ sprint: Sprint }> => {
     const response = await projectsClient.createSprint({
       organizationId,
@@ -743,7 +788,7 @@ export const projectsApi = {
 
   updateSprint: async (
     data: FrontendUpdateSprintRequest,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ sprint: Sprint }> => {
     const response = await projectsClient.updateSprint({
       organizationId,
@@ -758,7 +803,7 @@ export const projectsApi = {
 
   startSprint: async (
     data: FrontendStartSprintRequest,
-    organizationId: string
+    organizationId: string,
   ): Promise<{ sprint: Sprint }> => {
     const response = await projectsClient.startSprint({
       organizationId,

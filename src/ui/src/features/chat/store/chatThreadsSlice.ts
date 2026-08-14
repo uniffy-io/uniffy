@@ -1,6 +1,6 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { ChatMessage, ThreadInboxItem } from '@/features/chat/types';
-import type { RootState } from '@/app/store';
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { ChatMessage, ThreadInboxItem } from "@/features/chat/types";
+import type { RootState } from "@/app/store";
 
 interface ChatThreadsState {
   activeThreadId: string | null;
@@ -19,7 +19,7 @@ const initialState: ChatThreadsState = {
 };
 
 export const chatThreadsSlice = createSlice({
-  name: 'chatThreads',
+  name: "chatThreads",
   initialState,
   reducers: {
     setActiveThread: (state, action: PayloadAction<string | null>) => {
@@ -50,9 +50,7 @@ export const chatThreadsSlice = createSlice({
       }
     },
     unfollowThread: (state, action: PayloadAction<string>) => {
-      state.followedThreads = state.followedThreads.filter(
-        (id) => id !== action.payload,
-      );
+      state.followedThreads = state.followedThreads.filter((id) => id !== action.payload);
     },
     setThreadsInbox: (state, action: PayloadAction<ThreadInboxItem[]>) => {
       state.threadsInbox = action.payload;
@@ -74,10 +72,10 @@ export const chatThreadsSlice = createSlice({
     ) => {
       const { messageId, emoji, userId, currentUserId } = action.payload;
       for (const messages of Object.values(state.threadMessages)) {
-        const msg = messages.find(m => m.id === messageId);
+        const msg = messages.find((m) => m.id === messageId);
         if (!msg) continue;
         if (!msg.reactions) msg.reactions = [];
-        const group = msg.reactions.find(r => r.emoji === emoji);
+        const group = msg.reactions.find((r) => r.emoji === emoji);
         if (group) {
           if (!group.userIds.includes(userId)) {
             group.count += 1;
@@ -106,15 +104,15 @@ export const chatThreadsSlice = createSlice({
     ) => {
       const { messageId, emoji, userId, currentUserId } = action.payload;
       for (const messages of Object.values(state.threadMessages)) {
-        const msg = messages.find(m => m.id === messageId);
+        const msg = messages.find((m) => m.id === messageId);
         if (!msg?.reactions) continue;
-        const group = msg.reactions.find(r => r.emoji === emoji);
+        const group = msg.reactions.find((r) => r.emoji === emoji);
         if (!group) continue;
         group.count = Math.max(0, group.count - 1);
-        group.userIds = group.userIds.filter(id => id !== userId);
+        group.userIds = group.userIds.filter((id) => id !== userId);
         if (userId === currentUserId) group.currentUserReacted = false;
         if (group.count === 0) {
-          msg.reactions = msg.reactions.filter(r => r.emoji !== emoji);
+          msg.reactions = msg.reactions.filter((r) => r.emoji !== emoji);
         }
         return;
       }
@@ -146,10 +144,10 @@ export const chatThreadsSlice = createSlice({
         if (!msg) continue;
 
         const meta = (msg.metadata ?? {}) as Record<string, unknown>;
-        const lastSeq = typeof meta.streaming_sequence === 'number' ? meta.streaming_sequence : 0;
+        const lastSeq = typeof meta.streaming_sequence === "number" ? meta.streaming_sequence : 0;
         if (sequence <= lastSeq && !final) return;
 
-        msg.content = (msg.content ?? '') + delta;
+        msg.content = (msg.content ?? "") + delta;
         const nextMeta: Record<string, unknown> = {
           ...meta,
           streaming_sequence: sequence,

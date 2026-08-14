@@ -45,10 +45,7 @@ export function BoardSwimlane({
 }: BoardSwimlaneProps) {
   const { isMobile } = useBreakpoint();
 
-  const totalTasks = statusOptions.reduce(
-    (sum, s) => sum + (tasksByStatus[s.id]?.length ?? 0),
-    0,
-  );
+  const totalTasks = statusOptions.reduce((sum, s) => sum + (tasksByStatus[s.id]?.length ?? 0), 0);
   const doneTasks = statusOptions.reduce(
     (sum, s) => sum + (doneStatusIds.has(s.id) ? (tasksByStatus[s.id]?.length ?? 0) : 0),
     0,

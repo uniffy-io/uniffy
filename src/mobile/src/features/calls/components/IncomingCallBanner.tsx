@@ -61,7 +61,7 @@ export function IncomingCallBanner() {
     }
     // expo-audio's AudioPlayer is a mutable native handle; `loop` has no
     // constructor option, so assigning the property is the intended API.
-    // eslint-disable-next-line react-hooks/immutability
+    // eslint-disable-next-line react/react-compiler
     player.loop = true;
     void player.seekTo(0);
     player.play();

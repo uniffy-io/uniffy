@@ -1,11 +1,8 @@
-import { lazy } from 'react';
-import type { ComponentType } from 'react';
+import { lazy } from "react";
+import type { ComponentType } from "react";
 
 /** Adapter that lets `React.lazy` consume named exports - the codebase convention. */
-export function lazyImport<
-  T extends Record<string, unknown>,
-  K extends keyof T,
->(
+export function lazyImport<T extends Record<string, unknown>, K extends keyof T>(
   factory: () => Promise<T>,
   name: K,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

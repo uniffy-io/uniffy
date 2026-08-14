@@ -1,10 +1,10 @@
-import { type ReactNode } from 'react';
-import type { Icon } from '@phosphor-icons/react';
-import { CaretDoubleRight } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { SidebarOverlayContext } from '@/components/layout/SidebarOverlayContext';
+import { type ReactNode } from "react";
+import type { Icon } from "@phosphor-icons/react";
+import { CaretDoubleRight } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { SidebarOverlayContext } from "@/components/layout/SidebarOverlayContext";
 
-export { SidebarOverlayContext } from '@/components/layout/SidebarOverlayContext';
+export { SidebarOverlayContext } from "@/components/layout/SidebarOverlayContext";
 
 export interface SidebarSection {
   id: string;
@@ -45,15 +45,15 @@ export function CollapsibleSidebarRail({
               type="button"
               onClick={section.onClick}
               className={cn(
-                'p-1.5 rounded-lg transition-colors cursor-pointer',
+                "p-1.5 rounded-lg transition-colors cursor-pointer",
                 section.isActive
-                  ? 'text-primary bg-primary/10'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
               title={section.label}
             >
               <span className="flex items-center justify-center w-7 h-7 rounded-md">
-                <IconComponent size={20} weight={section.isActive ? 'fill' : 'duotone'} />
+                <IconComponent size={20} weight={section.isActive ? "fill" : "duotone"} />
               </span>
             </button>
           );
@@ -62,19 +62,17 @@ export function CollapsibleSidebarRail({
 
       <div
         className={cn(
-          'absolute inset-y-0 left-0 z-10',
-          'w-0 group-hover/sidebar:w-72',
-          'overflow-hidden',
-          'transition-[width,box-shadow] duration-200 ease-out',
-          'bg-background',
-          'group-hover/sidebar:shadow-xl',
-          'group-hover/sidebar:border-r group-hover/sidebar:border-border'
+          "absolute inset-y-0 left-0 z-10",
+          "w-0 group-hover/sidebar:w-72",
+          "overflow-hidden",
+          "transition-[width,box-shadow] duration-200 ease-out",
+          "bg-background",
+          "group-hover/sidebar:shadow-xl",
+          "group-hover/sidebar:border-r group-hover/sidebar:border-border",
         )}
       >
         <div className="w-72 h-full overflow-hidden">
-          <SidebarOverlayContext.Provider value={true}>
-            {children}
-          </SidebarOverlayContext.Provider>
+          <SidebarOverlayContext.Provider value={true}>{children}</SidebarOverlayContext.Provider>
         </div>
       </div>
     </div>

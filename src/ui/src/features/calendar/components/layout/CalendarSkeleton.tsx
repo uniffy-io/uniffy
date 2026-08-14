@@ -1,6 +1,6 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function CalendarSkeleton() {
   return (
@@ -21,18 +21,14 @@ export function CalendarSkeleton() {
           >
             <Skeleton variant="text" className="w-5 h-3 mb-1.5" />
             {/* Index-based pseudo-randomness keeps event blocks deterministic across renders. */}
-            {i % 3 === 0 && (
-              <Skeleton variant="rectangular" className="w-full h-3 mb-1" />
-            )}
+            {i % 3 === 0 && <Skeleton variant="rectangular" className="w-full h-3 mb-1" />}
             {i % 5 === 1 && (
               <>
                 <Skeleton variant="rectangular" className="w-full h-3 mb-1" />
                 <Skeleton variant="rectangular" className="w-3/4 h-3" />
               </>
             )}
-            {i % 7 === 3 && (
-              <Skeleton variant="rectangular" className="w-2/3 h-3" />
-            )}
+            {i % 7 === 3 && <Skeleton variant="rectangular" className="w-2/3 h-3" />}
           </div>
         ))}
       </div>
