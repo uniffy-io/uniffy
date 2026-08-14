@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  prettier@3: 3.9.4
-
 importers:
 
   .: {}
@@ -659,7 +656,7 @@ packages:
     resolution: {integrity: sha512-b64bWT74Vq/ORcSqW7TdIjjpB6hcl+Ei/lMANIUaAGlLPiYNtPTRI/j2tzvugT+LoVwfJtE2Ukq/t2OGCyEtfQ==}
     hasBin: true
     peerDependencies:
-      prettier: 3.9.4
+      prettier: ^3.0.0
       prettier-plugin-astro: '>=0.11.0'
     peerDependenciesMeta:
       prettier:
@@ -8917,7 +8914,7 @@ packages:
     resolution: {integrity: sha512-Z6BCFSpGVCd8BPAsZ785Kce1BGlWd5ODqmqZGVuB14MJvrR4+CYz6cDy4F+igmE1gMifqfvMhdgT8Aud4M5ngg==}
     peerDependencies:
       '@volar/language-service': ~2.4.0
-      prettier: 3.9.4
+      prettier: ^2.2 || ^3.0
     peerDependenciesMeta:
       '@volar/language-service':
         optional: true
