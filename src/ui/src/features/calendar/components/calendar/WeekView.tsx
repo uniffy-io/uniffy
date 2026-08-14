@@ -167,7 +167,7 @@ export function WeekView() {
 
       let eventToUpdate = null;
       for (const evts of positionedEventsMap.values()) {
-        const found = evts.find((e) => e.id === draggedEventId);
+        const found = evts.find((event) => event.id === draggedEventId);
         if (found) {
           eventToUpdate = found;
           break;

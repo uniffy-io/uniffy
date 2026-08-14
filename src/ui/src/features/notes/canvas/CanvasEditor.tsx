@@ -705,14 +705,14 @@ function CanvasEditorInner({
   const handleAddTextBlock = useCallback(() => {
     if (readonly) return;
     const position = getCenterPosition();
-    const defaults = getStyleDefaults();
+    const styleDefaults = getStyleDefaults();
     const nodeId = generateNodeId();
     const newNode: TextCanvasNode = {
       id: nodeId,
       type: "text",
       position,
       selected: true,
-      data: { type: "text", content: "", ...defaults },
+      data: { type: "text", content: "", ...styleDefaults },
       style: { width: 250, height: 40 },
     };
     setNodes((nds) => {
@@ -739,12 +739,18 @@ function CanvasEditorInner({
         const fileId = urlParts[urlParts.length - 1];
 
         const position = getCenterPosition();
-        const defaults = getStyleDefaults();
+        const styleDefaults = getStyleDefaults();
         const newNode: MediaCanvasNode = {
           id: generateNodeId(),
           type: "media",
           position,
-          data: { type: "media", fileId, mimeType: file.type, filename: file.name, ...defaults },
+          data: {
+            type: "media",
+            fileId,
+            mimeType: file.type,
+            filename: file.name,
+            ...styleDefaults,
+          },
           style: { width: 320, height: 240 },
         };
         setNodes((nds) => {
@@ -771,12 +777,13 @@ function CanvasEditorInner({
     (shape: "rect" | "ellipse" | "diamond") => {
       if (readonly) return;
       const position = getCenterPosition();
-      const defaults = getStyleDefaults();
+      const styleDefaults = getStyleDefaults();
       // Shapes use "color" for SVG fill; map bgColor -> color.
       const shapeDefaults: Record<string, unknown> = {};
-      if (defaults.bgColor) shapeDefaults.color = defaults.bgColor;
-      if (defaults.borderColor) shapeDefaults.borderColor = defaults.borderColor;
-      if (defaults.borderWidth !== undefined) shapeDefaults.borderWidth = defaults.borderWidth;
+      if (styleDefaults.bgColor) shapeDefaults.color = styleDefaults.bgColor;
+      if (styleDefaults.borderColor) shapeDefaults.borderColor = styleDefaults.borderColor;
+      if (styleDefaults.borderWidth !== undefined)
+        shapeDefaults.borderWidth = styleDefaults.borderWidth;
       const newNode: ShapeCanvasNode = {
         id: generateNodeId(),
         type: "shape",
@@ -1111,7 +1118,7 @@ function CanvasEditorInner({
       if (readonly) return;
       const position = getCenterPosition();
       const parsed = parseUrn(result.urn);
-      const defaults = getStyleDefaults();
+      const styleDefaults = getStyleDefaults();
 
       if (parsed.type === UrnType.NOTE) {
         const newNode: NoteCanvasNode = {
@@ -1123,7 +1130,7 @@ function CanvasEditorInner({
             noteId: parsed.id,
             title: result.title,
             urn: result.urn,
-            ...defaults,
+            ...styleDefaults,
           },
           style: { width: 280, height: 200 },
         };
@@ -1143,7 +1150,7 @@ function CanvasEditorInner({
             fileId: parsed.id,
             mimeType: mime,
             filename: result.title,
-            ...defaults,
+            ...styleDefaults,
           },
           style: { width: 320, height: 240 },
         };
@@ -1158,7 +1165,7 @@ function CanvasEditorInner({
           id: generateNodeId(),
           type: "text",
           position,
-          data: { type: "text", content: mentionMarkdown, ...defaults },
+          data: { type: "text", content: mentionMarkdown, ...styleDefaults },
           style: { width: 300, height: 100 },
         };
         setNodes((nds) => {

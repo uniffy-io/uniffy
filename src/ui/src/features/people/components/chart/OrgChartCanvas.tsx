@@ -244,11 +244,11 @@ export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasP
     const drawnIds = new Set<string>();
     const queue: string[] = [];
     let head = 0;
-    let budgetReached = false;
+    let budgetExhausted = false;
     const enqueue = (id: string): boolean => {
       if (drawnIds.has(id)) return true;
       if (drawnIds.size >= MAX_RENDERED_NODES) {
-        budgetReached = true;
+        budgetExhausted = true;
         return false;
       }
       drawnIds.add(id);
@@ -262,7 +262,7 @@ export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasP
         if (kids.length === 0 || !isExpanded(id)) continue;
         // Siblings are all-or-nothing; half a row of reports reads as data loss.
         if (drawnIds.size + kids.length > MAX_RENDERED_NODES) {
-          budgetReached = true;
+          budgetExhausted = true;
           continue;
         }
         for (const kid of kids) enqueue(kid);
@@ -346,7 +346,7 @@ export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasP
       });
     }
 
-    const flowEdges: Edge[] = visible.flatMap((node) => {
+    const managerEdges: Edge[] = visible.flatMap((node) => {
       const { managerId, inherited } = managerByNode.get(node.userId)!;
       if (!managerId || !drawnIds.has(managerId)) return [];
       return [
@@ -368,10 +368,10 @@ export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasP
 
     return {
       flowNodes: [...groupNodes, ...personNodes],
-      flowEdges,
+      flowEdges: managerEdges,
       drawnCount: visible.length,
       totalCount: candidates.length,
-      budgetReached,
+      budgetReached: budgetExhausted,
     };
   }, [nodes, teams, selectedTeamId, overrides, setBranchExpanded]);
 

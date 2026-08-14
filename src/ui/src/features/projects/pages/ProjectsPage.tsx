@@ -101,8 +101,8 @@ export function ProjectsPage() {
   }, [dispatch, taskId]);
 
   useEffect(() => {
-    const currentProjectId = currentProject?.id;
-    if (!currentProjectId) return;
+    const openProjectId = currentProject?.id;
+    if (!openProjectId) return;
 
     // URL represents single-task viewing; skip while multi-selecting.
     if (selectedTaskIds.length > 1) return;
@@ -110,11 +110,11 @@ export function ProjectsPage() {
     if (selectedTaskId && isDetailPanelOpen) {
       if (taskId !== selectedTaskId) {
         isProgrammaticNav.current = true;
-        navigate(`/projects/${currentProjectId}/tasks/${selectedTaskId}`, { replace: true });
+        navigate(`/projects/${openProjectId}/tasks/${selectedTaskId}`, { replace: true });
       }
     } else if (taskId) {
       isProgrammaticNav.current = true;
-      navigate(`/projects/${currentProjectId}`, { replace: true });
+      navigate(`/projects/${openProjectId}`, { replace: true });
     }
   }, [
     selectedTaskId,

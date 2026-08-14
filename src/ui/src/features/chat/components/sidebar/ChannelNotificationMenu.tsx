@@ -46,8 +46,8 @@ export function ChannelNotificationMenu({ channelId, onClose }: ChannelNotificat
   const notificationLevel =
     channelPrefs?.notificationLevel ?? currentMember?.notificationLevel ?? "ALL";
   const followAllThreads = useAppSelector((state) => {
-    const members = state.chatChannels.channelMembers[channelId];
-    const me = members?.find((m) => m.userId === currentUserId);
+    const channelMembers = state.chatChannels.channelMembers[channelId];
+    const me = channelMembers?.find((m) => m.userId === currentUserId);
     return me?.followAllThreads ?? false;
   });
 

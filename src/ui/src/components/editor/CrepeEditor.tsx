@@ -609,7 +609,7 @@ export function CrepeEditor({
       if (!mentionPopup) return;
 
       const { view, from: storedFrom, query } = mentionPopup;
-      const { state, dispatch } = view;
+      const { state, dispatch: dispatchTransaction } = view;
       const { schema } = state;
 
       // Use stored from position (@ symbol) and calculate to based on query length
@@ -649,7 +649,7 @@ export function CrepeEditor({
       // Set cursor after the space
       tr.setSelection(Selection.near(tr.doc.resolve(spacePos + 1)));
 
-      dispatch(tr);
+      dispatchTransaction(tr);
       view.focus();
       setMentionPopup(null);
     },

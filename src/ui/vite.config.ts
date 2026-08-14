@@ -89,7 +89,7 @@ export default defineConfig(({ command, mode }) => {
         target: process.env.LIVEKIT_PROXY_TARGET || 'http://localhost:7880',
         changeOrigin: true,
         ws: true,
-        rewrite: (path) => path.replace(/^\/livekit/, ''),
+        rewrite: (requestPath) => requestPath.replace(/^\/livekit/, ''),
       },
       '/api': {
         target: process.env.API_PROXY_TARGET || 'http://localhost:8000',

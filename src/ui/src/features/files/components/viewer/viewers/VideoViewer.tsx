@@ -101,17 +101,17 @@ export function VideoViewer({ file }: VideoViewerProps) {
     player.on("error", () => {
       dispatch(setViewerLoading(false));
       const err = player.error();
-      const swController = navigator.serviceWorker?.controller;
+      const currentSwController = navigator.serviceWorker?.controller;
       console.error("[VideoViewer] Playback error:", {
         code: err?.code,
         message: err?.message,
         streamUrl,
         mimeType: file.mimeType,
-        swControlling: !!swController,
+        swControlling: !!currentSwController,
       });
       if (err?.code === 4) {
         // Check if this might be a SW issue
-        if (!swController) {
+        if (!currentSwController) {
           setError("Media streaming unavailable. Please refresh the page.");
         } else {
           setError(

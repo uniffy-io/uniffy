@@ -125,7 +125,7 @@ export function DayView() {
       const newStartDate = new Date(currentDate);
       newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
 
-      const match = positionedEvents.find((e) => e.id === draggedEventId);
+      const match = positionedEvents.find((event) => event.id === draggedEventId);
       if (!match) return;
 
       const start = new Date(match.startTime);

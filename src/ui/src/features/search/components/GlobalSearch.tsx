@@ -86,14 +86,14 @@ export function GlobalSearch() {
 
     // Users open the 1:1 DM (create_dm is idempotent for pairs).
     if (result.type === SearchResultType.USER) {
-      const userId = result.urn.split(":").pop();
-      if (userId) {
+      const targetUserId = result.urn.split(":").pop();
+      if (targetUserId) {
         try {
           const channel = await dispatch(
             createChannel({
               name: "",
               channelType: ChannelType.DIRECT,
-              memberIds: [userId],
+              memberIds: [targetUserId],
             }),
           ).unwrap();
           navigate(`/chat/${channel.id}`);
