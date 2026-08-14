@@ -15,6 +15,7 @@ import {
   ArrowClockwise,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { friendlyErrorMessage } from "@/config";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { cn } from "@/shared/utils/cn";
 import { RecordingPopover } from "@/features/recording/components/RecordingPopover";
@@ -147,6 +148,8 @@ export function RecordingNavTrigger() {
                 className: "text-yellow-700 dark:text-yellow-300 bg-yellow-500/10",
               }
             : null;
+
+    const errorLabel = error ? (friendlyErrorMessage(error.message) ?? "Recording error") : null;
 
     const statusLabel = isError
       ? "Recording failed"
@@ -286,12 +289,12 @@ export function RecordingNavTrigger() {
             </button>
           )}
 
-          {isError && error && (
+          {isError && errorLabel && (
             <span
               className="hidden xl:inline ml-1 text-[10px] text-destructive truncate max-w-[120px]"
-              title={error.message}
+              title={errorLabel}
             >
-              {error.message}
+              {errorLabel}
             </span>
           )}
         </div>
