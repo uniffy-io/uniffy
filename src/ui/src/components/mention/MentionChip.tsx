@@ -21,7 +21,6 @@ import { cn } from "@/shared/utils/cn";
 import type { Icon } from "@phosphor-icons/react";
 import type {
   MentionChipProps,
-  MentionChipBasicProps,
   MentionChipCompactProps,
   MentionLiveState,
 } from "@/components/mention/types";
@@ -273,11 +272,12 @@ function MentionChipInner({
       if (chipRef.current) {
         const rect = chipRef.current.getBoundingClientRect();
         setPreviewPosition({ x: rect.left, y: rect.bottom, top: rect.top });
-        fetchPreview(urn);
+        // USER hovers render the person card from the people store; a preview resolve would be wasted.
+        if (parsed.type !== UrnType.USER) fetchPreview(urn);
         setShowPreview(true);
       }
     }, HOVER_DELAY);
-  }, [urn, fetchPreview, cancelClose]);
+  }, [urn, parsed.type, fetchPreview, cancelClose]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimeoutRef.current) {
@@ -365,6 +365,7 @@ function MentionChipInner({
         preview={preview}
         isLoading={isLoading}
         error={error}
+        urn={urn}
         position={previewPosition}
         onClose={handleClosePreview}
         onEmbed={onReplaceWithMedia ? handleEmbed : undefined}
@@ -585,11 +586,11 @@ function MentionChipCompactInner({
       if (chipRef.current) {
         const rect = chipRef.current.getBoundingClientRect();
         setPreviewPosition({ x: rect.left, y: rect.bottom, top: rect.top });
-        fetchPreview(urn);
+        if (parsed.type !== UrnType.USER) fetchPreview(urn);
         setShowPreview(true);
       }
     }, HOVER_DELAY);
-  }, [urn, fetchPreview, cancelClose]);
+  }, [urn, parsed.type, fetchPreview, cancelClose]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimeoutRef.current) {
@@ -625,6 +626,7 @@ function MentionChipCompactInner({
         preview={preview}
         isLoading={isLoading}
         error={error}
+        urn={urn}
         position={previewPosition}
         onClose={() => {
           cancelClose();
@@ -717,54 +719,6 @@ function MentionChipCompactInner({
   );
 }
 
-/** ProseMirror NodeView fallback: no Redux context, so no hover/live state. */
-function MentionChipBasicInner({ urn, label, selected = false }: MentionChipBasicProps) {
-  const parsed = parseUrn(urn);
-  const style = getTypeStyle(parsed.type);
-  const typeLabel = getUrnTypeLabel(urn);
-  const TypeIcon = style.icon;
-
-  if (isPeopleTokenType(parsed.type)) {
-    return (
-      <span
-        role="link"
-        className={peopleTokenClasses(false, selected)}
-        title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
-      >
-        @{label}
-      </span>
-    );
-  }
-
-  return (
-    <span
-      role="link"
-      className={cn(
-        "mention-chip group/chip inline-flex items-center align-middle",
-        "gap-1.5 px-2 py-1 mx-0.5 my-0.5",
-        "rounded-md",
-        style.badgeBg,
-        "border",
-        style.border,
-        style.borderHover,
-        "cursor-pointer select-none",
-        "transition-colors duration-200",
-        selected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
-      )}
-      title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
-    >
-      <span className={cn("grid place-items-center shrink-0 w-5 h-5 rounded", style.iconBoxAccent)}>
-        <TypeIcon size={11} weight="duotone" />
-      </span>
-
-      <span className="text-sm font-medium text-foreground truncate max-w-[200px] leading-tight">
-        {label}
-      </span>
-    </span>
-  );
-}
-
 // Default shallow comparison only — context-driven re-renders need to flow through; a custom equality would shadow that contract.
 export const MentionChip = memo(MentionChipInner);
 export const MentionChipCompact = memo(MentionChipCompactInner);
-export const MentionChipBasic = memo(MentionChipBasicInner);

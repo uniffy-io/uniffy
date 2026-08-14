@@ -102,6 +102,8 @@ export interface MentionLiveState {
   userJobTitle?: string;
   userDepartment?: string;
   userTeamName?: string;
+  /** IANA zone from the people profile; drives the "It's 07:13 for Maria" hover row. */
+  userTimezone?: string;
 
   // TAG
   /** Hex / palette slug used for the tag chip swatch (already stored on tag). */
@@ -149,8 +151,6 @@ export interface MentionChipProps extends MentionChipBaseProps {
   onReplaceWithMedia?: (mediaType: "image" | "video" | "audio", url: string, title: string) => void;
   liveState?: MentionLiveState | null;
 }
-
-export type MentionChipBasicProps = MentionChipBaseProps;
 
 export interface MentionChipCompactProps extends MentionChipBaseProps {
   onClick?: (e?: React.MouseEvent) => void;

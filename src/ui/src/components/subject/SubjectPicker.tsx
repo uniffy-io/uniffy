@@ -202,7 +202,12 @@ export function SubjectPicker({
       ref={dropdownRef}
       style={
         portal && position
-          ? { position: "fixed", top: position.top, left: position.left, width: dropdownWidth }
+          ? {
+              position: "fixed",
+              top: position.top,
+              left: position.left,
+              width: dropdownWidth,
+            }
           : undefined
       }
       className={cn(
@@ -253,7 +258,8 @@ export function SubjectPicker({
                     subject.memberCount != null &&
                     subject.memberCount > 0 && (
                       <div className="text-xs text-muted-foreground">
-                        {subject.memberCount} member{subject.memberCount !== 1 ? "s" : ""}
+                        {subject.memberCount} member
+                        {subject.memberCount !== 1 ? "s" : ""}
                       </div>
                     )}
                 </div>

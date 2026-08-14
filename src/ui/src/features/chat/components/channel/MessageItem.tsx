@@ -13,7 +13,7 @@ import {
 } from "@/features/chat/components/channel/AgentMessageBody";
 import { ReactionBar } from "@/features/chat/components/reactions/ReactionBar";
 import { EmojiPicker } from "@/features/chat/components/compose/EmojiPicker";
-import { SubjectAvatarById, UserHoverCard } from "@/components/subject";
+import { SubjectAvatarById, PersonHoverCard } from "@/components/subject";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { CustomStatusDisplay } from "@/features/presence/components/CustomStatusDisplay";
 import { cn } from "@/shared/utils/cn";
@@ -22,9 +22,16 @@ import {
   addReaction,
   removeReaction,
   jumpToChannelMessage,
+  createChannel,
+  createAgentChat,
 } from "@/features/chat/store/chatThunks";
+import { selectAgentChats } from "@/features/chat/store/chatChannelsSlice";
+import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
+import { navigateTo } from "@/shared/utils/navigation";
 import { setReplyToMessage, setEditingMessage } from "@/features/chat/store/chatUiSlice";
 import { stripMarkdown } from "@/features/search/utils/stripMarkdown";
+import { effectiveDayKey, parseCalendarDate } from "@/shared/utils/dateFormatting";
+import { getPreferredTimeZone } from "@/shared/utils/timezone";
 
 function formatMessageTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -32,27 +39,30 @@ function formatMessageTime(dateStr: string): string {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: getPreferredTimeZone() ?? undefined,
   });
 }
 
 function formatMessageTimestamp(dateStr: string): string {
   const date = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today.getTime() - 86400000);
-  const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDiff = Math.round(
+    (parseCalendarDate(effectiveDayKey(new Date())).getTime() -
+      parseCalendarDate(effectiveDayKey(date)).getTime()) /
+      86400000,
+  );
 
   const time = formatMessageTime(dateStr);
 
-  if (msgDay.getTime() === today.getTime()) {
+  if (dayDiff <= 0) {
     return time;
   }
-  if (msgDay.getTime() === yesterday.getTime()) {
+  if (dayDiff === 1) {
     return `Yesterday ${time}`;
   }
   const dateLabel = date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    timeZone: getPreferredTimeZone() ?? undefined,
   });
   return `${dateLabel} ${time}`;
 }
@@ -149,7 +159,7 @@ function MessageItemInner({
   const addReactionRef = useRef<HTMLDivElement>(null);
 
   const [hoverCardVisible, setHoverCardVisible] = useState(false);
-  const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+  const [hoverAnchor, setHoverAnchor] = useState({ top: 0, right: 0, bottom: 0, left: 0 });
   const hoverTimerRef = useRef<number | undefined>(undefined);
   const closeTimerRef = useRef<number | undefined>(undefined);
   const showHoverCard = message.senderType === "USER";
@@ -160,7 +170,12 @@ function MessageItemInner({
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       hoverTimerRef.current = window.setTimeout(() => {
-        setHoverPosition({ x: rect.left, y: rect.bottom });
+        setHoverAnchor({
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          left: rect.left,
+        });
         setHoverCardVisible(true);
       }, 350);
     },
@@ -183,6 +198,49 @@ function MessageItemInner({
       setHoverCardVisible(false);
     }, 350);
   }, []);
+
+  const existingAgentChatId = useAppSelector((state) =>
+    isAgent
+      ? (selectAgentChats(state).find((c) => c.agentId === message.senderId)?.id ?? null)
+      : null,
+  );
+  const senderClickPendingRef = useRef(false);
+
+  // Fast lane: the sender name/avatar jumps straight into a DM (users) or the
+  // most recent chat with that agent; the hover card keeps the explicit actions.
+  const handleSenderClick = useCallback(async () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setHoverCardVisible(false);
+    if (message.senderType === "USER" && message.senderId === currentUserId) {
+      navigateTo(`/people/${message.senderId}`);
+      return;
+    }
+    if (senderClickPendingRef.current) return;
+    senderClickPendingRef.current = true;
+    try {
+      if (isAgent) {
+        if (existingAgentChatId) {
+          navigateTo(`/chat/${existingAgentChatId}`);
+          return;
+        }
+        const channel = await dispatch(createAgentChat({ agentId: message.senderId })).unwrap();
+        navigateTo(`/chat/${channel.id}`);
+      } else if (message.senderType === "USER") {
+        const channel = await dispatch(
+          createChannel({
+            name: "",
+            channelType: ChannelType.DIRECT,
+            memberIds: [message.senderId],
+          }),
+        ).unwrap();
+        navigateTo(`/chat/${channel.id}`);
+      }
+    } catch {
+      // The rejected thunk already surfaced a toast.
+    } finally {
+      senderClickPendingRef.current = false;
+    }
+  }, [isAgent, existingAgentChatId, message.senderType, message.senderId, currentUserId, dispatch]);
 
   const reactions = (message.reactions ?? []).map((r) => ({
     emoji: r.emoji,
@@ -345,6 +403,7 @@ function MessageItemInner({
             className="shrink-0 mt-0.5 cursor-pointer"
             onMouseEnter={handleSenderMouseEnter}
             onMouseLeave={handleSenderMouseLeave}
+            onClick={() => void handleSenderClick()}
           >
             {isAgent ? (
               <AgentAvatar
@@ -383,6 +442,7 @@ function MessageItemInner({
                 className="text-[13px] font-semibold text-foreground cursor-pointer hover:underline"
                 onMouseEnter={handleSenderMouseEnter}
                 onMouseLeave={handleSenderMouseLeave}
+                onClick={() => void handleSenderClick()}
                 data-testid={`chat-message-author-${message.id}`}
               >
                 {senderName}
@@ -517,12 +577,11 @@ function MessageItemInner({
         </div>
       </div>
 
-      {showHoverCard && (
-        <UserHoverCard
+      {showHoverCard && hoverCardVisible && (
+        <PersonHoverCard
           userId={message.senderId}
-          displayName={senderName}
-          position={hoverPosition}
-          isVisible={hoverCardVisible}
+          fallbackName={senderName}
+          anchor={hoverAnchor}
           onClose={() => setHoverCardVisible(false)}
           onMouseEnter={handleCardMouseEnter}
           onMouseLeave={handleCardMouseLeave}

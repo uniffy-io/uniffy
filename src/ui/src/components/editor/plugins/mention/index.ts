@@ -375,15 +375,3 @@ export const mentionView = $view(
 
 // The remark plugin runs first so `[[[label|urn]]]` is parsed before other processing. $remark returns a tuple, hence the spread.
 export const mentionPlugins = [...mentionRemarkPlugin, mentionNode, mentionInputRule, mentionView];
-
-export { MentionChip, MentionChipBasic, MentionChipCompact } from "@/components/mention";
-export { MentionPreview } from "@/components/mention";
-export { MentionSearch } from "@/components/editor/plugins/mention/MentionSearch";
-export {
-  useUrnPreview,
-  clearPreviewCache,
-  invalidatePreviewCache,
-  invalidateNotePreviewCache,
-} from "@/components/editor/plugins/mention/useUrnPreview";
-export type { UrnPreviewData } from "@/components/editor/plugins/mention/useUrnPreview";
-export type { MentionLiveState, TaskStatus, FileProcessingStatus } from "@/components/mention";

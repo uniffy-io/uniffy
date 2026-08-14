@@ -29,7 +29,11 @@ interface CalendarMentionPreviewProps {
 function formatEventTimeRange(startStr: string, endStr?: string, isAllDay?: boolean): string {
   const start = new Date(startStr);
   const end = endStr ? new Date(endStr) : null;
-  const dateOpts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
+  const dateOpts: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  };
   const timeOpts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
 
   if (isAllDay) {

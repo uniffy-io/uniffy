@@ -10,7 +10,6 @@ import {
   FolderMentionPreview,
   NoteMentionPreview,
   RoomMentionPreview,
-  UserMentionPreview,
   ChatMentionPreview,
   ChatMessageMentionPreview,
   AgentMentionPreview,
@@ -74,8 +73,6 @@ export function MentionExpandedCard({
         return <NoteMentionPreview {...previewProps} />;
       case UrnType.ROOM:
         return <RoomMentionPreview {...previewProps} />;
-      case UrnType.USER:
-        return <UserMentionPreview {...previewProps} />;
       case UrnType.CHAT:
         return <ChatMentionPreview {...previewProps} />;
       case UrnType.CHAT_MESSAGE:

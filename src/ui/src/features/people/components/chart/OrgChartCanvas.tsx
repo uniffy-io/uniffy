@@ -18,7 +18,7 @@ import { UsersThree } from "@phosphor-icons/react";
 import { useTheme } from "@/config/theme/ThemeProvider";
 import { layoutTree } from "@/features/people/utils/treeLayout";
 import { OrgChartNode, type PersonFlowNode } from "@/features/people/components/chart/OrgChartNode";
-import { PersonHoverCard } from "@/features/people/components/chart/PersonHoverCard";
+import { PersonHoverCard } from "@/components/subject";
 import type {
   SerializedOrgChartNode,
   SerializedTeamNode,
@@ -424,6 +424,7 @@ export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasP
         <PersonHoverCard
           userId={hovered.userId}
           anchor={hovered.anchor}
+          placement="beside"
           onMouseEnter={cancelHoverCardHide}
           onMouseLeave={scheduleHoverCardHide}
           onClose={closeHoverCard}

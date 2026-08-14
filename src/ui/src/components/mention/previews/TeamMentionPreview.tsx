@@ -53,7 +53,8 @@ export function TeamMentionPreview({
                 <>
                   <MetaSeparator />
                   <span className="text-xs text-muted-foreground">
-                    {liveState.teamMemberCount} member{liveState.teamMemberCount !== 1 ? "s" : ""}
+                    {liveState.teamMemberCount} member
+                    {liveState.teamMemberCount !== 1 ? "s" : ""}
                   </span>
                 </>
               )}

@@ -222,17 +222,18 @@ MentionChip          (full chip; hover preview, expand button, live state)
 │  ├─ ChatMentionPreview
 │  ├─ CalendarMentionPreview
 │  ├─ ProjectMentionPreview
-│  ├─ UserMentionPreview
 │  └─ AgentMentionPreview
 ├─ MentionExpandedCardSkeleton  (loading footprint, prevents size jump)
 ├─ MentionTombstoneChip / MentionTombstoneCard  (deleted state)
-└─ MentionPreview (hover popover; attaches on every chip type - the expand caret suppresses it)
+└─ MentionPreview (hover popover; attaches on every chip type - the expand caret suppresses it.
+   USER routes to the shared PersonCardContent instead of the content-preview shell; see below)
 
 MentionChipCompact   (dense inline pill; same data, smaller)
-MentionChipBasic     (no Redux, no live state; ProseMirror render fallback)
 ```
 
-**People tokens:** `USER`, `AGENT`, and `TEAM` do not render as boxed chips. All three variants render them as a Slack-style `@Name` text token, composed from `peopleTokenClasses` + `PEOPLE_TOKEN_TYPES` in `mentionConstants.ts` (every surface reuses that helper - hand-copied class strings drift): one accent for every subject kind (`text-primary` on `bg-primary/10`, `bg-primary/25` when the mentioned user IS the viewer; `MentionChipBasic` and the compose static chip render without viewer context, so they never apply the self-mention wash), baseline-aligned, no border, no avatar, no presence. Avatars, presence, the agent badge, and member counts live in the hover card only. Teams get the people treatment because a team mention notifies its members - it behaves like a people mention, so it reads like one. Mobile mirrors the contract with `MentionToken` (`src/mobile/src/shared/mentions/MentionToken.tsx`, composed by `MarkdownRenderer`): same three kinds, same single accent, self-mention wash from the signed-in user; GROUP stays a boxed chip on both platforms, and chat SYSTEM messages keep their capsule rendering with plain emphasized names.
+**People tokens:** `USER`, `AGENT`, and `TEAM` do not render as boxed chips. All three variants render them as a Slack-style `@Name` text token, composed from `peopleTokenClasses` + `PEOPLE_TOKEN_TYPES` in `mentionConstants.ts` (every surface reuses that helper - hand-copied class strings drift): one accent for every subject kind (`text-primary` on `bg-primary/10`, `bg-primary/25` when the mentioned user IS the viewer; the compose static chip renders without viewer context, so it never applies the self-mention wash), baseline-aligned, no border, no avatar, no presence. Avatars, presence, the agent badge, and member counts live in the hover card only. Teams get the people treatment because a team mention notifies its members - it behaves like a people mention, so it reads like one.
+
+**One person card everywhere.** Hovering a USER token opens `PersonHoverCard` / `PersonCardContent` (`src/ui/src/components/subject/PersonHoverCard.tsx`) - the same card the chat sender name and the org chart open. There is exactly one person hover card in the app; a surface that needs a person popover mounts this one instead of hand-rolling markup. The card merges two sources: the people-store profile snapshot (`fetchPersonThunk` - pronouns, phones, office, bio, teams with lead badges, the fields Meili does not carry) and the USER mention live state via `useMentionState` on the canonical `urn:uniffy:content:USER:{id}` key, so display name, job title, department, team, email, and timezone changes stream into an open card through `MENTION_STATE_CHANGED` without a refetch. The profile RPC on hover is a sanctioned exception to pure-Meili reads (people profiles are org-readable member-record data, see `permissions.md`); the live fields still ride the index, so the USER metadata keys and their three translator entries stay load-bearing. Mobile mirrors the contract with `MentionToken` (`src/mobile/src/shared/mentions/MentionToken.tsx`, composed by `MarkdownRenderer`): same three kinds, same single accent, self-mention wash from the signed-in user; GROUP stays a boxed chip on both platforms, and chat SYSTEM messages keep their capsule rendering with plain emphasized names.
 
 **Expandable types** (may render the block card): `TASK`, `CALENDAR_EVENT`, `PROJECT`, `FILE`, `FOLDER`, `NOTE`, `CHAT`, `CHAT_MESSAGE`, `TAG`, `ROOM`. See `mentionConstants.ts`. Other non-token types render as inline pills with a hover popover.
 

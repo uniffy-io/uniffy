@@ -67,7 +67,8 @@ export function RoomMentionPreview({
                 <>
                   <MetaSeparator />
                   <span className="text-[10px] text-muted-foreground">
-                    {liveState.roomCapacity} seat{liveState.roomCapacity === 1 ? "" : "s"}
+                    {liveState.roomCapacity} seat
+                    {liveState.roomCapacity === 1 ? "" : "s"}
                   </span>
                 </>
               )}
