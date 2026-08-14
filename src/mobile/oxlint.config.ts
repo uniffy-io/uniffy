@@ -1,12 +1,6 @@
 import { defineConfig } from 'oxlint';
 import native from 'oxlint-config-universe/native';
 
-// Layering: app -> features -> shared -> core -> theme. Dependencies point one way.
-// Lower layers must never import from higher ones, or the layering rots into a cycle.
-const layerRestriction = (groups: string[], message: string) => ({
-  'no-restricted-imports': ['error', { patterns: [{ group: groups, message }] }],
-});
-
 export default defineConfig({
   extends: [native],
   ignorePatterns: ['dist'],
@@ -40,26 +34,76 @@ export default defineConfig({
         ],
       },
     },
+    // Layering: app -> features -> shared -> core -> theme. Dependencies point one
+    // way; lower layers must never import from higher ones, or the layering rots
+    // into a cycle. Rules are inlined (not built by a helper) so defineConfig can
+    // contextually type the severity tuples.
     {
       files: ['src/shared/**/*.{ts,tsx}'],
-      rules: layerRestriction(
-        ['@features/**', '@/features/**', '@app/**', '@/app/**'],
-        'Layer violation: shared/ must not import from features/ or app/. Promote the shared code down to shared/, core/, or theme/.',
-      ),
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['@features/**', '@/features/**', '@app/**', '@/app/**'],
+                message:
+                  'Layer violation: shared/ must not import from features/ or app/. Promote the shared code down to shared/, core/, or theme/.',
+              },
+            ],
+          },
+        ],
+      },
     },
     {
       files: ['src/core/**/*.{ts,tsx}'],
-      rules: layerRestriction(
-        ['@features/**', '@/features/**', '@app/**', '@/app/**', '@shared/**', '@/shared/**'],
-        'Layer violation: core/ is app infrastructure and must not import from features/, app/, or shared/.',
-      ),
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: [
+                  '@features/**',
+                  '@/features/**',
+                  '@app/**',
+                  '@/app/**',
+                  '@shared/**',
+                  '@/shared/**',
+                ],
+                message:
+                  'Layer violation: core/ is app infrastructure and must not import from features/, app/, or shared/.',
+              },
+            ],
+          },
+        ],
+      },
     },
     {
       files: ['src/theme/**/*.{ts,tsx}'],
-      rules: layerRestriction(
-        ['@features/**', '@/features/**', '@app/**', '@/app/**', '@shared/**', '@/shared/**', '@core/**', '@/core/**'],
-        'Layer violation: theme/ holds pure design tokens and must not import from any other layer.',
-      ),
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: [
+                  '@features/**',
+                  '@/features/**',
+                  '@app/**',
+                  '@/app/**',
+                  '@shared/**',
+                  '@/shared/**',
+                  '@core/**',
+                  '@/core/**',
+                ],
+                message:
+                  'Layer violation: theme/ holds pure design tokens and must not import from any other layer.',
+              },
+            ],
+          },
+        ],
+      },
     },
     {
       // Filenames are PascalCase (React component modules) or camelCase (everything else);
