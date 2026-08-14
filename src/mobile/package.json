@@ -4,10 +4,11 @@
   "version": "1.0.0",
   "scripts": {
     "start": "npx expo start",
-    "lint": "npx expo lint",
-    "lint:fix": "npx expo lint --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,json}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,json}\"",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "doctor": "expo-doctor",
+    "format": "oxfmt src",
+    "format:check": "oxfmt --check src",
     "android": "expo run:android",
     "ios": "expo run:ios"
   },
@@ -79,10 +80,10 @@
     "@types/react": "~19.2.14",
     "babel-plugin-react-compiler": "^19.0.0-beta-e993439-20250117",
     "babel-preset-expo": "~57.0.2",
-    "eslint": "^9.31.0",
-    "eslint-config-expo": "~57.0.0",
-    "eslint-plugin-unicorn": "^71.1.0",
-    "prettier": "^3.9.4",
+    "expo-doctor": "^1.20.1",
+    "oxfmt": "^0.62.0",
+    "oxlint": "^1.77.0",
+    "oxlint-config-universe": "^0.0.3",
     "typescript": "~6.0.3"
   },
   "private": true

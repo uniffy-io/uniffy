@@ -10,6 +10,7 @@
     "mobile:lint": "pnpm --filter uniffy-mobile lint"
   },
   "engines": {
-    "pnpm": ">=9"
-  }
+    "pnpm": ">=11"
+  },
+  "packageManager": "pnpm@11.20.0"
 }

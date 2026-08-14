@@ -1,6 +1,6 @@
-import { WarningCircle, ArrowClockwise, House } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/shared/utils/cn';
+import { WarningCircle, ArrowClockwise, House } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/shared/utils/cn";
 
 interface PageErrorFallbackProps {
   error: Error;
@@ -9,31 +9,30 @@ interface PageErrorFallbackProps {
 }
 
 export function PageErrorFallback({ error, reset, className }: PageErrorFallbackProps) {
-  const isChunkError = error.message?.includes('Failed to fetch dynamically imported module')
-    || error.message?.includes('Loading chunk')
-    || error.message?.includes('Loading CSS chunk');
+  const isChunkError =
+    error.message?.includes("Failed to fetch dynamically imported module") ||
+    error.message?.includes("Loading chunk") ||
+    error.message?.includes("Loading CSS chunk");
 
   return (
-    <div className={cn(
-      'flex flex-col items-center justify-center min-h-[60vh] bg-background px-4',
-      className,
-    )}>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center min-h-[60vh] bg-background px-4",
+        className,
+      )}
+    >
       <WarningCircle size={48} weight="duotone" className="text-red-500 dark:text-red-400 mb-4" />
       <h2 className="text-lg font-semibold text-foreground mb-2">
-        {isChunkError ? 'Update available' : 'Something went wrong'}
+        {isChunkError ? "Update available" : "Something went wrong"}
       </h2>
       <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
         {isChunkError
-          ? 'A newer version of the app is available. Please reload to get the latest update.'
-          : 'An unexpected error occurred while loading this page. You can try again or go back to the dashboard.'}
+          ? "A newer version of the app is available. Please reload to get the latest update."
+          : "An unexpected error occurred while loading this page. You can try again or go back to the dashboard."}
       </p>
       <div className="flex items-center gap-3">
         {isChunkError ? (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => window.location.reload()}
-          >
+          <Button variant="default" size="sm" onClick={() => window.location.reload()}>
             <ArrowClockwise size={16} weight="bold" />
             Reload page
           </Button>
@@ -46,7 +45,9 @@ export function PageErrorFallback({ error, reset, className }: PageErrorFallback
             <Button
               variant="default"
               size="sm"
-              onClick={() => { window.location.href = '/'; }}
+              onClick={() => {
+                window.location.href = "/";
+              }}
             >
               <House size={16} weight="bold" />
               Go to dashboard
@@ -60,8 +61,10 @@ export function PageErrorFallback({ error, reset, className }: PageErrorFallback
             Error details (dev only)
           </summary>
           <pre className="mt-2 text-xs bg-muted text-muted-foreground rounded-lg p-3 overflow-auto max-h-40">
+            {/* Dev-only diagnostics behind import.meta.env.DEV; never rendered in production. */}
+            {/* eslint-disable-next-line uniffy/no-raw-error-display */}
             {error.message}
-            {'\n'}
+            {"\n"}
             {error.stack}
           </pre>
         </details>

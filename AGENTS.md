@@ -18,7 +18,7 @@ Every feature must work in BOTH deployment modes. The same codebase ships as:
 - **Privacy posture on cloud.** Platform operators do not auto-bypass `PermissionChecker`. Access to tenant content MUST go through a time-bound, audit-logged `SupportSession` the org owner can see live and revoke. No code path lets `is_system_admin=true` read tenant content without one - this is a hard line.
 - **Secrets at rest belong to the tenant.** Per-org secrets are encrypted with `OrgCipher`, never a shared key. Self-hosters get the same envelope encryption; only the master KEK holder differs.
 - **Telemetry / phone-home is off by default.** Self-hosters MUST be able to run fully air-gapped; any opt-in stays off in defaults.
-- **No third-party CDN fetches at runtime** (scripts, workers, fonts, styles). Bundle everything (Vite `?url` imports, `@fontsource-variable/*`). ESLint rejects CDN URL literals and `vite.config.ts` injects a CSP locked to `'self'` - both stay in place. New dependencies get audited for CDN URLs, telemetry endpoints, and postinstall scripts before adoption.
+- **No third-party CDN fetches at runtime** (scripts, workers, fonts, styles). Bundle everything (Vite `?url` imports, `@fontsource-variable/*`). The linter rejects CDN URL literals in BOTH the web app and mobile (custom `uniffy/no-cdn-urls` oxlint rule in `lint/uniffy-oxlint-plugin.mjs`) and `vite.config.ts` injects a CSP locked to `'self'` - both stay in place. New dependencies get audited for CDN URLs, telemetry endpoints, and postinstall scripts before adoption.
 - **Migrations and seed data stay neutral.** Bootstrap works for "fresh deploy, one org, one admin" and "fresh deploy, no orgs yet". No cloud-only fixtures in the migration runner.
 - **Docs and ops UX cover both.** New settings go in `.env.example` (self-hosters) AND the relevant admin page (cloud operators do not edit env).
 
@@ -64,7 +64,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 ./manage.py toolbox <cmd>                    # run in deps-manager container (pnpm/uv/buf); try: toolbox bash
 
 # Quality
-./manage.py lint [-s backend|ui|mobile|cli]  # ruff / eslint / go vet
+./manage.py lint [-s backend|ui|mobile|cli]  # ruff / oxlint / go vet
 ./manage.py format                           # ruff format (backend)
 ./manage.py test [-s backend|ui|cli]         # pytest / vitest / go test
 ./manage.py bench                            # backend benchmarks

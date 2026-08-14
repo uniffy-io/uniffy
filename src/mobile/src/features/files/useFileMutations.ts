@@ -188,6 +188,8 @@ export async function uploadAsset(
     totalSize = source.size;
     reader = source.readableStream().getReader();
   } else {
+    // Not an RPC: reads the picker's local file:// URI into memory.
+    // eslint-disable-next-line no-restricted-globals
     const fileResponse = await fetch(args.uri);
     buffered = new Uint8Array(await fileResponse.arrayBuffer());
     totalSize = buffered.length;

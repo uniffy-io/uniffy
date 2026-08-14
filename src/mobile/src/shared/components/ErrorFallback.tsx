@@ -23,7 +23,11 @@ export function ErrorFallback({ error }: ErrorFallbackProps) {
       <Warning size={48} color="#FA5252" weight="fill" />
       <Text style={[styles.title, { color: T.textBright }]}>Something went wrong</Text>
       {__DEV__ && error && (
-        <Text style={[styles.message, { color: T.textDim }]}>{error.message}</Text>
+        <Text style={[styles.message, { color: T.textDim }]}>
+          {/* Dev-only diagnostics behind __DEV__; never rendered in production. */}
+          {/* eslint-disable-next-line uniffy/no-raw-error-display */}
+          {error.message}
+        </Text>
       )}
       <TouchableOpacity
         style={[styles.btn, { backgroundColor: T.accent }]}

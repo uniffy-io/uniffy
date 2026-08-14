@@ -12,7 +12,7 @@ The layout mirrors the web app (`src/ui/src/{app,features,shared,config}`) on pu
 
 ## Source lives under `src/`
 
-All app source is under `src/mobile/src/`. Config files stay at the package root (`app.json`, `metro.config.js`, `babel.config.js`, `tsconfig.json`, `eslint.config.js`, `package.json`) and `assets/` stays at the root too, because `app.json` references icons and splash from `./assets`. Expo Router auto-detects `src/app` as the routes root. Do not move config or assets into `src/`.
+All app source is under `src/mobile/src/`. Config files stay at the package root (`app.json`, `metro.config.js`, `babel.config.js`, `tsconfig.json`, `oxlint.config.ts`, `package.json`) and `assets/` stays at the root too, because `app.json` references icons and splash from `./assets`. Expo Router auto-detects `src/app` as the routes root. Do not move config or assets into `src/`.
 
 ## Layering
 
@@ -30,7 +30,7 @@ app  ->  features  ->  shared  ->  core  ->  theme
 | `core` | `src/core/` | App infrastructure with no domain logic: transport, query client, session, config, providers, cross-cutting types. | core, theme |
 | `theme` | `src/theme/` | Pure design tokens (colors, typography, color math). | nothing |
 
-`shared`, `core`, and `theme` must never import from `features` or `app`. `core` must not import `shared`. `theme` imports from no other layer. These rules are enforced by `no-restricted-imports` in `eslint.config.js`; a violation fails `./manage.py lint -s mobile`. If a shared or core file needs something from a feature, the thing is misplaced: move it down a layer, or lift the data fetch up into the route (`app/`) and pass it as a prop. `BottomNav` is the pattern for the second case: it takes an `unreadCount` prop instead of importing the notifications hook, and `_layout` supplies the value.
+`shared`, `core`, and `theme` must never import from `features` or `app`. `core` must not import `shared`. `theme` imports from no other layer. These rules are enforced by `no-restricted-imports` in `oxlint.config.ts`; a violation fails `./manage.py lint -s mobile`. If a shared or core file needs something from a feature, the thing is misplaced: move it down a layer, or lift the data fetch up into the route (`app/`) and pass it as a prop. `BottomNav` is the pattern for the second case: it takes an `unreadCount` prop instead of importing the notifications hook, and `_layout` supplies the value.
 
 Feature-to-feature imports are allowed (chat uses agent and file components, projects uses the calendar picker). Keep them shallow and obvious. When two features share a piece with no domain logic of its own, promote it to `shared` rather than deep-importing across domains.
 
@@ -93,7 +93,7 @@ The transport, the streaming transport, and the query client are created once in
 
 React Native's Android fetch has no native timeouts, so an RPC without a deadline can hang forever on LTE. Every new domain and every new API call follows these rules:
 
-- **Every RPC rides a shared transport from `core/api/`.** Never create a per-feature transport and never hit the API with raw `fetch`. The unary transports carry `DEFAULT_RPC_TIMEOUT_MS` (10s, `core/api/baseFetch.ts`) as `defaultTimeoutMs`, so a pass-through api method gets a bounded deadline for free. This is the interactive tier: list, get, create, send.
+- **Every RPC rides a shared transport from `core/api/`.** Never create a per-feature transport and never hit the API with raw `fetch` - `no-restricted-globals` in `oxlint.config.ts` enforces this across `features/` and `shared/`; the sanctioned non-RPC exceptions (asset reads, local `file://` URIs) carry an inline disable stating why. The same config bans `EXPO_PUBLIC_*` env vars (`uniffy/no-expo-public-env`) and CDN URL literals (`uniffy/no-cdn-urls`, both from the repo-root `lint/uniffy-oxlint-plugin.mjs`). The unary transports carry `DEFAULT_RPC_TIMEOUT_MS` (10s, `core/api/baseFetch.ts`) as `defaultTimeoutMs`, so a pass-through api method gets a bounded deadline for free. This is the interactive tier: list, get, create, send.
 - **RPCs that legitimately run long get `SLOW_RPC_TIMEOUT_MS` (60s) per call, set inside the feature's api module** - not at hook or screen call sites. `filesApi.ts` is the reference: `uploadChunk`, `completeUpload`, `copyItems`, `bulkDelete`, `emptyTrash` pass `{ timeoutMs: SLOW_RPC_TIMEOUT_MS }`. Qualifying means real server-side storage or export work; "might be a big list" does not qualify (paginate instead).
 - **Server-streaming RPCs use `streamTransport` and carry NO deadline.** A call timeout would kill the long-lived stream. The consumer owns liveness and reconnection instead: the chat stream (`features/chat/useChatStream.ts`) is the reference - heartbeat watchdog (abort after 2.5 missed 30s server heartbeats), exponential backoff with jitter, restart kick on AppState active and connectivity regained. A new stream consumer copies that shape; a stream without a watchdog silently goes half-open on LTE and never recovers.
 - **Cancellable or retried calls accept `options?: { signal?: AbortSignal }`** in the api method and thread it to the client, so hooks can abort in-flight work (see the upload pipeline).
@@ -116,7 +116,7 @@ Calls render as a global overlay mounted from `_layout`, not as a route, but eve
 ## Conventions
 
 - Named exports everywhere. The sole default export is a route file's re-export of its screen.
-- Filenames are PascalCase for React component modules (`ChatScreen.tsx`, `AuthContext.tsx`, `ChatComposer.tsx`) and camelCase for everything else (`chatApi.ts`, `useChat.ts`, `queryClient.ts`). No kebab-case. `unicorn/filename-case` in `eslint.config.js` enforces this across `features/`, `shared/`, `core/`, and `theme/`; `app/` is exempt because Expo Router owns those names (URL segments plus specials like `+not-found`, `[id]`, `(tabs)`).
+- Filenames are PascalCase for React component modules (`ChatScreen.tsx`, `AuthContext.tsx`, `ChatComposer.tsx`) and camelCase for everything else (`chatApi.ts`, `useChat.ts`, `queryClient.ts`). No kebab-case. `unicorn/filename-case` in `oxlint.config.ts` enforces this across `features/`, `shared/`, `core/`, and `theme/`; `app/` is exempt because Expo Router owns those names (URL segments plus specials like `+not-found`, `[id]`, `(tabs)`).
 - Static assets stay at the root `assets/`. Reference them with a relative `require()` from the file's location, or add an `@assets` alias if the depth becomes awkward.
 - Platform variants use the `.native.ts` / `.ios.tsx` / `.web.tsx` suffix (for example `features/calls/livekit.ts` + `livekit.native.ts`); import the base specifier and let Metro pick.
 - No barrel `index.ts` files today; imports target the concrete module. If barrels are introduced later, they do not change the layering rules.

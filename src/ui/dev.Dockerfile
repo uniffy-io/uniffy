@@ -7,7 +7,7 @@
 # Each service sets PNPM_FILTER in compose to limit install to its workspace.
 FROM node:24.0-slim
 
-RUN npm install -g pnpm@10.30.1
+RUN npm install -g pnpm@11.20.0
 
 WORKDIR /app
 

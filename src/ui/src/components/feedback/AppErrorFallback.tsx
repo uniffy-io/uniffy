@@ -1,5 +1,5 @@
-import { WarningCircle, ArrowClockwise } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
+import { WarningCircle, ArrowClockwise } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
 
 interface AppErrorFallbackProps {
   error: Error;
@@ -16,13 +16,18 @@ export function AppErrorFallback({ error, reset }: AppErrorFallbackProps) {
       </p>
       <Button
         size="md"
-        onClick={() => { reset(); window.location.reload(); }}
+        onClick={() => {
+          reset();
+          window.location.reload();
+        }}
       >
         <ArrowClockwise size={16} weight="bold" />
         Reload application
       </Button>
       {import.meta.env.DEV && (
         <pre className="mt-6 text-xs text-muted-foreground bg-muted rounded-lg p-3 max-w-lg overflow-auto max-h-40">
+          {/* Dev-only diagnostics behind import.meta.env.DEV; never rendered in production. */}
+          {/* eslint-disable-next-line uniffy/no-raw-error-display */}
           {error.message}
         </pre>
       )}
