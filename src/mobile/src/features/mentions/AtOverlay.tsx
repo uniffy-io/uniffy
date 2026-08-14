@@ -74,6 +74,10 @@ export function AtOverlay() {
     }).start(() => setIsMounted(false));
   }, [atOpen, slideAnim]);
 
+  // Runs once per open transition. `returnToAt` and `savedAtState` are read as a
+  // snapshot at that instant and deliberately stay out of the deps: the restore
+  // branch calls setReturnToAt(false), so listing them would re-enter the effect
+  // on the `!returnToAt` path and clear the query it had just restored.
   useEffect(() => {
     if (atOpen && isMounted) {
       slideAnim.setValue(0);
@@ -91,7 +95,8 @@ export function AtOverlay() {
         friction: 11,
       }).start();
     }
-  }, [isMounted, atOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMounted, atOpen, slideAnim, setQuery, setActiveFilter, setReturnToAt, clearResults]);
 
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],

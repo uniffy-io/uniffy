@@ -150,7 +150,13 @@ export function NotesGraphScreen() {
   // Edge animation phase ref — advanced each frame for selected edges
   const edgePhaseSelectedRef = useRef(0);
 
-  const [tick, setTick] = useState(0);
+  // The physics loop mutates node objects in place inside refs. Render must not
+  // read those refs, so each frame publishes an immutable snapshot of what the
+  // SVG draws; that snapshot is also what triggers the re-render.
+  const [frame, setFrame] = useState<{ nodes: SimNode[]; edgePhase: number }>({
+    nodes: [],
+    edgePhase: 0,
+  });
 
   // Pan/zoom state via refs to avoid re-renders during gesture
   const translateX = useRef(0);
@@ -234,7 +240,10 @@ export function NotesGraphScreen() {
       }
       lastTimeRef.current = now;
 
-      setTick((v) => v + 1);
+      setFrame({
+        nodes: nodesRef.current.map((n) => ({ ...n })),
+        edgePhase: edgePhaseSelectedRef.current,
+      });
       rafRef.current = requestAnimationFrame(animate);
     };
 
@@ -334,8 +343,7 @@ export function NotesGraphScreen() {
     [commitTransform],
   );
 
-  // Read live node positions on each tick-triggered re-render
-  const nodes = nodesRef.current;
+  const nodes = frame.nodes;
   const links = graph.data?.links ?? [];
   const nodePosMap = new Map(nodes.map((n) => [n.id, n]));
 
@@ -358,9 +366,6 @@ export function NotesGraphScreen() {
     : "";
 
   const edgeDimColor = T.isDark ? "rgba(140,120,200,0.22)" : "rgba(100,80,160,0.18)";
-
-  // Suppress unused-var lint: tick drives re-renders via setTick
-  void tick;
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
@@ -442,14 +447,7 @@ export function NotesGraphScreen() {
                             strokeLinecap="round"
                           />
                           {/* Flowing arrow particles — always outward from selected */}
-                          {flowingArrows(
-                            ax1,
-                            ay1,
-                            ax2,
-                            ay2,
-                            edgePhaseSelectedRef.current,
-                            T.accent,
-                          )}
+                          {flowingArrows(ax1, ay1, ax2, ay2, frame.edgePhase, T.accent)}
                         </G>
                       );
                     })}

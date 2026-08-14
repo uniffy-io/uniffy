@@ -60,7 +60,11 @@ export function MfaEnrollFlow({ color, onDone }: { color: string; onDone: () => 
     }
   }, []);
 
+  // Enrollment has to open with a server round trip: BeginEnrollment mints the
+  // shared secret and QR. The synchronous part the compiler sees is the loading
+  // phase this request starts in.
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler
     begin();
   }, [begin]);
 

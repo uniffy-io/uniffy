@@ -96,7 +96,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
 
     // The handle can only exist after the attach side effect succeeds; there
     // is nothing to derive during render.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react/react-compiler
     setSession({ ydoc, awareness, sessionId, whenSynced });
 
     return () => {

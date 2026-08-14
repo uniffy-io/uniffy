@@ -106,6 +106,28 @@ export default defineConfig({
       },
     },
     {
+      // Reanimated shared values are mutable UI-thread boxes and gesture-handler
+      // builds gestures through a capitalized `Gesture.*` namespace, so worklets,
+      // `.value` writes, and builder chains all sit outside the compiler's model.
+      // These files are gesture and animation surfaces where per-line disables
+      // would outnumber the code they annotate.
+      files: [
+        'src/features/calendar/screens/CalendarScreen.tsx',
+        'src/features/calls/components/DraggablePip.tsx',
+        'src/features/chat/components/SwipeToReply.tsx',
+        'src/features/files/components/FullscreenViewer.tsx',
+        'src/features/notes/components/NoteDrag.tsx',
+        'src/features/notes/screens/NotesGraphScreen.tsx',
+        'src/features/projects/components/ProjectGraphView.tsx',
+        'src/features/projects/components/ProjectRoadmapView.tsx',
+        'src/shared/components/BottomNav.tsx',
+        'src/shared/components/BottomSheet.tsx',
+      ],
+      rules: {
+        'react/react-compiler': 'off',
+      },
+    },
+    {
       // Filenames are PascalCase (React component modules) or camelCase (everything else);
       // kebab-case is banned. app/ is exempt on purpose: Expo Router maps a file path to a URL,
       // so it owns its own naming (kebab URLs plus framework specials like +not-found, [id], (tabs)).

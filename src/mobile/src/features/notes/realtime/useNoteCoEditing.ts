@@ -79,7 +79,11 @@ export function useNoteCoEditing(
 
   useEffect(() => {
     if (!session) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // `live` is not derivable: it turns true only after the post-handshake
+      // seed inside whenSynced, and it decides which writer owns the note's
+      // content. Losing the session has to hand ownership back to the RPC
+      // autosave in the same tick, or neither writer saves.
+      // eslint-disable-next-line react/react-compiler
       setLive(false);
       controllerRef.current = null;
       return;

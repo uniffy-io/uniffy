@@ -155,7 +155,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const reportPendingRef = useRef(false);
   const wasAuthedRef = useRef(isAuthenticated);
 
+  // Mirrored during render rather than from an effect: LiveKit disconnect
+  // handlers, the token-refresh timer and the rejoin loop all read these refs,
+  // and any of them can fire before a passive effect would have flushed. Reading
+  // a stale session there reports media for, or tears down, the wrong call.
+  // eslint-disable-next-line react/react-compiler
   sessionRef.current = session;
+  // eslint-disable-next-line react/react-compiler
   orgRef.current = organizationId;
 
   const clearTimers = useCallback(() => {
@@ -195,6 +201,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     deliberateDisconnectRef.current = false;
   }, [clearTimers, teardownRoom]);
 
+  // Re-enters itself once an in-flight report settles, so a toggle made during
+  // the request still reaches the server. That self-reference is what the
+  // compiler cannot model; the body reads only refs, so empty deps are correct
+  // and the binding it calls is always this same instance.
+  // eslint-disable-next-line react/react-compiler
   const sendMediaReport = useCallback(async () => {
     const r = roomRef.current;
     const s = sessionRef.current;
@@ -233,6 +244,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }, REPORT_DEBOUNCE_MS);
   }, [sendMediaReport]);
 
+  // Re-arms itself for the token that comes back, since each token's own expiry
+  // sets the next deadline, and the retry path re-arms itself the same way. Those
+  // self-references are what the compiler cannot model; the body reads only refs,
+  // so empty deps are correct and the bindings it calls are always this instance.
+  /* eslint-disable react/react-compiler */
   const scheduleTokenRefresh = useCallback((token: string) => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     const expiryMs = getTokenExpiryMs(token);
@@ -257,6 +273,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     };
     refreshTimerRef.current = setTimeout(() => void refreshNow(), delay);
   }, []);
+  /* eslint-enable react/react-compiler */
 
   const attemptRejoin = useCallback(async () => {
     const s = sessionRef.current;
@@ -281,6 +298,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           deviceLabel: getDeviceLabel(),
         });
         if (rejoinCancelledRef.current) break;
+        // connectRoom and lookupEndCause below are declared later in this
+        // component: handleDisconnected -> attemptRejoin -> connectRoom ->
+        // handleDisconnected is a genuine cycle, so one edge has to read ahead.
+        // Every callback in it is built from refs or stable deps, so this
+        // closure's captures are never stale, and keeping them out of the deps
+        // is deliberate - a churning attemptRejoin would rebuild
+        // handleDisconnected, which is a live listener on the LiveKit room.
+        // eslint-disable-next-line react/react-compiler
         await connectRoom(
           {
             callId,
@@ -314,6 +339,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     clearTimers();
     await stopCallAudio().catch(() => {});
     if (callGone) {
+      // eslint-disable-next-line react/react-compiler
       setEndedInfo({ cause: lookupEndCause(callId), callId, channelId });
       setSession(IDLE_SESSION);
       setMinimized(false);
@@ -324,7 +350,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearTimers, teardownRoom]);
 
+  // Read by attemptRejoin above, which is the read-ahead edge of the rejoin
+  // cycle; that is what stops the compiler from preserving this memo.
+  // `queryClient` is stable for the app's lifetime, so this callback is too.
   const lookupEndCause = useCallback(
+    // eslint-disable-next-line react/react-compiler
     (callId: string): CallEndCause => {
       const org = orgRef.current;
       if (!org) return "UNKNOWN";
@@ -692,6 +722,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setEndedInfo(null);
     }
     prevOrgForTeardownRef.current = organizationId;
+    // The banner records why THIS org refused a call, so switching orgs has to
+    // drop it. The provider deliberately never unmounts, so a remount key is not
+    // available here and the reset has to be explicit.
+    // eslint-disable-next-line react/react-compiler
     setCallsDisabledMessage(null);
   }, [organizationId, resetToIdle]);
 

@@ -233,8 +233,13 @@ export function NoteEditorScreen() {
   const previewFraction = useRef(0);
   const previewSyncPending = useRef(false);
 
-  const scrollFraction = (offset: number, contentH: number) =>
-    Math.min(1, Math.max(0, offset / Math.max(1, contentH - viewportH.current)));
+  // Reads the viewport height through a ref, so it never has to be rebuilt and
+  // the handlers that call it keep their identity across renders.
+  const scrollFraction = useCallback(
+    (offset: number, contentH: number) =>
+      Math.min(1, Math.max(0, offset / Math.max(1, contentH - viewportH.current))),
+    [],
+  );
 
   // A canvas stores board JSON in `content` and a folder has no body at all;
   // either one loaded here would let the first keystroke autosave markdown over
@@ -255,6 +260,10 @@ export function NoteEditorScreen() {
     if (initialized || isCanvas || isFolder) return;
     if (isEditMode) {
       if (!noteQuery.data) return;
+      // The note arrives from the server after mount, so there is no render-time
+      // value to seed from; `initialized` makes this a one-shot hand-off to the
+      // editable fields, which the user owns from then on.
+      // eslint-disable-next-line react/react-compiler
       setTitle(noteQuery.data.title);
       initFromCanonical(noteQuery.data.content);
       loadedRef.current = { title: noteQuery.data.title, content: noteQuery.data.content };
@@ -632,7 +641,7 @@ export function NoteEditorScreen() {
       setTimeout(() => editorScrollRef.current?.scrollTo({ y: target, animated: false }), 0);
     }
     setPreviewMode((v) => !v);
-  }, [previewMode]);
+  }, [previewMode, scrollFraction]);
 
   // Active toggle state. A collapsed caret reads the enclosing inline spans; a
   // range lights a format only when the whole selection is already wrapped.
@@ -925,6 +934,10 @@ export function NoteEditorScreen() {
           contentContainerStyle={styles.toolbarContent}
           keyboardShouldPersistTaps="always"
         >
+          {/* Every ref read behind these actions happens inside an onPress
+              handler, never while this list renders; `active` and `loading` are
+              plain values derived from state above. */}
+          {/* eslint-disable-next-line react/react-compiler */}
           {toolbarActions.map(({ key, Icon, onPress, loading, active }) => (
             <TouchableOpacity
               key={key}

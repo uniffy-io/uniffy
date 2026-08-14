@@ -62,10 +62,14 @@ export function useSearch() {
     [organizationId],
   );
 
+  // Debounced fetch: results come from the server, so they cannot be derived in
+  // render. Clearing them the moment the box empties is what keeps a stale hit
+  // list from outliving the query that produced it.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (!query.trim()) {
+      // eslint-disable-next-line react/react-compiler
       setResults([]);
       setIsLoading(false);
       return;

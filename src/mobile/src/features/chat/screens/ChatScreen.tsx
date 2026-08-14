@@ -377,6 +377,10 @@ export function ChatConversationScreen() {
   // no reliable heuristic without the stream).
   const streamRunningAgents = useRunningAgents(channelId);
   const thinkingByMessage = useAgentThinking(channelId);
+  // Keyed on the two channel fields it reads rather than the channel object: a
+  // refetch that changes the object identity would otherwise hand every consumer
+  // a fresh array and cost them their own memoization.
+  // eslint-disable-next-line react/react-compiler
   const runningAgentIds = useMemo(() => {
     if (streamRunningAgents !== undefined) return streamRunningAgents;
     const dmFallbackRunning = channel?.isAgentDm && messages[0]?.senderType === "USER";
@@ -412,8 +416,12 @@ export function ChatConversationScreen() {
     [directory.subjects, agentsQuery.data],
   );
 
-  // Snapshot the unread count on entry, before mark-as-read zeroes it out.
+  // Snapshot the unread count on entry, before mark-as-read zeroes it out. It
+  // has to be a lazily filled ref rather than a useState initializer: the org
+  // may still be resolving on the first render, and the snapshot has to be taken
+  // on whichever render first has it.
   const entryUnreadRef = useRef<number | null>(null);
+  // eslint-disable-next-line react/react-compiler
   if (entryUnreadRef.current === null && organizationId) {
     const unreadMap = queryClient.getQueryData<Record<string, { unread: number }>>([
       "chat",
@@ -430,8 +438,13 @@ export function ChatConversationScreen() {
     if (unreadAnchorRef.current !== undefined) return unreadAnchorRef.current;
     const loaded = messagesQuery.data;
     if (!loaded || loaded.length === 0) return null;
+    // The anchor is latched in a ref, not state: it must be picked from the very
+    // first non-empty page and then survive every later poll unchanged, and a
+    // state write here would re-render the whole thread to reach the same value.
+    // eslint-disable-next-line react/react-compiler
     const unread = entryUnreadRef.current ?? 0;
     const anchor = unread > 0 ? (loaded[Math.min(unread, loaded.length) - 1]?.id ?? null) : null;
+    // eslint-disable-next-line react/react-compiler
     unreadAnchorRef.current = anchor;
     return anchor;
   }, [messagesQuery.data]);
@@ -614,6 +627,10 @@ export function ChatConversationScreen() {
       mentionsRef.current = mentions;
       setTimeout(() => inputRef.current?.focus(), 60);
     },
+    // `draft` is load-bearing even though it only feeds a ref: without it the
+    // callback keeps the empty draft it closed over on mount and stashes that,
+    // so cancelling an edit wipes whatever the user had already typed.
+    // eslint-disable-next-line react/react-compiler
     [draft],
   );
 

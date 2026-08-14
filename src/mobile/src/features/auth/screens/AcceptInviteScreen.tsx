@@ -65,7 +65,11 @@ export function AcceptInviteScreen() {
     }
   }, []);
 
+  // A token arriving on the deep link is external input, so fetching its preview
+  // is the effect's job; nothing here is derivable during render. The compiler
+  // flags it because loadPreview raises its own loading flag before awaiting.
   useEffect(() => {
+    // eslint-disable-next-line react/react-compiler
     if (params.token) loadPreview(params.token);
   }, [params.token, loadPreview]);
 
