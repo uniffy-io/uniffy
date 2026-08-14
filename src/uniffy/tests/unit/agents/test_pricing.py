@@ -219,6 +219,7 @@ class TestCatalogResolution:
         assert get_model("openai", "gpt-5.6-luna") is not None
         assert get_model("openai", "gpt-4o") is not None
         assert get_model("google", "gemini-3.6-flash") is not None
+        assert get_model("google", "gemini-3.7-flash") is not None
         assert get_model("google", "gemini-3.5-flash-lite") is not None
         assert get_model("google", "gemini-2.5-pro") is not None
         assert get_model("xai", "grok-4.20-multi-agent-0309") is not None
@@ -263,12 +264,205 @@ class TestCatalogResolution:
         assert get_model("openrouter", "anthropic/claude-sonnet-5") is not None
         assert provider_for_model("anthropic/claude-sonnet-5") == "openrouter"
 
+    def test_openrouter_fusion_resolves_without_static_pricing(self) -> None:
+        model = get_model("openrouter", "openrouter/fusion")
+        assert model is not None
+        assert model.dynamic_pricing is True
+        assert model.use_responses_api is True
+        assert model.context_window == 1000000
+        assert model.default_max_tokens is None
+        assert model.supports_attachments is False
+        assert provider_for_model("openrouter/fusion") == "openrouter"
+        assert get_pricing(provider="openrouter", model="openrouter/fusion") is None
+
+        info = model_info_for("openrouter", "openrouter/fusion")
+        assert info is not None
+        assert info.input_per_1m is None
+        assert info.output_per_1m is None
+
+    def test_openrouter_latest_family_aliases_are_distinct_models(self) -> None:
+        model_ids = {
+            "~openai/gpt-latest",
+            "~openai/gpt-mini-latest",
+            "~anthropic/claude-fable-latest",
+            "~anthropic/claude-opus-latest",
+            "~anthropic/claude-sonnet-latest",
+            "~anthropic/claude-haiku-latest",
+            "~google/gemini-pro-latest",
+            "~google/gemini-flash-latest",
+            "~x-ai/grok-latest",
+            "~deepseek/deepseek-v4-flash-latest",
+            "~moonshotai/kimi-latest",
+        }
+
+        for model_id in model_ids:
+            model = get_model("openrouter", model_id)
+            assert model is not None
+            assert model.id == model_id
+            assert provider_for_model(model_id) == "openrouter"
+            assert get_pricing(provider="openrouter", model=model_id) is not None
+
+        gpt_latest = get_model("openrouter", "~openai/gpt-latest")
+        assert gpt_latest is not None
+        assert gpt_latest.context_window == 1050000
+        assert gpt_latest.cost_per_1m_in == Decimal("5")
+        assert gpt_latest.cost_per_1m_out == Decimal("30")
+
+    def test_openrouter_deepseek_v4_family_resolves_with_live_pricing(self) -> None:
+        expected = {
+            "deepseek/deepseek-v4-pro": ("1.168", "2.336", "0.09855", 393216),
+            "deepseek/deepseek-v4-pro-0813": ("0.435", "0.87", "0.003625", 384000),
+            "deepseek/deepseek-v4-flash": ("0.14", "0.28", "0.028", 393216),
+            "deepseek/deepseek-v4-flash-0731": ("0.14", "0.28", "0.028", 393216),
+        }
+        for model_id, (input_rate, output_rate, cache_rate, max_tokens) in expected.items():
+            model = get_model("openrouter", model_id)
+            assert model is not None
+            assert model.id == model_id
+            assert model.cost_per_1m_in == Decimal(input_rate)
+            assert model.cost_per_1m_out == Decimal(output_rate)
+            assert model.cost_per_1m_out_cached == Decimal(cache_rate)
+            assert model.default_max_tokens == max_tokens
+            assert model.reasoning_levels == ["high", "xhigh"]
+
+    def test_openrouter_current_gemini_models_resolve_with_live_metadata(self) -> None:
+        expected = {
+            "google/gemini-3.7-flash": (
+                "0.375",
+                "1.875",
+                "0.0208333333333333",
+                "0.0375",
+                65536,
+                ["low", "medium", "high"],
+                "medium",
+            ),
+            "google/gemini-3.6-flash": (
+                "0.75",
+                "3.75",
+                "0.0416666666666667",
+                "0.075",
+                65536,
+                ["minimal", "low", "medium", "high"],
+                "medium",
+            ),
+            "google/gemini-3.5-flash-lite": (
+                "0.3",
+                "2.5",
+                "0.0833333333333333",
+                "0.03",
+                65536,
+                ["minimal", "low", "medium", "high"],
+                "minimal",
+            ),
+        }
+        for model_id, metadata in expected.items():
+            (
+                input_rate,
+                output_rate,
+                cache_write_rate,
+                cache_read_rate,
+                max_tokens,
+                levels,
+                default,
+            ) = metadata
+            model = get_model("openrouter", model_id)
+            assert model is not None
+            assert model.cost_per_1m_in == Decimal(input_rate)
+            assert model.cost_per_1m_out == Decimal(output_rate)
+            assert model.cost_per_1m_in_cached == Decimal(cache_write_rate)
+            assert model.cost_per_1m_out_cached == Decimal(cache_read_rate)
+            assert model.default_max_tokens == max_tokens
+            assert model.reasoning_levels == levels
+            assert model.default_reasoning_effort == default
+            assert model.supports_attachments is True
+
+    def test_openrouter_current_qwen_models_resolve_with_live_metadata(self) -> None:
+        expected = {
+            "qwen/qwen3.8-max": (
+                "2",
+                "6",
+                "2.5",
+                "0.25",
+                1000000,
+                131072,
+                True,
+            ),
+            "qwen/qwen3.8-2.4t-a95b": (
+                "2",
+                "6",
+                "0",
+                "0.25",
+                1010000,
+                262144,
+                False,
+            ),
+            "qwen/qwen3.7-flash": (
+                "0.03",
+                "0.13",
+                "0.038",
+                "0.006",
+                1000000,
+                65536,
+                True,
+            ),
+            "qwen/qwen3.7-plus": (
+                "0.32",
+                "1.28",
+                "0.4",
+                "0.064",
+                1000000,
+                131072,
+                True,
+            ),
+        }
+        for model_id, metadata in expected.items():
+            (
+                input_rate,
+                output_rate,
+                cache_write_rate,
+                cache_read_rate,
+                context,
+                max_tokens,
+                attachments,
+            ) = metadata
+            model = get_model("openrouter", model_id)
+            assert model is not None
+            assert model.cost_per_1m_in == Decimal(input_rate)
+            assert model.cost_per_1m_out == Decimal(output_rate)
+            assert model.cost_per_1m_in_cached == Decimal(cache_write_rate)
+            assert model.cost_per_1m_out_cached == Decimal(cache_read_rate)
+            assert model.context_window == context
+            assert model.default_max_tokens == max_tokens
+            assert model.can_reason is True
+            assert model.supports_attachments is attachments
+
+        qwen_max = get_model("openrouter", "qwen/qwen3.8-max")
+        qwen_open = get_model("openrouter", "qwen/qwen3.8-2.4t-a95b")
+        assert qwen_max is not None
+        assert qwen_open is not None
+        assert qwen_max.reasoning_levels == [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+        ]
+        assert qwen_open.reasoning_levels == ["low", "medium", "xhigh"]
+        assert qwen_max.default_reasoning_effort == "xhigh"
+        assert qwen_open.default_reasoning_effort == "xhigh"
+
     def test_slug_does_not_shadow_first_party_id(self) -> None:
         assert provider_for_model("claude-sonnet-5") == "anthropic"
 
     def test_xai_models_resolve(self) -> None:
+        assert get_model("xai", "grok-4.6") is not None
         assert get_model("xai", "grok-4.5") is not None
         assert get_model("xai", "grok-99") is None
+
+    def test_latest_gemini_flash_resolves_to_3_7(self) -> None:
+        model = get_model("google", "gemini-flash-latest")
+        assert model is not None
+        assert model.id == "gemini-3.7-flash"
 
     def test_dated_looking_id_resolves_exactly(self) -> None:
         # The 0309 segment looks like a date. The exact id must still win.
@@ -312,3 +506,13 @@ class TestSchemaValidation:
     def test_context_window_must_be_positive(self) -> None:
         with pytest.raises(ValidationError):
             Model(id="m1", name="M1", context_window=0)
+
+    def test_dynamic_pricing_rejects_static_rates(self) -> None:
+        with pytest.raises(ValidationError, match="cannot declare static rates"):
+            Model(
+                id="router",
+                name="Router",
+                context_window=1000,
+                dynamic_pricing=True,
+                cost_per_1m_in=1,
+            )

@@ -65,6 +65,41 @@ def test_non_reasoner_has_no_effort_knob() -> None:
     assert "reasoning_effort" not in schema
 
 
+def test_openrouter_fusion_has_no_static_sampling_knobs() -> None:
+    assert get_parameter_schema("openrouter", "openrouter/fusion") == {}
+    assert resolve_request_params(
+        {"temperature": 0.7, "top_p": 0.9, "max_tokens": 4096},
+        None,
+        "openrouter",
+        "openrouter/fusion",
+    ) == {}
+
+
+def test_openrouter_latest_openai_alias_exposes_explicit_no_reasoning() -> None:
+    schema = get_parameter_schema("openrouter", "~openai/gpt-latest")
+
+    assert "temperature" not in schema
+    assert "top_p" not in schema
+    assert schema["reasoning_effort"]["enum"] == [
+        "off",
+        "none",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+    ]
+
+
+def test_openrouter_latest_alias_capabilities_stay_family_specific() -> None:
+    opus = get_parameter_schema("openrouter", "~anthropic/claude-opus-latest")
+    grok = get_parameter_schema("openrouter", "~x-ai/grok-latest")
+
+    assert "temperature" in opus
+    assert "top_p" not in opus
+    assert {"temperature", "top_p", "max_tokens"} <= grok.keys()
+
+
 def test_max_tokens_clamped_to_model_ceiling() -> None:
     schema = get_parameter_schema("anthropic", "claude-fable-5")
     assert schema["max_tokens"]["maximum"] == 126000
@@ -84,6 +119,15 @@ def test_model_options_override_defaults() -> None:
     schema = merge_parameter_schema(pc, pc.models[0])
     assert schema["temperature"]["default"] == 0.5
     assert schema["provider_options"]["top_k"]["default"] == 40
+
+
+def test_model_can_reject_provider_option() -> None:
+    catalog = Catalog.model_validate(
+        _synthetic(model_extra={"unsupported_provider_options": ["top_k"]}),
+    )
+    pc = catalog.providers["acme"]
+    schema = merge_parameter_schema(pc, pc.models[0])
+    assert "provider_options" not in schema
 
 
 def test_default_clamped_to_small_ceiling() -> None:
@@ -109,6 +153,13 @@ def test_undeclared_provider_option_rejected() -> None:
 def test_out_of_range_option_rejected() -> None:
     with pytest.raises(ValidationError, match="above maximum"):
         Catalog.model_validate(_synthetic(model_extra={"options": {"temperature": 3}}))
+
+
+def test_unknown_unsupported_provider_option_rejected() -> None:
+    with pytest.raises(ValidationError, match="is not a declared provider option"):
+        Catalog.model_validate(
+            _synthetic(model_extra={"unsupported_provider_options": ["beam_width"]}),
+        )
 
 
 def test_reasoning_knob_must_not_be_declared() -> None:
@@ -182,3 +233,28 @@ def test_resolve_merges_nested_provider_options() -> None:
         "provider_options": {"parallel_tool_calls": False},
         "temperature": 0.4,
     }
+
+
+def test_gemini_3_7_rejects_sampling_controls() -> None:
+    schema = get_parameter_schema("google", "gemini-3.7-flash")
+    assert "temperature" not in schema
+    assert "top_p" not in schema
+    assert "provider_options" not in schema
+    assert schema["reasoning_effort"] == {
+        "type": "enum",
+        "enum": ["off", "low", "medium", "high"],
+        "default": "off",
+    }
+
+    kept = resolve_request_params(
+        {
+            "temperature": 0.4,
+            "top_p": 0.9,
+            "provider_options": {"top_k": 20},
+            "reasoning_effort": "high",
+        },
+        None,
+        "google",
+        "gemini-3.7-flash",
+    )
+    assert kept == {"reasoning_effort": "high"}

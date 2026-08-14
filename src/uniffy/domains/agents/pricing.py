@@ -2,7 +2,7 @@
 
 Pricing is defined per model in the catalog (USD per one million tokens).
 Callers that get ``None`` from ``get_pricing`` leave ``AgentRunLog.cost``
-null and log a warning - we never guess at a price. Cost is computed at
+null - we never guess at an unknown or dynamic price. Cost is computed at
 write time and frozen on the run-log row, so editing a catalog price only
 affects future runs.
 """
@@ -28,8 +28,11 @@ PRICING_CURRENCY = "USD"
 
 
 def get_pricing(*, provider: str, model: str) -> Model | None:
-    """Return the catalog model carrying pricing for ``(provider, model)``."""
-    return get_model(provider, model)
+    """Return static catalog pricing, or ``None`` for unknown/dynamic models."""
+    pricing = get_model(provider, model)
+    if pricing is None or pricing.dynamic_pricing:
+        return None
+    return pricing
 
 
 def compute_text_cost(

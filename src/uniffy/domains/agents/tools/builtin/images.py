@@ -15,6 +15,11 @@ from uniffy.domains.agents.providers.catalog import (
     get_image_parameter_schema,
     resolve_image_params,
 )
+from uniffy.domains.agents.tools.builtin.content_space import (
+    creation_space_schema,
+    parse_creation_space,
+    space_for_access_mode,
+)
 from uniffy.domains.agents.tools.definitions import (
     CATEGORY_EXTERNAL,
     ToolContext,
@@ -51,7 +56,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.core.models.files.file_version import FileVersion
     from uniffy.core.search.indexer import build_content_urn
     from uniffy.core.storage import get_s3_client
-    from uniffy.core.types import ContentType, generate_id
+    from uniffy.core.types import AccessMode, ContentType, generate_id
     from uniffy.domains.agents.providers.operations import ProviderOperations
     from uniffy.domains.files.attachments.operations import AttachmentOperations
 
@@ -59,7 +64,13 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     if not prompt:
         return ToolResult(success=False, data="", error="prompt is required")
 
-    call_params = {k: v for k, v in args.items() if k != "prompt"}
+    access_mode, space_err = parse_creation_space(args)
+    if space_err:
+        return ToolResult(success=False, data="", error=space_err)
+    assert access_mode is not None
+    created_space = space_for_access_mode(access_mode, None)
+
+    call_params = {k: v for k, v in args.items() if k not in {"prompt", "space"}}
 
     if not ctx.agent_id:
         return ToolResult(
@@ -153,12 +164,14 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         content_type=mime_type,
     )
 
-    # Get or create the user's Attachments folder
     attach_ops = AttachmentOperations(ctx.session)
-    folder = await attach_ops.get_or_create_attachments_folder(
-        ctx.user_id,
-        ctx.organization_id,
-    )
+    if access_mode == AccessMode.OPEN_TO_ORG:
+        folder = await attach_ops.get_or_create_org_attachments_folder(ctx.organization_id)
+    else:
+        folder = await attach_ops.get_or_create_attachments_folder(
+            ctx.user_id,
+            ctx.organization_id,
+        )
 
     # Determine storage bucket name from env (same as S3Client config)
     bucket_name = os.getenv("S3_BUCKET", "uniffy")
@@ -177,6 +190,8 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         folder_id=folder.id,
         extraction_status=ExtractionStatus.PENDING,
         description=f"AI-generated image: {prompt[:200]}",
+        access_mode=access_mode,
+        baseline_role=None,
     )
     ctx.session.add(file_record)
     await ctx.session.flush()
@@ -237,11 +252,15 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         pricing = get_pricing(provider=provider.name, model=image_model)
         if pricing is not None:
             raw_cost = compute_image_cost(
-                pricing, size=size, quality=quality, count=1,
+                pricing,
+                size=size,
+                quality=quality,
+                count=1,
             )
             if raw_cost is not None:
                 display_currency = await get_display_currency(
-                    ctx.session, ctx.organization_id,
+                    ctx.session,
+                    ctx.organization_id,
                 )
                 image_cost = await convert_currency(
                     raw_cost,
@@ -278,9 +297,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             )
             ctx.session.add(run_log)
         except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to create image generation run log"
-            )
+            logger.opt(exception=True).warning("Failed to create image generation run log")
 
     try:
         await write_audit_event(
@@ -309,6 +326,17 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         logger.opt(exception=True).warning("Image generation audit emission failed")
 
     await ctx.session.commit()
+
+    if access_mode == AccessMode.OPEN_TO_ORG:
+        from uniffy.core.converters.common_proto import content_type_to_proto
+        from uniffy.core.valkey import publish_content_access_changed
+
+        await publish_content_access_changed(
+            content_type=content_type_to_proto(ContentType.FILE),
+            content_id=file_id,
+            action="granted",
+            organization_id=ctx.organization_id,
+        )
 
     # Enqueue thumbnail/extraction jobs only after the file row is committed, so
     # the core worker can load it - mirrors FileOperations._enqueue_processing_jobs.
@@ -349,7 +377,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     return ToolResult(
         success=True,
         data=(
-            f"Image generated successfully.\n"
+            f"Image generated successfully in {created_space.title()}.\n"
             f"File: {filename}\n"
             f"URN: {file_urn}\n"
             f"Mention: {mention}\n"
@@ -361,6 +389,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         metadata={
             "kind": "image_generation",
             "prompt": prompt,
+            "space": created_space,
             "params": params,
             "file_id": str(file_id),
             "file_urn": file_urn,
@@ -387,6 +416,7 @@ def build_image_tool_schema(provider: str, model_id: str) -> dict:
                 "type": "string",
                 "description": "A detailed text description of the image to generate.",
             },
+            "space": creation_space_schema(),
         },
         "required": ["prompt"],
     }
@@ -413,7 +443,8 @@ generate_image = ToolDefinition(
     category=CATEGORY_EXTERNAL,
     description=(
         "Generate an image from a text prompt using AI. "
-        "The image is saved as a file in the user's Attachments folder. "
+        "The image is saved as a Personal file unless the user explicitly requests "
+        "Organization. "
         "Returns the file URN that can be referenced in notes or messages. "
         "Omit the optional knobs unless the user asked for a specific shape or size - "
         "the agent's configured defaults apply otherwise."
@@ -425,6 +456,7 @@ generate_image = ToolDefinition(
                 "type": "string",
                 "description": ("A detailed text description of the image to generate."),
             },
+            "space": creation_space_schema(),
         },
         "required": ["prompt"],
     },

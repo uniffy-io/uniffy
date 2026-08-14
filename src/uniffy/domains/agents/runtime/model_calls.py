@@ -155,6 +155,7 @@ class ModelCallController:
             provider=self.target.provider_name,
             provider_key_id=self.target.provider_key_id,
             result=result,
+            model=self.target.model,
         )
 
     async def record_failure_and_failover(

@@ -14,7 +14,13 @@ import {
   Brain,
   Wrench,
   Warning,
+  MagnifyingGlass,
+  ClockCounterClockwise,
+  SealCheck,
+  Image as ImageIcon,
+  Lightning,
 } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
@@ -23,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { brandGradient, brandRampStops } from "@/config/theme/brandGradients";
 import {
   selectProviderKeys,
   selectAvailableModels,
@@ -38,96 +45,211 @@ import {
   fetchModelsForKey,
   toggleProviderKey,
 } from "@/features/agents/store/agentProvidersThunks";
-import type { SerializedProviderKey } from "@/features/agents/store/agentProvidersThunks";
+import type {
+  SerializedProviderKey,
+  SerializedModelInfo,
+} from "@/features/agents/store/agentProvidersThunks";
 import { ProviderLogo } from "@/features/agents/components/ProviderLogo";
 import { ProviderPicker } from "@/features/agents/components/ProviderPicker";
 import { providerBrand, providerLabel } from "@/features/agents/config/providerBrands";
+import { formatContextWindow, formatPricePer1M } from "@/features/agents/utils/modelFormatting";
+import { summarizeKeyError } from "@/features/agents/utils/providerKeyErrors";
 
 const CREDENTIAL_WRITE_ONCE_NOTE =
   "Pasted once and encrypted at rest. It is never shown again, so keep your own copy.";
 
-/** "1M ctx" at >= 1M tokens, "200k ctx" below. */
-function formatContextWindow(tokens: number): string {
-  if (tokens >= 1_000_000) {
-    return `${Number((tokens / 1_000_000).toFixed(1))}M`;
-  }
-  return `${Math.round(tokens / 1000)}k`;
+const EMPTY_MODELS: SerializedModelInfo[] = [];
+
+interface Capability {
+  label: string;
+  icon: Icon;
+  has: (model: SerializedModelInfo) => boolean;
+  /** Slice of the brand axis this marker is painted with, like a tool group. */
+  paint: string;
 }
+
+const CAPABILITY_ORDER: Omit<Capability, "paint">[] = [
+  { label: "Tools", icon: Wrench, has: (m) => m.supportsTools },
+  { label: "Vision", icon: Eye, has: (m) => m.supportsVision },
+  { label: "Thinking", icon: Brain, has: (m) => m.supportsThinking },
+  { label: "Images", icon: ImageIcon, has: (m) => m.supportsImageGeneration },
+  { label: "Cache", icon: Lightning, has: (m) => m.supportsPromptCache },
+];
+
+// The markers walk the axis end to end the way the catalog's tool groups do, so
+// a capability reads the same shade on every card regardless of the user accent.
+const CAPABILITIES: Capability[] = CAPABILITY_ORDER.map((capability, index) => ({
+  ...capability,
+  paint: brandGradient(brandRampStops(index, CAPABILITY_ORDER.length, { shade: 0.22 })),
+}));
 
 function protoTimestampToDateStr(ts?: { seconds: number; nanos: number }): string | undefined {
   if (!ts) return undefined;
   return new Date(ts.seconds * 1000).toISOString();
 }
 
-function KeyDetailPanel({ providerKey }: { providerKey: SerializedProviderKey }) {
+type KeyStatus = "disabled" | "valid" | "rejected";
+
+function keyStatus(providerKey: SerializedProviderKey): KeyStatus {
+  if (!providerKey.isEnabled) return "disabled";
+  return providerKey.isValid ? "valid" : "rejected";
+}
+
+const STATUS_LABELS: Record<KeyStatus, string> = {
+  disabled: "Disabled",
+  valid: "Valid",
+  rejected: "Rejected",
+};
+
+const STATUS_TEXT: Record<KeyStatus, string> = {
+  disabled: "text-muted-foreground",
+  valid: "text-green-600 dark:text-green-400",
+  rejected: "text-red-600 dark:text-red-400",
+};
+
+function StatusIcon({ status, size = 16 }: { status: KeyStatus; size?: number }) {
+  if (status === "valid") {
+    return <CheckCircle size={size} weight="fill" className={STATUS_TEXT.valid} />;
+  }
   return (
-    <div className="bg-card border border-border rounded-lg p-4">
-      <h3 className="font-medium text-foreground mb-4">Key Details</h3>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Provider</span>
-          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-            <ProviderLogo provider={providerKey.provider} size="sm" />
-            {providerLabel(providerKey.provider)}
-          </span>
+    <XCircle
+      size={size}
+      weight="fill"
+      className={status === "rejected" ? STATUS_TEXT.rejected : STATUS_TEXT.disabled}
+    />
+  );
+}
+
+function KeyErrorNotice({ lastError, provider }: { lastError?: string; provider: string }) {
+  const [showDetail, setShowDetail] = useState(false);
+  const { headline, detail } = summarizeKeyError(lastError, provider);
+
+  return (
+    <div className="rounded-lg border border-red-500/40 bg-red-100 p-3 dark:bg-red-900/30">
+      <div className="flex items-start gap-2">
+        <XCircle
+          size={16}
+          weight="fill"
+          className="mt-0.5 shrink-0 text-red-600 dark:text-red-400"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-red-800 dark:text-red-400">{headline}</p>
+          {detail && (
+            <button
+              type="button"
+              onClick={() => setShowDetail((open) => !open)}
+              className="mt-1 text-xs font-medium text-red-800/80 underline underline-offset-2 hover:text-red-800 dark:text-red-400/80 dark:hover:text-red-400"
+            >
+              {showDetail ? "Hide provider response" : "Show provider response"}
+            </button>
+          )}
+          {showDetail && detail && (
+            <p className="mt-2 break-words font-mono text-[11px] leading-relaxed text-red-800/90 dark:text-red-400/90">
+              {detail}
+            </p>
+          )}
         </div>
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <span className="text-sm text-muted-foreground">Hint</span>
-            <span className="block text-xs text-muted-foreground">
-              The full credential is write-once and cannot be read back.
+      </div>
+    </div>
+  );
+}
+
+function MetaFact({ icon: FactIcon, label, value }: { icon: Icon; label: string; value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap" title={label}>
+      <FactIcon size={13} className="shrink-0" />
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-foreground">{value}</span>
+    </span>
+  );
+}
+
+function PriceCell({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "truncate text-sm font-semibold tabular-nums",
+          value ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {value ?? "n/a"}
+      </p>
+    </div>
+  );
+}
+
+function ModelCard({ model }: { model: SerializedModelInfo }) {
+  const input = formatPricePer1M(model.inputPer1m);
+  const output = formatPricePer1M(model.outputPer1m);
+  const cached = formatPricePer1M(model.cacheReadPer1m);
+  const isFree = input === "$0" && output === "$0";
+  const priced = input !== null || output !== null;
+
+  return (
+    <div
+      className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-muted/30"
+      data-testid={`provider-model-${model.id}`}
+    >
+      <div className="flex items-start gap-3">
+        {/* No text color here: mono marks are currentColor masks, so a muted
+            tone would restyle the trademark (docs/TRADEMARKS.md). */}
+        <span
+          title={providerLabel(model.provider)}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted"
+        >
+          <ProviderLogo provider={model.provider} size="md" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">{model.displayName}</p>
+          <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">{model.id}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1">
+        {CAPABILITIES.map((capability) =>
+          capability.has(model) ? (
+            <span
+              key={capability.label}
+              title={capability.label}
+              className="flex h-5 w-5 items-center justify-center rounded-md text-white"
+              style={{ background: capability.paint }}
+            >
+              <capability.icon size={11} weight="duotone" />
             </span>
+          ) : null,
+        )}
+        <span className="ml-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+          {formatContextWindow(model.contextWindow)} ctx
+        </span>
+        {model.deprecated && (
+          <Badge
+            variant="secondary"
+            className="ml-1 bg-amber-100 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+          >
+            Deprecated
+          </Badge>
+        )}
+      </div>
+
+      <div className="mt-auto grid grid-cols-3 gap-2 border-t border-border pt-2.5">
+        {isFree ? (
+          <div className="col-span-3">
+            <p className="text-sm font-semibold text-green-600 dark:text-green-400">Free</p>
           </div>
-          <span className="text-sm font-mono text-muted-foreground shrink-0">
-            {providerKey.keyHint || "***"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Status</span>
-          <div className="flex items-center gap-1.5">
-            {!providerKey.isEnabled ? (
-              <>
-                <XCircle size={16} weight="fill" className="text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Disabled</span>
-              </>
-            ) : providerKey.isValid ? (
-              <>
-                <CheckCircle
-                  size={16}
-                  weight="fill"
-                  className="text-green-600 dark:text-green-400"
-                />
-                <span className="text-xs text-green-600 dark:text-green-400">Valid</span>
-              </>
-            ) : (
-              <>
-                <XCircle size={16} weight="fill" className="text-red-600 dark:text-red-400" />
-                <span className="text-xs text-red-600 dark:text-red-400">Rejected by provider</span>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Last Used</span>
-          <span className="text-sm text-muted-foreground">
-            {formatRelativeTime(protoTimestampToDateStr(providerKey.lastUsedAt)) || "Never"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Last Validated</span>
-          <span className="text-sm text-muted-foreground">
-            {formatRelativeTime(protoTimestampToDateStr(providerKey.lastValidatedAt)) || "Never"}
-          </span>
-        </div>
-        {!providerKey.isValid && providerKey.lastError && (
-          <div className="flex items-start gap-2 rounded-lg border border-red-500/40 bg-red-100 dark:bg-red-900/30 p-3">
-            <XCircle
-              size={16}
-              weight="fill"
-              className="text-red-600 dark:text-red-400 shrink-0 mt-0.5"
-            />
-            <p className="text-xs text-red-800 dark:text-red-400 break-words">
-              {providerKey.lastError}
+        ) : priced ? (
+          <>
+            <PriceCell label="In" value={input} />
+            <PriceCell label="Out" value={output} />
+            <PriceCell label="Cached in" value={cached} />
+          </>
+        ) : (
+          <div className="col-span-3">
+            <p className="text-xs text-muted-foreground">
+              Rate set by the provider at call time, not the catalog
             </p>
           </div>
         )}
@@ -241,6 +363,7 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
   const [togglingKeyId, setTogglingKeyId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [modelsTab, setModelsTab] = useState<"key" | "all">("key");
+  const [modelSearch, setModelSearch] = useState("");
 
   const providerKeys = useMemo(() => Object.values(providerKeysMap), [providerKeysMap]);
 
@@ -255,7 +378,18 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
   );
 
   const keyModels = useAppSelector(selectModelsForKey(selectedKeyId ?? ""));
-  const shownModels = modelsTab === "all" ? availableModels : keyModels;
+  // Model listing is catalog-only, so it answers for the key's PROVIDER, not
+  // the credential. A key the provider refused reaches none of them.
+  const tabModels =
+    modelsTab === "all" ? availableModels : selectedKey?.isValid ? keyModels : EMPTY_MODELS;
+  const shownModels = useMemo(() => {
+    const needle = modelSearch.trim().toLowerCase();
+    if (!needle) return tabModels;
+    return tabModels.filter(
+      (model) =>
+        model.displayName.toLowerCase().includes(needle) || model.id.toLowerCase().includes(needle),
+    );
+  }, [tabModels, modelSearch]);
 
   useEffect(() => {
     if (selectedKeyId) {
@@ -325,32 +459,31 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
           maxSize={400}
           className="border-r border-border bg-card overflow-hidden"
         >
-          {/* Left sidebar */}
           <div className="h-full flex flex-col">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <span className="font-semibold text-foreground">Provider Keys</span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => dispatch(fetchProviderKeys({ force: true }))}
-                >
-                  <ArrowClockwise size={16} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={showAddForm ? "text-primary bg-primary/10" : ""}
-                  onClick={() => setShowAddForm(!showAddForm)}
-                >
-                  <Plus size={16} />
-                </Button>
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-semibold text-foreground">Provider Keys</span>
+                {providerKeys.length > 0 && (
+                  <Badge variant="secondary" className="tabular-nums">
+                    {providerKeys.length}
+                  </Badge>
+                )}
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => dispatch(fetchProviderKeys({ force: true }))}
+                aria-label="Refresh keys"
+                title="Refresh"
+              >
+                <ArrowClockwise size={16} />
+              </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto py-1">
               {providerKeys.map((key) => {
-                const isSelected = key.id === selectedKeyId;
+                const isSelected = key.id === selectedKeyId && !showAddForm;
+                const status = keyStatus(key);
                 return (
                   <button
                     key={key.id}
@@ -360,17 +493,19 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                       setShowAddForm(false);
                     }}
                     className={cn(
-                      "w-full px-4 py-3 flex items-center gap-3 cursor-pointer transition-colors text-left",
+                      "w-full px-3 py-2.5 flex items-center gap-3 cursor-pointer text-left border-l-2 transition-colors",
                       isSelected
-                        ? "bg-primary/10 border-l-2 border-primary"
-                        : "hover:bg-muted border-l-2 border-transparent",
+                        ? "bg-primary/10 border-primary"
+                        : "border-transparent hover:bg-muted/60",
                     )}
                   >
-                    {providerBrand(key.provider) ? (
-                      <ProviderLogo provider={key.provider} size="lg" />
-                    ) : (
-                      <Key size={18} className="text-muted-foreground shrink-0" />
-                    )}
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
+                      {providerBrand(key.provider) ? (
+                        <ProviderLogo provider={key.provider} size="md" />
+                      ) : (
+                        <Key size={16} className="text-muted-foreground" />
+                      )}
+                    </span>
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className="text-sm font-medium truncate text-foreground">
                         {key.label}
@@ -379,29 +514,28 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                         {providerLabel(key.provider)} - {key.keyHint || "***"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {!key.isEnabled ? (
-                        <XCircle size={14} className="text-muted-foreground" />
-                      ) : key.isValid ? (
-                        <CheckCircle
-                          size={14}
-                          weight="fill"
-                          className="text-green-600 dark:text-green-400"
-                        />
-                      ) : (
-                        <XCircle size={14} weight="fill" className="text-muted-foreground" />
-                      )}
-                    </div>
+                    <StatusIcon status={status} size={14} />
                   </button>
                 );
               })}
+            </div>
+
+            <div className="border-t border-border p-3">
+              <Button
+                variant={showAddForm ? "secondary" : "default"}
+                size="sm"
+                className="w-full"
+                onClick={() => setShowAddForm(true)}
+              >
+                <Plus size={14} />
+                Add provider key
+              </Button>
             </div>
           </div>
         </Panel>
 
         <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
 
-        {/* Right main panel */}
         <Panel id="config-detail" minSize={400}>
           <div className="h-full flex flex-col overflow-hidden">
             {showAddForm ? (
@@ -420,9 +554,9 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
               </>
             ) : selectedKey ? (
               <>
-                <div className="px-6 py-4 border-b border-border">
+                <div className="px-6 py-3 border-b border-border">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-border bg-muted">
                       {providerBrand(selectedKey.provider) ? (
                         <ProviderLogo provider={selectedKey.provider} size="lg" />
                       ) : (
@@ -430,19 +564,108 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h2 className="text-xl font-semibold text-foreground">{selectedKey.label}</h2>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {providerLabel(selectedKey.provider)} - {selectedKey.keyHint || "***"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="mr-2">
-                        <ToggleSwitch
-                          enabled={selectedKey.isEnabled}
-                          disabled={togglingKeyId === selectedKey.id}
-                          onChange={(enabled) => handleToggle(selectedKey.id, enabled)}
+                      <div className="flex items-center gap-2">
+                        <h2 className="truncate text-lg font-semibold text-foreground">
+                          {selectedKey.label}
+                        </h2>
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 text-xs font-medium",
+                            STATUS_TEXT[keyStatus(selectedKey)],
+                          )}
+                        >
+                          <StatusIcon status={keyStatus(selectedKey)} size={13} />
+                          {STATUS_LABELS[keyStatus(selectedKey)]}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                          {providerLabel(selectedKey.provider)}
+                          <span className="font-mono">{selectedKey.keyHint || "***"}</span>
+                        </span>
+                        <MetaFact
+                          icon={ClockCounterClockwise}
+                          label="Used"
+                          value={
+                            formatRelativeTime(protoTimestampToDateStr(selectedKey.lastUsedAt)) ||
+                            "never"
+                          }
                         />
-                      </span>
+                        <MetaFact
+                          icon={SealCheck}
+                          label="Validated"
+                          value={
+                            formatRelativeTime(
+                              protoTimestampToDateStr(selectedKey.lastValidatedAt),
+                            ) || "never"
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-36 xl:w-48">
+                        <MagnifyingGlass
+                          size={14}
+                          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                        />
+                        <Input
+                          type="text"
+                          placeholder="Search models..."
+                          value={modelSearch}
+                          onChange={(e) => setModelSearch(e.target.value)}
+                          className="h-8 pl-8 text-xs"
+                          data-testid="provider-models-search"
+                        />
+                      </div>
+                      <div className="inline-flex rounded-md border border-border bg-muted p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setModelsTab("key")}
+                          className={cn(
+                            "px-2.5 py-1 text-xs font-medium rounded transition-colors",
+                            modelsTab === "key"
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          This key
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setModelsTab("all")}
+                          className={cn(
+                            "px-2.5 py-1 text-xs font-medium rounded transition-colors",
+                            modelsTab === "all"
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          All keys
+                        </button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (modelsTab === "all") {
+                            dispatch(fetchAvailableModels({ force: true }));
+                          } else {
+                            dispatch(fetchModelsForKey({ keyId: selectedKey.id, force: true }));
+                          }
+                        }}
+                        aria-label="Refresh models"
+                        title="Refresh models"
+                      >
+                        <ArrowClockwise size={16} />
+                      </Button>
+
+                      <span className="mx-1 h-6 w-px bg-border" />
+
+                      <ToggleSwitch
+                        enabled={selectedKey.isEnabled}
+                        disabled={togglingKeyId === selectedKey.id}
+                        onChange={(enabled) => handleToggle(selectedKey.id, enabled)}
+                      />
                       <Button
                         variant="ghost"
                         size="icon"
@@ -471,131 +694,39 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                  <KeyDetailPanel providerKey={selectedKey} />
+                {!selectedKey.isValid && (
+                  <div className="border-b border-border px-6 py-3">
+                    <KeyErrorNotice
+                      lastError={selectedKey.lastError}
+                      provider={providerLabel(selectedKey.provider)}
+                    />
+                  </div>
+                )}
 
-                  {/* Available Models Section */}
-                  <div className="bg-card border border-border rounded-lg overflow-hidden">
-                    <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Brain size={18} className="text-muted-foreground shrink-0" />
-                        <span className="font-medium text-foreground">Available Models</span>
-                        <Badge variant="secondary">{shownModels.length}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="inline-flex rounded-md border border-border bg-muted p-0.5">
-                          <button
-                            type="button"
-                            onClick={() => setModelsTab("key")}
-                            className={cn(
-                              "px-2.5 py-1 text-xs font-medium rounded transition-colors",
-                              modelsTab === "key"
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:text-foreground",
-                            )}
-                          >
-                            This key
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setModelsTab("all")}
-                            className={cn(
-                              "px-2.5 py-1 text-xs font-medium rounded transition-colors",
-                              modelsTab === "all"
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:text-foreground",
-                            )}
-                          >
-                            All keys
-                          </button>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (modelsTab === "all") {
-                              dispatch(
-                                fetchAvailableModels({
-                                  force: true,
-                                }),
-                              );
-                            } else {
-                              dispatch(
-                                fetchModelsForKey({
-                                  keyId: selectedKey.id,
-                                  force: true,
-                                }),
-                              );
-                            }
-                          }}
-                          aria-label="Refresh models"
-                        >
-                          <ArrowClockwise size={16} />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {shownModels.length > 0 ? (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-4">
+                <div className="flex min-h-0 flex-1 flex-col">
+                  {shownModels.length > 0 ? (
+                    <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                      <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                         {shownModels.map((model) => (
-                          <div
-                            key={model.id}
-                            className="bg-muted/30 border border-border rounded-lg p-3"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">
-                                  {model.displayName}
-                                </p>
-                                <p className="text-xs text-muted-foreground font-mono truncate">
-                                  {model.id}
-                                </p>
-                              </div>
-                              <Badge
-                                variant="secondary"
-                                className="flex items-center gap-1.5 shrink-0"
-                              >
-                                <ProviderLogo provider={model.provider} size="xs" />
-                                {providerLabel(model.provider)}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-3 mt-2">
-                              <span className="text-xs text-muted-foreground">
-                                {formatContextWindow(model.contextWindow)} ctx
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                {model.supportsTools && (
-                                  <span title="Supports tools">
-                                    <Wrench size={12} className="text-muted-foreground" />
-                                  </span>
-                                )}
-                                {model.supportsVision && (
-                                  <span title="Supports vision">
-                                    <Eye size={12} className="text-muted-foreground" />
-                                  </span>
-                                )}
-                                {model.supportsThinking && (
-                                  <span title="Supports thinking">
-                                    <Brain size={12} className="text-muted-foreground" />
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                          <ModelCard key={`${model.provider}:${model.id}`} model={model} />
                         ))}
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-12">
-                        <Brain size={32} className="text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">No models available</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {modelsTab === "key"
-                            ? "This key exposes no models, or it has not been validated yet"
-                            : "Add a valid provider key to see available models"}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-6">
+                      <Brain size={32} className="text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">No models to show</p>
+                      <p className="mt-1 text-center text-xs text-muted-foreground">
+                        {modelSearch.trim()
+                          ? "Nothing matches that search"
+                          : modelsTab !== "key"
+                            ? "Add a valid provider key to see available models"
+                            : selectedKey.isValid
+                              ? "This key exposes no models yet"
+                              : "A key the provider refused reaches no models"}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

@@ -110,11 +110,17 @@ def test_openrouter_reasoning_in_extra_body() -> None:
     assert "reasoning_effort" not in bare
 
 
-def test_xai_sends_no_reasoning() -> None:
+def test_xai_older_model_sends_no_reasoning() -> None:
     provider = XAIProvider("xai-test")
     kwargs = _openai_kwargs(provider, "grok-4.5", {"reasoning_effort": "on"})
     assert "reasoning_effort" not in kwargs
     assert "extra_body" not in kwargs
+
+
+def test_xai_grok_4_6_sends_reasoning_effort() -> None:
+    provider = XAIProvider("xai-test")
+    kwargs = _openai_kwargs(provider, "grok-4.6", {"reasoning_effort": "xhigh"})
+    assert kwargs["reasoning_effort"] == "xhigh"
 
 
 def test_google_thinking_level() -> None:

@@ -171,6 +171,7 @@ async def _recorded_completion(
         provider=provider_name,
         provider_key_id=provider_key_id,
         result=result,
+        model=model,
     )
     return result
 

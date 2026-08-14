@@ -3,32 +3,27 @@
 import contextlib
 from uuid import UUID
 
-from uniffy.core.types import AccessMode
+from uniffy.domains.agents.tools.builtin.content_space import (
+    creation_space_schema,
+    parse_creation_space,
+    space_for_access_mode,
+)
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
-
-VALID_ACCESS_MODES = ["OWNER_ONLY", "EXPLICIT_MEMBERS", "OPEN_TO_ORG"]
-
-
-def _parse_access_mode(args: dict, kwargs: dict) -> str | None:
-    """Parse ``access_mode`` from tool args into ``kwargs`` (mutates in place)."""
-    if "access_mode" not in args:
-        return None
-    try:
-        kwargs["access_mode"] = AccessMode(args["access_mode"])
-        return None
-    except ValueError:
-        return f"Invalid access_mode: {args['access_mode']}. Must be one of: {VALID_ACCESS_MODES}"
 
 
 async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
-    """Create a new project."""
     from uniffy.domains.projects.operations import ProjectOperations
 
     name = args.get("name", "")
     if not name:
         return ToolResult(success=False, data="", error="name is required")
 
-    kwargs: dict = {}
+    access_mode, space_err = parse_creation_space(args)
+    if space_err:
+        return ToolResult(success=False, data="", error=space_err)
+    assert access_mode is not None
+
+    kwargs: dict = {"access_mode": access_mode}
     if "description" in args:
         kwargs["description"] = args["description"]
     if "icon" in args:
@@ -37,10 +32,6 @@ async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
         kwargs["color"] = args["color"]
     if "slug" in args:
         kwargs["slug"] = args["slug"]
-
-    err = _parse_access_mode(args, kwargs)
-    if err:
-        return ToolResult(success=False, data="", error=err)
 
     ops = ProjectOperations(ctx.session)
     project = await ops.create(
@@ -53,7 +44,11 @@ async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
     urn = f"urn:uniffy:content:PROJECT:{project.id}"
     return ToolResult(
         success=True,
-        data=f"Project created successfully: [[[{project.name}|{urn}]]]",
+        data=(
+            "Project created successfully in "
+            f"{space_for_access_mode(access_mode, None).title()}: "
+            f"[[[{project.name}|{urn}]]]"
+        ),
     )
 
 
@@ -564,7 +559,10 @@ create_project = ToolDefinition(
     name="projects.create_project",
     display_name="Create Project",
     group="Projects",
-    description="Create a new project in the organization.",
+    description=(
+        "Create a new project. Omit space to create it in Personal. Use organization "
+        "only when the user explicitly requests it."
+    ),
     parameter_schema={
         "type": "object",
         "properties": {
@@ -575,14 +573,7 @@ create_project = ToolDefinition(
                 "description": "Icon identifier (e.g. 'folder', 'rocket', 'bug').",
             },
             "color": {"type": "string", "description": "Hex color code (e.g. '#3b82f6')."},
-            "access_mode": {
-                "type": "string",
-                "enum": ["OWNER_ONLY", "EXPLICIT_MEMBERS", "OPEN_TO_ORG"],
-                "description": (
-                    "Access mode: OWNER_ONLY (private), EXPLICIT_MEMBERS (listed members "
-                    "only), or OPEN_TO_ORG (everyone in the org with baseline role)."
-                ),
-            },
+            "space": creation_space_schema(),
             "slug": {
                 "type": "string",
                 "description": (

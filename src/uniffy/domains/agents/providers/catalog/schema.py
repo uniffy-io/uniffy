@@ -4,8 +4,9 @@ Field names mirror the catwalk catalog (charmbracelet/catwalk) so a model
 entry can be pasted across with minimal edits: ``name``, ``cost_per_1m_*``,
 ``can_reason``/``reasoning_levels``/``default_reasoning_effort``,
 ``supports_attachments``, ``context_window``, ``default_max_tokens``. A few
-fields are ours (``aliases``, ``deprecated``, ``supports_tools``,
-``image_prices``). Unknown keys are ignored so upstream-only fields
+fields are ours (``aliases``, ``deprecated``, ``dynamic_pricing``,
+``use_responses_api``, ``supports_tools``, ``image_prices``). Unknown keys are ignored so
+upstream-only fields
 (``has_reasoning_efforts``, ``type``, ``api_key`` ...) don't break a paste.
 
 Cache rates follow catwalk's convention: ``cost_per_1m_in_cached`` is the
@@ -94,6 +95,8 @@ class Model(BaseModel):
     cost_per_1m_out: Decimal = Decimal(0)
     cost_per_1m_in_cached: Decimal = Decimal(0)
     cost_per_1m_out_cached: Decimal = Decimal(0)
+    dynamic_pricing: bool = False
+    use_responses_api: bool = False
     context_window: int = Field(gt=0)
     default_max_tokens: int | None = Field(default=None, gt=0)
     can_reason: bool = False
@@ -134,6 +137,7 @@ class Model(BaseModel):
     # Claude 4.7+ / OpenAI reasoning models). Removed from the schema,
     # rejected at write time, and never sent on the request.
     unsupported_params: list[str] = Field(default_factory=list)
+    unsupported_provider_options: list[str] = Field(default_factory=list)
 
     @field_validator(
         "cost_per_1m_in",
@@ -158,6 +162,18 @@ class Model(BaseModel):
                 f"model {self.id!r}: default_reasoning_effort "
                 f"{self.default_reasoning_effort!r} not in reasoning_levels",
             )
+        return self
+
+    @model_validator(mode="after")
+    def _check_pricing(self) -> Model:
+        rates = (
+            self.cost_per_1m_in,
+            self.cost_per_1m_out,
+            self.cost_per_1m_in_cached,
+            self.cost_per_1m_out_cached,
+        )
+        if self.dynamic_pricing and any(rate != 0 for rate in rates):
+            raise ValueError(f"model {self.id!r}: dynamic pricing cannot declare static rates")
         return self
 
 
@@ -205,6 +221,17 @@ class ProviderCatalog(BaseModel):
                 )
             if name in model.options:
                 raise ValueError(f"model {model.id!r}: option {name!r} is unsupported")
+        provider_options = model.options.get("provider_options")
+        for name in model.unsupported_provider_options:
+            if name not in self.provider_options:
+                raise ValueError(
+                    f"model {model.id!r}: unsupported_provider_options entry {name!r} "
+                    "is not a declared provider option",
+                )
+            if isinstance(provider_options, dict) and name in provider_options:
+                raise ValueError(
+                    f"model {model.id!r}: provider option {name!r} is unsupported",
+                )
         for key, value in model.options.items():
             if key == "provider_options":
                 if not isinstance(value, dict):

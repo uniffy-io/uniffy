@@ -8,12 +8,19 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
 from uniffy.core.types import ContentType
 from uniffy.domains.agents.tools.builtin.args import MAX_PAGE, clamp_int, clamp_page, parse_uuid
+from uniffy.domains.agents.tools.builtin.content_space import (
+    creation_space_schema,
+    parse_creation_space,
+    resolve_parent_access_mode,
+    space_for_access_mode,
+)
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 from uniffy.domains.tags import TagOperations
 
@@ -108,7 +115,7 @@ async def _resolve_folder_arg(
     ops = NoteOperations(ctx.session)
     try:
         folder = await ops.get_by_id(ctx.user_id, ctx.organization_id, folder_id)  # type: ignore[arg-type]
-    except (NotFoundError, PermissionDeniedError):
+    except NotFoundError, PermissionDeniedError:
         return None, f"No accessible notes folder with id {raw}."
 
     if folder.node_type != NodeType.FOLDER:
@@ -168,7 +175,7 @@ async def _execute_search_notes(ctx: ToolContext, args: dict) -> ToolResult:
     for r in results:
         try:
             rid = UUID(r.urn.split(":")[-1])
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             rid = None
         node_type = kinds.get(rid) if rid else None
         if node_type == NodeType.FOLDER:
@@ -186,9 +193,7 @@ async def _execute_search_notes(ctx: ToolContext, args: dict) -> ToolResult:
 
     header = f"Found {len(lines)} notes:"
     if folders_hidden:
-        header += (
-            f" ({folders_hidden} matching folders omitted - use notes.list_folders for those)"
-        )
+        header += f" ({folders_hidden} matching folders omitted - use notes.list_folders for those)"
     return ToolResult(success=True, data="\n".join([header, *lines]))
 
 
@@ -229,18 +234,12 @@ async def _execute_list_notes(ctx: ToolContext, args: dict) -> ToolResult:
             data=f"No notes in {scope}. Folders are listed by notes.list_folders.",
         )
 
-    folder_titles = await _fetch_titles(
-        ctx, {n.parent_id for n in notes if n.parent_id}
-    )
+    folder_titles = await _fetch_titles(ctx, {n.parent_id for n in notes if n.parent_id})
 
     lines = [f"Found {total} notes in {scope} (showing {len(notes)}, page {page}):"]
     for n in notes:
         desc = f" - {n.content[:100]}..." if n.content else ""
-        location = (
-            f" [in {folder_titles.get(n.parent_id, 'unknown folder')}]"
-            if n.parent_id
-            else ""
-        )
+        location = f" [in {folder_titles.get(n.parent_id, 'unknown folder')}]" if n.parent_id else ""
         lines.append(f"- [[[{n.title}|{_note_urn(n.id)}]]]{location}{desc}")
 
     hint = _paging_hint(total, len(notes), page, "notes", "notes.search_notes or a folder_id")
@@ -286,16 +285,22 @@ async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
     if not folders:
         return ToolResult(success=True, data=f"No notes folders in {scope}.")
 
-    parent_titles = await _fetch_titles(
-        ctx, {f.parent_id for f in folders if f.parent_id}
+    parent_titles = await _fetch_titles(ctx, {f.parent_id for f in folders if f.parent_id})
+    default_mode, _ = await PermissionChecker(ctx.session).get_org_defaults(
+        ctx.organization_id,
+        ContentType.NOTE,
     )
 
     lines = [f"Found {total} folders in {scope} (showing {len(folders)}, page {page}):"]
     for f in folders:
-        location = (
-            f" [in {parent_titles.get(f.parent_id, 'unknown folder')}]" if f.parent_id else ""
+        location = f" [in {parent_titles.get(f.parent_id, 'unknown folder')}]" if f.parent_id else ""
+        space = space_for_access_mode(
+            f.access_mode,
+            default_mode,
+            owner_id=f.owner_id,
+            current_user_id=ctx.user_id,
         )
-        lines.append(f"- {f.title} (folder_id: {f.id}){location}")
+        lines.append(f"- {f.title} (folder_id: {f.id}, space: {space}){location}")
 
     hint = _paging_hint(total, len(folders), page, "folders", "a parent_id")
     if hint:
@@ -342,9 +347,7 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
     )
     note_tags = [tag.slug for tag in tags_by_urn.get(urn, [])]
 
-    folder_titles = await _fetch_titles(
-        ctx, {note.parent_id} if note.parent_id else set()
-    )
+    folder_titles = await _fetch_titles(ctx, {note.parent_id} if note.parent_id else set())
 
     result_dict: dict = {
         "id": str(note.id),
@@ -355,9 +358,7 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
         "folder_id": str(note.parent_id) if note.parent_id else None,
         "folder_title": folder_titles.get(note.parent_id) if note.parent_id else None,
         "access_mode": (note.access_mode.value if note.access_mode is not None else None),
-        "baseline_role": (
-            note.baseline_role.value if note.baseline_role is not None else None
-        ),
+        "baseline_role": (note.baseline_role.value if note.baseline_role is not None else None),
         "created_at": note.created_at.isoformat() if note.created_at else None,
         "updated_at": note.updated_at.isoformat() if note.updated_at else None,
     }
@@ -373,12 +374,16 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
-    """Create a new note, optionally inside a folder."""
     from uniffy.domains.notes.operations import NoteOperations
 
     title = args.get("title", "")
     if not title:
         return ToolResult(success=False, data="", error="title is required")
+
+    access_mode, space_err = parse_creation_space(args)
+    if space_err:
+        return ToolResult(success=False, data="", error=space_err)
+    assert access_mode is not None
 
     parent_id: UUID | None = None
     raw_folder = args.get("folder_id")
@@ -388,27 +393,51 @@ async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
             return ToolResult(success=False, data="", error=err)
 
     ops = NoteOperations(ctx.session)
+    if parent_id is not None:
+        parent = await ops.get_by_id(ctx.user_id, ctx.organization_id, parent_id)
+        access_mode, err = await resolve_parent_access_mode(
+            ctx.session,
+            ctx.organization_id,
+            ContentType.NOTE,
+            parent.access_mode,
+            access_mode,
+            parent_owner_id=parent.owner_id,
+            current_user_id=ctx.user_id,
+            space_was_explicit="space" in args,
+        )
+        if err:
+            return ToolResult(success=False, data="", error=err)
+        assert access_mode is not None
+
     note = await ops.create(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         title=title,
         content=args.get("content", ""),
         parent_id=parent_id,
+        access_mode=access_mode,
     )
 
     return ToolResult(
         success=True,
-        data=f"Note created successfully: [[[{note.title}|{_note_urn(note.id)}]]]",
+        data=(
+            f"Note created successfully in {space_for_access_mode(access_mode, None).title()}: "
+            f"[[[{note.title}|{_note_urn(note.id)}]]]"
+        ),
     )
 
 
 async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
-    """Create a notes folder."""
     from uniffy.domains.notes.operations import NoteOperations
 
     name = args.get("name", "")
     if not name:
         return ToolResult(success=False, data="", error="name is required")
+
+    access_mode, space_err = parse_creation_space(args)
+    if space_err:
+        return ToolResult(success=False, data="", error=space_err)
+    assert access_mode is not None
 
     parent_id: UUID | None = None
     raw_parent = args.get("parent_id")
@@ -418,17 +447,37 @@ async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
             return ToolResult(success=False, data="", error=err)
 
     ops = NoteOperations(ctx.session)
+    if parent_id is not None:
+        parent = await ops.get_by_id(ctx.user_id, ctx.organization_id, parent_id)
+        access_mode, err = await resolve_parent_access_mode(
+            ctx.session,
+            ctx.organization_id,
+            ContentType.NOTE,
+            parent.access_mode,
+            access_mode,
+            parent_owner_id=parent.owner_id,
+            current_user_id=ctx.user_id,
+            space_was_explicit="space" in args,
+        )
+        if err:
+            return ToolResult(success=False, data="", error=err)
+        assert access_mode is not None
+
     folder = await ops.create(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         title=name,
         node_type=NodeType.FOLDER,
         parent_id=parent_id,
+        access_mode=access_mode,
     )
 
     return ToolResult(
         success=True,
-        data=f"Folder '{folder.title}' created (folder_id: {folder.id}).",
+        data=(
+            f"Folder '{folder.title}' created in "
+            f"{space_for_access_mode(access_mode, None).title()} (folder_id: {folder.id})."
+        ),
     )
 
 
@@ -661,7 +710,9 @@ create_note = ToolDefinition(
     group="Notes",
     description=(
         "Create a new note with a title and optional markdown content. Pass folder_id "
-        "to file it inside a folder; omit it to create the note at the top level."
+        "to file it inside a folder; omit it to create the note at the top level. "
+        "Omit space for a Personal top-level note; a chosen folder establishes the space "
+        "for nested notes. Use organization only when the user explicitly requests it."
     ),
     parameter_schema={
         "type": "object",
@@ -678,6 +729,7 @@ create_note = ToolDefinition(
                 "type": "string",
                 "description": _FOLDER_ARG_DESC,
             },
+            "space": creation_space_schema(),
         },
         "required": ["title"],
     },
@@ -690,7 +742,9 @@ create_folder = ToolDefinition(
     group="Notes",
     description=(
         "Create a notes folder to group notes in. A folder holds notes, it does not "
-        "hold text - create notes inside it with notes.create_note(folder_id=...)."
+        "hold text - create notes inside it with notes.create_note(folder_id=...). "
+        "Omit space for a Personal top-level folder; a chosen parent establishes the "
+        "space for nested folders. Use organization only when explicitly requested."
     ),
     parameter_schema={
         "type": "object",
@@ -705,6 +759,7 @@ create_folder = ToolDefinition(
                     "UUID of the folder to nest this one under. Omit for a top-level folder."
                 ),
             },
+            "space": creation_space_schema(),
         },
         "required": ["name"],
     },

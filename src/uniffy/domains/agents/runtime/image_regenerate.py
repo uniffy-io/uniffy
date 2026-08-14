@@ -13,10 +13,17 @@ from sqlalchemy import select
 
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.files.file import File
+from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.runtime.image_config import resolve_image_config
 from uniffy.domains.agents.runtime.writers import ChatChannelMessageWriter
+from uniffy.domains.agents.tools.builtin.content_space import (
+    ORGANIZATION_SPACE,
+    PERSONAL_SPACE,
+    effective_content_space,
+)
 from uniffy.domains.agents.tools.builtin.images import generate_image
 from uniffy.domains.agents.tools.definitions import ToolContext
 from uniffy.domains.chat.access import ChatAccessChecker
@@ -59,6 +66,38 @@ async def regenerate_image(
         if not prompt:
             raise ValidationError("message_id", "The original prompt is unavailable")
 
+        space = tool_meta.get("space")
+        if space not in {PERSONAL_SPACE, ORGANIZATION_SPACE}:
+            raw_file_id = tool_meta.get("file_id")
+            try:
+                file_id = UUID(raw_file_id)
+            except (TypeError, ValueError) as exc:
+                raise ValidationError(
+                    "message_id", "The original image space is unavailable"
+                ) from exc
+            file_row = (
+                await session.execute(
+                    select(File).where(
+                        File.id == file_id,
+                        File.organization_id == organization_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if file_row is None:
+                raise ValidationError("message_id", "The original image space is unavailable")
+            space = await effective_content_space(
+                session,
+                organization_id,
+                ContentType.FILE,
+                file_row.access_mode,
+                owner_id=file_row.owner_id,
+                current_user_id=user_id,
+            )
+            if space not in {PERSONAL_SPACE, ORGANIZATION_SPACE}:
+                raise ValidationError(
+                    "message_id", "Shared images cannot be regenerated into a new space"
+                )
+
         agent_id = meta.get("agent_id")
         if not agent_id:
             raise ValidationError("message_id", "The source message has no agent")
@@ -73,13 +112,9 @@ async def regenerate_image(
         agent = await AgentOperations(session).get_for_runtime(
             user_id, organization_id, UUID(agent_id)
         )
-        image_config = await resolve_image_config(
-            session, agent, organization_id=organization_id
-        )
+        image_config = await resolve_image_config(session, agent, organization_id=organization_id)
         if image_config is None:
-            raise ValidationError(
-                "agent", "This agent no longer has image generation configured"
-            )
+            raise ValidationError("agent", "This agent no longer has image generation configured")
 
         writer = ChatChannelMessageWriter(
             session=session,
@@ -90,7 +125,12 @@ async def regenerate_image(
             trigger_message_id=message_id,
             thread_root_id=source.root_id,
         )
-        args = {**(tool_meta.get("params") or {}), **params_patch, "prompt": prompt}
+        args = {
+            **(tool_meta.get("params") or {}),
+            **params_patch,
+            "prompt": prompt,
+            "space": space,
+        }
         ctx = ToolContext(
             session=session,
             user_id=user_id,

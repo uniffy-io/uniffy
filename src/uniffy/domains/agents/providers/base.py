@@ -77,6 +77,7 @@ class CompletionResult:
     cache_creation_input_tokens: int = 0
     cache_read_input_tokens: int = 0
     thinking_tokens: int = 0
+    provider_cost_usd: Decimal | None = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     thinking_blocks: list[dict] = field(default_factory=list)
     stop_reason: str = "end_turn"

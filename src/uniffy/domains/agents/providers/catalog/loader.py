@@ -153,6 +153,7 @@ def merge_parameter_schema(pc: ProviderCatalog, model: Model) -> dict:
             model_opts.get(key) if isinstance(model_opts, dict) else None,
         )
         for key, spec in pc.provider_options.items()
+        if key not in model.unsupported_provider_options
     }
     if declared:
         schema["provider_options"] = declared
@@ -233,6 +234,8 @@ def to_model_info(provider: str, model: Model) -> ModelInfo:
     """Project a catalog ``Model`` onto the ``ModelInfo`` DTO consumers use."""
     read_rate = cache_read_rate(model)
     write_rate = cache_write_rate(model)
+    input_rate = None if model.dynamic_pricing else model.cost_per_1m_in
+    output_rate = None if model.dynamic_pricing else model.cost_per_1m_out
     return ModelInfo(
         id=model.id,
         display_name=model.name,
@@ -249,8 +252,8 @@ def to_model_info(provider: str, model: Model) -> ModelInfo:
         catalog_known=True,
         reasoning_levels=tuple(model.reasoning_levels),
         default_reasoning_effort=model.default_reasoning_effort,
-        input_per_1m=model.cost_per_1m_in,
-        output_per_1m=model.cost_per_1m_out,
+        input_per_1m=input_rate,
+        output_per_1m=output_rate,
         cache_read_per_1m=read_rate,
         cache_write_per_1m=write_rate,
     )

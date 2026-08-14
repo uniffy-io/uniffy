@@ -1,5 +1,6 @@
 """OpenAI Responses API path: request building and stream parsing."""
 
+from decimal import Decimal
 from types import SimpleNamespace
 
 from uniffy.domains.agents.providers.base import EventType
@@ -8,6 +9,7 @@ from uniffy.domains.agents.providers.openai.responses import (
     build_responses_kwargs,
     convert_messages_to_responses,
 )
+from uniffy.domains.agents.providers.openrouter.provider import OpenRouterProvider
 
 MESSAGES = [{"role": "user", "content": "hi"}]
 
@@ -64,8 +66,8 @@ def _function_item(item_id: str = "fc_1") -> SimpleNamespace:
     )
 
 
-def _usage() -> SimpleNamespace:
-    return SimpleNamespace(
+def _usage(*, cost: str | None = None) -> SimpleNamespace:
+    usage = SimpleNamespace(
         input_tokens=20,
         output_tokens=9,
         input_tokens_details=SimpleNamespace(
@@ -74,15 +76,18 @@ def _usage() -> SimpleNamespace:
         ),
         output_tokens_details=SimpleNamespace(reasoning_tokens=5),
     )
+    if cost is not None:
+        usage.cost = cost
+    return usage
 
 
-def _completed_response(output: list) -> SimpleNamespace:
+def _completed_response(output: list, *, cost: str | None = None) -> SimpleNamespace:
     return SimpleNamespace(
         model="gpt-5.6-terra",
         status="completed",
         incomplete_details=None,
         output=output,
-        usage=_usage(),
+        usage=_usage(cost=cost),
     )
 
 
@@ -211,6 +216,33 @@ class TestResponsesStream:
         assert end.thinking_tokens == 5
         assert end.result.cache_creation_input_tokens == 6
         assert end.result.thinking_tokens == 5
+
+    async def test_openrouter_cost_is_captured_from_completed_response(self) -> None:
+        provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
+        response = _completed_response([_message_item()], cost="0.019876")
+        _install_responses_stream(
+            provider,
+            [_event("response.completed", response=response)],
+        )
+
+        events = await _collect(
+            provider.chat_completion(MESSAGES, "openrouter/fusion", stream=True)
+        )
+
+        assert events[-1].result.provider_cost_usd == Decimal("0.019876")
+
+    async def test_openrouter_cost_is_captured_without_streaming(self) -> None:
+        provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
+        response = _completed_response([_message_item()], cost="0.012345")
+
+        async def _create(**kwargs):
+            return response
+
+        provider._client = SimpleNamespace(responses=SimpleNamespace(create=_create))
+
+        result = await provider.chat_completion(MESSAGES, "openrouter/fusion")
+
+        assert result.provider_cost_usd == Decimal("0.012345")
 
     async def test_refusal_is_streamed_and_returned_as_answer_text(self) -> None:
         provider = OpenAIProvider("sk-test")

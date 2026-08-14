@@ -12,8 +12,9 @@ on tool-loop continuations, mirroring the Anthropic signature re-feed.
 """
 
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from copy import deepcopy
+from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
@@ -241,7 +242,10 @@ def build_responses_kwargs(
     return kwargs
 
 
-def _result_from_response(response: Any) -> CompletionResult:
+def _result_from_response(
+    response: Any,
+    cost_from_usage: Callable[[Any], Decimal | None] | None = None,
+) -> CompletionResult:
     content_parts: list[str] = []
     tool_calls: list[ToolCall] = []
     thinking_blocks: list[dict] = []
@@ -277,6 +281,7 @@ def _result_from_response(response: Any) -> CompletionResult:
         cache_creation_input_tokens=cache_write_tokens,
         cache_read_input_tokens=cached_tokens,
         thinking_tokens=reasoning,
+        provider_cost_usd=(cost_from_usage(response.usage) if cost_from_usage else None),
         tool_calls=tool_calls,
         thinking_blocks=thinking_blocks,
         stop_reason=_stop_reason(response, tool_calls),
@@ -308,12 +313,22 @@ def _split_usage(usage: Any) -> tuple[int, int, int, int, int]:
     return input_tokens, cached, cache_write, output_tokens, reasoning
 
 
-async def sync_completion(client: Any, kwargs: dict) -> CompletionResult:
+async def sync_completion(
+    client: Any,
+    kwargs: dict,
+    *,
+    cost_from_usage: Callable[[Any], Decimal | None] | None = None,
+) -> CompletionResult:
     response = await client.responses.create(**kwargs)
-    return _result_from_response(response)
+    return _result_from_response(response, cost_from_usage)
 
 
-async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEvent]:
+async def stream_completion(
+    client: Any,
+    kwargs: dict,
+    *,
+    cost_from_usage: Callable[[Any], Decimal | None] | None = None,
+) -> AsyncIterator[StreamEvent]:
     """Stream block-framed events; MODEL_CALL_END carries the CompletionResult.
 
     Dispatch is on the wire ``event.type`` string rather than SDK event
@@ -408,7 +423,7 @@ async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEv
                     )
 
             elif etype == "response.completed":
-                result = _result_from_response(event.response)
+                result = _result_from_response(event.response, cost_from_usage)
                 yield StreamEvent(
                     type=EventType.MODEL_CALL_END,
                     model=result.model,
@@ -423,7 +438,7 @@ async def stream_completion(client: Any, kwargs: dict) -> AsyncIterator[StreamEv
             elif etype in ("response.failed", "response.incomplete"):
                 response = event.response
                 if etype == "response.incomplete":
-                    result = _result_from_response(response)
+                    result = _result_from_response(response, cost_from_usage)
                     yield StreamEvent(
                         type=EventType.MODEL_CALL_END,
                         model=result.model,

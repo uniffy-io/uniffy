@@ -138,7 +138,16 @@ export function AgentsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    // The keys tab hosts its own scroll regions, so on desktop the page becomes
+    // a fixed-height column (viewport minus the admin header and gutters) and
+    // the tab body takes whatever is left. Every other tab scrolls with the page.
+    <div
+      className={cn(
+        "space-y-6",
+        activeTab === "keys" &&
+          "md:flex md:h-[calc(100dvh-6rem)] md:flex-col md:space-y-0 md:gap-6",
+      )}
+    >
       <div>
         <div className="flex items-center gap-3 mb-2">
           <Robot size={24} weight="duotone" className="text-primary" />
@@ -171,7 +180,7 @@ export function AgentsPage() {
       {activeTab === "general" && <GeneralTab />}
       {activeTab === "runtime" && <RuntimeTab />}
       {activeTab === "keys" && (
-        <div className="h-[70vh] min-h-[480px] rounded-xl border border-border overflow-hidden">
+        <div className="h-[70vh] min-h-[560px] overflow-hidden rounded-xl border border-border md:h-auto md:min-h-0 md:flex-1">
           <ConfigView embedded />
         </div>
       )}

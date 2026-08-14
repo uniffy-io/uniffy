@@ -30,4 +30,5 @@ class XAIProvider(OpenAIProvider):
         return model_infos_for_provider("xai")
 
     def _apply_reasoning(self, kwargs: dict, effort: str) -> None:
-        """Grok 4+ always reasons and rejects ``reasoning_effort``; send nothing."""
+        if kwargs["model"] == "grok-4.6" and effort != "off":
+            kwargs["reasoning_effort"] = effort

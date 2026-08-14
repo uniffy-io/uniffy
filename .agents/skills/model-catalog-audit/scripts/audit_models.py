@@ -201,6 +201,8 @@ def _price_matches(catalog: Decimal, live: Decimal) -> bool:
 def _print_price_drift(provider: str, live_by_id: dict[str, dict]) -> None:
     lines: list[str] = []
     for model in models_for_provider(provider):
+        if model.dynamic_pricing:
+            continue
         for slug in (model.id, *model.aliases):
             prices = (live_by_id.get(slug) or {}).get("prices")
             if not prices:

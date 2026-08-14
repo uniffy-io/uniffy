@@ -14,15 +14,19 @@ class ModelCallUsage:
     provider: str
     provider_key_id: UUID | None
     model: str
+    resolved_model: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
     cache_creation_input_tokens: int = 0
     cache_read_input_tokens: int = 0
     thinking_tokens: int = 0
+    provider_cost_usd: Decimal | None = None
     status: str = "success"
     error: str | None = None
 
     def cost_usd(self) -> Decimal | None:
+        if self.provider_cost_usd is not None:
+            return self.provider_cost_usd
         pricing = get_pricing(provider=self.provider, model=self.model)
         if pricing is None:
             return None
@@ -42,6 +46,7 @@ class ModelCallUsage:
             "provider": self.provider,
             "provider_key_id": (str(self.provider_key_id) if self.provider_key_id else None),
             "model": self.model,
+            "resolved_model": self.resolved_model,
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "cache_creation_input_tokens": self.cache_creation_input_tokens,
@@ -63,18 +68,22 @@ class RunUsageAccumulator:
         provider: str,
         provider_key_id: UUID | None,
         result: CompletionResult,
+        model: str | None = None,
     ) -> None:
+        requested_model = model or result.model
         self.calls.append(
             ModelCallUsage(
                 sequence=len(self.calls) + 1,
                 provider=provider,
                 provider_key_id=provider_key_id,
-                model=result.model,
+                model=requested_model,
+                resolved_model=(result.model if result.model != requested_model else None),
                 input_tokens=max(0, int(result.input_tokens or 0)),
                 output_tokens=max(0, int(result.output_tokens or 0)),
                 cache_creation_input_tokens=max(0, int(result.cache_creation_input_tokens or 0)),
                 cache_read_input_tokens=max(0, int(result.cache_read_input_tokens or 0)),
                 thinking_tokens=max(0, int(result.thinking_tokens or 0)),
+                provider_cost_usd=result.provider_cost_usd,
             )
         )
 

@@ -3,6 +3,7 @@
 import base64
 import json
 from collections.abc import AsyncIterator
+from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
@@ -52,8 +53,8 @@ class OpenAIProvider(LLMProvider):
     """OpenAI provider using the official Python SDK."""
 
     # openai.com serves reasoning + function tools only on /v1/responses
-    # (gpt-5.4+ 400s the combo on chat completions). OpenAI-compatible
-    # subclasses (OpenRouter, xAI) stay on chat completions.
+    # (gpt-5.4+ 400s the combo on chat completions). Compatible subclasses
+    # can override endpoint selection for individual models.
     _use_responses_api = True
 
     def __init__(self, credential: str) -> None:
@@ -164,7 +165,7 @@ class OpenAIProvider(LLMProvider):
             Result or streaming iterator.
 
         """
-        if self._use_responses_api:
+        if self._should_use_responses_api(model):
             responses_kwargs = build_responses_kwargs(
                 messages=messages,
                 model=model,
@@ -175,8 +176,16 @@ class OpenAIProvider(LLMProvider):
                 safety_identifier=safety_identifier,
             )
             if stream:
-                return stream_completion(self._client, responses_kwargs)
-            return await sync_completion(self._client, responses_kwargs)
+                return stream_completion(
+                    self._client,
+                    responses_kwargs,
+                    cost_from_usage=self._provider_cost_usd,
+                )
+            return await sync_completion(
+                self._client,
+                responses_kwargs,
+                cost_from_usage=self._provider_cost_usd,
+            )
 
         kwargs = self._build_request_kwargs(
             messages=messages,
@@ -191,6 +200,12 @@ class OpenAIProvider(LLMProvider):
             return self._stream_completion(**kwargs)
 
         return await self._sync_completion(**kwargs)
+
+    def _should_use_responses_api(self, model: str) -> bool:
+        return self._use_responses_api
+
+    def _provider_cost_usd(self, _usage: Any) -> Decimal | None:
+        return None
 
     async def get_available_models(self) -> list[ModelInfo]:
         """Return OpenAI models from the catalog (the source of truth)."""
@@ -295,6 +310,7 @@ class OpenAIProvider(LLMProvider):
             input_tokens=prompt_tokens - cached_tokens,
             output_tokens=output_tokens,
             cache_read_input_tokens=cached_tokens,
+            provider_cost_usd=self._provider_cost_usd(response.usage),
             tool_calls=tool_calls,
             stop_reason=stop_reason,
         )
@@ -327,12 +343,16 @@ class OpenAIProvider(LLMProvider):
             prompt_tokens = 0
             cached_tokens = 0
             output_tokens = 0
+            provider_cost_usd: Decimal | None = None
             thinking_block_id = ""
             text_block_id = ""
 
             async for chunk in stream:
                 if chunk.usage:
                     prompt_tokens, cached_tokens, output_tokens = _split_openai_usage(chunk.usage)
+                    reported_cost_usd = self._provider_cost_usd(chunk.usage)
+                    if reported_cost_usd is not None:
+                        provider_cost_usd = reported_cost_usd
 
                 if not chunk.choices:
                     continue
@@ -466,6 +486,7 @@ class OpenAIProvider(LLMProvider):
                     input_tokens=prompt_tokens - cached_tokens,
                     output_tokens=output_tokens,
                     cache_read_input_tokens=cached_tokens,
+                    provider_cost_usd=provider_cost_usd,
                     tool_calls=tool_calls,
                     stop_reason=stop_reason,
                 ),

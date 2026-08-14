@@ -4,7 +4,9 @@ Registry dispatch, base URL wiring, and the live-probe validate path.
 No network calls; HTTP goes through a mocked client where needed.
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -81,6 +83,79 @@ class TestOpenRouterValidate:
         _stub_key_endpoint(provider, 429)
         result = await provider.validate()
         assert result == (True, None)
+
+
+class TestOpenRouterEndpoints:
+    async def test_only_fusion_streams_over_responses_api(self) -> None:
+        provider = OpenRouterProvider(OPENROUTER_KEY)
+        responses_stream = object()
+        chat_stream = object()
+        provider._stream_completion = MagicMock(return_value=chat_stream)
+
+        with patch(
+            "uniffy.domains.agents.providers.openai.provider.stream_completion",
+            return_value=responses_stream,
+        ) as stream_completion:
+            fusion = await provider.chat_completion(
+                [{"role": "user", "content": "compare these approaches"}],
+                "openrouter/fusion",
+                stream=True,
+            )
+            regular = await provider.chat_completion(
+                [{"role": "user", "content": "hello"}],
+                "google/gemini-3.7-flash",
+                stream=True,
+            )
+
+        assert fusion is responses_stream
+        assert regular is chat_stream
+        responses_kwargs = stream_completion.call_args.args[1]
+        assert responses_kwargs["model"] == "openrouter/fusion"
+        assert responses_kwargs["store"] is False
+        provider._stream_completion.assert_called_once()
+
+    def test_usage_cost_parser_accepts_only_non_negative_finite_values(self) -> None:
+        provider = OpenRouterProvider(OPENROUTER_KEY)
+
+        assert provider._provider_cost_usd(SimpleNamespace(cost="0.001234")) == Decimal(
+            "0.001234"
+        )
+        assert provider._provider_cost_usd(SimpleNamespace(cost=0)) == Decimal(0)
+        assert provider._provider_cost_usd(SimpleNamespace(cost=-1)) is None
+        assert provider._provider_cost_usd(SimpleNamespace(cost="NaN")) is None
+        assert provider._provider_cost_usd(SimpleNamespace()) is None
+
+    async def test_chat_completion_captures_provider_cost(self) -> None:
+        provider = OpenRouterProvider(OPENROUTER_KEY)
+        response = SimpleNamespace(
+            model="x-ai/grok-4.5",
+            choices=[
+                SimpleNamespace(
+                    finish_reason="stop",
+                    message=SimpleNamespace(content="done", refusal=None, tool_calls=None),
+                )
+            ],
+            usage=SimpleNamespace(
+                prompt_tokens=10,
+                completion_tokens=2,
+                prompt_tokens_details=None,
+                cost="0.000456",
+            ),
+        )
+
+        async def _create(**kwargs):
+            return response
+
+        provider._client = SimpleNamespace(
+            chat=SimpleNamespace(completions=SimpleNamespace(create=_create))
+        )
+
+        result = await provider.chat_completion(
+            [{"role": "user", "content": "hello"}],
+            "~x-ai/grok-latest",
+        )
+
+        assert result.provider_cost_usd == Decimal("0.000456")
 
 
 class TestDescriptors:

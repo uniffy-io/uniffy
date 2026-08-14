@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import PermissionDeniedError
@@ -19,6 +20,12 @@ from uniffy.domains.agents.tools.builtin.args import (
     clamp_page,
     parse_uuid,
     parse_uuid_list,
+)
+from uniffy.domains.agents.tools.builtin.content_space import (
+    creation_space_schema,
+    parse_creation_space,
+    resolve_parent_access_mode,
+    space_for_access_mode,
 )
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 from uniffy.domains.tags import TagOperations
@@ -193,18 +200,14 @@ async def _execute_list_files(ctx: ToolContext, args: dict) -> ToolResult:
             data=f"No files in {scope}. Folders are listed by files.list_folders.",
         )
 
-    folder_names = await _fetch_folder_names(
-        ctx, {f.folder_id for f in files if f.folder_id}
-    )
+    folder_names = await _fetch_folder_names(ctx, {f.folder_id for f in files if f.folder_id})
 
     lines = [f"Found {total} files in {scope} (showing {len(files)}, page {page}):"]
     for f in files:
         size = _format_size(f.size_bytes)
         mime = f.mime_type or "unknown"
         urn = f"urn:uniffy:content:FILE:{f.id}"
-        location = (
-            f" [in {folder_names.get(f.folder_id, 'unknown folder')}]" if f.folder_id else ""
-        )
+        location = f" [in {folder_names.get(f.folder_id, 'unknown folder')}]" if f.folder_id else ""
         lines.append(f"- [[[{f.filename}|{urn}]]] ({mime}, {size}){location}")
 
     hint = _paging_hint(total, len(files), page, "files", "files.search_files or a folder_id")
@@ -246,10 +249,22 @@ async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
     if not folders:
         return ToolResult(success=True, data=f"No folders in {scope}.")
 
+    default_mode, _ = await PermissionChecker(ctx.session).get_org_defaults(
+        ctx.organization_id,
+        ContentType.FOLDER,
+    )
     lines = [f"Found {len(folders)} folders in {scope} (page {page}):"]
     for f in folders:
         system = " [system]" if f.is_system else ""
-        lines.append(f"- [[[{f.name}|{_folder_urn(f.id)}]]] (folder_id: {f.id}){system}")
+        space = space_for_access_mode(
+            f.access_mode,
+            default_mode,
+            owner_id=f.owner_id,
+            current_user_id=ctx.user_id,
+        )
+        lines.append(
+            f"- [[[{f.name}|{_folder_urn(f.id)}]]] (folder_id: {f.id}, space: {space}){system}"
+        )
 
     if has_more:
         lines.append(f"More folders exist; ask for page {page + 1}.")
@@ -258,12 +273,16 @@ async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
-    """Create a folder in the file hierarchy."""
     from uniffy.domains.files.operations import FolderOperations
 
     name = args.get("name", "")
     if not name:
         return ToolResult(success=False, data="", error="name is required")
+
+    access_mode, space_err = parse_creation_space(args)
+    if space_err:
+        return ToolResult(success=False, data="", error=space_err)
+    assert access_mode is not None
 
     parent_id: UUID | None = None
     raw_parent = args.get("parent_id")
@@ -273,17 +292,38 @@ async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
             return ToolResult(success=False, data="", error=err)
 
     ops = FolderOperations(ctx.session)
+    if parent_id is not None:
+        parent = await ops.get_by_id(parent_id, ctx.organization_id)
+        if parent is None:
+            return ToolResult(success=False, data="", error="Folder is no longer available")
+        access_mode, err = await resolve_parent_access_mode(
+            ctx.session,
+            ctx.organization_id,
+            ContentType.FOLDER,
+            parent.access_mode,
+            access_mode,
+            parent_owner_id=parent.owner_id,
+            current_user_id=ctx.user_id,
+            space_was_explicit="space" in args,
+        )
+        if err:
+            return ToolResult(success=False, data="", error=err)
+        assert access_mode is not None
+
     folder = await ops.create(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         name=name,
         parent_id=parent_id,
+        access_mode=access_mode,
     )
 
     return ToolResult(
         success=True,
-        data=f"Folder created: [[[{folder.name}|{_folder_urn(folder.id)}]]] "
-        f"(folder_id: {folder.id}).",
+        data=(
+            f"Folder created in {space_for_access_mode(access_mode, None).title()}: "
+            f"[[[{folder.name}|{_folder_urn(folder.id)}]]] (folder_id: {folder.id})."
+        ),
     )
 
 
@@ -353,9 +393,7 @@ async def _execute_get_file_info(ctx: ToolContext, args: dict) -> ToolResult:
         content_urns=[urn],
     )
     file_tag_slugs = [tag.slug for tag in tags_by_urn.get(urn, [])]
-    folder_names = await _fetch_folder_names(
-        ctx, {file.folder_id} if file.folder_id else set()
-    )
+    folder_names = await _fetch_folder_names(ctx, {file.folder_id} if file.folder_id else set())
 
     data = json.dumps(
         {
@@ -369,12 +407,8 @@ async def _execute_get_file_info(ctx: ToolContext, args: dict) -> ToolResult:
             "folder_id": str(file.folder_id) if file.folder_id else None,
             "folder_name": folder_names.get(file.folder_id) if file.folder_id else None,
             "description": file.description,
-            "access_mode": (
-                file.access_mode.value if file.access_mode is not None else None
-            ),
-            "baseline_role": (
-                file.baseline_role.value if file.baseline_role is not None else None
-            ),
+            "access_mode": (file.access_mode.value if file.access_mode is not None else None),
+            "baseline_role": (file.baseline_role.value if file.baseline_role is not None else None),
             "urn": file.urn,
             "created_at": file.created_at.isoformat() if file.created_at else None,
             "updated_at": file.updated_at.isoformat() if file.updated_at else None,
@@ -640,7 +674,9 @@ create_folder = ToolDefinition(
     group="Files",
     description=(
         "Create a folder to group files in. A folder holds files, it holds no content "
-        "of its own - move files into it with files.move_file."
+        "of its own - move files into it with files.move_file. Omit space for a Personal "
+        "top-level folder; a chosen parent establishes the space for nested folders. "
+        "Use organization only when explicitly requested."
     ),
     parameter_schema={
         "type": "object",
@@ -655,6 +691,7 @@ create_folder = ToolDefinition(
                     "UUID of the folder to nest this one under. Omit for a top-level folder."
                 ),
             },
+            "space": creation_space_schema(),
         },
         "required": ["name"],
     },

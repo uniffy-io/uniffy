@@ -30,6 +30,8 @@ def validate_model_params(provider: str, model_id: str, params: dict) -> None:
                 spec = pc.provider_options.get(opt_key)
                 if spec is None:
                     raise ValueError(f"unknown provider option {opt_key!r}")
+                if opt_key in model.unsupported_provider_options:
+                    raise ValueError(f"model {model_id!r} does not accept {opt_key!r}")
                 spec.check_value(opt_key, opt_value)
             continue
         if knob == REASONING_KNOB:

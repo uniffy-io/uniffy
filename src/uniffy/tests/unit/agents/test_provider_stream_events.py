@@ -7,6 +7,7 @@ CompletionResult. Thinking must never leak into answer text.
 No network; SDK clients are replaced with canned streams.
 """
 
+from decimal import Decimal
 from types import SimpleNamespace
 
 from uniffy.domains.agents.providers.anthropic.provider import AnthropicProvider
@@ -272,12 +273,15 @@ def _openai_chunk(
     )
 
 
-def _openai_usage() -> SimpleNamespace:
-    return SimpleNamespace(
+def _openai_usage(*, cost: str | None = None) -> SimpleNamespace:
+    usage = SimpleNamespace(
         prompt_tokens=20,
         completion_tokens=7,
         prompt_tokens_details=SimpleNamespace(cached_tokens=4),
     )
+    if cost is not None:
+        usage.cost = cost
+    return usage
 
 
 def _openai_tool_delta(idx: int, tc_id: str | None, name: str | None, args: str | None):
@@ -338,6 +342,25 @@ class TestOpenAIFamilyStream:
         events = await _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
         deltas = _only(events, EventType.THINKING_BLOCK_DELTA)
         assert "".join(e.delta for e in deltas) == "chain of thought"
+
+    async def test_openrouter_cost_comes_from_final_usage_chunk(self) -> None:
+        provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
+        chunks = [
+            _openai_chunk(content="Answer"),
+            _openai_chunk(finish_reason="stop"),
+            SimpleNamespace(
+                usage=_openai_usage(cost="0.004321"),
+                model="openai/gpt-5.6-luna",
+                choices=[],
+            ),
+        ]
+        _install_openai_stream(provider, chunks)
+
+        events = await _collect(
+            provider.chat_completion(MESSAGES, "~openai/gpt-mini-latest", stream=True)
+        )
+
+        assert events[-1].result.provider_cost_usd == Decimal("0.004321")
 
     async def test_xai_reasoning_content_via_inheritance(self) -> None:
         provider = XAIProvider("xai-0123456789abcdef1234")
