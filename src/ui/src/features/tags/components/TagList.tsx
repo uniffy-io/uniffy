@@ -1,10 +1,24 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { PencilSimple, Trash } from "@phosphor-icons/react";
-import { Virtuoso } from "react-virtuoso";
+import { Virtuoso, type Components } from "react-virtuoso";
 
 import { cn } from "@/shared/utils/cn";
 import { TagChip } from "@/features/tags/components/TagChip";
 import type { SerializedTag } from "@/features/tags/store/tagsThunks";
+
+interface TagListContext {
+  isLoadingMore: boolean;
+}
+
+function TagListFooter({ context }: { context: TagListContext }) {
+  return context.isLoadingMore ? (
+    <div className="px-3 py-2 text-center text-xs text-muted-foreground">Loading...</div>
+  ) : null;
+}
+
+const TAG_LIST_COMPONENTS: Components<SerializedTag, TagListContext> = {
+  Footer: TagListFooter,
+};
 
 interface TagListProps {
   tags: readonly SerializedTag[];
@@ -83,6 +97,11 @@ export function TagList({
     }
   }, [nextPageToken, onLoadMore, isLoadingMore]);
 
+  const listContext = useMemo<TagListContext>(
+    () => ({ isLoadingMore: Boolean(isLoadingMore) }),
+    [isLoadingMore],
+  );
+
   if (tags.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
@@ -95,16 +114,12 @@ export function TagList({
     <Virtuoso
       className="h-full"
       data={tags as SerializedTag[]}
+      context={listContext}
       computeItemKey={(_index, tag) => tag.id}
       itemContent={itemContent}
       endReached={endReached}
       increaseViewportBy={400}
-      components={{
-        Footer: () =>
-          isLoadingMore ? (
-            <div className="px-3 py-2 text-center text-xs text-muted-foreground">Loading...</div>
-          ) : null,
-      }}
+      components={TAG_LIST_COMPONENTS}
     />
   );
 }

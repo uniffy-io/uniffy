@@ -654,6 +654,15 @@ interface TableRow {
   [key: string]: string | number;
 }
 
+function formatProviderCell(value: number | string, row: TableRow) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <ProviderLogo provider={String(row.provider)} size="sm" />
+      {String(value)}
+    </span>
+  );
+}
+
 function SortableTable({
   columns,
   rows,
@@ -1178,12 +1187,7 @@ export function UsageView() {
                 key: "model",
                 label: "Model",
                 mono: true,
-                format: (value, row) => (
-                  <span className="inline-flex items-center gap-1.5">
-                    <ProviderLogo provider={String(row.provider)} size="sm" />
-                    {String(value)}
-                  </span>
-                ),
+                format: formatProviderCell,
               },
               {
                 key: "runs",
@@ -1278,12 +1282,7 @@ export function UsageView() {
               {
                 key: "key",
                 label: "Key",
-                format: (value, row) => (
-                  <span className="inline-flex items-center gap-1.5">
-                    <ProviderLogo provider={String(row.provider)} size="sm" />
-                    {String(value)}
-                  </span>
-                ),
+                format: formatProviderCell,
               },
               {
                 key: "runs",

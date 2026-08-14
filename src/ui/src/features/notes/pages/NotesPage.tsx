@@ -34,6 +34,10 @@ const NotesGraphDashboard = lazyImport(
   "NotesGraphDashboard",
 );
 
+function renderPageErrorFallback(props: { error: Error; reset: () => void }) {
+  return <PageErrorFallback {...props} />;
+}
+
 export function NotesPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -142,7 +146,7 @@ export function NotesPage() {
             treeLoaded && notesCount === 0 && !notesLoading ? (
               <NotesEmptyState key="empty-state" />
             ) : (
-              <ErrorBoundary fallback={(props) => <PageErrorFallback {...props} />}>
+              <ErrorBoundary fallback={renderPageErrorFallback}>
                 <Suspense fallback={<PageLoader />}>
                   <NotesGraphDashboard key="graph-dashboard" />
                 </Suspense>

@@ -270,6 +270,19 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
   return <div className="min-h-screen bg-background text-foreground">{children}</div>;
 }
 
+interface ErrorFallbackProps {
+  error: Error;
+  reset: () => void;
+}
+
+function renderPageErrorFallback(props: ErrorFallbackProps) {
+  return <PageErrorFallback {...props} />;
+}
+
+function renderAppErrorFallback(props: ErrorFallbackProps) {
+  return <AppErrorFallback {...props} />;
+}
+
 /**
  * LazyRoute - Wraps lazy-loaded page components with Suspense and ErrorBoundary.
  *
@@ -278,7 +291,7 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
  */
 function LazyRoute({ children }: { children: React.ReactNode }) {
   return (
-    <ErrorBoundary fallback={(props) => <PageErrorFallback {...props} />}>
+    <ErrorBoundary fallback={renderPageErrorFallback}>
       <Suspense fallback={<PageLoader />}>{children}</Suspense>
     </ErrorBoundary>
   );
@@ -379,7 +392,7 @@ function PushNotificationRedirect() {
 export function App() {
   return (
     <AuthInitializer>
-      <ErrorBoundary fallback={(props) => <AppErrorFallback {...props} />}>
+      <ErrorBoundary fallback={renderAppErrorFallback}>
         <BrowserRouter>
           {/* Global Spotlight Search - available on all pages */}
           <SpotlightSearch />

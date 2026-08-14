@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useMemo, useState, type ReactNode } from "react";
 import { Hash, Lock } from "@phosphor-icons/react";
-import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
+import { Virtuoso, type Components, type VirtuosoHandle } from "react-virtuoso";
 import { useAvatarUrl } from "@/shared/hooks/useAvatarUrl";
 import { getInitials } from "@/components/subject/utils";
 import { cn } from "@/shared/utils/cn";
@@ -238,6 +238,37 @@ function DmPairAccent({
     </div>
   );
 }
+
+interface MessageListContext {
+  hasMore: boolean;
+  isLoadingMore: boolean;
+}
+
+// Constant header height while more history exists, so toggling the
+// spinner never shifts the anchored rows below it.
+function MessageListHeader({ context }: { context: MessageListContext }) {
+  return context.hasMore ? (
+    <div className="flex h-12 items-center justify-center">
+      {context.isLoadingMore && (
+        <>
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+          <span className="ml-2 text-xs text-muted-foreground">Loading older messages...</span>
+        </>
+      )}
+    </div>
+  ) : (
+    <div className="pt-4" />
+  );
+}
+
+function MessageListFooter() {
+  return <div className="pb-2" />;
+}
+
+const MESSAGE_LIST_COMPONENTS: Components<GroupedMessage, MessageListContext> = {
+  Header: MessageListHeader,
+  Footer: MessageListFooter,
+};
 
 interface MessageListProps {
   channelId?: string;
@@ -492,28 +523,9 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     });
   }, [grouped.length, isWindowed, effectiveChannelId, dispatch]);
 
-  const components = useMemo(
-    () => ({
-      // Constant header height while more history exists, so toggling the
-      // spinner never shifts the anchored rows below it.
-      Header: () =>
-        hasMore ? (
-          <div className="flex h-12 items-center justify-center">
-            {isLoadingMore && (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-                <span className="ml-2 text-xs text-muted-foreground">
-                  Loading older messages...
-                </span>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="pt-4" />
-        ),
-      Footer: () => <div className="pb-2" />,
-    }),
-    [isLoadingMore, hasMore],
+  const listContext = useMemo<MessageListContext>(
+    () => ({ hasMore, isLoadingMore }),
+    [hasMore, isLoadingMore],
   );
 
   const itemContent = useCallback(
@@ -637,7 +649,8 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         atBottomStateChange={handleAtBottomChange}
         atBottomThreshold={100}
         totalListHeightChanged={handleTotalListHeightChanged}
-        components={components}
+        context={listContext}
+        components={MESSAGE_LIST_COMPONENTS}
         itemContent={itemContent}
         computeItemKey={(_idx, g) => g.message.id}
       />

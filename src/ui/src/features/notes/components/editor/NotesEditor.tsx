@@ -21,6 +21,10 @@ import { useCanvasRealtimeSession } from "@/features/notes/realtime/useCanvasRea
 import { ErrorBoundary } from "@/components/feedback";
 import { EditorErrorFallback } from "@/features/notes/components/editor/EditorErrorFallback";
 
+function renderEditorErrorFallback({ reset }: { error: Error; reset: () => void }) {
+  return <EditorErrorFallback onRetry={reset} />;
+}
+
 export function NotesEditor() {
   const location = useLocation();
   const notesState = useAppSelector((state) => state.notes);
@@ -155,7 +159,7 @@ export function NotesEditor() {
         )}
         {!isZenMode && !canvasTitleHidden && compactTitleBlock}
         <div className="flex-1 overflow-hidden">
-          <ErrorBoundary fallback={({ reset }) => <EditorErrorFallback onRetry={reset} />}>
+          <ErrorBoundary fallback={renderEditorErrorFallback}>
             <CanvasEditor
               key={currentNote.id}
               canvasState={canvasState}
@@ -233,9 +237,7 @@ export function NotesEditor() {
           />
         )}
         <div ref={editorContainerRef} className="flex-1 overflow-hidden">
-          <ErrorBoundary fallback={({ reset }) => <EditorErrorFallback onRetry={reset} />}>
-            {renderEditor()}
-          </ErrorBoundary>
+          <ErrorBoundary fallback={renderEditorErrorFallback}>{renderEditor()}</ErrorBoundary>
         </div>
         {/* Floating toolbar only when persistent bar unpinned and in crepe mode. */}
         {canEdit && editorMode === "crepe" && !toolbarPinned && <FloatingFormattingToolbar />}

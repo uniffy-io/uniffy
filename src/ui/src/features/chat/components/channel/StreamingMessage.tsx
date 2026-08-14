@@ -147,9 +147,13 @@ function StreamingFallback({ content }: StreamingMessageProps) {
   );
 }
 
+function plainTextFallback(props: StreamingMessageProps) {
+  return () => <StreamingFallback {...props} />;
+}
+
 export function StreamingMessage(props: StreamingMessageProps) {
   return (
-    <ErrorBoundary fallback={() => <StreamingFallback {...props} />}>
+    <ErrorBoundary fallback={plainTextFallback(props)}>
       <MemoStreamingMessageInner {...props} />
     </ErrorBoundary>
   );

@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { CaretDown, TextT } from "@phosphor-icons/react";
 import { ToolbarButton } from "@/features/notes/components/editor/toolbar/ToolbarButton";
 import { ToolbarPopover } from "@/features/notes/components/editor/toolbar/ToolbarPopover";
@@ -13,27 +14,25 @@ const OPTIONS: Array<{ label: string; level: number | null; size: string }> = [
   { label: "Heading 3", level: 3, size: "text-base font-semibold" },
 ];
 
+type ToolbarTriggerProps = Parameters<ComponentProps<typeof ToolbarPopover>["trigger"]>[0];
+
+function headingTrigger({ label, disabled }: { label: string; disabled: boolean }) {
+  return ({ open, onClick, ref }: ToolbarTriggerProps) => (
+    <ToolbarButton ref={ref} onClick={onClick} active={open} disabled={disabled} className="px-2">
+      <TextT size={14} weight="bold" />
+      <span className="text-xs">{label}</span>
+      <CaretDown size={10} weight="bold" />
+    </ToolbarButton>
+  );
+}
+
 export function HeadingDropdown() {
   const handle = useEditorHandle();
   const { headingLevel } = useActiveMarks();
   const current = OPTIONS.find((o) => o.level === headingLevel) ?? OPTIONS[0];
 
   return (
-    <ToolbarPopover
-      trigger={({ open, onClick, ref }) => (
-        <ToolbarButton
-          ref={ref}
-          onClick={onClick}
-          active={open}
-          disabled={!handle}
-          className="px-2"
-        >
-          <TextT size={14} weight="bold" />
-          <span className="text-xs">{current.label}</span>
-          <CaretDown size={10} weight="bold" />
-        </ToolbarButton>
-      )}
-    >
+    <ToolbarPopover trigger={headingTrigger({ label: current.label, disabled: !handle })}>
       {(close) => (
         <div className="flex flex-col">
           {OPTIONS.map((option) => (

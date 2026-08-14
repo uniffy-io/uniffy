@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import { CaretDown, Table } from "@phosphor-icons/react";
 import { ToolbarButton } from "@/features/notes/components/editor/toolbar/ToolbarButton";
 import { ToolbarPopover } from "@/features/notes/components/editor/toolbar/ToolbarPopover";
@@ -9,25 +9,29 @@ import { cn } from "@/shared/utils/cn";
 const MAX_ROWS = 6;
 const MAX_COLS = 8;
 
+type ToolbarTriggerProps = Parameters<ComponentProps<typeof ToolbarPopover>["trigger"]>[0];
+
+function tableTrigger({ disabled }: { disabled: boolean }) {
+  return ({ open, onClick, ref }: ToolbarTriggerProps) => (
+    <ToolbarButton
+      ref={ref}
+      onClick={onClick}
+      active={open}
+      disabled={disabled}
+      label="Insert table"
+    >
+      <Table size={14} weight="bold" />
+      <CaretDown size={10} weight="bold" />
+    </ToolbarButton>
+  );
+}
+
 export function TablePopover() {
   const handle = useEditorHandle();
   const [hover, setHover] = useState<{ rows: number; cols: number }>({ rows: 0, cols: 0 });
 
   return (
-    <ToolbarPopover
-      trigger={({ open, onClick, ref }) => (
-        <ToolbarButton
-          ref={ref}
-          onClick={onClick}
-          active={open}
-          disabled={!handle}
-          label="Insert table"
-        >
-          <Table size={14} weight="bold" />
-          <CaretDown size={10} weight="bold" />
-        </ToolbarButton>
-      )}
-    >
+    <ToolbarPopover trigger={tableTrigger({ disabled: !handle })}>
       {(close) => (
         <div className="p-2">
           <div className="text-[11px] text-muted-foreground mb-1.5">

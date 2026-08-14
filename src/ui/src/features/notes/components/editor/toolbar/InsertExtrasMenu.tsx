@@ -18,7 +18,7 @@ import {
   type UploadHandler,
 } from "@/components/editor/commands/insertBlocks";
 import { cn } from "@/shared/utils/cn";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 interface InsertExtrasMenuProps {
   videoUpload?: UploadHandler;
@@ -50,23 +50,27 @@ function MenuItem({ icon, label, onClick, disabled }: MenuItemProps) {
   );
 }
 
+type ToolbarTriggerProps = Parameters<ComponentProps<typeof ToolbarPopover>["trigger"]>[0];
+
+function insertTrigger({ disabled }: { disabled: boolean }) {
+  return ({ open, onClick, ref }: ToolbarTriggerProps) => (
+    <ToolbarButton
+      ref={ref}
+      onClick={onClick}
+      active={open}
+      disabled={disabled}
+      label="Insert block"
+    >
+      <Plus size={14} weight="bold" />
+    </ToolbarButton>
+  );
+}
+
 export function InsertExtrasMenu({ videoUpload, audioUpload, imageUpload }: InsertExtrasMenuProps) {
   const handle = useEditorHandle();
 
   return (
-    <ToolbarPopover
-      trigger={({ open, onClick, ref }) => (
-        <ToolbarButton
-          ref={ref}
-          onClick={onClick}
-          active={open}
-          disabled={!handle}
-          label="Insert block"
-        >
-          <Plus size={14} weight="bold" />
-        </ToolbarButton>
-      )}
-    >
+    <ToolbarPopover trigger={insertTrigger({ disabled: !handle })}>
       {(close) => (
         <div className="flex flex-col">
           <MenuItem
