@@ -32,9 +32,18 @@ function computeHealth(stats: ProjectStats): HealthStatus {
 }
 
 const HEALTH_CONFIG: Record<HealthStatus, { label: string; className: string }> = {
-  on_track: { label: "On Track", className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-  at_risk: { label: "At Risk", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  behind: { label: "Behind", className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
+  on_track: {
+    label: "On Track",
+    className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  },
+  at_risk: {
+    label: "At Risk",
+    className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  },
+  behind: {
+    label: "Behind",
+    className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  },
   not_started: { label: "Not Started", className: "bg-muted text-muted-foreground" },
 };
 
@@ -48,7 +57,9 @@ function projectStats(project: Project): ProjectStats {
     totalTasks: project.taskCount,
     completedTasks: project.completedTaskCount,
     completionPct:
-      project.taskCount > 0 ? Math.round((project.completedTaskCount / project.taskCount) * 100) : 0,
+      project.taskCount > 0
+        ? Math.round((project.completedTaskCount / project.taskCount) * 100)
+        : 0,
     overdueTasks: project.overdueTaskCount,
     totalEstimated: project.estimatedMinutes,
     totalSpent: project.timeSpentMinutes,
@@ -74,7 +85,9 @@ export function PortfolioPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
         <Briefcase size={48} className="text-muted-foreground/30 mb-4" />
-        <p className="text-sm text-muted-foreground">No projects yet. Create your first project to get started.</p>
+        <p className="text-sm text-muted-foreground">
+          No projects yet. Create your first project to get started.
+        </p>
       </div>
     );
   }
@@ -113,7 +126,12 @@ export function PortfolioPage() {
                     {stats.totalTasks} task{stats.totalTasks !== 1 ? "s" : ""}
                   </p>
                 </div>
-                <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0", healthConfig.className)}>
+                <span
+                  className={cn(
+                    "text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0",
+                    healthConfig.className,
+                  )}
+                >
                   {healthConfig.label}
                 </span>
               </div>
@@ -128,7 +146,9 @@ export function PortfolioPage() {
               )}
 
               <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                <span>{stats.completedTasks}/{stats.totalTasks} done ({stats.completionPct}%)</span>
+                <span>
+                  {stats.completedTasks}/{stats.totalTasks} done ({stats.completionPct}%)
+                </span>
 
                 {stats.overdueTasks > 0 && (
                   <span className="flex items-center gap-0.5 text-red-500">
@@ -138,10 +158,14 @@ export function PortfolioPage() {
                 )}
 
                 {stats.totalEstimated > 0 && (
-                  <span className={cn(
-                    "flex items-center gap-0.5",
-                    stats.totalSpent > stats.totalEstimated ? "text-red-500" : "text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "flex items-center gap-0.5",
+                      stats.totalSpent > stats.totalEstimated
+                        ? "text-red-500"
+                        : "text-muted-foreground",
+                    )}
+                  >
                     <Clock size={10} />
                     {formatMinutes(stats.totalSpent)} / {formatMinutes(stats.totalEstimated)}
                   </span>

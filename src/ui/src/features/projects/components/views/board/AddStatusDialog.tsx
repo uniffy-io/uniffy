@@ -4,8 +4,16 @@ import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 
 const STATUS_COLORS = [
-  "#6b7280", "#3b82f6", "#22c55e", "#f59e0b", "#ef4444",
-  "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#14b8a6",
+  "#6b7280",
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#f97316",
+  "#14b8a6",
 ];
 
 interface AddStatusDialogProps {
@@ -57,7 +65,11 @@ export function AddStatusDialog({ onSubmit, onClose }: AddStatusDialogProps) {
     >
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-foreground">New Status</span>
-        <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-muted-foreground hover:text-foreground"
+        >
           <X size={14} />
         </button>
       </div>
@@ -82,7 +94,9 @@ export function AddStatusDialog({ onSubmit, onClose }: AddStatusDialogProps) {
               onClick={() => setColor(c)}
               className={cn(
                 "w-6 h-6 rounded-full transition-all",
-                color === c ? "ring-2 ring-offset-2 ring-offset-card ring-primary scale-110" : "hover:scale-110"
+                color === c
+                  ? "ring-2 ring-offset-2 ring-offset-card ring-primary scale-110"
+                  : "hover:scale-110",
               )}
               style={{ backgroundColor: c }}
             />
@@ -105,12 +119,7 @@ export function AddStatusDialog({ onSubmit, onClose }: AddStatusDialogProps) {
         </div>
       </div>
 
-      <Button
-        size="sm"
-        className="w-full h-8"
-        disabled={!label.trim()}
-        onClick={handleSubmit}
-      >
+      <Button size="sm" className="w-full h-8" disabled={!label.trim()} onClick={handleSubmit}>
         Add Status
       </Button>
     </div>

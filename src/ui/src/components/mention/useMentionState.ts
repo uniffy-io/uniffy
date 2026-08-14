@@ -1,17 +1,14 @@
-import { useContext, useEffect, useState } from 'react';
-import { useAppSelector } from '@/app/hooks';
+import { useContext, useEffect, useState } from "react";
+import { useAppSelector } from "@/app/hooks";
 import {
   MentionStateContext,
   MENTION_NOOP,
   streamChangesToLiveState,
   type MentionDisplayMode,
-} from '@/components/mention/MentionStateProvider';
-import {
-  getMentionState,
-  onMentionStateChange,
-} from '@/components/mention/mentionStateEmitter';
-import { resolveUrnBatched } from '@/components/mention/useBatchedSubjectResolver';
-import type { MentionLiveState } from '@/components/mention/types';
+} from "@/components/mention/MentionStateProvider";
+import { getMentionState, onMentionStateChange } from "@/components/mention/mentionStateEmitter";
+import { resolveUrnBatched } from "@/components/mention/useBatchedSubjectResolver";
+import type { MentionLiveState } from "@/components/mention/types";
 
 export function useMentionDisplay(): MentionDisplayMode {
   return useContext(MentionStateContext).mentionDisplay;
@@ -23,8 +20,8 @@ export function useMentionState(urn: string): MentionLiveState | null {
   const hasProvider = context.register !== MENTION_NOOP;
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
 
-  const [fallbackState, setFallbackState] = useState<MentionLiveState | null>(
-    () => getMentionState(urn),
+  const [fallbackState, setFallbackState] = useState<MentionLiveState | null>(() =>
+    getMentionState(urn),
   );
 
   // Depend on stable callbacks, not the whole context — `states` mutates on every batch and would thrash register/unregister.
@@ -56,9 +53,7 @@ export function useMentionState(urn: string): MentionLiveState | null {
     return onMentionStateChange((changedUrn, changes) => {
       if (changedUrn !== urn) return;
       setFallbackState((prev) => {
-        const patch = streamChangesToLiveState(
-          changes as Record<string, string>,
-        );
+        const patch = streamChangesToLiveState(changes as Record<string, string>);
         if (!prev) {
           return { urn, ...changes, ...patch } as MentionLiveState;
         }

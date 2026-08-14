@@ -1,7 +1,6 @@
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { SelectOption } from "@/features/projects/types";
 
-
 interface MultiSelectFieldProps {
   options: SelectOption[];
   value: string[];

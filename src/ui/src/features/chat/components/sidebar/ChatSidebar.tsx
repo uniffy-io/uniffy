@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useMemo, useContext, type ReactNode } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useCallback, useEffect, useMemo, useContext, type ReactNode } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Plus,
   PencilSimple,
@@ -13,7 +13,7 @@ import {
   CaretDoubleRight,
   Robot,
   FolderSimplePlus,
-} from '@phosphor-icons/react';
+} from "@phosphor-icons/react";
 import {
   DndContext,
   closestCenter,
@@ -25,20 +25,24 @@ import {
   useDraggable,
   useDroppable,
   type DragEndEvent,
-} from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { Input } from "@/components/ui/input";
+import { SidebarOverlayContext } from "@/components/layout/CollapsibleSidebarRail";
 import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { Input } from '@/components/ui/input';
-import { SidebarOverlayContext } from '@/components/layout/CollapsibleSidebarRail';
-import { setSplitChannel, selectChannelPreferences, selectChannels, selectAgentFolders, sortByLastActivity, sortByRootActivity } from '@/features/chat/store/chatChannelsSlice';
-import { createAgentFolder, setAgentChatFolder } from '@/features/chat/store/chatThunks';
-import { AgentChatFolderGroup } from '@/features/chat/components/sidebar/AgentChatFolderGroup';
-import { selectChannelsWithDrafts } from '@/features/chat/store/chatDraftsSlice';
+  setSplitChannel,
+  selectChannelPreferences,
+  selectChannels,
+  selectAgentFolders,
+  sortByLastActivity,
+  sortByRootActivity,
+} from "@/features/chat/store/chatChannelsSlice";
+import { createAgentFolder, setAgentChatFolder } from "@/features/chat/store/chatThunks";
+import { AgentChatFolderGroup } from "@/features/chat/components/sidebar/AgentChatFolderGroup";
+import { selectChannelsWithDrafts } from "@/features/chat/store/chatDraftsSlice";
 import {
   toggleDmSection,
   toggleAgentChatsSection,
@@ -52,15 +56,15 @@ import {
   openCreateCategoryModal,
   openBrowseChannelsModal,
   openNewDmModal,
-} from '@/features/chat/store/chatUiSlice';
-import { selectCategories, setCategories } from '@/features/chat/store/chatChannelsSlice';
-import { reorderCategoriesThunk } from '@/features/chat/store/chatThunks';
-import { ChannelListItem } from '@/features/chat/components/sidebar/ChannelListItem';
-import { DirectMessageListItem } from '@/features/chat/components/sidebar/DirectMessageListItem';
-import { CategorySection } from '@/features/chat/components/sidebar/CategorySection';
-import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
-import { cn } from '@/shared/utils/cn';
-import type { Icon } from '@phosphor-icons/react';
+} from "@/features/chat/store/chatUiSlice";
+import { selectCategories, setCategories } from "@/features/chat/store/chatChannelsSlice";
+import { reorderCategoriesThunk } from "@/features/chat/store/chatThunks";
+import { ChannelListItem } from "@/features/chat/components/sidebar/ChannelListItem";
+import { DirectMessageListItem } from "@/features/chat/components/sidebar/DirectMessageListItem";
+import { CategorySection } from "@/features/chat/components/sidebar/CategorySection";
+import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
+import { cn } from "@/shared/utils/cn";
+import type { Icon } from "@phosphor-icons/react";
 
 function DraggableAgentChat({ channelId, children }: { channelId: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -72,7 +76,7 @@ function DraggableAgentChat({ channelId, children }: { channelId: string; childr
       {...attributes}
       {...listeners}
       style={{ transform: CSS.Translate.toString(transform) }}
-      className={isDragging ? 'relative z-30 opacity-70' : undefined}
+      className={isDragging ? "relative z-30 opacity-70" : undefined}
     >
       {children}
     </div>
@@ -80,13 +84,13 @@ function DraggableAgentChat({ channelId, children }: { channelId: string; childr
 }
 
 function AgentUnfiledDropZone({ children }: { children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: 'agent-folder-root' });
+  const { setNodeRef, isOver } = useDroppable({ id: "agent-folder-root" });
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        'rounded-md transition-colors',
-        isOver && 'bg-primary/5 ring-1 ring-primary/30',
+        "rounded-md transition-colors",
+        isOver && "bg-primary/5 ring-1 ring-primary/30",
       )}
       data-testid="chat-sidebar-agent-unfiled-zone"
     >
@@ -113,8 +117,8 @@ function CompactActionButton({
       title={label}
       data-testid={testId}
       className={cn(
-        'group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg',
-        'overflow-hidden transition-all duration-300 ease-out hover:px-2.5',
+        "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg",
+        "overflow-hidden transition-all duration-300 ease-out hover:px-2.5",
       )}
     >
       <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
@@ -131,7 +135,7 @@ function CompactActionButton({
 export function ChatSidebar() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const { isMobile } = useBreakpoint();
   const isOverlay = useContext(SidebarOverlayContext);
 
@@ -139,27 +143,32 @@ export function ChatSidebar() {
   const categories = useAppSelector(selectCategories);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
   const dmSectionCollapsed = useAppSelector((state) => state.chatUi.dmSectionCollapsed);
-  const agentChatsSectionCollapsed = useAppSelector((state) => state.chatUi.agentChatsSectionCollapsed);
+  const agentChatsSectionCollapsed = useAppSelector(
+    (state) => state.chatUi.agentChatsSectionCollapsed,
+  );
   const splitActive = useAppSelector(selectSplitActive);
   const focusedPane = useAppSelector(selectFocusedPane);
-  const unreadThreadCount = useAppSelector((state) =>
-    state.chatThreads.threadsInbox.filter(t => t.hasUnread).length
+  const unreadThreadCount = useAppSelector(
+    (state) => state.chatThreads.threadsInbox.filter((t) => t.hasUnread).length,
   );
   const { canManageChat } = useChatPermissions();
   const channelPreferences = useAppSelector(selectChannelPreferences);
   const draftChannels = useAppSelector(selectChannelsWithDrafts);
-  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
+  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const allChannelMembers = useAppSelector((state) => state.chatChannels.channelMembers);
 
-  const isChannelMuted = useCallback((channelId: string) => {
-    if (channelPreferences[channelId]?.isMuted) return true;
-    const members = allChannelMembers[channelId];
-    if (members) {
-      const me = members.find((m) => m.userId === currentUserId);
-      if (me?.isMuted) return true;
-    }
-    return false;
-  }, [channelPreferences, allChannelMembers, currentUserId]);
+  const isChannelMuted = useCallback(
+    (channelId: string) => {
+      if (channelPreferences[channelId]?.isMuted) return true;
+      const members = allChannelMembers[channelId];
+      if (members) {
+        const me = members.find((m) => m.userId === currentUserId);
+        if (me?.isMuted) return true;
+      }
+      return false;
+    },
+    [channelPreferences, allChannelMembers, currentUserId],
+  );
 
   const unreadCounts: Record<string, number> = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -178,27 +187,27 @@ export function ChatSidebar() {
 
   const filteredChannels = useMemo(() => {
     const query = searchQuery.toLowerCase();
-    return channels.filter(c => !query || c.name.toLowerCase().includes(query));
+    return channels.filter((c) => !query || c.name.toLowerCase().includes(query));
   }, [channels, searchQuery]);
 
   const nonDmChannels = useMemo(
-    () => filteredChannels
-      .filter(c => c.channelType !== 'DIRECT' && c.channelType !== 'GROUP_DM')
-      .sort(sortByRootActivity),
+    () =>
+      filteredChannels
+        .filter((c) => c.channelType !== "DIRECT" && c.channelType !== "GROUP_DM")
+        .sort(sortByRootActivity),
     [filteredChannels],
   );
 
   const directMessages = useMemo(
-    () => filteredChannels
-      .filter(c => !c.isAgentDm && (c.channelType === 'DIRECT' || c.channelType === 'GROUP_DM'))
-      .sort(sortByLastActivity),
+    () =>
+      filteredChannels
+        .filter((c) => !c.isAgentDm && (c.channelType === "DIRECT" || c.channelType === "GROUP_DM"))
+        .sort(sortByLastActivity),
     [filteredChannels],
   );
 
   const agentChats = useMemo(
-    () => filteredChannels
-      .filter(c => c.isAgentDm)
-      .sort(sortByLastActivity),
+    () => filteredChannels.filter((c) => c.isAgentDm).sort(sortByLastActivity),
     [filteredChannels],
   );
 
@@ -206,10 +215,10 @@ export function ChatSidebar() {
   // Nullish fallback: persisted chatUi state from before this key existed omits it.
   const collapsedAgentFolders = useAppSelector((state) => state.chatUi.collapsedAgentFolders) ?? {};
   const [creatingFolder, setCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderName, setNewFolderName] = useState("");
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const agentFolderParam = searchParams.get('agentFolder');
+  const agentFolderParam = searchParams.get("agentFolder");
 
   // Deep link from a search result: open the section and the folder, scroll
   // to it, then strip the param so a refresh does not re-trigger the reveal.
@@ -219,12 +228,15 @@ export function ChatSidebar() {
     const timer = setTimeout(() => {
       document
         .querySelector(`[data-testid="chat-sidebar-agent-folder-${agentFolderParam}"]`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 100);
-    setSearchParams((params) => {
-      params.delete('agentFolder');
-      return params;
-    }, { replace: true });
+    setSearchParams(
+      (params) => {
+        params.delete("agentFolder");
+        return params;
+      },
+      { replace: true },
+    );
     return () => clearTimeout(timer);
   }, [agentFolderParam, dispatch, setSearchParams]);
 
@@ -251,39 +263,46 @@ export function ChatSidebar() {
   const handleCreateFolder = useCallback(async () => {
     const name = newFolderName.trim();
     setCreatingFolder(false);
-    setNewFolderName('');
+    setNewFolderName("");
     if (name) {
       await dispatch(createAgentFolder(name));
     }
   }, [dispatch, newFolderName]);
 
-  const handleAgentDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-    const activeId = String(active.id);
-    if (!activeId.startsWith('agent-chat:')) return;
-    const channelId = activeId.slice('agent-chat:'.length);
-    const overId = String(over.id);
-    let folderId: string | null;
-    if (overId === 'agent-folder-root') {
-      folderId = null;
-    } else if (overId.startsWith('agent-folder:')) {
-      folderId = overId.slice('agent-folder:'.length);
-    } else {
-      return;
-    }
-    const current = channels.find((c) => c.id === channelId)?.agentFolderId ?? null;
-    if (current === folderId) return;
-    dispatch(setAgentChatFolder({ channelId, folderId }));
-  }, [dispatch, channels]);
+  const handleAgentDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over) return;
+      const activeId = String(active.id);
+      if (!activeId.startsWith("agent-chat:")) return;
+      const channelId = activeId.slice("agent-chat:".length);
+      const overId = String(over.id);
+      let folderId: string | null;
+      if (overId === "agent-folder-root") {
+        folderId = null;
+      } else if (overId.startsWith("agent-folder:")) {
+        folderId = overId.slice("agent-folder:".length);
+      } else {
+        return;
+      }
+      const current = channels.find((c) => c.id === channelId)?.agentFolderId ?? null;
+      if (current === folderId) return;
+      dispatch(setAgentChatFolder({ channelId, folderId }));
+    },
+    [dispatch, channels],
+  );
 
   const categorizedChannels = useMemo(() => {
     const sortedCategories = [...categories].sort((a, b) => a.position - b.position);
 
-    const groups: { categoryId: string | null; categoryName: string; channels: typeof nonDmChannels }[] = [];
+    const groups: {
+      categoryId: string | null;
+      categoryName: string;
+      channels: typeof nonDmChannels;
+    }[] = [];
 
     for (const cat of sortedCategories) {
-      const catChannels = nonDmChannels.filter(c => c.categoryId === cat.id);
+      const catChannels = nonDmChannels.filter((c) => c.categoryId === cat.id);
       if (catChannels.length > 0 || !searchQuery) {
         groups.push({
           categoryId: cat.id,
@@ -293,11 +312,11 @@ export function ChatSidebar() {
       }
     }
 
-    const uncategorized = nonDmChannels.filter(c => !c.categoryId);
+    const uncategorized = nonDmChannels.filter((c) => !c.categoryId);
     if (uncategorized.length > 0) {
       groups.push({
         categoryId: null,
-        categoryName: 'Channels',
+        categoryName: "Channels",
         channels: uncategorized,
       });
     }
@@ -305,17 +324,20 @@ export function ChatSidebar() {
     return groups;
   }, [nonDmChannels, searchQuery, categories]);
 
-  const handleChannelSelect = useCallback((channelId: string) => {
-    if (splitActive && focusedPane === 'right') {
-      dispatch(setSplitChannel(channelId));
-      return;
-    }
-    // ChatPage's URL effect handles setActiveChannel + fetchMessages.
-    navigate(`/chat/${channelId}`);
-    if (isMobile) {
-      dispatch(collapseSidebar());
-    }
-  }, [dispatch, navigate, splitActive, focusedPane, isMobile]);
+  const handleChannelSelect = useCallback(
+    (channelId: string) => {
+      if (splitActive && focusedPane === "right") {
+        dispatch(setSplitChannel(channelId));
+        return;
+      }
+      // ChatPage's URL effect handles setActiveChannel + fetchMessages.
+      navigate(`/chat/${channelId}`);
+      if (isMobile) {
+        dispatch(collapseSidebar());
+      }
+    },
+    [dispatch, navigate, splitActive, focusedPane, isMobile],
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -323,33 +345,38 @@ export function ChatSidebar() {
   );
 
   const sortableCategoryIds = useMemo(
-    () => categorizedChannels.filter(g => g.categoryId !== null).map(g => g.categoryId!),
+    () => categorizedChannels.filter((g) => g.categoryId !== null).map((g) => g.categoryId!),
     [categorizedChannels],
   );
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
 
-    const oldIndex = sortableCategoryIds.indexOf(active.id as string);
-    const newIndex = sortableCategoryIds.indexOf(over.id as string);
-    if (oldIndex === -1 || newIndex === -1) return;
+      const oldIndex = sortableCategoryIds.indexOf(active.id as string);
+      const newIndex = sortableCategoryIds.indexOf(over.id as string);
+      if (oldIndex === -1 || newIndex === -1) return;
 
-    const reordered = [...sortableCategoryIds];
-    reordered.splice(oldIndex, 1);
-    reordered.splice(newIndex, 0, active.id as string);
+      const reordered = [...sortableCategoryIds];
+      reordered.splice(oldIndex, 1);
+      reordered.splice(newIndex, 0, active.id as string);
 
-    const updatedCategories = reordered.map((id, i) => {
-      const cat = categories.find(c => c.id === id);
-      return cat ? { ...cat, position: i } : null;
-    }).filter(Boolean) as typeof categories;
-    dispatch(setCategories(updatedCategories));
+      const updatedCategories = reordered
+        .map((id, i) => {
+          const cat = categories.find((c) => c.id === id);
+          return cat ? { ...cat, position: i } : null;
+        })
+        .filter(Boolean) as typeof categories;
+      dispatch(setCategories(updatedCategories));
 
-    dispatch(reorderCategoriesThunk(reordered));
-  }, [sortableCategoryIds, categories, dispatch]);
+      dispatch(reorderCategoriesThunk(reordered));
+    },
+    [sortableCategoryIds, categories, dispatch],
+  );
 
   const handleThreadsClick = useCallback(() => {
-    navigate('/chat/threads');
+    navigate("/chat/threads");
   }, [navigate]);
 
   return (
@@ -376,13 +403,14 @@ export function ChatSidebar() {
           <button
             onClick={() => dispatch(isOverlay ? expandSidebar() : collapseSidebar())}
             className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
-            title={isOverlay ? 'Pin sidebar' : 'Collapse sidebar'}
+            title={isOverlay ? "Pin sidebar" : "Collapse sidebar"}
             data-testid="chat-sidebar-collapse-toggle"
           >
-            {isOverlay
-              ? <CaretDoubleRight size={16} weight="bold" className="text-primary" />
-              : <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
-            }
+            {isOverlay ? (
+              <CaretDoubleRight size={16} weight="bold" className="text-primary" />
+            ) : (
+              <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
+            )}
           </button>
         )}
       </div>
@@ -425,7 +453,7 @@ export function ChatSidebar() {
         </button>
 
         <button
-          onClick={() => navigate('/chat/unreads')}
+          onClick={() => navigate("/chat/unreads")}
           className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           data-testid="chat-sidebar-unreads-link"
         >
@@ -454,16 +482,20 @@ export function ChatSidebar() {
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sortableCategoryIds} strategy={verticalListSortingStrategy}>
-            {categorizedChannels.map(group => (
+            {categorizedChannels.map((group) => (
               <CategorySection
-                key={group.categoryId ?? 'uncategorized'}
+                key={group.categoryId ?? "uncategorized"}
                 id={group.categoryId}
                 name={group.categoryName}
                 sortable={group.categoryId !== null}
                 canManage={canManageChat}
-                onAddChannel={canManageChat ? () => dispatch(openCreateChannelModal(group.categoryId)) : undefined}
+                onAddChannel={
+                  canManageChat
+                    ? () => dispatch(openCreateChannelModal(group.categoryId))
+                    : undefined
+                }
               >
-                {group.channels.map(channel => (
+                {group.channels.map((channel) => (
                   <ChannelListItem
                     key={channel.id}
                     channel={channel}
@@ -485,7 +517,7 @@ export function ChatSidebar() {
         <div
           className="mt-1"
           data-testid="chat-sidebar-agent-chats-section"
-          data-state={agentChatsSectionCollapsed ? 'collapsed' : 'expanded'}
+          data-state={agentChatsSectionCollapsed ? "collapsed" : "expanded"}
         >
           <div className="flex items-center justify-between w-full px-3 py-1.5 group">
             <button
@@ -500,7 +532,10 @@ export function ChatSidebar() {
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => { setCreatingFolder(true); setNewFolderName(''); }}
+                onClick={() => {
+                  setCreatingFolder(true);
+                  setNewFolderName("");
+                }}
                 aria-label="New folder"
                 title="New folder"
                 className="text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:text-foreground"
@@ -528,8 +563,11 @@ export function ChatSidebar() {
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onBlur={handleCreateFolder}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleCreateFolder();
-                  if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName(''); }
+                  if (e.key === "Enter") handleCreateFolder();
+                  if (e.key === "Escape") {
+                    setCreatingFolder(false);
+                    setNewFolderName("");
+                  }
                 }}
                 placeholder="Folder name..."
                 className="w-full bg-input border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
@@ -555,7 +593,7 @@ export function ChatSidebar() {
                       collapsed={!!collapsedAgentFolders[folder.id]}
                       chatCount={chats.length}
                     >
-                      {chats.map(channel => (
+                      {chats.map((channel) => (
                         <DraggableAgentChat key={channel.id} channelId={channel.id}>
                           <DirectMessageListItem
                             channel={channel}
@@ -582,7 +620,7 @@ export function ChatSidebar() {
                   </button>
                 ) : (
                   <AgentUnfiledDropZone>
-                    {agentChatGroups.unfiled.map(channel => (
+                    {agentChatGroups.unfiled.map((channel) => (
                       <DraggableAgentChat key={channel.id} channelId={channel.id}>
                         <DirectMessageListItem
                           channel={channel}
@@ -603,7 +641,11 @@ export function ChatSidebar() {
 
         <div className="mx-3 my-2 h-px bg-border/60" role="separator" />
 
-        <div className="mt-1" data-testid="chat-sidebar-dm-section" data-state={dmSectionCollapsed ? 'collapsed' : 'expanded'}>
+        <div
+          className="mt-1"
+          data-testid="chat-sidebar-dm-section"
+          data-state={dmSectionCollapsed ? "collapsed" : "expanded"}
+        >
           <div className="flex items-center justify-between w-full px-3 py-1.5 group">
             <button
               type="button"
@@ -627,7 +669,7 @@ export function ChatSidebar() {
 
           {!dmSectionCollapsed && (
             <div className="space-y-px">
-              {directMessages.map(channel => (
+              {directMessages.map((channel) => (
                 <DirectMessageListItem
                   key={channel.id}
                   channel={channel}

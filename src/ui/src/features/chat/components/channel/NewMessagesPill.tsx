@@ -1,4 +1,4 @@
-import { ArrowDown } from '@phosphor-icons/react';
+import { ArrowDown } from "@phosphor-icons/react";
 
 interface NewMessagesPillProps {
   /** Live messages that arrived while scrolled up; 0 while reading history. */
@@ -35,7 +35,7 @@ export function NewMessagesPill({ count, showJump, onClick }: NewMessagesPillPro
     >
       <ArrowDown size={14} />
       <span>
-        {count} new message{count !== 1 ? 's' : ''}
+        {count} new message{count !== 1 ? "s" : ""}
       </span>
     </button>
   );

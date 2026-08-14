@@ -1,7 +1,13 @@
-import { useMemo } from 'react';
-import { useAppSelector } from '@/app/hooks';
-import { selectCurrentProject, selectTasksMap } from '@/features/projects/store/projectsSlice';
-import { roleCanView, roleCanEdit, roleCanManage, roleCanDelete, roleCanTransfer } from '@/shared/utils/contentRoles';
+import { useMemo } from "react";
+import { useAppSelector } from "@/app/hooks";
+import { selectCurrentProject, selectTasksMap } from "@/features/projects/store/projectsSlice";
+import {
+  roleCanView,
+  roleCanEdit,
+  roleCanManage,
+  roleCanDelete,
+  roleCanTransfer,
+} from "@/shared/utils/contentRoles";
 
 export function useProjectPermission(): {
   canView: boolean;
@@ -30,7 +36,7 @@ export function useTaskPermission(taskId: string): { canEdit: boolean } {
 
   return useMemo(() => {
     const task = tasksMap[taskId];
-    const role = (task?.userRole && task.userRole > 0) ? task.userRole : project?.userRole ?? null;
+    const role = task?.userRole && task.userRole > 0 ? task.userRole : (project?.userRole ?? null);
     return {
       canEdit: roleCanEdit(role),
     };

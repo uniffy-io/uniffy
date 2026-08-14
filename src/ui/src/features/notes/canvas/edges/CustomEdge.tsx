@@ -12,10 +12,10 @@ import {
   getSmoothStepPath,
   EdgeLabelRenderer,
   type EdgeProps,
-} from '@xyflow/react';
-import type { CanvasEdge, CanvasEdgeData } from '@/features/notes/canvas/types';
+} from "@xyflow/react";
+import type { CanvasEdge, CanvasEdgeData } from "@/features/notes/canvas/types";
 
-const DEFAULT_STROKE_COLOR = 'hsl(var(--muted-foreground) / 0.4)';
+const DEFAULT_STROKE_COLOR = "hsl(var(--muted-foreground) / 0.4)";
 const DEFAULT_STROKE_WIDTH = 1.5;
 
 export function CustomEdge({
@@ -31,7 +31,7 @@ export function CustomEdge({
   markerEnd,
 }: EdgeProps<CanvasEdge>) {
   const edgeData = data as CanvasEdgeData | undefined;
-  const shape = edgeData?.edgeShape ?? 'default';
+  const shape = edgeData?.edgeShape ?? "default";
   const strokeColor = edgeData?.strokeColor ?? DEFAULT_STROKE_COLOR;
   const strokeWidth = edgeData?.strokeWidth ?? DEFAULT_STROKE_WIDTH;
 
@@ -42,21 +42,21 @@ export function CustomEdge({
   const pathParams = { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition };
 
   switch (shape) {
-    case 'straight': {
+    case "straight": {
       const [path, lx, ly] = getStraightPath(pathParams);
       edgePath = path;
       labelX = lx;
       labelY = ly;
       break;
     }
-    case 'step': {
+    case "step": {
       const [path, lx, ly] = getSmoothStepPath({ ...pathParams, borderRadius: 0 });
       edgePath = path;
       labelX = lx;
       labelY = ly;
       break;
     }
-    case 'smoothstep': {
+    case "smoothstep": {
       const [path, lx, ly] = getSmoothStepPath(pathParams);
       edgePath = path;
       labelX = lx;
@@ -96,9 +96,9 @@ export function CustomEdge({
         <EdgeLabelRenderer>
           <div
             style={{
-              position: 'absolute',
+              position: "absolute",
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-              pointerEvents: 'all',
+              pointerEvents: "all",
             }}
             className="text-xs bg-card px-2 py-0.5 rounded border border-border shadow-sm text-foreground"
           >

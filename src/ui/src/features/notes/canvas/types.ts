@@ -1,4 +1,4 @@
-import type { Node, Edge, Viewport } from '@xyflow/react';
+import type { Node, Edge, Viewport } from "@xyflow/react";
 
 export const CANVAS_FORMAT_VERSION = 1;
 
@@ -9,7 +9,7 @@ export interface NodeStyleData {
 }
 
 export interface TextNodeData extends Record<string, unknown> {
-  type: 'text';
+  type: "text";
   content: string;
   color?: string;
   bgColor?: string;
@@ -19,11 +19,11 @@ export interface TextNodeData extends Record<string, unknown> {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
-  textAlign?: 'left' | 'center' | 'right';
+  textAlign?: "left" | "center" | "right";
 }
 
 export interface NoteNodeData extends Record<string, unknown> {
-  type: 'note';
+  type: "note";
   urn: string;
   noteId: string;
   title?: string;
@@ -33,7 +33,7 @@ export interface NoteNodeData extends Record<string, unknown> {
 }
 
 export interface MediaNodeData extends Record<string, unknown> {
-  type: 'media';
+  type: "media";
   fileId: string;
   mimeType: string;
   filename: string;
@@ -43,8 +43,8 @@ export interface MediaNodeData extends Record<string, unknown> {
 }
 
 export interface ShapeNodeData extends Record<string, unknown> {
-  type: 'shape';
-  shape: 'rect' | 'ellipse' | 'diamond';
+  type: "shape";
+  shape: "rect" | "ellipse" | "diamond";
   label?: string;
   color?: string;
   borderColor?: string;
@@ -52,7 +52,7 @@ export interface ShapeNodeData extends Record<string, unknown> {
 }
 
 export interface MindMapNodeData extends Record<string, unknown> {
-  type: 'mindmap';
+  type: "mindmap";
   label: string;
   mindmapId: string;
   parentNodeId: string | null;
@@ -60,28 +60,38 @@ export interface MindMapNodeData extends Record<string, unknown> {
   collapsed?: boolean;
   branchColor?: string;
   isRoot?: boolean;
-  direction?: 'right' | 'down' | 'left' | 'up';
+  direction?: "right" | "down" | "left" | "up";
   fontSize?: number;
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
-  textAlign?: 'left' | 'center' | 'right';
+  textAlign?: "left" | "center" | "right";
   bgColor?: string;
   borderColor?: string;
   borderWidth?: number;
 }
 
-export type CanvasNodeData = TextNodeData | NoteNodeData | MediaNodeData | ShapeNodeData | MindMapNodeData;
+export type CanvasNodeData =
+  | TextNodeData
+  | NoteNodeData
+  | MediaNodeData
+  | ShapeNodeData
+  | MindMapNodeData;
 
-export type TextCanvasNode = Node<TextNodeData, 'text'>;
-export type NoteCanvasNode = Node<NoteNodeData, 'note'>;
-export type MediaCanvasNode = Node<MediaNodeData, 'media'>;
-export type ShapeCanvasNode = Node<ShapeNodeData, 'shape'>;
-export type MindMapCanvasNode = Node<MindMapNodeData, 'mindmap'>;
+export type TextCanvasNode = Node<TextNodeData, "text">;
+export type NoteCanvasNode = Node<NoteNodeData, "note">;
+export type MediaCanvasNode = Node<MediaNodeData, "media">;
+export type ShapeCanvasNode = Node<ShapeNodeData, "shape">;
+export type MindMapCanvasNode = Node<MindMapNodeData, "mindmap">;
 
-export type CanvasNode = TextCanvasNode | NoteCanvasNode | MediaCanvasNode | ShapeCanvasNode | MindMapCanvasNode;
+export type CanvasNode =
+  | TextCanvasNode
+  | NoteCanvasNode
+  | MediaCanvasNode
+  | ShapeCanvasNode
+  | MindMapCanvasNode;
 
-export type EdgeShape = 'default' | 'straight' | 'step' | 'smoothstep';
+export type EdgeShape = "default" | "straight" | "step" | "smoothstep";
 
 export interface CanvasEdgeData extends Record<string, unknown> {
   label?: string;

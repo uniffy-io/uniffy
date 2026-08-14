@@ -1,13 +1,19 @@
-import { useMemo, useState } from 'react';
-import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setCurrentDate, setViewMode, startDrag, endDrag, updateEventThunk } from '@/features/calendar/store';
-import { ACCENT_EVENT_COLOR, eventTint } from '@/features/calendar/constants';
-import { cn } from '@/shared/utils/cn';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { useMemo, useState } from "react";
+import { useCalendarNavigation, useCalendarEvents } from "@/features/calendar/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import {
+  setCurrentDate,
+  setViewMode,
+  startDrag,
+  endDrag,
+  updateEventThunk,
+} from "@/features/calendar/store";
+import { ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
+import { cn } from "@/shared/utils/cn";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 
-const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const DAY_HEADERS_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const DAY_HEADERS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_HEADERS_SHORT = ["M", "T", "W", "T", "F", "S", "S"];
 
 export function MonthView() {
   const dispatch = useAppDispatch();
@@ -20,7 +26,7 @@ export function MonthView() {
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   const weeks = useMemo(() => {
-    const result: typeof monthColumns[] = [];
+    const result: (typeof monthColumns)[] = [];
     for (let i = 0; i < monthColumns.length; i += 7) {
       result.push(monthColumns.slice(i, i + 7));
     }
@@ -29,13 +35,13 @@ export function MonthView() {
 
   const handleDayClick = (dateString: string) => {
     dispatch(setCurrentDate(dateString));
-    dispatch(setViewMode('day'));
+    dispatch(setViewMode("day"));
   };
 
   const handleDragStart = (e: React.DragEvent, eventId: string) => {
     e.stopPropagation();
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', eventId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", eventId);
 
     dispatch(startDrag(eventId));
   };
@@ -57,7 +63,7 @@ export function MonthView() {
     e.stopPropagation();
     setDragOverDate(null);
 
-    const eventId = e.dataTransfer.getData('text/plain');
+    const eventId = e.dataTransfer.getData("text/plain");
     if (!eventId || eventId !== draggedEventId) return;
 
     const event = events[eventId];
@@ -69,19 +75,25 @@ export function MonthView() {
     const oldEnd = new Date(event.endTime);
 
     const newStart = new Date(targetDate);
-    newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), oldStart.getSeconds(), oldStart.getMilliseconds());
+    newStart.setHours(
+      oldStart.getHours(),
+      oldStart.getMinutes(),
+      oldStart.getSeconds(),
+      oldStart.getMilliseconds(),
+    );
 
     const duration = oldEnd.getTime() - oldStart.getTime();
     const newEnd = new Date(newStart.getTime() + duration);
 
     try {
-        await dispatch(updateEventThunk({
-            eventId,
-            startTime: newStart.toISOString(),
-            endTime: newEnd.toISOString()
-        })).unwrap();
-    } catch {
-    }
+      await dispatch(
+        updateEventThunk({
+          eventId,
+          startTime: newStart.toISOString(),
+          endTime: newEnd.toISOString(),
+        }),
+      ).unwrap();
+    } catch {}
 
     dispatch(endDrag());
   };
@@ -101,10 +113,7 @@ export function MonthView() {
 
       <div className="flex-1 grid grid-rows-6">
         {weeks.map((week, weekIndex) => (
-          <div
-            key={weekIndex}
-            className="grid grid-cols-7 border-b border-border last:border-b-0"
-          >
+          <div key={weekIndex} className="grid grid-cols-7 border-b border-border last:border-b-0">
             {week.map((day) => {
               const dayEvents = getEventsForDate(day.date);
               const maxVisible = isMobile ? 2 : 3;
@@ -118,22 +127,23 @@ export function MonthView() {
                   onDragOver={(e) => handleDragOver(e, day.dateString)}
                   onDrop={(e) => handleDrop(e, day.dateString)}
                   className={cn(
-                    'min-h-[60px] md:min-h-[100px] p-1 md:p-2 text-left border-r border-border last:border-r-0',
-                    'hover:bg-muted/50 transition-colors',
-                    day.isToday && 'bg-primary/5',
-                    !day.isCurrentMonth && 'bg-muted/30',
-                    dragOverDate === day.dateString && 'bg-primary/10 ring-2 ring-inset ring-primary'
+                    "min-h-[60px] md:min-h-[100px] p-1 md:p-2 text-left border-r border-border last:border-r-0",
+                    "hover:bg-muted/50 transition-colors",
+                    day.isToday && "bg-primary/5",
+                    !day.isCurrentMonth && "bg-muted/30",
+                    dragOverDate === day.dateString &&
+                      "bg-primary/10 ring-2 ring-inset ring-primary",
                   )}
                 >
                   <div className="flex justify-center mb-0.5 md:mb-1">
                     <span
                       className={cn(
-                        'w-6 h-6 md:w-7 md:h-7 flex items-center justify-center text-xs md:text-sm rounded-full',
+                        "w-6 h-6 md:w-7 md:h-7 flex items-center justify-center text-xs md:text-sm rounded-full",
                         day.isToday
-                          ? 'bg-primary text-primary-foreground font-semibold'
+                          ? "bg-primary text-primary-foreground font-semibold"
                           : day.isCurrentMonth
-                          ? 'text-foreground'
-                          : 'text-muted-foreground'
+                            ? "text-foreground"
+                            : "text-muted-foreground",
                       )}
                     >
                       {day.dayNumber}
@@ -147,19 +157,22 @@ export function MonthView() {
                       const attendee = currentUserId
                         ? event.attendees.find((a) => a.id === currentUserId)
                         : null;
-                      const declined = attendee?.status === 'declined';
-                      const pendingOrTentative = attendee != null
-                        && (attendee.status === 'pending' || attendee.status === 'tentative');
+                      const declined = attendee?.status === "declined";
+                      const pendingOrTentative =
+                        attendee != null &&
+                        (attendee.status === "pending" || attendee.status === "tentative");
                       return (
                         <div
                           key={event.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, event.id)}
                           onDragEnd={handleDragEnd}
-                          onClick={(e) => { e.stopPropagation(); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
                           className={cn(
-                            'text-[10px] px-1.5 py-0.5 rounded truncate cursor-move hover:brightness-95 active:cursor-grabbing',
-                            declined && 'line-through',
+                            "text-[10px] px-1.5 py-0.5 rounded truncate cursor-move hover:brightness-95 active:cursor-grabbing",
+                            declined && "line-through",
                           )}
                           style={{
                             backgroundColor: eventTint(eventColor, 12),

@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { fetchEffectiveSettings } from '@/features/settings';
+import { useEffect } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { fetchEffectiveSettings } from "@/features/settings";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

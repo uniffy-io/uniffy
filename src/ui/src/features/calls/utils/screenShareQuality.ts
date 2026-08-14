@@ -1,6 +1,6 @@
-import { ScreenSharePresets, VideoPreset } from 'livekit-client';
-import type { VideoEncoding, VideoResolution } from 'livekit-client';
-import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
+import { ScreenSharePresets, VideoPreset } from "livekit-client";
+import type { VideoEncoding, VideoResolution } from "livekit-client";
+import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
 
 export interface ScreenShareConfig {
   /** getDisplayMedia capture ceiling; native (0x0) for MAX. */
@@ -57,10 +57,10 @@ export function clampQuality(
 }
 
 export const SCREEN_SHARE_QUALITY_LABEL: Record<ScreenShareQuality, string> = {
-  [ScreenShareQuality.UNSPECIFIED]: 'Auto',
-  [ScreenShareQuality.BALANCED]: 'Balanced',
-  [ScreenShareQuality.HIGH]: 'High',
-  [ScreenShareQuality.MAX]: 'Maximum',
+  [ScreenShareQuality.UNSPECIFIED]: "Auto",
+  [ScreenShareQuality.BALANCED]: "Balanced",
+  [ScreenShareQuality.HIGH]: "High",
+  [ScreenShareQuality.MAX]: "Maximum",
 };
 
 /** Tiers a user may pick at or below the resolved cap, lowest-first. */

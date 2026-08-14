@@ -1,18 +1,11 @@
-import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
-import {
-  CaretDown,
-  Plus,
-  PencilSimple,
-  Trash,
-  Check,
-  X,
-} from '@phosphor-icons/react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { cn } from '@/shared/utils/cn';
-import { useAppDispatch } from '@/app/hooks';
-import { updateCategoryThunk, deleteCategoryThunk } from '@/features/chat/store/chatThunks';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { CaretDown, Plus, PencilSimple, Trash, Check, X } from "@phosphor-icons/react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { cn } from "@/shared/utils/cn";
+import { useAppDispatch } from "@/app/hooks";
+import { updateCategoryThunk, deleteCategoryThunk } from "@/features/chat/store/chatThunks";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface CategorySectionProps {
   id?: string | null;
@@ -42,17 +35,10 @@ export function CategorySection({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const editInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState<number | 'auto'>('auto');
+  const [contentHeight, setContentHeight] = useState<number | "auto">("auto");
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id: id ?? 'uncategorized',
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: id ?? "uncategorized",
     disabled: !sortable,
   });
 
@@ -67,7 +53,7 @@ export function CategorySection({
 
     if (!collapsed) {
       setContentHeight(el.scrollHeight);
-      const timer = setTimeout(() => setContentHeight('auto'), 200);
+      const timer = setTimeout(() => setContentHeight("auto"), 200);
       return () => clearTimeout(timer);
     } else {
       setContentHeight(el.scrollHeight);
@@ -80,7 +66,7 @@ export function CategorySection({
   }, [collapsed]);
 
   const handleToggle = useCallback(() => {
-    setCollapsed(prev => !prev);
+    setCollapsed((prev) => !prev);
   }, []);
 
   const handleStartEdit = useCallback(() => {
@@ -109,23 +95,20 @@ export function CategorySection({
     setShowDeleteConfirm(false);
   }, [id, dispatch]);
 
-  const testidId = id ?? 'uncategorized';
+  const testidId = id ?? "uncategorized";
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        'mt-1',
-        isDragging && 'opacity-50 z-50',
-      )}
+      className={cn("mt-1", isDragging && "opacity-50 z-50")}
       data-testid={`chat-sidebar-category-${testidId}`}
-      data-state={collapsed ? 'collapsed' : 'expanded'}
+      data-state={collapsed ? "collapsed" : "expanded"}
     >
       <div
         className={cn(
-          'flex items-center w-full px-3 py-1.5 group',
-          sortable && 'cursor-grab active:cursor-grabbing',
+          "flex items-center w-full px-3 py-1.5 group",
+          sortable && "cursor-grab active:cursor-grabbing",
         )}
         {...(sortable ? { ...attributes, ...listeners } : {})}
       >
@@ -137,8 +120,8 @@ export function CategorySection({
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveEdit();
-                if (e.key === 'Escape') handleCancelEdit();
+                if (e.key === "Enter") handleSaveEdit();
+                if (e.key === "Escape") handleCancelEdit();
               }}
               className="flex-1 min-w-0 text-xs uppercase font-medium tracking-wider bg-input border border-border rounded px-1.5 py-0.5 text-foreground outline-none focus:ring-1 focus:ring-ring"
               data-testid={`chat-sidebar-category-edit-input-${testidId}`}
@@ -166,8 +149,8 @@ export function CategorySection({
             <CaretDown
               size={10}
               className={cn(
-                'transition-transform duration-200 ease-out shrink-0',
-                collapsed && '-rotate-90',
+                "transition-transform duration-200 ease-out shrink-0",
+                collapsed && "-rotate-90",
               )}
             />
             <span className="truncate">{name}</span>
@@ -177,11 +160,11 @@ export function CategorySection({
         <span className="flex items-center gap-1 shrink-0">
           <span
             className={cn(
-              'min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center',
-              'transition-all duration-200',
+              "min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center",
+              "transition-all duration-200",
               collapsed && unreadCount > 0
-                ? 'opacity-100 scale-100'
-                : 'opacity-0 scale-75 w-0 min-w-0 overflow-hidden',
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-75 w-0 min-w-0 overflow-hidden",
             )}
             data-testid={`chat-sidebar-category-unread-badge-${testidId}`}
           >
@@ -215,8 +198,10 @@ export function CategorySection({
             <Plus
               size={14}
               className={cn(
-                'text-muted-foreground transition-opacity duration-150 hover:text-foreground cursor-pointer',
-                collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100',
+                "text-muted-foreground transition-opacity duration-150 hover:text-foreground cursor-pointer",
+                collapsed
+                  ? "opacity-0 w-0 overflow-hidden"
+                  : "opacity-100 md:opacity-0 md:group-hover:opacity-100",
               )}
               onClick={(e) => {
                 e.stopPropagation();
@@ -232,13 +217,11 @@ export function CategorySection({
         ref={contentRef}
         className="overflow-hidden transition-[height,opacity] duration-200 ease-out"
         style={{
-          height: collapsed ? 0 : contentHeight === 'auto' ? 'auto' : contentHeight,
+          height: collapsed ? 0 : contentHeight === "auto" ? "auto" : contentHeight,
           opacity: collapsed ? 0 : 1,
         }}
       >
-        <div className="space-y-px">
-          {children}
-        </div>
+        <div className="space-y-px">{children}</div>
       </div>
 
       <ConfirmDialog
@@ -250,7 +233,6 @@ export function CategorySection({
         confirmLabel="Delete"
         variant="danger"
       />
-
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { cn } from '@/shared/utils/cn';
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { cn } from "@/shared/utils/cn";
 
 interface ToolbarPopoverProps {
   trigger: (props: {
@@ -9,11 +9,16 @@ interface ToolbarPopoverProps {
     ref: React.RefObject<HTMLButtonElement | null>;
   }) => ReactNode;
   children: (close: () => void) => ReactNode;
-  align?: 'start' | 'end';
+  align?: "start" | "end";
   className?: string;
 }
 
-export function ToolbarPopover({ trigger, children, align = 'start', className }: ToolbarPopoverProps) {
+export function ToolbarPopover({
+  trigger,
+  children,
+  align = "start",
+  className,
+}: ToolbarPopoverProps) {
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -28,13 +33,13 @@ export function ToolbarPopover({ trigger, children, align = 'start', className }
       setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener('mousedown', handle);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener("mousedown", handle);
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener('mousedown', handle);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener("mousedown", handle);
+      document.removeEventListener("keydown", onKey);
     };
   }, [open]);
 
@@ -50,26 +55,28 @@ export function ToolbarPopover({ trigger, children, align = 'start', className }
   return (
     <>
       {trigger({ open, onClick: toggle, ref: triggerRef })}
-      {open && rect && createPortal(
-        <div
-          ref={popoverRef}
-          role="dialog"
-          style={{
-            position: 'fixed',
-            top: rect.bottom + 4,
-            left: align === 'start' ? rect.left : undefined,
-            right: align === 'end' ? window.innerWidth - rect.right : undefined,
-            zIndex: 1000,
-          }}
-          className={cn(
-            'min-w-[180px] rounded-md border border-border bg-card text-card-foreground shadow-lg p-1',
-            className,
-          )}
-        >
-          {children(close)}
-        </div>,
-        document.body,
-      )}
+      {open &&
+        rect &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            role="dialog"
+            style={{
+              position: "fixed",
+              top: rect.bottom + 4,
+              left: align === "start" ? rect.left : undefined,
+              right: align === "end" ? window.innerWidth - rect.right : undefined,
+              zIndex: 1000,
+            }}
+            className={cn(
+              "min-w-[180px] rounded-md border border-border bg-card text-card-foreground shadow-lg p-1",
+              className,
+            )}
+          >
+            {children(close)}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

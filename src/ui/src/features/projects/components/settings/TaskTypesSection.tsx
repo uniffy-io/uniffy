@@ -17,20 +17,25 @@ interface TaskTypesSectionProps {
 export function TaskTypesSection({ project }: TaskTypesSectionProps) {
   const dispatch = useAppDispatch();
   const customFields = project.fieldDefinitions.filter((f) => !f.isSystem && !SYSTEM_IDS.has(f.id));
-  const [schemas, setSchemas] = useState<Record<string, TypeFieldSchema>>(project.typeFieldSchemas || {});
+  const [schemas, setSchemas] = useState<Record<string, TypeFieldSchema>>(
+    project.typeFieldSchemas || {},
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const persistSchemas = useCallback(async (newSchemas: Record<string, TypeFieldSchema>) => {
-    setSaving(true);
-    try {
-      await dispatch(updateProject({ id: project.id, typeFieldSchemas: newSchemas })).unwrap();
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
-  }, [dispatch, project.id]);
+  const persistSchemas = useCallback(
+    async (newSchemas: Record<string, TypeFieldSchema>) => {
+      setSaving(true);
+      try {
+        await dispatch(updateProject({ id: project.id, typeFieldSchemas: newSchemas })).unwrap();
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [dispatch, project.id],
+  );
 
   const toggleShown = useCallback(
     (taskType: string, fieldId: string) => {
@@ -55,7 +60,7 @@ export function TaskTypesSection({ project }: TaskTypesSectionProps) {
       setSchemas(newSchemas);
       persistSchemas(newSchemas);
     },
-    [schemas, persistSchemas]
+    [schemas, persistSchemas],
   );
 
   const toggleRequired = useCallback(
@@ -81,7 +86,7 @@ export function TaskTypesSection({ project }: TaskTypesSectionProps) {
       setSchemas(newSchemas);
       persistSchemas(newSchemas);
     },
-    [schemas, persistSchemas]
+    [schemas, persistSchemas],
   );
 
   return (
@@ -106,7 +111,8 @@ export function TaskTypesSection({ project }: TaskTypesSectionProps) {
       {customFields.length === 0 ? (
         <div className="bg-card rounded-lg border border-border p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            No custom fields defined yet. Create custom fields first to configure type-specific field visibility.
+            No custom fields defined yet. Create custom fields first to configure type-specific
+            field visibility.
           </p>
         </div>
       ) : (
@@ -128,46 +134,47 @@ export function TaskTypesSection({ project }: TaskTypesSectionProps) {
                   </span>
                 </h2>
                 <div className="bg-card rounded-lg border border-border">
-
-                <div className="divide-y divide-border">
-                  {customFields.map((field) => (
-                    <div
-                      key={field.id}
-                      className="flex items-center justify-between gap-4 px-4 py-3"
-                    >
-                      <span className="text-sm text-foreground truncate flex-1">
-                        {field.name}
-                      </span>
-                      <div className="flex items-center gap-6 shrink-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Show</span>
-                          <ToggleSwitch
-                            enabled={shownSet.has(field.id)}
-                            onChange={() => toggleShown(taskType.value, field.id)}
-                            disabled={saving}
-                            size="sm"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              "text-xs",
-                              shownSet.has(field.id) ? "text-muted-foreground" : "text-muted-foreground/40"
-                            )}
-                          >
-                            Required
-                          </span>
-                          <ToggleSwitch
-                            enabled={requiredSet.has(field.id)}
-                            onChange={() => toggleRequired(taskType.value, field.id)}
-                            disabled={saving || !shownSet.has(field.id)}
-                            size="sm"
-                          />
+                  <div className="divide-y divide-border">
+                    {customFields.map((field) => (
+                      <div
+                        key={field.id}
+                        className="flex items-center justify-between gap-4 px-4 py-3"
+                      >
+                        <span className="text-sm text-foreground truncate flex-1">
+                          {field.name}
+                        </span>
+                        <div className="flex items-center gap-6 shrink-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Show</span>
+                            <ToggleSwitch
+                              enabled={shownSet.has(field.id)}
+                              onChange={() => toggleShown(taskType.value, field.id)}
+                              disabled={saving}
+                              size="sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "text-xs",
+                                shownSet.has(field.id)
+                                  ? "text-muted-foreground"
+                                  : "text-muted-foreground/40",
+                              )}
+                            >
+                              Required
+                            </span>
+                            <ToggleSwitch
+                              enabled={requiredSet.has(field.id)}
+                              onChange={() => toggleRequired(taskType.value, field.id)}
+                              disabled={saving || !shownSet.has(field.id)}
+                              size="sm"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
                 </div>
               </section>
             );

@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
-import { Track } from 'livekit-client';
-import type { Participant, Room } from 'livekit-client';
-import { useRoomParticipants } from '@/features/calls/hooks/useRoomParticipants';
+import { useEffect, useRef } from "react";
+import { Track } from "livekit-client";
+import type { Participant, Room } from "livekit-client";
+import { useRoomParticipants } from "@/features/calls/hooks/useRoomParticipants";
 
 function ParticipantAudio({ participant }: { participant: Participant }) {
   const micRef = useRef<HTMLAudioElement>(null);

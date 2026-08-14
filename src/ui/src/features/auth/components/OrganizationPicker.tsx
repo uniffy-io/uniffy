@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { createClient } from "@connectrpc/connect";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
 import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
@@ -20,18 +20,23 @@ import { clearAdmin } from "@/features/admin";
 import { clearAgentProviders } from "@/features/agents/store/agentProvidersSlice";
 import { clearIntegrations } from "@/features/integrations/store/integrationsSlice";
 import {
-    clearBlobCache,
-    clearFiles,
-    clearTree as clearFilesTree,
-    clearUploads,
-    closeViewer,
-    clearSavedFilters,
+  clearBlobCache,
+  clearFiles,
+  clearTree as clearFilesTree,
+  clearUploads,
+  closeViewer,
+  clearSavedFilters,
 } from "@/features/files";
 import { uploadService } from "@/features/files/upload";
-import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi } from '@/features/chat/store';
-import { clearTags } from '@/features/tags/store/tagsSlice';
-import { clearPeople } from '@/features/people/store/peopleSlice';
-import { resetCalendarState, resetCalendarUiState } from '@/features/calendar/store';
+import {
+  clearChatChannels,
+  clearChatMessages,
+  clearChatThreads,
+  clearChatUi,
+} from "@/features/chat/store";
+import { clearTags } from "@/features/tags/store/tagsSlice";
+import { clearPeople } from "@/features/people/store/peopleSlice";
+import { resetCalendarState, resetCalendarUiState } from "@/features/calendar/store";
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { unaryTransport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
@@ -48,24 +53,24 @@ import {
 function getRoleLabel(role: OrganizationRole): string {
   switch (role) {
     case OrganizationRole.OWNER:
-      return 'owner';
+      return "owner";
     case OrganizationRole.ADMIN:
-      return 'admin';
+      return "admin";
     case OrganizationRole.MEMBER:
-      return 'member';
+      return "member";
     default:
-      return 'member';
+      return "member";
   }
 }
 
 function getRoleBadgeClasses(role: OrganizationRole): string {
   switch (role) {
     case OrganizationRole.OWNER:
-      return 'bg-primary/10 text-primary';
+      return "bg-primary/10 text-primary";
     case OrganizationRole.ADMIN:
-      return 'bg-primary/10 text-primary';
+      return "bg-primary/10 text-primary";
     default:
-      return 'bg-muted text-muted-foreground';
+      return "bg-muted text-muted-foreground";
   }
 }
 
@@ -74,12 +79,12 @@ function getOrgInitials(name: string): string {
     .split(/\s+/)
     .slice(0, 2)
     .map((w) => w[0])
-    .join('')
+    .join("")
     .toUpperCase();
 }
 
 export function OrganizationPicker() {
-  useDocumentTitle('Select Organization');
+  useDocumentTitle("Select Organization");
   const [organizations, setOrganizations] = useState<MyOrganization[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectingSlug, setSelectingSlug] = useState<string | null>(null);
@@ -95,7 +100,7 @@ export function OrganizationPicker() {
 
   useEffect(() => {
     if (!accessToken) {
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
 
@@ -104,11 +109,11 @@ export function OrganizationPicker() {
         const client = createClient(OrganizationsService, unaryTransport);
         const response = await client.listMyOrganizations(
           {},
-          { headers: { Authorization: `Bearer ${accessToken}` } }
+          { headers: { Authorization: `Bearer ${accessToken}` } },
         );
         setOrganizations(response.organizations);
       } catch {
-        setError('Failed to load organizations.');
+        setError("Failed to load organizations.");
       } finally {
         setLoading(false);
       }
@@ -118,8 +123,13 @@ export function OrganizationPicker() {
   }, [accessToken, navigate]);
 
   const RECORDING_ACTIVE_STATES = new Set([
-    'requesting', 'initiating-upload', 'recording', 'paused',
-    'stopping', 'flushing', 'completing',
+    "requesting",
+    "initiating-upload",
+    "recording",
+    "paused",
+    "stopping",
+    "flushing",
+    "completing",
   ]);
 
   const handleSelectOrg = async (orgSlug: string) => {
@@ -149,7 +159,7 @@ export function OrganizationPicker() {
       });
       const r = response.authResult;
       if (!r) {
-        setError('Failed to switch to organization.');
+        setError("Failed to switch to organization.");
         setSelectingSlug(null);
         return;
       }
@@ -164,21 +174,23 @@ export function OrganizationPicker() {
           dispatch(setFontFamily(user.fontFamily));
         }
 
-        dispatch(setCredentials({
-          user: user,
-          accessToken: r.accessToken,
-          refreshToken: r.refreshToken,
-          organizationId: r.organizationId,
-          organizationSlug: r.organizationSlug || orgSlug,
-          organizationRole: r.organizationRole,
-          sessionId: r.sessionId,
-          domainAdminDomains: Array.from(r.domainAdminDomains),
-        }));
+        dispatch(
+          setCredentials({
+            user: user,
+            accessToken: r.accessToken,
+            refreshToken: r.refreshToken,
+            organizationId: r.organizationId,
+            organizationSlug: r.organizationSlug || orgSlug,
+            organizationRole: r.organizationRole,
+            sessionId: r.sessionId,
+            domainAdminDomains: Array.from(r.domainAdminDomains),
+          }),
+        );
       }
 
-      navigate('/');
+      navigate("/");
     } catch {
-      setError('Failed to switch to organization.');
+      setError("Failed to switch to organization.");
       setSelectingSlug(null);
     }
   };
@@ -194,7 +206,7 @@ export function OrganizationPicker() {
   const handleLogout = () => {
     if (refreshToken) {
       const client = createClient(AuthService, unaryTransport);
-      client.logout({ refreshToken }).catch(() => { });
+      client.logout({ refreshToken }).catch(() => {});
     }
     clearMemoryAccessToken();
     dispatch(logout());
@@ -223,7 +235,7 @@ export function OrganizationPicker() {
     dispatch(resetCalendarState());
     dispatch(resetCalendarUiState());
     clearBlobCache();
-    navigate('/auth');
+    navigate("/auth");
   };
 
   return (
@@ -253,7 +265,7 @@ export function OrganizationPicker() {
         <div className="w-full max-w-md">
           <div
             className="flex items-center justify-between mb-8 opacity-0"
-            style={{ animation: 'org-slide-up 0.5s ease-out 0.1s forwards' }}
+            style={{ animation: "org-slide-up 0.5s ease-out 0.1s forwards" }}
           >
             <div className="flex items-center gap-3">
               <UniffyLogo className="w-14 h-14" />
@@ -262,11 +274,16 @@ export function OrganizationPicker() {
                   Select a workspace
                 </h1>
                 <p className="text-xs text-muted-foreground">
-                  {user?.email || 'Choose where to continue'}
+                  {user?.email || "Choose where to continue"}
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-1.5 text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="gap-1.5 text-muted-foreground"
+            >
               <SignOut className="h-4 w-4" />
               Sign out
             </Button>
@@ -275,10 +292,13 @@ export function OrganizationPicker() {
           {error && (
             <div
               className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
-              style={{ animation: 'org-slide-up 0.3s ease-out forwards' }}
+              style={{ animation: "org-slide-up 0.3s ease-out forwards" }}
             >
               <svg className="h-4 w-4 mt-0.5 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-10.25a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM8 12a1 1 0 100-2 1 1 0 000 2z" />
+                <path
+                  fillRule="evenodd"
+                  d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-10.25a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM8 12a1 1 0 100-2 1 1 0 000 2z"
+                />
               </svg>
               <span>{error}</span>
             </div>
@@ -287,11 +307,11 @@ export function OrganizationPicker() {
           {loading ? (
             <div
               className="flex flex-col items-center justify-center py-16 opacity-0"
-              style={{ animation: 'org-slide-up 0.5s ease-out 0.2s forwards' }}
+              style={{ animation: "org-slide-up 0.5s ease-out 0.2s forwards" }}
             >
               <CircleNotch
                 className="h-8 w-8 text-primary mb-4"
-                style={{ animation: 'org-spinner 0.8s linear infinite' }}
+                style={{ animation: "org-spinner 0.8s linear infinite" }}
                 weight="bold"
               />
               <p className="text-sm text-muted-foreground">Loading workspaces...</p>
@@ -299,7 +319,7 @@ export function OrganizationPicker() {
           ) : organizations.length === 0 ? (
             <div
               className="rounded-xl border border-border bg-card p-10 text-center opacity-0"
-              style={{ animation: 'org-slide-up 0.5s ease-out 0.2s forwards' }}
+              style={{ animation: "org-slide-up 0.5s ease-out 0.2s forwards" }}
             >
               <div className="mx-auto w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
                 <Buildings className="h-6 w-6 text-muted-foreground" />
@@ -307,16 +327,12 @@ export function OrganizationPicker() {
               <p className="text-foreground font-medium mb-1">No workspaces yet</p>
               <p className="text-sm text-muted-foreground mb-6">
                 {user?.isSystemAdmin
-                  ? 'You are a platform operator with no tenant membership. Open the platform console to manage the deployment.'
-                  : 'You are not a member of any organization.'}
+                  ? "You are a platform operator with no tenant membership. Open the platform console to manage the deployment."
+                  : "You are not a member of any organization."}
               </p>
               {user?.isSystemAdmin ? (
                 <div className="flex flex-col gap-2">
-                  <Button
-                    variant="default"
-                    className="gap-2"
-                    onClick={() => navigate('/platform')}
-                  >
+                  <Button variant="default" className="gap-2" onClick={() => navigate("/platform")}>
                     <ShieldWarning className="h-4 w-4" weight="duotone" />
                     Open platform console
                   </Button>
@@ -337,9 +353,9 @@ export function OrganizationPicker() {
               {user?.isSystemAdmin && (
                 <button
                   type="button"
-                  onClick={() => navigate('/platform')}
+                  onClick={() => navigate("/platform")}
                   className="w-full text-left rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/50 transition-all duration-200 group cursor-pointer opacity-0"
-                  style={{ animation: 'org-slide-up 0.4s ease-out 0.1s forwards' }}
+                  style={{ animation: "org-slide-up 0.4s ease-out 0.1s forwards" }}
                 >
                   <div className="flex items-center gap-4 p-4">
                     <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
@@ -349,9 +365,7 @@ export function OrganizationPicker() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm text-foreground">
-                        Platform console
-                      </div>
+                      <div className="font-semibold text-sm text-foreground">Platform console</div>
                       <div className="text-xs text-muted-foreground mt-0.5">
                         Cross-tenant operator view (no org context)
                       </div>
@@ -361,7 +375,7 @@ export function OrganizationPicker() {
                 </button>
               )}
               {organizations.map((myOrg, index) => {
-                const slug = myOrg.organization?.slug || '';
+                const slug = myOrg.organization?.slug || "";
                 const isSelecting = selectingSlug === slug;
 
                 return (
@@ -373,11 +387,12 @@ export function OrganizationPicker() {
                       w-full text-left rounded-xl border bg-card
                       transition-all duration-200 group cursor-pointer
                       opacity-0
-                      ${isSelecting
-                        ? 'border-primary ring-2 ring-primary/20 shadow-sm'
-                        : 'border-border hover:border-muted-foreground/30 hover:shadow-sm'
+                      ${
+                        isSelecting
+                          ? "border-primary ring-2 ring-primary/20 shadow-sm"
+                          : "border-border hover:border-muted-foreground/30 hover:shadow-sm"
                       }
-                      ${selectingSlug !== null && !isSelecting ? 'opacity-60' : ''}
+                      ${selectingSlug !== null && !isSelecting ? "opacity-60" : ""}
                     `}
                     style={{
                       animation: `org-slide-up 0.4s ease-out ${0.15 + index * 0.06}s forwards`,
@@ -386,7 +401,7 @@ export function OrganizationPicker() {
                     <div className="flex items-center gap-4 p-4">
                       <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/10 flex items-center justify-center flex-shrink-0">
                         <span className="text-primary font-bold text-sm">
-                          {getOrgInitials(myOrg.organization?.name || '?')}
+                          {getOrgInitials(myOrg.organization?.name || "?")}
                         </span>
                       </div>
 
@@ -407,13 +422,11 @@ export function OrganizationPicker() {
                         {isSelecting ? (
                           <CircleNotch
                             className="h-5 w-5 text-primary"
-                            style={{ animation: 'org-spinner 0.8s linear infinite' }}
+                            style={{ animation: "org-spinner 0.8s linear infinite" }}
                             weight="bold"
                           />
                         ) : (
-                          <ArrowRight
-                            className="h-5 w-5 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 -translate-x-1 group-hover:translate-x-0"
-                          />
+                          <ArrowRight className="h-5 w-5 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 -translate-x-1 group-hover:translate-x-0" />
                         )}
                       </div>
                     </div>
@@ -425,7 +438,7 @@ export function OrganizationPicker() {
 
           <p
             className="mt-8 text-center text-xs text-muted-foreground/60 opacity-0"
-            style={{ animation: 'org-slide-up 0.5s ease-out 0.6s forwards' }}
+            style={{ animation: "org-slide-up 0.5s ease-out 0.6s forwards" }}
           >
             Signed in as {user?.fullName || user?.username || user?.email}
           </p>

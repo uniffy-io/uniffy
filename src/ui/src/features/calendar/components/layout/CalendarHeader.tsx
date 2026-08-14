@@ -1,33 +1,23 @@
-import { CaretLeft, CaretRight, GlobeHemisphereWest, SidebarSimple } from '@phosphor-icons/react';
-import { useCalendarNavigation } from '@/features/calendar/hooks';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { toggleSidebar } from '@/features/calendar/store';
-import { getTimezoneOffset } from '@/features/calendar/utils';
-import { cn } from '@/shared/utils/cn';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import type { ViewMode } from '@/features/calendar/types';
+import { CaretLeft, CaretRight, GlobeHemisphereWest, SidebarSimple } from "@phosphor-icons/react";
+import { useCalendarNavigation } from "@/features/calendar/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { toggleSidebar } from "@/features/calendar/store";
+import { getTimezoneOffset } from "@/features/calendar/utils";
+import { cn } from "@/shared/utils/cn";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import type { ViewMode } from "@/features/calendar/types";
 
 export function CalendarHeader() {
   const dispatch = useAppDispatch();
   const { isMobile } = useBreakpoint();
-  const {
-    headerTitle,
-    viewMode,
-    goToPrevious,
-    goToNext,
-    goToToday,
-    changeViewMode,
-  } = useCalendarNavigation();
+  const { headerTitle, viewMode, goToPrevious, goToNext, goToToday, changeViewMode } =
+    useCalendarNavigation();
 
-  const displayTimezone = useAppSelector(
-    (state) => state.calendarUi.displayTimezone
-  );
-  const isSidebarCollapsed = useAppSelector(
-    (state) => state.calendarUi.isSidebarCollapsed
-  );
+  const displayTimezone = useAppSelector((state) => state.calendarUi.displayTimezone);
+  const isSidebarCollapsed = useAppSelector((state) => state.calendarUi.isSidebarCollapsed);
   const timezoneOffset = getTimezoneOffset(displayTimezone);
 
-  const viewModes: ViewMode[] = ['day', 'week', 'month', 'agenda'];
+  const viewModes: ViewMode[] = ["day", "week", "month", "agenda"];
 
   return (
     <div className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-card border-b border-border">
@@ -74,7 +64,7 @@ export function CalendarHeader() {
         <span
           className={cn(
             "items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground rounded-md",
-            isMobile ? "hidden" : "flex"
+            isMobile ? "hidden" : "flex",
           )}
           title="Your current timezone"
         >
@@ -88,10 +78,10 @@ export function CalendarHeader() {
               key={mode}
               onClick={() => changeViewMode(mode)}
               className={cn(
-                'px-2 md:px-3 py-1 text-sm rounded-md transition-colors',
+                "px-2 md:px-3 py-1 text-sm rounded-md transition-colors",
                 viewMode === mode
-                  ? 'text-primary bg-primary/10'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted",
               )}
             >
               {mode.charAt(0).toUpperCase() + mode.slice(1)}

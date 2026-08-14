@@ -46,7 +46,15 @@ const INTERVAL_UNITS: Record<RecurrencePattern, string> = {
 };
 
 function getTodayDayOfWeek(): DayOfWeek {
-  const mapping: DayOfWeek[] = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  const mapping: DayOfWeek[] = [
+    "SUNDAY",
+    "MONDAY",
+    "TUESDAY",
+    "WEDNESDAY",
+    "THURSDAY",
+    "FRIDAY",
+    "SATURDAY",
+  ];
   return mapping[new Date().getDay()];
 }
 
@@ -84,13 +92,16 @@ function describeSummary(config: RecurrenceConfig): string {
     desc = "Every 2 weeks";
   } else if (pattern === "monthly") {
     desc = interval === 1 ? "Every month" : `Every ${interval} months`;
-    if (config.day_of_month) desc += ` on the ${config.day_of_month}${ordinalSuffix(config.day_of_month)}`;
+    if (config.day_of_month)
+      desc += ` on the ${config.day_of_month}${ordinalSuffix(config.day_of_month)}`;
   } else if (pattern === "yearly") {
     desc = interval === 1 ? "Every year" : `Every ${interval} years`;
   }
 
   if ((pattern === "weekly" || pattern === "biweekly") && config.days_of_week?.length) {
-    const dayNames = config.days_of_week.map((d) => d.charAt(0) + d.slice(1).toLowerCase().slice(0, 2));
+    const dayNames = config.days_of_week.map(
+      (d) => d.charAt(0) + d.slice(1).toLowerCase().slice(0, 2),
+    );
     desc += ` on ${dayNames.join(", ")}`;
   }
 
@@ -120,13 +131,16 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
   const pattern = (config?.pattern as RecurrencePattern) ?? "weekly";
   const [isOpen, setIsOpen] = useState(false);
 
-  const [endCondition, setEndCondition] = useState<EndCondition>(
-    () => (config ? getEndCondition(config) : "never")
+  const [endCondition, setEndCondition] = useState<EndCondition>(() =>
+    config ? getEndCondition(config) : "never",
   );
 
-  const emitChange = useCallback((newConfig: RecurrenceConfig) => {
-    onChange(serializeConfig(newConfig));
-  }, [onChange]);
+  const emitChange = useCallback(
+    (newConfig: RecurrenceConfig) => {
+      onChange(serializeConfig(newConfig));
+    },
+    [onChange],
+  );
 
   const handleToggle = useCallback(() => {
     if (isActive) {
@@ -143,56 +157,71 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
     }
   }, [isActive, onChange, emitChange]);
 
-  const handlePatternChange = useCallback((newPattern: RecurrencePattern) => {
-    const base: RecurrenceConfig = {
-      pattern: newPattern,
-      interval: newPattern === "biweekly" ? 2 : (config?.interval ?? 1),
-      occurrences_created: config?.occurrences_created ?? 0,
-    };
-    if (newPattern === "weekly" || newPattern === "biweekly") {
-      base.days_of_week = config?.days_of_week?.length ? config.days_of_week : [getTodayDayOfWeek()];
-    }
-    if (newPattern === "monthly") {
-      base.day_of_month = config?.day_of_month ?? new Date().getDate();
-    }
-    if (endCondition === "after") base.max_occurrences = config?.max_occurrences ?? 10;
-    if (endCondition === "on_date") base.end_date = config?.end_date;
-    emitChange(base);
-  }, [config, endCondition, emitChange]);
+  const handlePatternChange = useCallback(
+    (newPattern: RecurrencePattern) => {
+      const base: RecurrenceConfig = {
+        pattern: newPattern,
+        interval: newPattern === "biweekly" ? 2 : (config?.interval ?? 1),
+        occurrences_created: config?.occurrences_created ?? 0,
+      };
+      if (newPattern === "weekly" || newPattern === "biweekly") {
+        base.days_of_week = config?.days_of_week?.length
+          ? config.days_of_week
+          : [getTodayDayOfWeek()];
+      }
+      if (newPattern === "monthly") {
+        base.day_of_month = config?.day_of_month ?? new Date().getDate();
+      }
+      if (endCondition === "after") base.max_occurrences = config?.max_occurrences ?? 10;
+      if (endCondition === "on_date") base.end_date = config?.end_date;
+      emitChange(base);
+    },
+    [config, endCondition, emitChange],
+  );
 
-  const handleIntervalChange = useCallback((interval: number) => {
-    if (!config) return;
-    emitChange({ ...config, interval: Math.max(1, Math.min(99, interval)) });
-  }, [config, emitChange]);
+  const handleIntervalChange = useCallback(
+    (interval: number) => {
+      if (!config) return;
+      emitChange({ ...config, interval: Math.max(1, Math.min(99, interval)) });
+    },
+    [config, emitChange],
+  );
 
-  const handleDayToggle = useCallback((day: DayOfWeek) => {
-    if (!config) return;
-    const current = (config.days_of_week ?? []) as string[];
-    const updated = current.includes(day)
-      ? current.filter((d) => d !== day)
-      : [...current, day];
-    emitChange({ ...config, days_of_week: updated.length > 0 ? updated : [day] });
-  }, [config, emitChange]);
+  const handleDayToggle = useCallback(
+    (day: DayOfWeek) => {
+      if (!config) return;
+      const current = (config.days_of_week ?? []) as string[];
+      const updated = current.includes(day) ? current.filter((d) => d !== day) : [...current, day];
+      emitChange({ ...config, days_of_week: updated.length > 0 ? updated : [day] });
+    },
+    [config, emitChange],
+  );
 
-  const handleDayOfMonthChange = useCallback((dayOfMonth: number) => {
-    if (!config) return;
-    emitChange({ ...config, day_of_month: Math.max(1, Math.min(31, dayOfMonth)) });
-  }, [config, emitChange]);
+  const handleDayOfMonthChange = useCallback(
+    (dayOfMonth: number) => {
+      if (!config) return;
+      emitChange({ ...config, day_of_month: Math.max(1, Math.min(31, dayOfMonth)) });
+    },
+    [config, emitChange],
+  );
 
-  const handleEndConditionChange = useCallback((condition: EndCondition) => {
-    setEndCondition(condition);
-    if (!config) return;
-    const updated = { ...config };
-    delete updated.max_occurrences;
-    delete updated.end_date;
-    if (condition === "after") updated.max_occurrences = 10;
-    if (condition === "on_date") {
-      const d = new Date();
-      d.setMonth(d.getMonth() + 3);
-      updated.end_date = d.toISOString().split("T")[0];
-    }
-    emitChange(updated);
-  }, [config, emitChange]);
+  const handleEndConditionChange = useCallback(
+    (condition: EndCondition) => {
+      setEndCondition(condition);
+      if (!config) return;
+      const updated = { ...config };
+      delete updated.max_occurrences;
+      delete updated.end_date;
+      if (condition === "after") updated.max_occurrences = 10;
+      if (condition === "on_date") {
+        const d = new Date();
+        d.setMonth(d.getMonth() + 3);
+        updated.end_date = d.toISOString().split("T")[0];
+      }
+      emitChange(updated);
+    },
+    [config, emitChange],
+  );
 
   const showDaysOfWeek = pattern === "weekly" || pattern === "biweekly";
   const showDayOfMonth = pattern === "monthly";
@@ -206,7 +235,7 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
         onClick={handleToggle}
         className={cn(
           "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted px-2 py-1 rounded-md transition-colors",
-          disabled && "opacity-50 cursor-not-allowed"
+          disabled && "opacity-50 cursor-not-allowed",
         )}
       >
         <ArrowsClockwise size={13} />
@@ -227,9 +256,12 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
         >
           <ArrowsClockwise size={13} weight="fill" className="shrink-0" />
           <span className="truncate">{config ? describeSummary(config) : "Recurring"}</span>
-          {!disabled && (
-            isOpen ? <CaretDown size={10} className="shrink-0 ml-auto" /> : <CaretRight size={10} className="shrink-0 ml-auto" />
-          )}
+          {!disabled &&
+            (isOpen ? (
+              <CaretDown size={10} className="shrink-0 ml-auto" />
+            ) : (
+              <CaretRight size={10} className="shrink-0 ml-auto" />
+            ))}
         </button>
         {!disabled && (
           <button
@@ -279,7 +311,7 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
                       "w-7 h-7 rounded-full text-[10px] font-medium transition-colors",
                       selected
                         ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:text-foreground border border-border"
+                        : "bg-background text-muted-foreground hover:text-foreground border border-border",
                     )}
                     title={day.label}
                   >
@@ -306,7 +338,9 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
 
           {/* End condition */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Ends</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+              Ends
+            </span>
             <label className="flex items-center gap-2 text-xs cursor-pointer">
               <input
                 type="radio"
@@ -334,7 +368,10 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
                     value={config.max_occurrences ?? 10}
                     onChange={(e) => {
                       if (!config) return;
-                      emitChange({ ...config, max_occurrences: Math.max(1, parseInt(e.target.value) || 1) });
+                      emitChange({
+                        ...config,
+                        max_occurrences: Math.max(1, parseInt(e.target.value) || 1),
+                      });
                     }}
                     className={INPUT_CLASS}
                   />

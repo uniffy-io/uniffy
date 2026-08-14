@@ -2,19 +2,19 @@
 // Frame = [VarString docName][y-protocols bytes].
 // Public entrypoint: `realtimeMultiplexer.attach()`.
 
-import * as Y from 'yjs';
-import type { Awareness } from 'y-protocols/awareness';
+import * as Y from "yjs";
+import type { Awareness } from "y-protocols/awareness";
 import {
   encodeAwarenessUpdate,
   applyAwarenessUpdate,
   removeAwarenessStates,
-} from 'y-protocols/awareness';
-import * as syncProtocol from 'y-protocols/sync';
-import * as encoding from 'lib0/encoding';
-import * as decoding from 'lib0/decoding';
-import { getAccessToken, refreshAccessToken } from '@/config/api';
-import { encodeDocFrame, peekVarString } from '@/features/realtime/multiplex';
-import { REMOTE_ORIGIN } from '@/features/realtime/persistence/encryptedYjsPersistence';
+} from "y-protocols/awareness";
+import * as syncProtocol from "y-protocols/sync";
+import * as encoding from "lib0/encoding";
+import * as decoding from "lib0/decoding";
+import { getAccessToken, refreshAccessToken } from "@/config/api";
+import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
+import { REMOTE_ORIGIN } from "@/features/realtime/persistence/encryptedYjsPersistence";
 import {
   CANONICAL_SUBPROTOCOL,
   WS_CLOSE_FORBIDDEN,
@@ -22,15 +22,15 @@ import {
   WS_CLOSE_REAUTH_REQUIRED,
   WS_CLOSE_TOKEN_REVOKED,
   type RealtimeStatus,
-} from '@/features/realtime/protocol';
+} from "@/features/realtime/protocol";
 
 // y-protocols message-type constants - upstream exposes them only as numeric literals.
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
 const MESSAGE_QUERY_AWARENESS = 3;
 
-const AUTH_REFRESHED_EVENT = 'uniffy:auth:refreshed';
-const AUTH_REVOKED_EVENT = 'uniffy:auth:revoked';
+const AUTH_REFRESHED_EVENT = "uniffy:auth:refreshed";
+const AUTH_REVOKED_EVENT = "uniffy:auth:revoked";
 
 const RECONNECT_INITIAL_MS = 500;
 const RECONNECT_MAX_MS = 15_000;
@@ -144,7 +144,7 @@ class RealtimeMultiplexer {
         if (!entry.droppedWhileDisconnected) this.noteLocalFramesHandedToSocket(entry);
       },
       awarenessHandler: (changes, origin) => {
-        if (origin === 'remote') return;
+        if (origin === "remote") return;
         const changed = changes.added.concat(changes.updated, changes.removed);
         const enc = encoding.createEncoder();
         encoding.writeVarUint(enc, MESSAGE_AWARENESS);
@@ -154,8 +154,8 @@ class RealtimeMultiplexer {
       options: opts,
     };
 
-    opts.ydoc.on('update', entry.updateHandler);
-    opts.awareness.on('change', entry.awarenessHandler);
+    opts.ydoc.on("update", entry.updateHandler);
+    opts.awareness.on("change", entry.awarenessHandler);
     this.docs.set(docName, entry);
     this.cancelIdleClose();
     this.openIfNeeded(opts.contentType, opts.contentId);
@@ -163,11 +163,11 @@ class RealtimeMultiplexer {
     if (this.wsConnected) {
       // WS was already open before this attach; push status + SyncStep1
       // synchronously so the new subscription does not stall on `'idle'`.
-      opts.onStatus?.('connected');
+      opts.onStatus?.("connected");
       this.bootstrapDoc(entry);
     } else if (this.wsConnecting) {
       // Late attach mid-handshake; surface the in-flight state immediately.
-      opts.onStatus?.('connecting');
+      opts.onStatus?.("connecting");
     }
 
     return {
@@ -179,16 +179,13 @@ class RealtimeMultiplexer {
   private detach(docName: string): void {
     const entry = this.docs.get(docName);
     if (!entry) return;
-    entry.ydoc.off('update', entry.updateHandler);
-    entry.awareness.off('change', entry.awarenessHandler);
+    entry.ydoc.off("update", entry.updateHandler);
+    entry.awareness.off("change", entry.awarenessHandler);
     // Announce departure so peers drop our cursor now, rather than waiting for
     // y-protocols' 30s outdatedTimeout GC. The change handler is already
     // detached, so this manual frame is the only removal that goes out.
-    if (
-      this.ws?.readyState === WebSocket.OPEN
-      && entry.awareness.getLocalState() !== null
-    ) {
-      removeAwarenessStates(entry.awareness, [entry.awareness.clientID], 'local-detach');
+    if (this.ws?.readyState === WebSocket.OPEN && entry.awareness.getLocalState() !== null) {
+      removeAwarenessStates(entry.awareness, [entry.awareness.clientID], "local-detach");
       const enc = encoding.createEncoder();
       encoding.writeVarUint(enc, MESSAGE_AWARENESS);
       encoding.writeVarUint8Array(
@@ -219,21 +216,21 @@ class RealtimeMultiplexer {
       return;
     }
     const url = this.buildUrl(orgId);
-    const token = getAccessToken() ?? '';
+    const token = getAccessToken() ?? "";
     const protocols = [CANONICAL_SUBPROTOCOL, `bearer.${encodeURIComponent(token)}`];
 
     let ws: WebSocket;
     try {
       ws = new WebSocket(url, protocols);
     } catch (err) {
-      console.warn('[realtime] WebSocket constructor failed', err);
+      console.warn("[realtime] WebSocket constructor failed", err);
       this.wsConnecting = false;
       this.scheduleReconnect();
       return;
     }
-    ws.binaryType = 'arraybuffer';
+    ws.binaryType = "arraybuffer";
     this.ws = ws;
-    this.emitStatusAll('connecting');
+    this.emitStatusAll("connecting");
 
     ws.onopen = () => {
       this.wsConnecting = false;
@@ -243,7 +240,7 @@ class RealtimeMultiplexer {
         entry.resolvedSyncOnce = false;
         this.bootstrapDoc(entry);
       }
-      this.emitStatusAll('connected');
+      this.emitStatusAll("connected");
       this.startResyncTimer();
       this.startAwarenessKeepaliveTimer();
     };
@@ -254,7 +251,7 @@ class RealtimeMultiplexer {
         this.onFrame(new Uint8Array(data));
         return;
       }
-      if (typeof data !== 'string' && 'arrayBuffer' in data) {
+      if (typeof data !== "string" && "arrayBuffer" in data) {
         void data.arrayBuffer().then((buf) => this.onFrame(new Uint8Array(buf)));
       }
     };
@@ -279,9 +276,9 @@ class RealtimeMultiplexer {
       if (event.code === WS_CLOSE_FORBIDDEN) {
         // Auth/permission lost; surface as disconnected but still try to
         // reconnect (the user may regain access via an org switch).
-        this.emitStatusAll('disconnected');
+        this.emitStatusAll("disconnected");
       } else {
-        this.emitStatusAll('disconnected');
+        this.emitStatusAll("disconnected");
       }
       this.scheduleReconnect();
     };
@@ -307,7 +304,7 @@ class RealtimeMultiplexer {
 
   private reconnectAfterRefresh(): void {
     if (this.destroyed || this.docs.size === 0) return;
-    this.emitStatusAll('connecting');
+    this.emitStatusAll("connecting");
     void refreshAccessToken()
       .catch(() => null)
       .finally(() => {
@@ -324,7 +321,10 @@ class RealtimeMultiplexer {
     if (this.reconnectTimer) return;
     if (this.docs.size === 0) return;
     const delay = this.reconnectDelayMs;
-    this.reconnectDelayMs = Math.min(this.reconnectDelayMs * RECONNECT_MULTIPLIER, RECONNECT_MAX_MS);
+    this.reconnectDelayMs = Math.min(
+      this.reconnectDelayMs * RECONNECT_MULTIPLIER,
+      RECONNECT_MAX_MS,
+    );
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connectNow();
@@ -403,7 +403,7 @@ class RealtimeMultiplexer {
       this.idleCloseTimer = null;
       if (this.docs.size === 0 && this.ws) {
         try {
-          this.ws.close(WS_CLOSE_NORMAL, 'idle');
+          this.ws.close(WS_CLOSE_NORMAL, "idle");
         } catch {
           // ignored
         }
@@ -425,7 +425,7 @@ class RealtimeMultiplexer {
     try {
       ({ docName, payloadOffset } = peekVarString(frame));
     } catch (err) {
-      console.warn('[realtime] malformed multiplex prefix', err);
+      console.warn("[realtime] malformed multiplex prefix", err);
       return;
     }
     const entry = this.docs.get(docName);
@@ -459,7 +459,7 @@ class RealtimeMultiplexer {
         entry.options.onSync?.();
       }
     } else if (messageType === MESSAGE_AWARENESS) {
-      applyAwarenessUpdate(entry.awareness, decoding.readVarUint8Array(decoder), 'remote');
+      applyAwarenessUpdate(entry.awareness, decoding.readVarUint8Array(decoder), "remote");
     } else if (messageType === MESSAGE_QUERY_AWARENESS) {
       this.sendLocalAwareness(entry);
     }
@@ -562,7 +562,7 @@ class RealtimeMultiplexer {
     try {
       this.ws.send(encodeDocFrame(docName, payload));
     } catch (err) {
-      console.warn('[realtime] send failed; reconnecting', err);
+      console.warn("[realtime] send failed; reconnecting", err);
       this.forceReconnect();
     }
   }
@@ -593,16 +593,16 @@ class RealtimeMultiplexer {
   }
 
   private buildUrl(orgId: string): string {
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${proto}//${window.location.host}/api/realtime?org_id=${encodeURIComponent(orgId)}`;
   }
 
   private resolveOrgId(): string | null {
     try {
-      const persisted = localStorage.getItem('persist:root');
+      const persisted = localStorage.getItem("persist:root");
       if (!persisted) return null;
       const root = JSON.parse(persisted);
-      const auth = JSON.parse(root.auth || '{}');
+      const auth = JSON.parse(root.auth || "{}");
       return (auth.currentOrganizationId as string | null) ?? null;
     } catch {
       return null;
@@ -612,9 +612,9 @@ class RealtimeMultiplexer {
   private ensureListeners(): void {
     if (this.listenersAttached) return;
     this.listenersAttached = true;
-    window.addEventListener('online', this.handleOnline);
-    window.addEventListener('offline', this.handleOffline);
-    document.addEventListener('visibilitychange', this.handleVisibility);
+    window.addEventListener("online", this.handleOnline);
+    window.addEventListener("offline", this.handleOffline);
+    document.addEventListener("visibilitychange", this.handleVisibility);
     window.addEventListener(AUTH_REFRESHED_EVENT, this.handleAuthRefreshed);
     window.addEventListener(AUTH_REVOKED_EVENT, this.handleAuthRevoked);
   }
@@ -624,7 +624,7 @@ class RealtimeMultiplexer {
   };
 
   private handleOffline = (): void => {
-    this.emitStatusAll('offline');
+    this.emitStatusAll("offline");
     if (this.ws) {
       try {
         this.ws.close();
@@ -636,7 +636,7 @@ class RealtimeMultiplexer {
   };
 
   private handleVisibility = (): void => {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== "visible") return;
     if (this.docs.size === 0) return;
     if (!this.wsConnected && !this.wsConnecting) this.forceReconnect();
   };
@@ -651,15 +651,15 @@ class RealtimeMultiplexer {
     this.destroyed = true;
     if (this.ws) {
       try {
-        this.ws.close(WS_CLOSE_NORMAL, 'auth revoked');
+        this.ws.close(WS_CLOSE_NORMAL, "auth revoked");
       } catch {
         // ignored
       }
       this.cleanupSocket();
     }
     for (const entry of this.docs.values()) {
-      entry.ydoc.off('update', entry.updateHandler);
-      entry.awareness.off('change', entry.awarenessHandler);
+      entry.ydoc.off("update", entry.updateHandler);
+      entry.awareness.off("change", entry.awarenessHandler);
     }
     this.docs.clear();
   };

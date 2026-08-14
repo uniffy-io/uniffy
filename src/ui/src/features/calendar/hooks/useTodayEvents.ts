@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useCallback, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { fetchEventsInRange } from '@/features/calendar/store/calendarThunks';
-import type { CalendarEvent } from '@/features/calendar/types';
+import { useEffect, useMemo, useCallback, useState } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { fetchEventsInRange } from "@/features/calendar/store/calendarThunks";
+import type { CalendarEvent } from "@/features/calendar/types";
 
 interface TodayEventGroup {
   current: CalendarEvent[];
@@ -32,7 +32,7 @@ function getTodayRange(): { startDate: string; endDate: string } {
 
 function groupEvents(events: CalendarEvent[], now: Date): TodayEventGroup {
   const sorted = [...events].sort(
-    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
   );
 
   const current: CalendarEvent[] = [];
@@ -93,7 +93,7 @@ export function useTodayEvents(enabled: boolean): UseTodayEventsResult {
 
   const todayEvents = useMemo(() => {
     const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
     return Object.values(events).filter((event) => {
       const startDate = event.startTime.slice(0, 10);

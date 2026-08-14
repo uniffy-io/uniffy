@@ -18,14 +18,14 @@ function validateEnv(): void {
 function createEnvConfig(): EnvConfig {
   validateEnv();
 
-  const mode = import.meta.env.MODE || 'development';
+  const mode = import.meta.env.MODE || "development";
 
   return {
     // Backend routes live under /api/*; override with VITE_API_URL for split-origin dev.
-    apiBaseUrl: import.meta.env.VITE_API_URL ?? '/api',
+    apiBaseUrl: import.meta.env.VITE_API_URL ?? "/api",
     mode,
-    isDev: mode === 'development',
-    isProd: mode === 'production',
+    isDev: mode === "development",
+    isProd: mode === "production",
   };
 }
 

@@ -1,22 +1,28 @@
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Bell, ArrowRight, CheckCircle } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { WidgetCard, EmptyWidget, WidgetSkeleton } from '@/features/dashboard/components/widgets/WidgetCard';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { urnToPath } from '@/shared/utils/urn';
-import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { Bell, ArrowRight, CheckCircle } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import {
+  WidgetCard,
+  EmptyWidget,
+  WidgetSkeleton,
+} from "@/features/dashboard/components/widgets/WidgetCard";
+import { formatRelativeTime } from "@/shared/utils/dateFormatting";
+import { urnToPath } from "@/shared/utils/urn";
+import type { SerializedNotification } from "@/features/notifications/store/notificationsSlice";
 
 function NotificationItem({ notification }: { notification: SerializedNotification }) {
-  const path = notification.sourceUrn ? (urnToPath(notification.sourceUrn) ?? '/notifications') : '/notifications';
+  const path = notification.sourceUrn
+    ? (urnToPath(notification.sourceUrn) ?? "/notifications")
+    : "/notifications";
 
   return (
     <Link
       to={path}
       className={cn(
-        'group flex items-start gap-2.5 rounded-lg p-2 -mx-2 transition-colors',
-        'hover:bg-muted/50',
+        "group flex items-start gap-2.5 rounded-lg p-2 -mx-2 transition-colors",
+        "hover:bg-muted/50",
       )}
     >
       {notification.actorAvatarUrl ? (
@@ -49,9 +55,7 @@ export function NotificationsSummaryWidget() {
   const isLoading = useAppSelector((state) => state.notifications?.loading ?? false);
 
   const unreadNotifications = useMemo(() => {
-    return notifications
-      .filter((n: SerializedNotification) => !n.isRead)
-      .slice(0, 3);
+    return notifications.filter((n: SerializedNotification) => !n.isRead).slice(0, 3);
   }, [notifications]);
 
   const isEmpty = unreadCount === 0 && !isLoading;
@@ -66,7 +70,7 @@ export function NotificationsSummaryWidget() {
       action={
         unreadCount > 0 ? (
           <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         ) : null
       }

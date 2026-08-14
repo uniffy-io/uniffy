@@ -1,10 +1,10 @@
-import type { Icon } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
-import { useFormattedKeybinding } from '@/features/settings';
-import { cn } from '@/shared/utils/cn';
+import type { Icon } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { useFormattedKeybinding } from "@/features/settings";
+import { cn } from "@/shared/utils/cn";
 
 interface EmptyStateTip {
-  color: 'primary' | 'emerald-500' | 'amber-500' | 'blue-500' | 'violet-500' | 'rose-500';
+  color: "primary" | "emerald-500" | "amber-500" | "blue-500" | "violet-500" | "rose-500";
   text: React.ReactNode;
 }
 
@@ -29,10 +29,10 @@ export function EmptyState({
   tips,
   className,
 }: EmptyStateProps) {
-  const shortcut = useFormattedKeybinding(shortcutKey ?? '');
+  const shortcut = useFormattedKeybinding(shortcutKey ?? "");
 
   return (
-    <div className={cn('flex-1 flex flex-col items-center justify-center p-6 md:p-8', className)}>
+    <div className={cn("flex-1 flex flex-col items-center justify-center p-6 md:p-8", className)}>
       <div className="max-w-md text-center">
         <div className="relative mb-8">
           <div className="flex items-center justify-center gap-4">
@@ -47,12 +47,8 @@ export function EmptyState({
           </div>
         </div>
 
-        <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-2">
-          {title}
-        </h2>
-        <p className="text-sm md:text-base text-muted-foreground mb-6">
-          {description}
-        </p>
+        <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-2">{title}</h2>
+        <p className="text-sm md:text-base text-muted-foreground mb-6">{description}</p>
 
         {actionLabel && onAction && (
           <Button onClick={onAction} className="mb-4">
@@ -64,9 +60,7 @@ export function EmptyState({
         {shortcutKey && shortcut && (
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-8">
             <span>or press</span>
-            <kbd className="px-2 py-1 rounded bg-muted text-xs font-mono">
-              {shortcut}
-            </kbd>
+            <kbd className="px-2 py-1 rounded bg-muted text-xs font-mono">{shortcut}</kbd>
           </div>
         )}
 
@@ -95,10 +89,10 @@ interface TipItemProps {
 }
 
 function TipItem({ color, children }: TipItemProps) {
-  const dotColor = color === 'primary' ? 'bg-primary' : `bg-${color}`;
+  const dotColor = color === "primary" ? "bg-primary" : `bg-${color}`;
   return (
     <li className="flex items-start gap-2 text-sm text-muted-foreground">
-      <div className={cn('w-2 h-2 rounded-full mt-1.5 flex-shrink-0', dotColor)} />
+      <div className={cn("w-2 h-2 rounded-full mt-1.5 flex-shrink-0", dotColor)} />
       <span>{children}</span>
     </li>
   );

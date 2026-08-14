@@ -98,10 +98,7 @@ describe("buildTaskHierarchyIndex", () => {
   });
 
   it("tolerates a cyclic parent_id chain without spinning", () => {
-    const tasks = [
-      makeTask({ id: "a", parentId: "b" }),
-      makeTask({ id: "b", parentId: "a" }),
-    ];
+    const tasks = [makeTask({ id: "a", parentId: "b" }), makeTask({ id: "b", parentId: "a" })];
     const index = buildTaskHierarchyIndex(tasks);
     expect(index.depthById.get("a")).toBeLessThan(64);
     expect(index.depthById.get("b")).toBeLessThan(64);
@@ -234,7 +231,12 @@ describe("applyFilters - composing hierarchy filters", () => {
     const config: FilterConfig = {
       conditions: [
         { id: "c1", fieldId: HIERARCHY_ROOT_ONLY_FIELD_ID, operator: "is_empty", value: null },
-        { id: "c2", fieldId: HIERARCHY_HAS_SUBTASKS_FIELD_ID, operator: "is_not_empty", value: null },
+        {
+          id: "c2",
+          fieldId: HIERARCHY_HAS_SUBTASKS_FIELD_ID,
+          operator: "is_not_empty",
+          value: null,
+        },
       ],
       logic: "and",
     };

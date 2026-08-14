@@ -1,58 +1,58 @@
-import { useEffect, useState } from 'react';
-import { ExtractionStatus } from '@uniffy/proto/files/v1/files_pb';
-import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
-import type { SerializedFile } from '@/features/files/store/filesThunks';
+import { useEffect, useState } from "react";
+import { ExtractionStatus } from "@uniffy/proto/files/v1/files_pb";
+import { useThumbnailUrl } from "@/features/files/hooks/useThumbnail";
+import type { SerializedFile } from "@/features/files/store/filesThunks";
 
 interface ThumbnailImageProps {
-    file: SerializedFile;
-    fallback: React.ReactNode;
+  file: SerializedFile;
+  fallback: React.ReactNode;
 }
 
 export function ThumbnailImage({ file, fallback }: ThumbnailImageProps) {
-    const [error, setError] = useState(false);
-    const { url, loading } = useThumbnailUrl(file.id);
+  const [error, setError] = useState(false);
+  const { url, loading } = useThumbnailUrl(file.id);
 
-    // Re-extracted files bump extractionStatus; clear the error so we retry.
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when extractionStatus changes is valid
-        setError(false);
-    }, [file.extractionStatus]);
+  // Re-extracted files bump extractionStatus; clear the error so we retry.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when extractionStatus changes is valid
+    setError(false);
+  }, [file.extractionStatus]);
 
-    // Don't attempt loading until worker has finished processing
-    if (file.extractionStatus !== ExtractionStatus.COMPLETED) {
-        return <>{fallback}</>;
-    }
+  // Don't attempt loading until worker has finished processing
+  if (file.extractionStatus !== ExtractionStatus.COMPLETED) {
+    return <>{fallback}</>;
+  }
 
-    // Still waiting for service worker
-    if (loading) {
-        return (
-            <div className="w-full h-full flex items-center justify-center bg-muted/30">
-                <div className="animate-pulse w-8 h-8 rounded-full bg-muted" />
-            </div>
-        );
-    }
-
-    // No URL available (SW not ready or missing org)
-    if (!url) {
-        return <>{fallback}</>;
-    }
-
-    // Error loading image
-    if (error) {
-        return <>{fallback}</>;
-    }
-
-    // Cache-bust with the file version (new bytes -> new thumbnail) and
-    // extractionStatus (so a cached 404 is retried once processing completes).
-    const cacheBustedUrl = `${url}?v=${file.version}-${file.extractionStatus}`;
-
+  // Still waiting for service worker
+  if (loading) {
     return (
-        <img
-            src={cacheBustedUrl}
-            alt={file.filename}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={() => setError(true)}
-        />
+      <div className="w-full h-full flex items-center justify-center bg-muted/30">
+        <div className="animate-pulse w-8 h-8 rounded-full bg-muted" />
+      </div>
     );
+  }
+
+  // No URL available (SW not ready or missing org)
+  if (!url) {
+    return <>{fallback}</>;
+  }
+
+  // Error loading image
+  if (error) {
+    return <>{fallback}</>;
+  }
+
+  // Cache-bust with the file version (new bytes -> new thumbnail) and
+  // extractionStatus (so a cached 404 is retried once processing completes).
+  const cacheBustedUrl = `${url}?v=${file.version}-${file.extractionStatus}`;
+
+  return (
+    <img
+      src={cacheBustedUrl}
+      alt={file.filename}
+      className="w-full h-full object-cover"
+      loading="lazy"
+      onError={() => setError(true)}
+    />
+  );
 }

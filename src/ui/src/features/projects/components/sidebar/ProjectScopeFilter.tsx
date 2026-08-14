@@ -34,14 +34,14 @@ function CompactScopeItem({
       className={cn(
         "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
         "hover:px-2.5",
-        isActive && "text-foreground"
+        isActive && "text-foreground",
       )}
     >
       {/* Active indicator */}
       <span
         className={cn(
           "absolute inset-0 rounded-lg transition-all duration-500",
-          isActive ? "bg-primary/10" : "bg-transparent"
+          isActive ? "bg-primary/10" : "bg-transparent",
         )}
       />
 
@@ -54,7 +54,7 @@ function CompactScopeItem({
           "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
           isActive
             ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground group-hover:text-primary"
+            : "text-muted-foreground group-hover:text-primary",
         )}
       >
         <IconComponent size={18} weight={isActive ? "fill" : "duotone"} />
@@ -65,9 +65,7 @@ function CompactScopeItem({
         className={cn(
           "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
           "group-hover:ml-1.5 group-hover:max-w-24",
-          isActive
-            ? "text-foreground"
-            : "text-muted-foreground group-hover:text-foreground"
+          isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
         )}
       >
         {filter.name}

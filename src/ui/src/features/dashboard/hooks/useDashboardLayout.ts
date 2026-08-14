@@ -1,21 +1,21 @@
-import { useState, useCallback } from 'react';
-import { useAppSelector } from '@/app/hooks';
+import { useState, useCallback } from "react";
+import { useAppSelector } from "@/app/hooks";
 
 export type WidgetId =
-  | 'today-agenda'
-  | 'my-tasks'
-  | 'recent-activity'
-  | 'quick-actions'
-  | 'team-presence'
-  | 'people'
-  | 'notifications'
-  | 'recent-notes'
-  | 'recent-files'
-  | 'bookmarks'
-  | 'analytics'
-  | 'agents';
+  | "today-agenda"
+  | "my-tasks"
+  | "recent-activity"
+  | "quick-actions"
+  | "team-presence"
+  | "people"
+  | "notifications"
+  | "recent-notes"
+  | "recent-files"
+  | "bookmarks"
+  | "analytics"
+  | "agents";
 
-export type WidgetSize = 'compact' | 'expanded';
+export type WidgetSize = "compact" | "expanded";
 
 export interface WidgetPreference {
   id: WidgetId;
@@ -24,21 +24,21 @@ export interface WidgetPreference {
 }
 
 const DEFAULT_LAYOUT: WidgetPreference[] = [
-  { id: 'today-agenda', visible: true, size: 'expanded' },
-  { id: 'my-tasks', visible: true, size: 'expanded' },
-  { id: 'recent-activity', visible: true, size: 'expanded' },
-  { id: 'quick-actions', visible: true, size: 'expanded' },
-  { id: 'team-presence', visible: true, size: 'compact' },
-  { id: 'people', visible: true, size: 'compact' },
-  { id: 'notifications', visible: true, size: 'compact' },
-  { id: 'recent-notes', visible: true, size: 'expanded' },
-  { id: 'recent-files', visible: true, size: 'expanded' },
-  { id: 'bookmarks', visible: true, size: 'expanded' },
-  { id: 'analytics', visible: true, size: 'expanded' },
-  { id: 'agents', visible: true, size: 'expanded' },
+  { id: "today-agenda", visible: true, size: "expanded" },
+  { id: "my-tasks", visible: true, size: "expanded" },
+  { id: "recent-activity", visible: true, size: "expanded" },
+  { id: "quick-actions", visible: true, size: "expanded" },
+  { id: "team-presence", visible: true, size: "compact" },
+  { id: "people", visible: true, size: "compact" },
+  { id: "notifications", visible: true, size: "compact" },
+  { id: "recent-notes", visible: true, size: "expanded" },
+  { id: "recent-files", visible: true, size: "expanded" },
+  { id: "bookmarks", visible: true, size: "expanded" },
+  { id: "analytics", visible: true, size: "expanded" },
+  { id: "agents", visible: true, size: "expanded" },
 ];
 
-const STORAGE_KEY_PREFIX = 'uniffy_dashboard_layout_';
+const STORAGE_KEY_PREFIX = "uniffy_dashboard_layout_";
 
 function getStorageKey(userId: string): string {
   return `${STORAGE_KEY_PREFIX}${userId}`;
@@ -65,7 +65,7 @@ function savePreferences(userId: string, prefs: WidgetPreference[]): void {
 }
 
 export function useDashboardLayout() {
-  const userId = useAppSelector((state) => state.auth.user?.id ?? 'anonymous');
+  const userId = useAppSelector((state) => state.auth.user?.id ?? "anonymous");
 
   const [widgets, setWidgets] = useState<WidgetPreference[]>(() => {
     return loadPreferences(userId) ?? [...DEFAULT_LAYOUT];
@@ -91,39 +91,26 @@ export function useDashboardLayout() {
     setEditBuffer([]);
   }, [editBuffer, userId]);
 
-  const toggleVisibility = useCallback(
-    (id: WidgetId) => {
-      setEditBuffer((prev) =>
-        prev.map((w) => (w.id === id ? { ...w, visible: !w.visible } : w)),
-      );
-    },
-    [],
-  );
+  const toggleVisibility = useCallback((id: WidgetId) => {
+    setEditBuffer((prev) => prev.map((w) => (w.id === id ? { ...w, visible: !w.visible } : w)));
+  }, []);
 
-  const toggleSize = useCallback(
-    (id: WidgetId) => {
-      setEditBuffer((prev) =>
-        prev.map((w) =>
-          w.id === id
-            ? { ...w, size: w.size === 'compact' ? 'expanded' : 'compact' }
-            : w,
-        ),
-      );
-    },
-    [],
-  );
+  const toggleSize = useCallback((id: WidgetId) => {
+    setEditBuffer((prev) =>
+      prev.map((w) =>
+        w.id === id ? { ...w, size: w.size === "compact" ? "expanded" : "compact" } : w,
+      ),
+    );
+  }, []);
 
-  const moveWidget = useCallback(
-    (fromIndex: number, toIndex: number) => {
-      setEditBuffer((prev) => {
-        const next = [...prev];
-        const [moved] = next.splice(fromIndex, 1);
-        next.splice(toIndex, 0, moved);
-        return next;
-      });
-    },
-    [],
-  );
+  const moveWidget = useCallback((fromIndex: number, toIndex: number) => {
+    setEditBuffer((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }, []);
 
   const resetToDefault = useCallback(() => {
     const defaults = [...DEFAULT_LAYOUT];
@@ -144,7 +131,7 @@ export function useDashboardLayout() {
   const getWidgetSize = useCallback(
     (id: WidgetId): WidgetSize => {
       const pref = widgets.find((w) => w.id === id);
-      return pref?.size ?? 'expanded';
+      return pref?.size ?? "expanded";
     },
     [widgets],
   );

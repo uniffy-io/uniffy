@@ -1,11 +1,4 @@
-import {
-  CheckSquare,
-  Bug,
-  Star,
-  BookOpen,
-  Lightning,
-  type Icon,
-} from "@phosphor-icons/react";
+import { CheckSquare, Bug, Star, BookOpen, Lightning, type Icon } from "@phosphor-icons/react";
 
 export interface TaskTypeConfig {
   value: string;
@@ -47,9 +40,7 @@ export const TASK_TYPES: TaskTypeConfig[] = [
   },
 ];
 
-export const TASK_TYPE_MAP = new Map(
-  TASK_TYPES.map((t) => [t.value, t])
-);
+export const TASK_TYPE_MAP = new Map(TASK_TYPES.map((t) => [t.value, t]));
 
 export function getTaskTypeConfig(value: string): TaskTypeConfig {
   return TASK_TYPE_MAP.get(value) ?? TASK_TYPES[0];

@@ -1,19 +1,19 @@
 // Supports Google-style keyword filters: type prefixes (`note:`, `file:`, ...), `tag:`, and `my:` for the current user's content.
-import { useRef, useEffect, useState, useCallback } from 'react';
-import type { EditorView } from '@milkdown/kit/prose/view';
-import { X, At } from '@phosphor-icons/react';
-import { SearchResultsList, useSearch } from '@/features/search';
-import { FilterChip } from '@/features/search/components/FilterChip';
-import { FilterHints } from '@/features/search/components/FilterHints';
+import { useRef, useEffect, useState, useCallback } from "react";
+import type { EditorView } from "@milkdown/kit/prose/view";
+import { X, At } from "@phosphor-icons/react";
+import { SearchResultsList, useSearch } from "@/features/search";
+import { FilterChip } from "@/features/search/components/FilterChip";
+import { FilterHints } from "@/features/search/components/FilterHints";
 import {
   getTypeFilterLabel,
   removeTypeFilterFromQuery,
   removeTagFilterFromQuery,
   removeMyFilterFromQuery,
   removeProjectFilterFromQuery,
-} from '@/features/search/utils/queryParser';
-import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
-import { cn } from '@/shared/utils/cn';
+} from "@/features/search/utils/queryParser";
+import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
+import { cn } from "@/shared/utils/cn";
 
 interface MentionSearchProps {
   query: string;
@@ -25,7 +25,14 @@ interface MentionSearchProps {
   onQueryChange?: (query: string) => void;
 }
 
-export function MentionSearch({ query: initialQuery, from, view, onClose, onSelect, onQueryChange }: MentionSearchProps) {
+export function MentionSearch({
+  query: initialQuery,
+  from,
+  view,
+  onClose,
+  onSelect,
+  onQueryChange,
+}: MentionSearchProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -35,7 +42,15 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
   const prevQueryLengthRef = useRef(localQuery.length);
 
   // Search for all content types with filter support
-  const { setQuery, results, isLoading, query: currentSearchQuery, clearResults, parsedQuery, hasFilters } = useSearch();
+  const {
+    setQuery,
+    results,
+    isLoading,
+    query: currentSearchQuery,
+    clearResults,
+    parsedQuery,
+    hasFilters,
+  } = useSearch();
 
   // Update search query when local query changes
   const trimmedQuery = localQuery.trim();
@@ -44,50 +59,60 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
   }
 
   // Sync editor content with local query (defined first so other callbacks can use it)
-  const syncEditorContent = useCallback((newQuery: string, oldLength: number) => {
-    const { state, dispatch } = view;
-    // Replace content after @ with new query
-    // from = position of @, so from+1 is where the query starts
-    const queryStart = from + 1;
-    const queryEnd = queryStart + oldLength;
+  const syncEditorContent = useCallback(
+    (newQuery: string, oldLength: number) => {
+      const { state, dispatch } = view;
+      // Replace content after @ with new query
+      // from = position of @, so from+1 is where the query starts
+      const queryStart = from + 1;
+      const queryEnd = queryStart + oldLength;
 
-    // Validate positions are within document bounds
-    const docSize = state.doc.content.size;
-    if (queryStart < 0 || queryEnd > docSize) return;
+      // Validate positions are within document bounds
+      const docSize = state.doc.content.size;
+      if (queryStart < 0 || queryEnd > docSize) return;
 
-    // Create fragment for replacement
-    const fragment = newQuery
-      ? state.schema.text(newQuery)
-      : null;
+      // Create fragment for replacement
+      const fragment = newQuery ? state.schema.text(newQuery) : null;
 
-    const tr = fragment
-      ? state.tr.replaceWith(queryStart, queryEnd, fragment)
-      : state.tr.delete(queryStart, queryEnd);
+      const tr = fragment
+        ? state.tr.replaceWith(queryStart, queryEnd, fragment)
+        : state.tr.delete(queryStart, queryEnd);
 
-    dispatch(tr);
-  }, [view, from]);
+      dispatch(tr);
+    },
+    [view, from],
+  );
 
   // Filter removal handlers
-  const handleRemoveTypeFilter = useCallback((type: number) => {
-    const newQuery = removeTypeFilterFromQuery(localQuery, type);
-    setLocalQuery(newQuery);
-    syncEditorContent(newQuery, prevQueryLengthRef.current);
-    prevQueryLengthRef.current = newQuery.length;
-  }, [localQuery, syncEditorContent]);
+  const handleRemoveTypeFilter = useCallback(
+    (type: number) => {
+      const newQuery = removeTypeFilterFromQuery(localQuery, type);
+      setLocalQuery(newQuery);
+      syncEditorContent(newQuery, prevQueryLengthRef.current);
+      prevQueryLengthRef.current = newQuery.length;
+    },
+    [localQuery, syncEditorContent],
+  );
 
-  const handleRemoveTagFilter = useCallback((tag: string) => {
-    const newQuery = removeTagFilterFromQuery(localQuery, tag);
-    setLocalQuery(newQuery);
-    syncEditorContent(newQuery, prevQueryLengthRef.current);
-    prevQueryLengthRef.current = newQuery.length;
-  }, [localQuery, syncEditorContent]);
+  const handleRemoveTagFilter = useCallback(
+    (tag: string) => {
+      const newQuery = removeTagFilterFromQuery(localQuery, tag);
+      setLocalQuery(newQuery);
+      syncEditorContent(newQuery, prevQueryLengthRef.current);
+      prevQueryLengthRef.current = newQuery.length;
+    },
+    [localQuery, syncEditorContent],
+  );
 
-  const handleRemoveProjectFilter = useCallback((project: string) => {
-    const newQuery = removeProjectFilterFromQuery(localQuery, project);
-    setLocalQuery(newQuery);
-    syncEditorContent(newQuery, prevQueryLengthRef.current);
-    prevQueryLengthRef.current = newQuery.length;
-  }, [localQuery, syncEditorContent]);
+  const handleRemoveProjectFilter = useCallback(
+    (project: string) => {
+      const newQuery = removeProjectFilterFromQuery(localQuery, project);
+      setLocalQuery(newQuery);
+      syncEditorContent(newQuery, prevQueryLengthRef.current);
+      prevQueryLengthRef.current = newQuery.length;
+    },
+    [localQuery, syncEditorContent],
+  );
 
   const handleRemoveMyFilter = useCallback(() => {
     const newQuery = removeMyFilterFromQuery(localQuery);
@@ -96,61 +121,70 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
     prevQueryLengthRef.current = newQuery.length;
   }, [localQuery, syncEditorContent]);
 
-  const handleFilterHintClick = useCallback((filter: string) => {
-    const newQuery = filter + ' ';
-    setLocalQuery(newQuery);
-    syncEditorContent(newQuery, prevQueryLengthRef.current);
-    prevQueryLengthRef.current = newQuery.length;
-    inputRef.current?.focus();
-  }, [syncEditorContent]);
+  const handleFilterHintClick = useCallback(
+    (filter: string) => {
+      const newQuery = filter + " ";
+      setLocalQuery(newQuery);
+      syncEditorContent(newQuery, prevQueryLengthRef.current);
+      prevQueryLengthRef.current = newQuery.length;
+      inputRef.current?.focus();
+    },
+    [syncEditorContent],
+  );
 
   // Handle input changes from the visible input
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newQuery = e.target.value;
-    const oldLength = prevQueryLengthRef.current;
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newQuery = e.target.value;
+      const oldLength = prevQueryLengthRef.current;
 
-    setLocalQuery(newQuery);
-    syncEditorContent(newQuery, oldLength);
-    onQueryChange?.(newQuery);
+      setLocalQuery(newQuery);
+      syncEditorContent(newQuery, oldLength);
+      onQueryChange?.(newQuery);
 
-    // Update ref for next change
-    prevQueryLengthRef.current = newQuery.length;
-  }, [syncEditorContent, onQueryChange]);
+      // Update ref for next change
+      prevQueryLengthRef.current = newQuery.length;
+    },
+    [syncEditorContent, onQueryChange],
+  );
 
   // Handle special keys in the input
-  const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Handle Escape - close popup and return focus to editor
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      view.focus();
-      onClose();
-      return;
-    }
+  const handleInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Handle Escape - close popup and return focus to editor
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        view.focus();
+        onClose();
+        return;
+      }
 
-    // Handle Backspace on empty query - delete @ and close popup
-    if (e.key === 'Backspace' && localQuery === '') {
-      e.preventDefault();
-      e.stopPropagation();
-      // Delete the @ symbol from the editor
-      const { state, dispatch } = view;
-      const tr = state.tr.delete(from, from + 1);
-      dispatch(tr);
-      view.focus();
-      onClose();
-      return;
-    }
+      // Handle Backspace on empty query - delete @ and close popup
+      if (e.key === "Backspace" && localQuery === "") {
+        e.preventDefault();
+        e.stopPropagation();
+        // Delete the @ symbol from the editor
+        const { state, dispatch } = view;
+        const tr = state.tr.delete(from, from + 1);
+        dispatch(tr);
+        view.focus();
+        onClose();
+        return;
+      }
 
-    // Let SearchResultsList handle arrow keys and Enter
-    // These need to bubble to the document listener
-  }, [view, from, localQuery, onClose]);
+      // Let SearchResultsList handle arrow keys and Enter
+      // These need to bubble to the document listener
+    },
+    [view, from, localQuery, onClose],
+  );
 
   // Handle clear button
   const handleClear = useCallback(() => {
     const oldLength = prevQueryLengthRef.current;
-    setLocalQuery('');
-    syncEditorContent('', oldLength);
-    onQueryChange?.('');
+    setLocalQuery("");
+    syncEditorContent("", oldLength);
+    onQueryChange?.("");
     prevQueryLengthRef.current = 0;
     clearResults();
     inputRef.current?.focus();
@@ -173,8 +207,8 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
   return (
@@ -205,7 +239,7 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
                 className={cn(
                   "w-full h-14 bg-transparent pl-12 pr-20 text-lg",
                   "placeholder:text-muted-foreground/60",
-                  "focus:outline-none"
+                  "focus:outline-none",
                 )}
                 autoComplete="off"
                 autoCorrect="off"
@@ -252,10 +286,7 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
                   />
                 ))}
                 {parsedQuery.filters.myContentOnly && (
-                  <FilterChip
-                    label="My content"
-                    onRemove={handleRemoveMyFilter}
-                  />
+                  <FilterChip label="My content" onRemove={handleRemoveMyFilter} />
                 )}
               </div>
             )}
@@ -279,7 +310,11 @@ export function MentionSearch({ query: initialQuery, from, view, onClose, onSele
                   Type to search for content to mention
                 </p>
                 <p className="text-xs text-muted-foreground/60 mt-2 mb-4">
-                  Use <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border/50 font-mono text-[10px]">@</kbd> to reference notes, files, users, and more
+                  Use{" "}
+                  <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border/50 font-mono text-[10px]">
+                    @
+                  </kbd>{" "}
+                  to reference notes, files, users, and more
                 </p>
                 <FilterHints onHintClick={handleFilterHintClick} />
               </div>

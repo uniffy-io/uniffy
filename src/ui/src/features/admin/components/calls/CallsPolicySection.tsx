@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Phone, Warning } from '@phosphor-icons/react';
-import { toast } from 'sonner';
-import { useAppSelector } from '@/app/hooks';
-import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
-import { friendlyErrorMessage } from '@/config';
-import { callsApi } from '@/features/calls/api/callsApi';
-import { NumberInput } from '@/components/ui/number-input';
-import { Select, type SelectOption } from '@/components/ui/select';
-import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
+import { useCallback, useEffect, useState } from "react";
+import { Phone, Warning } from "@phosphor-icons/react";
+import { toast } from "sonner";
+import { useAppSelector } from "@/app/hooks";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { friendlyErrorMessage } from "@/config";
+import { callsApi } from "@/features/calls/api/callsApi";
+import { NumberInput } from "@/components/ui/number-input";
+import { Select, type SelectOption } from "@/components/ui/select";
+import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
 
 interface PolicyForm {
   callsEnabled: boolean;
@@ -19,26 +19,29 @@ interface PolicyForm {
 }
 
 const QUALITY_OPTIONS: SelectOption<ScreenShareQuality>[] = [
-  { value: ScreenShareQuality.UNSPECIFIED, label: 'No cap (per-type default)' },
-  { value: ScreenShareQuality.BALANCED, label: 'Balanced (1080p, ~6 Mbps)' },
-  { value: ScreenShareQuality.HIGH, label: 'High (1080p, ~10 Mbps)' },
-  { value: ScreenShareQuality.MAX, label: 'Maximum (native, ~16 Mbps)' },
+  { value: ScreenShareQuality.UNSPECIFIED, label: "No cap (per-type default)" },
+  { value: ScreenShareQuality.BALANCED, label: "Balanced (1080p, ~6 Mbps)" },
+  { value: ScreenShareQuality.HIGH, label: "High (1080p, ~10 Mbps)" },
+  { value: ScreenShareQuality.MAX, label: "Maximum (native, ~16 Mbps)" },
 ];
 
 const QUALITY_CALL_TYPES: {
-  key: 'maxScreenShareQualityDirect' | 'maxScreenShareQualityGroup' | 'maxScreenShareQualityChannel';
+  key:
+    | "maxScreenShareQualityDirect"
+    | "maxScreenShareQualityGroup"
+    | "maxScreenShareQualityChannel";
   label: string;
 }[] = [
-  { key: 'maxScreenShareQualityDirect', label: 'Direct (1:1)' },
-  { key: 'maxScreenShareQualityGroup', label: 'Group DM' },
-  { key: 'maxScreenShareQualityChannel', label: 'Channel' },
+  { key: "maxScreenShareQualityDirect", label: "Direct (1:1)" },
+  { key: "maxScreenShareQualityGroup", label: "Group DM" },
+  { key: "maxScreenShareQualityChannel", label: "Channel" },
 ];
 
 export function CallsPolicySection() {
-  useDocumentTitle('Calls');
+  useDocumentTitle("Calls");
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const role = useAppSelector((state) => state.auth.currentOrganizationRole);
-  const isAdmin = role === 'OWNER' || role === 'ADMIN';
+  const isAdmin = role === "OWNER" || role === "ADMIN";
 
   const [form, setForm] = useState<PolicyForm | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +70,7 @@ export function CallsPolicySection() {
     } catch (err) {
       setError(
         friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
-          'Could not load call policy',
+          "Could not load call policy",
       );
     } finally {
       setLoading(false);
@@ -94,11 +97,11 @@ export function CallsPolicySection() {
           maxScreenShareQualityChannel: policy.maxScreenShareQualityChannel,
         });
       }
-      toast.success('Call policy saved');
+      toast.success("Call policy saved");
     } catch (err) {
       toast.error(
         friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
-          'Could not save call policy',
+          "Could not save call policy",
       );
     } finally {
       setSaving(false);
@@ -126,10 +129,7 @@ export function CallsPolicySection() {
 
       {error && (
         <div className="p-4 rounded-lg border border-border">
-          <div
-            className="flex items-center gap-2 text-sm"
-            style={{ color: 'var(--status-error)' }}
-          >
+          <div className="flex items-center gap-2 text-sm" style={{ color: "var(--status-error)" }}>
             <Warning size={20} weight="fill" />
             {error}
           </div>
@@ -148,20 +148,18 @@ export function CallsPolicySection() {
           >
             <Toggle
               enabled={form.callsEnabled}
-              onChange={(v) => update('callsEnabled', v)}
+              onChange={(v) => update("callsEnabled", v)}
               disabled={disabled}
             />
           </Row>
 
           <div className="p-5">
-            <h3 className="text-sm font-semibold text-foreground">
-              Maximum screen-share quality
-            </h3>
+            <h3 className="text-sm font-semibold text-foreground">Maximum screen-share quality</h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               The highest tier a member may broadcast, set per call type. Higher tiers use more of
               the media server's outbound bandwidth per viewer. &ldquo;No cap&rdquo; uses the
-              built-in default for that type: direct 1:1 calls default to maximum, group and
-              channel calls to balanced.
+              built-in default for that type: direct 1:1 calls default to maximum, group and channel
+              calls to balanced.
             </p>
             <div className="mt-4 flex flex-col gap-3">
               {QUALITY_CALL_TYPES.map(({ key, label }) => (
@@ -190,7 +188,7 @@ export function CallsPolicySection() {
               value={form.maxParticipants}
               min={1}
               max={1000}
-              onChange={(v) => update('maxParticipants', v)}
+              onChange={(v) => update("maxParticipants", v)}
               disabled={disabled}
             />
           </Row>
@@ -203,7 +201,7 @@ export function CallsPolicySection() {
               value={form.maxDurationMinutes}
               min={1}
               max={1440}
-              onChange={(v) => update('maxDurationMinutes', v)}
+              onChange={(v) => update("maxDurationMinutes", v)}
               disabled={disabled}
             />
           </Row>
@@ -217,7 +215,7 @@ export function CallsPolicySection() {
           disabled={disabled || !form}
           className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {saving ? 'Saving...' : 'Save changes'}
+          {saving ? "Saving..." : "Save changes"}
         </button>
         {!isAdmin && (
           <span className="text-xs text-muted-foreground">
@@ -294,12 +292,12 @@ function Toggle({
       disabled={disabled}
       aria-pressed={enabled}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-        enabled ? 'bg-primary' : 'bg-muted'
+        enabled ? "bg-primary" : "bg-muted"
       }`}
     >
       <span
         className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
-          enabled ? 'translate-x-5' : 'translate-x-0'
+          enabled ? "translate-x-5" : "translate-x-0"
         }`}
       />
     </button>

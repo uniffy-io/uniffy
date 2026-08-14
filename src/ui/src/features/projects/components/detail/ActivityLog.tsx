@@ -36,10 +36,11 @@ export function ActivityLog({ taskId, maxInitialItems }: ActivityLogProps) {
   }, [dispatch, taskId]);
 
   const sorted = useMemo(
-    () => [...activities].sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    ),
-    [activities]
+    () =>
+      [...activities].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      ),
+    [activities],
   );
 
   const visible = useMemo(() => {
@@ -49,10 +50,7 @@ export function ActivityLog({ taskId, maxInitialItems }: ActivityLogProps) {
 
   const hiddenCount = sorted.length - visible.length;
 
-  const actorIds = useMemo(
-    () => [...new Set(visible.map((a) => a.actorId))],
-    [visible]
-  );
+  const actorIds = useMemo(() => [...new Set(visible.map((a) => a.actorId))], [visible]);
   const { subjects } = useSubjectResolver(actorIds);
   const actorMap = useMemo(() => {
     const map: Record<string, (typeof subjects)[number]> = {};
@@ -70,9 +68,7 @@ export function ActivityLog({ taskId, maxInitialItems }: ActivityLogProps) {
 
       <div className="space-y-3 pl-2">
         {visible.length === 0 ? (
-          <div className="text-sm text-muted-foreground italic">
-            No recent activity
-          </div>
+          <div className="text-sm text-muted-foreground italic">No recent activity</div>
         ) : (
           visible.map((activity) => (
             <ActivityItem
@@ -130,15 +126,11 @@ function ActivityItem({ activity, actorName, actorSubject }: ActivityItemProps) 
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-medium text-foreground text-xs">
-            {actorName || "Unknown user"}
-          </span>
+          <span className="font-medium text-foreground text-xs">{actorName || "Unknown user"}</span>
           <span className="text-muted-foreground/60 shrink-0">
             {renderActivityIcon(activity.action)}
           </span>
-          <span className="text-foreground text-xs">
-            {renderActivityContent(activity)}
-          </span>
+          <span className="text-foreground text-xs">{renderActivityContent(activity)}</span>
           <span className="text-muted-foreground text-[10px] shrink-0">{timeAgo}</span>
         </div>
       </div>
@@ -148,16 +140,25 @@ function ActivityItem({ activity, actorName, actorSubject }: ActivityItemProps) 
 
 function renderActivityIcon(action: ActivityAction) {
   switch (action) {
-    case "created": return <PlusCircle size={12} />;
-    case "status_changed": return <CheckCircle size={12} />;
-    case "priority_changed": return <ShieldWarning size={12} />;
-    case "field_updated": return <PencilSimple size={12} />;
+    case "created":
+      return <PlusCircle size={12} />;
+    case "status_changed":
+      return <CheckCircle size={12} />;
+    case "priority_changed":
+      return <ShieldWarning size={12} />;
+    case "field_updated":
+      return <PencilSimple size={12} />;
     case "blocked_by_added":
-    case "blocked_by_removed": return <Clock size={12} />;
-    case "assigned": return <ArrowsLeftRight size={12} />;
-    case "type_changed": return <PencilSimple size={12} />;
-    case "sprint_changed": return <ArrowsLeftRight size={12} />;
-    default: return <PencilSimple size={12} />;
+    case "blocked_by_removed":
+      return <Clock size={12} />;
+    case "assigned":
+      return <ArrowsLeftRight size={12} />;
+    case "type_changed":
+      return <PencilSimple size={12} />;
+    case "sprint_changed":
+      return <ArrowsLeftRight size={12} />;
+    default:
+      return <PencilSimple size={12} />;
   }
 }
 
@@ -194,7 +195,10 @@ function renderActivityContent(activity: TaskActivity) {
     case "field_updated":
       return (
         <span>
-          updated <span className="font-medium">{activity.fieldId?.replace("field_", "") || "a field"}</span>
+          updated{" "}
+          <span className="font-medium">
+            {activity.fieldId?.replace("field_", "") || "a field"}
+          </span>
         </span>
       );
     default:

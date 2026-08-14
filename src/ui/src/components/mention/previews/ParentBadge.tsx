@@ -1,4 +1,4 @@
-import { FolderSimple } from '@phosphor-icons/react';
+import { FolderSimple } from "@phosphor-icons/react";
 
 interface ParentBadgeProps {
   label: string;

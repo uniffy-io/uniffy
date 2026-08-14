@@ -5,36 +5,27 @@
  * No box, no editor chrome - just text on the canvas.
  */
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { type NodeProps, NodeResizer, Handle, Position } from '@xyflow/react';
-import { cn } from '@/shared/utils/cn';
-import type { TextCanvasNode } from '@/features/notes/canvas/types';
-import { useCanvasCallbacks } from '@/features/notes/canvas/hooks/useCanvasCallbacks';
-import { TextFormatToolbar } from '@/features/notes/canvas/components/TextFormatToolbar';
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { type NodeProps, NodeResizer, Handle, Position } from "@xyflow/react";
+import { cn } from "@/shared/utils/cn";
+import type { TextCanvasNode } from "@/features/notes/canvas/types";
+import { useCanvasCallbacks } from "@/features/notes/canvas/hooks/useCanvasCallbacks";
+import { TextFormatToolbar } from "@/features/notes/canvas/components/TextFormatToolbar";
 
-export const TextNode = memo(function TextNode({
-  id,
-  data,
-  selected,
-}: NodeProps<TextCanvasNode>) {
-  const {
-    onTextContentChange,
-    onNodeStyleChange,
-    readonly,
-    editingNodeId,
-    clearEditingNodeId,
-  } = useCanvasCallbacks();
+export const TextNode = memo(function TextNode({ id, data, selected }: NodeProps<TextCanvasNode>) {
+  const { onTextContentChange, onNodeStyleChange, readonly, editingNodeId, clearEditingNodeId } =
+    useCanvasCallbacks();
   const [isEditing, setIsEditing] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
 
-  const bgColor = data.bgColor || '';
-  const borderColor = data.borderColor || '';
+  const bgColor = data.bgColor || "";
+  const borderColor = data.borderColor || "";
   const borderWidth = data.borderWidth;
   const fontSize = data.fontSize ?? 14;
   const isBold = data.bold ?? false;
   const isItalic = data.italic ?? false;
   const isUnderline = data.underline ?? false;
-  const textAlign = data.textAlign ?? 'left';
+  const textAlign = data.textAlign ?? "left";
 
   // Auto-enter edit mode when this node was just created
   useEffect(() => {
@@ -50,7 +41,7 @@ export const TextNode = memo(function TextNode({
     if (!isEditing || !textRef.current) return;
     const el = textRef.current;
     // Populate DOM with current content (only on transition to editing)
-    el.innerText = data.content || '';
+    el.innerText = data.content || "";
     el.focus();
     // Place cursor at end
     const range = document.createRange();
@@ -72,7 +63,7 @@ export const TextNode = memo(function TextNode({
   // Sync from props when NOT editing (e.g. undo/redo)
   useEffect(() => {
     if (!isEditing && textRef.current) {
-      textRef.current.innerText = data.content || '';
+      textRef.current.innerText = data.content || "";
     }
   }, [isEditing, data.content]);
 
@@ -93,42 +84,39 @@ export const TextNode = memo(function TextNode({
     onTextContentChange(id, textRef.current.innerText);
   }, [id, onTextContentChange]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // Prevent React Flow from capturing keys while typing
-      e.stopPropagation();
-      if (e.key === 'Escape') {
-        setIsEditing(false);
-        textRef.current?.blur();
-      }
-    },
-    []
-  );
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Prevent React Flow from capturing keys while typing
+    e.stopPropagation();
+    if (e.key === "Escape") {
+      setIsEditing(false);
+      textRef.current?.blur();
+    }
+  }, []);
 
   const handleStyleChange = useCallback(
     (updates: Record<string, unknown>) => {
       onNodeStyleChange(id, updates);
     },
-    [id, onNodeStyleChange]
+    [id, onNodeStyleChange],
   );
 
-  const hasBg = bgColor && bgColor !== 'transparent';
-  const hasBorder = borderColor && borderColor !== 'transparent';
+  const hasBg = bgColor && bgColor !== "transparent";
+  const hasBorder = borderColor && borderColor !== "transparent";
 
   const inlineStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
-    ...(data.color ? { borderLeftColor: data.color, borderLeftWidth: '3px' } : {}),
+    width: "100%",
+    height: "100%",
+    ...(data.color ? { borderLeftColor: data.color, borderLeftWidth: "3px" } : {}),
     ...(hasBg ? { backgroundColor: bgColor } : {}),
-    ...(hasBorder ? { borderColor, borderStyle: 'solid' } : {}),
+    ...(hasBorder ? { borderColor, borderStyle: "solid" } : {}),
     ...(borderWidth !== undefined && hasBorder ? { borderWidth: `${borderWidth}px` } : {}),
   };
 
   const textStyle: React.CSSProperties = {
     fontSize: `${fontSize}px`,
     fontWeight: isBold ? 700 : 400,
-    fontStyle: isItalic ? 'italic' : 'normal',
-    textDecoration: isUnderline ? 'underline' : 'none',
+    fontStyle: isItalic ? "italic" : "normal",
+    textDecoration: isUnderline ? "underline" : "none",
     textAlign,
   };
 
@@ -148,10 +136,7 @@ export const TextNode = memo(function TextNode({
       <Handle type="target" position={Position.Left} className="!bg-primary !w-2 !h-2" />
       <Handle type="source" position={Position.Right} className="!bg-primary !w-2 !h-2" />
       <div
-        className={cn(
-          'canvas-text-node text-foreground',
-          hasBg || hasBorder ? 'rounded-lg' : '',
-        )}
+        className={cn("canvas-text-node text-foreground", hasBg || hasBorder ? "rounded-lg" : "")}
         style={inlineStyle}
         onDoubleClick={handleDoubleClick}
       >
@@ -168,8 +153,8 @@ export const TextNode = memo(function TextNode({
           contentEditable={isEditing && !readonly}
           suppressContentEditableWarning
           className={cn(
-            'w-full h-full px-1 py-0.5 outline-none whitespace-pre-wrap break-words',
-            isEditing && 'nowheel nopan nodrag cursor-text',
+            "w-full h-full px-1 py-0.5 outline-none whitespace-pre-wrap break-words",
+            isEditing && "nowheel nopan nodrag cursor-text",
           )}
           style={textStyle}
           onBlur={handleBlur}
@@ -186,8 +171,8 @@ export const TextNode = memo(function TextNode({
           underline={isUnderline}
           fontSize={fontSize}
           textAlign={textAlign}
-          fillColor={bgColor || 'transparent'}
-          borderColor={borderColor || 'transparent'}
+          fillColor={bgColor || "transparent"}
+          borderColor={borderColor || "transparent"}
           borderWidth={borderWidth ?? 1}
           onStyleChange={handleStyleChange}
         />

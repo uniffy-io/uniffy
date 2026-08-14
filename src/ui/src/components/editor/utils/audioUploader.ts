@@ -1,107 +1,107 @@
-import { filesApi } from '@/features/files/api/filesApi';
-import { attachmentsApi } from '@/features/files/api/attachmentsApi';
-import { buildMediaUrl } from '@/shared/utils/fileUrls';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+import { filesApi } from "@/features/files/api/filesApi";
+import { attachmentsApi } from "@/features/files/api/attachmentsApi";
+import { buildMediaUrl } from "@/shared/utils/fileUrls";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
 const attachmentsFolderCache = new Map<string, string>();
 
 async function getAttachmentsFolderId(organizationId: string): Promise<string> {
-    const cached = attachmentsFolderCache.get(organizationId);
-    if (cached) {
-        return cached;
-    }
+  const cached = attachmentsFolderCache.get(organizationId);
+  if (cached) {
+    return cached;
+  }
 
-    const response = await attachmentsApi.getAttachmentsFolder({
-        organizationId,
-    });
+  const response = await attachmentsApi.getAttachmentsFolder({
+    organizationId,
+  });
 
-    const folderId = response.folderId;
-    attachmentsFolderCache.set(organizationId, folderId);
-    return folderId;
+  const folderId = response.folderId;
+  attachmentsFolderCache.set(organizationId, folderId);
+  return folderId;
 }
 
 export interface UploadAudioOptions {
-    file: File;
-    organizationId: string;
-    /** Empty string defers attachment until the editor flushes content. */
-    contentId: string;
-    contentType: ContentType;
-    onProgress?: (percent: number) => void;
-    onFileUploaded?: (fileId: string) => void;
+  file: File;
+  organizationId: string;
+  /** Empty string defers attachment until the editor flushes content. */
+  contentId: string;
+  contentType: ContentType;
+  onProgress?: (percent: number) => void;
+  onFileUploaded?: (fileId: string) => void;
 }
 
 export async function uploadAudio(options: UploadAudioOptions): Promise<string> {
-    const { file, organizationId, contentId, contentType, onProgress, onFileUploaded } = options;
+  const { file, organizationId, contentId, contentType, onProgress, onFileUploaded } = options;
 
-    const folderId = await getAttachmentsFolderId(organizationId);
-    onProgress?.(5);
+  const folderId = await getAttachmentsFolderId(organizationId);
+  onProgress?.(5);
 
-    const initiateResponse = await filesApi.initiateUpload({
-        organizationId,
-        filename: file.name,
-        mimeType: file.type || 'audio/mpeg',
-        totalSize: BigInt(file.size),
-        folderId,
+  const initiateResponse = await filesApi.initiateUpload({
+    organizationId,
+    filename: file.name,
+    mimeType: file.type || "audio/mpeg",
+    totalSize: BigInt(file.size),
+    folderId,
+  });
+
+  const { uploadId, chunkSize, totalChunks } = initiateResponse;
+  onProgress?.(10);
+
+  const fileBuffer = await file.arrayBuffer();
+  const progressPerChunk = 70 / totalChunks;
+
+  for (let chunkNumber = 1; chunkNumber <= totalChunks; chunkNumber++) {
+    const start = (chunkNumber - 1) * chunkSize;
+    const end = Math.min(start + chunkSize, file.size);
+    const chunkData = new Uint8Array(fileBuffer.slice(start, end));
+
+    await filesApi.uploadChunk({
+      uploadId,
+      chunkNumber,
+      data: chunkData,
+      isLast: chunkNumber === totalChunks,
     });
 
-    const { uploadId, chunkSize, totalChunks } = initiateResponse;
-    onProgress?.(10);
+    onProgress?.(10 + chunkNumber * progressPerChunk);
+  }
 
-    const fileBuffer = await file.arrayBuffer();
-    const progressPerChunk = 70 / totalChunks;
+  const completeResponse = await filesApi.completeUpload({
+    uploadId,
+  });
 
-    for (let chunkNumber = 1; chunkNumber <= totalChunks; chunkNumber++) {
-        const start = (chunkNumber - 1) * chunkSize;
-        const end = Math.min(start + chunkSize, file.size);
-        const chunkData = new Uint8Array(fileBuffer.slice(start, end));
+  const fileId = completeResponse.file?.id;
+  if (!fileId) {
+    throw new Error("Upload completed but no file ID returned");
+  }
+  onProgress?.(85);
 
-        await filesApi.uploadChunk({
-            uploadId,
-            chunkNumber,
-            data: chunkData,
-            isLast: chunkNumber === totalChunks,
-        });
-
-        onProgress?.(10 + chunkNumber * progressPerChunk);
-    }
-
-    const completeResponse = await filesApi.completeUpload({
-        uploadId,
+  if (contentId) {
+    await attachmentsApi.attachFile({
+      organizationId,
+      sourceFileId: fileId,
+      contentType,
+      contentId,
     });
+  }
+  onFileUploaded?.(fileId);
+  onProgress?.(100);
 
-    const fileId = completeResponse.file?.id;
-    if (!fileId) {
-        throw new Error('Upload completed but no file ID returned');
-    }
-    onProgress?.(85);
-
-    if (contentId) {
-        await attachmentsApi.attachFile({
-            organizationId,
-            sourceFileId: fileId,
-            contentType,
-            contentId,
-        });
-    }
-    onFileUploaded?.(fileId);
-    onProgress?.(100);
-
-    return buildMediaUrl(organizationId, fileId);
+  return buildMediaUrl(organizationId, fileId);
 }
 
 export function createAudioUploadHandler(
-    contentType: ContentType,
-    contentId: string,
-    organizationId: string,
-    onFileUploaded?: (fileId: string) => void,
+  contentType: ContentType,
+  contentId: string,
+  organizationId: string,
+  onFileUploaded?: (fileId: string) => void,
 ): (file: File) => Promise<string> {
-    return async (file: File): Promise<string> => {
-        return uploadAudio({
-            file,
-            organizationId,
-            contentId,
-            contentType,
-            onFileUploaded,
-        });
-    };
+  return async (file: File): Promise<string> => {
+    return uploadAudio({
+      file,
+      organizationId,
+      contentId,
+      contentType,
+      onFileUploaded,
+    });
+  };
 }

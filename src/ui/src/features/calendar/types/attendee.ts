@@ -1,13 +1,6 @@
-export type AttendeeStatus =
-  | 'pending'
-  | 'accepted'
-  | 'tentative'
-  | 'declined';
+export type AttendeeStatus = "pending" | "accepted" | "tentative" | "declined";
 
-export type AttendeeRole =
-  | 'organizer'
-  | 'required'
-  | 'optional';
+export type AttendeeRole = "organizer" | "required" | "optional";
 
 export interface Attendee {
   id: string;
@@ -21,4 +14,3 @@ export interface Attendee {
   /** Group whose invite produced this row (snapshot); absent for direct invites. */
   invitedViaGroupId?: string;
 }
-

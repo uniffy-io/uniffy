@@ -1,4 +1,4 @@
-import { GRID } from '@/features/calendar/constants';
+import { GRID } from "@/features/calendar/constants";
 
 interface GridLinesProps {
   columnCount: number;
@@ -7,7 +7,12 @@ interface GridLinesProps {
   hourHeight?: number;
 }
 
-export function GridLines({ columnCount, hourCount, topOffset = 0, hourHeight = GRID.HOUR_HEIGHT }: GridLinesProps) {
+export function GridLines({
+  columnCount,
+  hourCount,
+  topOffset = 0,
+  hourHeight = GRID.HOUR_HEIGHT,
+}: GridLinesProps) {
   const halfHourHeight = hourHeight / 2;
 
   return (

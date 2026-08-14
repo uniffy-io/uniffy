@@ -16,20 +16,21 @@ export function EmptyState({ onCreateTask }: EmptyStateProps) {
       shortcutKey="projects.newTask"
       tips={[
         {
-          color: 'primary',
+          color: "primary",
           text: (
             <>
-              Use <kbd className="px-1 rounded bg-muted text-xs">@</kbd> in task descriptions to reference Notes, Files, or Chats
+              Use <kbd className="px-1 rounded bg-muted text-xs">@</kbd> in task descriptions to
+              reference Notes, Files, or Chats
             </>
           ),
         },
         {
-          color: 'emerald-500',
-          text: 'Drag tasks between Board columns to update status',
+          color: "emerald-500",
+          text: "Drag tasks between Board columns to update status",
         },
         {
-          color: 'amber-500',
-          text: 'Add Start and Due dates to see tasks in Roadmap view',
+          color: "amber-500",
+          text: "Add Start and Due dates to see tasks in Roadmap view",
         },
       ]}
     />

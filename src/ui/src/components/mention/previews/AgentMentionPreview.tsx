@@ -1,14 +1,8 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { useState, useCallback } from 'react';
-import {
-  Clock,
-  ArrowSquareOut,
-  CopySimple,
-  Check,
-  Robot,
-} from '@phosphor-icons/react';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import type { MentionLiveState } from '@/components/mention/types';
+import { useState, useCallback } from "react";
+import { Clock, ArrowSquareOut, CopySimple, Check, Robot } from "@phosphor-icons/react";
+import { formatRelativeTime } from "@/shared/utils/dateFormatting";
+import type { MentionLiveState } from "@/components/mention/types";
 
 interface AgentMentionPreviewProps {
   urn: string;
@@ -51,22 +45,31 @@ export function AgentMentionPreview({
 
       {description && (
         <span className="block px-4 pb-2.5 pl-5">
-          <span className="block text-xs text-muted-foreground leading-relaxed line-clamp-3">{description}</span>
+          <span className="block text-xs text-muted-foreground leading-relaxed line-clamp-3">
+            {description}
+          </span>
         </span>
       )}
 
       <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
-          <span>{formatRelativeTime(liveState.updatedAt) || 'No date'}</span>
+          <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>
         </span>
         <span className="flex items-center gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopy();
+            }}
             className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title="Copy URN"
           >
-            {copied ? <Check size={12} weight="bold" className="text-green-500" /> : <CopySimple size={12} weight="bold" />}
+            {copied ? (
+              <Check size={12} weight="bold" className="text-green-500" />
+            ) : (
+              <CopySimple size={12} weight="bold" />
+            )}
           </button>
           <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
             <ArrowSquareOut size={11} weight="bold" />

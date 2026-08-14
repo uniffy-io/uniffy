@@ -1,6 +1,6 @@
-import * as Y from 'yjs';
-import { openDB, type IDBPDatabase } from 'idb';
-import { randomUUID } from '@/shared/utils/uuid';
+import * as Y from "yjs";
+import { openDB, type IDBPDatabase } from "idb";
+import { randomUUID } from "@/shared/utils/uuid";
 import {
   ENCRYPTION_REKEY_EVENT,
   ENCRYPTION_TEARDOWN_EVENT,
@@ -8,13 +8,13 @@ import {
   encryptForStorage,
   isStorageEncryptionReady,
   registerEncryptedDatabase,
-} from '@/shared/crypto/storageEncryption';
+} from "@/shared/crypto/storageEncryption";
 
-const DB_NAME = 'uniffy-realtime-yjs';
+const DB_NAME = "uniffy-realtime-yjs";
 // Rebuildable cache: a key-shape change bumps the version and the upgrade
 // wipes the stores instead of migrating rows.
 const DB_VERSION = 2;
-const UPDATES_STORE = 'updates';
+const UPDATES_STORE = "updates";
 
 registerEncryptedDatabase(DB_NAME);
 
@@ -34,18 +34,16 @@ function getDB(): Promise<IDBPDatabase> {
   return dbPromise;
 }
 
-export const HYDRATION_ORIGIN = Symbol('uniffy.realtime.hydration');
-export const REMOTE_ORIGIN = Symbol('uniffy.realtime.remote');
+export const HYDRATION_ORIGIN = Symbol("uniffy.realtime.hydration");
+export const REMOTE_ORIGIN = Symbol("uniffy.realtime.remote");
 // The editor's Y.Text("markdown") mirror re-derives its content from the
 // persisted fragment and also fires for remote ySync transactions, so
 // persisting it would write peer edits into local IDB.
-export const MARKDOWN_MIRROR_ORIGIN = Symbol('uniffy.realtime.markdownMirror');
+export const MARKDOWN_MIRROR_ORIGIN = Symbol("uniffy.realtime.markdownMirror");
 
 export function isPersistedOrigin(origin: unknown): boolean {
   return (
-    origin !== HYDRATION_ORIGIN &&
-    origin !== REMOTE_ORIGIN &&
-    origin !== MARKDOWN_MIRROR_ORIGIN
+    origin !== HYDRATION_ORIGIN && origin !== REMOTE_ORIGIN && origin !== MARKDOWN_MIRROR_ORIGIN
   );
 }
 
@@ -58,7 +56,7 @@ export function newPersistenceEpoch(): string {
 // Yjs updates are commutative, so replay order across epochs does not matter;
 // zero-padding keeps one epoch's rows in write order anyway.
 export function updateRowSeq(epoch: string, counter: number): string {
-  return `${epoch}:${String(counter).padStart(10, '0')}`;
+  return `${epoch}:${String(counter).padStart(10, "0")}`;
 }
 
 // A row may be folded into a snapshot only when its content is provably in
@@ -94,10 +92,7 @@ export interface EncryptedPersistence {
 function rangeFor(contentType: string, contentId: string): IDBKeyRange {
   // The third key component is always a string; an empty array sorts after
   // every string in IndexedDB key order.
-  return IDBKeyRange.bound(
-    [contentType, contentId],
-    [contentType, contentId, []],
-  );
+  return IDBKeyRange.bound([contentType, contentId], [contentType, contentId, []]);
 }
 
 export function attachEncryptedPersistence(
@@ -126,11 +121,7 @@ export function attachEncryptedPersistence(
     try {
       const blob = await encryptForStorage(bytesToBase64(update));
       const db = await getDB();
-      await db.put(UPDATES_STORE, blob, [
-        contentType,
-        contentId,
-        updateRowSeq(epoch, allocated),
-      ]);
+      await db.put(UPDATES_STORE, blob, [contentType, contentId, updateRowSeq(epoch, allocated)]);
       if (allocated % compactEvery === 0 && !pendingCompact) {
         pendingCompact = true;
         queueMicrotask(() => {
@@ -139,7 +130,7 @@ export function attachEncryptedPersistence(
         });
       }
     } catch (err) {
-      console.warn('[realtime] encrypted persistence write failed', err);
+      console.warn("[realtime] encrypted persistence write failed", err);
     }
   }
 
@@ -147,7 +138,7 @@ export function attachEncryptedPersistence(
     if (!isStorageEncryptionReady()) return;
     try {
       const db = await getDB();
-      const tx = db.transaction(UPDATES_STORE, 'readonly');
+      const tx = db.transaction(UPDATES_STORE, "readonly");
       const store = tx.objectStore(UPDATES_STORE);
       const range = rangeFor(contentType, contentId);
       const [keys, blobs] = await Promise.all([
@@ -169,7 +160,7 @@ export function attachEncryptedPersistence(
         }
       }
     } catch (err) {
-      console.warn('[realtime] encrypted persistence hydrate failed', err);
+      console.warn("[realtime] encrypted persistence hydrate failed", err);
     }
   }
 
@@ -185,11 +176,13 @@ export function attachEncryptedPersistence(
       const snapshot = Y.encodeStateAsUpdate(ydoc);
       const blob = await encryptForStorage(bytesToBase64(snapshot));
       const db = await getDB();
-      const tx = db.transaction(UPDATES_STORE, 'readwrite');
+      const tx = db.transaction(UPDATES_STORE, "readwrite");
       const store = tx.objectStore(UPDATES_STORE);
-      const keys = (await store.getAllKeys(
-        rangeFor(contentType, contentId),
-      )) as [string, string, string][];
+      const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as [
+        string,
+        string,
+        string,
+      ][];
       const removable = selectCompactableSeqs(
         keys.map((key) => key[2]),
         epoch,
@@ -203,17 +196,17 @@ export function attachEncryptedPersistence(
       ]);
       for (const seq of removable) hydratedSeqs.delete(seq);
     } catch (err) {
-      console.warn('[realtime] encrypted persistence compact failed', err);
+      console.warn("[realtime] encrypted persistence compact failed", err);
     }
   }
 
   async function destroy(): Promise<void> {
     if (destroyed) return;
     destroyed = true;
-    ydoc.off('update', onUpdate);
+    ydoc.off("update", onUpdate);
     window.removeEventListener(ENCRYPTION_REKEY_EVENT, handleRekey);
     window.removeEventListener(ENCRYPTION_TEARDOWN_EVENT, handleTeardown);
-    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener("beforeunload", handleBeforeUnload);
   }
 
   const handleRekey = () => {
@@ -229,16 +222,16 @@ export function attachEncryptedPersistence(
     void compact();
   };
 
-  ydoc.on('update', onUpdate);
+  ydoc.on("update", onUpdate);
   window.addEventListener(ENCRYPTION_REKEY_EVENT, handleRekey);
   window.addEventListener(ENCRYPTION_TEARDOWN_EVENT, handleTeardown);
-  window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener("beforeunload", handleBeforeUnload);
 
   return { hydrate, compact, destroy };
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
+  let binary = "";
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }

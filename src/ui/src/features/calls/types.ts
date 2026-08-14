@@ -1,11 +1,11 @@
-export type CallType = 'DIRECT' | 'GROUP_DM' | 'CHANNEL';
+export type CallType = "DIRECT" | "GROUP_DM" | "CHANNEL";
 
 export type CallEndReason =
-  | 'HOST_ENDED'
-  | 'ALL_LEFT'
-  | 'MAX_DURATION'
-  | 'SOLO_TIMEOUT'
-  | 'CHANNEL_ARCHIVED';
+  | "HOST_ENDED"
+  | "ALL_LEFT"
+  | "MAX_DURATION"
+  | "SOLO_TIMEOUT"
+  | "CHANNEL_ARCHIVED";
 
 export interface CallParticipantData {
   userId: string;
@@ -51,11 +51,11 @@ export interface RingInvite {
 }
 
 export type CallSessionStatus =
-  | 'idle'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'disconnected';
+  | "idle"
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "disconnected";
 
 export interface CallEndedInfo {
   callId: string;

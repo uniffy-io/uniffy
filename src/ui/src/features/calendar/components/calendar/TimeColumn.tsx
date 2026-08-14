@@ -1,4 +1,4 @@
-import { GRID, LAYOUT, DISPLAY_HOURS } from '@/features/calendar/constants';
+import { GRID, LAYOUT, DISPLAY_HOURS } from "@/features/calendar/constants";
 
 /** Top padding to keep the first hour label from clipping. */
 export const TIME_COLUMN_TOP_PADDING = 8;
@@ -9,7 +9,7 @@ interface TimeColumnProps {
 
 export function TimeColumn({ hourHeight = GRID.HOUR_HEIGHT }: TimeColumnProps) {
   const visibleHours = DISPLAY_HOURS.filter(
-    (h) => h.hour >= GRID.START_HOUR && h.hour <= GRID.END_HOUR
+    (h) => h.hour >= GRID.START_HOUR && h.hour <= GRID.END_HOUR,
   );
 
   return (

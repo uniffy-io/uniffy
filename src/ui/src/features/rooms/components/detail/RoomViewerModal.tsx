@@ -1,20 +1,20 @@
-import { useCallback, useState } from 'react';
-import { X, Door, CalendarPlus, WarningCircle } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/shared/utils/cn';
+import { useCallback, useState } from "react";
+import { X, Door, CalendarPlus, WarningCircle } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/shared/utils/cn";
 import {
   closeRoomViewer,
   selectRoomById,
   selectRoomViewer,
   selectRoomAvailability,
-} from '@/features/rooms/store/roomsSlice';
-import { openRoomViewer, cancelBooking } from '@/features/rooms/store/roomsThunks';
-import { RoomOverview } from '@/features/rooms/components/detail/RoomOverview';
-import { BookingModal } from '@/features/rooms/components/modals/BookingModal';
-import type { RoomBooking } from '@/features/rooms/types';
-import type { RootState } from '@/app/store';
+} from "@/features/rooms/store/roomsSlice";
+import { openRoomViewer, cancelBooking } from "@/features/rooms/store/roomsThunks";
+import { RoomOverview } from "@/features/rooms/components/detail/RoomOverview";
+import { BookingModal } from "@/features/rooms/components/modals/BookingModal";
+import type { RoomBooking } from "@/features/rooms/types";
+import type { RootState } from "@/app/store";
 
 /**
  * Read-only room card, opened in place from a room mention chip or a search hit.
@@ -24,8 +24,12 @@ export function RoomViewerModal() {
   const dispatch = useAppDispatch();
   const viewer = useAppSelector(selectRoomViewer);
   const roomId = viewer.roomId;
-  const room = useAppSelector((state: RootState) => (roomId ? selectRoomById(state, roomId) : undefined));
-  const availability = useAppSelector((state: RootState) => selectRoomAvailability(state, roomId ?? ''));
+  const room = useAppSelector((state: RootState) =>
+    roomId ? selectRoomById(state, roomId) : undefined,
+  );
+  const availability = useAppSelector((state: RootState) =>
+    selectRoomAvailability(state, roomId ?? ""),
+  );
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
   const organizationRole = useAppSelector((state) => state.auth.currentOrganizationRole);
@@ -38,15 +42,18 @@ export function RoomViewerModal() {
 
   const canCancelBooking = useCallback(
     (booking: RoomBooking) =>
-      booking.userId === userId || ['ADMIN', 'OWNER'].includes(organizationRole ?? ''),
+      booking.userId === userId || ["ADMIN", "OWNER"].includes(organizationRole ?? ""),
     [userId, organizationRole],
   );
 
-  const handleCancelBooking = useCallback(async (bookingId: string) => {
-    if (!organizationId || !roomId) return;
-    await dispatch(cancelBooking({ bookingId, organizationId }));
-    dispatch(openRoomViewer({ roomId }));
-  }, [dispatch, organizationId, roomId]);
+  const handleCancelBooking = useCallback(
+    async (bookingId: string) => {
+      if (!organizationId || !roomId) return;
+      await dispatch(cancelBooking({ bookingId, organizationId }));
+      dispatch(openRoomViewer({ roomId }));
+    },
+    [dispatch, organizationId, roomId],
+  );
 
   const handleBooked = useCallback(() => {
     if (roomId) dispatch(openRoomViewer({ roomId }));
@@ -61,7 +68,7 @@ export function RoomViewerModal() {
           <div className="flex items-center gap-2 min-w-0">
             <Door size={18} weight="duotone" className="text-muted-foreground shrink-0" />
             <span className="text-sm font-semibold text-foreground truncate">
-              {room?.name ?? 'Room'}
+              {room?.name ?? "Room"}
             </span>
           </div>
           <button
@@ -74,7 +81,7 @@ export function RoomViewerModal() {
           </button>
         </div>
 
-        <div className={cn('px-5 py-4 max-h-[70vh] overflow-y-auto')}>
+        <div className={cn("px-5 py-4 max-h-[70vh] overflow-y-auto")}>
           {viewer.error ? (
             <div className="flex flex-col items-center text-center py-8 gap-2">
               <WarningCircle size={32} weight="duotone" className="text-muted-foreground" />
@@ -98,7 +105,7 @@ export function RoomViewerModal() {
           )}
         </div>
 
-        {room && room.status === 'active' && (
+        {room && room.status === "active" && (
           <div className="flex items-center justify-end gap-3 px-5 py-3 bg-muted/30 border-t border-border">
             <Button variant="outline" size="md" onClick={handleClose}>
               Close

@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useReactFlow } from '@xyflow/react';
-import { useDocAwareness } from '@/features/realtime';
-import { PeerAvatar } from '@/features/realtime/components/PeerAvatar';
-import { brandGradient, identityStops } from '@/config/theme/brandGradients';
-import type { CanvasRealtimeBinding } from '@/features/notes/realtime/useCanvasRealtimeSession';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useReactFlow } from "@xyflow/react";
+import { useDocAwareness } from "@/features/realtime";
+import { PeerAvatar } from "@/features/realtime/components/PeerAvatar";
+import { brandGradient, identityStops } from "@/config/theme/brandGradients";
+import type { CanvasRealtimeBinding } from "@/features/notes/realtime/useCanvasRealtimeSession";
 import {
   AUTO_CURSORS_HIDE_THRESHOLD,
   type CanvasCursorsMode,
-} from '@/features/notes/store/editorSlice';
+} from "@/features/notes/store/editorSlice";
 
 interface CanvasAwarenessPayload {
   user?: {
@@ -31,7 +31,7 @@ const POINTER_THROTTLE_MS = 30;
 export function CanvasAwarenessOverlay({
   binding,
   containerRef,
-  cursorsMode = 'auto',
+  cursorsMode = "auto",
   onPeerCountChange,
 }: CanvasAwarenessOverlayProps) {
   const { screenToFlowPosition, flowToScreenPosition } = useReactFlow();
@@ -82,12 +82,12 @@ export function CanvasAwarenessOverlay({
       }
     };
 
-    el.addEventListener('pointermove', handleMove);
-    el.addEventListener('pointerleave', handleLeave);
+    el.addEventListener("pointermove", handleMove);
+    el.addEventListener("pointerleave", handleLeave);
     const interval = window.setInterval(flushPointer, POINTER_THROTTLE_MS);
     return () => {
-      el.removeEventListener('pointermove', handleMove);
-      el.removeEventListener('pointerleave', handleLeave);
+      el.removeEventListener("pointermove", handleMove);
+      el.removeEventListener("pointerleave", handleLeave);
       window.clearInterval(interval);
     };
   }, [binding, containerRef, flushPointer, screenToFlowPosition]);
@@ -100,8 +100,7 @@ export function CanvasAwarenessOverlay({
   if (!binding) return null;
 
   const cursorsVisible =
-    cursorsMode === 'on'
-    || (cursorsMode === 'auto' && peerCount <= AUTO_CURSORS_HIDE_THRESHOLD);
+    cursorsMode === "on" || (cursorsMode === "auto" && peerCount <= AUTO_CURSORS_HIDE_THRESHOLD);
   if (!cursorsVisible) return null;
 
   // Dedupe by user.id: peer mid-refresh holds two awareness clientIds during y-protocols' 30s GC window.
@@ -121,24 +120,20 @@ export function CanvasAwarenessOverlay({
         const screen = flowToScreenPosition(payload.pointer);
         const x = containerRect ? screen.x - containerRect.left : screen.x;
         const y = containerRect ? screen.y - containerRect.top : screen.y;
-        const name = user?.name ?? 'Anonymous';
+        const name = user?.name ?? "Anonymous";
         const paint = identityStops(name);
         const key = userId ?? String(peer.clientId);
         // SVG gradients are referenced by id, so each pointer needs its own.
         const gradientId = `canvas-cursor-${key}`;
         return (
-          <div
-            key={key}
-            className="absolute"
-            style={{ left: x, top: y }}
-          >
+          <div key={key} className="absolute" style={{ left: x, top: y }}>
             <svg
               width="18"
               height="18"
               viewBox="0 0 18 18"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}
+              style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.35))" }}
             >
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">

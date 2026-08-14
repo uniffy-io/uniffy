@@ -1,5 +1,5 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 import {
   Clock,
   ArrowSquareOut,
@@ -10,11 +10,11 @@ import {
   Layout,
   File,
   Tag,
-} from '@phosphor-icons/react';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { NoteEditingIndicator } from '@/components/mention/LiveIndicators';
-import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
-import type { MentionLiveState } from '@/components/mention/types';
+} from "@phosphor-icons/react";
+import { formatRelativeTime } from "@/shared/utils/dateFormatting";
+import { NoteEditingIndicator } from "@/components/mention/LiveIndicators";
+import { ParentBadge, MetaSeparator } from "@/components/mention/previews/ParentBadge";
+import type { MentionLiveState } from "@/components/mention/types";
 
 interface NoteMentionPreviewProps {
   urn: string;
@@ -27,19 +27,27 @@ interface NoteMentionPreviewProps {
 
 function getNoteTypeLabel(nodeType?: string): string {
   switch (nodeType) {
-    case 'FOLDER': return 'Folder';
-    case 'TEMPLATE': return 'Template';
-    case 'CANVAS': return 'Canvas';
-    default: return 'Note';
+    case "FOLDER":
+      return "Folder";
+    case "TEMPLATE":
+      return "Template";
+    case "CANVAS":
+      return "Canvas";
+    default:
+      return "Note";
   }
 }
 
 function NoteTypeIcon({ nodeType }: { nodeType?: string }) {
   switch (nodeType) {
-    case 'FOLDER': return <Folder size={16} weight="duotone" />;
-    case 'TEMPLATE': return <File size={16} weight="duotone" />;
-    case 'CANVAS': return <Layout size={16} weight="duotone" />;
-    default: return <Note size={16} weight="duotone" />;
+    case "FOLDER":
+      return <Folder size={16} weight="duotone" />;
+    case "TEMPLATE":
+      return <File size={16} weight="duotone" />;
+    case "CANVAS":
+      return <Layout size={16} weight="duotone" />;
+    default:
+      return <Note size={16} weight="duotone" />;
   }
 }
 
@@ -79,11 +87,11 @@ export function NoteMentionPreview({
                 </>
               )}
               <span className="text-[10px] font-medium text-primary">{typeLabel}</span>
-              {liveState.noteNodeType === 'FOLDER' && liveState.noteChildCount != null && (
+              {liveState.noteNodeType === "FOLDER" && liveState.noteChildCount != null && (
                 <>
                   <MetaSeparator />
                   <span className="text-[10px] text-muted-foreground">
-                    {liveState.noteChildCount} note{liveState.noteChildCount === 1 ? '' : 's'}
+                    {liveState.noteChildCount} note{liveState.noteChildCount === 1 ? "" : "s"}
                   </span>
                 </>
               )}
@@ -100,9 +108,11 @@ export function NoteMentionPreview({
 
       {/* Content preview - aligned with title (icon 28px + gap 10px + pl-5 = pl offset).
           Folder-type notes have no body; the child count in the meta row is the content. */}
-      {description && liveState.noteNodeType !== 'FOLDER' && (
+      {description && liveState.noteNodeType !== "FOLDER" && (
         <span className="block px-4 pb-2 pl-[3.375rem]">
-          <span className="block text-xs text-muted-foreground/70 leading-relaxed line-clamp-3">{description}</span>
+          <span className="block text-xs text-muted-foreground/70 leading-relaxed line-clamp-3">
+            {description}
+          </span>
         </span>
       )}
 
@@ -130,7 +140,7 @@ export function NoteMentionPreview({
       <span className="flex px-4 py-1.5 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
-          <span>{formatRelativeTime(liveState.updatedAt) || 'No date'}</span>
+          <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>
           {liveState.updatedByName && (
             <>
               <span className="text-muted-foreground/40">.</span>
@@ -140,12 +150,23 @@ export function NoteMentionPreview({
         </span>
         <span className="flex items-center gap-1">
           <button
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy(); }}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleCopy();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title="Copy URN"
           >
-            {copied ? <Check size={11} weight="bold" className="text-green-500" /> : <CopySimple size={11} weight="bold" />}
+            {copied ? (
+              <Check size={11} weight="bold" className="text-green-500" />
+            ) : (
+              <CopySimple size={11} weight="bold" />
+            )}
           </button>
           <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
             <ArrowSquareOut size={11} weight="bold" />

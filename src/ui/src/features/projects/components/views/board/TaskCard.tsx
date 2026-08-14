@@ -1,6 +1,13 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CheckCircle, WarningCircle, ArrowsClockwise, Clock, ArrowElbowDownRight, CaretRight } from "@phosphor-icons/react";
+import {
+  CheckCircle,
+  WarningCircle,
+  ArrowsClockwise,
+  Clock,
+  ArrowElbowDownRight,
+  CaretRight,
+} from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { selectTask, openDetailPanel } from "@/features/projects/store/projectsUiSlice";
@@ -42,14 +49,9 @@ export function TaskCard({
   projectSlug,
   reparentHintActive = false,
 }: TaskCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -57,7 +59,8 @@ export function TaskCard({
   };
 
   const taskOverdue = task.dueDate && task.status !== "status_done" && isOverdue(task.dueDate);
-  const hasUnresolvedBlockers = task.blockedByTaskIds && task.blockedByTaskIds.length > 0 && task.status !== "status_done";
+  const hasUnresolvedBlockers =
+    task.blockedByTaskIds && task.blockedByTaskIds.length > 0 && task.status !== "status_done";
 
   const ticketId = `${projectSlug}-${task.number}`;
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
@@ -66,7 +69,7 @@ export function TaskCard({
   const dispatch = useAppDispatch();
   // Narrow subscription: re-renders only when this card's own parent changes.
   const parentTask = useAppSelector((state) =>
-    task.parentId ? state.projects.tasks[task.parentId] : undefined
+    task.parentId ? state.projects.tasks[task.parentId] : undefined,
   );
 
   const visibleTags = useTagsByIds(task.tagIds ?? []);
@@ -85,17 +88,12 @@ export function TaskCard({
         isDragging && "opacity-50 shadow-lg",
         isSelected && "ring-2 ring-primary",
         reparentHintActive && "outline-2 outline-dashed outline-primary/70 -outline-offset-2",
-        hasUnresolvedBlockers && "border-l-2 border-l-yellow-500 dark:border-l-yellow-400"
+        hasUnresolvedBlockers && "border-l-2 border-l-yellow-500 dark:border-l-yellow-400",
       )}
       onClick={onClick}
     >
       {/* Status color bar at top */}
-      {statusOption && (
-        <div
-          className="h-1"
-          style={{ backgroundColor: statusOption.color }}
-        />
-      )}
+      {statusOption && <div className="h-1" style={{ backgroundColor: statusOption.color }} />}
 
       <div className="p-3">
         {/* Ticket ID and type, with parent breadcrumb for subtasks */}
@@ -151,17 +149,15 @@ export function TaskCard({
               </h3>
             </div>
           </div>
-          
+
           {/* Dates - moved to top right */}
           {(task.startDate || task.dueDate) && (
             <div className="flex flex-col items-end gap-0.5 text-[10px] text-muted-foreground shrink-0 leading-tight">
-              {task.startDate && (
-                  <span>Start: {formatDateShort(task.startDate)}</span>
-              )}
+              {task.startDate && <span>Start: {formatDateShort(task.startDate)}</span>}
               {task.dueDate && (
-                  <span className={isOverdue(task.dueDate) ? "text-destructive font-medium" : ""}>
-                    Due: {formatDateShort(task.dueDate)}
-                  </span>
+                <span className={isOverdue(task.dueDate) ? "text-destructive font-medium" : ""}>
+                  Due: {formatDateShort(task.dueDate)}
+                </span>
               )}
             </div>
           )}
@@ -169,69 +165,76 @@ export function TaskCard({
 
         {/* Middle Row: Priority & Indicators */}
         <div className="flex flex-wrap items-center gap-2 mt-2">
-            {/* Priority */}
-            {priorityOption && (
+          {/* Priority */}
+          {priorityOption && (
             <span
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
-                style={{
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{
                 backgroundColor: `${priorityOption.color}15`,
                 color: priorityOption.color,
-                }}
+              }}
             >
-                {priorityOption.label}
+              {priorityOption.label}
             </span>
-            )}
+          )}
 
-            {/* Blocked Indicator */}
-            {hasUnresolvedBlockers && (
-                <span
-                  className="flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px] bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                  title={`Blocked by ${task.blockedByTaskIds.length} task(s)`}
-                >
-                    <WarningCircle size={10} weight="fill" />
-                    Blocked ({task.blockedByTaskIds.length})
-                </span>
-            )}
+          {/* Blocked Indicator */}
+          {hasUnresolvedBlockers && (
+            <span
+              className="flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px] bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+              title={`Blocked by ${task.blockedByTaskIds.length} task(s)`}
+            >
+              <WarningCircle size={10} weight="fill" />
+              Blocked ({task.blockedByTaskIds.length})
+            </span>
+          )}
 
-            {/* Overdue Indicator */}
-            {taskOverdue && (
-                <span className="flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px] bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                    <WarningCircle size={10} weight="fill" />
-                    Overdue
-                </span>
-            )}
+          {/* Overdue Indicator */}
+          {taskOverdue && (
+            <span className="flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px] bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+              <WarningCircle size={10} weight="fill" />
+              Overdue
+            </span>
+          )}
 
-            {/* Subtask Progress */}
-            {task.subtaskTotal > 0 && (
-                <span className="flex items-center text-muted-foreground bg-muted px-1.5 py-0.5 rounded gap-1 text-[10px]">
-                    <CheckCircle size={10} className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""} />
-                    {task.subtaskCompleted}/{task.subtaskTotal}
-                    <span className="text-muted-foreground/70">
-                      ({Math.round((task.subtaskCompleted / task.subtaskTotal) * 100)}%)
-                    </span>
-                </span>
-            )}
+          {/* Subtask Progress */}
+          {task.subtaskTotal > 0 && (
+            <span className="flex items-center text-muted-foreground bg-muted px-1.5 py-0.5 rounded gap-1 text-[10px]">
+              <CheckCircle
+                size={10}
+                className={task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""}
+              />
+              {task.subtaskCompleted}/{task.subtaskTotal}
+              <span className="text-muted-foreground/70">
+                ({Math.round((task.subtaskCompleted / task.subtaskTotal) * 100)}%)
+              </span>
+            </span>
+          )}
 
-            {/* Time tracking */}
-            {(task.estimatedMinutes || task.timeSpentMinutes) && (
-                <span className={cn(
-                    "flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px]",
-                    task.estimatedMinutes && task.timeSpentMinutes && task.timeSpentMinutes > task.estimatedMinutes
-                        ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                        : "text-muted-foreground bg-muted"
-                )}>
-                    <Clock size={10} />
-                    {task.timeSpentMinutes ? formatMinutes(task.timeSpentMinutes) : "0m"}
-                    {task.estimatedMinutes ? ` / ${formatMinutes(task.estimatedMinutes)}` : ""}
-                </span>
-            )}
+          {/* Time tracking */}
+          {(task.estimatedMinutes || task.timeSpentMinutes) && (
+            <span
+              className={cn(
+                "flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px]",
+                task.estimatedMinutes &&
+                  task.timeSpentMinutes &&
+                  task.timeSpentMinutes > task.estimatedMinutes
+                  ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                  : "text-muted-foreground bg-muted",
+              )}
+            >
+              <Clock size={10} />
+              {task.timeSpentMinutes ? formatMinutes(task.timeSpentMinutes) : "0m"}
+              {task.estimatedMinutes ? ` / ${formatMinutes(task.estimatedMinutes)}` : ""}
+            </span>
+          )}
 
-            {/* Recurrence indicator */}
-            {task.recurrenceRule && (
-                <span title="Recurring task">
-                    <ArrowsClockwise size={12} className="text-muted-foreground" />
-                </span>
-            )}
+          {/* Recurrence indicator */}
+          {task.recurrenceRule && (
+            <span title="Recurring task">
+              <ArrowsClockwise size={12} className="text-muted-foreground" />
+            </span>
+          )}
         </div>
 
         {/* Subtask Progress Bar */}
@@ -240,7 +243,7 @@ export function TaskCard({
             <div
               className={cn(
                 "h-full rounded-full transition-all",
-                task.subtaskCompleted === task.subtaskTotal ? "bg-green-500" : "bg-primary"
+                task.subtaskCompleted === task.subtaskTotal ? "bg-green-500" : "bg-primary",
               )}
               style={{ width: `${(task.subtaskCompleted / task.subtaskTotal) * 100}%` }}
             />
@@ -249,41 +252,42 @@ export function TaskCard({
 
         {/* Footer with assignees */}
         {(task.assigneeIds.length > 0 || task.outgoingReferences.length > 0) && (
-        <div className="flex items-center justify-between pt-2 border-t border-border/50 mt-2">
-          {/* Reference chips */}
-          <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
-            {task.outgoingReferences?.slice(0, 2).map((urn) => (
-              <ReferenceChip key={urn} urn={urn} />
-            ))}
-            {(task.outgoingReferences?.length || 0) > 2 && (
-              <span className="text-[10px] text-muted-foreground">
-                +{(task.outgoingReferences?.length || 0) - 2}
-              </span>
+          <div className="flex items-center justify-between pt-2 border-t border-border/50 mt-2">
+            {/* Reference chips */}
+            <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+              {task.outgoingReferences?.slice(0, 2).map((urn) => (
+                <ReferenceChip key={urn} urn={urn} />
+              ))}
+              {(task.outgoingReferences?.length || 0) > 2 && (
+                <span className="text-[10px] text-muted-foreground">
+                  +{(task.outgoingReferences?.length || 0) - 2}
+                </span>
+              )}
+            </div>
+
+            {/* Assignee avatars */}
+            {task.assigneeIds.length > 0 && (
+              <div className="ml-auto">
+                <SubjectAvatarStack subjectIds={task.assigneeIds} maxDisplay={2} size="xs" />
+              </div>
             )}
           </div>
-
-          {/* Assignee avatars */}
-          {task.assigneeIds.length > 0 && (
-            <div className="ml-auto">
-              <SubjectAvatarStack subjectIds={task.assigneeIds} maxDisplay={2} size="xs" />
-            </div>
-          )}
-        </div>
         )}
 
         {/* Tags row - capped at 3 + overflow */}
         {shownTags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1 pt-2">
             {shownTags.map((tag) => (
-              <TagChip
-                key={tag.id}
-                tag={tag}
-                nonInteractive
-                className="px-1.5 py-0 text-[10px]"
-              />
+              <TagChip key={tag.id} tag={tag} nonInteractive className="px-1.5 py-0 text-[10px]" />
             ))}
             {overflowTagCount > 0 && (
-              <span className="text-[10px] text-muted-foreground" title={visibleTags.slice(3).map((t) => t.name).join(", ")}>
+              <span
+                className="text-[10px] text-muted-foreground"
+                title={visibleTags
+                  .slice(3)
+                  .map((t) => t.name)
+                  .join(", ")}
+              >
                 +{overflowTagCount}
               </span>
             )}

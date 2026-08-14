@@ -1,4 +1,4 @@
-import { createContext } from 'react';
+import { createContext } from "react";
 
 /**
  * Context that signals sidebar children are rendered inside the hover overlay.

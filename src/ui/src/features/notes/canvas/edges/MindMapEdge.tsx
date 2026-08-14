@@ -5,17 +5,12 @@
  * Uses the branch color from edge data for consistent branch coloring.
  */
 
-import {
-  BaseEdge,
-  getBezierPath,
-  type EdgeProps,
-  type Edge,
-} from '@xyflow/react';
-import type { MindMapEdgeData } from '@/features/notes/canvas/types';
+import { BaseEdge, getBezierPath, type EdgeProps, type Edge } from "@xyflow/react";
+import type { MindMapEdgeData } from "@/features/notes/canvas/types";
 
 type MindMapEdgeType = Edge<MindMapEdgeData>;
 
-const DEFAULT_COLOR = 'hsl(var(--muted-foreground) / 0.4)';
+const DEFAULT_COLOR = "hsl(var(--muted-foreground) / 0.4)";
 const STROKE_WIDTH = 2.5;
 
 export function MindMapEdge({
@@ -47,7 +42,7 @@ export function MindMapEdge({
       style={{
         stroke: color,
         strokeWidth: STROKE_WIDTH,
-        fill: 'none',
+        fill: "none",
       }}
     />
   );

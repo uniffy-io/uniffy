@@ -1,7 +1,7 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { SafeEmojiPicker } from '@/components/emoji/SafeEmojiPicker';
-import { useTheme } from '@/config/theme/ThemeProvider';
+import { useRef, useEffect, useCallback, useState } from "react";
+import { createPortal } from "react-dom";
+import { SafeEmojiPicker } from "@/components/emoji/SafeEmojiPicker";
+import { useTheme } from "@/config/theme/ThemeProvider";
 
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
@@ -52,26 +52,29 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
       }
     };
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }, 0);
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [onClose]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  const handleEmojiSelect = useCallback((emoji: { native: string }) => {
-    onSelect(emoji.native);
-    onClose();
-  }, [onSelect, onClose]);
+  const handleEmojiSelect = useCallback(
+    (emoji: { native: string }) => {
+      onSelect(emoji.native);
+      onClose();
+    },
+    [onSelect, onClose],
+  );
 
   if (!position) return null;
 
@@ -85,7 +88,7 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
       <div className="rounded-xl border border-border bg-card shadow-xl overflow-hidden">
         <SafeEmojiPicker
           onEmojiSelect={handleEmojiSelect}
-          theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+          theme={resolvedTheme === "dark" ? "dark" : "light"}
           previewPosition="none"
           skinTonePosition="search"
           perLine={8}

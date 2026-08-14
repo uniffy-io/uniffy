@@ -1,14 +1,14 @@
-import { createSlice } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
 import type {
   ViewMode,
   QuickAccessFilter,
   EventModalPrefill,
   DropTarget,
   SidebarSectionId,
-} from '@/features/calendar/types';
-import { LAYOUT, SIDEBAR_SECTIONS } from '@/features/calendar/constants';
-import { toDateString } from '@/features/calendar/utils';
+} from "@/features/calendar/types";
+import { LAYOUT, SIDEBAR_SECTIONS } from "@/features/calendar/constants";
+import { toDateString } from "@/features/calendar/utils";
 
 interface CalendarUiState {
   viewMode: ViewMode;
@@ -16,7 +16,7 @@ interface CalendarUiState {
   quickAccessFilter: QuickAccessFilter | null;
   selectedEventId: string | null;
   isEventModalOpen: boolean;
-  eventModalMode: 'create' | 'edit';
+  eventModalMode: "create" | "edit";
   eventModalPrefill: EventModalPrefill | null;
   isSidebarCollapsed: boolean;
   sidebarWidth: number;
@@ -38,12 +38,12 @@ function getDefaultCollapsedSections(): SidebarSectionId[] {
 }
 
 const initialState: CalendarUiState = {
-  viewMode: 'week',
+  viewMode: "week",
   currentDate: toDateString(new Date()),
   quickAccessFilter: null,
   selectedEventId: null,
   isEventModalOpen: false,
-  eventModalMode: 'create',
+  eventModalMode: "create",
   eventModalPrefill: null,
   isSidebarCollapsed: false,
   sidebarWidth: LAYOUT.SIDEBAR_WIDTH,
@@ -59,7 +59,7 @@ const initialState: CalendarUiState = {
 };
 
 const calendarUiSlice = createSlice({
-  name: 'calendarUi',
+  name: "calendarUi",
   initialState,
   reducers: {
     setViewMode: (state, action: PayloadAction<ViewMode>) => {
@@ -74,10 +74,7 @@ const calendarUiSlice = createSlice({
       state.currentDate = toDateString(new Date());
     },
 
-    setQuickAccessFilter: (
-      state,
-      action: PayloadAction<QuickAccessFilter | null>
-    ) => {
+    setQuickAccessFilter: (state, action: PayloadAction<QuickAccessFilter | null>) => {
       state.quickAccessFilter = action.payload;
     },
 
@@ -92,9 +89,9 @@ const calendarUiSlice = createSlice({
     openEventModal: (
       state,
       action: PayloadAction<{
-        mode: 'create' | 'edit';
+        mode: "create" | "edit";
         prefill?: EventModalPrefill;
-      }>
+      }>,
     ) => {
       state.isEventModalOpen = true;
       state.eventModalMode = action.payload.mode;
@@ -117,7 +114,7 @@ const calendarUiSlice = createSlice({
     setSidebarWidth: (state, action: PayloadAction<number>) => {
       state.sidebarWidth = Math.max(
         LAYOUT.SIDEBAR_MIN_WIDTH,
-        Math.min(action.payload, LAYOUT.SIDEBAR_MAX_WIDTH)
+        Math.min(action.payload, LAYOUT.SIDEBAR_MAX_WIDTH),
       );
     },
 

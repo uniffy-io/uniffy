@@ -5,7 +5,7 @@
  * node style change, etc.) without recreating the nodeTypes object.
  */
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext } from "react";
 
 interface CanvasCallbacks {
   onTextContentChange: (nodeId: string, content: string) => void;
@@ -32,7 +32,7 @@ export const CanvasCallbacksContext = createContext<CanvasCallbacks>({
   onMindMapDeleteNode: () => {},
   onMindMapToggleCollapse: () => {},
   readonly: false,
-  contentId: '',
+  contentId: "",
   editingNodeId: null,
   clearEditingNodeId: () => {},
 });

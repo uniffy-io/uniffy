@@ -111,7 +111,7 @@ export function RoadmapView() {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const rows = useMemo(
     () => buildOrderedRows(filteredTasks, collapsedIds),
-    [filteredTasks, collapsedIds]
+    [filteredTasks, collapsedIds],
   );
   // Rollup spans are derived from the full task set, so a collapsed parent
   // still shows its aggregate bracket.
@@ -130,9 +130,7 @@ export function RoadmapView() {
 
   // Scroll synchronization - initialize scrollLeft so today is visible
   const [scrollTop, setScrollTop] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(
-    () => PERIODS_BEFORE * COLUMN_WIDTHS[zoom] - 200
-  );
+  const [scrollLeft, setScrollLeft] = useState(() => PERIODS_BEFORE * COLUMN_WIDTHS[zoom] - 200);
 
   // Ref to timeline scroll container for direct scroll control
   const timelineScrollRef = useRef<HTMLDivElement>(null);
@@ -140,40 +138,41 @@ export function RoadmapView() {
   // Calculate timeline range
   const timelineStart = useMemo(
     () => addPeriods(baseDate, -PERIODS_BEFORE, zoom),
-    [baseDate, zoom]
+    [baseDate, zoom],
   );
-  const timelineEnd = useMemo(
-    () => addPeriods(baseDate, PERIODS_AFTER, zoom),
-    [baseDate, zoom]
-  );
+  const timelineEnd = useMemo(() => addPeriods(baseDate, PERIODS_AFTER, zoom), [baseDate, zoom]);
 
   // Generate timeline columns
   const columns = useMemo(
     () => generateTimelineColumns(timelineStart, timelineEnd, zoom),
-    [timelineStart, timelineEnd, zoom]
+    [timelineStart, timelineEnd, zoom],
   );
 
   // Calculate dependency data for lines
   const dependencyData = useMemo(() => {
-    return rows.map(({ task }, index) => {
-      const hasOwnDates = !!(task.startDate && task.dueDate);
-      const own = hasOwnDates
-        ? calculateBarPosition(task.startDate, task.dueDate, timelineStart, timelineEnd, zoom)
-        : null;
-      const span = !hasOwnDates ? rollupSpans.get(task.id) : undefined;
-      const position =
-        own ??
-        (span ? calculateBarPosition(span.start, span.due, timelineStart, timelineEnd, zoom) : null);
+    return rows
+      .map(({ task }, index) => {
+        const hasOwnDates = !!(task.startDate && task.dueDate);
+        const own = hasOwnDates
+          ? calculateBarPosition(task.startDate, task.dueDate, timelineStart, timelineEnd, zoom)
+          : null;
+        const span = !hasOwnDates ? rollupSpans.get(task.id) : undefined;
+        const position =
+          own ??
+          (span
+            ? calculateBarPosition(span.start, span.due, timelineStart, timelineEnd, zoom)
+            : null);
 
-      return {
-        id: task.id,
-        blockedByTaskIds: task.blockedByTaskIds || [],
-        row: index,
-        left: position ? position.left : 0,
-        width: position ? position.width : 0,
-        hasDates: !!position,
-      };
-    }).filter(t => t.hasDates);
+        return {
+          id: task.id,
+          blockedByTaskIds: task.blockedByTaskIds || [],
+          row: index,
+          left: position ? position.left : 0,
+          width: position ? position.width : 0,
+          hasDates: !!position,
+        };
+      })
+      .filter((t) => t.hasDates);
   }, [rows, rollupSpans, timelineStart, timelineEnd, zoom]);
 
   // Handle task click
@@ -186,7 +185,7 @@ export function RoadmapView() {
         dispatch(openDetailPanel());
       }
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Handle checkbox toggle (no detail panel)
@@ -194,7 +193,7 @@ export function RoadmapView() {
     (taskId: string) => {
       dispatch(toggleTaskSelection(taskId));
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Handle navigation
@@ -239,7 +238,7 @@ export function RoadmapView() {
       dispatch(optimisticUpdateTask({ id: taskId, startDate, dueDate }));
       dispatch(updateTask({ id: taskId, startDate, dueDate }));
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Early return after all hooks
@@ -248,9 +247,7 @@ export function RoadmapView() {
   }
 
   // Get status options
-  const statusField = project.fieldDefinitions.find(
-    (f) => f.id === SYSTEM_FIELD_IDS.STATUS
-  );
+  const statusField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
   const statusOptions = statusField?.config.options || [];
 
   // Show empty state if no tasks
@@ -336,18 +333,18 @@ export function RoadmapView() {
             sprints={sprints}
             timelineStart={timelineStart}
           >
-              {/* Dependency Lines */}
-              <DependencyLines tasks={dependencyData} />
+            {/* Dependency Lines */}
+            <DependencyLines tasks={dependencyData} />
 
-              {/* Task rows */}
-              <div
-                style={{
-                  height: rows.length * LAYOUT.ROADMAP_ROW_HEIGHT,
-                  position: "relative",
-                  zIndex: 10, // Ensure bars are above lines
-                }}
-              >
-                {rows.map(({ task }, index) => {
+            {/* Task rows */}
+            <div
+              style={{
+                height: rows.length * LAYOUT.ROADMAP_ROW_HEIGHT,
+                position: "relative",
+                zIndex: 10, // Ensure bars are above lines
+              }}
+            >
+              {rows.map(({ task }, index) => {
                 const hasOwnDates = !!(task.startDate && task.dueDate);
                 const position = hasOwnDates
                   ? calculateBarPosition(
@@ -355,13 +352,11 @@ export function RoadmapView() {
                       task.dueDate,
                       timelineStart,
                       timelineEnd,
-                      zoom
+                      zoom,
                     )
                   : null;
 
-                const statusOption = statusOptions.find(
-                  (s) => s.id === task.status
-                );
+                const statusOption = statusOptions.find((s) => s.id === task.status);
 
                 if (position) {
                   return (
@@ -411,10 +406,7 @@ export function RoadmapView() {
         <span className="font-medium">Legend:</span>
         {statusOptions.map((status) => (
           <div key={status.id} className="flex items-center gap-1">
-            <div
-              className="w-3 h-3 rounded"
-              style={{ backgroundColor: status.color }}
-            />
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: status.color }} />
             <span>{status.label}</span>
           </div>
         ))}

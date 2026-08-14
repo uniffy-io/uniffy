@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { CaretDown, Table } from '@phosphor-icons/react';
-import { ToolbarButton } from '@/features/notes/components/editor/toolbar/ToolbarButton';
-import { ToolbarPopover } from '@/features/notes/components/editor/toolbar/ToolbarPopover';
-import { toolbarCommands } from '@/features/notes/components/editor/toolbar/toolbarCommands';
-import { useEditorHandle } from '@/components/editor/EditorHandle';
-import { cn } from '@/shared/utils/cn';
+import { useState } from "react";
+import { CaretDown, Table } from "@phosphor-icons/react";
+import { ToolbarButton } from "@/features/notes/components/editor/toolbar/ToolbarButton";
+import { ToolbarPopover } from "@/features/notes/components/editor/toolbar/ToolbarPopover";
+import { toolbarCommands } from "@/features/notes/components/editor/toolbar/toolbarCommands";
+import { useEditorHandle } from "@/components/editor/EditorHandle";
+import { cn } from "@/shared/utils/cn";
 
 const MAX_ROWS = 6;
 const MAX_COLS = 8;
@@ -16,7 +16,13 @@ export function TablePopover() {
   return (
     <ToolbarPopover
       trigger={({ open, onClick, ref }) => (
-        <ToolbarButton ref={ref} onClick={onClick} active={open} disabled={!handle} label="Insert table">
+        <ToolbarButton
+          ref={ref}
+          onClick={onClick}
+          active={open}
+          disabled={!handle}
+          label="Insert table"
+        >
           <Table size={14} weight="bold" />
           <CaretDown size={10} weight="bold" />
         </ToolbarButton>
@@ -25,7 +31,7 @@ export function TablePopover() {
       {(close) => (
         <div className="p-2">
           <div className="text-[11px] text-muted-foreground mb-1.5">
-            {hover.rows && hover.cols ? `${hover.rows} x ${hover.cols}` : 'Pick size'}
+            {hover.rows && hover.cols ? `${hover.rows} x ${hover.cols}` : "Pick size"}
           </div>
           <div
             className="grid gap-0.5"
@@ -47,8 +53,8 @@ export function TablePopover() {
                     close();
                   }}
                   className={cn(
-                    'w-3.5 h-3.5 rounded-[2px] border border-border transition-colors',
-                    filled ? 'bg-primary/70' : 'bg-muted/40 hover:bg-muted',
+                    "w-3.5 h-3.5 rounded-[2px] border border-border transition-colors",
+                    filled ? "bg-primary/70" : "bg-muted/40 hover:bg-muted",
                   )}
                 />
               );

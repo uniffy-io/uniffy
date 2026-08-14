@@ -1,12 +1,15 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { MagnifyingGlass, X } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { useAppDispatch } from '@/app/hooks';
-import { useChatSearch } from '@/features/chat/hooks/useChatSearch';
-import { ChatSearchFilters, type ChatSearchFilterValues } from '@/features/chat/components/search/ChatSearchFilters';
-import { ChatSearchResultItem } from '@/features/chat/components/search/ChatSearchResultItem';
-import { jumpToChannelMessage } from '@/features/chat/store/chatThunks';
+import { useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { useAppDispatch } from "@/app/hooks";
+import { useChatSearch } from "@/features/chat/hooks/useChatSearch";
+import {
+  ChatSearchFilters,
+  type ChatSearchFilterValues,
+} from "@/features/chat/components/search/ChatSearchFilters";
+import { ChatSearchResultItem } from "@/features/chat/components/search/ChatSearchResultItem";
+import { jumpToChannelMessage } from "@/features/chat/store/chatThunks";
 
 interface ChatSearchPanelProps {
   channelId?: string;
@@ -15,16 +18,19 @@ interface ChatSearchPanelProps {
   onClose: () => void;
 }
 
-export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: ChatSearchPanelProps) {
+export function ChatSearchPanel({
+  channelId,
+  channelName,
+  anchorRef,
+  onClose,
+}: ChatSearchPanelProps) {
   const dispatch = useAppDispatch();
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [filters, setFilters] = useState<ChatSearchFilterValues>(
-    channelId ? { channelId } : {},
-  );
+  const [filters, setFilters] = useState<ChatSearchFilterValues>(channelId ? { channelId } : {});
 
   const { results, isLoading, error, totalCount, search, clear } = useChatSearch();
 
@@ -68,56 +74,59 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
       }
     };
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }, 0);
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [onClose]);
 
-  const handleNavigate = useCallback((targetChannelId: string, messageId: string) => {
-    dispatch(jumpToChannelMessage({ channelId: targetChannelId, messageId }));
-    onClose();
-  }, [dispatch, onClose]);
+  const handleNavigate = useCallback(
+    (targetChannelId: string, messageId: string) => {
+      dispatch(jumpToChannelMessage({ channelId: targetChannelId, messageId }));
+      onClose();
+    },
+    [dispatch, onClose],
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
         return;
       }
 
       if (results.length === 0) return;
 
-      if (e.key === 'ArrowDown') {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
         setFocusedIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setFocusedIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
-      } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      } else if (e.key === "Enter" && focusedIndex >= 0) {
         e.preventDefault();
         const focused = results[focusedIndex];
         const cId = focused?.metadata?.channel_id;
-        const mId = focused?.urn.split(':').pop();
+        const mId = focused?.urn.split(":").pop();
         if (cId && mId) {
           handleNavigate(cId, mId);
         }
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose, results, focusedIndex, handleNavigate]);
 
   useEffect(() => {
     if (focusedIndex < 0 || !resultsRef.current) return;
-    const items = resultsRef.current.querySelectorAll('[data-search-result]');
-    items[focusedIndex]?.scrollIntoView({ block: 'nearest' });
+    const items = resultsRef.current.querySelectorAll("[data-search-result]");
+    items[focusedIndex]?.scrollIntoView({ block: "nearest" });
   }, [focusedIndex]);
 
   const handleClear = useCallback(() => {
-    setQuery('');
+    setQuery("");
     inputRef.current?.focus();
   }, []);
 
@@ -129,7 +138,7 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
       className="fixed z-[100] w-[420px] max-w-[calc(100vw-2rem)] max-h-[70vh] bg-card border border-border rounded-xl shadow-xl overflow-hidden flex flex-col"
       style={{ top: position.top, left: position.left }}
       data-testid="chat-search-popover"
-      data-loading={isLoading ? 'true' : 'false'}
+      data-loading={isLoading ? "true" : "false"}
     >
       <div className="px-3 pt-3 pb-2">
         <div className="relative">
@@ -144,9 +153,9 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search messages..."
             className={cn(
-              'w-full pl-8 pr-8 py-2 rounded-lg text-sm',
-              'bg-muted border border-border text-foreground placeholder:text-muted-foreground',
-              'focus:outline-none focus:ring-1 focus:ring-ring focus:border-transparent',
+              "w-full pl-8 pr-8 py-2 rounded-lg text-sm",
+              "bg-muted border border-border text-foreground placeholder:text-muted-foreground",
+              "focus:outline-none focus:ring-1 focus:ring-ring focus:border-transparent",
             )}
             data-testid="chat-search-input"
           />
@@ -206,7 +215,7 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
           <div className="py-1">
             <div className="px-4 py-1">
               <span className="text-xs text-muted-foreground">
-                {totalCount} {totalCount === 1 ? 'result' : 'results'}
+                {totalCount} {totalCount === 1 ? "result" : "results"}
               </span>
             </div>
             {results.map((result, index) => (
@@ -214,7 +223,7 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
                 key={result.urn}
                 data-search-result
                 data-testid={`chat-search-result-${result.urn}`}
-                data-focused={index === focusedIndex ? 'true' : 'false'}
+                data-focused={index === focusedIndex ? "true" : "false"}
               >
                 <ChatSearchResultItem
                   result={result}
@@ -233,7 +242,7 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
             <MagnifyingGlass size={28} className="mx-auto mb-2 text-muted-foreground/30" />
             <p className="text-sm text-foreground font-medium">Search messages</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Find messages in {filters.channelId ? 'this channel' : 'all channels'}
+              Find messages in {filters.channelId ? "this channel" : "all channels"}
             </p>
           </div>
         )}

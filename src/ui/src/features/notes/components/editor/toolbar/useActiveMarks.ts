@@ -1,5 +1,5 @@
-import { useMemo, useSyncExternalStore } from 'react';
-import { commandsCtx } from '@milkdown/core';
+import { useMemo, useSyncExternalStore } from "react";
+import { commandsCtx } from "@milkdown/core";
 import {
   isMarkSelectedCommand,
   isNodeSelectedCommand,
@@ -10,12 +10,12 @@ import {
   bulletListSchema,
   orderedListSchema,
   codeBlockSchema,
-} from '@milkdown/kit/preset/commonmark';
-import { strikethroughSchema } from '@milkdown/kit/preset/gfm';
-import type { Ctx } from '@milkdown/kit/ctx';
-import { useEditorHandle, type EditorHandle } from '@/components/editor/EditorHandle';
-import { subscribeSelection } from '@/components/editor/utils/selectionVersionPlugin';
-import { isUnderlineActive } from '@/components/editor/plugins/underline';
+} from "@milkdown/kit/preset/commonmark";
+import { strikethroughSchema } from "@milkdown/kit/preset/gfm";
+import type { Ctx } from "@milkdown/kit/ctx";
+import { useEditorHandle, type EditorHandle } from "@/components/editor/EditorHandle";
+import { subscribeSelection } from "@/components/editor/utils/selectionVersionPlugin";
+import { isUnderlineActive } from "@/components/editor/plugins/underline";
 
 export interface ActiveMarks {
   bold: boolean;
@@ -43,7 +43,7 @@ const INACTIVE: ActiveMarks = {
   headingLevel: null,
 };
 
-function readActive(ctx: Ctx): Omit<ActiveMarks, 'headingLevel'> {
+function readActive(ctx: Ctx): Omit<ActiveMarks, "headingLevel"> {
   const commands = ctx.get(commandsCtx);
   return {
     bold: commands.call(isMarkSelectedCommand.key, strongSchema.type(ctx)),
@@ -62,7 +62,7 @@ function readHeadingLevel(handle: EditorHandle): number | null {
   const { $from } = handle.view.state.selection;
   for (let d = $from.depth; d > 0; d--) {
     const node = $from.node(d);
-    if (node.type.name === 'heading') {
+    if (node.type.name === "heading") {
       const level = Number(node.attrs.level);
       return Number.isFinite(level) ? level : null;
     }

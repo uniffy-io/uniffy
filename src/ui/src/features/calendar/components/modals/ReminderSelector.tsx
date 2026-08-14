@@ -1,10 +1,10 @@
-import { cn } from '@/shared/utils/cn';
+import { cn } from "@/shared/utils/cn";
 
 const REMINDER_OPTIONS = [
-  { value: 15, label: '15 min before' },
-  { value: 30, label: '30 min before' },
-  { value: 60, label: '1 hour before' },
-  { value: 1440, label: '1 day before' },
+  { value: 15, label: "15 min before" },
+  { value: 30, label: "30 min before" },
+  { value: 60, label: "1 hour before" },
+  { value: 1440, label: "1 day before" },
 ] as const;
 
 interface ReminderSelectorProps {
@@ -24,7 +24,7 @@ export function ReminderSelector({ value, onChange, compact = false }: ReminderS
   };
 
   return (
-    <div className={cn('flex flex-wrap', compact ? 'gap-1.5' : 'gap-2')}>
+    <div className={cn("flex flex-wrap", compact ? "gap-1.5" : "gap-2")}>
       {REMINDER_OPTIONS.map((option) => {
         const isSelected = value.includes(option.value);
         return (
@@ -33,11 +33,11 @@ export function ReminderSelector({ value, onChange, compact = false }: ReminderS
             type="button"
             onClick={() => handleToggle(option.value)}
             className={cn(
-              'rounded-lg border transition-all',
-              compact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm',
+              "rounded-lg border transition-all",
+              compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm",
               isSelected
-                ? 'border-primary bg-primary/10 text-foreground'
-                : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             {option.label}

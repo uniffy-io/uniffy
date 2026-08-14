@@ -1,6 +1,6 @@
-import { createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { PlainDraft } from '@/features/chat/api/chatConverters';
-import type { RootState } from '@/app/store';
+import { createSelector, createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { PlainDraft } from "@/features/chat/api/chatConverters";
+import type { RootState } from "@/app/store";
 
 export interface ChatDraftEntry {
   content: string;
@@ -20,7 +20,7 @@ export function draftKey(channelId: string, rootMessageId?: string): string {
 }
 
 export const chatDraftsSlice = createSlice({
-  name: 'chatDrafts',
+  name: "chatDrafts",
   initialState,
   reducers: {
     setDrafts: (state, action: PayloadAction<PlainDraft[]>) => {
@@ -46,8 +46,7 @@ export const chatDraftsSlice = createSlice({
   },
 });
 
-export const { setDrafts, draftUpserted, draftRemoved, clearChatDrafts } =
-  chatDraftsSlice.actions;
+export const { setDrafts, draftUpserted, draftRemoved, clearChatDrafts } = chatDraftsSlice.actions;
 
 export const selectDraft = (state: RootState, key: string): ChatDraftEntry | undefined =>
   state.chatDrafts.byKey[key];
@@ -58,7 +57,7 @@ export const selectChannelsWithDrafts = createSelector(
   (byKey): Set<string> => {
     const channels = new Set<string>();
     for (const key of Object.keys(byKey)) {
-      const separator = key.indexOf(':');
+      const separator = key.indexOf(":");
       channels.add(separator === -1 ? key : key.slice(0, separator));
     }
     return channels;

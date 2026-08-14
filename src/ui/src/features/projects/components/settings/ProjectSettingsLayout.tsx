@@ -24,7 +24,15 @@ import { DangerZoneSection } from "@/features/projects/components/settings/Dange
 import { AuditLogSection } from "@/features/projects/components/settings/AuditLogSection";
 import type { Project } from "@/features/projects/types";
 
-type SettingsSection = "general" | "members" | "statuses" | "fields" | "types" | "sprints" | "audit" | "danger";
+type SettingsSection =
+  | "general"
+  | "members"
+  | "statuses"
+  | "fields"
+  | "types"
+  | "sprints"
+  | "audit"
+  | "danger";
 
 interface SectionDef {
   id: SettingsSection;
@@ -124,7 +132,7 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
                     ? "bg-primary text-primary-foreground"
                     : danger
                       ? "text-red-500 hover:bg-red-500/10"
-                      : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                      : "text-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
                 onClick={() => handleSectionChange(id)}
               >
@@ -137,9 +145,7 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 pb-8">
-        {renderContent()}
-      </main>
+      <main className="flex-1 min-w-0 pb-8">{renderContent()}</main>
     </div>
   );
 }

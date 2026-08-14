@@ -1,13 +1,7 @@
-import { createSlice } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
-import type { RootState } from '@/app/store';
-import type {
-  Room,
-  RoomType,
-  RoomStatus,
-  RoomBooking,
-  TimeSlot,
-} from '@/features/rooms/types';
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
+import type { RootState } from "@/app/store";
+import type { Room, RoomType, RoomStatus, RoomBooking, TimeSlot } from "@/features/rooms/types";
 import {
   fetchRooms,
   fetchRoom,
@@ -22,7 +16,7 @@ import {
   findAvailableRooms,
   fetchAvailableRoomIds,
   openRoomViewer,
-} from '@/features/rooms/store/roomsThunks';
+} from "@/features/rooms/store/roomsThunks";
 
 /** Read-only room view opened from a mention chip, a search hit or /rooms/:roomId. */
 interface RoomViewerState {
@@ -97,9 +91,9 @@ const initialState: RoomsState = {
     status: null,
     minCapacity: null,
     amenities: [],
-    building: '',
-    floor: '',
-    searchQuery: '',
+    building: "",
+    floor: "",
+    searchQuery: "",
   },
   loading: {
     rooms: false,
@@ -127,14 +121,14 @@ const initialState: RoomsState = {
 };
 
 const roomsSlice = createSlice({
-  name: 'rooms',
+  name: "rooms",
   initialState,
   reducers: {
     selectRoom: (state, action: PayloadAction<string | null>) => {
       state.selectedRoomId = action.payload;
     },
 
-    setFilters: (state, action: PayloadAction<Partial<RoomsState['filters']>>) => {
+    setFilters: (state, action: PayloadAction<Partial<RoomsState["filters"]>>) => {
       state.filters = { ...state.filters, ...action.payload };
     },
 
@@ -171,7 +165,7 @@ const roomsSlice = createSlice({
       })
       .addCase(initializeRoomsData.rejected, (state, action) => {
         state.loading.rooms = false;
-        state.errors.rooms = action.payload || 'Failed to load rooms';
+        state.errors.rooms = action.payload || "Failed to load rooms";
       });
 
     builder
@@ -196,16 +190,15 @@ const roomsSlice = createSlice({
       })
       .addCase(fetchRooms.rejected, (state, action) => {
         state.loading.rooms = false;
-        state.errors.rooms = action.payload || 'Failed to fetch rooms';
+        state.errors.rooms = action.payload || "Failed to fetch rooms";
       });
 
-    builder
-      .addCase(fetchRoom.fulfilled, (state, action) => {
-        state.rooms[action.payload.id] = action.payload;
-        if (!state.roomIds.includes(action.payload.id)) {
-          state.roomIds.push(action.payload.id);
-        }
-      });
+    builder.addCase(fetchRoom.fulfilled, (state, action) => {
+      state.rooms[action.payload.id] = action.payload;
+      if (!state.roomIds.includes(action.payload.id)) {
+        state.roomIds.push(action.payload.id);
+      }
+    });
 
     builder
       .addCase(createRoomThunk.pending, (state) => {
@@ -221,7 +214,7 @@ const roomsSlice = createSlice({
       })
       .addCase(createRoomThunk.rejected, (state, action) => {
         state.loading.creating = false;
-        state.errors.creating = action.payload || 'Failed to create room';
+        state.errors.creating = action.payload || "Failed to create room";
       });
 
     builder
@@ -237,7 +230,7 @@ const roomsSlice = createSlice({
       })
       .addCase(updateRoomThunk.rejected, (state, action) => {
         state.loading.updating = false;
-        state.errors.updating = action.payload || 'Failed to update room';
+        state.errors.updating = action.payload || "Failed to update room";
       });
 
     builder
@@ -248,16 +241,14 @@ const roomsSlice = createSlice({
       .addCase(deleteRoomThunk.fulfilled, (state, action) => {
         state.loading.deleting = false;
         delete state.rooms[action.payload.roomId];
-        state.roomIds = state.roomIds.filter(
-          (id) => id !== action.payload.roomId
-        );
+        state.roomIds = state.roomIds.filter((id) => id !== action.payload.roomId);
         if (state.selectedRoomId === action.payload.roomId) {
           state.selectedRoomId = null;
         }
       })
       .addCase(deleteRoomThunk.rejected, (state, action) => {
         state.loading.deleting = false;
-        state.errors.deleting = action.payload || 'Failed to delete room';
+        state.errors.deleting = action.payload || "Failed to delete room";
       });
 
     builder
@@ -274,15 +265,14 @@ const roomsSlice = createSlice({
       })
       .addCase(createBookingThunk.rejected, (state, action) => {
         state.loading.creating = false;
-        state.errors.creating = action.payload || 'Failed to create booking';
+        state.errors.creating = action.payload || "Failed to create booking";
       });
 
-    builder
-      .addCase(cancelBookingThunk.fulfilled, (state, action) => {
-        if (state.bookings[action.payload.id]) {
-          state.bookings[action.payload.id] = action.payload;
-        }
-      });
+    builder.addCase(cancelBookingThunk.fulfilled, (state, action) => {
+      if (state.bookings[action.payload.id]) {
+        state.bookings[action.payload.id] = action.payload;
+      }
+    });
 
     builder
       .addCase(fetchBookings.pending, (state) => {
@@ -300,7 +290,7 @@ const roomsSlice = createSlice({
       })
       .addCase(fetchBookings.rejected, (state, action) => {
         state.loading.bookings = false;
-        state.errors.bookings = action.payload || 'Failed to fetch bookings';
+        state.errors.bookings = action.payload || "Failed to fetch bookings";
       });
 
     builder
@@ -314,7 +304,7 @@ const roomsSlice = createSlice({
       })
       .addCase(checkAvailability.rejected, (state, action) => {
         state.loading.availability = false;
-        state.errors.availability = action.payload || 'Failed to check availability';
+        state.errors.availability = action.payload || "Failed to check availability";
       });
 
     builder
@@ -333,7 +323,7 @@ const roomsSlice = createSlice({
       })
       .addCase(findAvailableRooms.rejected, (state, action) => {
         state.loading.rooms = false;
-        state.errors.rooms = action.payload || 'Failed to find available rooms';
+        state.errors.rooms = action.payload || "Failed to find available rooms";
       });
 
     builder
@@ -356,7 +346,7 @@ const roomsSlice = createSlice({
       .addCase(openRoomViewer.rejected, (state, action) => {
         if (state.viewer.roomId !== action.meta.arg.roomId) return;
         state.viewer.loading = false;
-        state.viewer.error = action.payload || 'Failed to load room';
+        state.viewer.error = action.payload || "Failed to load room";
       });
 
     builder
@@ -374,7 +364,6 @@ const roomsSlice = createSlice({
   },
 });
 
-
 export const roomsActions = roomsSlice.actions;
 
 export const {
@@ -386,23 +375,19 @@ export const {
   clearRooms,
 } = roomsSlice.actions;
 
-
 export const selectAllRooms = (state: RootState): Room[] =>
   state.rooms.roomIds.map((id) => state.rooms.rooms[id]).filter(Boolean);
 
 export const selectRoomById = (state: RootState, roomId: string): Room | undefined =>
   state.rooms.rooms[roomId];
 
-export const selectSelectedRoomId = (state: RootState): string | null =>
-  state.rooms.selectedRoomId;
+export const selectSelectedRoomId = (state: RootState): string | null => state.rooms.selectedRoomId;
 
-export const selectRoomFilters = (state: RootState): RoomsState['filters'] =>
-  state.rooms.filters;
+export const selectRoomFilters = (state: RootState): RoomsState["filters"] => state.rooms.filters;
 
-export const selectRoomsLoading = (state: RootState): RoomsState['loading'] =>
-  state.rooms.loading;
+export const selectRoomsLoading = (state: RootState): RoomsState["loading"] => state.rooms.loading;
 
-export const selectRoomsPagination = (state: RootState): RoomsState['pagination'] =>
+export const selectRoomsPagination = (state: RootState): RoomsState["pagination"] =>
   state.rooms.pagination;
 
 export const selectRoomBookings = (state: RootState): RoomBooking[] =>
@@ -414,7 +399,6 @@ export const selectRoomAvailability = (state: RootState, roomId: string): TimeSl
 export const selectAvailableRoomIds = (state: RootState): string[] | null =>
   state.rooms.availableRoomIds;
 
-export const selectRoomViewer = (state: RootState): RoomViewerState =>
-  state.rooms.viewer;
+export const selectRoomViewer = (state: RootState): RoomViewerState => state.rooms.viewer;
 
 export const roomsReducer = roomsSlice.reducer;

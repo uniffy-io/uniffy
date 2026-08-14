@@ -1,17 +1,20 @@
-import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { updateEventThunk, openEventModal } from '@/features/calendar/store';
-import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
-import { TimeColumn, TIME_COLUMN_TOP_PADDING } from '@/features/calendar/components/calendar/TimeColumn';
-import { DayHeadersRow } from '@/features/calendar/components/calendar/DayHeader';
-import { GridLines } from '@/features/calendar/components/calendar/GridLines';
-import { CurrentTimeIndicator } from '@/features/calendar/components/calendar/CurrentTimeIndicator';
-import { EventBlock } from '@/features/calendar/components/calendar/EventBlock';
-import { GRID, LAYOUT, ACCENT_EVENT_COLOR, eventTint } from '@/features/calendar/constants';
-import { positionAllDayEvents } from '@/features/calendar/utils/eventPositioning';
-import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
-import { cn } from '@/shared/utils/cn';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { updateEventThunk, openEventModal } from "@/features/calendar/store";
+import { useCalendarNavigation, useCalendarEvents } from "@/features/calendar/hooks";
+import {
+  TimeColumn,
+  TIME_COLUMN_TOP_PADDING,
+} from "@/features/calendar/components/calendar/TimeColumn";
+import { DayHeadersRow } from "@/features/calendar/components/calendar/DayHeader";
+import { GridLines } from "@/features/calendar/components/calendar/GridLines";
+import { CurrentTimeIndicator } from "@/features/calendar/components/calendar/CurrentTimeIndicator";
+import { EventBlock } from "@/features/calendar/components/calendar/EventBlock";
+import { GRID, LAYOUT, ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
+import { positionAllDayEvents } from "@/features/calendar/utils/eventPositioning";
+import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
+import { cn } from "@/shared/utils/cn";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 
 export function WeekView() {
   const dispatch = useAppDispatch();
@@ -22,15 +25,23 @@ export function WeekView() {
   const { weekColumns, currentDate } = useCalendarNavigation();
   const { getPositionedEventsWeek, events } = useCalendarEvents();
 
-  const [selectedSlot, setSelectedSlot] = useState<{ date: string; hour: number; isHalf: boolean } | null>(null);
-  const [dropPreview, setDropPreview] = useState<{ date: string; hour: number; isHalf: boolean } | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<{
+    date: string;
+    hour: number;
+    isHalf: boolean;
+  } | null>(null);
+  const [dropPreview, setDropPreview] = useState<{
+    date: string;
+    hour: number;
+    isHalf: boolean;
+  } | null>(null);
   const lastClickTimeRef = useRef<number>(0);
 
   // Mobile shows a 3-day window centered on currentDate; desktop shows the full 7-day week.
   const displayColumns = useMemo(() => {
     if (!isMobile) return weekColumns;
 
-    const currentIndex = weekColumns.findIndex(col => col.dateString === currentDate);
+    const currentIndex = weekColumns.findIndex((col) => col.dateString === currentDate);
     if (currentIndex === -1) {
       return weekColumns.slice(0, 3);
     }
@@ -41,24 +52,20 @@ export function WeekView() {
 
   const columnCount = displayColumns.length;
 
-  const weekDates = useMemo(
-    () => weekColumns.map((col) => col.date),
-    [weekColumns]
-  );
+  const weekDates = useMemo(() => weekColumns.map((col) => col.date), [weekColumns]);
 
   const positionedEventsMap = useMemo(
     () => getPositionedEventsWeek(weekDates),
-    [getPositionedEventsWeek, weekDates]
+    [getPositionedEventsWeek, weekDates],
   );
 
   const { visibleEvents } = useCalendarEvents();
   const allDayPositions = useMemo(
     () => positionAllDayEvents(visibleEvents, weekDates),
-    [visibleEvents, weekDates]
+    [visibleEvents, weekDates],
   );
-  const allDayMaxRow = allDayPositions.length > 0
-    ? Math.max(...allDayPositions.map(p => p.row)) + 1
-    : 0;
+  const allDayMaxRow =
+    allDayPositions.length > 0 ? Math.max(...allDayPositions.map((p) => p.row)) + 1 : 0;
   const allDayRowHeight = 26;
   const allDaySectionHeight = allDayMaxRow > 0 ? allDayMaxRow * allDayRowHeight + 6 : 0;
   const categories = useAppSelector((state) => state.calendar.categories);
@@ -82,111 +89,122 @@ export function WeekView() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && selectedSlot) {
+      if (e.key === "Escape" && selectedSlot) {
         setSelectedSlot(null);
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [selectedSlot]);
 
-  const getSlotFromCoordinates = useCallback((clientX: number, clientY: number) => {
-    if (!gridRef.current || !scrollRef.current) return null;
+  const getSlotFromCoordinates = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!gridRef.current || !scrollRef.current) return null;
 
-    const gridRect = gridRef.current.getBoundingClientRect();
-    const clickX = clientX - gridRect.left;
-    const columnWidth = gridRect.width / columnCount;
-    const columnIndex = Math.floor(clickX / columnWidth);
+      const gridRect = gridRef.current.getBoundingClientRect();
+      const clickX = clientX - gridRect.left;
+      const columnWidth = gridRect.width / columnCount;
+      const columnIndex = Math.floor(clickX / columnWidth);
 
-    if (columnIndex < 0 || columnIndex >= columnCount) return null;
+      if (columnIndex < 0 || columnIndex >= columnCount) return null;
 
-    const scrollRect = scrollRef.current.getBoundingClientRect();
-    const clickY = clientY - scrollRect.top + scrollRef.current.scrollTop - TIME_COLUMN_TOP_PADDING;
+      const scrollRect = scrollRef.current.getBoundingClientRect();
+      const clickY =
+        clientY - scrollRect.top + scrollRef.current.scrollTop - TIME_COLUMN_TOP_PADDING;
 
-    if (clickY < 0) return null;
+      if (clickY < 0) return null;
 
-    const halfHourOffset = Math.floor(clickY / GRID.HALF_HOUR_HEIGHT);
-    const hour = GRID.START_HOUR + Math.floor(halfHourOffset / 2);
-    const isHalf = halfHourOffset % 2 === 1;
+      const halfHourOffset = Math.floor(clickY / GRID.HALF_HOUR_HEIGHT);
+      const hour = GRID.START_HOUR + Math.floor(halfHourOffset / 2);
+      const isHalf = halfHourOffset % 2 === 1;
 
-    if (hour < GRID.START_HOUR || hour >= GRID.END_HOUR) return null;
+      if (hour < GRID.START_HOUR || hour >= GRID.END_HOUR) return null;
 
-    return {
-      date: displayColumns[columnIndex].dateString,
-      dateObj: displayColumns[columnIndex].date,
-      hour,
-      isHalf,
-      columnIndex
-    };
-  }, [displayColumns, columnCount]);
+      return {
+        date: displayColumns[columnIndex].dateString,
+        dateObj: displayColumns[columnIndex].date,
+        hour,
+        isHalf,
+        columnIndex,
+      };
+    },
+    [displayColumns, columnCount],
+  );
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
 
-    if (!draggedEventId) return;
+      if (!draggedEventId) return;
 
-    const slot = getSlotFromCoordinates(e.clientX, e.clientY);
-    if (slot) {
-      setDropPreview({
-        date: slot.date,
-        hour: slot.hour,
-        isHalf: slot.isHalf
-      });
-    } else {
-      setDropPreview(null);
-    }
-  }, [draggedEventId, getSlotFromCoordinates]);
-
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    setDropPreview(null);
-
-    if (!draggedEventId) return;
-
-    const slot = getSlotFromCoordinates(e.clientX, e.clientY);
-    if (!slot) return;
-
-    const newStartDate = new Date(slot.dateObj);
-    newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
-
-    let eventToUpdate = null;
-    for (const evts of positionedEventsMap.values()) {
-      const found = evts.find(e => e.id === draggedEventId);
-      if (found) {
-        eventToUpdate = found;
-        break;
+      const slot = getSlotFromCoordinates(e.clientX, e.clientY);
+      if (slot) {
+        setDropPreview({
+          date: slot.date,
+          hour: slot.hour,
+          isHalf: slot.isHalf,
+        });
+      } else {
+        setDropPreview(null);
       }
-    }
+    },
+    [draggedEventId, getSlotFromCoordinates],
+  );
 
-    if (!eventToUpdate) return;
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      setDropPreview(null);
 
-    const start = new Date(eventToUpdate.startTime);
-    const end = new Date(eventToUpdate.endTime);
-    const durationMs = end.getTime() - start.getTime();
+      if (!draggedEventId) return;
 
-    const newStartTime = newStartDate.toISOString();
-    const newEndTime = new Date(newStartDate.getTime() + durationMs).toISOString();
+      const slot = getSlotFromCoordinates(e.clientX, e.clientY);
+      if (!slot) return;
 
-    try {
-      await dispatch(updateEventThunk({
-        eventId: draggedEventId,
-        startTime: newStartTime,
-        endTime: newEndTime,
-      })).unwrap();
-    } catch {
-    }
-  }, [draggedEventId, getSlotFromCoordinates, positionedEventsMap, dispatch]);
+      const newStartDate = new Date(slot.dateObj);
+      newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
+
+      let eventToUpdate = null;
+      for (const evts of positionedEventsMap.values()) {
+        const found = evts.find((e) => e.id === draggedEventId);
+        if (found) {
+          eventToUpdate = found;
+          break;
+        }
+      }
+
+      if (!eventToUpdate) return;
+
+      const start = new Date(eventToUpdate.startTime);
+      const end = new Date(eventToUpdate.endTime);
+      const durationMs = end.getTime() - start.getTime();
+
+      const newStartTime = newStartDate.toISOString();
+      const newEndTime = new Date(newStartDate.getTime() + durationMs).toISOString();
+
+      try {
+        await dispatch(
+          updateEventThunk({
+            eventId: draggedEventId,
+            startTime: newStartTime,
+            endTime: newEndTime,
+          }),
+        ).unwrap();
+      } catch {}
+    },
+    [draggedEventId, getSlotFromCoordinates, positionedEventsMap, dispatch],
+  );
 
   const handleGridClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
 
     // Ignore clicks on events or other interactive elements - empty grid only.
     if (
-      target.closest('[data-event-block]') ||
-      target.closest('[data-event]') ||
-      target.closest('button') ||
-      target.closest('a')
+      target.closest("[data-event-block]") ||
+      target.closest("[data-event]") ||
+      target.closest("button") ||
+      target.closest("a")
     ) {
       return;
     }
@@ -196,10 +214,11 @@ export function WeekView() {
 
     const { date, hour, isHalf, dateObj } = slot;
     const currentTime = Date.now();
-    const isDoubleClick = currentTime - lastClickTimeRef.current < 300 &&
-                          selectedSlot?.date === date &&
-                          selectedSlot?.hour === hour &&
-                          selectedSlot?.isHalf === isHalf;
+    const isDoubleClick =
+      currentTime - lastClickTimeRef.current < 300 &&
+      selectedSlot?.date === date &&
+      selectedSlot?.hour === hour &&
+      selectedSlot?.isHalf === isHalf;
 
     if (isDoubleClick) {
       const clickedHour = hour + (isHalf ? 0.5 : 0);
@@ -212,13 +231,16 @@ export function WeekView() {
       const endDt = new Date(dateObj);
       endDt.setHours(Math.floor(endHourVal), endMinutes, 0, 0);
 
-      dispatch(openEventModal({
-        mode: 'create',
-        prefill: {
-          date: date,
-          startTime: startDt.toISOString(),
-          endTime: endDt.toISOString(),
-        },      }));
+      dispatch(
+        openEventModal({
+          mode: "create",
+          prefill: {
+            date: date,
+            startTime: startDt.toISOString(),
+            endTime: endDt.toISOString(),
+          },
+        }),
+      );
       setSelectedSlot(null);
     } else {
       setSelectedSlot({ date, hour, isHalf });
@@ -256,7 +278,10 @@ export function WeekView() {
                 .map(({ event, startColumn, spanColumns, row }) => {
                   const displayStart = weekColumns.indexOf(displayColumns[0]);
                   const adjustedStart = Math.max(0, startColumn - displayStart);
-                  const adjustedEnd = Math.min(columnCount, startColumn + spanColumns - displayStart);
+                  const adjustedEnd = Math.min(
+                    columnCount,
+                    startColumn + spanColumns - displayStart,
+                  );
                   const adjustedSpan = adjustedEnd - adjustedStart;
                   if (adjustedSpan <= 0) return null;
 
@@ -269,9 +294,9 @@ export function WeekView() {
                       key={event.id}
                       onClick={() => dispatch(selectEvent(event.id))}
                       className={cn(
-                        'absolute text-left text-xs truncate px-2 py-0.5 rounded transition-colors',
-                        'hover:brightness-90',
-                        isSelected && 'ring-2 ring-primary'
+                        "absolute text-left text-xs truncate px-2 py-0.5 rounded transition-colors",
+                        "hover:brightness-90",
+                        isSelected && "ring-2 ring-primary",
                       )}
                       style={{
                         left: `${(adjustedStart / columnCount) * 100}%`,
@@ -304,19 +329,24 @@ export function WeekView() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
-              <GridLines columnCount={columnCount} hourCount={hourCount} topOffset={TIME_COLUMN_TOP_PADDING} />
+              <GridLines
+                columnCount={columnCount}
+                hourCount={hourCount}
+                topOffset={TIME_COLUMN_TOP_PADDING}
+              />
 
               {dropPreview && (
                 <div
                   className="absolute bg-primary/30 border border-primary pointer-events-none z-30 transition-all duration-75 rounded"
                   style={{
-                    left: `${((displayColumns.findIndex(col => col.dateString === dropPreview.date)) / columnCount) * 100}%`,
+                    left: `${(displayColumns.findIndex((col) => col.dateString === dropPreview.date) / columnCount) * 100}%`,
                     width: `${95 / columnCount}%`,
-                    marginLeft: '2px',
+                    marginLeft: "2px",
                     top: `${TIME_COLUMN_TOP_PADDING + (dropPreview.hour - GRID.START_HOUR) * GRID.HOUR_HEIGHT + (dropPreview.isHalf ? GRID.HALF_HOUR_HEIGHT : 0)}px`,
-                    height: draggedEventId && events[draggedEventId]
-                      ? `${((new Date(events[draggedEventId].endTime).getTime() - new Date(events[draggedEventId].startTime).getTime()) / (1000 * 60 * 60)) * GRID.HOUR_HEIGHT}px`
-                      : `${GRID.HALF_HOUR_HEIGHT * 2}px`,
+                    height:
+                      draggedEventId && events[draggedEventId]
+                        ? `${((new Date(events[draggedEventId].endTime).getTime() - new Date(events[draggedEventId].startTime).getTime()) / (1000 * 60 * 60)) * GRID.HOUR_HEIGHT}px`
+                        : `${GRID.HALF_HOUR_HEIGHT * 2}px`,
                   }}
                 />
               )}
@@ -325,7 +355,7 @@ export function WeekView() {
                 <div
                   className="absolute bg-primary/20 border-2 border-primary pointer-events-none"
                   style={{
-                    left: `${((displayColumns.findIndex(col => col.dateString === selectedSlot.date)) / columnCount) * 100}%`,
+                    left: `${(displayColumns.findIndex((col) => col.dateString === selectedSlot.date) / columnCount) * 100}%`,
                     width: `${100 / columnCount}%`,
                     top: `${TIME_COLUMN_TOP_PADDING + (selectedSlot.hour - GRID.START_HOUR) * GRID.HOUR_HEIGHT + (selectedSlot.isHalf ? GRID.HALF_HOUR_HEIGHT : 0)}px`,
                     height: `${GRID.HALF_HOUR_HEIGHT}px`,
@@ -333,20 +363,21 @@ export function WeekView() {
                 />
               )}
 
-              {displayColumns.map((day, index) => (
-                day.isToday && (
-                  <div
-                    key={`today-${day.dateString}`}
-                    className="absolute bg-primary/5 pointer-events-none"
-                    style={{
-                      left: `${(index / columnCount) * 100}%`,
-                      width: `${100 / columnCount}%`,
-                      top: TIME_COLUMN_TOP_PADDING,
-                      bottom: 0,
-                    }}
-                  />
-                )
-              ))}
+              {displayColumns.map(
+                (day, index) =>
+                  day.isToday && (
+                    <div
+                      key={`today-${day.dateString}`}
+                      className="absolute bg-primary/5 pointer-events-none"
+                      style={{
+                        left: `${(index / columnCount) * 100}%`,
+                        width: `${100 / columnCount}%`,
+                        top: TIME_COLUMN_TOP_PADDING,
+                        bottom: 0,
+                      }}
+                    />
+                  ),
+              )}
 
               {displayColumns.map((day, columnIndex) => {
                 const dayEvents = positionedEventsMap.get(day.dateString) || [];
@@ -365,11 +396,7 @@ export function WeekView() {
                     }}
                   >
                     {dayEvents.map((event) => (
-                      <div
-                        key={event.id}
-                        data-event-block
-                        className="pointer-events-auto"
-                      >
+                      <div key={event.id} data-event-block className="pointer-events-auto">
                         <EventBlock event={event} columnWidth={100} />
                       </div>
                     ))}
@@ -377,15 +404,11 @@ export function WeekView() {
                 );
               })}
 
-              <CurrentTimeIndicator
-                days={displayColumns}
-                topOffset={TIME_COLUMN_TOP_PADDING}
-              />
+              <CurrentTimeIndicator days={displayColumns} topOffset={TIME_COLUMN_TOP_PADDING} />
             </div>
           </div>
         </div>
       </div>
-
     </>
   );
 }

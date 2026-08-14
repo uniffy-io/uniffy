@@ -14,15 +14,15 @@ const displayNames = new Map<string, string>();
  * reverse mapping is lossless.
  */
 export function internalToolName(toolName: string): string {
-    return toolName.replace(/-/g, '.');
+  return toolName.replace(/-/g, ".");
 }
 
 export function rememberToolLabels(tools: { name: string; displayName: string }[]): void {
-    for (const tool of tools) {
-        if (tool.displayName) {
-            displayNames.set(tool.name, tool.displayName);
-        }
+  for (const tool of tools) {
+    if (tool.displayName) {
+      displayNames.set(tool.name, tool.displayName);
     }
+  }
 }
 
 /**
@@ -31,19 +31,19 @@ export function rememberToolLabels(tools: { name: string; displayName: string }[
  * values - so the row shows the lead and hover reveals the rest.
  */
 export function toolSummary(description: string): string {
-    const end = description.search(/\.\s/);
-    return end === -1 ? description : description.slice(0, end + 1);
+  const end = description.search(/\.\s/);
+  return end === -1 ? description : description.slice(0, end + 1);
 }
 
 export function toolActionLabel(toolName: string): string {
-    const internal = internalToolName(toolName);
-    const known = displayNames.get(internal);
-    if (known) return known;
+  const internal = internalToolName(toolName);
+  const known = displayNames.get(internal);
+  if (known) return known;
 
-    const parts = internal.split('.');
-    const action = parts[parts.length - 1] ?? '';
-    return action
-        .split('_')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ');
+  const parts = internal.split(".");
+  const action = parts[parts.length - 1] ?? "";
+  return action
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }

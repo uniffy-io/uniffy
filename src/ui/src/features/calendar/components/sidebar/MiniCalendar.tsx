@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
-import { CaretLeft, CaretRight } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setCurrentDate } from '@/features/calendar/store';
+import { useState, useMemo, useEffect } from "react";
+import { CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { setCurrentDate } from "@/features/calendar/store";
 import {
   getMonthColumns,
   formatMonthYear,
@@ -9,10 +9,10 @@ import {
   parseISO,
   isDateToday,
   areSameDay,
-} from '@/features/calendar/utils';
-import { cn } from '@/shared/utils/cn';
+} from "@/features/calendar/utils";
+import { cn } from "@/shared/utils/cn";
 
-const DAY_HEADERS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const DAY_HEADERS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
 export function MiniCalendar() {
   const dispatch = useAppDispatch();
@@ -27,16 +27,12 @@ export function MiniCalendar() {
       newDate.getMonth() !== displayMonth.getMonth() ||
       newDate.getFullYear() !== displayMonth.getFullYear()
     ) {
-       
       setDisplayMonth(newDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate]);
 
-  const monthColumns = useMemo(
-    () => getMonthColumns(displayMonth),
-    [displayMonth]
-  );
+  const monthColumns = useMemo(() => getMonthColumns(displayMonth), [displayMonth]);
 
   const monthTitle = formatMonthYear(displayMonth);
 
@@ -53,7 +49,7 @@ export function MiniCalendar() {
   };
 
   const weeks = useMemo(() => {
-    const result: typeof monthColumns[] = [];
+    const result: (typeof monthColumns)[] = [];
     for (let i = 0; i < monthColumns.length; i += 7) {
       result.push(monthColumns.slice(i, i + 7));
     }
@@ -84,10 +80,7 @@ export function MiniCalendar() {
 
       <div className="grid grid-cols-7 gap-1 mb-1">
         {DAY_HEADERS.map((day) => (
-          <div
-            key={day}
-            className="text-center text-[10px] text-muted-foreground py-1"
-          >
+          <div key={day} className="text-center text-[10px] text-muted-foreground py-1">
             {day}
           </div>
         ))}
@@ -105,13 +98,20 @@ export function MiniCalendar() {
                   key={day.dateString}
                   onClick={() => handleDateClick(day.dateString)}
                   className={cn(
-                    'w-7 h-7 text-[11px] rounded-full flex items-center justify-center transition-colors',
-                    !day.isCurrentMonth && 'text-muted-foreground/50',
-                    day.isCurrentMonth && !isToday && !isSelected && 'text-muted-foreground hover:bg-muted-foreground/20',
-                    day.isWeekend && day.isCurrentMonth && !isToday && !isSelected && 'text-muted-foreground/60',
-                    isToday && !isSelected && 'bg-primary text-primary-foreground font-semibold',
-                    isSelected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
-                    isSelected && isToday && 'bg-primary text-primary-foreground font-semibold'
+                    "w-7 h-7 text-[11px] rounded-full flex items-center justify-center transition-colors",
+                    !day.isCurrentMonth && "text-muted-foreground/50",
+                    day.isCurrentMonth &&
+                      !isToday &&
+                      !isSelected &&
+                      "text-muted-foreground hover:bg-muted-foreground/20",
+                    day.isWeekend &&
+                      day.isCurrentMonth &&
+                      !isToday &&
+                      !isSelected &&
+                      "text-muted-foreground/60",
+                    isToday && !isSelected && "bg-primary text-primary-foreground font-semibold",
+                    isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
+                    isSelected && isToday && "bg-primary text-primary-foreground font-semibold",
                   )}
                 >
                   {day.dayNumber}

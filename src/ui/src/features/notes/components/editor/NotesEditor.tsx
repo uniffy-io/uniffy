@@ -1,25 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useAppSelector } from '@/app/hooks';
-import { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
-import { CrepeEditor } from '@/components/editor/CrepeEditor';
-import { MarkdownSplitEditor } from '@/features/notes/components/editor/MarkdownSplitEditor';
-import { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewer';
-import { CanvasEditor } from '@/features/notes/canvas/CanvasEditor';
-import { parseCanvasContent } from '@/features/notes/canvas/types';
-import { useMyContentRole } from '@/features/permissions';
-import { roleCanEdit, roleCanManage } from '@/shared/utils/contentRoles';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
-import { findHeadingBySlug } from '@/components/editor/utils/headingScroll';
-import { EditorHandleContext } from '@/components/editor/EditorHandle';
-import type { EditorHandle } from '@/components/editor/EditorHandle';
-import { NoteTitleBlock } from '@/features/notes/components/editor/NoteTitleBlock';
-import { FloatingFormattingToolbar } from '@/features/notes/components/editor/FloatingFormattingToolbar';
-import { useNoteRealtimeSession } from '@/features/notes/realtime/useNoteRealtimeSession';
-import { useCanvasRealtimeSession } from '@/features/notes/realtime/useCanvasRealtimeSession';
-import { ErrorBoundary } from '@/components/feedback';
-import { EditorErrorFallback } from '@/features/notes/components/editor/EditorErrorFallback';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { useAppSelector } from "@/app/hooks";
+import { EditorHeader } from "@/features/notes/components/editor/EditorHeader";
+import { CrepeEditor } from "@/components/editor/CrepeEditor";
+import { MarkdownSplitEditor } from "@/features/notes/components/editor/MarkdownSplitEditor";
+import { ReadOnlyViewer } from "@/features/notes/components/editor/ReadOnlyViewer";
+import { CanvasEditor } from "@/features/notes/canvas/CanvasEditor";
+import { parseCanvasContent } from "@/features/notes/canvas/types";
+import { useMyContentRole } from "@/features/permissions";
+import { roleCanEdit, roleCanManage } from "@/shared/utils/contentRoles";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
+import { findHeadingBySlug } from "@/components/editor/utils/headingScroll";
+import { EditorHandleContext } from "@/components/editor/EditorHandle";
+import type { EditorHandle } from "@/components/editor/EditorHandle";
+import { NoteTitleBlock } from "@/features/notes/components/editor/NoteTitleBlock";
+import { FloatingFormattingToolbar } from "@/features/notes/components/editor/FloatingFormattingToolbar";
+import { useNoteRealtimeSession } from "@/features/notes/realtime/useNoteRealtimeSession";
+import { useCanvasRealtimeSession } from "@/features/notes/realtime/useCanvasRealtimeSession";
+import { ErrorBoundary } from "@/components/feedback";
+import { EditorErrorFallback } from "@/features/notes/components/editor/EditorErrorFallback";
 
 export function NotesEditor() {
   const location = useLocation();
@@ -32,22 +32,18 @@ export function NotesEditor() {
   const notes = notesState?.notes || {};
   const loadingNoteId = notesState?.loadingNoteId;
   const settings = editorState?.settings;
-  const userSelectedMode = settings?.editorMode || 'crepe';
+  const userSelectedMode = settings?.editorMode || "crepe";
 
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
   const isLoadingCurrentNote = loadingNoteId === currentNoteId;
   const canvasTitleHidden = settings?.canvasTitleHidden ?? false;
 
   // Pass note's userRole so hook skips a fetch; UNSPECIFIED (0) falls through.
-  const role = useMyContentRole(
-    ContentType.NOTE,
-    currentNoteId ?? '',
-    currentNote?.userRole,
-  );
+  const role = useMyContentRole(ContentType.NOTE, currentNoteId ?? "", currentNote?.userRole);
 
   const canEdit = role === null ? true : roleCanEdit(role);
   const canShare = roleCanManage(role);
-  const editorMode = canEdit ? userSelectedMode : 'readonly';
+  const editorMode = canEdit ? userSelectedMode : "readonly";
 
   const isCanvas = currentNote?.nodeType === NodeType.CANVAS;
   // Viewers attach too so read-only shares render the live Y.Text; the
@@ -57,19 +53,18 @@ export function NotesEditor() {
     Boolean(currentNoteId) && !isCanvas,
     canEdit,
   );
-  const { binding: canvasRealtimeBinding, status: canvasRealtimeStatus } =
-    useCanvasRealtimeSession(
-      currentNoteId ?? null,
-      Boolean(currentNoteId) && canEdit && isCanvas,
-    );
+  const { binding: canvasRealtimeBinding, status: canvasRealtimeStatus } = useCanvasRealtimeSession(
+    currentNoteId ?? null,
+    Boolean(currentNoteId) && canEdit && isCanvas,
+  );
 
-  const noteContent = currentNote?.content ?? '';
+  const noteContent = currentNote?.content ?? "";
 
   // Poll until heading appears since editor renders async.
   const hashScrolledRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const hash = location.hash.replace(/^#/, '');
+    const hash = location.hash.replace(/^#/, "");
     if (!hash || !currentNote?.content) return;
 
     if (hashScrolledRef.current === `${currentNoteId}#${hash}`) return;
@@ -81,7 +76,7 @@ export function NotesEditor() {
     const tryScroll = () => {
       const heading = findHeadingBySlug(hash);
       if (heading) {
-        heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        heading.scrollIntoView({ behavior: "smooth", block: "start" });
         hashScrolledRef.current = `${currentNoteId}#${hash}`;
         return;
       }
@@ -110,7 +105,7 @@ export function NotesEditor() {
 
   const canvasState = useMemo(
     () => (isCanvas ? parseCanvasContent(noteContent) : null),
-    [isCanvas, noteContent]
+    [isCanvas, noteContent],
   );
 
   const shouldShowLoading = isLoadingCurrentNote && (!currentNote || !currentNote.content);
@@ -144,7 +139,10 @@ export function NotesEditor() {
   // Canvas surface has no scrolling document, so title sits above.
   if (isCanvas && canvasState) {
     return (
-      <div className="flex flex-col h-full bg-card" data-toolbar-pinned={toolbarPinned ? 'true' : 'false'}>
+      <div
+        className="flex flex-col h-full bg-card"
+        data-toolbar-pinned={toolbarPinned ? "true" : "false"}
+      >
         {!isZenMode && (
           <EditorHeader
             note={currentNote}
@@ -173,7 +171,7 @@ export function NotesEditor() {
 
   const renderEditor = () => {
     switch (editorMode) {
-      case 'crepe':
+      case "crepe":
         return (
           <CrepeEditor
             contentType={ContentType.NOTE}
@@ -186,7 +184,7 @@ export function NotesEditor() {
             realtime={realtimeBinding ?? undefined}
           />
         );
-      case 'markdown':
+      case "markdown":
         return (
           <MarkdownSplitEditor
             note={currentNote}
@@ -194,7 +192,7 @@ export function NotesEditor() {
             realtime={realtimeBinding ?? undefined}
           />
         );
-      case 'readonly':
+      case "readonly":
         return (
           <ReadOnlyViewer
             note={currentNote}
@@ -221,7 +219,10 @@ export function NotesEditor() {
 
   return (
     <EditorHandleContext.Provider value={editorHandle}>
-      <div className="flex flex-col h-full bg-card" data-toolbar-pinned={toolbarPinned ? 'true' : 'false'}>
+      <div
+        className="flex flex-col h-full bg-card"
+        data-toolbar-pinned={toolbarPinned ? "true" : "false"}
+      >
         {!isZenMode && (
           <EditorHeader
             note={currentNote}
@@ -237,9 +238,7 @@ export function NotesEditor() {
           </ErrorBoundary>
         </div>
         {/* Floating toolbar only when persistent bar unpinned and in crepe mode. */}
-        {canEdit && editorMode === 'crepe' && !toolbarPinned && (
-          <FloatingFormattingToolbar />
-        )}
+        {canEdit && editorMode === "crepe" && !toolbarPinned && <FloatingFormattingToolbar />}
       </div>
     </EditorHandleContext.Provider>
   );

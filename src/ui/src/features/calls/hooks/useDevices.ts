@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 /** Live device inventory; labels stay empty until a getUserMedia grant. */
 export function useDevices() {
@@ -19,15 +19,15 @@ export function useDevices() {
     const media = navigator.mediaDevices;
     if (!media?.addEventListener) return;
     const onChange = () => void refresh();
-    media.addEventListener('devicechange', onChange);
-    return () => media.removeEventListener('devicechange', onChange);
+    media.addEventListener("devicechange", onChange);
+    return () => media.removeEventListener("devicechange", onChange);
   }, [refresh]);
 
   return useMemo(
     () => ({
-      audioInputs: devices.filter((d) => d.kind === 'audioinput'),
-      videoInputs: devices.filter((d) => d.kind === 'videoinput'),
-      audioOutputs: devices.filter((d) => d.kind === 'audiooutput'),
+      audioInputs: devices.filter((d) => d.kind === "audioinput"),
+      videoInputs: devices.filter((d) => d.kind === "videoinput"),
+      audioOutputs: devices.filter((d) => d.kind === "audiooutput"),
       refresh,
     }),
     [devices, refresh],

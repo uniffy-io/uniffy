@@ -1,23 +1,23 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { X, FunnelSimple } from '@phosphor-icons/react';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { closeResourcePanel } from '@/features/chat/store/chatUiSlice';
-import { selectActiveChannel } from '@/features/chat/store/chatChannelsSlice';
-import { fetchChannelResources } from '@/features/chat/store/chatThunks';
-import { parseUrn, urnToPath, getUrnIcon, UrnType } from '@/shared/utils/urn';
-import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
-import { getUrnTypeHexColor } from '@/config/theme/urnColors';
-import { cn } from '@/shared/utils/cn';
-import type { ChatResource } from '@/features/chat/types';
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { X, FunnelSimple } from "@phosphor-icons/react";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { closeResourcePanel } from "@/features/chat/store/chatUiSlice";
+import { selectActiveChannel } from "@/features/chat/store/chatChannelsSlice";
+import { fetchChannelResources } from "@/features/chat/store/chatThunks";
+import { parseUrn, urnToPath, getUrnIcon, UrnType } from "@/shared/utils/urn";
+import { openRoomViewer } from "@/features/rooms/store/roomsThunks";
+import { getUrnTypeHexColor } from "@/config/theme/urnColors";
+import { cn } from "@/shared/utils/cn";
+import type { ChatResource } from "@/features/chat/types";
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
-  NOTE: 'Notes',
-  FILE: 'Files',
-  CALENDAR_EVENT: 'Events',
-  PROJECT: 'Projects',
-  TASK: 'Tasks',
-  USER: 'People',
+  NOTE: "Notes",
+  FILE: "Files",
+  CALENDAR_EVENT: "Events",
+  PROJECT: "Projects",
+  TASK: "Tasks",
+  USER: "People",
 };
 
 export function ResourcePanel() {
@@ -33,15 +33,25 @@ export function ResourcePanel() {
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state tied to async fetch lifecycle
     setIsLoading(true);
-    dispatch(fetchChannelResources({
-      channelId: activeChannel.id,
-      limit: 200,
-    }))
+    dispatch(
+      fetchChannelResources({
+        channelId: activeChannel.id,
+        limit: 200,
+      }),
+    )
       .unwrap()
-      .then((result) => { if (!cancelled) setAllResources(result.resources); })
-      .catch(() => { if (!cancelled) setAllResources([]); })
-      .finally(() => { if (!cancelled) setIsLoading(false); });
-    return () => { cancelled = true; };
+      .then((result) => {
+        if (!cancelled) setAllResources(result.resources);
+      })
+      .catch(() => {
+        if (!cancelled) setAllResources([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [activeChannel, dispatch]);
 
   const availableTypes = useMemo(
@@ -50,7 +60,7 @@ export function ResourcePanel() {
   );
 
   const resources = useMemo(
-    () => filter ? allResources.filter((r) => r.contentType === filter) : allResources,
+    () => (filter ? allResources.filter((r) => r.contentType === filter) : allResources),
     [allResources, filter],
   );
 
@@ -58,15 +68,18 @@ export function ResourcePanel() {
     dispatch(closeResourcePanel());
   }, [dispatch]);
 
-  const handleResourceClick = useCallback((urn: string) => {
-    const parsed = parseUrn(urn);
-    if (parsed.type === UrnType.ROOM && parsed.id) {
-      dispatch(openRoomViewer({ roomId: parsed.id }));
-      return;
-    }
-    const path = urnToPath(urn);
-    if (path) navigate(path);
-  }, [dispatch, navigate]);
+  const handleResourceClick = useCallback(
+    (urn: string) => {
+      const parsed = parseUrn(urn);
+      if (parsed.type === UrnType.ROOM && parsed.id) {
+        dispatch(openRoomViewer({ roomId: parsed.id }));
+        return;
+      }
+      const path = urnToPath(urn);
+      if (path) navigate(path);
+    },
+    [dispatch, navigate],
+  );
 
   const grouped = resources.reduce<Record<string, ChatResource[]>>((acc, r) => {
     const key = r.contentType;
@@ -95,10 +108,10 @@ export function ResourcePanel() {
           <button
             onClick={() => setFilter(null)}
             className={cn(
-              'px-2 py-0.5 text-xs rounded-full border transition-colors whitespace-nowrap',
+              "px-2 py-0.5 text-xs rounded-full border transition-colors whitespace-nowrap",
               filter === null
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'border-border text-muted-foreground hover:text-foreground',
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:text-foreground",
             )}
           >
             All
@@ -108,10 +121,10 @@ export function ResourcePanel() {
               key={type}
               onClick={() => setFilter(type)}
               className={cn(
-                'px-2 py-0.5 text-xs rounded-full border transition-colors whitespace-nowrap',
+                "px-2 py-0.5 text-xs rounded-full border transition-colors whitespace-nowrap",
                 filter === type
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground',
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
               {CONTENT_TYPE_LABELS[type] ?? type}
@@ -158,7 +171,8 @@ export function ResourcePanel() {
                         {resource.title || parsed.id.substring(0, 8)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Mentioned {resource.mentionCount} {resource.mentionCount === 1 ? 'time' : 'times'}
+                        Mentioned {resource.mentionCount}{" "}
+                        {resource.mentionCount === 1 ? "time" : "times"}
                       </p>
                     </div>
                   </button>

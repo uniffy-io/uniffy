@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { VideoCamera, ArrowSquareOut } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { prejoinOpened, selectActiveCallForChannel } from '@/features/calls/store/callsSlice';
-import { chatApi } from '@/features/chat/api/chatApi';
-import { navigateTo } from '@/shared/utils/navigation';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/shared/utils/cn';
-import type { RootState } from '@/app/store';
+import { useState, useEffect } from "react";
+import { VideoCamera, ArrowSquareOut } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { prejoinOpened, selectActiveCallForChannel } from "@/features/calls/store/callsSlice";
+import { chatApi } from "@/features/chat/api/chatApi";
+import { navigateTo } from "@/shared/utils/navigation";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/shared/utils/cn";
+import type { RootState } from "@/app/store";
 
 interface EventMeetingJoinProps {
   channelId: string;
@@ -48,7 +48,7 @@ export function EventMeetingJoin({ channelId }: EventMeetingJoinProps) {
 
   const isLive = !!activeCall;
   const participantCount = activeCall?.participants.length ?? 0;
-  const label = channelName ?? 'Online meeting';
+  const label = channelName ?? "Online meeting";
 
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2.5">
@@ -61,7 +61,7 @@ export function EventMeetingJoin({ channelId }: EventMeetingJoinProps) {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
             </span>
-            Live{participantCount > 0 ? ` · ${participantCount}` : ''}
+            Live{participantCount > 0 ? ` · ${participantCount}` : ""}
           </span>
         )}
       </div>
@@ -84,8 +84,8 @@ export function EventMeetingJoin({ channelId }: EventMeetingJoinProps) {
             type="button"
             onClick={() => navigateTo(`/chat/${channelId}`)}
             className={cn(
-              'inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground',
-              'hover:text-foreground transition-colors',
+              "inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground",
+              "hover:text-foreground transition-colors",
             )}
           >
             <ArrowSquareOut size={14} />

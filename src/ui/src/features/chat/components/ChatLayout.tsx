@@ -1,32 +1,27 @@
-import { type ReactNode, useState, useCallback } from 'react';
-import { Panel, Group, Separator } from 'react-resizable-panels';
-import {
-  ChatTeardrop,
-  Hash,
-  ChatsCircle,
-  Bell,
-} from '@phosphor-icons/react';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { Drawer } from '@/components/ui/drawer';
+import { type ReactNode, useState, useCallback } from "react";
+import { Panel, Group, Separator } from "react-resizable-panels";
+import { ChatTeardrop, Hash, ChatsCircle, Bell } from "@phosphor-icons/react";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { Drawer } from "@/components/ui/drawer";
 import {
   expandSidebar,
   setSidebarOpen,
   closeThreadPanel,
   closeResourcePanel,
-} from '@/features/chat/store/chatUiSlice';
+} from "@/features/chat/store/chatUiSlice";
 import {
   CollapsibleSidebarRail,
   type SidebarSection,
-} from '@/components/layout/CollapsibleSidebarRail';
+} from "@/components/layout/CollapsibleSidebarRail";
 
 const CHAT_SECTIONS: SidebarSection[] = [
-  { id: 'threads', icon: ChatsCircle, label: 'Threads' },
-  { id: 'channels', icon: Hash, label: 'Channels' },
-  { id: 'dms', icon: ChatTeardrop, label: 'Messages' },
-  { id: 'notifications', icon: Bell, label: 'Notifications' },
+  { id: "threads", icon: ChatsCircle, label: "Threads" },
+  { id: "channels", icon: Hash, label: "Channels" },
+  { id: "dms", icon: ChatTeardrop, label: "Messages" },
+  { id: "notifications", icon: Bell, label: "Notifications" },
 ];
 
 interface ChatLayoutProps {
@@ -36,12 +31,7 @@ interface ChatLayoutProps {
   rightPanel?: ReactNode;
 }
 
-export function ChatLayout({
-  sidebar,
-  channelView,
-  splitView,
-  rightPanel,
-}: ChatLayoutProps) {
+export function ChatLayout({ sidebar, channelView, splitView, rightPanel }: ChatLayoutProps) {
   const dispatch = useAppDispatch();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const sidebarOpen = useAppSelector((state) => state.chatUi.sidebarOpen);
@@ -51,10 +41,10 @@ export function ChatLayout({
   const splitChannelId = useAppSelector((state) => state.chatChannels.splitChannelId);
 
   const { isMobile, isMobileOrTablet } = useBreakpoint();
-  const [defaultLayout] = useState(() => loadPanelLayout('chat'));
+  const [defaultLayout] = useState(() => loadPanelLayout("chat"));
 
   const handleLayoutChange = useCallback((layout: Record<string, number>) => {
-    savePanelLayout('chat', layout);
+    savePanelLayout("chat", layout);
   }, []);
 
   const handleExpandSidebar = useCallback(() => {
@@ -84,15 +74,12 @@ export function ChatLayout({
     <div
       className={cn(
         "relative bg-background overflow-hidden transition-[height] duration-300 ease-in-out",
-        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
+        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0",
       )}
     >
       {showCollapsedRail && (
         <div className="absolute inset-y-0 left-0 z-30 w-12">
-          <CollapsibleSidebarRail
-            onExpand={handleExpandSidebar}
-            sections={CHAT_SECTIONS}
-          >
+          <CollapsibleSidebarRail onExpand={handleExpandSidebar} sections={CHAT_SECTIONS}>
             {sidebar}
           </CollapsibleSidebarRail>
         </div>
@@ -124,13 +111,9 @@ export function ChatLayout({
           <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
             {showSplit && splitView ? (
               <div className="flex h-full">
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  {channelView}
-                </div>
+                <div className="flex-1 min-w-0 overflow-hidden">{channelView}</div>
                 <div className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize" />
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  {splitView}
-                </div>
+                <div className="flex-1 min-w-0 overflow-hidden">{splitView}</div>
               </div>
             ) : (
               channelView

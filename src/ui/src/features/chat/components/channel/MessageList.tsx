@@ -1,15 +1,13 @@
 /** Virtualised message list; anchors via firstItemIndex shifts when older rows are prepended or oldest are evicted. */
 
-import { useRef, useEffect, useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Hash, Lock } from '@phosphor-icons/react';
-import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
-import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
-import { getInitials } from '@/components/subject/utils';
-import { cn } from '@/shared/utils/cn';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import {
-  selectActiveChannelId,
-} from '@/features/chat/store/chatChannelsSlice';
+import { useRef, useEffect, useCallback, useMemo, useState, type ReactNode } from "react";
+import { Hash, Lock } from "@phosphor-icons/react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
+import { useAvatarUrl } from "@/shared/hooks/useAvatarUrl";
+import { getInitials } from "@/components/subject/utils";
+import { cn } from "@/shared/utils/cn";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { selectActiveChannelId } from "@/features/chat/store/chatChannelsSlice";
 import {
   selectMessagesForChannel,
   selectUnreadSeparatorForChannel,
@@ -19,17 +17,14 @@ import {
   selectIsWindowedForChannel,
   evictOldestMessages,
   evictExpiredTyping,
-} from '@/features/chat/store/chatMessagesSlice';
-import { fetchMessages, stopAgentRun } from '@/features/chat/store/chatThunks';
-import {
-  selectJumpToMessageId,
-  clearJumpToMessage,
-} from '@/features/chat/store/chatUiSlice';
-import { MessageItem } from '@/features/chat/components/channel/MessageItem';
-import { TypingIndicator } from '@/features/chat/components/channel/TypingIndicator';
-import { NewMessagesPill } from '@/features/chat/components/channel/NewMessagesPill';
-import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
-import type { ChatMessage } from '@/features/chat/types';
+} from "@/features/chat/store/chatMessagesSlice";
+import { fetchMessages, stopAgentRun } from "@/features/chat/store/chatThunks";
+import { selectJumpToMessageId, clearJumpToMessage } from "@/features/chat/store/chatUiSlice";
+import { MessageItem } from "@/features/chat/components/channel/MessageItem";
+import { TypingIndicator } from "@/features/chat/components/channel/TypingIndicator";
+import { NewMessagesPill } from "@/features/chat/components/channel/NewMessagesPill";
+import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import type { ChatMessage } from "@/features/chat/types";
 
 const GROUPING_THRESHOLD_MS = 5 * 60 * 1000;
 const START_INDEX = 100_000_000;
@@ -45,13 +40,13 @@ function isSameDay(a: string, b: string): boolean {
 }
 
 function resolveMessageKind(message: ChatMessage): string {
-  if (message.isDeleted) return 'deleted';
-  if (message.senderType === 'SYSTEM') return 'system';
-  if (message.senderType === 'AGENT') {
-    if (message.metadata?.['kind'] === 'context_reset') return 'agent-context-reset';
-    return 'agent';
+  if (message.isDeleted) return "deleted";
+  if (message.senderType === "SYSTEM") return "system";
+  if (message.senderType === "AGENT") {
+    if (message.metadata?.["kind"] === "context_reset") return "agent-context-reset";
+    return "agent";
   }
-  return 'user';
+  return "user";
 }
 
 function formatDateLabel(dateStr: string): string {
@@ -60,14 +55,14 @@ function formatDateLabel(dateStr: string): string {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
 
-  if (isSameDay(dateStr, today.toISOString())) return 'Today';
-  if (isSameDay(dateStr, yesterday.toISOString())) return 'Yesterday';
+  if (isSameDay(dateStr, today.toISOString())) return "Today";
+  if (isSameDay(dateStr, yesterday.toISOString())) return "Yesterday";
 
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
   });
 }
 
@@ -81,7 +76,7 @@ interface GroupedMessage {
 }
 
 function isAgentToolCall(m: ChatMessage): boolean {
-  return m.senderType === 'AGENT' && m.metadata?.['kind'] === 'tool_call';
+  return m.senderType === "AGENT" && m.metadata?.["kind"] === "tool_call";
 }
 
 function groupMessages(messages: ChatMessage[]): GroupedMessage[] {
@@ -92,7 +87,7 @@ function groupMessages(messages: ChatMessage[]): GroupedMessage[] {
     const prev = i > 0 ? messages[i - 1] : null;
 
     const showDateSeparator = !prev || !isSameDay(prev.createdAt, msg.createdAt);
-    const dateLabel = showDateSeparator ? formatDateLabel(msg.createdAt) : '';
+    const dateLabel = showDateSeparator ? formatDateLabel(msg.createdAt) : "";
 
     let showAvatar = true;
     if (prev && !showDateSeparator) {
@@ -106,7 +101,11 @@ function groupMessages(messages: ChatMessage[]): GroupedMessage[] {
     if (isAgentToolCall(msg)) {
       const toolRun = [msg];
       let j = i + 1;
-      while (j < messages.length && isAgentToolCall(messages[j]) && messages[j].senderId === msg.senderId) {
+      while (
+        j < messages.length &&
+        isAgentToolCall(messages[j]) &&
+        messages[j].senderId === msg.senderId
+      ) {
         toolRun.push(messages[j]);
         j++;
       }
@@ -123,7 +122,11 @@ function groupMessages(messages: ChatMessage[]): GroupedMessage[] {
 
 function DateSeparator({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 py-2 px-4" data-testid="chat-date-separator" data-date-label={label}>
+    <div
+      className="flex items-center gap-3 py-2 px-4"
+      data-testid="chat-date-separator"
+      data-date-label={label}
+    >
       <div className="flex-1 h-px bg-border/30" />
       <span className="text-xs font-medium text-muted-foreground/60 select-none whitespace-nowrap">
         {label}
@@ -143,7 +146,12 @@ function UnreadSeparator() {
   );
 }
 
-function ChannelEmptyState({ eyebrow, heading, description, accent }: {
+function ChannelEmptyState({
+  eyebrow,
+  heading,
+  description,
+  accent,
+}: {
   eyebrow: string;
   heading: string;
   description: string;
@@ -154,25 +162,25 @@ function ChannelEmptyState({ eyebrow, heading, description, accent }: {
       <div className="flex flex-col items-center gap-4 text-center max-w-md px-4">
         <div
           className="hero-enter flex justify-center drop-shadow-[0_0_28px_rgba(105,74,255,0.35)]"
-          style={{ animationFillMode: 'backwards' }}
+          style={{ animationFillMode: "backwards" }}
         >
           {accent}
         </div>
         <p
           className="hero-enter font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80"
-          style={{ animationDelay: '80ms', animationFillMode: 'backwards' }}
+          style={{ animationDelay: "80ms", animationFillMode: "backwards" }}
         >
           {eyebrow}
         </p>
         <p
           className="hero-enter text-2xl md:text-3xl font-medium tracking-tight text-foreground [text-wrap:balance]"
-          style={{ animationDelay: '140ms', animationFillMode: 'backwards' }}
+          style={{ animationDelay: "140ms", animationFillMode: "backwards" }}
         >
           {heading}
         </p>
         <p
           className="hero-enter text-sm"
-          style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}
+          style={{ animationDelay: "200ms", animationFillMode: "backwards" }}
         >
           {description}
         </p>
@@ -182,7 +190,7 @@ function ChannelEmptyState({ eyebrow, heading, description, accent }: {
 }
 
 const HERO_AVATAR_BASE =
-  'w-16 h-16 rounded-full ring-4 ring-background object-cover bg-primary/15 text-primary flex items-center justify-center text-xl font-medium shrink-0';
+  "w-16 h-16 rounded-full ring-4 ring-background object-cover bg-primary/15 text-primary flex items-center justify-center text-xl font-medium shrink-0";
 
 function HeroAvatar({
   userId,
@@ -193,7 +201,7 @@ function HeroAvatar({
   displayName: string;
   className?: string;
 }) {
-  const avatarSrc = useAvatarUrl(userId, 'md');
+  const avatarSrc = useAvatarUrl(userId, "md");
   const [failed, setFailed] = useState(false);
   if (avatarSrc && !failed) {
     return (
@@ -226,11 +234,7 @@ function DmPairAccent({
   return (
     <div className="relative inline-flex items-center" aria-hidden="true">
       <HeroAvatar userId={selfId} displayName={selfName} className="opacity-90" />
-      <HeroAvatar
-        userId={peerId}
-        displayName={peerName}
-        className="-ml-5 scale-110 z-10"
-      />
+      <HeroAvatar userId={peerId} displayName={peerName} className="-ml-5 scale-110 z-10" />
     </div>
   );
 }
@@ -259,7 +263,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     effectiveChannelId ? selectTypingUsers(state, effectiveChannelId) : [],
   );
   const typingUsers = useMemo(
-    () => allTypingUsers.filter(u => u.userId !== currentUserId),
+    () => allTypingUsers.filter((u) => u.userId !== currentUserId),
     [allTypingUsers, currentUserId],
   );
   const hasMore = useAppSelector((state) =>
@@ -290,23 +294,24 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const absorbedResultCallIds = useMemo(() => {
     const calls = new Set<string>();
     for (const m of messages) {
-      if (m.senderType === 'AGENT' && m.metadata?.['kind'] === 'tool_call') {
-        const cid = m.metadata?.['tool_call_id'];
-        if (typeof cid === 'string') calls.add(cid);
+      if (m.senderType === "AGENT" && m.metadata?.["kind"] === "tool_call") {
+        const cid = m.metadata?.["tool_call_id"];
+        if (typeof cid === "string") calls.add(cid);
       }
     }
     return calls;
   }, [messages]);
 
   const rootMessages = useMemo(
-    () => messages.filter((m) => {
-      if (m.rootId !== null) return false;
-      if (m.senderType === 'AGENT' && m.metadata?.['kind'] === 'tool_result') {
-        const cid = m.metadata?.['tool_call_id'];
-        if (typeof cid === 'string' && absorbedResultCallIds.has(cid)) return false;
-      }
-      return true;
-    }),
+    () =>
+      messages.filter((m) => {
+        if (m.rootId !== null) return false;
+        if (m.senderType === "AGENT" && m.metadata?.["kind"] === "tool_result") {
+          const cid = m.metadata?.["tool_call_id"];
+          if (typeof cid === "string" && absorbedResultCallIds.has(cid)) return false;
+        }
+        return true;
+      }),
     [messages, absorbedResultCallIds],
   );
 
@@ -330,7 +335,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
 
   // Swapping between a jump window and the live tail replaces the whole list, so it remounts
   // the virtualiser rather than trying to anchor across two unrelated slices of history.
-  const listKey = `${effectiveChannelId ?? 'none'}:${isWindowed ? 'window' : 'live'}`;
+  const listKey = `${effectiveChannelId ?? "none"}:${isWindowed ? "window" : "live"}`;
 
   // Kept in a ref, and synced first, so the list-swap reset below can read it without
   // re-running on every jump.
@@ -344,9 +349,12 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   // the jump settles; the list reports its real position again afterwards.
   const jumpingRef = useRef(false);
   const jumpTimerRef = useRef<number | null>(null);
-  useEffect(() => () => {
-    if (jumpTimerRef.current !== null) window.clearTimeout(jumpTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (jumpTimerRef.current !== null) window.clearTimeout(jumpTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     // A list that opens on a jump target is not at its bottom, and claiming otherwise lets the
@@ -413,8 +421,8 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
       isAtBottomRef.current = false;
       virtuosoRef.current?.scrollToIndex({
         index: jumpIndex,
-        align: 'center',
-        behavior: 'auto',
+        align: "center",
+        behavior: "auto",
       });
       attempt += 1;
       if (attempt < JUMP_SCROLL_ATTEMPTS) {
@@ -434,24 +442,22 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   }, [jumpToMessageId, jumpIndex, dispatch]);
 
   const startReached = useCallback(() => {
-    if (
-      !effectiveChannelId ||
-      !hasMore ||
-      loadingMoreRef.current ||
-      rootMessages.length === 0
-    ) return;
+    if (!effectiveChannelId || !hasMore || loadingMoreRef.current || rootMessages.length === 0)
+      return;
     loadingMoreRef.current = true;
     const oldestId = rootMessages[0].id;
-    dispatch(fetchMessages({ channelId: effectiveChannelId, beforeId: oldestId }))
-      .finally(() => {
-        loadingMoreRef.current = false;
-      });
+    dispatch(fetchMessages({ channelId: effectiveChannelId, beforeId: oldestId })).finally(() => {
+      loadingMoreRef.current = false;
+    });
   }, [effectiveChannelId, hasMore, rootMessages, dispatch]);
 
-  const handleStopAgent = useCallback((agentId: string) => {
-    if (!effectiveChannelId) return;
-    dispatch(stopAgentRun({ channelId: effectiveChannelId, agentId }));
-  }, [effectiveChannelId, dispatch]);
+  const handleStopAgent = useCallback(
+    (agentId: string) => {
+      if (!effectiveChannelId) return;
+      dispatch(stopAgentRun({ channelId: effectiveChannelId, agentId }));
+    },
+    [effectiveChannelId, dispatch],
+  );
 
   const handleAtBottomChange = useCallback((bottom: boolean) => {
     // A jump in flight gets one stale "still at the bottom" report from the pre-scroll position.
@@ -469,7 +475,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     // while we're tracking it, so the view stays glued through the whole stream.
     if (jumpingRef.current) return;
     if (!isAtBottomRef.current) return;
-    virtuosoRef.current?.scrollToIndex({ index: 'LAST', align: 'end', behavior: 'auto' });
+    virtuosoRef.current?.scrollToIndex({ index: "LAST", align: "end", behavior: "auto" });
   }, []);
 
   const scrollToBottom = useCallback(() => {
@@ -481,8 +487,8 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     if (grouped.length === 0) return;
     virtuosoRef.current?.scrollToIndex({
       index: grouped.length - 1,
-      align: 'end',
-      behavior: 'smooth',
+      align: "end",
+      behavior: "smooth",
     });
   }, [grouped.length, isWindowed, effectiveChannelId, dispatch]);
 
@@ -496,7 +502,9 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
             {isLoadingMore && (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-                <span className="ml-2 text-xs text-muted-foreground">Loading older messages...</span>
+                <span className="ml-2 text-xs text-muted-foreground">
+                  Loading older messages...
+                </span>
               </>
             )}
           </div>
@@ -529,27 +537,27 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     [unreadSeparatorId, highlightedId],
   );
 
-  const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? '');
+  const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? "");
 
   if (!activeChannel) return null;
 
-  const isPrivate = activeChannel.channelType === 'PRIVATE';
-  const isDirect = activeChannel.channelType === 'DIRECT';
-  const isGroupDm = activeChannel.channelType === 'GROUP_DM';
+  const isPrivate = activeChannel.channelType === "PRIVATE";
+  const isDirect = activeChannel.channelType === "DIRECT";
+  const isGroupDm = activeChannel.channelType === "GROUP_DM";
   const isDm = isDirect || isGroupDm;
   const peerNames = (() => {
-    if (!isDm) return '';
+    if (!isDm) return "";
     const raw = getChannelDisplayName(activeChannel);
     if (!currentUserName) return raw;
     const others = raw
-      .split(',')
+      .split(",")
       .map((s) => s.trim())
       .filter((n) => n && n !== currentUserName);
-    return others.length > 0 ? others.join(', ') : raw;
+    return others.length > 0 ? others.join(", ") : raw;
   })();
   const peerUserId = (() => {
-    if (!isDirect) return '';
-    return (activeChannel.dmMemberIds ?? []).find((id) => id && id !== (currentUserId ?? '')) ?? '';
+    if (!isDirect) return "";
+    return (activeChannel.dmMemberIds ?? []).find((id) => id && id !== (currentUserId ?? "")) ?? "";
   })();
 
   const heading = isDm
@@ -557,31 +565,32 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     : `This is the start of #${getChannelDisplayName(activeChannel)}`;
 
   const eyebrow = isDirect
-    ? 'Private conversation'
+    ? "Private conversation"
     : isGroupDm
-      ? 'Group conversation'
+      ? "Group conversation"
       : isPrivate
-        ? 'Private channel'
-        : 'Team channel';
+        ? "Private channel"
+        : "Team channel";
 
   const description = isDirect
-    ? 'Just the two of you. Say hello.'
+    ? "Just the two of you. Say hello."
     : isGroupDm
       ? `Group conversation with ${activeChannel.memberCount} people.`
-      : activeChannel.description || 'Start connecting with your team.';
+      : activeChannel.description || "Start connecting with your team.";
 
-  const accent: ReactNode = isDirect && peerUserId
-    ? (
+  const accent: ReactNode =
+    isDirect && peerUserId ? (
       <DmPairAccent
-        selfId={currentUserId ?? ''}
+        selfId={currentUserId ?? ""}
         selfName={currentUserName}
         peerId={peerUserId}
         peerName={peerNames}
       />
-    )
-    : isPrivate
-      ? <Lock size={48} className="text-muted-foreground/30" />
-      : <Hash size={48} className="text-muted-foreground/30" />;
+    ) : isPrivate ? (
+      <Lock size={48} className="text-muted-foreground/30" />
+    ) : (
+      <Hash size={48} className="text-muted-foreground/30" />
+    );
 
   if (rootMessages.length === 0) {
     if (!hasLoaded || isLoadingMore) {
@@ -611,7 +620,11 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col relative min-h-0" data-testid="chat-message-list" data-empty="false">
+    <div
+      className="flex-1 flex flex-col relative min-h-0"
+      data-testid="chat-message-list"
+      data-empty="false"
+    >
       <Virtuoso
         ref={virtuosoRef}
         key={listKey}
@@ -619,7 +632,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         data={grouped}
         firstItemIndex={firstItemIndex}
         initialTopMostItemIndex={jumpIndex >= 0 ? jumpIndex : Math.max(0, grouped.length - 1)}
-        followOutput={(isAtBottom) => (isAtBottom && !isWindowed ? 'auto' : false)}
+        followOutput={(isAtBottom) => (isAtBottom && !isWindowed ? "auto" : false)}
         startReached={startReached}
         atBottomStateChange={handleAtBottomChange}
         atBottomThreshold={100}
@@ -629,7 +642,11 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         computeItemKey={(_idx, g) => g.message.id}
       />
 
-      <NewMessagesPill count={newMessageCount} showJump={!atBottom || isWindowed} onClick={scrollToBottom} />
+      <NewMessagesPill
+        count={newMessageCount}
+        showJump={!atBottom || isWindowed}
+        onClick={scrollToBottom}
+      />
       <TypingIndicator typingUsers={typingUsers} onStopAgent={handleStopAgent} />
     </div>
   );

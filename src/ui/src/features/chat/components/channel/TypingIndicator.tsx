@@ -3,9 +3,9 @@
  *  control stays put near the message box while the reply scrolls; humans get an
  *  understated row. */
 
-import { Stop } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { SubjectAvatarById } from '@/components/subject';
+import { Stop } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { SubjectAvatarById } from "@/components/subject";
 
 interface TypingEntry {
   userId: string;
@@ -20,22 +20,22 @@ interface TypingIndicatorProps {
 }
 
 function buildTypingText(users: { displayName: string }[]): string {
-  if (users.length === 0) return '';
+  if (users.length === 0) return "";
   if (users.length === 1) return `${users[0].displayName} is typing`;
   if (users.length === 2) return `${users[0].displayName} and ${users[1].displayName} are typing`;
-  return 'Several people are typing';
+  return "Several people are typing";
 }
 
 /** Equalizer-style "thinking" motion - bars breathe in a staggered wave. */
-function ThinkingWave({ tone }: { tone: 'agent' | 'human' }) {
+function ThinkingWave({ tone }: { tone: "agent" | "human" }) {
   return (
     <span className="flex h-3 items-center gap-[3px]" aria-hidden="true">
       {[0, 1, 2, 3].map((i) => (
         <span
           key={i}
           className={cn(
-            'uniffy-typing-bar h-full w-[3px] rounded-full',
-            tone === 'agent' ? 'bg-primary' : 'bg-muted-foreground/70',
+            "uniffy-typing-bar h-full w-[3px] rounded-full",
+            tone === "agent" ? "bg-primary" : "bg-muted-foreground/70",
           )}
           style={{ animationDelay: `${i * 0.13}s` }}
         />

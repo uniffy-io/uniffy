@@ -1,18 +1,12 @@
-import { useState, useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { checkAvailability } from '@/features/rooms/store/roomsThunks';
-import { selectRoomAvailability } from '@/features/rooms/store/roomsSlice';
+import { useState, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { checkAvailability } from "@/features/rooms/store/roomsThunks";
+import { selectRoomAvailability } from "@/features/rooms/store/roomsSlice";
 
-export function useRoomAvailability(
-  roomId: string | null,
-  startTime?: string,
-  endTime?: string,
-) {
+export function useRoomAvailability(roomId: string | null, startTime?: string, endTime?: string) {
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
-  const availability = useAppSelector((state) =>
-    selectRoomAvailability(state, roomId || ''),
-  );
+  const availability = useAppSelector((state) => selectRoomAvailability(state, roomId || ""));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -32,9 +26,7 @@ export function useRoomAvailability(
     });
   }, [roomId, startTime, endTime, organizationId, dispatch]);
 
-  const isAvailable = availability.length > 0
-    ? availability.every((s) => s.isAvailable)
-    : true;
+  const isAvailable = availability.length > 0 ? availability.every((s) => s.isAvailable) : true;
 
   return { slots: availability, isAvailable, loading };
 }

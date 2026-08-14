@@ -1,19 +1,14 @@
-import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
-import { Crepe } from '@milkdown/crepe';
-import { editorViewCtx, parserCtx, serializerCtx } from '@milkdown/core';
-import { Plugin, Selection } from '@milkdown/prose/state';
-import type { Node } from '@milkdown/prose/model';
-import type { EditorView } from '@milkdown/prose/view';
-import { upload, uploadConfig, type Uploader } from '@milkdown/kit/plugin/upload';
-import { $prose } from '@milkdown/kit/utils';
-import {
-  ySyncPlugin,
-  ySyncPluginKey,
-  yCursorPlugin,
-  yUndoPlugin,
-} from 'y-prosemirror';
-import * as Y from 'yjs';
-import type { Awareness } from 'y-protocols/awareness';
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+import { Crepe } from "@milkdown/crepe";
+import { editorViewCtx, parserCtx, serializerCtx } from "@milkdown/core";
+import { Plugin, Selection } from "@milkdown/prose/state";
+import type { Node } from "@milkdown/prose/model";
+import type { EditorView } from "@milkdown/prose/view";
+import { upload, uploadConfig, type Uploader } from "@milkdown/kit/plugin/upload";
+import { $prose } from "@milkdown/kit/utils";
+import { ySyncPlugin, ySyncPluginKey, yCursorPlugin, yUndoPlugin } from "y-prosemirror";
+import * as Y from "yjs";
+import type { Awareness } from "y-protocols/awareness";
 import {
   MARKDOWN_MIRROR_ORIGIN,
   MARKDOWN_TEXT_FIELD,
@@ -21,68 +16,72 @@ import {
   fragmentHasRealContent,
   replaceMarkdownYText,
   replaceProsemirrorFragment,
-} from '@/features/notes/realtime/markdown';
-import { HYDRATION_ORIGIN } from '@/features/realtime';
-import { identityPaint } from '@/config/theme/brandGradients';
-import { oneDark } from '@codemirror/theme-one-dark';
-import { languages } from '@codemirror/language-data';
-import { basicSetup } from 'codemirror';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { openViewerWithFetch } from '@/features/files';
-import { parseFileUrl, buildFileUrl, buildMediaUrl } from '@/shared/utils/fileUrls';
-import { parseUrn, UrnType } from '@/shared/utils/urn';
-import { searchApi } from '@/features/search';
-import { tagPlugins } from '@/components/editor/plugins/tag';
-import { mentionPlugins, onMentionTrigger, type MentionTriggerEvent } from '@/components/editor/plugins/mention';
-import { videoPlugins } from '@/components/editor/plugins/video';
-import { MentionSearch } from '@/components/editor/plugins/mention/MentionSearch';
-import { createPortal } from 'react-dom';
-import { openSpotlightSearch } from '@/features/search';
-import { useGlobalShortcuts } from '@/features/settings';
-import { createImageUploadHandler, uploadImage } from '@/components/editor/utils/imageUploader';
-import { createVideoUploadHandler, uploadVideo } from '@/components/editor/utils/videoUploader';
-import { createAudioUploadHandler, uploadAudio } from '@/components/editor/utils/audioUploader';
-import { findHeadingBySlug } from '@/components/editor/utils/headingScroll';
-import { audioPlugins, setAudioRecordingUploadHandler } from '@/components/editor/plugins/audio';
-import { tocPlugins } from '@/components/editor/plugins/toc';
-import { highlightPlugins, highlightMark } from '@/components/editor/plugins/highlight';
-import { HighlightPicker } from '@/components/editor/plugins/highlight/HighlightPicker';
-import { underlinePlugins } from '@/components/editor/plugins/underline';
-import { slashMenuGridNavigation } from '@/components/editor/plugins/slashMenuGridNavigation';
+} from "@/features/notes/realtime/markdown";
+import { HYDRATION_ORIGIN } from "@/features/realtime";
+import { identityPaint } from "@/config/theme/brandGradients";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { languages } from "@codemirror/language-data";
+import { basicSetup } from "codemirror";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { openViewerWithFetch } from "@/features/files";
+import { parseFileUrl, buildFileUrl, buildMediaUrl } from "@/shared/utils/fileUrls";
+import { parseUrn, UrnType } from "@/shared/utils/urn";
+import { searchApi } from "@/features/search";
+import { tagPlugins } from "@/components/editor/plugins/tag";
+import {
+  mentionPlugins,
+  onMentionTrigger,
+  type MentionTriggerEvent,
+} from "@/components/editor/plugins/mention";
+import { videoPlugins } from "@/components/editor/plugins/video";
+import { MentionSearch } from "@/components/editor/plugins/mention/MentionSearch";
+import { createPortal } from "react-dom";
+import { openSpotlightSearch } from "@/features/search";
+import { useGlobalShortcuts } from "@/features/settings";
+import { createImageUploadHandler, uploadImage } from "@/components/editor/utils/imageUploader";
+import { createVideoUploadHandler, uploadVideo } from "@/components/editor/utils/videoUploader";
+import { createAudioUploadHandler, uploadAudio } from "@/components/editor/utils/audioUploader";
+import { findHeadingBySlug } from "@/components/editor/utils/headingScroll";
+import { audioPlugins, setAudioRecordingUploadHandler } from "@/components/editor/plugins/audio";
+import { tocPlugins } from "@/components/editor/plugins/toc";
+import { highlightPlugins, highlightMark } from "@/components/editor/plugins/highlight";
+import { HighlightPicker } from "@/components/editor/plugins/highlight/HighlightPicker";
+import { underlinePlugins } from "@/components/editor/plugins/underline";
+import { slashMenuGridNavigation } from "@/components/editor/plugins/slashMenuGridNavigation";
 import {
   insertTocBlock,
   insertVideoBlock,
   insertAudioBlock,
   insertAudioRecording,
-} from '@/components/editor/commands/insertBlocks';
+} from "@/components/editor/commands/insertBlocks";
 import {
   createSelectionVersionPlugin,
   disposeSelectionScope,
-} from '@/components/editor/utils/selectionVersionPlugin';
-import type { EditorHandle } from '@/components/editor/EditorHandle';
-import { registerEditor } from '@/components/editor/editorRegistry';
-import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
-import { InlineCommentPopover } from '@/features/comments/components/InlineCommentPopover';
-import { CommentThreadPopover } from '@/features/comments/components/CommentThreadPopover';
+} from "@/components/editor/utils/selectionVersionPlugin";
+import type { EditorHandle } from "@/components/editor/EditorHandle";
+import { registerEditor } from "@/components/editor/editorRegistry";
+import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
+import { InlineCommentPopover } from "@/features/comments/components/InlineCommentPopover";
+import { CommentThreadPopover } from "@/features/comments/components/CommentThreadPopover";
 import {
   commentDecorationsPlugin,
   updateCommentDecorations,
   setCommentClickHandler,
-} from '@/features/comments/plugins/commentDecorations';
-import type { CommentAnchor } from '@/features/comments/plugins/commentDecorations';
-import { useComments } from '@/features/comments/hooks/useComments';
-import { setActiveComment } from '@/features/comments/store/commentsSlice';
-import { CommentAnchorType } from '@uniffy/proto/comments/v1/comments_pb';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+} from "@/features/comments/plugins/commentDecorations";
+import type { CommentAnchor } from "@/features/comments/plugins/commentDecorations";
+import { useComments } from "@/features/comments/hooks/useComments";
+import { setActiveComment } from "@/features/comments/store/commentsSlice";
+import { CommentAnchorType } from "@uniffy/proto/comments/v1/comments_pb";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
 // Import only common Crepe styles - frame themes set global html/body styles that break our app
-import '@milkdown/crepe/theme/common/style.css';
+import "@milkdown/crepe/theme/common/style.css";
 
 // Comment highlight styles
-import '@/features/comments/styles/comments.css';
+import "@/features/comments/styles/comments.css";
 
 // Import our custom overrides that handle theming
-import '@/components/editor/styles/editor.css';
+import "@/components/editor/styles/editor.css";
 
 export interface CrepeRealtimeBinding {
   ydoc: Y.Doc;
@@ -123,10 +122,14 @@ interface CrepeEditorProps {
   allowImages?: boolean;
 }
 
-const VIDEO_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M164,104v48a4,4,0,0,1-4,4H48a4,4,0,0,1-4-4V104a4,4,0,0,1,4-4H160A4,4,0,0,1,164,104Zm48-8a4,4,0,0,0-4.22.43L172,122.75V133.25l35.78,26.32A4,4,0,0,0,212,160a4,4,0,0,0,4-4V100A4,4,0,0,0,212,96Z"/></svg>';
-const AUDIO_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M155.51,24.81a8,8,0,0,0-8.42.88L77.25,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,224V32A8,8,0,0,0,155.51,24.81ZM144,207.64,84.91,161.69A7.94,7.94,0,0,0,80,160H32V96H80a7.94,7.94,0,0,0,4.91-1.69L144,48.36Zm64-79.64a24,24,0,0,0-24-24,8,8,0,0,0,0,16,8,8,0,0,1,0,16,8,8,0,0,0,0,16A24,24,0,0,0,208,128Z"/></svg>';
-const RECORD_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M128,176a48.05,48.05,0,0,0,48-48V64a48,48,0,0,0-96,0v64A48.05,48.05,0,0,0,128,176ZM96,64a32,32,0,0,1,64,0v64a32,32,0,0,1-64,0Zm40,143.6V232a8,8,0,0,1-16,0V207.6A80.11,80.11,0,0,1,48,128a8,8,0,0,1,16,0,64,64,0,0,0,128,0,8,8,0,0,1,16,0A80.11,80.11,0,0,1,136,207.6Z"/></svg>';
-const TOC_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M88,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H96A8,8,0,0,1,88,64Zm128,56H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm0,64H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM44,52A12,12,0,1,0,56,64,12,12,0,0,0,44,52Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,116Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,180Z"/></svg>';
+const VIDEO_ICON_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M164,104v48a4,4,0,0,1-4,4H48a4,4,0,0,1-4-4V104a4,4,0,0,1,4-4H160A4,4,0,0,1,164,104Zm48-8a4,4,0,0,0-4.22.43L172,122.75V133.25l35.78,26.32A4,4,0,0,0,212,160a4,4,0,0,0,4-4V100A4,4,0,0,0,212,96Z"/></svg>';
+const AUDIO_ICON_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M155.51,24.81a8,8,0,0,0-8.42.88L77.25,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,224V32A8,8,0,0,0,155.51,24.81ZM144,207.64,84.91,161.69A7.94,7.94,0,0,0,80,160H32V96H80a7.94,7.94,0,0,0,4.91-1.69L144,48.36Zm64-79.64a24,24,0,0,0-24-24,8,8,0,0,0,0,16,8,8,0,0,1,0,16,8,8,0,0,0,0,16A24,24,0,0,0,208,128Z"/></svg>';
+const RECORD_ICON_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M128,176a48.05,48.05,0,0,0,48-48V64a48,48,0,0,0-96,0v64A48.05,48.05,0,0,0,128,176ZM96,64a32,32,0,0,1,64,0v64a32,32,0,0,1-64,0Zm40,143.6V232a8,8,0,0,1-16,0V207.6A80.11,80.11,0,0,1,48,128a8,8,0,0,1,16,0,64,64,0,0,0,128,0,8,8,0,0,1,16,0A80.11,80.11,0,0,1,136,207.6Z"/></svg>';
+const TOC_ICON_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M88,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H96A8,8,0,0,1,88,64Zm128,56H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm0,64H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM44,52A12,12,0,1,0,56,64,12,12,0,0,0,44,52Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,116Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,180Z"/></svg>';
 
 function clearContainer(container: HTMLElement) {
   while (container.firstChild) {
@@ -142,7 +145,9 @@ function clearContainer(container: HTMLElement) {
 function muteSyncBinding(view: EditorView | null | undefined) {
   if (!view || view.isDestroyed) return;
   try {
-    const syncState = ySyncPluginKey.getState(view.state) as { binding?: { destroy?: () => void; isDestroyed?: boolean } } | null;
+    const syncState = ySyncPluginKey.getState(view.state) as {
+      binding?: { destroy?: () => void; isDestroyed?: boolean };
+    } | null;
     const binding = syncState?.binding;
     if (binding) {
       binding.isDestroyed = true;
@@ -158,26 +163,29 @@ function muteSyncBinding(view: EditorView | null | undefined) {
 // Peer paint is derived from the display name, the same way avatars are, so a
 // caret and its owner's avatar always carry one identity.
 function buildRealtimeCursor(user: { name?: string } | null): HTMLElement {
-  const name = user?.name ?? 'Anonymous';
+  const name = user?.name ?? "Anonymous";
   const paint = identityPaint(name);
 
-  const caret = document.createElement('span');
-  caret.classList.add('uniffy-yjs-cursor');
-  caret.setAttribute('style', `background-color: ${paint.solid}`);
+  const caret = document.createElement("span");
+  caret.classList.add("uniffy-yjs-cursor");
+  caret.setAttribute("style", `background-color: ${paint.solid}`);
 
-  const flag = document.createElement('div');
-  flag.classList.add('uniffy-yjs-cursor__flag');
-  flag.setAttribute('style', `background-image: ${paint.gradient}`);
+  const flag = document.createElement("div");
+  flag.classList.add("uniffy-yjs-cursor__flag");
+  flag.setAttribute("style", `background-image: ${paint.gradient}`);
   flag.textContent = name;
 
   caret.appendChild(flag);
   return caret;
 }
 
-function buildRealtimeSelection(user: { name?: string } | null): { class?: string; style?: string } {
-  const paint = identityPaint(user?.name ?? 'Anonymous');
+function buildRealtimeSelection(user: { name?: string } | null): {
+  class?: string;
+  style?: string;
+} {
+  const paint = identityPaint(user?.name ?? "Anonymous");
   return {
-    class: 'uniffy-yjs-selection',
+    class: "uniffy-yjs-selection",
     style: `background-color: ${paint.translucent}`,
   };
 }
@@ -199,7 +207,7 @@ function createCrepeConfig(
     root,
     // y-prosemirror owns the doc under realtime; seeding via
     // ``defaultValue`` would race the ySyncPlugin and dup content.
-    defaultValue: realtime ? '' : content,
+    defaultValue: realtime ? "" : content,
     features: {
       [Crepe.Feature.CodeMirror]: true,
       [Crepe.Feature.ListItem]: true,
@@ -220,29 +228,30 @@ function createCrepeConfig(
     featureConfigs: {
       [Crepe.Feature.Placeholder]: {
         text: placeholderText,
-        mode: compact ? 'block' as const : 'doc' as const,
+        mode: compact ? ("block" as const) : ("doc" as const),
       },
       [Crepe.Feature.CodeMirror]: {
         theme: oneDark,
         languages: languages,
         extensions: [basicSetup],
-        searchPlaceholder: 'Search language...',
-        noResultText: 'No language found',
+        searchPlaceholder: "Search language...",
+        noResultText: "No language found",
       },
-      ...(allowImages && imageUploadHandler && {
-        [Crepe.Feature.ImageBlock]: {
-          onUpload: imageUploadHandler,
-        },
-      }),
+      ...(allowImages &&
+        imageUploadHandler && {
+          [Crepe.Feature.ImageBlock]: {
+            onUpload: imageUploadHandler,
+          },
+        }),
       ...(!readonly && {
         [Crepe.Feature.BlockEdit]: {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           buildMenu: (builder: any) => {
-            const advancedGroup = builder.getGroup('advanced');
+            const advancedGroup = builder.getGroup("advanced");
             if (!advancedGroup) return;
 
-            advancedGroup.addItem('toc', {
-              label: 'Table of Contents',
+            advancedGroup.addItem("toc", {
+              label: "Table of Contents",
               icon: TOC_ICON_SVG,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onRun: (ctx: any) => insertTocBlock(ctx),
@@ -250,8 +259,8 @@ function createCrepeConfig(
 
             if (videoUploadHandler) {
               const videoHandler = videoUploadHandler;
-              advancedGroup.addItem('video', {
-                label: 'Video',
+              advancedGroup.addItem("video", {
+                label: "Video",
                 icon: VIDEO_ICON_SVG,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onRun: (ctx: any) => insertVideoBlock(ctx, videoHandler),
@@ -260,15 +269,15 @@ function createCrepeConfig(
 
             if (audioUploadHandler) {
               const audioHandler = audioUploadHandler;
-              advancedGroup.addItem('audio', {
-                label: 'Audio',
+              advancedGroup.addItem("audio", {
+                label: "Audio",
                 icon: AUDIO_ICON_SVG,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onRun: (ctx: any) => insertAudioBlock(ctx, audioHandler),
               });
 
-              advancedGroup.addItem('record', {
-                label: 'Record Audio',
+              advancedGroup.addItem("record", {
+                label: "Record Audio",
                 icon: RECORD_ICON_SVG,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onRun: (ctx: any) => insertAudioRecording(ctx),
@@ -287,10 +296,16 @@ async function autoEmbedMediaMentions(view: EditorView, organizationId: string) 
   // destroyed; dispatching then trips the milkdown context.
   if (view.isDestroyed) return;
 
-  const fileMentions: Array<{ pos: number; node: Node; urn: string; label: string; fileId: string }> = [];
+  const fileMentions: Array<{
+    pos: number;
+    node: Node;
+    urn: string;
+    label: string;
+    fileId: string;
+  }> = [];
 
   view.state.doc.descendants((node, pos) => {
-    if (node.type.name !== 'mention') return;
+    if (node.type.name !== "mention") return;
     const { urn, label } = node.attrs as { urn: string; label: string };
     const parsed = parseUrn(urn);
     if (parsed.type === UrnType.FILE && parsed.id) {
@@ -305,7 +320,10 @@ async function autoEmbedMediaMentions(view: EditorView, organizationId: string) 
   let resolvedMap: Record<string, { metadata?: Record<string, string> }>;
   try {
     const response = await searchApi.resolveUrns({ organizationId, urns });
-    resolvedMap = (response.resolved ?? {}) as Record<string, { metadata?: Record<string, string> }>;
+    resolvedMap = (response.resolved ?? {}) as Record<
+      string,
+      { metadata?: Record<string, string> }
+    >;
   } catch {
     return;
   }
@@ -314,7 +332,7 @@ async function autoEmbedMediaMentions(view: EditorView, organizationId: string) 
   const replacements: Array<{
     pos: number;
     nodeSize: number;
-    mediaType: 'image' | 'video' | 'audio';
+    mediaType: "image" | "video" | "audio";
     url: string;
     title: string;
   }> = [];
@@ -324,17 +342,17 @@ async function autoEmbedMediaMentions(view: EditorView, organizationId: string) 
     const mime = resolved?.metadata?.mime_type;
     if (!mime) continue;
 
-    let mediaType: 'image' | 'video' | 'audio';
+    let mediaType: "image" | "video" | "audio";
     let url: string;
 
-    if (mime.startsWith('image/')) {
-      mediaType = 'image';
+    if (mime.startsWith("image/")) {
+      mediaType = "image";
       url = buildFileUrl(organizationId, mention.fileId);
-    } else if (mime.startsWith('video/')) {
-      mediaType = 'video';
+    } else if (mime.startsWith("video/")) {
+      mediaType = "video";
       url = buildMediaUrl(organizationId, mention.fileId);
-    } else if (mime.startsWith('audio/')) {
-      mediaType = 'audio';
+    } else if (mime.startsWith("audio/")) {
+      mediaType = "audio";
       url = buildMediaUrl(organizationId, mention.fileId);
     } else {
       continue;
@@ -364,13 +382,13 @@ async function autoEmbedMediaMentions(view: EditorView, organizationId: string) 
   for (const rep of replacements) {
     let mediaNode: Node | null = null;
 
-    if (rep.mediaType === 'image') {
-      const imageType = schema.nodes['image-block'] ?? schema.nodes.image;
+    if (rep.mediaType === "image") {
+      const imageType = schema.nodes["image-block"] ?? schema.nodes.image;
       mediaNode = imageType?.createAndFill?.({ src: rep.url, alt: rep.title }) ?? null;
-    } else if (rep.mediaType === 'video') {
+    } else if (rep.mediaType === "video") {
       const videoType = schema.nodes.video_block;
       mediaNode = videoType?.create({ src: rep.url, title: rep.title }) ?? null;
-    } else if (rep.mediaType === 'audio') {
+    } else if (rep.mediaType === "audio") {
       const audioType = schema.nodes.audio_block;
       mediaNode = audioType?.create({ src: rep.url, title: rep.title }) ?? null;
     }
@@ -389,7 +407,7 @@ async function autoEmbedMediaMentions(view: EditorView, organizationId: string) 
       const parentStart = $pos.before(1);
       const parentEnd = $pos.after(1);
 
-      if (parentNode.textContent.trim() === '') {
+      if (parentNode.textContent.trim() === "") {
         // Paragraph is empty after removing mention - replace with media block
         tr = tr.replaceWith(parentStart, parentEnd, mediaNode);
       } else {
@@ -402,7 +420,13 @@ async function autoEmbedMediaMentions(view: EditorView, organizationId: string) 
   view.dispatch(tr);
 }
 
-const defaultSettings = { editorMode: 'crepe' as const, showMarkdownPreview: true, fontSize: 16, lineHeight: 1.6, spellCheck: true };
+const defaultSettings = {
+  editorMode: "crepe" as const,
+  showMarkdownPreview: true,
+  fontSize: 16,
+  lineHeight: 1.6,
+  spellCheck: true,
+};
 
 export function CrepeEditor({
   contentType,
@@ -434,7 +458,7 @@ export function CrepeEditor({
   // Comment decorations: fetch + read comments from Redux (only when comments enabled)
   const { comments: contentComments, refresh: refreshComments } = useComments(
     enableComments ? contentType : ContentType.NOTE,
-    enableComments ? contentId : '',
+    enableComments ? contentId : "",
   );
   const activeCommentId = useAppSelector((state) => state.comments.activeCommentId);
 
@@ -447,7 +471,7 @@ export function CrepeEditor({
         commentId: c.id,
         from: (c.anchorData?.from as number) ?? 0,
         to: (c.anchorData?.to as number) ?? 0,
-        text: (c.anchorData?.text as string) ?? '',
+        text: (c.anchorData?.text as string) ?? "",
         isResolved: c.isResolved,
       }));
   }, [enableComments, contentComments]);
@@ -463,7 +487,7 @@ export function CrepeEditor({
   const crepeRef = useRef<Crepe | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const unregisterEditorRef = useRef<(() => void) | null>(null);
-  const contentRef = useRef<string>('');
+  const contentRef = useRef<string>("");
   const initializedNoteIdRef = useRef<string | null>(null);
   const handleScopeRef = useRef<object>({});
   const onEditorReadyRef = useRef(onEditorReady);
@@ -501,7 +525,7 @@ export function CrepeEditor({
     const { from, to } = view.state.selection;
     if (from === to) return;
 
-    const text = view.state.doc.textBetween(from, to, ' ');
+    const text = view.state.doc.textBetween(from, to, " ");
     if (!text.trim()) return;
 
     // Get the bounding rect of the selection for positioning the form
@@ -560,66 +584,77 @@ export function CrepeEditor({
       setAudioRecordingUploadHandler(null);
       return undefined;
     }
-    const handler = createAudioUploadHandler(contentType, contentId, organizationId, onFileUploaded);
+    const handler = createAudioUploadHandler(
+      contentType,
+      contentId,
+      organizationId,
+      onFileUploaded,
+    );
     setAudioRecordingUploadHandler(handler);
     return handler;
   }, [readonly, enableUpload, organizationId, contentId, contentType, onFileUploaded]);
 
   // Handle content changes from the editor
-  const handleContentChange = useCallback((markdown: string) => {
-    if (readonly) return;
-    onChange?.(markdown);
-  }, [readonly, onChange]);
+  const handleContentChange = useCallback(
+    (markdown: string) => {
+      if (readonly) return;
+      onChange?.(markdown);
+    },
+    [readonly, onChange],
+  );
 
   // Handle mention selection
-  const handleMentionSelect = useCallback((result: SearchResultItem) => {
-    if (!mentionPopup) return;
+  const handleMentionSelect = useCallback(
+    (result: SearchResultItem) => {
+      if (!mentionPopup) return;
 
-    const { view, from: storedFrom, query } = mentionPopup;
-    const { state, dispatch } = view;
-    const { schema } = state;
+      const { view, from: storedFrom, query } = mentionPopup;
+      const { state, dispatch } = view;
+      const { schema } = state;
 
-    // Use stored from position (@ symbol) and calculate to based on query length
-    // from = position of @, to = from + 1 (@) + query length
-    const from = storedFrom;
-    const to = storedFrom + 1 + query.length;
+      // Use stored from position (@ symbol) and calculate to based on query length
+      // from = position of @, to = from + 1 (@) + query length
+      const from = storedFrom;
+      const to = storedFrom + 1 + query.length;
 
-    // Validate positions are within the current document bounds
-    const docSize = state.doc.content.size;
-    if (from < 0 || to > docSize) {
+      // Validate positions are within the current document bounds
+      const docSize = state.doc.content.size;
+      if (from < 0 || to > docSize) {
+        setMentionPopup(null);
+        return;
+      }
+
+      // ── Insert mention chip ─────────────────────────────────────
+      // All @mentions create chips. Media files can be converted to
+      // inline embeds via the "Embed" button in the hover preview.
+      const mentionType = schema.nodes.mention;
+      if (!mentionType) {
+        setMentionPopup(null);
+        return;
+      }
+
+      // Create the mention node using URN from search result
+      const mention = mentionType.create({
+        urn: result.urn,
+        label: result.title,
+      });
+
+      // Replace the @ trigger and query with the mention
+      const tr = state.tr.replaceWith(from, to, mention);
+
+      // Add a space after the mention
+      const spacePos = from + 1;
+      tr.insertText(" ", spacePos);
+
+      // Set cursor after the space
+      tr.setSelection(Selection.near(tr.doc.resolve(spacePos + 1)));
+
+      dispatch(tr);
+      view.focus();
       setMentionPopup(null);
-      return;
-    }
-
-    // ── Insert mention chip ─────────────────────────────────────
-    // All @mentions create chips. Media files can be converted to
-    // inline embeds via the "Embed" button in the hover preview.
-    const mentionType = schema.nodes.mention;
-    if (!mentionType) {
-      setMentionPopup(null);
-      return;
-    }
-
-    // Create the mention node using URN from search result
-    const mention = mentionType.create({
-      urn: result.urn,
-      label: result.title,
-    });
-
-    // Replace the @ trigger and query with the mention
-    const tr = state.tr.replaceWith(from, to, mention);
-
-    // Add a space after the mention
-    const spacePos = from + 1;
-    tr.insertText(' ', spacePos);
-
-    // Set cursor after the space
-    tr.setSelection(Selection.near(tr.doc.resolve(spacePos + 1)));
-
-    dispatch(tr);
-    view.focus();
-    setMentionPopup(null);
-  }, [mentionPopup]);
+    },
+    [mentionPopup],
+  );
 
   // Register mention trigger callback
   useEffect(() => {
@@ -651,18 +686,28 @@ export function CrepeEditor({
       crepeRef.current.destroy();
       crepeRef.current = null;
     }
-    
+
     // Clear the container to prevent duplication
     clearContainer(container);
-    
+
     contentRef.current = content;
     initializedNoteIdRef.current = contentId;
 
-    const crepe = new Crepe(createCrepeConfig(
-      container, content, readonly, compact, placeholder,
-      imageUploadHandler, videoUploadHandler, audioUploadHandler,
-      floatingToolbar, Boolean(realtimeRef.current), allowImages,
-    ));
+    const crepe = new Crepe(
+      createCrepeConfig(
+        container,
+        content,
+        readonly,
+        compact,
+        placeholder,
+        imageUploadHandler,
+        videoUploadHandler,
+        audioUploadHandler,
+        floatingToolbar,
+        Boolean(realtimeRef.current),
+        allowImages,
+      ),
+    );
 
     // CRITICAL: Add plugins BEFORE calling create()
     // Access the underlying Milkdown editor and register our custom plugins
@@ -702,12 +747,14 @@ export function CrepeEditor({
       if (rt) {
         const fragment = rt.ydoc.get(PROSEMIRROR_FRAGMENT_FIELD, Y.XmlFragment);
         editor.use($prose(() => ySyncPlugin(fragment)));
-        editor.use($prose(() =>
-          yCursorPlugin(rt.awareness, {
-            cursorBuilder: buildRealtimeCursor,
-            selectionBuilder: buildRealtimeSelection,
-          }),
-        ));
+        editor.use(
+          $prose(() =>
+            yCursorPlugin(rt.awareness, {
+              cursorBuilder: buildRealtimeCursor,
+              selectionBuilder: buildRealtimeSelection,
+            }),
+          ),
+        );
         if (rt.undoManager) {
           editor.use($prose(() => yUndoPlugin({ undoManager: rt.undoManager! })));
         }
@@ -782,7 +829,7 @@ export function CrepeEditor({
             if (!file) continue;
 
             // Handle image files
-            if (file.type.startsWith('image/')) {
+            if (file.type.startsWith("image/")) {
               try {
                 const url = await uploadImage({
                   file,
@@ -800,12 +847,12 @@ export function CrepeEditor({
                   nodes.push(node);
                 }
               } catch (error) {
-                console.error('[CrepeEditor] Failed to upload pasted image:', error);
+                console.error("[CrepeEditor] Failed to upload pasted image:", error);
               }
             }
 
             // Handle video files
-            if (file.type.startsWith('video/')) {
+            if (file.type.startsWith("video/")) {
               try {
                 const url = await uploadVideo({
                   file,
@@ -821,12 +868,12 @@ export function CrepeEditor({
                   nodes.push(node);
                 }
               } catch (error) {
-                console.error('[CrepeEditor] Failed to upload pasted video:', error);
+                console.error("[CrepeEditor] Failed to upload pasted video:", error);
               }
             }
 
             // Handle audio files
-            if (file.type.startsWith('audio/')) {
+            if (file.type.startsWith("audio/")) {
               try {
                 const url = await uploadAudio({
                   file,
@@ -842,7 +889,7 @@ export function CrepeEditor({
                   nodes.push(node);
                 }
               } catch (error) {
-                console.error('[CrepeEditor] Failed to upload pasted audio:', error);
+                console.error("[CrepeEditor] Failed to upload pasted audio:", error);
               }
             }
           }
@@ -859,7 +906,6 @@ export function CrepeEditor({
         });
         editor.use(upload);
       }
-
     } catch {
       // Plugin registration failed silently
     }
@@ -900,7 +946,7 @@ export function CrepeEditor({
                   try {
                     return crepe.editor.action(fn);
                   } catch (error) {
-                    console.error('[CrepeEditor] handle.run failed:', error);
+                    console.error("[CrepeEditor] handle.run failed:", error);
                     return undefined;
                   }
                 },
@@ -958,10 +1004,7 @@ export function CrepeEditor({
             crepe.editor.action((ctx) => {
               const view = ctx.get(editorViewCtx);
               if (!view || view.isDestroyed) return;
-              const fragment = rtBinding.ydoc.get(
-                PROSEMIRROR_FRAGMENT_FIELD,
-                Y.XmlFragment,
-              );
+              const fragment = rtBinding.ydoc.get(PROSEMIRROR_FRAGMENT_FIELD, Y.XmlFragment);
               const ytext = rtBinding.ydoc.get(MARKDOWN_TEXT_FIELD, Y.Text);
               const md = ytext.toString();
               // Empty Y.Text never wins over fragment content; the mirror
@@ -1006,7 +1049,7 @@ export function CrepeEditor({
           } catch (err) {
             // Parse or serialize failure: keep showing the fragment with the
             // mirror off rather than risk destroying content in Y.Text.
-            console.warn('[CrepeEditor] realtime cold-start seed failed', err);
+            console.warn("[CrepeEditor] realtime cold-start seed failed", err);
           }
         });
       }
@@ -1053,19 +1096,26 @@ export function CrepeEditor({
     // on ydoc identity change so ySyncPlugin rebinds to the new shared
     // types when the realtime session is replaced.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentId, readonly, imageUploadHandler, videoUploadHandler, audioUploadHandler, realtime?.ydoc]);
+  }, [
+    contentId,
+    readonly,
+    imageUploadHandler,
+    videoUploadHandler,
+    audioUploadHandler,
+    realtime?.ydoc,
+  ]);
 
   // Separate effect to handle content updates in readonly mode only
   useEffect(() => {
     // Only run this effect for readonly mode after initial mount
     if (!readonly || !crepeRef.current) return;
-    
+
     // Check if content actually changed
     if (contentRef.current === content) return;
 
     const container = editorRef.current;
     if (!container) return;
-    
+
     let cancelled = false;
 
     if (unregisterEditorRef.current) {
@@ -1081,10 +1131,21 @@ export function CrepeEditor({
 
     contentRef.current = content;
 
-    const crepe = new Crepe(createCrepeConfig(
-      container, content, true, compact, placeholder,
-      undefined, undefined, undefined, floatingToolbar, false, allowImages,
-    ));
+    const crepe = new Crepe(
+      createCrepeConfig(
+        container,
+        content,
+        true,
+        compact,
+        placeholder,
+        undefined,
+        undefined,
+        undefined,
+        floatingToolbar,
+        false,
+        allowImages,
+      ),
+    );
 
     // Register plugins before create (same as above)
     try {
@@ -1150,15 +1211,15 @@ export function CrepeEditor({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check if this matches the nav.search shortcut
-      if (matches('nav.search', e)) {
+      if (matches("nav.search", e)) {
         e.preventDefault();
         e.stopPropagation();
         openSpotlightSearch();
       }
     };
 
-    container.addEventListener('keydown', handleKeyDown, { capture: true });
-    return () => container.removeEventListener('keydown', handleKeyDown, { capture: true });
+    container.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => container.removeEventListener("keydown", handleKeyDown, { capture: true });
   }, [matches]);
 
   // In readonly mode, clicking an image opens the file viewer modal
@@ -1171,7 +1232,7 @@ export function CrepeEditor({
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       // Walk up from click target to find an <img> element
-      const img = target.closest('img') || (target.tagName === 'IMG' ? target : null);
+      const img = target.closest("img") || (target.tagName === "IMG" ? target : null);
       if (!img) return;
 
       const src = (img as HTMLImageElement).src;
@@ -1183,8 +1244,8 @@ export function CrepeEditor({
       dispatch(openViewerWithFetch({ fileId: parsed.fileId }));
     };
 
-    container.addEventListener('click', handleClick, { capture: true });
-    return () => container.removeEventListener('click', handleClick, { capture: true });
+    container.addEventListener("click", handleClick, { capture: true });
+    return () => container.removeEventListener("click", handleClick, { capture: true });
   }, [readonly, dispatch]);
 
   // Intercept in-document anchor links (href starting with `#`) so a Table of
@@ -1200,16 +1261,16 @@ export function CrepeEditor({
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
 
       const target = e.target as HTMLElement | null;
-      const anchor = target?.closest('a');
+      const anchor = target?.closest("a");
       if (!anchor) return;
 
-      const href = anchor.getAttribute('href');
+      const href = anchor.getAttribute("href");
       if (!href) return;
 
       // In-doc hash link (`#slug`) - resolve locally.
       let slug: string | null = null;
       let parsedUrl: URL | null = null;
-      if (href.startsWith('#')) {
+      if (href.startsWith("#")) {
         slug = href.slice(1);
       } else {
         // Same-origin same-path link with a hash also counts.
@@ -1233,58 +1294,61 @@ export function CrepeEditor({
 
         e.preventDefault();
         e.stopPropagation();
-        heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        heading.scrollIntoView({ behavior: "smooth", block: "start" });
         // Keep the URL shareable without polluting browser history.
         const nextUrl = `${window.location.pathname}${window.location.search}#${slug}`;
-        window.history.replaceState(window.history.state, '', nextUrl);
+        window.history.replaceState(window.history.state, "", nextUrl);
         return;
       }
 
       // External link (or any non-anchor URL): open in a new tab. Skip
       // unsupported schemes (mailto:, tel:, etc.) so the browser default
       // still launches the right handler in the same tab.
-      const scheme = parsedUrl?.protocol ?? '';
-      if (scheme === 'http:' || scheme === 'https:') {
+      const scheme = parsedUrl?.protocol ?? "";
+      if (scheme === "http:" || scheme === "https:") {
         e.preventDefault();
         e.stopPropagation();
-        window.open(parsedUrl!.href, '_blank', 'noopener,noreferrer');
+        window.open(parsedUrl!.href, "_blank", "noopener,noreferrer");
       }
     };
 
-    container.addEventListener('click', handleAnchorClick, { capture: true });
-    return () => container.removeEventListener('click', handleAnchorClick, { capture: true });
+    container.addEventListener("click", handleAnchorClick, { capture: true });
+    return () => container.removeEventListener("click", handleAnchorClick, { capture: true });
   }, []);
 
   // Handle highlight color selection from the picker
-  const handleHighlightColor = useCallback((color: string | null) => {
-    if (!crepeRef.current || !highlightPicker) return;
+  const handleHighlightColor = useCallback(
+    (color: string | null) => {
+      if (!crepeRef.current || !highlightPicker) return;
 
-    try {
-      crepeRef.current.editor.action((ctx) => {
-        const view = ctx.get(editorViewCtx);
-        if (!view || view.isDestroyed) return;
+      try {
+        crepeRef.current.editor.action((ctx) => {
+          const view = ctx.get(editorViewCtx);
+          if (!view || view.isDestroyed) return;
 
-        const markType = highlightMark.type(ctx);
-        const { from, to } = highlightPicker;
+          const markType = highlightMark.type(ctx);
+          const { from, to } = highlightPicker;
 
-        if (color === null) {
-          // Remove highlight marks in the selection
-          view.dispatch(view.state.tr.removeMark(from, to, markType));
-        } else {
-          // Remove existing highlight, then add new one
-          let tr = view.state.tr.removeMark(from, to, markType);
-          tr = tr.addMark(from, to, markType.create({ color }));
-          view.dispatch(tr);
-        }
+          if (color === null) {
+            // Remove highlight marks in the selection
+            view.dispatch(view.state.tr.removeMark(from, to, markType));
+          } else {
+            // Remove existing highlight, then add new one
+            let tr = view.state.tr.removeMark(from, to, markType);
+            tr = tr.addMark(from, to, markType.create({ color }));
+            view.dispatch(tr);
+          }
 
-        view.focus();
-      });
-    } catch {
-      // Editor action failed
-    }
+          view.focus();
+        });
+      } catch {
+        // Editor action failed
+      }
 
-    setHighlightPicker(null);
-  }, [highlightPicker]);
+      setHighlightPicker(null);
+    },
+    [highlightPicker],
+  );
 
   // Update comment decorations when comments or active comment change
   useEffect(() => {
@@ -1307,7 +1371,8 @@ export function CrepeEditor({
 
   return (
     <>
-      <div className={`crepe-editor-wrapper ${compact ? '' : 'h-full'} overflow-y-auto ${className || ''}`}
+      <div
+        className={`crepe-editor-wrapper ${compact ? "" : "h-full"} overflow-y-auto ${className || ""}`}
         style={{
           ...(minHeight ? { minHeight } : {}),
           ...(maxHeight ? { maxHeight } : {}),
@@ -1316,67 +1381,82 @@ export function CrepeEditor({
         {headerSlot}
         <div
           ref={editorRef}
-          className={`crepe-editor prose max-w-none ${compact ? 'crepe-editor-compact px-3 py-2' : ''}`}
-          style={className?.includes('chat-bubble-editor') ? undefined : {
-            fontSize: `${settings?.fontSize || 16}px`,
-            lineHeight: settings?.lineHeight || 1.6,
-          }}
+          className={`crepe-editor prose max-w-none ${compact ? "crepe-editor-compact px-3 py-2" : ""}`}
+          style={
+            className?.includes("chat-bubble-editor")
+              ? undefined
+              : {
+                  fontSize: `${settings?.fontSize || 16}px`,
+                  lineHeight: settings?.lineHeight || 1.6,
+                }
+          }
         />
       </div>
 
       {/* Mention search popup - only for editable mode */}
-      {!readonly && mentionPopup && createPortal(
-        <MentionSearch
-          query={mentionPopup.query}
-          from={mentionPopup.from}
-          to={mentionPopup.to}
-          view={mentionPopup.view}
-          onSelect={handleMentionSelect}
-          onClose={() => setMentionPopup(null)}
-          onQueryChange={(newQuery) => setMentionPopup(prev => prev ? { ...prev, query: newQuery } : null)}
-        />,
-        document.body
-      )}
+      {!readonly &&
+        mentionPopup &&
+        createPortal(
+          <MentionSearch
+            query={mentionPopup.query}
+            from={mentionPopup.from}
+            to={mentionPopup.to}
+            view={mentionPopup.view}
+            onSelect={handleMentionSelect}
+            onClose={() => setMentionPopup(null)}
+            onQueryChange={(newQuery) =>
+              setMentionPopup((prev) => (prev ? { ...prev, query: newQuery } : null))
+            }
+          />,
+          document.body,
+        )}
 
       {/* Highlight color picker - triggered from toolbar highlight button */}
-      {!readonly && highlightPicker && createPortal(
-        <HighlightPicker
-          anchorRect={highlightPicker.rect}
-          onSelect={handleHighlightColor}
-          onClose={() => setHighlightPicker(null)}
-        />,
-        document.body
-      )}
+      {!readonly &&
+        highlightPicker &&
+        createPortal(
+          <HighlightPicker
+            anchorRect={highlightPicker.rect}
+            onSelect={handleHighlightColor}
+            onClose={() => setHighlightPicker(null)}
+          />,
+          document.body,
+        )}
 
       {/* Inline comment form - triggered from toolbar comment button */}
-      {!readonly && enableComments && commentSelection && createPortal(
-        <InlineCommentPopover
-          selection={commentSelection}
-          contentType={contentType}
-          contentId={contentId}
-          onClose={() => setCommentSelection(null)}
-        />,
-        document.body
-      )}
-
-      {/* Comment thread popover - triggered from clicking highlighted text */}
-      {enableComments && threadPopover && (() => {
-        const comment = contentComments.find((c) => c.id === threadPopover.commentId);
-        if (!comment) return null;
-        return (
-          <CommentThreadPopover
-            comment={comment}
+      {!readonly &&
+        enableComments &&
+        commentSelection &&
+        createPortal(
+          <InlineCommentPopover
+            selection={commentSelection}
             contentType={contentType}
             contentId={contentId}
-            anchorRect={threadPopover.rect}
-            onClose={() => {
-              setThreadPopover(null);
-              dispatch(setActiveComment(null));
-            }}
-            onRefresh={refreshComments}
-          />
-        );
-      })()}
+            onClose={() => setCommentSelection(null)}
+          />,
+          document.body,
+        )}
+
+      {/* Comment thread popover - triggered from clicking highlighted text */}
+      {enableComments &&
+        threadPopover &&
+        (() => {
+          const comment = contentComments.find((c) => c.id === threadPopover.commentId);
+          if (!comment) return null;
+          return (
+            <CommentThreadPopover
+              comment={comment}
+              contentType={contentType}
+              contentId={contentId}
+              anchorRect={threadPopover.rect}
+              onClose={() => {
+                setThreadPopover(null);
+                dispatch(setActiveComment(null));
+              }}
+              onRefresh={refreshComments}
+            />
+          );
+        })()}
     </>
   );
 }

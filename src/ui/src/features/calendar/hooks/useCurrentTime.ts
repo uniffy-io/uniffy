@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
-import { getCurrentTimeInfo } from '@/features/calendar/utils';
-import { GRID } from '@/features/calendar/constants';
+import { useState, useEffect, useMemo } from "react";
+import { getCurrentTimeInfo } from "@/features/calendar/utils";
+import { GRID } from "@/features/calendar/constants";
 
 interface CurrentTimeInfo {
   hour: number;
@@ -12,7 +12,7 @@ interface CurrentTimeInfo {
 
 export function useCurrentTime(
   startHour: number = GRID.START_HOUR,
-  hourHeight: number = GRID.HOUR_HEIGHT
+  hourHeight: number = GRID.HOUR_HEIGHT,
 ): CurrentTimeInfo {
   const [timeInfo, setTimeInfo] = useState(() => getCurrentTimeInfo());
 
@@ -45,8 +45,8 @@ export function useCurrentTime(
   const formattedTime = useMemo(() => {
     const { hour, minutes } = timeInfo;
     const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    const period = hour < 12 ? 'AM' : 'PM';
-    const minuteStr = minutes.toString().padStart(2, '0');
+    const period = hour < 12 ? "AM" : "PM";
+    const minuteStr = minutes.toString().padStart(2, "0");
     return `${displayHour}:${minuteStr} ${period}`;
   }, [timeInfo]);
 
@@ -56,4 +56,3 @@ export function useCurrentTime(
     formattedTime,
   };
 }
-

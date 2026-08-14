@@ -36,59 +36,60 @@ All composables are imported from `@milkdown/kit/utils`.
 Define the structure and behavior of custom content nodes.
 
 ```typescript
-import { $node } from '@milkdown/kit/utils';
-import { Node } from '@milkdown/kit/prose/model';
+import { $node } from "@milkdown/kit/utils";
+import { Node } from "@milkdown/kit/prose/model";
 
-export const mentionNode = $node('mention', () => ({
-  group: 'inline',      // 'block' or 'inline'
+export const mentionNode = $node("mention", () => ({
+  group: "inline", // 'block' or 'inline'
   inline: true,
-  atom: true,           // Treated as single unit
+  atom: true, // Treated as single unit
   attrs: {
-    id: { default: '' },
-    label: { default: '' },
-    type: { default: 'note' },
+    id: { default: "" },
+    label: { default: "" },
+    type: { default: "note" },
   },
   parseDOM: [
     {
       tag: 'span[data-type="mention"]',
       getAttrs: (dom: HTMLElement) => ({
-        id: dom.getAttribute('data-id') || '',
-        label: dom.getAttribute('data-label') || '',
-        type: dom.getAttribute('data-mention-type') || 'note',
+        id: dom.getAttribute("data-id") || "",
+        label: dom.getAttribute("data-label") || "",
+        type: dom.getAttribute("data-mention-type") || "note",
       }),
     },
   ],
   toDOM: (node: Node) => [
-    'span',
+    "span",
     {
-      'data-type': 'mention',
-      'data-id': node.attrs.id,
-      'data-label': node.attrs.label,
-      'data-mention-type': node.attrs.type,
-      class: 'mention-chip',
+      "data-type": "mention",
+      "data-id": node.attrs.id,
+      "data-label": node.attrs.label,
+      "data-mention-type": node.attrs.type,
+      class: "mention-chip",
     },
     `@${node.attrs.label}`,
   ],
   parseMarkdown: {
-    match: ({ type }: any) => type === 'mention',
+    match: ({ type }: any) => type === "mention",
     runner: (state: any, node: any, type: any) => {
       state.addNode(type, {
-        id: node.id || '',
-        label: node.label || '',
-        type: node.type || 'note',
+        id: node.id || "",
+        label: node.label || "",
+        type: node.type || "note",
       });
     },
   },
   toMarkdown: {
-    match: (node: Node) => node.type.name === 'mention',
+    match: (node: Node) => node.type.name === "mention",
     runner: (state: any, node: Node) => {
-      state.addNode('text', undefined, `@${(node.attrs as any).label}`);
+      state.addNode("text", undefined, `@${(node.attrs as any).label}`);
     },
   },
 }));
 ```
 
 **Key points:**
+
 - `group`: 'block' for paragraphs/headings, 'inline' for text-level elements
 - `atom: true`: Prevents cursor from entering the node
 - `parseDOM` and `toDOM`: HTML serialization
@@ -99,8 +100,8 @@ export const mentionNode = $node('mention', () => ({
 Trigger behavior when user types specific patterns.
 
 ```typescript
-import { $inputRule } from '@milkdown/kit/utils';
-import { InputRule } from '@milkdown/kit/prose/inputrules';
+import { $inputRule } from "@milkdown/kit/utils";
+import { InputRule } from "@milkdown/kit/prose/inputrules";
 
 // Store editor view reference (needed for accessing view in input rule)
 let editorViewRef: EditorView | null = null;
@@ -108,7 +109,7 @@ let editorViewRef: EditorView | null = null;
 export const mentionInputRule = $inputRule(() => {
   // Regex: @ followed by alphanumeric characters
   return new InputRule(/@([a-zA-Z0-9-_]*)$/, (state, match, start, end) => {
-    const query = match[1] || '';
+    const query = match[1] || "";
 
     // Get view from stored reference
     const view = editorViewRef || (window as any).__milkdownEditorView;
@@ -125,6 +126,7 @@ export const mentionInputRule = $inputRule(() => {
 ```
 
 **Key points:**
+
 - Input rules run on every keystroke
 - Regex must match at end of line (`$` anchor)
 - Return `null` if you don't want to modify the document
@@ -136,9 +138,9 @@ export const mentionInputRule = $inputRule(() => {
 Render custom UI for nodes using React or vanilla JS.
 
 ```typescript
-import { $view } from '@milkdown/kit/utils';
-import { EditorView } from '@milkdown/kit/prose/view';
-import type { NodeView } from '@milkdown/kit/prose/view';
+import { $view } from "@milkdown/kit/utils";
+import { EditorView } from "@milkdown/kit/prose/view";
+import type { NodeView } from "@milkdown/kit/prose/view";
 
 class MentionNodeView implements NodeView {
   dom: HTMLElement;
@@ -148,8 +150,8 @@ class MentionNodeView implements NodeView {
     this.node = node;
 
     // Create the DOM element
-    this.dom = document.createElement('span');
-    this.dom.className = 'mention-chip';
+    this.dom = document.createElement("span");
+    this.dom.className = "mention-chip";
     this.dom.textContent = `@${node.attrs.label}`;
 
     // Handle clicks
@@ -166,13 +168,15 @@ class MentionNodeView implements NodeView {
   }
 }
 
-export const mentionView = $view(mentionNode, () =>
-  (node: Node, view: EditorView, getPos: () => number | undefined) =>
-    new MentionNodeView(node, view, getPos)
+export const mentionView = $view(
+  mentionNode,
+  () => (node: Node, view: EditorView, getPos: () => number | undefined) =>
+    new MentionNodeView(node, view, getPos),
 );
 ```
 
 **Key points:**
+
 - Implement `NodeView` interface
 - `dom` property is the root element
 - `stopEvent()` returns true to handle events internally
@@ -188,8 +192,8 @@ export const mentionView = $view(mentionNode, () =>
 Plugins must be registered before calling `.create()`, not after.
 
 ```typescript
-import { Crepe } from '@milkdown/crepe';
-import { mentionPlugins } from './plugins/mention';
+import { Crepe } from "@milkdown/crepe";
+import { mentionPlugins } from "./plugins/mention";
 
 const crepe = new Crepe(config);
 
@@ -224,7 +228,7 @@ useEffect(() => {
     const editor = crepe.editor;
     editor.use(mentionPlugins);
   } catch (error) {
-    console.error('Failed to register plugins:', error);
+    console.error("Failed to register plugins:", error);
   }
 
   // Setup listeners
@@ -255,7 +259,7 @@ useEffect(() => {
 The ProseMirror `EditorView` is needed for many operations. Access it after `.create()`:
 
 ```typescript
-import { editorViewCtx } from '@milkdown/core';
+import { editorViewCtx } from "@milkdown/core";
 
 crepe.create().then(() => {
   const editor = crepe.editor;
@@ -275,6 +279,7 @@ crepe.create().then(() => {
 ```
 
 **Why you need the view:**
+
 - Get cursor position
 - Dispatch transactions
 - Access document state
@@ -359,16 +364,16 @@ useEffect(() => {
 For embedding React components inside nodes:
 
 ```typescript
-import { createRoot } from 'react-dom/client';
-import type { Root } from 'react-dom/client';
+import { createRoot } from "react-dom/client";
+import type { Root } from "react-dom/client";
 
 class ReactNodeView implements NodeView {
   dom: HTMLElement;
   root: Root;
 
   constructor(node: Node, view: EditorView) {
-    this.dom = document.createElement('div');
-    this.dom.className = 'my-custom-node';
+    this.dom = document.createElement("div");
+    this.dom.className = "my-custom-node";
 
     // Mount React component
     this.root = createRoot(this.dom);
@@ -379,7 +384,7 @@ class ReactNodeView implements NodeView {
     this.root.render(
       React.createElement(MyComponent, {
         // pass props
-      })
+      }),
     );
   }
 
@@ -412,12 +417,13 @@ src/ui/src/features/notes/components/editor/plugins/mention/
 ```
 
 **index.ts:**
+
 ```typescript
-import { $node, $inputRule, $view } from '@milkdown/kit/utils';
-import { InputRule } from '@milkdown/kit/prose/inputrules';
-import { Node } from '@milkdown/kit/prose/model';
-import { EditorView } from '@milkdown/kit/prose/view';
-import type { NodeView } from '@milkdown/kit/prose/view';
+import { $node, $inputRule, $view } from "@milkdown/kit/utils";
+import { InputRule } from "@milkdown/kit/prose/inputrules";
+import { Node } from "@milkdown/kit/prose/model";
+import { EditorView } from "@milkdown/kit/prose/view";
+import type { NodeView } from "@milkdown/kit/prose/view";
 
 // 1. Event bus for UI communication
 export type MentionTriggerEvent = {
@@ -440,7 +446,7 @@ function triggerMentionSearch(event: MentionTriggerEvent | null) {
 }
 
 // 2. Node schema
-export const mentionNode = $node('mention', () => ({
+export const mentionNode = $node("mention", () => ({
   // ... (see Node Schema section above)
 }));
 
@@ -449,7 +455,7 @@ let editorViewRef: EditorView | null = null;
 
 export const mentionInputRule = $inputRule(() => {
   return new InputRule(/@([a-zA-Z0-9-_]*)$/, (state, match, start, end) => {
-    const query = match[1] || '';
+    const query = match[1] || "";
     const view = editorViewRef || (window as any).__milkdownEditorView;
 
     if (view) {
@@ -465,9 +471,10 @@ class MentionNodeView implements NodeView {
   // ... (see Custom Node Views section above)
 }
 
-export const mentionView = $view(mentionNode, () =>
-  (node: Node, view: EditorView, getPos: () => number | undefined) =>
-    new MentionNodeView(node, view, getPos)
+export const mentionView = $view(
+  mentionNode,
+  () => (node: Node, view: EditorView, getPos: () => number | undefined) =>
+    new MentionNodeView(node, view, getPos),
 );
 
 // 5. Export as single array
@@ -503,12 +510,10 @@ function handleSelect(item: SearchResultItem) {
   const tr = state.tr.replaceWith(from, to, mention);
 
   // Add a space after
-  tr.insertText(' ', from + 1);
+  tr.insertText(" ", from + 1);
 
   // Set cursor position
-  tr.setSelection(
-    (state.selection.constructor as any).near(tr.doc.resolve(from + 2))
-  );
+  tr.setSelection((state.selection.constructor as any).near(tr.doc.resolve(from + 2)));
 
   dispatch(tr);
   view.focus();
@@ -538,27 +543,27 @@ function MentionPopup({ from, view }: Props) {
 useEffect(() => {
   const handleKeyDown = (e: KeyboardEvent) => {
     switch (e.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         e.preventDefault();
         setSelected((prev) => (prev + 1) % items.length);
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         e.preventDefault();
         setSelected((prev) => (prev - 1 + items.length) % items.length);
         break;
-      case 'Enter':
+      case "Enter":
         e.preventDefault();
         onSelect(items[selected]);
         break;
-      case 'Escape':
+      case "Escape":
         e.preventDefault();
         onClose();
         break;
     }
   };
 
-  document.addEventListener('keydown', handleKeyDown);
-  return () => document.removeEventListener('keydown', handleKeyDown);
+  document.addEventListener("keydown", handleKeyDown);
+  return () => document.removeEventListener("keydown", handleKeyDown);
 }, [items, selected, onSelect, onClose]);
 ```
 
@@ -571,6 +576,7 @@ useEffect(() => {
 **Problem:** Plugin appears to register but doesn't work.
 
 **Solution:**
+
 - ✅ Ensure you call `editor.use(plugins)` BEFORE `crepe.create()`
 - ✅ Check console for errors during plugin registration
 - ✅ Verify imports are from `@milkdown/kit/*` not `@milkdown/*`
@@ -580,6 +586,7 @@ useEffect(() => {
 **Problem:** Typing pattern doesn't trigger input rule.
 
 **Solution:**
+
 - ✅ Regex must end with `$` to match end of line
 - ✅ Input rules only trigger on text input, not programmatic changes
 - ✅ Check if another plugin is consuming the input first
@@ -589,6 +596,7 @@ useEffect(() => {
 **Problem:** `editorViewCtx` returns undefined.
 
 **Solution:**
+
 - ✅ Only access view AFTER `.create()` completes
 - ✅ Use `editor.action((ctx) => { const view = ctx.get(editorViewCtx); })`
 - ✅ Store reference globally or in module variable for input rules
@@ -598,6 +606,7 @@ useEffect(() => {
 **Problem:** NodeView React component doesn't show.
 
 **Solution:**
+
 - ✅ Use `createRoot` from `react-dom/client`, not legacy `render`
 - ✅ Call `root.unmount()` in `destroy()` method
 - ✅ Check if `stopEvent()` returns `true`
@@ -607,6 +616,7 @@ useEffect(() => {
 **Problem:** Component re-renders constantly.
 
 **Solution:**
+
 - ✅ Don't create arrays/objects in component body (move outside or use `useMemo`)
 - ✅ Avoid calling `setState` directly in render
 - ✅ Check useEffect dependencies

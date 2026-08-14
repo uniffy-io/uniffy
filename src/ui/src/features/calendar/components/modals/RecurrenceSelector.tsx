@@ -1,60 +1,74 @@
-import { useState } from 'react';
-import { ArrowsClockwise } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { Select } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/date-picker';
-import { NumberInput } from '@/components/ui/number-input';
-import type { RecurrenceConfig, RecurrencePattern, DayOfWeek } from '@/features/calendar/types';
-import { RECURRENCE_LABELS, DAY_OF_WEEK_LABELS } from '@/features/calendar/constants';
+import { useState } from "react";
+import { ArrowsClockwise } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { Select } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
+import { NumberInput } from "@/components/ui/number-input";
+import type { RecurrenceConfig, RecurrencePattern, DayOfWeek } from "@/features/calendar/types";
+import { RECURRENCE_LABELS, DAY_OF_WEEK_LABELS } from "@/features/calendar/constants";
 
-type EndCondition = 'never' | 'after' | 'on_date';
+type EndCondition = "never" | "after" | "on_date";
 
-const ALL_DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const ALL_DAYS: DayOfWeek[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
 
-const PATTERN_OPTIONS = (Object.keys(RECURRENCE_LABELS) as RecurrencePattern[]).map(
-  (pattern) => ({
-    value: pattern,
-    label: RECURRENCE_LABELS[pattern],
-  })
-);
+const PATTERN_OPTIONS = (Object.keys(RECURRENCE_LABELS) as RecurrencePattern[]).map((pattern) => ({
+  value: pattern,
+  label: RECURRENCE_LABELS[pattern],
+}));
 
 const DAY_KEYS = Object.keys(DAY_OF_WEEK_LABELS) as DayOfWeek[];
 
 function getTodayDayOfWeek(): DayOfWeek {
   const jsDay = new Date().getDay();
-  const mapping: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const mapping: DayOfWeek[] = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
   return mapping[jsDay];
 }
 
 function getIntervalUnit(pattern: RecurrencePattern): string {
   switch (pattern) {
-    case 'daily':
-      return 'day(s)';
-    case 'weekly':
-    case 'biweekly':
-      return 'week(s)';
-    case 'monthly':
-      return 'month(s)';
-    case 'yearly':
-      return 'year(s)';
+    case "daily":
+      return "day(s)";
+    case "weekly":
+    case "biweekly":
+      return "week(s)";
+    case "monthly":
+      return "month(s)";
+    case "yearly":
+      return "year(s)";
     default:
-      return '';
+      return "";
   }
 }
 
 function getEndCondition(config: RecurrenceConfig): EndCondition {
-  if (config.maxOccurrences) return 'after';
-  if (config.endDate) return 'on_date';
-  return 'never';
+  if (config.maxOccurrences) return "after";
+  if (config.endDate) return "on_date";
+  return "never";
 }
 
 function getDefaultDays(newPattern: RecurrencePattern): DayOfWeek[] | undefined {
-  if (newPattern === 'daily') return [...ALL_DAYS];
-  if (newPattern === 'weekly' || newPattern === 'biweekly') return [getTodayDayOfWeek()];
+  if (newPattern === "daily") return [...ALL_DAYS];
+  if (newPattern === "weekly" || newPattern === "biweekly") return [getTodayDayOfWeek()];
   return undefined;
 }
 
-const INPUT_CLASS = 'h-auto w-16 px-2 py-1 text-xs text-foreground text-center transition-all';
+const INPUT_CLASS = "h-auto w-16 px-2 py-1 text-xs text-foreground text-center transition-all";
 
 interface RecurrenceSelectorProps {
   value: RecurrenceConfig | undefined;
@@ -62,26 +76,26 @@ interface RecurrenceSelectorProps {
 }
 
 export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps) {
-  const pattern = value?.pattern ?? 'none';
+  const pattern = value?.pattern ?? "none";
 
-  const [endCondition, setEndCondition] = useState<EndCondition>(
-    () => (value ? getEndCondition(value) : 'never')
+  const [endCondition, setEndCondition] = useState<EndCondition>(() =>
+    value ? getEndCondition(value) : "never",
   );
 
   const handlePatternChange = (newPattern: RecurrencePattern) => {
-    if (newPattern === 'none') {
+    if (newPattern === "none") {
       onChange(undefined);
-      setEndCondition('never');
+      setEndCondition("never");
       return;
     }
 
     onChange({
       pattern: newPattern,
-      interval: newPattern === 'biweekly' ? 2 : (value?.interval ?? 1),
+      interval: newPattern === "biweekly" ? 2 : (value?.interval ?? 1),
       daysOfWeek: getDefaultDays(newPattern),
-      dayOfMonth: newPattern === 'monthly' ? (value?.dayOfMonth ?? 1) : undefined,
-      endDate: endCondition === 'on_date' ? value?.endDate : undefined,
-      maxOccurrences: endCondition === 'after' ? value?.maxOccurrences : undefined,
+      dayOfMonth: newPattern === "monthly" ? (value?.dayOfMonth ?? 1) : undefined,
+      endDate: endCondition === "on_date" ? value?.endDate : undefined,
+      maxOccurrences: endCondition === "after" ? value?.maxOccurrences : undefined,
     });
   };
 
@@ -94,9 +108,7 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
   const handleDayToggle = (day: DayOfWeek) => {
     if (!value) return;
     const current = value.daysOfWeek ?? [];
-    const updated = current.includes(day)
-      ? current.filter((d) => d !== day)
-      : [...current, day];
+    const updated = current.includes(day) ? current.filter((d) => d !== day) : [...current, day];
     onChange({ ...value, daysOfWeek: updated });
   };
 
@@ -112,8 +124,8 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
 
     onChange({
       ...value,
-      endDate: condition === 'on_date' ? (value.endDate ?? '') : undefined,
-      maxOccurrences: condition === 'after' ? (value.maxOccurrences ?? 10) : undefined,
+      endDate: condition === "on_date" ? (value.endDate ?? "") : undefined,
+      maxOccurrences: condition === "after" ? (value.maxOccurrences ?? 10) : undefined,
     });
   };
 
@@ -128,9 +140,9 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
     onChange({ ...value, endDate: date });
   };
 
-  const showDetails = pattern !== 'none';
-  const showDayToggles = pattern === 'daily' || pattern === 'weekly' || pattern === 'biweekly';
-  const showDayOfMonth = pattern === 'monthly';
+  const showDetails = pattern !== "none";
+  const showDayToggles = pattern === "daily" || pattern === "weekly" || pattern === "biweekly";
+  const showDayOfMonth = pattern === "monthly";
 
   return (
     <div className="space-y-2">
@@ -158,15 +170,13 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
               onChange={(e) => handleIntervalChange(Number(e.target.value))}
               className={INPUT_CLASS}
             />
-            <span className="text-xs text-muted-foreground">
-              {getIntervalUnit(pattern)}
-            </span>
+            <span className="text-xs text-muted-foreground">{getIntervalUnit(pattern)}</span>
           </div>
 
           {showDayToggles && (
             <div className="space-y-1.5">
               <label className="block text-xs text-muted-foreground">
-                {pattern === 'daily' ? 'Repeat on' : 'On days'}
+                {pattern === "daily" ? "Repeat on" : "On days"}
               </label>
               <div className="flex gap-1">
                 {DAY_KEYS.map((day) => {
@@ -177,10 +187,10 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
                       type="button"
                       onClick={() => handleDayToggle(day)}
                       className={cn(
-                        'w-8 h-8 text-xs rounded-md border transition-all font-medium',
+                        "w-8 h-8 text-xs rounded-md border transition-all font-medium",
                         isSelected
-                          ? 'border-primary bg-primary/10 text-foreground'
-                          : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
                       title={DAY_OF_WEEK_LABELS[day].full}
                     >
@@ -213,8 +223,8 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
                 <input
                   type="radio"
                   name="recurrence-end"
-                  checked={endCondition === 'never'}
-                  onChange={() => handleEndConditionChange('never')}
+                  checked={endCondition === "never"}
+                  onChange={() => handleEndConditionChange("never")}
                   className="accent-primary"
                 />
                 <span className="text-xs text-foreground">Never</span>
@@ -224,8 +234,8 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
                 <input
                   type="radio"
                   name="recurrence-end"
-                  checked={endCondition === 'after'}
-                  onChange={() => handleEndConditionChange('after')}
+                  checked={endCondition === "after"}
+                  onChange={() => handleEndConditionChange("after")}
                   className="accent-primary"
                 />
                 <span className="text-xs text-foreground">After</span>
@@ -234,7 +244,7 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
                   max={999}
                   value={value?.maxOccurrences ?? 10}
                   onChange={(e) => handleMaxOccurrencesChange(Number(e.target.value))}
-                  disabled={endCondition !== 'after'}
+                  disabled={endCondition !== "after"}
                   className={INPUT_CLASS}
                 />
                 <span className="text-xs text-foreground">occurrences</span>
@@ -245,20 +255,20 @@ export function RecurrenceSelector({ value, onChange }: RecurrenceSelectorProps)
                   <input
                     type="radio"
                     name="recurrence-end"
-                    checked={endCondition === 'on_date'}
-                    onChange={() => handleEndConditionChange('on_date')}
+                    checked={endCondition === "on_date"}
+                    onChange={() => handleEndConditionChange("on_date")}
                     className="accent-primary"
                   />
                   <span className="text-xs text-foreground">On</span>
                 </label>
                 <DatePicker
-                  value={value?.endDate ?? ''}
+                  value={value?.endDate ?? ""}
                   onChange={handleEndDateChange}
-                  disabled={endCondition !== 'on_date'}
+                  disabled={endCondition !== "on_date"}
                   placeholder="Pick end date"
                   className={cn(
-                    'max-w-[200px]',
-                    endCondition !== 'on_date' && 'opacity-50 pointer-events-none'
+                    "max-w-[200px]",
+                    endCondition !== "on_date" && "opacity-50 pointer-events-none",
                   )}
                 />
               </div>

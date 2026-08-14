@@ -113,10 +113,13 @@ export function ResourceView() {
     });
   }, []);
 
-  const handleTaskClick = useCallback((taskId: string) => {
-    dispatch(selectTask(taskId));
-    dispatch(openDetailPanel());
-  }, [dispatch]);
+  const handleTaskClick = useCallback(
+    (taskId: string) => {
+      dispatch(selectTask(taskId));
+      dispatch(openDetailPanel());
+    },
+    [dispatch],
+  );
 
   if (!project) return null;
 
@@ -147,10 +150,11 @@ export function ResourceView() {
                 onClick={() => toggleSection(key)}
                 className="w-full flex items-center gap-3 px-4 py-2.5 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
               >
-                {isCollapsed
-                  ? <CaretRight size={14} className="text-muted-foreground shrink-0" />
-                  : <CaretDown size={14} className="text-muted-foreground shrink-0" />
-                }
+                {isCollapsed ? (
+                  <CaretRight size={14} className="text-muted-foreground shrink-0" />
+                ) : (
+                  <CaretDown size={14} className="text-muted-foreground shrink-0" />
+                )}
 
                 {subject ? (
                   <SubjectAvatar subject={subject} size="sm" />
@@ -169,12 +173,14 @@ export function ResourceView() {
                 </span>
 
                 {group.totalEstimated > 0 && (
-                  <span className={cn(
-                    "text-xs shrink-0 ml-auto",
-                    group.totalSpent > group.totalEstimated
-                      ? "text-red-500"
-                      : "text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-xs shrink-0 ml-auto",
+                      group.totalSpent > group.totalEstimated
+                        ? "text-red-500"
+                        : "text-muted-foreground",
+                    )}
+                  >
                     <Clock size={10} className="inline mr-0.5" />
                     {formatMinutes(group.totalSpent)} / {formatMinutes(group.totalEstimated)}
                   </span>
@@ -205,10 +211,12 @@ export function ResourceView() {
                         )}
 
                         {/* Title */}
-                        <span className={cn(
-                          "text-sm flex-1 truncate",
-                          task.completedAt && "text-muted-foreground line-through"
-                        )}>
+                        <span
+                          className={cn(
+                            "text-sm flex-1 truncate",
+                            task.completedAt && "text-muted-foreground line-through",
+                          )}
+                        >
                           {task.title}
                         </span>
 
@@ -227,10 +235,12 @@ export function ResourceView() {
 
                         {/* Due date */}
                         {task.dueDate && (
-                          <span className={cn(
-                            "flex items-center gap-1 text-xs shrink-0",
-                            taskOverdue ? "text-red-500" : "text-muted-foreground"
-                          )}>
+                          <span
+                            className={cn(
+                              "flex items-center gap-1 text-xs shrink-0",
+                              taskOverdue ? "text-red-500" : "text-muted-foreground",
+                            )}
+                          >
                             <CalendarBlank size={10} />
                             {formatDateShort(task.dueDate)}
                           </span>
@@ -238,15 +248,21 @@ export function ResourceView() {
 
                         {/* Time */}
                         {(task.estimatedMinutes || task.timeSpentMinutes) && (
-                          <span className={cn(
-                            "text-[10px] shrink-0",
-                            task.estimatedMinutes && task.timeSpentMinutes && task.timeSpentMinutes > task.estimatedMinutes
-                              ? "text-red-500"
-                              : "text-muted-foreground"
-                          )}>
+                          <span
+                            className={cn(
+                              "text-[10px] shrink-0",
+                              task.estimatedMinutes &&
+                                task.timeSpentMinutes &&
+                                task.timeSpentMinutes > task.estimatedMinutes
+                                ? "text-red-500"
+                                : "text-muted-foreground",
+                            )}
+                          >
                             <Clock size={10} className="inline mr-0.5" />
                             {task.timeSpentMinutes ? formatMinutes(task.timeSpentMinutes) : "0m"}
-                            {task.estimatedMinutes ? ` / ${formatMinutes(task.estimatedMinutes)}` : ""}
+                            {task.estimatedMinutes
+                              ? ` / ${formatMinutes(task.estimatedMinutes)}`
+                              : ""}
                           </span>
                         )}
                       </div>

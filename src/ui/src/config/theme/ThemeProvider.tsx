@@ -1,15 +1,23 @@
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
-import type { Theme } from '@/config/theme/types';
-import { defaultTheme, darkTheme } from '@/config/theme/types';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { setThemeMode, setAccentColor, setFontFamily, type ThemeMode } from '@/config/theme/themeSlice';
-import { updateEffectiveSettingsLocal, updateProfile } from '@/features/settings/store/settingsSlice';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import type { Theme } from "@/config/theme/types";
+import { defaultTheme, darkTheme } from "@/config/theme/types";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import {
+  setThemeMode,
+  setAccentColor,
+  setFontFamily,
+  type ThemeMode,
+} from "@/config/theme/themeSlice";
+import {
+  updateEffectiveSettingsLocal,
+  updateProfile,
+} from "@/features/settings/store/settingsSlice";
 
 interface ThemeContextType {
   theme: Theme;
   themeMode: ThemeMode;
   /** Resolves 'system' to the OS preference. */
-  resolvedTheme: 'light' | 'dark';
+  resolvedTheme: "light" | "dark";
   setTheme: (mode: ThemeMode) => void;
   availableModes: ThemeMode[];
 }
@@ -18,7 +26,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 /** sRGB relative luminance from an HSL triplet ("221.2 83.2% 53.3%"). Used to pick contrasting foreground. */
 function getLuminance(hsl: string): number {
-  const parts = hsl.split(' ');
+  const parts = hsl.split(" ");
   if (parts.length !== 3) return 0.5;
 
   const h = parseFloat(parts[0]) / 360;
@@ -32,16 +40,16 @@ function getLuminance(hsl: string): number {
     const hue2rgb = (p: number, q: number, t: number) => {
       if (t < 0) t += 1;
       if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q - p) * 6 * t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
       return p;
     };
     const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
     const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1/3);
+    r = hue2rgb(p, q, h + 1 / 3);
     g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1/3);
+    b = hue2rgb(p, q, h - 1 / 3);
   }
 
   const rsRGB = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
@@ -51,11 +59,11 @@ function getLuminance(hsl: string): number {
   return 0.2126 * rsRGB + 0.7152 * gsRGB + 0.0722 * bsRGB;
 }
 
-function getSystemTheme(): 'light' | 'dark' {
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+function getSystemTheme(): "light" | "dark" {
+  if (typeof window !== "undefined" && window.matchMedia) {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
-  return 'light';
+  return "light";
 }
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,16 +79,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const user = useAppSelector((state) => state.auth?.user);
 
-  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(getSystemTheme);
+  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(getSystemTheme);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
-      setSystemTheme(e.matches ? 'dark' : 'light');
+      setSystemTheme(e.matches ? "dark" : "light");
     };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
   // Resolution priority: settings framework -> theme slice -> user profile -> defaults.
@@ -88,7 +96,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (settingsInitialized && effectiveSettings?.appearance.theme) {
       return effectiveSettings.appearance.theme as ThemeMode;
     }
-    return themeSliceMode ?? 'system';
+    return themeSliceMode ?? "system";
   }, [settingsInitialized, effectiveSettings?.appearance.theme, themeSliceMode]);
 
   const accentColor = useMemo(() => {
@@ -122,7 +130,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         dispatch(setFontFamily(settingsFont));
       }
     }
-  }, [settingsInitialized, effectiveSettings, dispatch, themeSliceMode, themeSliceAccentColor, themeSliceFontFamily]);
+  }, [
+    settingsInitialized,
+    effectiveSettings,
+    dispatch,
+    themeSliceMode,
+    themeSliceAccentColor,
+    themeSliceFontFamily,
+  ]);
 
   // Fallback sync from user profile before the settings framework boots.
   useEffect(() => {
@@ -136,91 +151,99 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [settingsInitialized, user, themeSliceAccentColor, themeSliceFontFamily, dispatch]);
 
-  const resolvedTheme: 'light' | 'dark' = themeMode === 'system' ? systemTheme : themeMode;
+  const resolvedTheme: "light" | "dark" = themeMode === "system" ? systemTheme : themeMode;
 
-  const baseTheme = resolvedTheme === 'dark' ? darkTheme : defaultTheme;
+  const baseTheme = resolvedTheme === "dark" ? darkTheme : defaultTheme;
 
-  const theme: Theme = useMemo(() => ({
-    ...baseTheme,
-    accentColor: accentColor || undefined,
-    fontFamily: fontFamily || undefined,
-  }), [baseTheme, accentColor, fontFamily]);
+  const theme: Theme = useMemo(
+    () => ({
+      ...baseTheme,
+      accentColor: accentColor || undefined,
+      fontFamily: fontFamily || undefined,
+    }),
+    [baseTheme, accentColor, fontFamily],
+  );
 
-  const setTheme = useCallback((mode: ThemeMode) => {
-    dispatch(setThemeMode(mode));
-    if (settingsInitialized) {
-      dispatch(updateEffectiveSettingsLocal({ appearance: { theme: mode } }));
-      if (activeProfileId) {
-        dispatch(updateProfile({ profileId: activeProfileId, appearance: { theme: mode } }));
+  const setTheme = useCallback(
+    (mode: ThemeMode) => {
+      dispatch(setThemeMode(mode));
+      if (settingsInitialized) {
+        dispatch(updateEffectiveSettingsLocal({ appearance: { theme: mode } }));
+        if (activeProfileId) {
+          dispatch(updateProfile({ profileId: activeProfileId, appearance: { theme: mode } }));
+        }
       }
-    }
-  }, [dispatch, settingsInitialized, activeProfileId]);
+    },
+    [dispatch, settingsInitialized, activeProfileId],
+  );
 
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove('dark');
+    root.classList.remove("dark");
 
-    if (resolvedTheme === 'dark') {
-      root.classList.add('dark');
+    if (resolvedTheme === "dark") {
+      root.classList.add("dark");
     }
 
     Object.entries(theme.colors).forEach(([key, value]) => {
-      const cssVar = `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+      const cssVar = `--${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
       root.style.setProperty(cssVar, value);
     });
 
     if (theme.accentColor) {
-      root.style.setProperty('--primary', theme.accentColor);
-      root.style.setProperty('--ring', theme.accentColor);
+      root.style.setProperty("--primary", theme.accentColor);
+      root.style.setProperty("--ring", theme.accentColor);
 
       // Pick foreground that contrasts with the custom accent.
       const luminance = getLuminance(theme.accentColor);
-      const foregroundColor = luminance > 0.5
-        ? '222.2 84% 4.9%'
-        : '210 40% 98%';
+      const foregroundColor = luminance > 0.5 ? "222.2 84% 4.9%" : "210 40% 98%";
 
-      root.style.setProperty('--primary-foreground', foregroundColor);
+      root.style.setProperty("--primary-foreground", foregroundColor);
     } else {
-      root.style.setProperty('--primary', theme.colors.primary);
-      root.style.setProperty('--primary-foreground', theme.colors.primaryForeground);
-      root.style.setProperty('--ring', theme.colors.ring);
+      root.style.setProperty("--primary", theme.colors.primary);
+      root.style.setProperty("--primary-foreground", theme.colors.primaryForeground);
+      root.style.setProperty("--ring", theme.colors.ring);
     }
 
     if (theme.fontFamily) {
-      const fontVar = theme.fontFamily === 'inter' ? 'var(--font-inter)'
-                    : theme.fontFamily === 'geist' ? 'var(--font-geist)'
-                    : theme.fontFamily === 'jakarta' ? 'var(--font-jakarta)'
-                    : theme.fontFamily === 'system' ? 'var(--font-system)'
-                    : 'var(--font-inter)';
-      root.style.setProperty('--font-sans', fontVar);
+      const fontVar =
+        theme.fontFamily === "inter"
+          ? "var(--font-inter)"
+          : theme.fontFamily === "geist"
+            ? "var(--font-geist)"
+            : theme.fontFamily === "jakarta"
+              ? "var(--font-jakarta)"
+              : theme.fontFamily === "system"
+                ? "var(--font-system)"
+                : "var(--font-inter)";
+      root.style.setProperty("--font-sans", fontVar);
     } else {
-      root.style.setProperty('--font-sans', 'var(--font-inter)');
+      root.style.setProperty("--font-sans", "var(--font-inter)");
     }
   }, [theme, resolvedTheme]);
 
-  const availableModes = useMemo(() => ['system', 'light', 'dark'] as ThemeMode[], []);
+  const availableModes = useMemo(() => ["system", "light", "dark"] as ThemeMode[], []);
 
-  const value = useMemo(() => ({
-    theme,
-    themeMode,
-    resolvedTheme,
-    setTheme,
-    availableModes,
-  }), [theme, themeMode, resolvedTheme, setTheme, availableModes]);
-
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
+  const value = useMemo(
+    () => ({
+      theme,
+      themeMode,
+      resolvedTheme,
+      setTheme,
+      availableModes,
+    }),
+    [theme, themeMode, resolvedTheme, setTheme, availableModes],
   );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
 };

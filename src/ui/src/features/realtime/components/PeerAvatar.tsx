@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { cn } from '@/shared/utils/cn';
-import { getInitials } from '@/components/subject/utils';
-import { buildAvatarUrl } from '@/shared/utils/fileUrls';
+import { useState } from "react";
+import { cn } from "@/shared/utils/cn";
+import { getInitials } from "@/components/subject/utils";
+import { buildAvatarUrl } from "@/shared/utils/fileUrls";
 
 interface PeerAvatarProps {
   name: string;
@@ -22,7 +22,7 @@ export function PeerAvatar({
   gradient,
   userId = null,
   hasAvatar = false,
-  sizeClass = 'h-5 w-5 text-[10px]',
+  sizeClass = "h-5 w-5 text-[10px]",
   className,
   title,
 }: PeerAvatarProps) {
@@ -32,7 +32,7 @@ export function PeerAvatar({
   return (
     <span
       className={cn(
-        'inline-flex select-none items-center justify-center overflow-hidden rounded-full font-medium text-white shadow',
+        "inline-flex select-none items-center justify-center overflow-hidden rounded-full font-medium text-white shadow",
         sizeClass,
         className,
       )}
@@ -42,7 +42,7 @@ export function PeerAvatar({
     >
       {showImage ? (
         <img
-          src={buildAvatarUrl(userId as string, 'sm')}
+          src={buildAvatarUrl(userId as string, "sm")}
           alt=""
           className="h-full w-full object-cover"
           onError={() => setImageFailed(true)}

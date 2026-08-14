@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { setMetadataPanelTab, setMetadataPanelOpen } from '@/features/notes/store/editorSlice';
-import type { MetadataPanelTab } from '@/features/notes/store/editorSlice';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { cn } from '@/shared/utils/cn';
-import type { Icon as IconType } from '@phosphor-icons/react';
+import { useState, useMemo } from "react";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { setMetadataPanelTab, setMetadataPanelOpen } from "@/features/notes/store/editorSlice";
+import type { MetadataPanelTab } from "@/features/notes/store/editorSlice";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { cn } from "@/shared/utils/cn";
+import type { Icon as IconType } from "@phosphor-icons/react";
 import {
   Link,
   Gear,
@@ -15,24 +15,24 @@ import {
   Cube,
   ChatCircle,
   X,
-} from '@phosphor-icons/react';
-import { CommentsPanel } from '@/features/comments/components/CommentsPanel';
-import { useComments } from '@/features/comments/hooks/useComments';
-import { useLiveNoteMarkdown } from '@/features/notes/realtime/liveNoteDocs';
-import { ContentType } from '@uniffy/proto/common/v1/common_pb';
-import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
-import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
-import { useNavigate } from 'react-router-dom';
+} from "@phosphor-icons/react";
+import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
+import { useComments } from "@/features/comments/hooks/useComments";
+import { useLiveNoteMarkdown } from "@/features/notes/realtime/liveNoteDocs";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { parseUrn, urnToPath, UrnType } from "@/shared/utils/urn";
+import { openRoomViewer } from "@/features/rooms/store/roomsThunks";
+import { useNavigate } from "react-router-dom";
 
-import { getInitials } from '@/components/subject/utils';
-import { MentionChipCompact } from '@/components/mention';
-import { TagChip } from '@/features/tags';
-import { useTagsByIds } from '@/features/tags/store/selectors';
+import { getInitials } from "@/components/subject/utils";
+import { MentionChipCompact } from "@/components/mention";
+import { TagChip } from "@/features/tags";
+import { useTagsByIds } from "@/features/tags/store/selectors";
 import {
   headingToSlug,
   indexedSlug,
   findHeadingBySlug,
-} from '@/components/editor/utils/headingScroll';
+} from "@/components/editor/utils/headingScroll";
 
 function NoteMetadataTagsList({ tagIds }: { tagIds: ReadonlyArray<string> }) {
   const tags = useTagsByIds(tagIds);
@@ -83,7 +83,6 @@ function parseMentionsFromContent(content: string): ParsedMention[] {
   return mentions;
 }
 
-
 export function NotesMetadataPanel() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -91,7 +90,7 @@ export function NotesMetadataPanel() {
   const { currentNoteId, notes } = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
   const currentUser = useAppSelector((state) => state.auth.user);
-  const metadataPanelTab = editorState?.metadataPanelTab || 'links';
+  const metadataPanelTab = editorState?.metadataPanelTab || "links";
 
   // State for showing copy feedback - must be declared before any conditional returns
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -101,36 +100,28 @@ export function NotesMetadataPanel() {
 
   // Redux content lags the live doc by snapshot debounce plus refetch, so
   // outline/links/statistics read Y.Text when the editor has a session open.
-  const currentContent = useLiveNoteMarkdown(currentNoteId ?? null, note?.content ?? '');
+  const currentContent = useLiveNoteMarkdown(currentNoteId ?? null, note?.content ?? "");
 
   // Parse outgoing links (mentions) from content - MUST be called before any returns
-  const outgoingLinks = useMemo(
-    () => parseMentionsFromContent(currentContent),
-    [currentContent]
-  );
+  const outgoingLinks = useMemo(() => parseMentionsFromContent(currentContent), [currentContent]);
 
   // Get comment counts for badge
-  const { openCount: commentOpenCount } = useComments(
-    ContentType.NOTE,
-    currentNoteId || '',
-  );
+  const { openCount: commentOpenCount } = useComments(ContentType.NOTE, currentNoteId || "");
 
   // Early returns AFTER all hooks
   if (!currentNoteId || !note) return null;
 
   // Check if current user is the owner
   const isOwner = currentUser && note.ownerId === currentUser.id;
-  const ownerName = isOwner
-    ? (currentUser.fullName || currentUser.username || 'You')
-    : 'Unknown';
+  const ownerName = isOwner ? currentUser.fullName || currentUser.username || "You" : "Unknown";
   const ownerInitials = getInitials(ownerName);
 
   const tabs: Array<{ id: MetadataPanelTab; label: string; icon: IconType; badge?: number }> = [
-    { id: 'outline', label: 'Outline', icon: ListBullets },
-    { id: 'links', label: 'Links', icon: Link },
-    { id: 'properties', label: 'Properties', icon: Gear },
-    { id: 'comments', label: 'Comments', icon: ChatCircle, badge: commentOpenCount },
-    { id: 'history', label: 'History', icon: Clock },
+    { id: "outline", label: "Outline", icon: ListBullets },
+    { id: "links", label: "Links", icon: Link },
+    { id: "properties", label: "Properties", icon: Gear },
+    { id: "comments", label: "Comments", icon: ChatCircle, badge: commentOpenCount },
+    { id: "history", label: "History", icon: Clock },
   ];
 
   // Parse headings from markdown content. Slug derivation + occurrence
@@ -164,7 +155,7 @@ export function NotesMetadataPanel() {
       return;
     }
     const path = urnToPath(urn);
-    if (path !== '#') {
+    if (path !== "#") {
       navigate(path);
     }
   };
@@ -179,7 +170,7 @@ export function NotesMetadataPanel() {
   const handleCopyLink = async (e: React.MouseEvent, headingId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const url = getHeadingAnchorUrl(headingId);
     try {
       await navigator.clipboard.writeText(url);
@@ -193,18 +184,22 @@ export function NotesMetadataPanel() {
   const handleHeadingClick = (e: React.MouseEvent, _headingText: string, headingId: string) => {
     e.preventDefault();
 
-    window.history.replaceState(window.history.state, '', `#${headingId}`);
+    window.history.replaceState(window.history.state, "", `#${headingId}`);
 
     const heading = findHeadingBySlug(headingId);
     if (!heading) return;
-    heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    heading.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const renderOutlineTab = () => (
     <div className="space-y-2">
       {headings.length === 0 ? (
         <div className="text-center py-8">
-          <ListBullets size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
+          <ListBullets
+            size={32}
+            weight="duotone"
+            className="mx-auto text-muted-foreground/50 mb-3"
+          />
           <p className="text-sm text-muted-foreground">No headings found</p>
           <p className="text-xs text-muted-foreground mt-1">
             Add headings (# H1, ## H2, etc.) to see the outline
@@ -213,7 +208,7 @@ export function NotesMetadataPanel() {
       ) : (
         <>
           <p className="text-xs text-muted-foreground mb-3">
-            {headings.length} heading{headings.length !== 1 ? 's' : ''}
+            {headings.length} heading{headings.length !== 1 ? "s" : ""}
           </p>
           <nav className="space-y-0.5">
             {headings.map((heading, index) => (
@@ -228,22 +223,36 @@ export function NotesMetadataPanel() {
                   className="flex-1 py-1.5 px-2 text-sm truncate"
                   title={heading.text}
                 >
-                  <span className={`${
-                    heading.level === 1 ? 'font-semibold' : 
-                    heading.level === 2 ? 'font-medium' : 
-                    'text-muted-foreground'
-                  }`}>
+                  <span
+                    className={`${
+                      heading.level === 1
+                        ? "font-semibold"
+                        : heading.level === 2
+                          ? "font-medium"
+                          : "text-muted-foreground"
+                    }`}
+                  >
                     {heading.text}
                   </span>
                 </a>
                 <button
                   onClick={(e) => handleCopyLink(e, heading.id)}
                   className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
-                  title={copiedId === heading.id ? 'Copied!' : 'Copy link'}
+                  title={copiedId === heading.id ? "Copied!" : "Copy link"}
                 >
                   {copiedId === heading.id ? (
-                    <svg className="h-3.5 w-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="h-3.5 w-3.5 text-green-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   ) : (
                     <Hash size={14} weight="bold" className="text-muted-foreground" />
@@ -264,7 +273,7 @@ export function NotesMetadataPanel() {
         <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
           <span className="uppercase tracking-wider text-muted-foreground">Outgoing Links</span>
           <span className="px-1.5 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
-            {outgoingLinks.length} reference{outgoingLinks.length !== 1 ? 's' : ''}
+            {outgoingLinks.length} reference{outgoingLinks.length !== 1 ? "s" : ""}
           </span>
         </h4>
         {outgoingLinks.length === 0 ? (
@@ -300,9 +309,7 @@ export function NotesMetadataPanel() {
         <div className="text-center py-6 border border-dashed border-border rounded-lg">
           <FileText size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
           <p className="text-sm text-muted-foreground">Backlinks coming soon</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            See which notes link to this one
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">See which notes link to this one</p>
         </div>
       </div>
 
@@ -336,26 +343,28 @@ export function NotesMetadataPanel() {
           </span>
         </div>
       </div>
-      
+
       {/* Created */}
       {note.createdAt && (
         <div>
           <label className="text-xs font-medium text-muted-foreground block mb-1">Created</label>
           <p className="text-sm p-2 rounded-md bg-muted/50">
-            {new Date(Number(note.createdAt.seconds) * 1000).toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
+            {new Date(Number(note.createdAt.seconds) * 1000).toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
             })}
           </p>
         </div>
       )}
-      
+
       {/* Updated */}
       {note.updatedAt && (
         <div>
-          <label className="text-xs font-medium text-muted-foreground block mb-1">Last Updated</label>
+          <label className="text-xs font-medium text-muted-foreground block mb-1">
+            Last Updated
+          </label>
           <p className="text-sm p-2 rounded-md bg-muted/50">
             {new Date(Number(note.updatedAt.seconds) * 1000).toLocaleString()}
           </p>
@@ -370,7 +379,7 @@ export function NotesMetadataPanel() {
           <p>{currentContent.length} characters</p>
         </div>
       </div>
-      
+
       <NoteMetadataTagsList tagIds={note.tagIds ?? []} />
     </div>
   );
@@ -405,15 +414,15 @@ export function NotesMetadataPanel() {
 
   const renderContent = () => {
     switch (metadataPanelTab) {
-      case 'outline':
+      case "outline":
         return renderOutlineTab();
-      case 'links':
+      case "links":
         return renderLinksTab();
-      case 'properties':
+      case "properties":
         return renderPropertiesTab();
-      case 'history':
+      case "history":
         return renderHistoryTab();
-      case 'comments':
+      case "comments":
         return currentNoteId ? (
           <CommentsPanel contentType={ContentType.NOTE} contentId={currentNoteId} />
         ) : null;
@@ -421,7 +430,7 @@ export function NotesMetadataPanel() {
         return renderOutlineTab();
     }
   };
-  
+
   return (
     <div className="h-full flex flex-col">
       {/* Tabs */}
@@ -442,34 +451,42 @@ export function NotesMetadataPanel() {
               key={id}
               onClick={() => dispatch(setMetadataPanelTab(id))}
               className={cn(
-                'group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden',
-                'hover:px-2.5',
-                isActive && 'text-foreground'
+                "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
+                "hover:px-2.5",
+                isActive && "text-foreground",
               )}
             >
-              <span className={cn(
-                'absolute inset-0 rounded-lg transition-all duration-500',
-                isActive ? 'bg-primary/10' : 'bg-transparent'
-              )} />
+              <span
+                className={cn(
+                  "absolute inset-0 rounded-lg transition-all duration-500",
+                  isActive ? "bg-primary/10" : "bg-transparent",
+                )}
+              />
               <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
-              <span className={cn(
-                'relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground group-hover:text-primary'
-              )}>
-                <Icon size={18} weight={isActive ? 'fill' : 'duotone'} />
+              <span
+                className={cn(
+                  "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground group-hover:text-primary",
+                )}
+              >
+                <Icon size={18} weight={isActive ? "fill" : "duotone"} />
                 {badge != null && badge > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 text-[9px] rounded-full bg-primary text-primary-foreground leading-[14px] text-center">
                     {badge}
                   </span>
                 )}
               </span>
-              <span className={cn(
-                'relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out',
-                'group-hover:ml-1.5 group-hover:max-w-24',
-                isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
-              )}>
+              <span
+                className={cn(
+                  "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
+                  "group-hover:ml-1.5 group-hover:max-w-24",
+                  isActive
+                    ? "text-foreground"
+                    : "text-muted-foreground group-hover:text-foreground",
+                )}
+              >
                 {label}
               </span>
             </button>
@@ -478,9 +495,7 @@ export function NotesMetadataPanel() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {renderContent()}
-      </div>
+      <div className="flex-1 overflow-y-auto p-4">{renderContent()}</div>
     </div>
   );
 }

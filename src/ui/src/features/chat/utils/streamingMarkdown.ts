@@ -11,12 +11,12 @@ const FENCE_RE = /```/g;
 export function sanitizeStreamingMarkdown(content: string): string {
   let out = content;
 
-  const lastOpen = out.lastIndexOf('[[[');
-  if (lastOpen !== -1 && out.indexOf(']]]', lastOpen) === -1) {
+  const lastOpen = out.lastIndexOf("[[[");
+  if (lastOpen !== -1 && out.indexOf("]]]", lastOpen) === -1) {
     out = out.slice(0, lastOpen);
   }
 
-  if (((out.match(FENCE_RE)?.length ?? 0) % 2) === 1) {
+  if ((out.match(FENCE_RE)?.length ?? 0) % 2 === 1) {
     out = `${out}\n\`\`\``;
   }
 

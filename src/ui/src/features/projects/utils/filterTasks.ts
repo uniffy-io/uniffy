@@ -116,12 +116,12 @@ function getFieldValue(task: Task, fieldId: string): unknown {
 function evaluateTagCondition(task: Task, condition: FilterCondition): boolean {
   const taskTagSet = new Set(task.tagIds ?? []);
   const raw = condition.value;
-  const tagIds: string[] = Array.isArray(raw)
-    ? (raw as string[])
-    : raw
-      ? [String(raw)]
-      : [];
-  if (tagIds.length === 0 && condition.operator !== "is_empty" && condition.operator !== "is_not_empty") {
+  const tagIds: string[] = Array.isArray(raw) ? (raw as string[]) : raw ? [String(raw)] : [];
+  if (
+    tagIds.length === 0 &&
+    condition.operator !== "is_empty" &&
+    condition.operator !== "is_not_empty"
+  ) {
     return true;
   }
   // Operator semantics: equals=ALL, not_equals=NONE, contains=ANY, not_contains=NONE.
@@ -217,9 +217,7 @@ export function applyFilters(
   if (!filterConfig || filterConfig.conditions.length === 0) return tasks;
 
   return tasks.filter((task) => {
-    const results = filterConfig.conditions.map((c) =>
-      evaluateCondition(task, c, hierarchyIndex),
-    );
+    const results = filterConfig.conditions.map((c) => evaluateCondition(task, c, hierarchyIndex));
     if (filterConfig.logic === "and") return results.every(Boolean);
     return results.some(Boolean);
   });

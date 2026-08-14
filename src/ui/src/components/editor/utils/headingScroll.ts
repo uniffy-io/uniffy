@@ -1,8 +1,8 @@
 export function headingToSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 /** Duplicate headings get distinct anchors: pass the count of prior occurrences and the result is `base`, `base-2`, `base-3`, ... */
@@ -15,9 +15,10 @@ export function indexedSlug(base: string, occurrence: number): string {
 function resolveEditor(root?: Element | null): ParentNode | null {
   const scope: ParentNode = root ?? document;
   return (
-    scope.querySelector('.crepe-editor .ProseMirror') ??
-    scope.querySelector('.crepe-editor .milkdown') ??
-    (root ?? null)
+    scope.querySelector(".crepe-editor .ProseMirror") ??
+    scope.querySelector(".crepe-editor .milkdown") ??
+    root ??
+    null
   );
 }
 
@@ -25,15 +26,15 @@ function resolveEditor(root?: Element | null): ParentNode | null {
 export function findHeadingBySlugAt(
   slug: string,
   occurrence: number,
-  root?: Element | null
+  root?: Element | null,
 ): Element | null {
   const editor = resolveEditor(root);
   if (!editor) return null;
 
   let seen = 0;
-  const headings = editor.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  const headings = editor.querySelectorAll("h1, h2, h3, h4, h5, h6");
   for (const heading of headings) {
-    const text = heading.textContent?.trim() ?? '';
+    const text = heading.textContent?.trim() ?? "";
     if (headingToSlug(text) !== slug) continue;
     if (seen === occurrence) return heading;
     seen++;

@@ -1,17 +1,17 @@
-import { createConnectTransport } from '@connectrpc/connect-web';
-import type { Interceptor } from '@connectrpc/connect';
-import { ConnectError, Code, createClient } from '@connectrpc/connect';
-import { env } from '@/config/env';
-import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';
-import { getStoreRef } from '@/app/storeRef';
+import { createConnectTransport } from "@connectrpc/connect-web";
+import type { Interceptor } from "@connectrpc/connect";
+import { ConnectError, Code, createClient } from "@connectrpc/connect";
+import { env } from "@/config/env";
+import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
+import { getStoreRef } from "@/app/storeRef";
 import {
   createSetCredentialsAction,
   createStartRehydratingAction,
   createRehydrateCompleteAction,
   createRehydrateFailedAction,
   createLogoutAction,
-} from '@/features/auth/store/authActions';
-import { initStorageEncryption } from '@/shared/crypto/storageEncryption';
+} from "@/features/auth/store/authActions";
+import { initStorageEncryption } from "@/shared/crypto/storageEncryption";
 
 // Access token lives in memory only - never persisted, to reduce XSS surface.
 let memoryAccessToken: string | null = null;
@@ -41,10 +41,10 @@ function getAuthState(): {
   let currentOrganizationRole: string | null = null;
 
   try {
-    const persistedState = localStorage.getItem('persist:root');
+    const persistedState = localStorage.getItem("persist:root");
     if (persistedState) {
       const rootState = JSON.parse(persistedState);
-      const authState = JSON.parse(rootState.auth || '{}');
+      const authState = JSON.parse(rootState.auth || "{}");
       refreshToken = authState.refreshToken || null;
       user = authState.user || null;
       currentOrganizationId = authState.currentOrganizationId || null;
@@ -98,7 +98,7 @@ function updateAuthState(
 
   const store = getStoreRef();
   if (!store) {
-    console.warn('Store not initialized, cannot update auth state');
+    console.warn("Store not initialized, cannot update auth state");
     return;
   }
 
@@ -109,17 +109,19 @@ function updateAuthState(
   const currentOrgRole = state.auth?.currentOrganizationRole;
 
   if (user) {
-    store.dispatch(createSetCredentialsAction({
-      user,
-      accessToken,
-      refreshToken,
-      // `||` not `??`: protobuf returns "" for unset strings, which ?? does not fall through.
-      organizationId: organizationId || currentOrgId || undefined,
-      organizationSlug: organizationSlug || currentOrgSlug || undefined,
-      organizationRole: organizationRole || currentOrgRole || undefined,
-      sessionId,
-      domainAdminDomains,
-    }));
+    store.dispatch(
+      createSetCredentialsAction({
+        user,
+        accessToken,
+        refreshToken,
+        // `||` not `??`: protobuf returns "" for unset strings, which ?? does not fall through.
+        organizationId: organizationId || currentOrgId || undefined,
+        organizationSlug: organizationSlug || currentOrgSlug || undefined,
+        organizationRole: organizationRole || currentOrgRole || undefined,
+        sessionId,
+        domainAdminDomains,
+      }),
+    );
   }
 }
 
@@ -149,24 +151,24 @@ async function clearAuthAndRedirect(): Promise<void> {
   // worker) to disconnect cleanly BEFORE we navigate. Without this the
   // page redirect tears the WS down in mid-frame and we lose the chance
   // to send a clean close frame.
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('uniffy:auth:revoked'));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("uniffy:auth:revoked"));
   }
 
   const store = getStoreRef();
   if (store) {
     store.dispatch(createLogoutAction());
   } else {
-    localStorage.removeItem('persist:root');
+    localStorage.removeItem("persist:root");
   }
-  window.location.href = '/auth';
+  window.location.href = "/auth";
 }
 
 function decodeJwtPayload(token: string): { exp?: number; iat?: number } | null {
   try {
-    const parts = token.split('.');
+    const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const payload = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
     return JSON.parse(payload);
   } catch {
     return null;
@@ -223,16 +225,16 @@ async function refreshAccessToken(): Promise<string | null> {
         Array.from(response.domainAdminDomains),
       );
 
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('uniffy:auth:refreshed'));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("uniffy:auth:refreshed"));
       }
 
       return response.accessToken;
     } catch (error) {
       if (error instanceof ConnectError && error.code === Code.Unauthenticated) {
-        console.warn('Token refresh failed: authentication required');
+        console.warn("Token refresh failed: authentication required");
       } else {
-        console.error('Token refresh failed:', error);
+        console.error("Token refresh failed:", error);
       }
       clearMemoryAccessToken();
       return null;
@@ -253,7 +255,7 @@ async function initStorageEncryptionFromApi(userId: string): Promise<void> {
       await initStorageEncryption(new Uint8Array(response.cacheKeySeed), userId);
     }
   } catch (err) {
-    console.warn('Failed to fetch cache key seed:', err);
+    console.warn("Failed to fetch cache key seed:", err);
   }
 }
 
@@ -277,7 +279,7 @@ export async function rehydrateAuth(): Promise<boolean> {
 
   const store = getStoreRef();
   if (!store) {
-    console.error('Auth rehydration failed: store not initialized');
+    console.error("Auth rehydration failed: store not initialized");
     return false;
   }
 
@@ -302,18 +304,23 @@ export async function rehydrateAuth(): Promise<boolean> {
         hasAvatar?: boolean;
       };
 
-      store.dispatch(createRehydrateCompleteAction({
-        user: { ...persistedUser, hasAvatar: persistedUser.hasAvatar ?? Boolean(persistedUser.avatarUrl) },
-        accessToken: newToken,
-        refreshToken: state.auth?.refreshToken || refreshToken,
-        organizationId: state.auth?.currentOrganizationId || persistedOrgId || undefined,
-        organizationSlug: state.auth?.currentOrganizationSlug || persistedOrgSlug || undefined,
-        organizationRole: state.auth?.currentOrganizationRole || persistedOrgRole || undefined,
-        sessionId: state.auth?.currentSessionId || undefined,
-      }));
+      store.dispatch(
+        createRehydrateCompleteAction({
+          user: {
+            ...persistedUser,
+            hasAvatar: persistedUser.hasAvatar ?? Boolean(persistedUser.avatarUrl),
+          },
+          accessToken: newToken,
+          refreshToken: state.auth?.refreshToken || refreshToken,
+          organizationId: state.auth?.currentOrganizationId || persistedOrgId || undefined,
+          organizationSlug: state.auth?.currentOrganizationSlug || persistedOrgSlug || undefined,
+          organizationRole: state.auth?.currentOrganizationRole || persistedOrgRole || undefined,
+          sessionId: state.auth?.currentSessionId || undefined,
+        }),
+      );
 
       initStorageEncryptionFromApi(persistedUser.id).catch((err) => {
-        console.warn('Storage encryption init failed:', err);
+        console.warn("Storage encryption init failed:", err);
       });
 
       return true;
@@ -322,7 +329,7 @@ export async function rehydrateAuth(): Promise<boolean> {
       return false;
     }
   } catch (error) {
-    console.error('Auth rehydration failed:', error);
+    console.error("Auth rehydration failed:", error);
     clearMemoryAccessToken();
     store.dispatch(createRehydrateFailedAction());
     return false;
@@ -331,7 +338,7 @@ export async function rehydrateAuth(): Promise<boolean> {
 
 const authInterceptor: Interceptor = (next) => async (req) => {
   // Refresh calls would recurse through this interceptor.
-  const isRefreshRequest = req.url.includes('RefreshToken');
+  const isRefreshRequest = req.url.includes("RefreshToken");
 
   if (!isRefreshRequest) {
     let { accessToken } = getAuthState();
@@ -342,19 +349,19 @@ const authInterceptor: Interceptor = (next) => async (req) => {
         accessToken = newToken;
       } else {
         await clearAuthAndRedirect();
-        throw new ConnectError('Session expired', Code.Unauthenticated);
+        throw new ConnectError("Session expired", Code.Unauthenticated);
       }
     }
 
     if (accessToken) {
-      req.header.set('Authorization', `Bearer ${accessToken}`);
+      req.header.set("Authorization", `Bearer ${accessToken}`);
     } else if (memoryEnrollmentToken) {
       // Mid-login MFA enrollment: no access token exists yet, only the
       // short-lived enrollment-only token. Attach it without going
       // through the refresh path - the enrollment token is not
       // refreshable and the backend's strict ``type=access`` decoder
       // would reject any attempt to use it as one.
-      req.header.set('Authorization', `Bearer ${memoryEnrollmentToken}`);
+      req.header.set("Authorization", `Bearer ${memoryEnrollmentToken}`);
     }
   }
 
@@ -368,7 +375,7 @@ const authInterceptor: Interceptor = (next) => async (req) => {
       if (!memoryEnrollmentToken) {
         const newToken = await refreshAccessToken();
         if (newToken) {
-          req.header.set('Authorization', `Bearer ${newToken}`);
+          req.header.set("Authorization", `Bearer ${newToken}`);
           return await next(req);
         }
 
@@ -401,7 +408,7 @@ export { clearEnrollmentToken };
 export { getEnrollmentToken };
 
 export function getAccessToken(): string | null {
-    return memoryAccessToken;
+  return memoryAccessToken;
 }
 
 export { refreshAccessToken };

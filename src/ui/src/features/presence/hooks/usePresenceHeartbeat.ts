@@ -1,8 +1,8 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { presenceApi } from '@/features/presence/api/presenceApi';
-import { fetchBulkPresence } from '@/features/presence/store/presenceThunks';
-import { PresenceStatus } from '@uniffy/proto/presence/v1/presence_pb';
+import { useEffect, useRef, useCallback } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { presenceApi } from "@/features/presence/api/presenceApi";
+import { fetchBulkPresence } from "@/features/presence/store/presenceThunks";
+import { PresenceStatus } from "@uniffy/proto/presence/v1/presence_pb";
 
 // Heartbeat tuned so the backend stale-presence GC marks offline within 2x without
 // over-spamming SetPresence. Idle threshold matches typical "away" UX on chat apps.
@@ -12,106 +12,104 @@ const ACTIVITY_THROTTLE_MS = 30_000;
 
 /** Call once at the top of the tree (e.g. AppHeader). */
 export function usePresenceHeartbeat() {
-    const dispatch = useAppDispatch();
-    const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
-    const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
-    const userId = useAppSelector((s) => s.auth.user?.id);
+  const dispatch = useAppDispatch();
+  const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+  const userId = useAppSelector((s) => s.auth.user?.id);
 
-    const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const isAwayRef = useRef(false);
-    const lastActivityRef = useRef(0);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAwayRef = useRef(false);
+  const lastActivityRef = useRef(0);
 
-    const sendPresence = useCallback(
-        async (status: PresenceStatus) => {
-            if (!organizationId) return;
-            try {
-                await presenceApi.setPresence({
-                    organizationId,
-                    status,
-                    client: 'web',
-                });
-            } catch {
-                // best-effort
-            }
-        },
-        [organizationId],
-    );
+  const sendPresence = useCallback(
+    async (status: PresenceStatus) => {
+      if (!organizationId) return;
+      try {
+        await presenceApi.setPresence({
+          organizationId,
+          status,
+          client: "web",
+        });
+      } catch {
+        // best-effort
+      }
+    },
+    [organizationId],
+  );
 
-    const resetIdleTimer = useCallback(() => {
-        if (idleTimerRef.current) {
-            clearTimeout(idleTimerRef.current);
-        }
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+    }
 
-        if (isAwayRef.current) {
-            isAwayRef.current = false;
-            sendPresence(PresenceStatus.ONLINE);
-        }
+    if (isAwayRef.current) {
+      isAwayRef.current = false;
+      sendPresence(PresenceStatus.ONLINE);
+    }
 
-        idleTimerRef.current = setTimeout(() => {
-            isAwayRef.current = true;
-            sendPresence(PresenceStatus.AWAY);
-        }, IDLE_TIMEOUT_MS);
-    }, [sendPresence]);
+    idleTimerRef.current = setTimeout(() => {
+      isAwayRef.current = true;
+      sendPresence(PresenceStatus.AWAY);
+    }, IDLE_TIMEOUT_MS);
+  }, [sendPresence]);
 
-    useEffect(() => {
-        if (!isAuthenticated || !organizationId) return;
+  useEffect(() => {
+    if (!isAuthenticated || !organizationId) return;
 
-        sendPresence(PresenceStatus.ONLINE);
+    sendPresence(PresenceStatus.ONLINE);
 
-        // Rehydrate own custom status from DB after page refresh.
-        if (userId) {
-            dispatch(
-                fetchBulkPresence({
-                    organizationId,
-                    userIds: [userId],
-                }),
-            );
-        }
+    // Rehydrate own custom status from DB after page refresh.
+    if (userId) {
+      dispatch(
+        fetchBulkPresence({
+          organizationId,
+          userIds: [userId],
+        }),
+      );
+    }
 
-        heartbeatRef.current = setInterval(() => {
-            const status = isAwayRef.current
-                ? PresenceStatus.AWAY
-                : PresenceStatus.ONLINE;
-            sendPresence(status);
-        }, HEARTBEAT_INTERVAL_MS);
+    heartbeatRef.current = setInterval(() => {
+      const status = isAwayRef.current ? PresenceStatus.AWAY : PresenceStatus.ONLINE;
+      sendPresence(status);
+    }, HEARTBEAT_INTERVAL_MS);
 
-        resetIdleTimer();
+    resetIdleTimer();
 
-        const handleActivity = () => {
-            const now = Date.now();
-            if (now - lastActivityRef.current < ACTIVITY_THROTTLE_MS) return;
-            lastActivityRef.current = now;
-            resetIdleTimer();
-        };
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityRef.current < ACTIVITY_THROTTLE_MS) return;
+      lastActivityRef.current = now;
+      resetIdleTimer();
+    };
 
-        const events = ['mousemove', 'keydown', 'scroll', 'touchstart'] as const;
-        for (const event of events) {
-            window.addEventListener(event, handleActivity, { passive: true });
-        }
+    const events = ["mousemove", "keydown", "scroll", "touchstart"] as const;
+    for (const event of events) {
+      window.addEventListener(event, handleActivity, { passive: true });
+    }
 
-        const handleVisibility = () => {
-            if (document.hidden) {
-                // Hidden tabs drift to away via the idle timer.
-            } else {
-                handleActivity();
-            }
-        };
-        document.addEventListener('visibilitychange', handleVisibility);
+    const handleVisibility = () => {
+      if (document.hidden) {
+        // Hidden tabs drift to away via the idle timer.
+      } else {
+        handleActivity();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
 
-        return () => {
-            if (heartbeatRef.current) {
-                clearInterval(heartbeatRef.current);
-                heartbeatRef.current = null;
-            }
-            if (idleTimerRef.current) {
-                clearTimeout(idleTimerRef.current);
-                idleTimerRef.current = null;
-            }
-            for (const event of events) {
-                window.removeEventListener(event, handleActivity);
-            }
-            document.removeEventListener('visibilitychange', handleVisibility);
-        };
-    }, [isAuthenticated, organizationId, userId, dispatch, sendPresence, resetIdleTimer]);
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+      for (const event of events) {
+        window.removeEventListener(event, handleActivity);
+      }
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [isAuthenticated, organizationId, userId, dispatch, sendPresence, resetIdleTimer]);
 }

@@ -1,16 +1,10 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { useState, useCallback } from 'react';
-import {
-  Clock,
-  ArrowSquareOut,
-  CopySimple,
-  Check,
-  ChatTeardropText,
-} from '@phosphor-icons/react';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
-import { getInitials } from '@/components/subject/utils';
-import type { MentionLiveState } from '@/components/mention/types';
+import { useState, useCallback } from "react";
+import { Clock, ArrowSquareOut, CopySimple, Check, ChatTeardropText } from "@phosphor-icons/react";
+import { formatRelativeTime } from "@/shared/utils/dateFormatting";
+import { ParentBadge, MetaSeparator } from "@/components/mention/previews/ParentBadge";
+import { getInitials } from "@/components/subject/utils";
+import type { MentionLiveState } from "@/components/mention/types";
 
 interface ChatMessageMentionPreviewProps {
   urn: string;
@@ -36,7 +30,7 @@ export function ChatMessageMentionPreview({
     setTimeout(() => setCopied(false), 2000);
   }, [urn, onCopyLink]);
 
-  const senderName = liveState.chatSenderName || 'Unknown';
+  const senderName = liveState.chatSenderName || "Unknown";
   const initials = getInitials(senderName);
 
   return (
@@ -59,7 +53,9 @@ export function ChatMessageMentionPreview({
                   <MetaSeparator />
                 </>
               )}
-              <span className="text-xs font-medium text-violet-600 dark:text-violet-400">Message</span>
+              <span className="text-xs font-medium text-violet-600 dark:text-violet-400">
+                Message
+              </span>
             </span>
           </span>
         </span>
@@ -78,16 +74,27 @@ export function ChatMessageMentionPreview({
       <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
-          <span>{formatRelativeTime(liveState.updatedAt) || 'No date'}</span>
+          <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>
         </span>
         <span className="flex items-center gap-1">
           <button
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy(); }}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleCopy();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title="Copy URN"
           >
-            {copied ? <Check size={12} weight="bold" className="text-green-500" /> : <CopySimple size={12} weight="bold" />}
+            {copied ? (
+              <Check size={12} weight="bold" className="text-green-500" />
+            ) : (
+              <CopySimple size={12} weight="bold" />
+            )}
           </button>
           <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
             <ArrowSquareOut size={11} weight="bold" />

@@ -1,41 +1,44 @@
 // Top-level only: headings inside tables/code/blockquotes are intentionally excluded — only structural document headings appear in the ToC.
 
-import { $prose } from '@milkdown/kit/utils';
-import { Plugin, PluginKey } from '@milkdown/prose/state';
-import type { Node } from '@milkdown/prose/model';
-import { headingToSlug, indexedSlug } from '@/components/editor/utils/headingScroll';
-import { setOutline, type HeadingEntry } from '@/components/editor/plugins/toc/tocOutlineSubject';
+import { $prose } from "@milkdown/kit/utils";
+import { Plugin, PluginKey } from "@milkdown/prose/state";
+import type { Node } from "@milkdown/prose/model";
+import { headingToSlug, indexedSlug } from "@/components/editor/utils/headingScroll";
+import { setOutline, type HeadingEntry } from "@/components/editor/plugins/toc/tocOutlineSubject";
 
 function computeOutline(doc: Node): HeadingEntry[] {
-    const entries: HeadingEntry[] = [];
-    const slugCounts = new Map<string, number>();
+  const entries: HeadingEntry[] = [];
+  const slugCounts = new Map<string, number>();
 
-    doc.forEach((child) => {
-        if (child.type.name !== 'heading') return;
-        const level = (child.attrs as { level?: number }).level ?? 1;
-        const text = child.textContent.trim();
-        if (!text) return;
-        const base = headingToSlug(text);
-        if (!base) return;
-        const n = slugCounts.get(base) ?? 0;
-        slugCounts.set(base, n + 1);
-        entries.push({ level, text, slug: indexedSlug(base, n) });
-    });
+  doc.forEach((child) => {
+    if (child.type.name !== "heading") return;
+    const level = (child.attrs as { level?: number }).level ?? 1;
+    const text = child.textContent.trim();
+    if (!text) return;
+    const base = headingToSlug(text);
+    if (!base) return;
+    const n = slugCounts.get(base) ?? 0;
+    slugCounts.set(base, n + 1);
+    entries.push({ level, text, slug: indexedSlug(base, n) });
+  });
 
-    return entries;
+  return entries;
 }
 
-export const tocOutlineKey = new PluginKey('tocOutline');
+export const tocOutlineKey = new PluginKey("tocOutline");
 
-export const tocOutlinePlugin = $prose(() => new Plugin({
-    key: tocOutlineKey,
-    view: (view) => {
+export const tocOutlinePlugin = $prose(
+  () =>
+    new Plugin({
+      key: tocOutlineKey,
+      view: (view) => {
         setOutline(view, computeOutline(view.state.doc));
         return {
-            update: (v, prevState) => {
-                if (prevState.doc === v.state.doc) return;
-                setOutline(v, computeOutline(v.state.doc));
-            },
+          update: (v, prevState) => {
+            if (prevState.doc === v.state.doc) return;
+            setOutline(v, computeOutline(v.state.doc));
+          },
         };
-    },
-}));
+      },
+    }),
+);

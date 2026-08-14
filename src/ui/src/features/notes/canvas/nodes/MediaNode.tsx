@@ -6,15 +6,15 @@
  * audio uses AudioBlock (canvas waveform player).
  */
 
-import { memo, useCallback, useMemo } from 'react';
-import { type NodeProps, NodeResizer, Handle, Position } from '@xyflow/react';
-import { useAppSelector } from '@/app/hooks';
-import { buildFileUrl, buildMediaUrl } from '@/shared/utils/fileUrls';
-import type { MediaCanvasNode } from '@/features/notes/canvas/types';
-import { VideoBlock } from '@/components/editor/plugins/video/VideoBlock';
-import { AudioBlock } from '@/components/editor/plugins/audio/AudioBlock';
-import { useCanvasCallbacks } from '@/features/notes/canvas/hooks/useCanvasCallbacks';
-import { NodeStyleToolbar } from '@/features/notes/canvas/components/NodeStyleToolbar';
+import { memo, useCallback, useMemo } from "react";
+import { type NodeProps, NodeResizer, Handle, Position } from "@xyflow/react";
+import { useAppSelector } from "@/app/hooks";
+import { buildFileUrl, buildMediaUrl } from "@/shared/utils/fileUrls";
+import type { MediaCanvasNode } from "@/features/notes/canvas/types";
+import { VideoBlock } from "@/components/editor/plugins/video/VideoBlock";
+import { AudioBlock } from "@/components/editor/plugins/audio/AudioBlock";
+import { useCanvasCallbacks } from "@/features/notes/canvas/hooks/useCanvasCallbacks";
+import { NodeStyleToolbar } from "@/features/notes/canvas/components/NodeStyleToolbar";
 
 export const MediaNode = memo(function MediaNode({
   id,
@@ -24,14 +24,14 @@ export const MediaNode = memo(function MediaNode({
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const { onNodeStyleChange, readonly } = useCanvasCallbacks();
 
-  const bgColor = data.bgColor || '';
-  const borderColor = data.borderColor || '';
+  const bgColor = data.bgColor || "";
+  const borderColor = data.borderColor || "";
   const borderWidth = data.borderWidth;
 
   const mediaUrl = useMemo(() => {
-    if (!organizationId || !data.fileId) return '';
-    const mime = data.mimeType || '';
-    if (mime.startsWith('image/')) {
+    if (!organizationId || !data.fileId) return "";
+    const mime = data.mimeType || "";
+    if (mime.startsWith("image/")) {
       return buildFileUrl(organizationId, data.fileId);
     }
     return buildMediaUrl(organizationId, data.fileId);
@@ -41,25 +41,25 @@ export const MediaNode = memo(function MediaNode({
     (updates: Record<string, unknown>) => {
       onNodeStyleChange(id, updates);
     },
-    [id, onNodeStyleChange]
+    [id, onNodeStyleChange],
   );
 
-  const mime = data.mimeType || '';
-  const isImage = mime.startsWith('image/');
-  const isVideo = mime.startsWith('video/');
-  const isAudio = mime.startsWith('audio/');
+  const mime = data.mimeType || "";
+  const isImage = mime.startsWith("image/");
+  const isVideo = mime.startsWith("video/");
+  const isAudio = mime.startsWith("audio/");
 
   const wrapperStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
-    ...(bgColor && bgColor !== 'transparent' ? { backgroundColor: bgColor } : {}),
-    ...(bgColor === 'transparent' ? { backgroundColor: 'transparent' } : {}),
-    ...(borderColor && borderColor !== 'transparent'
-      ? { borderColor, borderStyle: 'solid' }
-      : borderColor === 'transparent'
-        ? { borderColor: 'transparent' }
+    width: "100%",
+    height: "100%",
+    ...(bgColor && bgColor !== "transparent" ? { backgroundColor: bgColor } : {}),
+    ...(bgColor === "transparent" ? { backgroundColor: "transparent" } : {}),
+    ...(borderColor && borderColor !== "transparent"
+      ? { borderColor, borderStyle: "solid" }
+      : borderColor === "transparent"
+        ? { borderColor: "transparent" }
         : {}),
-    ...(borderWidth !== undefined ? { borderWidth: `${borderWidth}px`, borderStyle: 'solid' } : {}),
+    ...(borderWidth !== undefined ? { borderWidth: `${borderWidth}px`, borderStyle: "solid" } : {}),
   };
 
   const hasCustomStyle = bgColor || borderColor || borderWidth !== undefined;
@@ -121,8 +121,8 @@ export const MediaNode = memo(function MediaNode({
 
       {selected && !readonly && (
         <NodeStyleToolbar
-          fillColor={bgColor || 'transparent'}
-          borderColor={borderColor || 'transparent'}
+          fillColor={bgColor || "transparent"}
+          borderColor={borderColor || "transparent"}
           borderWidth={borderWidth ?? 0}
           onStyleChange={handleStyleChange}
           fillFieldName="bgColor"

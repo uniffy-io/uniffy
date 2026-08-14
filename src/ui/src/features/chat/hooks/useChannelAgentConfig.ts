@@ -1,166 +1,160 @@
 /** Per-(channel, agent) model + parameter overrides for agent DMs. */
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAppSelector } from '@/app/hooks';
-import { chatApi } from '@/features/chat/api/chatApi';
-import { friendlyErrorMessage } from '@/config';
-import { toast } from 'sonner';
+import { useCallback, useEffect, useState } from "react";
+import { useAppSelector } from "@/app/hooks";
+import { chatApi } from "@/features/chat/api/chatApi";
+import { friendlyErrorMessage } from "@/config";
+import { toast } from "sonner";
 import {
-    parseModelParamValues,
-    type ModelParamValues,
-} from '@/features/agents/utils/modelParamsSchema';
+  parseModelParamValues,
+  type ModelParamValues,
+} from "@/features/agents/utils/modelParamsSchema";
 
 export interface ChannelAgentConfigState {
-    modelOverride: string | null;
-    modelParams: ModelParamValues;
-    imageParams: ModelParamValues;
+  modelOverride: string | null;
+  modelParams: ModelParamValues;
+  imageParams: ModelParamValues;
 }
 
 /** Absent field = leave unchanged; null model / empty params = clear the override. */
 export interface ChannelAgentConfigChanges {
-    modelOverride?: string | null;
-    modelParams?: ModelParamValues;
-    imageParams?: ModelParamValues;
+  modelOverride?: string | null;
+  modelParams?: ModelParamValues;
+  imageParams?: ModelParamValues;
 }
 
 export interface ChannelAgentConfigIds {
-    organizationId: string;
-    channelId: string;
-    agentId: string;
+  organizationId: string;
+  channelId: string;
+  agentId: string;
 }
 
 export interface UseChannelAgentConfigResult {
-    config: ChannelAgentConfigState | null;
-    loading: boolean;
-    updating: boolean;
-    update: (changes: ChannelAgentConfigChanges) => Promise<void>;
+  config: ChannelAgentConfigState | null;
+  loading: boolean;
+  updating: boolean;
+  update: (changes: ChannelAgentConfigChanges) => Promise<void>;
 }
 
 export const configFromProto = (
-    proto:
-        | { modelOverride: string; modelParamsOverride: string; imageParamsOverride: string }
-        | undefined,
+  proto:
+    | { modelOverride: string; modelParamsOverride: string; imageParamsOverride: string }
+    | undefined,
 ): ChannelAgentConfigState => ({
-    modelOverride: proto?.modelOverride ? proto.modelOverride : null,
-    modelParams: parseModelParamValues(proto?.modelParamsOverride ?? ''),
-    imageParams: parseModelParamValues(proto?.imageParamsOverride ?? ''),
+  modelOverride: proto?.modelOverride ? proto.modelOverride : null,
+  modelParams: parseModelParamValues(proto?.modelParamsOverride ?? ""),
+  imageParams: parseModelParamValues(proto?.imageParamsOverride ?? ""),
 });
 
 export const applyConfigChanges = (
-    config: ChannelAgentConfigState,
-    changes: ChannelAgentConfigChanges,
+  config: ChannelAgentConfigState,
+  changes: ChannelAgentConfigChanges,
 ): ChannelAgentConfigState => ({
-    modelOverride:
-        changes.modelOverride !== undefined ? changes.modelOverride : config.modelOverride,
-    modelParams: changes.modelParams !== undefined ? changes.modelParams : config.modelParams,
-    imageParams: changes.imageParams !== undefined ? changes.imageParams : config.imageParams,
+  modelOverride: changes.modelOverride !== undefined ? changes.modelOverride : config.modelOverride,
+  modelParams: changes.modelParams !== undefined ? changes.modelParams : config.modelParams,
+  imageParams: changes.imageParams !== undefined ? changes.imageParams : config.imageParams,
 });
 
 /** Wire contract on the optional update fields: absent = unchanged, "" = clear. */
 export const buildUpdatePayload = (
-    changes: ChannelAgentConfigChanges,
+  changes: ChannelAgentConfigChanges,
 ): {
+  modelOverride?: string;
+  modelParamsOverride?: string;
+  imageParamsOverride?: string;
+} => {
+  const payload: {
     modelOverride?: string;
     modelParamsOverride?: string;
     imageParamsOverride?: string;
-} => {
-    const payload: {
-        modelOverride?: string;
-        modelParamsOverride?: string;
-        imageParamsOverride?: string;
-    } = {};
-    if (changes.modelOverride !== undefined) {
-        payload.modelOverride = changes.modelOverride ?? '';
-    }
-    if (changes.modelParams !== undefined) {
-        payload.modelParamsOverride =
-            Object.keys(changes.modelParams).length > 0 ? JSON.stringify(changes.modelParams) : '';
-    }
-    if (changes.imageParams !== undefined) {
-        payload.imageParamsOverride =
-            Object.keys(changes.imageParams).length > 0 ? JSON.stringify(changes.imageParams) : '';
-    }
-    return payload;
+  } = {};
+  if (changes.modelOverride !== undefined) {
+    payload.modelOverride = changes.modelOverride ?? "";
+  }
+  if (changes.modelParams !== undefined) {
+    payload.modelParamsOverride =
+      Object.keys(changes.modelParams).length > 0 ? JSON.stringify(changes.modelParams) : "";
+  }
+  if (changes.imageParams !== undefined) {
+    payload.imageParamsOverride =
+      Object.keys(changes.imageParams).length > 0 ? JSON.stringify(changes.imageParams) : "";
+  }
+  return payload;
 };
 
 const notifyRequestError = (error: unknown): void => {
-    const friendly = friendlyErrorMessage(error instanceof Error ? error.message : String(error));
-    if (friendly) toast.error(friendly);
+  const friendly = friendlyErrorMessage(error instanceof Error ? error.message : String(error));
+  if (friendly) toast.error(friendly);
 };
 
 export const fetchChannelAgentConfig = async (
-    ids: ChannelAgentConfigIds,
+  ids: ChannelAgentConfigIds,
 ): Promise<ChannelAgentConfigState> => {
-    const response = await chatApi.getChannelAgentConfig(ids);
-    return configFromProto(response.config);
+  const response = await chatApi.getChannelAgentConfig(ids);
+  return configFromProto(response.config);
 };
 
 /** Applies optimistically, reconciles with the server row, reverts + toasts on failure. */
 export const runConfigUpdate = async (
-    ids: ChannelAgentConfigIds,
-    current: ChannelAgentConfigState,
-    changes: ChannelAgentConfigChanges,
-    setConfig: (next: ChannelAgentConfigState) => void,
+  ids: ChannelAgentConfigIds,
+  current: ChannelAgentConfigState,
+  changes: ChannelAgentConfigChanges,
+  setConfig: (next: ChannelAgentConfigState) => void,
 ): Promise<void> => {
-    const payload = buildUpdatePayload(changes);
-    if (Object.keys(payload).length === 0) return;
-    setConfig(applyConfigChanges(current, changes));
-    try {
-        const response = await chatApi.updateChannelAgentConfig({ ...ids, ...payload });
-        if (response.config) setConfig(configFromProto(response.config));
-    } catch (error) {
-        setConfig(current);
-        notifyRequestError(error);
-    }
+  const payload = buildUpdatePayload(changes);
+  if (Object.keys(payload).length === 0) return;
+  setConfig(applyConfigChanges(current, changes));
+  try {
+    const response = await chatApi.updateChannelAgentConfig({ ...ids, ...payload });
+    if (response.config) setConfig(configFromProto(response.config));
+  } catch (error) {
+    setConfig(current);
+    notifyRequestError(error);
+  }
 };
 
 export function useChannelAgentConfig(
-    channelId: string | undefined,
-    agentId: string | undefined,
+  channelId: string | undefined,
+  agentId: string | undefined,
 ): UseChannelAgentConfigResult {
-    const organizationId = useAppSelector((s) => s.auth.currentOrganizationId ?? '');
-    const [config, setConfig] = useState<ChannelAgentConfigState | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [updating, setUpdating] = useState(false);
+  const organizationId = useAppSelector((s) => s.auth.currentOrganizationId ?? "");
+  const [config, setConfig] = useState<ChannelAgentConfigState | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
-    useEffect(() => {
-        setConfig(null);
-        if (!channelId || !agentId || !organizationId) return;
-        let cancelled = false;
-        const load = async (): Promise<void> => {
-            setLoading(true);
-            try {
-                const state = await fetchChannelAgentConfig({ organizationId, channelId, agentId });
-                if (!cancelled) setConfig(state);
-            } catch (error) {
-                if (!cancelled) notifyRequestError(error);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        };
-        void load();
-        return () => {
-            cancelled = true;
-        };
-    }, [channelId, agentId, organizationId]);
+  useEffect(() => {
+    setConfig(null);
+    if (!channelId || !agentId || !organizationId) return;
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      setLoading(true);
+      try {
+        const state = await fetchChannelAgentConfig({ organizationId, channelId, agentId });
+        if (!cancelled) setConfig(state);
+      } catch (error) {
+        if (!cancelled) notifyRequestError(error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [channelId, agentId, organizationId]);
 
-    const update = useCallback(
-        async (changes: ChannelAgentConfigChanges): Promise<void> => {
-            if (!channelId || !agentId || !organizationId || !config) return;
-            setUpdating(true);
-            try {
-                await runConfigUpdate(
-                    { organizationId, channelId, agentId },
-                    config,
-                    changes,
-                    setConfig,
-                );
-            } finally {
-                setUpdating(false);
-            }
-        },
-        [channelId, agentId, organizationId, config],
-    );
+  const update = useCallback(
+    async (changes: ChannelAgentConfigChanges): Promise<void> => {
+      if (!channelId || !agentId || !organizationId || !config) return;
+      setUpdating(true);
+      try {
+        await runConfigUpdate({ organizationId, channelId, agentId }, config, changes, setConfig);
+      } finally {
+        setUpdating(false);
+      }
+    },
+    [channelId, agentId, organizationId, config],
+  );
 
-    return { config, loading, updating, update };
+  return { config, loading, updating, update };
 }

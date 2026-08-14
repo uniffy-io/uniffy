@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   X,
   GlobeSimple,
@@ -14,25 +14,32 @@ import {
   CalendarBlank,
   Info,
   Gauge,
-} from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Modal } from '@/components/ui/modal';
-import { Select } from '@/components/ui/select';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { SubjectAvatarById } from '@/components/subject/SubjectAvatar';
-import { SubjectAvatar } from '@/components/subject/SubjectAvatar';
-import { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';
-import { useSubjectSearch } from '@/components/subject/hooks/useSubjectSearch';
-import { SUBJECT_TYPE } from '@/components/subject/types';
-import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
-import { AgentContextBar } from '@/features/chat/components/channel/AgentContextBar';
-import { selectAllAgents } from '@/features/agents/store/agentsSlice';
-import { adminApi } from '@/features/admin/api/adminApi';
-import { cn } from '@/shared/utils/cn';
-import { selectActiveChannel, selectChannelMembers, selectCategories } from '@/features/chat/store/chatChannelsSlice';
-import { closeChannelSettingsModal, selectChannelSettingsModalTab } from '@/features/chat/store/chatUiSlice';
+} from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { Select } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SubjectAvatarById } from "@/components/subject/SubjectAvatar";
+import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
+import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
+import { useSubjectSearch } from "@/components/subject/hooks/useSubjectSearch";
+import { SUBJECT_TYPE } from "@/components/subject/types";
+import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
+import { AgentContextBar } from "@/features/chat/components/channel/AgentContextBar";
+import { selectAllAgents } from "@/features/agents/store/agentsSlice";
+import { adminApi } from "@/features/admin/api/adminApi";
+import { cn } from "@/shared/utils/cn";
+import {
+  selectActiveChannel,
+  selectChannelMembers,
+  selectCategories,
+} from "@/features/chat/store/chatChannelsSlice";
+import {
+  closeChannelSettingsModal,
+  selectChannelSettingsModalTab,
+} from "@/features/chat/store/chatUiSlice";
 import {
   updateChannelThunk,
   addMembersThunk,
@@ -41,18 +48,18 @@ import {
   fetchMembers,
   deleteChannel,
   archiveChannel,
-} from '@/features/chat/store/chatThunks';
-import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
-import { formatDateFull } from '@/shared/utils/dateFormatting';
-import type { ChatChannelMember } from '@/features/chat/types';
-import { TagPicker } from '@/features/tags';
+} from "@/features/chat/store/chatThunks";
+import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
+import { formatDateFull } from "@/shared/utils/dateFormatting";
+import type { ChatChannelMember } from "@/features/chat/types";
+import { TagPicker } from "@/features/tags";
 
-type SettingsTab = 'overview' | 'members';
+type SettingsTab = "overview" | "members";
 
 const ROLE_BADGE_STYLES: Record<string, string> = {
-  OWNER: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-  ADMIN: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  MEMBER: 'bg-muted text-muted-foreground',
+  OWNER: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  ADMIN: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  MEMBER: "bg-muted text-muted-foreground",
 };
 
 const ROLE_ICONS: Record<string, typeof Crown | null> = {
@@ -73,18 +80,20 @@ export function ChannelSettingsModal() {
   const currentOrgId = useAppSelector((s) => s.auth.currentOrganizationId);
   const { canManageChat } = useChatPermissions();
 
-  const channelId = activeChannel?.id ?? '';
+  const channelId = activeChannel?.id ?? "";
   const members = useAppSelector((s) => selectChannelMembers(s, channelId));
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
-  const [name, setName] = useState(activeChannel?.name ?? '');
-  const [description, setDescription] = useState(activeChannel?.description ?? '');
-  const [categoryId, setCategoryId] = useState<string | undefined>(activeChannel?.categoryId ?? undefined);
+  const [name, setName] = useState(activeChannel?.name ?? "");
+  const [description, setDescription] = useState(activeChannel?.description ?? "");
+  const [categoryId, setCategoryId] = useState<string | undefined>(
+    activeChannel?.categoryId ?? undefined,
+  );
   const [tagIds, setTagIds] = useState<string[]>(activeChannel?.tagIds ?? []);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [addMemberQuery, setAddMemberQuery] = useState('');
+  const [addMemberQuery, setAddMemberQuery] = useState("");
   const [showAddMember, setShowAddMember] = useState(false);
   const [isAddingMembers, setIsAddingMembers] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
@@ -113,16 +122,16 @@ export function ChannelSettingsModal() {
     [members, currentUserId],
   );
   const currentUserRole = currentUserMember?.role;
-  const canEdit = canManageChat || currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
-  const actorIsOwner = canManageChat || currentUserRole === 'OWNER';
-  const actorIsAdmin = actorIsOwner || currentUserRole === 'ADMIN';
+  const canEdit = canManageChat || currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+  const actorIsOwner = canManageChat || currentUserRole === "OWNER";
+  const actorIsAdmin = actorIsOwner || currentUserRole === "ADMIN";
   const ownerCount = useMemo(
-    () => members.filter((m) => m.subjectType === 'USER' && m.role === 'OWNER').length,
+    () => members.filter((m) => m.subjectType === "USER" && m.role === "OWNER").length,
     [members],
   );
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
 
-  const handleRoleChange = async (userId: string, role: 'MEMBER' | 'ADMIN' | 'OWNER') => {
+  const handleRoleChange = async (userId: string, role: "MEMBER" | "ADMIN" | "OWNER") => {
     setChangingRoleId(userId);
     try {
       await dispatch(updateMemberRoleThunk({ channelId, userId, role })).unwrap();
@@ -133,12 +142,12 @@ export function ChannelSettingsModal() {
 
   const isDirty = useMemo(() => {
     if (!activeChannel) return false;
-    const sortedNew = [...tagIds].sort().join(',');
-    const sortedOld = [...(activeChannel.tagIds ?? [])].sort().join(',');
+    const sortedNew = [...tagIds].sort().join(",");
+    const sortedOld = [...(activeChannel.tagIds ?? [])].sort().join(",");
     return (
       name !== activeChannel.name ||
-      description !== (activeChannel.description ?? '') ||
-      (categoryId ?? '') !== (activeChannel.categoryId ?? '') ||
+      description !== (activeChannel.description ?? "") ||
+      (categoryId ?? "") !== (activeChannel.categoryId ?? "") ||
       sortedNew !== sortedOld
     );
   }, [name, description, categoryId, tagIds, activeChannel]);
@@ -157,28 +166,33 @@ export function ChannelSettingsModal() {
 
   const sortedMembers = useMemo(() => {
     const roleOrder: Record<string, number> = { OWNER: 0, ADMIN: 1, MEMBER: 2 };
-    return [...members].sort(
-      (a, b) => (roleOrder[a.role] ?? 3) - (roleOrder[b.role] ?? 3),
-    );
+    return [...members].sort((a, b) => (roleOrder[a.role] ?? 3) - (roleOrder[b.role] ?? 3));
   }, [members]);
 
-  const categoryOptions = useMemo(() => [
-    { value: '', label: 'No category' },
-    ...categories.map((c) => ({ value: c.id, label: c.name })),
-  ], [categories]);
+  const categoryOptions = useMemo(
+    () => [
+      { value: "", label: "No category" },
+      ...categories.map((c) => ({ value: c.id, label: c.name })),
+    ],
+    [categories],
+  );
 
   const roleSelectOptions = useMemo(() => {
     const base = [
-      { value: 'MEMBER', label: 'Member' },
-      { value: 'ADMIN', label: 'Admin' },
+      { value: "MEMBER", label: "Member" },
+      { value: "ADMIN", label: "Admin" },
     ];
-    return actorIsOwner ? [...base, { value: 'OWNER', label: 'Owner' }] : base;
+    return actorIsOwner ? [...base, { value: "OWNER", label: "Owner" }] : base;
   }, [actorIsOwner]);
 
-  const isChannelPublic = activeChannel?.channelType === 'PUBLIC';
+  const isChannelPublic = activeChannel?.channelType === "PUBLIC";
 
-  const { results: searchResults, loading: searchLoading, search } = useSubjectSearch({
-    subjectTypes: 'all',
+  const {
+    results: searchResults,
+    loading: searchLoading,
+    search,
+  } = useSubjectSearch({
+    subjectTypes: "all",
     excludeIds: existingMemberIds,
   });
 
@@ -196,7 +210,11 @@ export function ChannelSettingsModal() {
       .slice(0, 10);
   }, [agentsMap, addMemberQuery]);
 
-  if (!activeChannel || activeChannel.channelType === 'DIRECT' || activeChannel.channelType === 'GROUP_DM') {
+  if (
+    !activeChannel ||
+    activeChannel.channelType === "DIRECT" ||
+    activeChannel.channelType === "GROUP_DM"
+  ) {
     return null;
   }
 
@@ -225,7 +243,7 @@ export function ChannelSettingsModal() {
       let userIds: string[];
       if (subject.type === SUBJECT_TYPE.GROUP) {
         const res = await adminApi.listGroupMembers({
-          organizationId: currentOrgId ?? '',
+          organizationId: currentOrgId ?? "",
           groupId: subject.id,
         });
         userIds = (res.members ?? [])
@@ -237,7 +255,7 @@ export function ChannelSettingsModal() {
       if (userIds.length > 0) {
         await dispatch(addMembersThunk({ channelId, userIds })).unwrap();
       }
-      setAddMemberQuery('');
+      setAddMemberQuery("");
       addInputRef.current?.focus();
     } finally {
       setIsAddingMembers(false);
@@ -250,10 +268,10 @@ export function ChannelSettingsModal() {
       await dispatch(
         addMembersThunk({
           channelId,
-          subjects: [{ type: 'AGENT', id: agentId }],
+          subjects: [{ type: "AGENT", id: agentId }],
         }),
       ).unwrap();
-      setAddMemberQuery('');
+      setAddMemberQuery("");
       addInputRef.current?.focus();
     } finally {
       setIsAddingMembers(false);
@@ -269,7 +287,7 @@ export function ChannelSettingsModal() {
         removeMemberThunk({
           channelId,
           subject: {
-            type: memberToRemove.subjectType === 'AGENT' ? 'AGENT' : 'USER',
+            type: memberToRemove.subjectType === "AGENT" ? "AGENT" : "USER",
             id: subjectKey,
           },
         }),
@@ -286,7 +304,7 @@ export function ChannelSettingsModal() {
     try {
       await dispatch(deleteChannel(channelId)).unwrap();
       handleClose();
-      navigate('/chat');
+      navigate("/chat");
     } finally {
       setIsDeleting(false);
     }
@@ -297,7 +315,7 @@ export function ChannelSettingsModal() {
     try {
       await dispatch(archiveChannel(channelId)).unwrap();
       handleClose();
-      navigate('/chat');
+      navigate("/chat");
     } finally {
       setIsArchiving(false);
     }
@@ -306,11 +324,14 @@ export function ChannelSettingsModal() {
   return (
     <>
       <Modal onClose={handleClose} closeDisabled={isSaving || isDeleting} maxWidth="max-w-lg">
-        <div className="flex flex-col" style={{ maxHeight: '75vh' }} data-testid="chat-channel-settings-modal" data-tab={activeTab}>
+        <div
+          className="flex flex-col"
+          style={{ maxHeight: "75vh" }}
+          data-testid="chat-channel-settings-modal"
+          data-tab={activeTab}
+        >
           <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
-            <h2 className="text-xl font-semibold text-foreground">
-              Channel settings
-            </h2>
+            <h2 className="text-xl font-semibold text-foreground">Channel settings</h2>
             <button
               type="button"
               onClick={handleClose}
@@ -323,51 +344,50 @@ export function ChannelSettingsModal() {
           </div>
 
           <div className="mx-6 mt-2 mb-4 shrink-0">
-            <div className={cn(
-              'flex items-center gap-3 rounded-lg border p-3.5',
-              isChannelPublic
-                ? 'border-primary/30 bg-primary/5'
-                : 'border-border bg-muted/30',
-            )}>
-              <div className={cn(
-                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                isChannelPublic
-                  ? 'bg-primary/15 text-primary'
-                  : 'bg-muted text-muted-foreground',
-              )}>
-                {isChannelPublic
-                  ? <GlobeSimple size={22} weight="bold" />
-                  : <Lock size={22} weight="bold" />
-                }
+            <div
+              className={cn(
+                "flex items-center gap-3 rounded-lg border p-3.5",
+                isChannelPublic ? "border-primary/30 bg-primary/5" : "border-border bg-muted/30",
+              )}
+            >
+              <div
+                className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                  isChannelPublic ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                )}
+              >
+                {isChannelPublic ? (
+                  <GlobeSimple size={22} weight="bold" />
+                ) : (
+                  <Lock size={22} weight="bold" />
+                )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {activeChannel.name}
-                </p>
+                <p className="text-sm font-medium text-foreground truncate">{activeChannel.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {isChannelPublic ? 'Public channel' : 'Private channel'}
-                  {' '}&middot;{' '}{members.length} {members.length === 1 ? 'member' : 'members'}
+                  {isChannelPublic ? "Public channel" : "Private channel"} &middot; {members.length}{" "}
+                  {members.length === 1 ? "member" : "members"}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="flex gap-1 px-6 shrink-0">
-            {(['overview', 'members'] as const).map((tab) => (
+            {(["overview", "members"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                  "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
                   activeTab === tab
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
                 data-testid={`chat-channel-settings-tab-${tab}`}
-                data-active={activeTab === tab ? 'true' : 'false'}
+                data-active={activeTab === tab ? "true" : "false"}
               >
-                {tab === 'overview' ? 'Overview' : `Members (${members.length})`}
+                {tab === "overview" ? "Overview" : `Members (${members.length})`}
               </button>
             ))}
           </div>
@@ -375,7 +395,7 @@ export function ChannelSettingsModal() {
           <div className="border-b border-border mt-2 shrink-0" />
 
           <div className="flex-1 overflow-y-auto min-h-0">
-            {activeTab === 'overview' ? (
+            {activeTab === "overview" ? (
               <div className="px-6 py-5 space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -391,10 +411,12 @@ export function ChannelSettingsModal() {
                   <div className="flex items-center justify-between mt-1">
                     <span />
                     {canEdit && (
-                      <p className={cn(
-                        'text-xs tabular-nums',
-                        name.length >= MAX_NAME_LENGTH ? 'text-red-500' : 'text-muted-foreground',
-                      )}>
+                      <p
+                        className={cn(
+                          "text-xs tabular-nums",
+                          name.length >= MAX_NAME_LENGTH ? "text-red-500" : "text-muted-foreground",
+                        )}
+                      >
                         {name.length}/{MAX_NAME_LENGTH}
                       </p>
                     )}
@@ -431,7 +453,8 @@ export function ChannelSettingsModal() {
                     placeholder="Add a tag"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Group related channels with shared tags. Visible from the unified Tags dashboard.
+                    Group related channels with shared tags. Visible from the unified Tags
+                    dashboard.
                   </p>
                 </div>
 
@@ -442,7 +465,7 @@ export function ChannelSettingsModal() {
                       <span className="text-muted-foreground font-normal ml-1">(optional)</span>
                     </label>
                     <Select
-                      value={categoryId ?? ''}
+                      value={categoryId ?? ""}
                       onChange={(v) => setCategoryId(v || undefined)}
                       options={categoryOptions}
                       size="md"
@@ -511,7 +534,9 @@ export function ChannelSettingsModal() {
 
                     {showAddMember && addMemberQuery.length >= 2 && (
                       <div className="mt-1 rounded-lg border border-border bg-card shadow-lg max-h-[260px] overflow-y-auto">
-                        {searchLoading && searchResults.length === 0 && agentMatches.length === 0 ? (
+                        {searchLoading &&
+                        searchResults.length === 0 &&
+                        agentMatches.length === 0 ? (
                           <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                             Searching...
                           </div>
@@ -538,7 +563,10 @@ export function ChannelSettingsModal() {
                                       </p>
                                       {subject.type === SUBJECT_TYPE.GROUP ? (
                                         <p className="text-xs text-muted-foreground truncate">
-                                          Group{subject.memberCount ? ` (${subject.memberCount} members)` : ''}
+                                          Group
+                                          {subject.memberCount
+                                            ? ` (${subject.memberCount} members)`
+                                            : ""}
                                         </p>
                                       ) : subject.email ? (
                                         <p className="text-xs text-muted-foreground truncate">
@@ -577,7 +605,9 @@ export function ChannelSettingsModal() {
                                       <p className="text-sm font-medium text-foreground truncate">
                                         {agent.name}
                                       </p>
-                                      <p className="text-xs text-muted-foreground truncate">Agent</p>
+                                      <p className="text-xs text-muted-foreground truncate">
+                                        Agent
+                                      </p>
                                     </div>
                                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
                                       <UserPlus size={12} weight="bold" />
@@ -601,7 +631,7 @@ export function ChannelSettingsModal() {
                     </div>
                   ) : (
                     sortedMembers.map((member) => {
-                      const isAgentMember = member.subjectType === 'AGENT';
+                      const isAgentMember = member.subjectType === "AGENT";
                       const agent = isAgentMember ? agentsMap[member.subjectId] : null;
                       const subject = memberSubjectMap[member.userId];
                       const displayName = isAgentMember
@@ -609,7 +639,7 @@ export function ChannelSettingsModal() {
                         : (subject?.name ?? member.displayName ?? member.userId.slice(-6));
                       const memberKey = isAgentMember ? member.subjectId : member.userId;
                       const RoleIcon = ROLE_ICONS[member.role];
-                      const isOwner = member.role === 'OWNER';
+                      const isOwner = member.role === "OWNER";
                       const isSelf = !isAgentMember && member.userId === currentUserId;
                       const isRemoving = removingMemberId === memberKey;
                       const isAgentExpanded = isAgentMember && expandedAgentId === member.subjectId;
@@ -624,8 +654,8 @@ export function ChannelSettingsModal() {
                         <div
                           key={memberKey}
                           className={cn(
-                            'rounded-lg transition-colors',
-                            isAgentExpanded ? 'bg-muted/40' : 'hover:bg-muted/50',
+                            "rounded-lg transition-colors",
+                            isAgentExpanded ? "bg-muted/40" : "hover:bg-muted/50",
                           )}
                         >
                           <div className="flex items-center gap-3 px-3 py-2 group">
@@ -650,7 +680,9 @@ export function ChannelSettingsModal() {
                                   {displayName}
                                 </span>
                                 {isSelf && (
-                                  <span className="text-xs text-muted-foreground shrink-0">(you)</span>
+                                  <span className="text-xs text-muted-foreground shrink-0">
+                                    (you)
+                                  </span>
                                 )}
                                 {isAgentMember && (
                                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded-full shrink-0">
@@ -665,11 +697,17 @@ export function ChannelSettingsModal() {
                               )}
                             </div>
                             {canChangeRole ? (
-                              <div className="shrink-0 w-[104px]" data-testid={`chat-member-role-select-${member.userId}`}>
+                              <div
+                                className="shrink-0 w-[104px]"
+                                data-testid={`chat-member-role-select-${member.userId}`}
+                              >
                                 <Select
                                   value={member.role}
                                   onChange={(v) =>
-                                    handleRoleChange(member.userId, v as 'MEMBER' | 'ADMIN' | 'OWNER')
+                                    handleRoleChange(
+                                      member.userId,
+                                      v as "MEMBER" | "ADMIN" | "OWNER",
+                                    )
                                   }
                                   options={roleSelectOptions}
                                   size="sm"
@@ -677,10 +715,12 @@ export function ChannelSettingsModal() {
                                 />
                               </div>
                             ) : (
-                              <span className={cn(
-                                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0',
-                                ROLE_BADGE_STYLES[member.role],
-                              )}>
+                              <span
+                                className={cn(
+                                  "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0",
+                                  ROLE_BADGE_STYLES[member.role],
+                                )}
+                              >
                                 {RoleIcon && <RoleIcon size={11} weight="fill" />}
                                 {member.role}
                               </span>
@@ -694,10 +734,12 @@ export function ChannelSettingsModal() {
                                   )
                                 }
                                 className={cn(
-                                  'p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
-                                  isAgentExpanded && 'text-primary bg-primary/10',
+                                  "p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
+                                  isAgentExpanded && "text-primary bg-primary/10",
                                 )}
-                                aria-label={isAgentExpanded ? 'Hide agent context' : 'Show agent context'}
+                                aria-label={
+                                  isAgentExpanded ? "Hide agent context" : "Show agent context"
+                                }
                                 title="Agent context"
                               >
                                 <Gauge size={14} />
@@ -738,14 +780,14 @@ export function ChannelSettingsModal() {
             )}
           </div>
 
-          {activeTab === 'overview' && canEdit && isDirty && (
+          {activeTab === "overview" && canEdit && isDirty && (
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border shrink-0">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => {
                   setName(activeChannel.name);
-                  setDescription(activeChannel.description ?? '');
+                  setDescription(activeChannel.description ?? "");
                   setCategoryId(activeChannel.categoryId ?? undefined);
                 }}
                 disabled={isSaving}
@@ -797,9 +839,11 @@ export function ChannelSettingsModal() {
         }}
         onConfirm={handleRemoveMember}
         title="Remove member"
-        message={memberToRemove
-          ? `Remove ${memberSubjectMap[memberToRemove.userId]?.name ?? 'this user'} from #${activeChannel.name}?`
-          : ''}
+        message={
+          memberToRemove
+            ? `Remove ${memberSubjectMap[memberToRemove.userId]?.name ?? "this user"} from #${activeChannel.name}?`
+            : ""
+        }
         confirmLabel="Remove"
         variant="danger"
         loading={removingMemberId !== null}

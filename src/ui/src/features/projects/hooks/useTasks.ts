@@ -14,7 +14,12 @@ import {
   deleteTask,
 } from "@/features/projects/store/projectsThunks";
 import { applyFilters, buildTaskHierarchyIndex } from "@/features/projects/utils/filterTasks";
-import type { Task, CreateTaskRequest, UpdateTaskRequest, MoveTaskRequest } from "@/features/projects/types/project";
+import type {
+  Task,
+  CreateTaskRequest,
+  UpdateTaskRequest,
+  MoveTaskRequest,
+} from "@/features/projects/types/project";
 
 export function useTasks() {
   const dispatch = useAppDispatch();
@@ -22,11 +27,11 @@ export function useTasks() {
   const currentProjectId = useAppSelector(selectCurrentProjectId);
 
   const tasks = useAppSelector((state) =>
-    currentProjectId ? selectTasksForProject(currentProjectId)(state) : []
+    currentProjectId ? selectTasksForProject(currentProjectId)(state) : [],
   );
 
   const tasksByStatus = useAppSelector((state) =>
-    currentProjectId ? selectTasksByStatus(currentProjectId)(state) : {}
+    currentProjectId ? selectTasksByStatus(currentProjectId)(state) : {},
   );
 
   const loadTasks = useCallback(
@@ -37,7 +42,7 @@ export function useTasks() {
       }
       return Promise.resolve();
     },
-    [dispatch, currentProjectId]
+    [dispatch, currentProjectId],
   );
 
   const addTask = useCallback(
@@ -47,29 +52,31 @@ export function useTasks() {
       }
       return dispatch(createTask({ ...data, projectId: currentProjectId }));
     },
-    [dispatch, currentProjectId]
+    [dispatch, currentProjectId],
   );
 
   const editTask = useCallback(
     (data: UpdateTaskRequest) => {
       return dispatch(updateTask(data));
     },
-    [dispatch]
+    [dispatch],
   );
 
   const reorderTask = useCallback(
     (data: MoveTaskRequest) => {
-      dispatch(optimisticUpdateTask({ id: data.id, status: data.status, sortOrder: data.sortOrder }));
+      dispatch(
+        optimisticUpdateTask({ id: data.id, status: data.status, sortOrder: data.sortOrder }),
+      );
       return dispatch(moveTask(data));
     },
-    [dispatch]
+    [dispatch],
   );
 
   const removeTask = useCallback(
     (id: string) => {
       return dispatch(deleteTask(id));
     },
-    [dispatch]
+    [dispatch],
   );
 
   return {
@@ -89,10 +96,7 @@ interface UseFilteredTasksOptions {
   includeSubtasks?: boolean;
 }
 
-export function useFilteredTasks(
-  projectId: string,
-  options: UseFilteredTasksOptions = {},
-) {
+export function useFilteredTasks(projectId: string, options: UseFilteredTasksOptions = {}) {
   const { includeSubtasks = false } = options;
   const tasks = useAppSelector(selectTasksForProject(projectId));
   const searchQuery = useAppSelector((state) => state.projectsUi.searchQuery);
@@ -124,7 +128,7 @@ export function useFilteredTasks(
       result = result.filter(
         (task) =>
           task.title.toLowerCase().includes(query) ||
-          task.description.toLowerCase().includes(query)
+          task.description.toLowerCase().includes(query),
       );
     }
 

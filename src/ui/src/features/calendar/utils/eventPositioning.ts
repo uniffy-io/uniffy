@@ -1,7 +1,7 @@
-import type { CalendarEvent, PositionedEvent, MultiDayPosition } from '@/features/calendar/types';
-import { GRID } from '@/features/calendar/constants';
-import { parseISO, getDurationMinutes, format } from '@/features/calendar/utils/dateUtils';
-import { formatInTimeZone } from 'date-fns-tz';
+import type { CalendarEvent, PositionedEvent, MultiDayPosition } from "@/features/calendar/types";
+import { GRID } from "@/features/calendar/constants";
+import { parseISO, getDurationMinutes, format } from "@/features/calendar/utils/dateUtils";
+import { formatInTimeZone } from "date-fns-tz";
 
 const getLocalTimezone = (): string => {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -11,8 +11,8 @@ const getLocalTimezone = (): string => {
 function getLocalHoursMinutes(isoString: string): { hours: number; minutes: number } {
   const date = parseISO(isoString);
   const timezone = getLocalTimezone();
-  const hours = parseInt(formatInTimeZone(date, timezone, 'H'), 10);
-  const minutes = parseInt(formatInTimeZone(date, timezone, 'm'), 10);
+  const hours = parseInt(formatInTimeZone(date, timezone, "H"), 10);
+  const minutes = parseInt(formatInTimeZone(date, timezone, "m"), 10);
 
   return { hours, minutes };
 }
@@ -21,7 +21,7 @@ function getLocalHoursMinutes(isoString: string): { hours: number; minutes: numb
 function getLocalDateString(isoString: string): string {
   const date = parseISO(isoString);
   const timezone = getLocalTimezone();
-  return formatInTimeZone(date, timezone, 'yyyy-MM-dd');
+  return formatInTimeZone(date, timezone, "yyyy-MM-dd");
 }
 
 /** Multi-day events repeat the same hour band on each day; geometry uses local clock-time only. */
@@ -30,19 +30,21 @@ function calculateEventPosition(
   startHour: number = GRID.START_HOUR,
   hourHeight: number = GRID.HOUR_HEIGHT,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for API compatibility
-  _renderDate?: Date | string
+  _renderDate?: Date | string,
 ): { top: number; height: number } {
-  const { hours: effectiveStartHour, minutes: effectiveStartMinutes } = getLocalHoursMinutes(event.startTime);
-  const { hours: effectiveEndHour, minutes: effectiveEndMinutes } = getLocalHoursMinutes(event.endTime);
+  const { hours: effectiveStartHour, minutes: effectiveStartMinutes } = getLocalHoursMinutes(
+    event.startTime,
+  );
+  const { hours: effectiveEndHour, minutes: effectiveEndMinutes } = getLocalHoursMinutes(
+    event.endTime,
+  );
 
   const minutesFromStart = (effectiveStartHour - startHour) * 60 + effectiveStartMinutes;
   const top = (minutesFromStart / 60) * hourHeight;
 
-  const effectiveDurationMinutes = (effectiveEndHour - effectiveStartHour) * 60 + (effectiveEndMinutes - effectiveStartMinutes);
-  const height = Math.max(
-    (effectiveDurationMinutes / 60) * hourHeight,
-    GRID.MIN_EVENT_HEIGHT
-  );
+  const effectiveDurationMinutes =
+    (effectiveEndHour - effectiveStartHour) * 60 + (effectiveEndMinutes - effectiveStartMinutes);
+  const height = Math.max((effectiveDurationMinutes / 60) * hourHeight, GRID.MIN_EVENT_HEIGHT);
 
   return { top, height };
 }
@@ -60,7 +62,7 @@ function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[][] {
   if (events.length === 0) return [];
 
   const sorted = [...events].sort(
-    (a, b) => parseISO(a.startTime).getTime() - parseISO(b.startTime).getTime()
+    (a, b) => parseISO(a.startTime).getTime() - parseISO(b.startTime).getTime(),
   );
 
   const groups: CalendarEvent[][] = [];
@@ -68,9 +70,7 @@ function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[][] {
 
   for (let i = 1; i < sorted.length; i++) {
     const event = sorted[i];
-    const overlapsWithGroup = currentGroup.some((groupEvent) =>
-      eventsOverlap(event, groupEvent)
-    );
+    const overlapsWithGroup = currentGroup.some((groupEvent) => eventsOverlap(event, groupEvent));
 
     if (overlapsWithGroup) {
       currentGroup.push(event);
@@ -86,7 +86,7 @@ function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[][] {
 
 /** Greedy column packing - longer events first to minimize total columns. */
 function assignEventColumns(
-  events: CalendarEvent[]
+  events: CalendarEvent[],
 ): { event: CalendarEvent; column: number; totalColumns: number }[] {
   if (events.length === 0) return [];
   if (events.length === 1) {
@@ -94,11 +94,9 @@ function assignEventColumns(
   }
 
   const sorted = [...events].sort((a, b) => {
-    const startDiff =
-      parseISO(a.startTime).getTime() - parseISO(b.startTime).getTime();
+    const startDiff = parseISO(a.startTime).getTime() - parseISO(b.startTime).getTime();
     if (startDiff !== 0) return startDiff;
-    return getDurationMinutes(b.startTime, b.endTime) -
-           getDurationMinutes(a.startTime, a.endTime);
+    return getDurationMinutes(b.startTime, b.endTime) - getDurationMinutes(a.startTime, a.endTime);
   });
 
   const assignments: { event: CalendarEvent; column: number }[] = [];
@@ -135,8 +133,8 @@ function assignEventColumns(
 }
 
 function eventSpansDate(event: CalendarEvent, date: Date | string): boolean {
-  const targetDate = typeof date === 'string' ? new Date(date + 'T00:00:00') : date;
-  const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+  const targetDate = typeof date === "string" ? new Date(date + "T00:00:00") : date;
+  const targetDateStr = format(targetDate, "yyyy-MM-dd");
 
   const eventStartDateStr = getLocalDateString(event.startTime);
   const eventEndDateStr = getLocalDateString(event.endTime);
@@ -145,32 +143,27 @@ function eventSpansDate(event: CalendarEvent, date: Date | string): boolean {
 }
 
 function getMultiDayPosition(event: CalendarEvent, date: Date | string): MultiDayPosition {
-  const targetDate = typeof date === 'string' ? new Date(date + 'T00:00:00') : date;
-  const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+  const targetDate = typeof date === "string" ? new Date(date + "T00:00:00") : date;
+  const targetDateStr = format(targetDate, "yyyy-MM-dd");
 
   const eventStartDateStr = getLocalDateString(event.startTime);
   const eventEndDateStr = getLocalDateString(event.endTime);
 
   if (eventStartDateStr === eventEndDateStr) {
-    return 'single';
+    return "single";
   }
 
   if (targetDateStr === eventStartDateStr) {
-    return 'start';
+    return "start";
   } else if (targetDateStr === eventEndDateStr) {
-    return 'end';
+    return "end";
   } else {
-    return 'middle';
+    return "middle";
   }
 }
 
-export function findConflicts(
-  event: CalendarEvent,
-  allEvents: CalendarEvent[]
-): CalendarEvent[] {
-  return allEvents.filter(
-    (other) => other.id !== event.id && eventsOverlap(event, other)
-  );
+export function findConflicts(event: CalendarEvent, allEvents: CalendarEvent[]): CalendarEvent[] {
+  return allEvents.filter((other) => other.id !== event.id && eventsOverlap(event, other));
 }
 
 /** Includes events that span into this day, not just those that start on it. */
@@ -179,7 +172,7 @@ export function getPositionedEventsForDay(
   date: Date | string,
   startHour: number = GRID.START_HOUR,
   hourHeight: number = GRID.HOUR_HEIGHT,
-  columnWidth: number = 100
+  columnWidth: number = 100,
 ): PositionedEvent[] {
   // All-day events render in a separate row.
   const dayEvents = events.filter((e) => !e.isAllDay && eventSpansDate(e, date));
@@ -198,7 +191,7 @@ export function getPositionedEventsForDay(
 
       // Gap only when there is more than one column so single events fill the day cell.
       const gapPercent = totalColumns > 1 ? GRID.EVENT_GAP / totalColumns : 0;
-      const widthPercent = (columnWidth / totalColumns) - gapPercent;
+      const widthPercent = columnWidth / totalColumns - gapPercent;
       const leftPercent = (column / totalColumns) * columnWidth + (column > 0 ? gapPercent / 2 : 0);
 
       const multiDayPosition = getMultiDayPosition(event, date);
@@ -228,19 +221,14 @@ export function getPositionedEventsForWeek(
   events: CalendarEvent[],
   weekDates: Date[],
   startHour: number = GRID.START_HOUR,
-  hourHeight: number = GRID.HOUR_HEIGHT
+  hourHeight: number = GRID.HOUR_HEIGHT,
 ): Map<string, PositionedEvent[]> {
   const result = new Map<string, PositionedEvent[]>();
 
   for (const date of weekDates) {
     // Key matches dateString from weekColumns (local zone).
-    const dateKey = format(date, 'yyyy-MM-dd');
-    const dayEvents = getPositionedEventsForDay(
-      events,
-      date,
-      startHour,
-      hourHeight
-    );
+    const dateKey = format(date, "yyyy-MM-dd");
+    const dayEvents = getPositionedEventsForDay(events, date, startHour, hourHeight);
     result.set(dateKey, dayEvents);
   }
 
@@ -250,7 +238,7 @@ export function getPositionedEventsForWeek(
 /** Packs all-day events into the top row with one event per (row, day) cell. */
 export function positionAllDayEvents(
   events: CalendarEvent[],
-  weekDates: Date[]
+  weekDates: Date[],
 ): {
   event: CalendarEvent;
   startColumn: number;
@@ -263,13 +251,12 @@ export function positionAllDayEvents(
 
   const dateToColumn = new Map<string, number>();
   weekDates.forEach((date, index) => {
-    dateToColumn.set(format(date, 'yyyy-MM-dd'), index);
+    dateToColumn.set(format(date, "yyyy-MM-dd"), index);
   });
 
   // Longer spans first so they claim contiguous cells before shorter events fill the gaps.
   const sorted = [...allDayEvents].sort((a, b) => {
-    const startDiff =
-      parseISO(a.startTime).getTime() - parseISO(b.startTime).getTime();
+    const startDiff = parseISO(a.startTime).getTime() - parseISO(b.startTime).getTime();
     if (startDiff !== 0) return startDiff;
 
     const spanA = getDurationMinutes(a.startTime, a.endTime);
@@ -331,4 +318,3 @@ export function positionAllDayEvents(
 
   return positions;
 }
-

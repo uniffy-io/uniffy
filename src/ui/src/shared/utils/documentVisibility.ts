@@ -5,5 +5,5 @@
  * window), while a side-by-side or foreground tab stays visible.
  */
 export function isDocumentVisible(): boolean {
-  return typeof document === 'undefined' || document.visibilityState !== 'hidden';
+  return typeof document === "undefined" || document.visibilityState !== "hidden";
 }

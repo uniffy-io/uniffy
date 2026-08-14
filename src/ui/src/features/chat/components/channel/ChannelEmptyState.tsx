@@ -1,6 +1,6 @@
-import { Hash, Lock } from '@phosphor-icons/react';
+import { Hash, Lock } from "@phosphor-icons/react";
 
-import { type ChannelType } from '@/features/chat/types';
+import { type ChannelType } from "@/features/chat/types";
 
 interface ChannelEmptyStateProps {
   channelName: string;
@@ -13,7 +13,7 @@ export function ChannelEmptyState({
   channelType,
   description,
 }: ChannelEmptyStateProps) {
-  const isPrivate = channelType === 'PRIVATE';
+  const isPrivate = channelType === "PRIVATE";
   const Icon = isPrivate ? Lock : Hash;
 
   return (
@@ -24,7 +24,7 @@ export function ChannelEmptyState({
           This is the start of #{channelName}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          {description || 'Start connecting with your team.'}
+          {description || "Start connecting with your team."}
         </p>
       </div>
     </div>

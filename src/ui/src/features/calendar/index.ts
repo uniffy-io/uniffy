@@ -1,11 +1,11 @@
-export { CalendarPage } from '@/features/calendar/pages/CalendarPage';
+export { CalendarPage } from "@/features/calendar/pages/CalendarPage";
 
 export {
   CalendarLayout,
   CalendarHeader,
   LeftSidebar,
   MainContent,
-} from '@/features/calendar/components/layout';
+} from "@/features/calendar/components/layout";
 
 export {
   WeekView,
@@ -17,7 +17,7 @@ export {
   DayHeadersRow,
   GridLines,
   CurrentTimeIndicator,
-} from '@/features/calendar/components/calendar';
+} from "@/features/calendar/components/calendar";
 
 export {
   SidebarSection,
@@ -26,9 +26,9 @@ export {
   CategoryList,
   TemplateList,
   TagCloud,
-} from '@/features/calendar/components/sidebar';
+} from "@/features/calendar/components/sidebar";
 
-export { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
+export { QuickEventModal } from "@/features/calendar/components/modals/QuickEventModal";
 
 export {
   calendarReducer,
@@ -54,9 +54,9 @@ export {
   toggleSidebar,
   setSidebarCollapsed,
   toggleSectionCollapse,
-} from '@/features/calendar/store';
+} from "@/features/calendar/store";
 
-export { calendarApi } from '@/features/calendar/api/calendarApi';
+export { calendarApi } from "@/features/calendar/api/calendarApi";
 
 export {
   fetchEventsInRange,
@@ -71,16 +71,16 @@ export {
   updateAttendeeStatus,
   addAttendees,
   removeAttendees,
-} from '@/features/calendar/store/calendarThunks';
+} from "@/features/calendar/store/calendarThunks";
 
-export { CalendarQuickView } from '@/features/calendar/components/quick-view/CalendarQuickView';
+export { CalendarQuickView } from "@/features/calendar/components/quick-view/CalendarQuickView";
 
 export {
   useCalendarNavigation,
   useCalendarEvents,
   useCurrentTime,
   useTodayEvents,
-} from '@/features/calendar/hooks';
+} from "@/features/calendar/hooks";
 
 export {
   getWeekDates,
@@ -98,7 +98,7 @@ export {
   formatDuration,
   getPositionedEventsForDay,
   getPositionedEventsForWeek,
-} from '@/features/calendar/utils';
+} from "@/features/calendar/utils";
 
 export {
   CATEGORY_COLORS,
@@ -106,7 +106,7 @@ export {
   getCategoryColor,
   LAYOUT,
   GRID,
-} from '@/features/calendar/constants';
+} from "@/features/calendar/constants";
 
 export type {
   CalendarEvent,
@@ -120,4 +120,4 @@ export type {
   DayOfWeek,
   LinkedResource,
   EventFilters,
-} from '@/features/calendar/types';
+} from "@/features/calendar/types";

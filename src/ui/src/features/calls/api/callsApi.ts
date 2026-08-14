@@ -1,5 +1,5 @@
-import { createClient } from '@connectrpc/connect';
-import { unaryTransport } from '@/config/api';
+import { createClient } from "@connectrpc/connect";
+import { unaryTransport } from "@/config/api";
 import {
   CallService,
   InitiateCallRequestSchema,
@@ -15,20 +15,17 @@ import {
   ReportMediaStateRequestSchema,
   GetOrgCallPolicyRequestSchema,
   UpdateOrgCallPolicyRequestSchema,
-} from '@uniffy/proto/calls/v1/calls_pb';
-import type { MessageInitShape } from '@bufbuild/protobuf';
+} from "@uniffy/proto/calls/v1/calls_pb";
+import type { MessageInitShape } from "@bufbuild/protobuf";
 
 const callsClient = createClient(CallService, unaryTransport);
 
 export const callsApi = {
   initiateCall: (req: MessageInitShape<typeof InitiateCallRequestSchema>) =>
     callsClient.initiateCall(req),
-  joinCall: (req: MessageInitShape<typeof JoinCallRequestSchema>) =>
-    callsClient.joinCall(req),
-  leaveCall: (req: MessageInitShape<typeof LeaveCallRequestSchema>) =>
-    callsClient.leaveCall(req),
-  endCall: (req: MessageInitShape<typeof EndCallRequestSchema>) =>
-    callsClient.endCall(req),
+  joinCall: (req: MessageInitShape<typeof JoinCallRequestSchema>) => callsClient.joinCall(req),
+  leaveCall: (req: MessageInitShape<typeof LeaveCallRequestSchema>) => callsClient.leaveCall(req),
+  endCall: (req: MessageInitShape<typeof EndCallRequestSchema>) => callsClient.endCall(req),
   refreshCallToken: (req: MessageInitShape<typeof RefreshCallTokenRequestSchema>) =>
     callsClient.refreshCallToken(req),
   getActiveCall: (req: MessageInitShape<typeof GetActiveCallRequestSchema>) =>

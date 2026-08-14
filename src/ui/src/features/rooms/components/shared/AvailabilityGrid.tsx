@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-import { cn } from '@/shared/utils/cn';
-import type { TimeSlot } from '@/features/rooms/types';
+import { useMemo } from "react";
+import { cn } from "@/shared/utils/cn";
+import type { TimeSlot } from "@/features/rooms/types";
 
 const START_HOUR = 8;
 const END_HOUR = 20;
@@ -35,31 +35,31 @@ export function AvailabilityGrid({ slots, onSlotClick, className }: Availability
     for (let h = START_HOUR; h < END_HOUR; h++) {
       const slot = hourMap.get(h);
       const isAvailable = slot ? slot.isAvailable : true;
-      const suffix = h < 12 ? 'a' : 'p';
+      const suffix = h < 12 ? "a" : "p";
       const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
       result.push({
         hour: h,
         label: `${displayHour}${suffix}`,
         isAvailable,
-        bookerName: slot?.bookerName || '',
+        bookerName: slot?.bookerName || "",
       });
     }
     return result;
   }, [hourMap]);
 
   return (
-    <div className={cn('flex flex-col gap-1', className)}>
+    <div className={cn("flex flex-col gap-1", className)}>
       <div className="flex">
         {hours.map((h, i) => (
           <div
             key={h.hour}
             className={cn(
-              'flex-1 text-center text-[10px] text-muted-foreground',
-              i === 0 && 'text-left',
-              i === hours.length - 1 && 'text-right',
+              "flex-1 text-center text-[10px] text-muted-foreground",
+              i === 0 && "text-left",
+              i === hours.length - 1 && "text-right",
             )}
           >
-            {i % 2 === 0 ? h.label : ''}
+            {i % 2 === 0 ? h.label : ""}
           </div>
         ))}
       </div>
@@ -70,28 +70,30 @@ export function AvailabilityGrid({ slots, onSlotClick, className }: Availability
             key={h.hour}
             type="button"
             disabled={!h.isAvailable || !onSlotClick}
-            title={h.isAvailable ? `${h.label} - Available` : `${h.label} - ${h.bookerName || 'Booked'}`}
+            title={
+              h.isAvailable ? `${h.label} - Available` : `${h.label} - ${h.bookerName || "Booked"}`
+            }
             onClick={() => {
               if (h.isAvailable && onSlotClick) {
                 onSlotClick(h.hour, h.hour + 1);
               }
             }}
             className={cn(
-              'flex-1 transition-colors border-r border-border/40 last:border-r-0',
+              "flex-1 transition-colors border-r border-border/40 last:border-r-0",
               h.isAvailable
-                ? 'bg-muted hover:bg-muted/70 cursor-pointer'
-                : 'bg-primary/40 cursor-default',
-              !h.isAvailable && 'relative group',
+                ? "bg-muted hover:bg-muted/70 cursor-pointer"
+                : "bg-primary/40 cursor-default",
+              !h.isAvailable && "relative group",
             )}
           >
             {!h.isAvailable && h.bookerName && (
               <span
                 className={cn(
-                  'absolute bottom-full left-1/2 -translate-x-1/2 mb-1',
-                  'hidden group-hover:block',
-                  'px-2 py-1 text-xs rounded-md',
-                  'bg-card text-foreground border border-border shadow-lg',
-                  'whitespace-nowrap z-10 pointer-events-none',
+                  "absolute bottom-full left-1/2 -translate-x-1/2 mb-1",
+                  "hidden group-hover:block",
+                  "px-2 py-1 text-xs rounded-md",
+                  "bg-card text-foreground border border-border shadow-lg",
+                  "whitespace-nowrap z-10 pointer-events-none",
                 )}
               >
                 {h.bookerName}

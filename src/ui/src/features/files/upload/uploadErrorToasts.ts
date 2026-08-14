@@ -1,6 +1,6 @@
-import { toast } from 'sonner';
-import { friendlyErrorMessage } from '@/config';
-import { uploadService } from '@/features/files/upload/uploadService';
+import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/config";
+import { uploadService } from "@/features/files/upload/uploadService";
 
 const toasted = new Set<string>();
 
@@ -9,13 +9,13 @@ const toasted = new Set<string>();
  * never lets a failure pass unnoticed. Chat shows its own inline error; cancellations are not failures.
  */
 export function subscribeUploadErrorToasts(): () => void {
-    return uploadService.subscribe((records) => {
-        for (const record of records) {
-            if (record.context === 'chat') continue;
-            if (record.status !== 'failed') continue;
-            if (toasted.has(record.id)) continue;
-            toasted.add(record.id);
-            toast.error(friendlyErrorMessage(record.error ?? '') ?? `Couldn't upload ${record.filename}`);
-        }
-    });
+  return uploadService.subscribe((records) => {
+    for (const record of records) {
+      if (record.context === "chat") continue;
+      if (record.status !== "failed") continue;
+      if (toasted.has(record.id)) continue;
+      toasted.add(record.id);
+      toast.error(friendlyErrorMessage(record.error ?? "") ?? `Couldn't upload ${record.filename}`);
+    }
+  });
 }

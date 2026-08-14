@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  Books,
-  ClockCounterClockwise,
-  Robot,
-  Lightning,
-} from "@phosphor-icons/react";
+import { Books, ClockCounterClockwise, Robot, Lightning } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { clearPanelLayout, loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
@@ -116,10 +111,34 @@ export function AgentsLayout() {
   }, []);
 
   const railSections: SidebarSection[] = [
-    { id: "agents", icon: Robot, label: "Agents", isActive: section === "agents", onClick: () => navigate("/agents/agents") },
-    { id: "catalog", icon: Books, label: "Catalog", isActive: section === "catalog", onClick: () => navigate("/agents/catalog") },
-    { id: "skills", icon: Lightning, label: "Skills", isActive: section === "skills", onClick: () => navigate("/agents/skills") },
-    { id: "automations", icon: ClockCounterClockwise, label: "Automations", isActive: section === "automations", onClick: () => navigate("/agents/automations") },
+    {
+      id: "agents",
+      icon: Robot,
+      label: "Agents",
+      isActive: section === "agents",
+      onClick: () => navigate("/agents/agents"),
+    },
+    {
+      id: "catalog",
+      icon: Books,
+      label: "Catalog",
+      isActive: section === "catalog",
+      onClick: () => navigate("/agents/catalog"),
+    },
+    {
+      id: "skills",
+      icon: Lightning,
+      label: "Skills",
+      isActive: section === "skills",
+      onClick: () => navigate("/agents/skills"),
+    },
+    {
+      id: "automations",
+      icon: ClockCounterClockwise,
+      label: "Automations",
+      isActive: section === "automations",
+      onClick: () => navigate("/agents/automations"),
+    },
   ];
 
   const sidebar = <AgentsModuleSidebar />;

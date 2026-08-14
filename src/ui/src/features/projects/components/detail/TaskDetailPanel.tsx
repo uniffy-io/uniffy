@@ -1,8 +1,22 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Diamond, PencilSimple, Check, SidebarSimple, Clock, Eye, EyeSlash, CaretRight } from "@phosphor-icons/react";
+import {
+  X,
+  Diamond,
+  PencilSimple,
+  Check,
+  SidebarSimple,
+  Clock,
+  Eye,
+  EyeSlash,
+  CaretRight,
+} from "@phosphor-icons/react";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { toast } from "sonner";
-import { TASK_TYPES, getTaskTypeConfig, getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
+import {
+  TASK_TYPES,
+  getTaskTypeConfig,
+  getHierarchyRuleViolation,
+} from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { isOverdue } from "@/shared/utils/dateFormatting";
@@ -12,7 +26,12 @@ import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { MentionChipCompact } from "@/components/mention";
-import { selectTasksMap, selectCurrentProject, selectTasksForProject, optimisticUpdateTask } from "@/features/projects/store/projectsSlice";
+import {
+  selectTasksMap,
+  selectCurrentProject,
+  selectTasksForProject,
+  optimisticUpdateTask,
+} from "@/features/projects/store/projectsSlice";
 import { updateTask } from "@/features/projects/store/projectsThunks";
 import { closeDetailPanel, selectTask } from "@/features/projects/store/projectsUiSlice";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
@@ -44,14 +63,11 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
   const project = useAppSelector(selectCurrentProject);
   const projectId = project?.id;
   const allProjectTasks = useAppSelector(
-    useMemo(
-      () => (projectId ? selectTasksForProject(projectId) : () => []),
-      [projectId]
-    )
+    useMemo(() => (projectId ? selectTasksForProject(projectId) : () => []), [projectId]),
   );
   const blocksTaskIds = useMemo(
     () => allProjectTasks.filter((t) => t.blockedByTaskIds.includes(taskId)).map((t) => t.id),
-    [allProjectTasks, taskId]
+    [allProjectTasks, taskId],
   );
   const { canEdit } = useTaskPermission(taskId);
   const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
@@ -71,7 +87,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Build ancestor chain for breadcrumb navigation (must be before early return)
   const ancestorChain = useMemo(() => {
@@ -164,374 +180,418 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
             </span>
           ))}
           <CaretRight size={10} className="text-muted-foreground/50" />
-          <span className="font-mono text-foreground font-medium">
-            {ticketId}
-          </span>
+          <span className="font-mono text-foreground font-medium">{ticketId}</span>
         </div>
       )}
 
       <ScrollArea className="flex-1 min-h-0">
-        <div className={cn("p-4", variant === "modal" ? "flex flex-col lg:flex-row gap-6 items-start" : "space-y-6")}>
+        <div
+          className={cn(
+            "p-4",
+            variant === "modal" ? "flex flex-col lg:flex-row gap-6 items-start" : "space-y-6",
+          )}
+        >
+          {/* Left column - primary content in modal (title, description, comments); top of single column in sidebar */}
+          <div
+            className={cn(variant === "modal" ? "flex-1 min-w-0 w-full space-y-6" : "space-y-6")}
+          >
+            {/* Task Title (editable when permitted) */}
+            <EditableTitle
+              title={task.title}
+              readOnly={!canEdit}
+              onSave={(newTitle) => {
+                dispatch(optimisticUpdateTask({ id: task.id, title: newTitle }));
+                dispatch(updateTask({ id: task.id, title: newTitle }));
+              }}
+            />
 
-        {/* Left column - primary content in modal (title, description, comments); top of single column in sidebar */}
-        <div className={cn(variant === "modal" ? "flex-1 min-w-0 w-full space-y-6" : "space-y-6")}>
-
-          {/* Task Title (editable when permitted) */}
-          <EditableTitle
-            title={task.title}
-            readOnly={!canEdit}
-            onSave={(newTitle) => {
-              dispatch(optimisticUpdateTask({ id: task.id, title: newTitle }));
-              dispatch(updateTask({ id: task.id, title: newTitle }));
-            }}
-          />
-
-          {/* Status (sidebar variant only - modal places status at the top of the metadata column) */}
-          {variant !== "modal" && statusOption && statusField && (
-            <div className="flex items-center justify-between">
-              <StatusPicker
-                currentOption={statusOption}
-                options={(statusField.config.options ?? []) as SelectOption[]}
-                onSelect={(newStatus) => {
-                  dispatch(optimisticUpdateTask({ id: task.id, status: newStatus }));
-                  dispatch(updateTask({ id: task.id, status: newStatus }));
-                }}
-                disabled={!canEdit}
-              />
-              {task.isMilestone && (
-                 <Badge variant="secondary" className="gap-1" style={{ color: 'var(--status-warning)', borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }}>
+            {/* Status (sidebar variant only - modal places status at the top of the metadata column) */}
+            {variant !== "modal" && statusOption && statusField && (
+              <div className="flex items-center justify-between">
+                <StatusPicker
+                  currentOption={statusOption}
+                  options={(statusField.config.options ?? []) as SelectOption[]}
+                  onSelect={(newStatus) => {
+                    dispatch(optimisticUpdateTask({ id: task.id, status: newStatus }));
+                    dispatch(updateTask({ id: task.id, status: newStatus }));
+                  }}
+                  disabled={!canEdit}
+                />
+                {task.isMilestone && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1"
+                    style={{
+                      color: "var(--status-warning)",
+                      borderColor: "color-mix(in srgb, var(--status-warning) 30%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--status-warning) 10%, transparent)",
+                    }}
+                  >
                     <Diamond weight="fill" />
                     Milestone
-                 </Badge>
-              )}
-            </div>
-          )}
+                  </Badge>
+                )}
+              </div>
+            )}
 
-          {/* Tags (sidebar variant only - modal places tags in the metadata column) */}
-          {variant !== "modal" && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Tags
-              </h3>
-              <TagPicker
-                selectedTagIds={task.tagIds}
-                onChange={(nextTagIds) => {
-                  dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
-                  dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
+            {/* Tags (sidebar variant only - modal places tags in the metadata column) */}
+            {variant !== "modal" && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Tags
+                </h3>
+                <TagPicker
+                  selectedTagIds={task.tagIds}
+                  onChange={(nextTagIds) => {
+                    dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
+                    dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
+                  }}
+                  disabled={!canEdit}
+                  placeholder="Add a tag"
+                />
+              </div>
+            )}
+
+            {/* Description - same click-to-open expandable widget the sidebar uses: chip placeholder when empty, full CrepeEditor in an overlay on click. Capped + scrollable preview keeps the modal compact regardless of description length; the Edit button rides the header row so it never overlaps the scrollbar. */}
+            {variant === "modal" && (
+              <ExpandableEditor
+                contentType={ContentType.TASK}
+                contentId={task.id}
+                value={task.description}
+                onChange={(newDesc) => {
+                  dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
+                  dispatch(updateTask({ id: task.id, description: newDesc }));
                 }}
-                disabled={!canEdit}
-                placeholder="Add a tag"
+                placeholder="Click to add a description... (type @ to mention)"
+                label="Description"
+                enableUpload
+                fullPreview
+                previewMaxHeight="400px"
+                showHeader
+                readonly={!canEdit}
               />
-            </div>
-          )}
+            )}
 
-          {/* Description - same click-to-open expandable widget the sidebar uses: chip placeholder when empty, full CrepeEditor in an overlay on click. Capped + scrollable preview keeps the modal compact regardless of description length; the Edit button rides the header row so it never overlaps the scrollbar. */}
-          {variant === "modal" && (
-            <ExpandableEditor
-              contentType={ContentType.TASK}
-              contentId={task.id}
-              value={task.description}
-              onChange={(newDesc) => {
-                dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
-                dispatch(updateTask({ id: task.id, description: newDesc }));
-              }}
-              placeholder="Click to add a description... (type @ to mention)"
-              label="Description"
-              enableUpload
-              fullPreview
-              previewMaxHeight="400px"
-              showHeader
-              readonly={!canEdit}
-            />
-          )}
-
-          {/* Comments (in modal mode, in left column) */}
-          {variant === "modal" && (
-            <div className="rounded-md border border-border [&>div]:h-auto">
-              <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
-            </div>
-          )}
-
-          </div>{/* end left column */}
+            {/* Comments (in modal mode, in left column) */}
+            {variant === "modal" && (
+              <div className="rounded-md border border-border [&>div]:h-auto">
+                <CommentsPanel contentType={ContentType.TASK} contentId={task.id} />
+              </div>
+            )}
+          </div>
+          {/* end left column */}
 
           {/* Right column - metadata in modal (status, tags, fields, relationships, activity); continues in single column for sidebar */}
-          <div className={cn(variant === "modal" ? "w-full lg:w-80 shrink-0 space-y-6" : "space-y-6")}>
-
-          {/* Status (modal only - sidebar shows it in the left block) */}
-          {variant === "modal" && statusOption && statusField && (
-            <div className="flex items-center justify-between">
-              <StatusPicker
-                currentOption={statusOption}
-                options={(statusField.config.options ?? []) as SelectOption[]}
-                onSelect={(newStatus) => {
-                  dispatch(optimisticUpdateTask({ id: task.id, status: newStatus }));
-                  dispatch(updateTask({ id: task.id, status: newStatus }));
-                }}
-                disabled={!canEdit}
-              />
-              {task.isMilestone && (
-                 <Badge variant="secondary" className="gap-1" style={{ color: 'var(--status-warning)', borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)' }}>
+          <div
+            className={cn(variant === "modal" ? "w-full lg:w-80 shrink-0 space-y-6" : "space-y-6")}
+          >
+            {/* Status (modal only - sidebar shows it in the left block) */}
+            {variant === "modal" && statusOption && statusField && (
+              <div className="flex items-center justify-between">
+                <StatusPicker
+                  currentOption={statusOption}
+                  options={(statusField.config.options ?? []) as SelectOption[]}
+                  onSelect={(newStatus) => {
+                    dispatch(optimisticUpdateTask({ id: task.id, status: newStatus }));
+                    dispatch(updateTask({ id: task.id, status: newStatus }));
+                  }}
+                  disabled={!canEdit}
+                />
+                {task.isMilestone && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1"
+                    style={{
+                      color: "var(--status-warning)",
+                      borderColor: "color-mix(in srgb, var(--status-warning) 30%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--status-warning) 10%, transparent)",
+                    }}
+                  >
                     <Diamond weight="fill" />
                     Milestone
-                 </Badge>
-              )}
-            </div>
-          )}
+                  </Badge>
+                )}
+              </div>
+            )}
 
-          {/* Tags (modal only - sidebar shows them in the left block) */}
-          {variant === "modal" && (
-            <div className="space-y-2">
+            {/* Tags (modal only - sidebar shows them in the left block) */}
+            {variant === "modal" && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Tags
+                </h3>
+                <TagPicker
+                  selectedTagIds={task.tagIds}
+                  onChange={(nextTagIds) => {
+                    dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
+                    dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
+                  }}
+                  disabled={!canEdit}
+                  placeholder="Add a tag"
+                />
+              </div>
+            )}
+
+            {/* Fields Section */}
+            <div className="space-y-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Tags
+                Fields
               </h3>
-              <TagPicker
-                selectedTagIds={task.tagIds}
-                onChange={(nextTagIds) => {
-                  dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
-                  dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
-                }}
-                disabled={!canEdit}
-                placeholder="Add a tag"
-              />
-            </div>
-          )}
 
-          {/* Fields Section */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Fields
-            </h3>
+              <div className="space-y-3">
+                {/* Priority */}
+                {priorityOption && priorityField && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground w-20">Priority</span>
+                    <PriorityPicker
+                      currentOption={priorityOption}
+                      options={(priorityField.config.options ?? []) as SelectOption[]}
+                      onSelect={(newPriority) => {
+                        dispatch(optimisticUpdateTask({ id: task.id, priority: newPriority }));
+                        dispatch(updateTask({ id: task.id, priority: newPriority }));
+                      }}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                )}
 
-            <div className="space-y-3">
-              {/* Priority */}
-              {priorityOption && priorityField && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground w-20">Priority</span>
-                  <PriorityPicker
-                    currentOption={priorityOption}
-                    options={(priorityField.config.options ?? []) as SelectOption[]}
-                    onSelect={(newPriority) => {
-                      dispatch(optimisticUpdateTask({ id: task.id, priority: newPriority }));
-                      dispatch(updateTask({ id: task.id, priority: newPriority }));
-                    }}
-                    disabled={!canEdit}
-                  />
+                {/* Type */}
+                <div className="flex items-start gap-2">
+                  <span className="text-sm text-muted-foreground w-20 shrink-0 pt-1">Type</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TASK_TYPES.map((type) => {
+                      const TIcon = type.icon;
+                      const isActive = (task.taskType || "task") === type.value;
+                      return (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => {
+                            dispatch(updateTask({ id: task.id, taskType: type.value }));
+                            const parentType = task.parentId
+                              ? (allProjectTasks.find((t) => t.id === task.parentId)?.taskType ??
+                                null)
+                              : null;
+                            const warning = getHierarchyRuleViolation(type.value, parentType);
+                            if (warning) toast.warning(warning);
+                          }}
+                          className={cn(
+                            "flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors",
+                            isActive
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                          )}
+                        >
+                          <TIcon size={12} weight={isActive ? "fill" : "regular"} />
+                          {type.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
 
-              {/* Type */}
-              <div className="flex items-start gap-2">
-                <span className="text-sm text-muted-foreground w-20 shrink-0 pt-1">Type</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {TASK_TYPES.map((type) => {
-                    const TIcon = type.icon;
-                    const isActive = (task.taskType || "task") === type.value;
-                    return (
-                      <button
-                        key={type.value}
-                        type="button"
-                        onClick={() => {
-                          dispatch(updateTask({ id: task.id, taskType: type.value }));
-                          const parentType = task.parentId
-                            ? (allProjectTasks.find((t) => t.id === task.parentId)?.taskType ?? null)
-                            : null;
-                          const warning = getHierarchyRuleViolation(type.value, parentType);
-                          if (warning) toast.warning(warning);
-                        }}
+                {/* Parent */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20 shrink-0">Parent</span>
+                  <div className="flex-1 min-w-0">
+                    <ParentPicker
+                      task={task}
+                      project={project}
+                      allTasks={allProjectTasks}
+                      onSelect={(parentId) => {
+                        const parentType = parentId
+                          ? (allProjectTasks.find((t) => t.id === parentId)?.taskType ?? null)
+                          : null;
+                        const warning = getHierarchyRuleViolation(
+                          task.taskType || "task",
+                          parentType,
+                        );
+                        dispatch(optimisticUpdateTask({ id: task.id, parentId }));
+                        dispatch(updateTask({ id: task.id, parentId }));
+                        if (warning) toast.warning(warning);
+                      }}
+                      onNavigate={(id) => dispatch(selectTask(id))}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                </div>
+
+                {/* Assignees */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20">Assignee</span>
+                  <div className="flex-1 min-w-0">
+                    <AssigneeField
+                      assigneeIds={task.assigneeIds}
+                      onChange={(ids) => {
+                        dispatch(optimisticUpdateTask({ id: task.id, assigneeIds: ids }));
+                        dispatch(updateTask({ id: task.id, assigneeIds: ids }));
+                      }}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                </div>
+
+                {/* Start Date */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20">Start</span>
+                  <div className="flex-1 min-w-0">
+                    <DatePicker
+                      value={task.startDate ?? ""}
+                      onChange={(v) => {
+                        const next = v || null;
+                        dispatch(optimisticUpdateTask({ id: task.id, startDate: next }));
+                        dispatch(updateTask({ id: task.id, startDate: next }));
+                      }}
+                      disabled={!canEdit}
+                      placeholder="Set start date"
+                    />
+                  </div>
+                </div>
+
+                {/* Due Date */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20">Due</span>
+                  <div
+                    className={cn(
+                      "flex-1 min-w-0",
+                      task.dueDate && isOverdue(task.dueDate) && "text-destructive",
+                    )}
+                  >
+                    <DatePicker
+                      value={task.dueDate ?? ""}
+                      onChange={(v) => {
+                        const next = v || null;
+                        dispatch(optimisticUpdateTask({ id: task.id, dueDate: next }));
+                        dispatch(updateTask({ id: task.id, dueDate: next }));
+                      }}
+                      disabled={!canEdit}
+                      placeholder="Set due date"
+                    />
+                  </div>
+                </div>
+
+                {/* Recurrence */}
+                <div className="flex items-start gap-3">
+                  <span className="text-sm text-muted-foreground w-20 pt-0.5">Repeat</span>
+                  <div className="flex-1">
+                    <TaskRecurrenceSelector
+                      value={task.recurrenceRule}
+                      onChange={(val) => dispatch(updateTask({ id: task.id, recurrenceRule: val }))}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                </div>
+
+                {/* Sprint */}
+                {sprints.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground w-20">Sprint</span>
+                    <SprintSelector
+                      sprints={sprints}
+                      currentSprintId={task.sprintId}
+                      onSelect={(sprintId) => {
+                        dispatch(optimisticUpdateTask({ id: task.id, sprintId }));
+                        dispatch(updateTask({ id: task.id, sprintId }));
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Time Tracking */}
+                <TimeField
+                  label="Estimated"
+                  minutes={task.estimatedMinutes}
+                  onSave={(minutes) => {
+                    dispatch(optimisticUpdateTask({ id: task.id, estimatedMinutes: minutes }));
+                    dispatch(updateTask({ id: task.id, estimatedMinutes: minutes }));
+                  }}
+                />
+                <TimeField
+                  label="Time Spent"
+                  minutes={task.timeSpentMinutes}
+                  onSave={(minutes) => {
+                    dispatch(optimisticUpdateTask({ id: task.id, timeSpentMinutes: minutes }));
+                    dispatch(updateTask({ id: task.id, timeSpentMinutes: minutes }));
+                  }}
+                />
+
+                {/* Time Progress Bar */}
+                {task.estimatedMinutes != null && task.estimatedMinutes > 0 && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground w-20" />
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            !task.timeSpentMinutes
+                              ? "bg-muted"
+                              : task.timeSpentMinutes <= task.estimatedMinutes * 0.75
+                                ? "bg-green-500"
+                                : task.timeSpentMinutes <= task.estimatedMinutes
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500",
+                          )}
+                          style={{
+                            width: `${Math.min(100, ((task.timeSpentMinutes ?? 0) / task.estimatedMinutes) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span
                         className={cn(
-                          "flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors",
-                          isActive
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                          "text-[10px] shrink-0",
+                          task.timeSpentMinutes && task.timeSpentMinutes > task.estimatedMinutes
+                            ? "text-red-500 font-medium"
+                            : "text-muted-foreground",
                         )}
                       >
-                        <TIcon size={12} weight={isActive ? "fill" : "regular"} />
-                        {type.label}
-                      </button>
+                        {task.timeSpentMinutes
+                          ? `${Math.round((task.timeSpentMinutes / task.estimatedMinutes) * 100)}%`
+                          : "0%"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Dependencies (Blocked By + Blocks) */}
+            <DependenciesList
+              taskId={task.id}
+              blockedByTaskIds={task.blockedByTaskIds}
+              blocksTaskIds={blocksTaskIds}
+            />
+
+            {/* Subtasks */}
+            <SubtasksList taskId={task.id} parentCompleted={!!task.completedAt} />
+
+            {/* References (modal only - sidebar shows them in the sidebar-only block below) */}
+            {variant === "modal" && task.outgoingReferences.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  References
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {task.outgoingReferences.map((urn) => {
+                    const mention = extractMentionsFromMarkdown(task.description).find(
+                      (m) => m.urn === urn,
+                    );
+                    return (
+                      <MentionChipCompact
+                        key={urn}
+                        urn={urn}
+                        label={mention?.label || extractFallbackLabel(urn)}
+                      />
                     );
                   })}
                 </div>
               </div>
+            )}
 
-              {/* Parent */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground w-20 shrink-0">Parent</span>
-                <div className="flex-1 min-w-0">
-                  <ParentPicker
-                    task={task}
-                    project={project}
-                    allTasks={allProjectTasks}
-                    onSelect={(parentId) => {
-                      const parentType = parentId
-                        ? (allProjectTasks.find((t) => t.id === parentId)?.taskType ?? null)
-                        : null;
-                      const warning = getHierarchyRuleViolation(task.taskType || "task", parentType);
-                      dispatch(optimisticUpdateTask({ id: task.id, parentId }));
-                      dispatch(updateTask({ id: task.id, parentId }));
-                      if (warning) toast.warning(warning);
-                    }}
-                    onNavigate={(id) => dispatch(selectTask(id))}
-                    disabled={!canEdit}
-                  />
-                </div>
-              </div>
-
-              {/* Assignees */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground w-20">Assignee</span>
-                <div className="flex-1 min-w-0">
-                  <AssigneeField
-                    assigneeIds={task.assigneeIds}
-                    onChange={(ids) => {
-                      dispatch(optimisticUpdateTask({ id: task.id, assigneeIds: ids }));
-                      dispatch(updateTask({ id: task.id, assigneeIds: ids }));
-                    }}
-                    disabled={!canEdit}
-                  />
-                </div>
-              </div>
-
-              {/* Start Date */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground w-20">Start</span>
-                <div className="flex-1 min-w-0">
-                  <DatePicker
-                    value={task.startDate ?? ""}
-                    onChange={(v) => {
-                      const next = v || null;
-                      dispatch(optimisticUpdateTask({ id: task.id, startDate: next }));
-                      dispatch(updateTask({ id: task.id, startDate: next }));
-                    }}
-                    disabled={!canEdit}
-                    placeholder="Set start date"
-                  />
-                </div>
-              </div>
-
-              {/* Due Date */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground w-20">Due</span>
-                <div className={cn("flex-1 min-w-0", task.dueDate && isOverdue(task.dueDate) && "text-destructive")}>
-                  <DatePicker
-                    value={task.dueDate ?? ""}
-                    onChange={(v) => {
-                      const next = v || null;
-                      dispatch(optimisticUpdateTask({ id: task.id, dueDate: next }));
-                      dispatch(updateTask({ id: task.id, dueDate: next }));
-                    }}
-                    disabled={!canEdit}
-                    placeholder="Set due date"
-                  />
-                </div>
-              </div>
-
-              {/* Recurrence */}
-              <div className="flex items-start gap-3">
-                <span className="text-sm text-muted-foreground w-20 pt-0.5">Repeat</span>
-                <div className="flex-1">
-                  <TaskRecurrenceSelector
-                    value={task.recurrenceRule}
-                    onChange={(val) => dispatch(updateTask({ id: task.id, recurrenceRule: val }))}
-                    disabled={!canEdit}
-                  />
-                </div>
-              </div>
-
-              {/* Sprint */}
-              {sprints.length > 0 && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground w-20">Sprint</span>
-                  <SprintSelector
-                    sprints={sprints}
-                    currentSprintId={task.sprintId}
-                    onSelect={(sprintId) => {
-                      dispatch(optimisticUpdateTask({ id: task.id, sprintId }));
-                      dispatch(updateTask({ id: task.id, sprintId }));
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Time Tracking */}
-              <TimeField
-                label="Estimated"
-                minutes={task.estimatedMinutes}
-                onSave={(minutes) => {
-                  dispatch(optimisticUpdateTask({ id: task.id, estimatedMinutes: minutes }));
-                  dispatch(updateTask({ id: task.id, estimatedMinutes: minutes }));
-                }}
-              />
-              <TimeField
-                label="Time Spent"
-                minutes={task.timeSpentMinutes}
-                onSave={(minutes) => {
-                  dispatch(optimisticUpdateTask({ id: task.id, timeSpentMinutes: minutes }));
-                  dispatch(updateTask({ id: task.id, timeSpentMinutes: minutes }));
-                }}
-              />
-
-              {/* Time Progress Bar */}
-              {task.estimatedMinutes != null && task.estimatedMinutes > 0 && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground w-20" />
-                  <div className="flex items-center gap-2 flex-1">
-                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all",
-                          !task.timeSpentMinutes ? "bg-muted"
-                          : task.timeSpentMinutes <= task.estimatedMinutes * 0.75 ? "bg-green-500"
-                          : task.timeSpentMinutes <= task.estimatedMinutes ? "bg-yellow-500"
-                          : "bg-red-500"
-                        )}
-                        style={{ width: `${Math.min(100, ((task.timeSpentMinutes ?? 0) / task.estimatedMinutes) * 100)}%` }}
-                      />
-                    </div>
-                    <span className={cn(
-                      "text-[10px] shrink-0",
-                      task.timeSpentMinutes && task.timeSpentMinutes > task.estimatedMinutes
-                        ? "text-red-500 font-medium"
-                        : "text-muted-foreground"
-                    )}>
-                      {task.timeSpentMinutes
-                        ? `${Math.round((task.timeSpentMinutes / task.estimatedMinutes) * 100)}%`
-                        : "0%"
-                      }
-                    </span>
-                  </div>
-                </div>
-              )}
-
-            </div>
+            {/* Activity log (modal only - collapses to the most recent entries with a "Show more" toggle to keep the metadata column scannable) */}
+            {variant === "modal" && <ActivityLog taskId={task.id} maxInitialItems={5} />}
           </div>
-          
-          {/* Dependencies (Blocked By + Blocks) */}
-          <DependenciesList
-            taskId={task.id}
-            blockedByTaskIds={task.blockedByTaskIds}
-            blocksTaskIds={blocksTaskIds}
-          />
-
-          {/* Subtasks */}
-          <SubtasksList taskId={task.id} parentCompleted={!!task.completedAt} />
-
-          {/* References (modal only - sidebar shows them in the sidebar-only block below) */}
-          {variant === "modal" && task.outgoingReferences.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">References</h3>
-              <div className="flex flex-wrap gap-2">
-                {task.outgoingReferences.map((urn) => {
-                  const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
-                  return <MentionChipCompact key={urn} urn={urn} label={mention?.label || extractFallbackLabel(urn)} />;
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Activity log (modal only - collapses to the most recent entries with a "Show more" toggle to keep the metadata column scannable) */}
-          {variant === "modal" && <ActivityLog taskId={task.id} maxInitialItems={5} />}
-
-          </div>{/* end right column (or contents for sidebar) */}
+          {/* end right column (or contents for sidebar) */}
 
           {/* The following sections are shown in sidebar mode only - in modal mode they're in the left column */}
           {variant === "sidebar" && (
@@ -557,11 +617,21 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
               {/* References Section */}
               {task.outgoingReferences.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">References</h3>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    References
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {task.outgoingReferences.map((urn) => {
-                      const mention = extractMentionsFromMarkdown(task.description).find((m) => m.urn === urn);
-                      return <MentionChipCompact key={urn} urn={urn} label={mention?.label || extractFallbackLabel(urn)} />;
+                      const mention = extractMentionsFromMarkdown(task.description).find(
+                        (m) => m.urn === urn,
+                      );
+                      return (
+                        <MentionChipCompact
+                          key={urn}
+                          urn={urn}
+                          label={mention?.label || extractFallbackLabel(urn)}
+                        />
+                      );
                     })}
                   </div>
                 </div>
@@ -574,14 +644,21 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
               <ActivityLog taskId={task.id} maxInitialItems={5} />
             </>
           )}
-
         </div>
       </ScrollArea>
     </div>
   );
 }
 
-function EditableTitle({ title, onSave, readOnly }: { title: string; onSave: (newTitle: string) => void; readOnly?: boolean }) {
+function EditableTitle({
+  title,
+  onSave,
+  readOnly,
+}: {
+  title: string;
+  onSave: (newTitle: string) => void;
+  readOnly?: boolean;
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -650,11 +727,13 @@ function EditableTitle({ title, onSave, readOnly }: { title: string; onSave: (ne
       onClick={() => setIsEditing(true)}
     >
       <h2 className="text-lg font-semibold text-foreground flex-1">{title}</h2>
-      <PencilSimple size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0 transition-opacity" />
+      <PencilSimple
+        size={14}
+        className="text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0 transition-opacity"
+      />
     </div>
   );
 }
-
 
 interface AssigneeFieldProps {
   assigneeIds: string[];
@@ -675,7 +754,7 @@ function AssigneeField({ assigneeIds, onChange, disabled }: AssigneeFieldProps) 
         disabled={disabled}
         className={cn(
           "flex items-center gap-2 rounded-md px-2 py-1 -mx-2 text-sm transition-colors",
-          disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-muted/50"
+          disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-muted/50",
         )}
       >
         {assigneeIds.length > 0 ? (
@@ -737,7 +816,7 @@ function OptionDropdown({ options, currentId, onSelect, onClose }: OptionDropdow
             "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
             option.id === currentId
               ? "bg-primary/10 text-primary"
-              : "text-foreground hover:bg-muted"
+              : "text-foreground hover:bg-muted",
           )}
         >
           <span
@@ -774,10 +853,7 @@ function StatusPicker({ currentOption, options, onSelect, disabled }: StatusPick
           border: `1px solid ${currentOption.color}30`,
         }}
       >
-        <div
-          className="w-2 h-2 rounded-full"
-          style={{ backgroundColor: currentOption.color }}
-        />
+        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentOption.color }} />
         <span style={{ color: currentOption.color }}>{currentOption.label}</span>
       </button>
       {isOpen && (
@@ -869,7 +945,7 @@ function SprintSelector({ sprints, currentSprintId, onSelect }: SprintSelectorPr
           "flex items-center gap-1.5 px-2 py-1 rounded text-sm border transition-colors",
           currentSprint
             ? "border-primary/30 bg-primary/10 text-primary"
-            : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+            : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
         )}
       >
         {currentSprint ? currentSprint.name : "Backlog"}
@@ -889,9 +965,7 @@ function SprintSelector({ sprints, currentSprintId, onSelect }: SprintSelectorPr
             }}
             className={cn(
               "flex w-full items-center justify-between px-3 py-1.5 text-sm transition-colors",
-              !currentSprintId
-                ? "bg-primary/10 text-primary"
-                : "text-foreground hover:bg-muted"
+              !currentSprintId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted",
             )}
           >
             <span>Backlog</span>
@@ -910,9 +984,7 @@ function SprintSelector({ sprints, currentSprintId, onSelect }: SprintSelectorPr
                 }}
                 className={cn(
                   "flex w-full items-center justify-between px-3 py-1.5 text-sm transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted"
+                  isActive ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted",
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -1026,7 +1098,7 @@ function WatchButton({ taskId }: { taskId: string }) {
         "flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors",
         isWatching
           ? "text-primary bg-primary/10"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted",
       )}
       title={isWatching ? "Stop watching" : "Watch this task"}
     >
@@ -1035,4 +1107,3 @@ function WatchButton({ taskId }: { taskId: string }) {
     </button>
   );
 }
-

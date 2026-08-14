@@ -1,7 +1,7 @@
-import { createSlice } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
 
-export type ThemeMode = 'system' | 'light' | 'dark';
+export type ThemeMode = "system" | "light" | "dark";
 
 interface ThemeState {
   themeMode: ThemeMode;
@@ -11,13 +11,13 @@ interface ThemeState {
 }
 
 const initialState: ThemeState = {
-  themeMode: 'system',
+  themeMode: "system",
   accentColor: null,
   fontFamily: null,
 };
 
 export const themeSlice = createSlice({
-  name: 'theme',
+  name: "theme",
   initialState,
   reducers: {
     setThemeMode: (state, action: PayloadAction<ThemeMode>) => {
@@ -25,12 +25,12 @@ export const themeSlice = createSlice({
     },
     toggleTheme: (state) => {
       // Cycle: system -> light -> dark -> system
-      if (state.themeMode === 'system') {
-        state.themeMode = 'light';
-      } else if (state.themeMode === 'light') {
-        state.themeMode = 'dark';
+      if (state.themeMode === "system") {
+        state.themeMode = "light";
+      } else if (state.themeMode === "light") {
+        state.themeMode = "dark";
       } else {
-        state.themeMode = 'system';
+        state.themeMode = "system";
       }
     },
     setAccentColor: (state, action: PayloadAction<string | null>) => {

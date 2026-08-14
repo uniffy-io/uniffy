@@ -1,10 +1,10 @@
-import { createSlice } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
-import type { GetCurrentUserResponse } from '@uniffy/proto/auth/v1/auth_pb';
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
+import type { GetCurrentUserResponse } from "@uniffy/proto/auth/v1/auth_pb";
 
 /** accessToken stays in memory only; rehydrateAuth() re-mints it from refreshToken to limit XSS exposure. */
 export interface AuthState {
-  user: Omit<GetCurrentUserResponse, '$typeName'> | null;
+  user: Omit<GetCurrentUserResponse, "$typeName"> | null;
   accessToken: string | null;
   refreshToken: string | null;
   currentOrganizationId: string | null;
@@ -31,13 +31,13 @@ const initialState: AuthState = {
 };
 
 export const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     setCredentials: (
       state,
       action: PayloadAction<{
-        user: Omit<GetCurrentUserResponse, '$typeName'>;
+        user: Omit<GetCurrentUserResponse, "$typeName">;
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
@@ -45,7 +45,7 @@ export const authSlice = createSlice({
         organizationRole?: string;
         sessionId?: string;
         domainAdminDomains?: number[];
-      }>
+      }>,
     ) => {
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
@@ -64,7 +64,7 @@ export const authSlice = createSlice({
     rehydrateComplete: (
       state,
       action: PayloadAction<{
-        user: Omit<GetCurrentUserResponse, '$typeName'>;
+        user: Omit<GetCurrentUserResponse, "$typeName">;
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
@@ -72,7 +72,7 @@ export const authSlice = createSlice({
         organizationRole?: string;
         sessionId?: string;
         domainAdminDomains?: number[];
-      }>
+      }>,
     ) => {
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
@@ -80,7 +80,8 @@ export const authSlice = createSlice({
       state.currentOrganizationId = action.payload.organizationId || state.currentOrganizationId;
       state.currentOrganizationSlug =
         action.payload.organizationSlug || state.currentOrganizationSlug || null;
-      state.currentOrganizationRole = action.payload.organizationRole || state.currentOrganizationRole;
+      state.currentOrganizationRole =
+        action.payload.organizationRole || state.currentOrganizationRole;
       state.domainAdminDomains = action.payload.domainAdminDomains ?? state.domainAdminDomains;
       state.currentSessionId = action.payload.sessionId || state.currentSessionId;
       state.isAuthenticated = true;
@@ -100,7 +101,7 @@ export const authSlice = createSlice({
     },
     updateUser: (
       state,
-      action: PayloadAction<Partial<Omit<GetCurrentUserResponse, '$typeName'>>>
+      action: PayloadAction<Partial<Omit<GetCurrentUserResponse, "$typeName">>>,
     ) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
@@ -124,6 +125,14 @@ export const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, startRehydrating, rehydrateComplete, rehydrateFailed, updateUser, setDomainAdminDomains, logout } = authSlice.actions;
+export const {
+  setCredentials,
+  startRehydrating,
+  rehydrateComplete,
+  rehydrateFailed,
+  updateUser,
+  setDomainAdminDomains,
+  logout,
+} = authSlice.actions;
 
 export const authReducer = authSlice.reducer;

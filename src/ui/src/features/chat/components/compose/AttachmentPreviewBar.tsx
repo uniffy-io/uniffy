@@ -1,6 +1,6 @@
-import { File as FileIcon, X } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { formatFileSize } from '@/shared/utils/dateFormatting';
+import { File as FileIcon, X } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { formatFileSize } from "@/shared/utils/dateFormatting";
 
 interface PendingFile {
   id: string;
@@ -26,8 +26,8 @@ export function AttachmentPreviewBar({ files, onRemove }: AttachmentPreviewBarPr
         <div
           key={file.id}
           className={cn(
-            'relative flex items-center gap-1.5 px-2 py-1 rounded-lg',
-            'bg-muted border border-border/50 text-sm max-w-[200px]',
+            "relative flex items-center gap-1.5 px-2 py-1 rounded-lg",
+            "bg-muted border border-border/50 text-sm max-w-[200px]",
           )}
           data-testid={`chat-compose-attachment-${file.id}`}
           data-progress={file.progress ?? -1}

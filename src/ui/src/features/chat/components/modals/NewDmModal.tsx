@@ -1,18 +1,18 @@
 /** User-to-user DM modal (1:1 or group); agent conversations live elsewhere and must not appear here. */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { X, MagnifyingGlass, Check, PaperPlaneTilt } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router-dom';
-import { useAppDispatch } from '@/app/hooks';
-import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { SubjectAvatar } from '@/components/subject';
-import { cn } from '@/shared/utils/cn';
-import { closeNewDmModal } from '@/features/chat/store/chatUiSlice';
-import { createChannel } from '@/features/chat/store/chatThunks';
-import { useSubjectSearch } from '@/components/subject/hooks/useSubjectSearch';
-import { ChannelType } from '@uniffy/proto/chat/v1/chat_pb';
-import type { Subject } from '@/components/subject/types';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { X, MagnifyingGlass, Check, PaperPlaneTilt } from "@phosphor-icons/react";
+import { useNavigate } from "react-router-dom";
+import { useAppDispatch } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
+import { SubjectAvatar } from "@/components/subject";
+import { cn } from "@/shared/utils/cn";
+import { closeNewDmModal } from "@/features/chat/store/chatUiSlice";
+import { createChannel } from "@/features/chat/store/chatThunks";
+import { useSubjectSearch } from "@/components/subject/hooks/useSubjectSearch";
+import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
+import type { Subject } from "@/components/subject/types";
 
 const MAX_RECIPIENTS = 7;
 
@@ -21,14 +21,14 @@ export function NewDmModal() {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<Subject[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedUserIds = selectedUsers.map((s) => s.id);
 
   const { results, loading, search } = useSubjectSearch({
-    subjectTypes: 'users',
+    subjectTypes: "users",
     excludeIds: selectedUserIds,
   });
 
@@ -42,7 +42,7 @@ export function NewDmModal() {
   }, []);
 
   const handleClose = useCallback(() => {
-    setQuery('');
+    setQuery("");
     setSelectedUsers([]);
     dispatch(closeNewDmModal());
   }, [dispatch]);
@@ -55,7 +55,7 @@ export function NewDmModal() {
       if (prev.length >= MAX_RECIPIENTS) return prev;
       return [...prev, subject];
     });
-    setQuery('');
+    setQuery("");
     inputRef.current?.focus();
   }, []);
 
@@ -71,7 +71,7 @@ export function NewDmModal() {
     try {
       const channelType = selectedUsers.length === 1 ? ChannelType.DIRECT : ChannelType.GROUP_DM;
       const result = await dispatch(
-        createChannel({ name: '', channelType, memberIds: selectedUserIds }),
+        createChannel({ name: "", channelType, memberIds: selectedUserIds }),
       ).unwrap();
 
       navigate(`/chat/${result.id}`);
@@ -82,10 +82,10 @@ export function NewDmModal() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && query === '' && selectedUsers.length > 0) {
+    if (e.key === "Backspace" && query === "" && selectedUsers.length > 0) {
       handleRemoveUser(selectedUsers[selectedUsers.length - 1].id);
     }
-    if (e.key === 'Enter' && selectedUsers.length > 0 && query === '') {
+    if (e.key === "Enter" && selectedUsers.length > 0 && query === "") {
       e.preventDefault();
       handleSubmit();
     }
@@ -93,7 +93,7 @@ export function NewDmModal() {
 
   return (
     <Modal onClose={handleClose} closeDisabled={isSubmitting} maxWidth="max-w-md">
-      <div className="flex flex-col" style={{ maxHeight: '70vh' }} data-testid="chat-new-dm-modal">
+      <div className="flex flex-col" style={{ maxHeight: "70vh" }} data-testid="chat-new-dm-modal">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h2 className="text-lg font-semibold text-foreground">New message</h2>
           <button
@@ -132,7 +132,7 @@ export function NewDmModal() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={selectedUsers.length === 0 ? 'Search people...' : 'Add more...'}
+                placeholder={selectedUsers.length === 0 ? "Search people..." : "Add more..."}
                 disabled={isSubmitting || selectedUsers.length >= MAX_RECIPIENTS}
                 className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
                 data-testid="chat-new-dm-search-input"
@@ -142,7 +142,7 @@ export function NewDmModal() {
           {selectedUsers.length > 0 && (
             <p className="text-xs text-muted-foreground mt-1.5">
               {selectedUsers.length === 1
-                ? 'Press Enter or click below to start a conversation'
+                ? "Press Enter or click below to start a conversation"
                 : `Group conversation with ${selectedUsers.length + 1} participants`}
             </p>
           )}
@@ -164,14 +164,16 @@ export function NewDmModal() {
                       type="button"
                       onClick={() => handleToggleUser(subject)}
                       className={cn(
-                        'flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-muted',
+                        "flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-muted",
                       )}
                       data-testid={`chat-new-dm-user-${subject.id}`}
-                      data-selected={selectedUserIds.includes(subject.id) ? 'true' : 'false'}
+                      data-selected={selectedUserIds.includes(subject.id) ? "true" : "false"}
                     >
                       <SubjectAvatar subject={subject} size="md" showPresence />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{subject.name}</p>
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {subject.name}
+                        </p>
                         {subject.email && (
                           <p className="text-xs text-muted-foreground truncate">{subject.email}</p>
                         )}
@@ -187,7 +189,9 @@ export function NewDmModal() {
               )}
 
               {query.length >= 2 && results.length === 0 && (
-                <div className="px-5 py-8 text-center text-sm text-muted-foreground">No matches</div>
+                <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+                  No matches
+                </div>
               )}
 
               {query.length < 2 && results.length === 0 && (
@@ -216,7 +220,7 @@ export function NewDmModal() {
             data-testid="chat-new-dm-submit"
           >
             <PaperPlaneTilt className="mr-1.5 h-4 w-4" />
-            {selectedUsers.length <= 1 ? 'Start conversation' : 'Create group'}
+            {selectedUsers.length <= 1 ? "Start conversation" : "Create group"}
           </Button>
         </div>
       </div>

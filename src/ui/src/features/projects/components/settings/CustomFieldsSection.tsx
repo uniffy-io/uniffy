@@ -41,8 +41,16 @@ const FIELD_TYPES: { type: FieldType; label: string; icon: React.ElementType }[]
 ];
 
 const DEFAULT_OPTION_COLORS = [
-  "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#f97316", "#14b8a6", "#6b7280",
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#f97316",
+  "#14b8a6",
+  "#6b7280",
 ];
 
 function getFieldTypeConfig(type: FieldType) {
@@ -101,9 +109,10 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
         isRequired: newRequired,
         isSystem: false,
         sortOrder: customFields.length,
-        config: (newType === "single_select" || newType === "multi_select")
-          ? { options: newOptions.filter((o) => o.label.trim()) }
-          : {},
+        config:
+          newType === "single_select" || newType === "multi_select"
+            ? { options: newOptions.filter((o) => o.label.trim()) }
+            : {},
       };
       await dispatch(createFieldThunk({ projectId: project.id, field })).unwrap();
       resetCreateForm();
@@ -114,7 +123,10 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
 
   const addNewOption = () => {
     const color = DEFAULT_OPTION_COLORS[newOptions.length % DEFAULT_OPTION_COLORS.length];
-    setNewOptions([...newOptions, { id: `opt_${Date.now()}`, label: "", color, sortOrder: newOptions.length }]);
+    setNewOptions([
+      ...newOptions,
+      { id: `opt_${Date.now()}`, label: "", color, sortOrder: newOptions.length },
+    ]);
   };
 
   // --- Edit handlers ---
@@ -150,7 +162,10 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
 
   const addEditOption = () => {
     const color = DEFAULT_OPTION_COLORS[editOptions.length % DEFAULT_OPTION_COLORS.length];
-    setEditOptions([...editOptions, { id: `opt_${Date.now()}`, label: "", color, sortOrder: editOptions.length }]);
+    setEditOptions([
+      ...editOptions,
+      { id: `opt_${Date.now()}`, label: "", color, sortOrder: editOptions.length },
+    ]);
   };
 
   // --- Delete handler ---
@@ -179,11 +194,13 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
     reordered.splice(index, 0, moved);
     for (let i = 0; i < reordered.length; i++) {
       if (reordered[i].sortOrder !== i) {
-        dispatch(updateFieldThunk({
-          projectId: project.id,
-          fieldId: reordered[i].id,
-          updates: { sortOrder: i },
-        }));
+        dispatch(
+          updateFieldThunk({
+            projectId: project.id,
+            fieldId: reordered[i].id,
+            updates: { sortOrder: i },
+          }),
+        );
       }
     }
     setDragIndex(null);
@@ -198,9 +215,7 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
           <Columns size={24} weight="duotone" className="text-primary shrink-0" />
           Custom Fields
         </h1>
-        <p className="text-muted-foreground">
-          Define additional fields for tasks in this project.
-        </p>
+        <p className="text-muted-foreground">Define additional fields for tasks in this project.</p>
       </div>
 
       {/* System Fields */}
@@ -212,7 +227,10 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
               const typeConfig = getFieldTypeConfig(field.type);
               const TypeIcon = typeConfig.icon;
               return (
-                <div key={field.id} className="flex items-center gap-3 p-2 rounded-lg text-muted-foreground">
+                <div
+                  key={field.id}
+                  className="flex items-center gap-3 p-2 rounded-lg text-muted-foreground"
+                >
                   <TypeIcon size={14} className="shrink-0" />
                   <span className="text-sm flex-1">{field.name}</span>
                   <span className="text-xs bg-muted px-2 py-0.5 rounded">{typeConfig.label}</span>
@@ -228,9 +246,7 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
         <h2 className="text-lg font-semibold text-foreground">Custom Fields</h2>
         <div className="bg-card rounded-lg border border-border p-4 md:p-6 space-y-4">
           {customFields.length === 0 && !isCreating && (
-            <p className="text-sm text-muted-foreground">
-              No custom fields yet. Add one below.
-            </p>
+            <p className="text-sm text-muted-foreground">No custom fields yet. Add one below.</p>
           )}
 
           <div className="space-y-1">
@@ -241,7 +257,10 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
 
               if (isEditing) {
                 return (
-                  <div key={field.id} className="p-3 rounded-lg border border-primary/30 bg-muted/30 space-y-3">
+                  <div
+                    key={field.id}
+                    className="p-3 rounded-lg border border-primary/30 bg-muted/30 space-y-3"
+                  >
                     <div className="flex items-center gap-3">
                       <Input
                         ref={editNameRef}
@@ -256,11 +275,7 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
                       />
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-xs text-muted-foreground">Required</span>
-                        <ToggleSwitch
-                          enabled={editRequired}
-                          onChange={setEditRequired}
-                          size="sm"
-                        />
+                        <ToggleSwitch enabled={editRequired} onChange={setEditRequired} size="sm" />
                       </div>
                     </div>
 
@@ -274,8 +289,12 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
                     )}
 
                     <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button>
-                      <Button size="sm" onClick={saveEdit} disabled={!editName.trim()}>Save</Button>
+                      <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={saveEdit} disabled={!editName.trim()}>
+                        Save
+                      </Button>
                     </div>
                   </div>
                 );
@@ -288,21 +307,34 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
                   onDragStart={() => handleDragStart(index)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDrop={() => handleDrop(index)}
-                  onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                  onDragEnd={() => {
+                    setDragIndex(null);
+                    setDragOverIndex(null);
+                  }}
                   className={cn(
                     "flex items-center gap-3 group p-2 rounded-lg border border-transparent transition-colors",
                     "hover:bg-muted/50",
-                    dragOverIndex === index && dragIndex !== null && dragIndex !== index && "border-primary/50 bg-primary/5",
+                    dragOverIndex === index &&
+                      dragIndex !== null &&
+                      dragIndex !== index &&
+                      "border-primary/50 bg-primary/5",
                     dragIndex === index && "opacity-50",
                   )}
                 >
-                  <DotsSixVertical size={14} className="text-muted-foreground/40 cursor-grab shrink-0" />
+                  <DotsSixVertical
+                    size={14}
+                    className="text-muted-foreground/40 cursor-grab shrink-0"
+                  />
                   <TypeIcon size={14} className="text-muted-foreground shrink-0" />
                   <span className="text-sm font-medium flex-1 truncate">{field.name}</span>
                   {field.isRequired && (
-                    <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">Required</span>
+                    <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                      Required
+                    </span>
                   )}
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">{typeConfig.label}</span>
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                    {typeConfig.label}
+                  </span>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"
@@ -360,7 +392,7 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
                         "flex flex-col items-center gap-1 p-2 rounded-md border text-xs transition-colors",
                         newType === type
                           ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
                       )}
                     >
                       <Icon size={16} />
@@ -372,25 +404,19 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
 
               {/* Options for select types */}
               {(newType === "single_select" || newType === "multi_select") && (
-                <OptionsEditor
-                  options={newOptions}
-                  onChange={setNewOptions}
-                  onAdd={addNewOption}
-                />
+                <OptionsEditor options={newOptions} onChange={setNewOptions} onAdd={addNewOption} />
               )}
 
               {/* Required */}
               <div className="flex items-center gap-3">
-                <ToggleSwitch
-                  enabled={newRequired}
-                  onChange={setNewRequired}
-                  size="sm"
-                />
+                <ToggleSwitch enabled={newRequired} onChange={setNewRequired} size="sm" />
                 <span className="text-sm text-muted-foreground">Required field</span>
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={resetCreateForm}>Cancel</Button>
+                <Button variant="ghost" onClick={resetCreateForm}>
+                  Cancel
+                </Button>
                 <Button onClick={handleCreate} disabled={!newName.trim() || isSubmitting}>
                   {isSubmitting ? "Creating..." : "Create Field"}
                 </Button>

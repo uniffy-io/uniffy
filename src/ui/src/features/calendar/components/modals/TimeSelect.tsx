@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { CaretDown, Check, ClockAfternoon } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { CaretDown, Check, ClockAfternoon } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
 
 interface TimeSelectProps {
   value: number;
@@ -15,26 +15,26 @@ interface TimeSelectProps {
 function formatTimeValue(value: number): string {
   const hours = Math.floor(value);
   const minutes = Math.round((value % 1) * 60);
-  const period = hours < 12 ? 'AM' : 'PM';
+  const period = hours < 12 ? "AM" : "PM";
   const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-  return `${displayHour}:${String(minutes).padStart(2, '0')} ${period}`;
+  return `${displayHour}:${String(minutes).padStart(2, "0")} ${period}`;
 }
 
 /** Accepts "9:15 AM", "9:15am", "9:15", "21:15", "9 AM", "9". */
 function parseTimeString(input: string): number | null {
-  const trimmed = input.trim().toLowerCase().replace(/\s+/g, ' ');
+  const trimmed = input.trim().toLowerCase().replace(/\s+/g, " ");
 
   const match = trimmed.match(/^(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?$/);
   if (!match) return null;
 
   let hours = parseInt(match[1], 10);
   const minutes = match[2] ? parseInt(match[2], 10) : 0;
-  const period = match[3] as 'am' | 'pm' | undefined;
+  const period = match[3] as "am" | "pm" | undefined;
 
   if (minutes < 0 || minutes > 59) return null;
 
-  if (period === 'pm' && hours < 12) hours += 12;
-  if (period === 'am' && hours === 12) hours = 0;
+  if (period === "pm" && hours < 12) hours += 12;
+  if (period === "am" && hours === 12) hours = 0;
 
   if (hours < 0 || hours > 23) return null;
 
@@ -60,9 +60,9 @@ interface DropdownPosition {
 }
 
 export function TimeSelect({ value, onChange, className, compact = false }: TimeSelectProps) {
-  const triggerSize = compact ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm';
+  const triggerSize = compact ? "px-2 py-1 text-xs" : "px-3 py-2 text-sm";
   const [isOpen, setIsOpen] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [position, setPosition] = useState<DropdownPosition | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,11 +95,11 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
     updatePosition();
 
     const handler = () => updatePosition();
-    window.addEventListener('scroll', handler, true);
-    window.addEventListener('resize', handler);
+    window.addEventListener("scroll", handler, true);
+    window.addEventListener("resize", handler);
     return () => {
-      window.removeEventListener('scroll', handler, true);
-      window.removeEventListener('resize', handler);
+      window.removeEventListener("scroll", handler, true);
+      window.removeEventListener("resize", handler);
     };
   }, [isOpen, updatePosition]);
 
@@ -115,12 +115,12 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
         !dropdownRef.current.contains(target)
       ) {
         setIsOpen(false);
-        setInputValue('');
+        setInputValue("");
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
   useEffect(() => {
@@ -158,7 +158,7 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
   }, [inputValue, filteredOptions]);
 
   const handleOpen = () => {
-    setInputValue('');
+    setInputValue("");
     setIsOpen(true);
     requestAnimationFrame(() => inputRef.current?.focus());
   };
@@ -166,11 +166,11 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
   const handleSelect = (timeValue: number) => {
     onChange(timeValue);
     setIsOpen(false);
-    setInputValue('');
+    setInputValue("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       if (inputValue.trim()) {
         const parsed = parseTimeString(inputValue);
@@ -182,9 +182,9 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
       if (filteredOptions.length > 0) {
         handleSelect(filteredOptions[0].value);
       }
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setIsOpen(false);
-      setInputValue('');
+      setInputValue("");
     }
   };
 
@@ -197,17 +197,17 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
       <div
         ref={dropdownRef}
         style={{
-          position: 'fixed',
+          position: "fixed",
           top: position.top,
           left: position.left,
           width: position.width,
           minWidth: 160,
         }}
         className={cn(
-          'z-[200] overflow-hidden rounded-md',
-          'border border-border bg-card shadow-xl',
-          'animate-in fade-in-0 duration-100',
-          position.openUpward ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'
+          "z-[200] overflow-hidden rounded-md",
+          "border border-border bg-card shadow-xl",
+          "animate-in fade-in-0 duration-100",
+          position.openUpward ? "slide-in-from-bottom-2" : "slide-in-from-top-2",
         )}
       >
         <div ref={listRef} className="py-1 max-h-60 overflow-y-auto">
@@ -216,9 +216,9 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
               type="button"
               onClick={() => handleSelect(parsedCustomTime.value)}
               className={cn(
-                'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
-                'text-primary hover:bg-primary/10 transition-colors',
-                'border-b border-border'
+                "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
+                "text-primary hover:bg-primary/10 transition-colors",
+                "border-b border-border",
               )}
             >
               <ClockAfternoon size={14} weight="bold" />
@@ -234,9 +234,9 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
                 type="button"
                 onClick={() => handleSelect(option.value)}
                 className={cn(
-                  'flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm',
-                  'transition-colors',
-                  isSelected ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                  "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm",
+                  "transition-colors",
+                  isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted",
                 )}
               >
                 <span>{option.label}</span>
@@ -258,7 +258,7 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
   };
 
   return (
-    <div ref={containerRef} className={cn('relative', className)}>
+    <div ref={containerRef} className={cn("relative", className)}>
       {isOpen ? (
         <input
           ref={inputRef}
@@ -268,12 +268,12 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
           onKeyDown={handleKeyDown}
           placeholder={displayValue}
           className={cn(
-            'flex w-full items-center rounded-md border border-primary bg-background',
+            "flex w-full items-center rounded-md border border-primary bg-background",
             triggerSize,
-            'font-medium',
-            'outline-none ring-2 ring-primary/50 ring-offset-1 ring-offset-background',
-            'placeholder:text-muted-foreground',
-            compact ? 'min-w-0' : 'min-w-[100px]'
+            "font-medium",
+            "outline-none ring-2 ring-primary/50 ring-offset-1 ring-offset-background",
+            "placeholder:text-muted-foreground",
+            compact ? "min-w-0" : "min-w-[100px]",
           )}
         />
       ) : (
@@ -281,16 +281,20 @@ export function TimeSelect({ value, onChange, className, compact = false }: Time
           type="button"
           onClick={handleOpen}
           className={cn(
-            'flex w-full items-center justify-between gap-2 rounded-md border border-border bg-background',
+            "flex w-full items-center justify-between gap-2 rounded-md border border-border bg-background",
             triggerSize,
-            'font-medium transition-colors',
-            'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background',
-            'hover:bg-muted/50',
-            compact ? 'min-w-0' : 'min-w-[100px]'
+            "font-medium transition-colors",
+            "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background",
+            "hover:bg-muted/50",
+            compact ? "min-w-0" : "min-w-[100px]",
           )}
         >
           <span className="truncate">{displayValue}</span>
-          <CaretDown size={compact ? 12 : 16} weight="bold" className="text-muted-foreground shrink-0" />
+          <CaretDown
+            size={compact ? 12 : 16}
+            weight="bold"
+            className="text-muted-foreground shrink-0"
+          />
         </button>
       )}
 

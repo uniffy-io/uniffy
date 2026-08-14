@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import {
   TextB,
   TextItalic,
@@ -10,22 +10,22 @@ import {
   Highlighter,
   ChatCircle,
   At,
-} from '@phosphor-icons/react';
-import { editorViewCtx } from '@milkdown/core';
-import type { EditorView } from '@milkdown/prose/view';
-import { useEditorHandle, type EditorHandle } from '@/components/editor/EditorHandle';
-import { subscribeSelection } from '@/components/editor/utils/selectionVersionPlugin';
-import { useActiveMarks } from '@/features/notes/components/editor/toolbar/useActiveMarks';
-import { toolbarCommands } from '@/features/notes/components/editor/toolbar/toolbarCommands';
+} from "@phosphor-icons/react";
+import { editorViewCtx } from "@milkdown/core";
+import type { EditorView } from "@milkdown/prose/view";
+import { useEditorHandle, type EditorHandle } from "@/components/editor/EditorHandle";
+import { subscribeSelection } from "@/components/editor/utils/selectionVersionPlugin";
+import { useActiveMarks } from "@/features/notes/components/editor/toolbar/useActiveMarks";
+import { toolbarCommands } from "@/features/notes/components/editor/toolbar/toolbarCommands";
 import {
   ToolbarButton,
   ToolbarGroup,
   ToolbarSeparator,
-} from '@/features/notes/components/editor/toolbar/ToolbarButton';
-import { HeadingDropdown } from '@/features/notes/components/editor/toolbar/HeadingDropdown';
-import { HighlightPicker } from '@/components/editor/plugins/highlight/HighlightPicker';
-import { highlightMark } from '@/components/editor/plugins/highlight';
-import { LinkPrompt } from '@/features/notes/components/editor/toolbar/LinkPrompt';
+} from "@/features/notes/components/editor/toolbar/ToolbarButton";
+import { HeadingDropdown } from "@/features/notes/components/editor/toolbar/HeadingDropdown";
+import { HighlightPicker } from "@/components/editor/plugins/highlight/HighlightPicker";
+import { highlightMark } from "@/components/editor/plugins/highlight";
+import { LinkPrompt } from "@/features/notes/components/editor/toolbar/LinkPrompt";
 
 interface SelectionAnchor {
   top: number;
@@ -45,7 +45,7 @@ function readSelectionAnchor(handle: EditorHandle | null): SelectionAnchor | nul
   const { from, to, empty } = state.selection;
   if (empty) return null;
   // Only show on regular text selections; node selections (image, video, etc.) skip the bar.
-  if ('node' in state.selection) return null;
+  if ("node" in state.selection) return null;
   try {
     const start = view.coordsAtPos(from);
     const end = view.coordsAtPos(to);
@@ -104,7 +104,11 @@ export function FloatingFormattingToolbar() {
   const [highlightAnchor, setHighlightAnchor] = useState<DOMRect | null>(null);
   const [linkAnchor, setLinkAnchor] = useState<DOMRect | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [position, setPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null);
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number;
+    placement: "top" | "bottom";
+  } | null>(null);
 
   // Track the current selection rect. Cached by value so getSnapshot returns
   // a stable reference between renders unless the selection actually moved
@@ -133,12 +137,15 @@ export function FloatingFormattingToolbar() {
     const rect = containerRef.current.getBoundingClientRect();
     const width = rect.width || 320;
     const selectionCenter = (anchor.left + anchor.right) / 2;
-    const desiredLeft = Math.max(8, Math.min(window.innerWidth - width - 8, selectionCenter - width / 2));
+    const desiredLeft = Math.max(
+      8,
+      Math.min(window.innerWidth - width - 8, selectionCenter - width / 2),
+    );
     const fitsAbove = anchor.top - VERTICAL_OFFSET - ESTIMATED_TOOLBAR_HEIGHT >= 8;
     const top = fitsAbove
       ? anchor.top - VERTICAL_OFFSET - rect.height
       : anchor.bottom + VERTICAL_OFFSET;
-    setPosition({ top, left: desiredLeft, placement: fitsAbove ? 'top' : 'bottom' });
+    setPosition({ top, left: desiredLeft, placement: fitsAbove ? "top" : "bottom" });
   }, [visible, anchor]);
 
   // Close the highlight picker if selection collapses.
@@ -152,24 +159,27 @@ export function FloatingFormattingToolbar() {
     setHighlightAnchor(e.currentTarget.getBoundingClientRect());
   };
 
-  const applyHighlight = useMemo(() => (color: string | null) => {
-    if (!handle) {
+  const applyHighlight = useMemo(
+    () => (color: string | null) => {
+      if (!handle) {
+        setHighlightAnchor(null);
+        return;
+      }
+      handle.run((ctx) => {
+        const view = ctx.get(editorViewCtx) as EditorView;
+        if (!view) return;
+        const { from, to } = view.state.selection;
+        if (from === to) return;
+        const markType = highlightMark.type(ctx);
+        let tr = view.state.tr.removeMark(from, to, markType);
+        if (color !== null) tr = tr.addMark(from, to, markType.create({ color }));
+        view.dispatch(tr);
+      });
+      handle.focus();
       setHighlightAnchor(null);
-      return;
-    }
-    handle.run((ctx) => {
-      const view = ctx.get(editorViewCtx) as EditorView;
-      if (!view) return;
-      const { from, to } = view.state.selection;
-      if (from === to) return;
-      const markType = highlightMark.type(ctx);
-      let tr = view.state.tr.removeMark(from, to, markType);
-      if (color !== null) tr = tr.addMark(from, to, markType.create({ color }));
-      view.dispatch(tr);
-    });
-    handle.focus();
-    setHighlightAnchor(null);
-  }, [handle]);
+    },
+    [handle],
+  );
 
   if (!handle || !visible) return null;
 
@@ -183,10 +193,10 @@ export function FloatingFormattingToolbar() {
         e.preventDefault();
       }}
       style={{
-        position: 'fixed',
+        position: "fixed",
         top: position?.top ?? -9999,
         left: position?.left ?? -9999,
-        visibility: position ? 'visible' : 'hidden',
+        visibility: position ? "visible" : "hidden",
         zIndex: 60,
       }}
       className="flex items-center gap-0.5 rounded-md border border-border bg-card text-card-foreground shadow-lg px-1 py-1"
@@ -195,19 +205,39 @@ export function FloatingFormattingToolbar() {
       <ToolbarSeparator />
 
       <ToolbarGroup>
-        <ToolbarButton active={active.bold} onClick={() => toolbarCommands.toggleBold(handle)} label="Bold">
+        <ToolbarButton
+          active={active.bold}
+          onClick={() => toolbarCommands.toggleBold(handle)}
+          label="Bold"
+        >
           <TextB size={14} weight="bold" />
         </ToolbarButton>
-        <ToolbarButton active={active.italic} onClick={() => toolbarCommands.toggleItalic(handle)} label="Italic">
+        <ToolbarButton
+          active={active.italic}
+          onClick={() => toolbarCommands.toggleItalic(handle)}
+          label="Italic"
+        >
           <TextItalic size={14} weight="bold" />
         </ToolbarButton>
-        <ToolbarButton active={active.underline} onClick={() => toolbarCommands.toggleUnderline(handle)} label="Underline">
+        <ToolbarButton
+          active={active.underline}
+          onClick={() => toolbarCommands.toggleUnderline(handle)}
+          label="Underline"
+        >
           <TextUnderline size={14} weight="bold" />
         </ToolbarButton>
-        <ToolbarButton active={active.strike} onClick={() => toolbarCommands.toggleStrike(handle)} label="Strikethrough">
+        <ToolbarButton
+          active={active.strike}
+          onClick={() => toolbarCommands.toggleStrike(handle)}
+          label="Strikethrough"
+        >
           <TextStrikethrough size={14} weight="bold" />
         </ToolbarButton>
-        <ToolbarButton active={active.code} onClick={() => toolbarCommands.toggleInlineCode(handle)} label="Inline code">
+        <ToolbarButton
+          active={active.code}
+          onClick={() => toolbarCommands.toggleInlineCode(handle)}
+          label="Inline code"
+        >
           <Code size={14} weight="bold" />
         </ToolbarButton>
         <ToolbarButton
@@ -250,11 +280,7 @@ export function FloatingFormattingToolbar() {
       )}
 
       {linkAnchor && (
-        <LinkPrompt
-          handle={handle}
-          anchorRect={linkAnchor}
-          onClose={() => setLinkAnchor(null)}
-        />
+        <LinkPrompt handle={handle} anchorRect={linkAnchor} onClose={() => setLinkAnchor(null)} />
       )}
     </div>,
     document.body,

@@ -1,6 +1,25 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MagnifyingGlass, Table, Columns, ChartLine, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users, FrameCorners, Gear, TreeView, SlidersHorizontal } from "@phosphor-icons/react";
+import {
+  MagnifyingGlass,
+  Table,
+  Columns,
+  ChartLine,
+  Trash,
+  X,
+  Funnel,
+  SquaresFour,
+  CaretDown,
+  Plus,
+  Archive,
+  ShareNetwork,
+  SidebarSimple,
+  Users,
+  FrameCorners,
+  Gear,
+  TreeView,
+  SlidersHorizontal,
+} from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -40,10 +59,17 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Project, ViewType } from "@/features/projects/types";
 import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
 import { ManageStatusesDialog } from "@/features/projects/components/views/board/ManageStatusesDialog";
-import { updateFieldDefinition, selectProjectTimeStats, selectTasksForProject } from "@/features/projects/store/projectsSlice";
+import {
+  updateFieldDefinition,
+  selectProjectTimeStats,
+  selectTasksForProject,
+} from "@/features/projects/store/projectsSlice";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
-import { selectActiveSprint, selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
+import {
+  selectActiveSprint,
+  selectSprintsForProject,
+} from "@/features/projects/store/sprintsSlice";
 import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import type { SelectOption, Sprint } from "@/features/projects/types";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
@@ -82,9 +108,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const activeGroupByFieldId = useAppSelector(selectActiveGroupByFieldId);
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const detailViewMode = useAppSelector(selectDetailViewMode);
-  const timeStats = useAppSelector(
-    useMemo(() => selectProjectTimeStats(project.id), [project.id])
-  );
+  const timeStats = useAppSelector(useMemo(() => selectProjectTimeStats(project.id), [project.id]));
   const { canEdit, canManage } = useProjectPermission();
   const activeSprint = useAppSelector(selectActiveSprint(project.id));
   const allSprints = useAppSelector(selectSprintsForProject(project.id));
@@ -123,26 +147,28 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   }, []);
   const showViewLabels = controlBarWidth === 0 ? isDesktop : controlBarWidth > 1040;
 
-  const statusField = project.fieldDefinitions.find(
-    (f) => f.id === SYSTEM_FIELD_IDS.STATUS
-  );
+  const statusField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
   const statusOptions = statusField?.config.options || [];
 
   const handleUpdateStatuses = (newOptions: SelectOption[]) => {
     if (!statusField) return;
     const updatedConfig = { ...statusField.config, options: newOptions };
 
-    dispatch(updateFieldDefinition({
-      projectId: project.id,
-      fieldId: SYSTEM_FIELD_IDS.STATUS,
-      changes: { config: updatedConfig },
-    }));
+    dispatch(
+      updateFieldDefinition({
+        projectId: project.id,
+        fieldId: SYSTEM_FIELD_IDS.STATUS,
+        changes: { config: updatedConfig },
+      }),
+    );
 
-    dispatch(updateFieldThunk({
-      projectId: project.id,
-      fieldId: SYSTEM_FIELD_IDS.STATUS,
-      updates: { config: updatedConfig },
-    }));
+    dispatch(
+      updateFieldThunk({
+        projectId: project.id,
+        fieldId: SYSTEM_FIELD_IDS.STATUS,
+        updates: { config: updatedConfig },
+      }),
+    );
   };
 
   const handleViewChange = (view: ViewType) => {
@@ -164,16 +190,14 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
     }
   };
 
-  const filterableFields = project.fieldDefinitions.filter(
-    (f) => f.id !== SYSTEM_FIELD_IDS.TITLE
-  );
+  const filterableFields = project.fieldDefinitions.filter((f) => f.id !== SYSTEM_FIELD_IDS.TITLE);
 
   const hasSelection = selectedTaskIds.length > 0;
 
   // Tags live inside the shared FilterConfig; pull them out so they can be
   // surfaced as their own quick control and chip.
   const tagCondition = activeFilterConfig?.conditions.find(
-    (c) => c.fieldId === TAGS_FILTER_FIELD_ID
+    (c) => c.fieldId === TAGS_FILTER_FIELD_ID,
   );
   const selectedTagIds: string[] = Array.isArray(tagCondition?.value)
     ? (tagCondition!.value as string[])
@@ -181,16 +205,22 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
       ? [String(tagCondition.value)]
       : [];
   const nonTagConditions = (activeFilterConfig?.conditions ?? []).filter(
-    (c) => c.fieldId !== TAGS_FILTER_FIELD_ID
+    (c) => c.fieldId !== TAGS_FILTER_FIELD_ID,
   );
 
   const applyTags = useCallback(
     (nextTagIds: string[]) => {
       const others = (activeFilterConfig?.conditions ?? []).filter(
-        (c) => c.fieldId !== TAGS_FILTER_FIELD_ID
+        (c) => c.fieldId !== TAGS_FILTER_FIELD_ID,
       );
       if (nextTagIds.length === 0) {
-        dispatch(setFilterConfig(others.length === 0 ? null : { conditions: others, logic: activeFilterConfig?.logic ?? "and" }));
+        dispatch(
+          setFilterConfig(
+            others.length === 0
+              ? null
+              : { conditions: others, logic: activeFilterConfig?.logic ?? "and" },
+          ),
+        );
         return;
       }
       const next: FilterCondition = {
@@ -199,16 +229,27 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
         operator: "contains",
         value: nextTagIds,
       };
-      dispatch(setFilterConfig({ conditions: [...others, next], logic: activeFilterConfig?.logic ?? "and" }));
+      dispatch(
+        setFilterConfig({
+          conditions: [...others, next],
+          logic: activeFilterConfig?.logic ?? "and",
+        }),
+      );
     },
     [activeFilterConfig, tagCondition, dispatch],
   );
 
   const clearBuilderConditions = useCallback(() => {
     const tagsOnly = (activeFilterConfig?.conditions ?? []).filter(
-      (c) => c.fieldId === TAGS_FILTER_FIELD_ID
+      (c) => c.fieldId === TAGS_FILTER_FIELD_ID,
     );
-    dispatch(setFilterConfig(tagsOnly.length === 0 ? null : { conditions: tagsOnly, logic: activeFilterConfig?.logic ?? "and" }));
+    dispatch(
+      setFilterConfig(
+        tagsOnly.length === 0
+          ? null
+          : { conditions: tagsOnly, logic: activeFilterConfig?.logic ?? "and" },
+      ),
+    );
   }, [activeFilterConfig, dispatch]);
 
   const sprintOptions: Option[] = useMemo(
@@ -222,7 +263,10 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
     [allSprints],
   );
   const typeOptions: Option[] = useMemo(
-    () => [{ value: null, label: "All types" }, ...TASK_TYPES.map((t) => ({ value: t.value, label: t.label }))],
+    () => [
+      { value: null, label: "All types" },
+      ...TASK_TYPES.map((t) => ({ value: t.value, label: t.label })),
+    ],
     [],
   );
   const epicFilterOptions: Option[] = useMemo(
@@ -254,7 +298,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const sprintLabel =
     sprintFilter === "__backlog__"
       ? "Backlog"
-      : allSprints.find((s) => s.id === sprintFilter)?.name ?? sprintFilter;
+      : (allSprints.find((s) => s.id === sprintFilter)?.name ?? sprintFilter);
   const epicLabel = epicOptions.find((e) => e.value === inEpicFilter)?.label ?? inEpicFilter;
 
   const activeFilterCount =
@@ -285,281 +329,324 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
 
   return (
     <>
-    <div className="shrink-0 border-b border-border bg-card">
-      {/* Project Info Bar */}
-      <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 border-b border-border">
-        {isMobileOrTablet && !isSidebarOpen && (
-          <button
-            onClick={() => dispatch(toggleSidebar())}
-            className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
-            title="Show sidebar"
-          >
-            <SidebarSimple size={16} className="text-primary" />
-          </button>
-        )}
+      <div className="shrink-0 border-b border-border bg-card">
+        {/* Project Info Bar */}
+        <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 border-b border-border">
+          {isMobileOrTablet && !isSidebarOpen && (
+            <button
+              onClick={() => dispatch(toggleSidebar())}
+              className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
+              title="Show sidebar"
+            >
+              <SidebarSimple size={16} className="text-primary" />
+            </button>
+          )}
 
-        <ProjectIcon
-          icon={project.icon}
-          size={isMobile ? 16 : 20}
-          weight="duotone"
-          className="text-primary shrink-0"
-        />
-        <div className="min-w-0 flex-1">
-          <h1 className="font-medium text-sm md:text-base text-foreground truncate">{project.name}</h1>
-          <p className="text-xs text-muted-foreground">
-            {taskCount} task{taskCount !== 1 ? "s" : ""}
-            {timeStats.hasTimeData && !isMobile && (
-              <> · {formatMinutes(timeStats.totalSpent)} spent{timeStats.totalEstimated > 0 && <> / {formatMinutes(timeStats.totalEstimated)} est{timeStats.remaining > 0 && <> · {formatMinutes(timeStats.remaining)} left</>}</>}</>
-            )}
-          </p>
+          <ProjectIcon
+            icon={project.icon}
+            size={isMobile ? 16 : 20}
+            weight="duotone"
+            className="text-primary shrink-0"
+          />
+          <div className="min-w-0 flex-1">
+            <h1 className="font-medium text-sm md:text-base text-foreground truncate">
+              {project.name}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {taskCount} task{taskCount !== 1 ? "s" : ""}
+              {timeStats.hasTimeData && !isMobile && (
+                <>
+                  {" "}
+                  · {formatMinutes(timeStats.totalSpent)} spent
+                  {timeStats.totalEstimated > 0 && (
+                    <>
+                      {" "}
+                      / {formatMinutes(timeStats.totalEstimated)} est
+                      {timeStats.remaining > 0 && <> · {formatMinutes(timeStats.remaining)} left</>}
+                    </>
+                  )}
+                </>
+              )}
+            </p>
+          </div>
+          {canEdit && (
+            <Button
+              size="sm"
+              className="shrink-0 gap-1.5"
+              onClick={() => dispatch(openCreateTaskModal())}
+            >
+              <Plus size={16} weight="bold" />
+              {!isMobile && "New Task"}
+            </Button>
+          )}
+
+          {/* Detail view mode toggle */}
+          <div className="hidden md:flex items-center gap-0.5 border border-border rounded-md p-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => dispatch(setDetailViewMode("sidebar"))}
+              className={cn(
+                "p-1 rounded transition-colors",
+                detailViewMode === "sidebar"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Sidebar panel"
+            >
+              <SidebarSimple size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch(setDetailViewMode("modal"))}
+              className={cn(
+                "p-1 rounded transition-colors",
+                detailViewMode === "modal"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Modal view"
+            >
+              <FrameCorners size={14} />
+            </button>
+          </div>
+
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => navigate(`/projects/${project.id}/settings`)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              title="Project Settings"
+            >
+              <Gear size={16} />
+            </button>
+          )}
         </div>
-        {canEdit && (
-          <Button
-            size="sm"
-            className="shrink-0 gap-1.5"
-            onClick={() => dispatch(openCreateTaskModal())}
-          >
-            <Plus size={16} weight="bold" />
-            {!isMobile && "New Task"}
-          </Button>
-        )}
 
-        {/* Detail view mode toggle */}
-        <div className="hidden md:flex items-center gap-0.5 border border-border rounded-md p-0.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => dispatch(setDetailViewMode("sidebar"))}
-            className={cn(
-              "p-1 rounded transition-colors",
-              detailViewMode === "sidebar" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-            title="Sidebar panel"
-          >
-            <SidebarSimple size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch(setDetailViewMode("modal"))}
-            className={cn(
-              "p-1 rounded transition-colors",
-              detailViewMode === "modal" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-            title="Modal view"
-          >
-            <FrameCorners size={14} />
-          </button>
-        </div>
+        {/* Control bar: view switcher (left) vs slice controls (right) */}
+        <div ref={controlBarRef} className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2">
+          <ViewSwitcher
+            viewMode={viewMode}
+            onChange={handleViewChange}
+            showLabels={showViewLabels}
+          />
 
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => navigate(`/projects/${project.id}/settings`)}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-            title="Project Settings"
-          >
-            <Gear size={16} />
-          </button>
-        )}
-      </div>
+          {activeSprint && !isMobile && (
+            <span className="shrink-0 text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+              {activeSprint.name}
+            </span>
+          )}
 
-      {/* Control bar: view switcher (left) vs slice controls (right) */}
-      <div ref={controlBarRef} className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2">
-        <ViewSwitcher
-          viewMode={viewMode}
-          onChange={handleViewChange}
-          showLabels={showViewLabels}
-        />
+          <div className="hidden md:block flex-1" />
 
-        {activeSprint && !isMobile && (
-          <span className="shrink-0 text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-            {activeSprint.name}
-          </span>
-        )}
-
-        <div className="hidden md:block flex-1" />
-
-        {/* Search: full-width field on mobile, fixed field on desktop */}
-        {isMobile ? (
-          isSearchOpen || searchQuery ? (
-            <div className="relative flex-1 min-w-0">
-              <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          {/* Search: full-width field on mobile, fixed field on desktop */}
+          {isMobile ? (
+            isSearchOpen || searchQuery ? (
+              <div className="relative flex-1 min-w-0">
+                <MagnifyingGlass
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  type="text"
+                  autoFocus
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onBlur={() => !searchQuery && setIsSearchOpen(false)}
+                  className="pl-9 h-8 text-sm bg-muted border-0"
+                />
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => setIsSearchOpen(true)}
+                title="Search tasks"
+              >
+                <MagnifyingGlass size={16} />
+              </Button>
+            )
+          ) : (
+            <div className="relative w-56 lg:w-64 shrink-0">
+              <MagnifyingGlass
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
               <Input
                 type="text"
-                autoFocus
                 placeholder="Search tasks..."
                 value={searchQuery}
                 onChange={handleSearchChange}
-                onBlur={() => !searchQuery && setIsSearchOpen(false)}
                 className="pl-9 h-8 text-sm bg-muted border-0"
               />
             </div>
-          ) : (
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIsSearchOpen(true)} title="Search tasks">
-              <MagnifyingGlass size={16} />
+          )}
+
+          {/* Advanced filter builder */}
+          <div className="relative shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn("h-8 gap-1.5", nonTagConditions.length > 0 && "text-primary")}
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+            >
+              <Funnel size={16} weight={nonTagConditions.length > 0 ? "fill" : "regular"} />
+              {!isMobile && "Filter"}
+              {nonTagConditions.length > 0 && (
+                <span className="text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
+                  {nonTagConditions.length}
+                </span>
+              )}
             </Button>
-          )
-        ) : (
-          <div className="relative w-56 lg:w-64 shrink-0">
-            <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="pl-9 h-8 text-sm bg-muted border-0"
-            />
+            {isFilterOpen && (
+              <FilterBuilder
+                fields={filterableFields}
+                filterConfig={activeFilterConfig}
+                onApply={(config) => dispatch(setFilterConfig(config))}
+                onClose={() => setIsFilterOpen(false)}
+                epicOptions={epicOptions}
+              />
+            )}
+          </div>
+
+          {/* Display: every quick filter + arrangement control in one panel */}
+          <div className="relative shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn("h-8 gap-1.5", displayDirtyCount > 0 && "text-primary")}
+              onClick={() => setIsDisplayOpen(!isDisplayOpen)}
+            >
+              <SlidersHorizontal size={16} weight={displayDirtyCount > 0 ? "fill" : "regular"} />
+              {!isMobile && "Display"}
+              {displayDirtyCount > 0 && (
+                <span className="text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
+                  {displayDirtyCount}
+                </span>
+              )}
+            </Button>
+            {isDisplayOpen && (
+              <DisplayPanel
+                onClose={() => setIsDisplayOpen(false)}
+                typeOptions={typeOptions}
+                taskTypeFilter={taskTypeFilter}
+                onType={(v) => dispatch(setTaskTypeFilter(v))}
+                showSprint={showSprintControl}
+                sprintOptions={sprintOptions}
+                sprintFilter={sprintFilter}
+                onSprint={(v) => dispatch(setSprintFilter(v))}
+                showEpic={showEpicControl}
+                epicOptions={epicFilterOptions}
+                inEpicFilter={inEpicFilter}
+                onEpic={(v) => dispatch(setInEpicFilter(v))}
+                selectedTagIds={selectedTagIds}
+                onTags={applyTags}
+                rootOnlyFilter={rootOnlyFilter}
+                onRootOnly={() => dispatch(setRootOnlyFilter(!rootOnlyFilter))}
+                showGroupBy={showGroupBy}
+                groupByOptions={groupByOptions}
+                groupByValue={groupByValue}
+                onGroupBy={(v) => dispatch(setGroupBy(v))}
+                showOutline={showOutline}
+                tableOutlineEnabled={tableOutlineEnabled}
+                onOutline={() => dispatch(setTableOutlineEnabled(!tableOutlineEnabled))}
+                showManageStatuses={showManageStatuses}
+                onManageStatuses={() => {
+                  setIsDisplayOpen(false);
+                  setIsManageStatusesOpen(true);
+                }}
+              />
+            )}
+            {isManageStatusesOpen && (
+              <div className="absolute top-full right-0 z-50 mt-1.5">
+                <ManageStatusesDialog
+                  options={statusOptions}
+                  onSave={handleUpdateStatuses}
+                  onClose={() => setIsManageStatusesOpen(false)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Active filters: only present once something narrows the view */}
+        {hasActiveFilters && !hasSelection && (
+          <div className="flex flex-wrap items-center gap-1.5 px-3 md:px-4 pb-2">
+            <span className="text-xs text-muted-foreground mr-0.5">Filters</span>
+            {nonTagConditions.length > 0 && (
+              <FilterChip
+                label={`Conditions · ${nonTagConditions.length}`}
+                onClick={() => setIsFilterOpen(true)}
+                onRemove={clearBuilderConditions}
+              />
+            )}
+            {taskTypeFilter && (
+              <FilterChip
+                label={`Type · ${typeLabel}`}
+                onRemove={() => dispatch(setTaskTypeFilter(null))}
+              />
+            )}
+            {sprintFilter && (
+              <FilterChip
+                label={`Sprint · ${sprintLabel}`}
+                onRemove={() => dispatch(setSprintFilter(null))}
+              />
+            )}
+            {inEpicFilter && (
+              <FilterChip
+                label={`Epic · ${epicLabel}`}
+                onRemove={() => dispatch(setInEpicFilter(null))}
+              />
+            )}
+            {selectedTagIds.length > 0 && (
+              <FilterChip
+                label={`Tags · ${selectedTagIds.length}`}
+                onRemove={() => applyTags([])}
+              />
+            )}
+            {rootOnlyFilter && (
+              <FilterChip
+                label="Top-level only"
+                onRemove={() => dispatch(setRootOnlyFilter(false))}
+              />
+            )}
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-0.5"
+            >
+              Clear all
+            </button>
           </div>
         )}
 
-        {/* Advanced filter builder */}
-        <div className="relative shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("h-8 gap-1.5", nonTagConditions.length > 0 && "text-primary")}
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-          >
-            <Funnel size={16} weight={nonTagConditions.length > 0 ? "fill" : "regular"} />
-            {!isMobile && "Filter"}
-            {nonTagConditions.length > 0 && (
-              <span className="text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
-                {nonTagConditions.length}
-              </span>
-            )}
-          </Button>
-          {isFilterOpen && (
-            <FilterBuilder
-              fields={filterableFields}
-              filterConfig={activeFilterConfig}
-              onApply={(config) => dispatch(setFilterConfig(config))}
-              onClose={() => setIsFilterOpen(false)}
-              epicOptions={epicOptions}
+        {/* Bulk actions take over the rail while tasks are selected */}
+        {hasSelection && (
+          <div className="flex items-center px-3 md:px-4 pb-2">
+            <BulkActionToolbar
+              selectedCount={selectedTaskIds.length}
+              selectedTaskIds={selectedTaskIds}
+              statusOptions={statusOptions}
+              onDeleteClick={() => setShowDeleteTasksConfirm(true)}
+              onClearSelection={() => dispatch(clearSelection())}
+              dispatch={dispatch}
+              sprints={allSprints}
             />
-          )}
-        </div>
-
-        {/* Display: every quick filter + arrangement control in one panel */}
-        <div className="relative shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("h-8 gap-1.5", displayDirtyCount > 0 && "text-primary")}
-            onClick={() => setIsDisplayOpen(!isDisplayOpen)}
-          >
-            <SlidersHorizontal size={16} weight={displayDirtyCount > 0 ? "fill" : "regular"} />
-            {!isMobile && "Display"}
-            {displayDirtyCount > 0 && (
-              <span className="text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
-                {displayDirtyCount}
-              </span>
-            )}
-          </Button>
-          {isDisplayOpen && (
-            <DisplayPanel
-              onClose={() => setIsDisplayOpen(false)}
-              typeOptions={typeOptions}
-              taskTypeFilter={taskTypeFilter}
-              onType={(v) => dispatch(setTaskTypeFilter(v))}
-              showSprint={showSprintControl}
-              sprintOptions={sprintOptions}
-              sprintFilter={sprintFilter}
-              onSprint={(v) => dispatch(setSprintFilter(v))}
-              showEpic={showEpicControl}
-              epicOptions={epicFilterOptions}
-              inEpicFilter={inEpicFilter}
-              onEpic={(v) => dispatch(setInEpicFilter(v))}
-              selectedTagIds={selectedTagIds}
-              onTags={applyTags}
-              rootOnlyFilter={rootOnlyFilter}
-              onRootOnly={() => dispatch(setRootOnlyFilter(!rootOnlyFilter))}
-              showGroupBy={showGroupBy}
-              groupByOptions={groupByOptions}
-              groupByValue={groupByValue}
-              onGroupBy={(v) => dispatch(setGroupBy(v))}
-              showOutline={showOutline}
-              tableOutlineEnabled={tableOutlineEnabled}
-              onOutline={() => dispatch(setTableOutlineEnabled(!tableOutlineEnabled))}
-              showManageStatuses={showManageStatuses}
-              onManageStatuses={() => {
-                setIsDisplayOpen(false);
-                setIsManageStatusesOpen(true);
-              }}
-            />
-          )}
-          {isManageStatusesOpen && (
-            <div className="absolute top-full right-0 z-50 mt-1.5">
-              <ManageStatusesDialog
-                options={statusOptions}
-                onSave={handleUpdateStatuses}
-                onClose={() => setIsManageStatusesOpen(false)}
-              />
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Active filters: only present once something narrows the view */}
-      {hasActiveFilters && !hasSelection && (
-        <div className="flex flex-wrap items-center gap-1.5 px-3 md:px-4 pb-2">
-          <span className="text-xs text-muted-foreground mr-0.5">Filters</span>
-          {nonTagConditions.length > 0 && (
-            <FilterChip
-              label={`Conditions · ${nonTagConditions.length}`}
-              onClick={() => setIsFilterOpen(true)}
-              onRemove={clearBuilderConditions}
-            />
-          )}
-          {taskTypeFilter && (
-            <FilterChip label={`Type · ${typeLabel}`} onRemove={() => dispatch(setTaskTypeFilter(null))} />
-          )}
-          {sprintFilter && (
-            <FilterChip label={`Sprint · ${sprintLabel}`} onRemove={() => dispatch(setSprintFilter(null))} />
-          )}
-          {inEpicFilter && (
-            <FilterChip label={`Epic · ${epicLabel}`} onRemove={() => dispatch(setInEpicFilter(null))} />
-          )}
-          {selectedTagIds.length > 0 && (
-            <FilterChip label={`Tags · ${selectedTagIds.length}`} onRemove={() => applyTags([])} />
-          )}
-          {rootOnlyFilter && (
-            <FilterChip label="Top-level only" onRemove={() => dispatch(setRootOnlyFilter(false))} />
-          )}
-          <button
-            type="button"
-            onClick={clearAllFilters}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-0.5"
-          >
-            Clear all
-          </button>
-        </div>
-      )}
-
-      {/* Bulk actions take over the rail while tasks are selected */}
-      {hasSelection && (
-        <div className="flex items-center px-3 md:px-4 pb-2">
-          <BulkActionToolbar
-            selectedCount={selectedTaskIds.length}
-            selectedTaskIds={selectedTaskIds}
-            statusOptions={statusOptions}
-            onDeleteClick={() => setShowDeleteTasksConfirm(true)}
-            onClearSelection={() => dispatch(clearSelection())}
-            dispatch={dispatch}
-            sprints={allSprints}
-          />
-        </div>
-      )}
-    </div>
-
-    <ConfirmDialog
-      isOpen={showDeleteTasksConfirm}
-      onClose={() => setShowDeleteTasksConfirm(false)}
-      onConfirm={handleDeleteTasks}
-      title="Delete Tasks"
-      message={`Are you sure you want to delete ${selectedTaskIds.length} task${selectedTaskIds.length !== 1 ? "s" : ""}? This action cannot be undone.`}
-      confirmLabel="Delete"
-      variant="danger"
-      loading={isDeleting}
-    />
+      <ConfirmDialog
+        isOpen={showDeleteTasksConfirm}
+        onClose={() => setShowDeleteTasksConfirm(false)}
+        onConfirm={handleDeleteTasks}
+        title="Delete Tasks"
+        message={`Are you sure you want to delete ${selectedTaskIds.length} task${selectedTaskIds.length !== 1 ? "s" : ""}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={isDeleting}
+      />
     </>
   );
 }
@@ -588,7 +675,7 @@ function ViewSwitcher({ viewMode, onChange, showLabels }: ViewSwitcherProps) {
               "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm transition-all",
               isActive
                 ? "bg-card text-foreground shadow-sm font-medium"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             <span className="shrink-0 flex items-center">{view.icon}</span>
@@ -699,20 +786,36 @@ function DisplayPanel(props: DisplayPanelProps) {
     >
       <PanelSection label="Filter">
         <PanelRow label="Type">
-          <OptionChips options={props.typeOptions} value={props.taskTypeFilter} onSelect={props.onType} />
+          <OptionChips
+            options={props.typeOptions}
+            value={props.taskTypeFilter}
+            onSelect={props.onType}
+          />
         </PanelRow>
         {props.showSprint && (
           <PanelRow label="Sprint">
-            <OptionChips options={props.sprintOptions} value={props.sprintFilter} onSelect={props.onSprint} />
+            <OptionChips
+              options={props.sprintOptions}
+              value={props.sprintFilter}
+              onSelect={props.onSprint}
+            />
           </PanelRow>
         )}
         {props.showEpic && (
           <PanelRow label="Epic">
-            <OptionChips options={props.epicOptions} value={props.inEpicFilter} onSelect={props.onEpic} />
+            <OptionChips
+              options={props.epicOptions}
+              value={props.inEpicFilter}
+              onSelect={props.onEpic}
+            />
           </PanelRow>
         )}
         <PanelRow label="Tags">
-          <TagPicker selectedTagIds={props.selectedTagIds} onChange={props.onTags} placeholder="Pick a tag" />
+          <TagPicker
+            selectedTagIds={props.selectedTagIds}
+            onChange={props.onTags}
+            placeholder="Pick a tag"
+          />
         </PanelRow>
         <ToggleRow
           icon={<SquaresFour size={16} />}
@@ -727,7 +830,11 @@ function DisplayPanel(props: DisplayPanelProps) {
         <PanelSection label="Arrange">
           {props.showGroupBy && (
             <PanelRow label="Group by">
-              <OptionChips options={props.groupByOptions} value={props.groupByValue} onSelect={props.onGroupBy} />
+              <OptionChips
+                options={props.groupByOptions}
+                value={props.groupByValue}
+                onSelect={props.onGroupBy}
+              />
             </PanelRow>
           )}
           {props.showOutline && (
@@ -758,7 +865,9 @@ function DisplayPanel(props: DisplayPanelProps) {
 function PanelSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        {label}
+      </div>
       <div className="space-y-2.5">{children}</div>
     </div>
   );
@@ -773,7 +882,15 @@ function PanelRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-function OptionChips({ options, value, onSelect }: { options: Option[]; value: string | null; onSelect: (v: string | null) => void }) {
+function OptionChips({
+  options,
+  value,
+  onSelect,
+}: {
+  options: Option[];
+  value: string | null;
+  onSelect: (v: string | null) => void;
+}) {
   return (
     <div className="flex flex-wrap gap-1">
       {options.map((option) => {
@@ -787,7 +904,7 @@ function OptionChips({ options, value, onSelect }: { options: Option[]; value: s
               "px-2 py-1 rounded-md text-xs transition-colors",
               isActive
                 ? "bg-primary text-primary-foreground font-medium"
-                : "bg-muted text-muted-foreground hover:text-foreground"
+                : "bg-muted text-muted-foreground hover:text-foreground",
             )}
           >
             {option.label}
@@ -813,13 +930,27 @@ function ToggleRow({ icon, label, description, active, onToggle }: ToggleRowProp
       onClick={onToggle}
       className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-muted transition-colors"
     >
-      <span className={cn("shrink-0", active ? "text-primary" : "text-muted-foreground")}>{icon}</span>
+      <span className={cn("shrink-0", active ? "text-primary" : "text-muted-foreground")}>
+        {icon}
+      </span>
       <span className="flex-1 min-w-0">
         <span className="block text-sm text-foreground">{label}</span>
-        {description && <span className="block text-xs text-muted-foreground truncate">{description}</span>}
+        {description && (
+          <span className="block text-xs text-muted-foreground truncate">{description}</span>
+        )}
       </span>
-      <span className={cn("relative h-4 w-7 rounded-full transition-colors shrink-0", active ? "bg-primary" : "bg-muted-foreground/30")}>
-        <span className={cn("absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform", active ? "translate-x-3.5" : "translate-x-0.5")} />
+      <span
+        className={cn(
+          "relative h-4 w-7 rounded-full transition-colors shrink-0",
+          active ? "bg-primary" : "bg-muted-foreground/30",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform",
+            active ? "translate-x-3.5" : "translate-x-0.5",
+          )}
+        />
       </span>
     </button>
   );
@@ -861,10 +992,7 @@ function BulkActionToolbar({
   useEffect(() => {
     if (!openDropdown) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         handleClose();
       }
     };
@@ -882,16 +1010,12 @@ function BulkActionToolbar({
 
   return (
     <div ref={containerRef} className="flex items-center gap-1.5 text-xs">
-      <span className="text-muted-foreground whitespace-nowrap">
-        {selectedCount} selected
-      </span>
+      <span className="text-muted-foreground whitespace-nowrap">{selectedCount} selected</span>
 
       <div className="relative">
         <button
           type="button"
-          onClick={() =>
-            setOpenDropdown(openDropdown === "status" ? null : "status")
-          }
+          onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
           className="flex items-center gap-1 h-7 px-2 rounded-md text-xs hover:bg-muted transition-colors text-muted-foreground"
         >
           Status
@@ -920,9 +1044,7 @@ function BulkActionToolbar({
       <div className="relative">
         <button
           type="button"
-          onClick={() =>
-            setOpenDropdown(openDropdown === "priority" ? null : "priority")
-          }
+          onClick={() => setOpenDropdown(openDropdown === "priority" ? null : "priority")}
           className="flex items-center gap-1 h-7 px-2 rounded-md text-xs hover:bg-muted transition-colors text-muted-foreground"
         >
           Priority
@@ -952,9 +1074,7 @@ function BulkActionToolbar({
         <div className="relative">
           <button
             type="button"
-            onClick={() =>
-              setOpenDropdown(openDropdown === "sprint" ? null : "sprint")
-            }
+            onClick={() => setOpenDropdown(openDropdown === "sprint" ? null : "sprint")}
             className="flex items-center gap-1 h-7 px-2 rounded-md text-xs hover:bg-muted transition-colors text-muted-foreground"
           >
             Sprint
@@ -975,9 +1095,7 @@ function BulkActionToolbar({
                   <button
                     key={sprint.id}
                     type="button"
-                    onClick={() =>
-                      handleBulkUpdate({ sprintId: sprint.id })
-                    }
+                    onClick={() => handleBulkUpdate({ sprintId: sprint.id })}
                     className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted"
                   >
                     <span className="truncate">{sprint.name}</span>

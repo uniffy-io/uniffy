@@ -23,9 +23,7 @@ export function computeCriticalPath(
   const activeIds = new Set(nodeIds.filter((id) => !completedIds.has(id)));
   if (activeIds.size === 0) return EMPTY_RESULT;
 
-  const activeEdges = edges.filter(
-    (e) => activeIds.has(e.fromId) && activeIds.has(e.toId)
-  );
+  const activeEdges = edges.filter((e) => activeIds.has(e.fromId) && activeIds.has(e.toId));
 
   if (activeEdges.length === 0) {
     return EMPTY_RESULT;

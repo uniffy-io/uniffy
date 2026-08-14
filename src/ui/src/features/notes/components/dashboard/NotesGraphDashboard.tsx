@@ -5,17 +5,17 @@
  * between notes based on URN mentions.
  */
 
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ForceGraph2D from 'react-force-graph-2d';
-import type { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-2d';
-import { useAppSelector } from '@/app/hooks';
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import ForceGraph2D from "react-force-graph-2d";
+import type { ForceGraphMethods, NodeObject, LinkObject } from "react-force-graph-2d";
+import { useAppSelector } from "@/app/hooks";
 import {
   buildGraphData,
   getNodeSize,
   getGraphStats,
   type GraphNode,
-} from '@/features/notes/utils/notesGraphUtils';
+} from "@/features/notes/utils/notesGraphUtils";
 import {
   Cube,
   MagnifyingGlassMinus,
@@ -26,19 +26,18 @@ import {
   Folder,
   ChatTeardrop,
   Link,
-} from '@phosphor-icons/react';
-import { getIconComponent } from '@/features/notes/utils/noteIconConstants';
-import { drawIconOnCanvas } from '@/features/notes/utils/noteIcons';
-import { UrnType, urnToPath, parseUrn } from '@/shared/utils/urn';
-import { URN_TYPE_HEX_COLORS } from '@/config/theme/urnColors';
-import { useUrnResolution } from '@/features/search';
-import { useTheme } from '@/config/theme/ThemeProvider';
+} from "@phosphor-icons/react";
+import { getIconComponent } from "@/features/notes/utils/noteIconConstants";
+import { drawIconOnCanvas } from "@/features/notes/utils/noteIcons";
+import { UrnType, urnToPath, parseUrn } from "@/shared/utils/urn";
+import { URN_TYPE_HEX_COLORS } from "@/config/theme/urnColors";
+import { useUrnResolution } from "@/features/search";
+import { useTheme } from "@/config/theme/ThemeProvider";
 
 /** Cast NodeObject to our GraphNode type */
 function asGraphNode(node: NodeObject): GraphNode {
   return node as unknown as GraphNode;
 }
-
 
 /**
  * Draw a type-specific icon inside a node circle
@@ -46,24 +45,24 @@ function asGraphNode(node: NodeObject): GraphNode {
  */
 function drawNodeIcon(
   ctx: CanvasRenderingContext2D,
-  type: UrnType | 'note',
+  type: UrnType | "note",
   x: number,
   y: number,
   size: number,
-  color: string
+  color: string,
 ) {
   const s = size * 0.35; // Icon takes up ~35% of node radius
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = size * 0.05; // Very thin lines like Heroicons outline
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
 
   ctx.save();
   ctx.translate(x, y);
 
   switch (type) {
-    case 'note':
+    case "note":
     case UrnType.NOTE: {
       // DocumentTextIcon - document with text lines
       const w = s * 0.75;
@@ -186,7 +185,7 @@ function drawNodeIcon(
 /** Convert HSL string (from CSS var) to hex color */
 function hslToHex(hsl: string): string {
   const parts = hsl.trim().split(/\s+/);
-  if (parts.length !== 3) return '#8b5cf6';
+  if (parts.length !== 3) return "#8b5cf6";
 
   const h = parseFloat(parts[0]) / 360;
   const s = parseFloat(parts[1]) / 100;
@@ -213,7 +212,7 @@ function hslToHex(hsl: string): string {
 
   const toHex = (x: number) => {
     const hex = Math.round(x * 255).toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
+    return hex.length === 1 ? "0" + hex : hex;
   };
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
@@ -224,21 +223,20 @@ function getThemeColors() {
   const root = document.documentElement;
   const getVar = (name: string) => getComputedStyle(root).getPropertyValue(name).trim();
 
-  const primaryHsl = getVar('--primary');
-  const backgroundHsl = getVar('--background');
-  const cardHsl = getVar('--card');
-  const foregroundHsl = getVar('--foreground');
-  const mutedForegroundHsl = getVar('--muted-foreground');
+  const primaryHsl = getVar("--primary");
+  const backgroundHsl = getVar("--background");
+  const cardHsl = getVar("--card");
+  const foregroundHsl = getVar("--foreground");
+  const mutedForegroundHsl = getVar("--muted-foreground");
 
   return {
-    primary: primaryHsl ? hslToHex(primaryHsl) : '#8b5cf6',
-    background: backgroundHsl ? hslToHex(backgroundHsl) : '#0a0a0a',
-    card: cardHsl ? hslToHex(cardHsl) : '#171717',
-    foreground: foregroundHsl ? hslToHex(foregroundHsl) : '#fafafa',
-    mutedForeground: mutedForegroundHsl ? hslToHex(mutedForegroundHsl) : '#a1a1aa',
+    primary: primaryHsl ? hslToHex(primaryHsl) : "#8b5cf6",
+    background: backgroundHsl ? hslToHex(backgroundHsl) : "#0a0a0a",
+    card: cardHsl ? hslToHex(cardHsl) : "#171717",
+    foreground: foregroundHsl ? hslToHex(foregroundHsl) : "#fafafa",
+    mutedForeground: mutedForegroundHsl ? hslToHex(mutedForegroundHsl) : "#a1a1aa",
   };
 }
-
 
 export function NotesGraphDashboard() {
   const navigate = useNavigate();
@@ -254,7 +252,6 @@ export function NotesGraphDashboard() {
   // We implement coordinate-based hit detection instead
   const lastHoveredNodeRef = useRef<string | null>(null);
 
-
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [themeColors, setThemeColors] = useState(getThemeColors);
@@ -266,7 +263,7 @@ export function NotesGraphDashboard() {
   // Track theme changes
   const accentColor = useAppSelector((state) => state.theme?.accentColor);
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const isDark = resolvedTheme === "dark";
 
   // Update theme colors when theme changes
   useEffect(() => {
@@ -331,7 +328,7 @@ export function NotesGraphDashboard() {
     for (let i = 0; i < data.nodes.length; i++) {
       const node = data.nodes[i];
       const existing = existingNodes.get(node.id);
-      if (existing && typeof existing.x === 'number' && typeof existing.y === 'number') {
+      if (existing && typeof existing.x === "number" && typeof existing.y === "number") {
         // Preserve existing position
         node.x = existing.x;
         node.y = existing.y;
@@ -358,7 +355,13 @@ export function NotesGraphDashboard() {
   const stats = useMemo(() => {
     const notesList = Object.values(notes).filter((n) => !n.isDeleted);
     if (notesList.length === 0) {
-      return { totalNodes: 0, internalNotes: 0, externalReferences: 0, totalLinks: 0, avgConnections: 0 };
+      return {
+        totalNodes: 0,
+        internalNotes: 0,
+        externalReferences: 0,
+        totalLinks: 0,
+        avgConnections: 0,
+      };
     }
     const data = buildGraphData(notesList, urnMetadata);
     return getGraphStats(data);
@@ -415,8 +418,8 @@ export function NotesGraphDashboard() {
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Default zoom level
@@ -425,7 +428,8 @@ export function NotesGraphDashboard() {
   // Set initial zoom and center once on mount
   const hasInitialized = useRef(false);
   useEffect(() => {
-    if (hasInitialized.current || !graphRef.current || !dimensions || graphData.nodes.length === 0) return;
+    if (hasInitialized.current || !graphRef.current || !dimensions || graphData.nodes.length === 0)
+      return;
     hasInitialized.current = true;
 
     // Wait for graph to render, then set default zoom centered at origin
@@ -480,12 +484,12 @@ export function NotesGraphDashboard() {
       } else if (graphNode.urn) {
         // External references - use urnToPath for proper routing
         const path = urnToPath(graphNode.urn);
-        if (path !== '#') {
+        if (path !== "#") {
           navigate(path);
         }
       }
     },
-    [navigate]
+    [navigate],
   );
 
   // WORKAROUND: Custom hit detection to bypass library bug
@@ -510,7 +514,7 @@ export function NotesGraphDashboard() {
       let closestDist = Infinity;
 
       for (const node of graphData.nodes) {
-        if (typeof node.x !== 'number' || typeof node.y !== 'number') continue;
+        if (typeof node.x !== "number" || typeof node.y !== "number") continue;
 
         const dx = graphCoords.x - node.x;
         const dy = graphCoords.y - node.y;
@@ -524,7 +528,7 @@ export function NotesGraphDashboard() {
 
       return closestNode;
     },
-    [graphData.nodes]
+    [graphData.nodes],
   );
 
   // Custom mouse move handler for hover detection
@@ -540,17 +544,17 @@ export function NotesGraphDashboard() {
         if (node) {
           setHoveredNode(asGraphNode(node));
           if (containerRef.current) {
-            containerRef.current.style.cursor = 'pointer';
+            containerRef.current.style.cursor = "pointer";
           }
         } else {
           setHoveredNode(null);
           if (containerRef.current) {
-            containerRef.current.style.cursor = 'grab';
+            containerRef.current.style.cursor = "grab";
           }
         }
       }
     },
-    [findNodeAtPosition]
+    [findNodeAtPosition],
   );
 
   // Custom click handler
@@ -561,7 +565,7 @@ export function NotesGraphDashboard() {
         handleNodeClick(node);
       }
     },
-    [findNodeAtPosition, handleNodeClick]
+    [findNodeAtPosition, handleNodeClick],
   );
 
   // Attach custom mouse handlers to bypass library's broken hit detection
@@ -569,16 +573,16 @@ export function NotesGraphDashboard() {
     if (!containerRef.current || loading) return;
 
     // Use MutationObserver to wait for canvas to be rendered
-    let canvas = containerRef.current.querySelector('canvas');
+    let canvas = containerRef.current.querySelector("canvas");
 
     const attachHandlers = (canvasEl: HTMLCanvasElement) => {
-      canvasEl.addEventListener('mousemove', handleCanvasMouseMove);
-      canvasEl.addEventListener('click', handleCanvasClick);
+      canvasEl.addEventListener("mousemove", handleCanvasMouseMove);
+      canvasEl.addEventListener("click", handleCanvasClick);
     };
 
     const detachHandlers = (canvasEl: HTMLCanvasElement) => {
-      canvasEl.removeEventListener('mousemove', handleCanvasMouseMove);
-      canvasEl.removeEventListener('click', handleCanvasClick);
+      canvasEl.removeEventListener("mousemove", handleCanvasMouseMove);
+      canvasEl.removeEventListener("click", handleCanvasClick);
     };
 
     if (canvas) {
@@ -615,7 +619,7 @@ export function NotesGraphDashboard() {
       }
       return URN_TYPE_HEX_COLORS[node.type as UrnType] || URN_TYPE_HEX_COLORS[UrnType.UNKNOWN];
     },
-    [themeColors.primary]
+    [themeColors.primary],
   );
 
   // Custom node painting with glow effects
@@ -631,8 +635,8 @@ export function NotesGraphDashboard() {
       // Outer glow for hovered nodes
       if (isHovered) {
         const gradient = ctx.createRadialGradient(x, y, size, x, y, size * 3);
-        gradient.addColorStop(0, nodeColor + '40');
-        gradient.addColorStop(1, nodeColor + '00');
+        gradient.addColorStop(0, nodeColor + "40");
+        gradient.addColorStop(1, nodeColor + "00");
         ctx.beginPath();
         ctx.arc(x, y, size * 3, 0, 2 * Math.PI);
         ctx.fillStyle = gradient;
@@ -640,22 +644,15 @@ export function NotesGraphDashboard() {
       }
 
       // Node shadow
-      ctx.shadowColor = nodeColor + '60';
+      ctx.shadowColor = nodeColor + "60";
       ctx.shadowBlur = isHovered ? 20 : 10;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
       // Main node circle with gradient
-      const nodeGradient = ctx.createRadialGradient(
-        x - size * 0.3,
-        y - size * 0.3,
-        0,
-        x,
-        y,
-        size
-      );
+      const nodeGradient = ctx.createRadialGradient(x - size * 0.3, y - size * 0.3, 0, x, y, size);
       nodeGradient.addColorStop(0, nodeColor);
-      nodeGradient.addColorStop(1, nodeColor + 'cc');
+      nodeGradient.addColorStop(1, nodeColor + "cc");
 
       ctx.beginPath();
       ctx.arc(x, y, size, 0, 2 * Math.PI);
@@ -663,28 +660,35 @@ export function NotesGraphDashboard() {
       ctx.fill();
 
       // Reset shadow
-      ctx.shadowColor = 'transparent';
+      ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
 
       // Draw icon inside the node
-      const iconColor = isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.95)';
+      const iconColor = isDark ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.95)";
 
       if (graphNode.customIcon) {
-        if (graphNode.customIcon.type === 'emoji') {
+        if (graphNode.customIcon.type === "emoji") {
           // Draw custom emoji icon - sized to match heroicons (~70% of node)
           const emojiSize = size * 0.65;
           ctx.font = `${emojiSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
           // Small vertical offset to visually center (emojis tend to sit high)
           ctx.fillText(graphNode.customIcon.value, x, y + emojiSize * 0.08);
         } else {
           // Draw custom heroicon using SVG path data
           const iconSize = size * 0.7; // Icon takes up ~70% of node size
-          const drawn = drawIconOnCanvas(ctx, graphNode.customIcon.value, x, y, iconSize, iconColor);
+          const drawn = drawIconOnCanvas(
+            ctx,
+            graphNode.customIcon.value,
+            x,
+            y,
+            iconSize,
+            iconColor,
+          );
           if (!drawn) {
             // Fallback to default icon if heroicon not found
-            drawNodeIcon(ctx, 'note', x, y, size, iconColor);
+            drawNodeIcon(ctx, "note", x, y, size, iconColor);
           }
         }
       } else {
@@ -704,61 +708,60 @@ export function NotesGraphDashboard() {
         const fontSize = Math.max(11 / globalScale, 4);
         const label = graphNode.label;
         const maxLength = isHovered ? 30 : 18;
-        const truncatedLabel =
-          label.length > maxLength ? label.slice(0, maxLength) + '…' : label;
+        const truncatedLabel = label.length > maxLength ? label.slice(0, maxLength) + "…" : label;
 
         ctx.font = `500 ${fontSize}px Inter, system-ui, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
 
         const labelY = y + size + 6 / globalScale;
 
         // Label text - white on dark, dark on light
-        ctx.fillStyle = isDark ? themeColors.foreground : '#18181b';
+        ctx.fillStyle = isDark ? themeColors.foreground : "#18181b";
         ctx.fillText(truncatedLabel, x, labelY);
       }
     },
-    [hoveredNode, getNodeColor, themeColors, isDark]
+    [hoveredNode, getNodeColor, themeColors, isDark],
   );
 
   // Link styling
   const getLinkColor = useCallback(
     (link: LinkObject) => {
       const sourceId =
-        typeof link.source === 'object' ? (link.source as NodeObject).id : link.source;
+        typeof link.source === "object" ? (link.source as NodeObject).id : link.source;
       const targetId =
-        typeof link.target === 'object' ? (link.target as NodeObject).id : link.target;
+        typeof link.target === "object" ? (link.target as NodeObject).id : link.target;
 
       if (hoveredNode) {
         if (hoveredNode.id === sourceId || hoveredNode.id === targetId) {
-          return themeColors.primary + 'cc';
+          return themeColors.primary + "cc";
         }
-        return isDark ? 'rgba(63, 63, 70, 0.15)' : 'rgba(161, 161, 170, 0.15)';
+        return isDark ? "rgba(63, 63, 70, 0.15)" : "rgba(161, 161, 170, 0.15)";
       }
-      return isDark ? 'rgba(113, 113, 122, 0.35)' : 'rgba(161, 161, 170, 0.4)';
+      return isDark ? "rgba(113, 113, 122, 0.35)" : "rgba(161, 161, 170, 0.4)";
     },
-    [hoveredNode, themeColors.primary, isDark]
+    [hoveredNode, themeColors.primary, isDark],
   );
 
   const getLinkWidth = useCallback(
     (link: LinkObject) => {
       const sourceId =
-        typeof link.source === 'object' ? (link.source as NodeObject).id : link.source;
+        typeof link.source === "object" ? (link.source as NodeObject).id : link.source;
       const targetId =
-        typeof link.target === 'object' ? (link.target as NodeObject).id : link.target;
+        typeof link.target === "object" ? (link.target as NodeObject).id : link.target;
 
       if (hoveredNode && (hoveredNode.id === sourceId || hoveredNode.id === targetId)) {
         return 2;
       }
       return 1;
     },
-    [hoveredNode]
+    [hoveredNode],
   );
 
   // Get icon for node type
-  const getTypeIcon = (type: UrnType | 'note') => {
+  const getTypeIcon = (type: UrnType | "note") => {
     switch (type) {
-      case 'note':
+      case "note":
       case UrnType.NOTE:
         return FileText;
       case UrnType.USER:
@@ -785,7 +788,8 @@ export function NotesGraphDashboard() {
           </div>
           <h2 className="text-2xl font-semibold mb-3">Your Knowledge Graph</h2>
           <p className="text-muted-foreground mb-6 leading-relaxed">
-            Create notes and link them together using @mentions to build your personal knowledge network.
+            Create notes and link them together using @mentions to build your personal knowledge
+            network.
           </p>
         </div>
       </div>
@@ -813,13 +817,13 @@ export function NotesGraphDashboard() {
             nodeId="id"
             nodeLabel=""
             nodeCanvasObject={paintNode}
-            nodeCanvasObjectMode={() => 'replace'}
+            nodeCanvasObjectMode={() => "replace"}
             linkColor={getLinkColor}
             linkWidth={getLinkWidth}
             linkDirectionalParticles={2}
             linkDirectionalParticleWidth={2}
             linkDirectionalParticleSpeed={0.005}
-            linkDirectionalParticleColor={() => themeColors.primary + 'cc'}
+            linkDirectionalParticleColor={() => themeColors.primary + "cc"}
             // WORKAROUND: Disable library's broken hover/click detection
             // (canvas-color-tracker bug where certain node indices fail hit detection)
             // We use our own coordinate-based hit detection instead
@@ -870,23 +874,35 @@ export function NotesGraphDashboard() {
                 className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner"
                 style={{
                   background: `linear-gradient(135deg, ${getNodeColor(hoveredNode)}20, ${getNodeColor(hoveredNode)}10)`,
-                  borderColor: getNodeColor(hoveredNode) + '30',
+                  borderColor: getNodeColor(hoveredNode) + "30",
                   borderWidth: 1,
                 }}
               >
                 {hoveredNode.customIcon ? (
-                  hoveredNode.customIcon.type === 'emoji' ? (
+                  hoveredNode.customIcon.type === "emoji" ? (
                     <span className="text-xl">{hoveredNode.customIcon.value}</span>
                   ) : (
                     (() => {
                       const Icon = getIconComponent(hoveredNode.customIcon.value);
-                      return <Icon size={20} weight="duotone" style={{ color: getNodeColor(hoveredNode) }} />;
+                      return (
+                        <Icon
+                          size={20}
+                          weight="duotone"
+                          style={{ color: getNodeColor(hoveredNode) }}
+                        />
+                      );
                     })()
                   )
                 ) : (
                   (() => {
                     const Icon = getTypeIcon(hoveredNode.type);
-                    return <Icon size={20} weight="duotone" style={{ color: getNodeColor(hoveredNode) }} />;
+                    return (
+                      <Icon
+                        size={20}
+                        weight="duotone"
+                        style={{ color: getNodeColor(hoveredNode) }}
+                      />
+                    );
                   })()
                 )}
               </div>
@@ -896,19 +912,20 @@ export function NotesGraphDashboard() {
                   <span
                     className="text-xs px-1.5 py-0.5 rounded-md capitalize"
                     style={{
-                      backgroundColor: getNodeColor(hoveredNode) + '15',
+                      backgroundColor: getNodeColor(hoveredNode) + "15",
                       color: getNodeColor(hoveredNode),
                     }}
                   >
-                    {hoveredNode.isInternal ? 'Note' : hoveredNode.type.replace('_', ' ')}
+                    {hoveredNode.isInternal ? "Note" : hoveredNode.type.replace("_", " ")}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {hoveredNode.connections} connection{hoveredNode.connections !== 1 ? 's' : ''}
+                  {hoveredNode.connections} connection{hoveredNode.connections !== 1 ? "s" : ""}
                 </p>
               </div>
             </div>
-            {(hoveredNode.isInternal || (hoveredNode.urn && urnToPath(hoveredNode.urn) !== '#')) && (
+            {(hoveredNode.isInternal ||
+              (hoveredNode.urn && urnToPath(hoveredNode.urn) !== "#")) && (
               <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">Click</kbd>
                 <span>to open</span>
@@ -923,7 +940,6 @@ export function NotesGraphDashboard() {
           <span>·</span>
           <span>{stats.totalLinks} links</span>
         </div>
-
       </div>
     </div>
   );

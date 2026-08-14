@@ -1,18 +1,22 @@
-import { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { CalendarBlank, MapPin, Clock, ArrowRight } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { WidgetCard, EmptyWidget, WidgetSkeleton } from '@/features/dashboard/components/widgets/WidgetCard';
-import { formatDateFull } from '@/shared/utils/dateFormatting';
-import type { CalendarEvent } from '@/features/calendar/types';
+import { useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { CalendarBlank, MapPin, Clock, ArrowRight } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import {
+  WidgetCard,
+  EmptyWidget,
+  WidgetSkeleton,
+} from "@/features/dashboard/components/widgets/WidgetCard";
+import { formatDateFull } from "@/shared/utils/dateFormatting";
+import type { CalendarEvent } from "@/features/calendar/types";
 
 function formatEventTime(event: CalendarEvent): string {
-  if (event.isAllDay) return 'All day';
+  if (event.isAllDay) return "All day";
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
-  const startStr = start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-  const endStr = end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const startStr = start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const endStr = end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   return `${startStr} - ${endStr}`;
 }
 
@@ -52,10 +56,10 @@ function EventItem({
     <Link
       to={`/calendar?event=${event.id}`}
       className={cn(
-        'group flex items-start gap-3 rounded-lg p-2.5 -mx-2 transition-colors',
-        isCurrent && 'bg-primary/5 border border-primary/20',
-        isNext && 'bg-muted/50',
-        !isCurrent && !isNext && 'hover:bg-muted/50',
+        "group flex items-start gap-3 rounded-lg p-2.5 -mx-2 transition-colors",
+        isCurrent && "bg-primary/5 border border-primary/20",
+        isNext && "bg-muted/50",
+        !isCurrent && !isNext && "hover:bg-muted/50",
       )}
     >
       <div
@@ -117,16 +121,18 @@ export function TodayAgendaWidget() {
 
     const timed = todayEvents
       .filter((e: CalendarEvent) => !e.isAllDay)
-      .sort((a: CalendarEvent, b: CalendarEvent) =>
-        new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+      .sort(
+        (a: CalendarEvent, b: CalendarEvent) =>
+          new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
       );
 
     let nextOutside: CalendarEvent | null = null;
     if (todayEvents.length === 0) {
       const future = Object.values(events)
         .filter((e: CalendarEvent) => new Date(e.startTime) > now)
-        .sort((a: CalendarEvent, b: CalendarEvent) =>
-          new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        .sort(
+          (a: CalendarEvent, b: CalendarEvent) =>
+            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
         );
       nextOutside = future[0] ?? null;
     }
@@ -142,7 +148,7 @@ export function TodayAgendaWidget() {
 
   const getCategoryColor = (categoryId: string): string => {
     const category = categories[categoryId];
-    return category?.color ?? '#f43f5e';
+    return category?.color ?? "#f43f5e";
   };
 
   const isEmpty = allDayEvents.length === 0 && timedEvents.length === 0 && !isLoading;
@@ -174,7 +180,7 @@ export function TodayAgendaWidget() {
               to={`/calendar?event=${nextEventOutsideToday.id}`}
               className="mt-1 text-sm text-primary hover:text-primary/80 transition-colors"
             >
-              Next: {nextEventOutsideToday.title} on{' '}
+              Next: {nextEventOutsideToday.title} on{" "}
               {formatDateFull(nextEventOutsideToday.startTime)}
             </Link>
           </div>
@@ -184,8 +190,8 @@ export function TodayAgendaWidget() {
             title="No events today"
             description="Create one to get started"
             action={{
-              label: 'Create event',
-              onClick: () => navigate('/calendar?new=true'),
+              label: "Create event",
+              onClick: () => navigate("/calendar?new=true"),
             }}
           />
         )

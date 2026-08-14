@@ -1,9 +1,9 @@
 /** One persistent stream per session; channel filtering happens client-side against the active channelId. */
 
-import { useEffect, useRef } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { chatStreamApi } from '@/features/chat/api/chatApi';
-import { messageToPlain, channelToPlain, timestampToIso } from '@/features/chat/api/chatConverters';
+import { useEffect, useRef } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { chatStreamApi } from "@/features/chat/api/chatApi";
+import { messageToPlain, channelToPlain, timestampToIso } from "@/features/chat/api/chatConverters";
 import {
   appendMessage,
   updateMessage,
@@ -17,26 +17,40 @@ import {
   removeReactionFromMessage,
   appendDelta,
   appendAgentThinking,
-} from '@/features/chat/store/chatMessagesSlice';
-import { fetchMembers, fetchThreadsInbox, fetchDrafts, markChannelRead, clearActiveChannelUnread } from '@/features/chat/store/chatThunks';
-import { draftUpserted, draftRemoved, draftKey } from '@/features/chat/store/chatDraftsSlice';
-import { draftClientSessionId } from '@/features/chat/api/draftSession';
+} from "@/features/chat/store/chatMessagesSlice";
+import {
+  fetchMembers,
+  fetchThreadsInbox,
+  fetchDrafts,
+  markChannelRead,
+  clearActiveChannelUnread,
+} from "@/features/chat/store/chatThunks";
+import { draftUpserted, draftRemoved, draftKey } from "@/features/chat/store/chatDraftsSlice";
+import { draftClientSessionId } from "@/features/chat/api/draftSession";
 import {
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
   appendThreadMessage,
   appendDeltaToThreadMessage,
-} from '@/features/chat/store/chatThreadsSlice';
-import { updateChannel, incrementUnreadCount, updateUnreadCounts, addChannel, removeChannel, touchChannelActivity, setMemberRole } from '@/features/chat/store/chatChannelsSlice';
-import { isDocumentVisible } from '@/shared/utils/documentVisibility';
-import { chatApi } from '@/features/chat/api/chatApi';
-import { channelToPlain as apiChannelToPlain } from '@/features/chat/api/chatConverters';
-import { ChatEventType, UserChatEventType } from '@uniffy/proto/chat/v1/chat_stream_pb';
-import { ChannelRole } from '@uniffy/proto/chat/v1/chat_pb';
-import { handleCallStreamEvent } from '@/features/calls/streamHandlers';
-import { syncActiveCalls } from '@/features/calls/store/callsThunks';
-import type { AppDispatch } from '@/app/store';
-import type { StreamUserChatEventsResponse } from '@uniffy/proto/chat/v1/chat_stream_pb';
+} from "@/features/chat/store/chatThreadsSlice";
+import {
+  updateChannel,
+  incrementUnreadCount,
+  updateUnreadCounts,
+  addChannel,
+  removeChannel,
+  touchChannelActivity,
+  setMemberRole,
+} from "@/features/chat/store/chatChannelsSlice";
+import { isDocumentVisible } from "@/shared/utils/documentVisibility";
+import { chatApi } from "@/features/chat/api/chatApi";
+import { channelToPlain as apiChannelToPlain } from "@/features/chat/api/chatConverters";
+import { ChatEventType, UserChatEventType } from "@uniffy/proto/chat/v1/chat_stream_pb";
+import { ChannelRole } from "@uniffy/proto/chat/v1/chat_pb";
+import { handleCallStreamEvent } from "@/features/calls/streamHandlers";
+import { syncActiveCalls } from "@/features/calls/store/callsThunks";
+import type { AppDispatch } from "@/app/store";
+import type { StreamUserChatEventsResponse } from "@uniffy/proto/chat/v1/chat_stream_pb";
 
 // At most one active stream connection per page.
 let _activeController: AbortController | null = null;
@@ -55,14 +69,14 @@ function hydrateChannel(
   organizationId: string,
   channelId: string,
   dispatch: AppDispatch,
-  mode: 'add' | 'update',
+  mode: "add" | "update",
 ): void {
   chatApi
     .getChannel({ organizationId, channelId })
     .then((res) => {
       if (!res.channel) return;
       const plain = channelToPlain(res.channel);
-      dispatch(mode === 'add' ? addChannel(plain) : updateChannel(plain));
+      dispatch(mode === "add" ? addChannel(plain) : updateChannel(plain));
     })
     .catch(() => {});
 }
@@ -73,9 +87,9 @@ function handleChannelEvent(
   currentUserId: string,
   organizationId: string,
   dispatch: AppDispatch,
-  getMessageById: (id: string) => import('@/features/chat/types').ChatMessage | undefined,
+  getMessageById: (id: string) => import("@/features/chat/types").ChatMessage | undefined,
 ): void {
-  if (event.payload.case !== 'channelEvent' || !event.payload.value) return;
+  if (event.payload.case !== "channelEvent" || !event.payload.value) return;
   const ce = event.payload.value;
   const channelId = ce.channelId;
 
@@ -84,22 +98,22 @@ function handleChannelEvent(
   // Channel lifecycle applies to every session of every member, whatever
   // channel each one happens to be looking at.
   if (ce.eventType === ChatEventType.CHANNEL_CREATED) {
-    hydrateChannel(organizationId, channelId, dispatch, 'add');
+    hydrateChannel(organizationId, channelId, dispatch, "add");
     return;
   }
 
   if (ce.eventType === ChatEventType.CHANNEL_UPDATED) {
-    if (ce.payload.case === 'channelUpdated' && ce.payload.value?.isArchived) {
+    if (ce.payload.case === "channelUpdated" && ce.payload.value?.isArchived) {
       dispatch(removeChannel(channelId));
       return;
     }
-    hydrateChannel(organizationId, channelId, dispatch, 'update');
+    hydrateChannel(organizationId, channelId, dispatch, "update");
     return;
   }
 
   // Member events apply globally, not just the active channel.
   if (ce.eventType === ChatEventType.MEMBER_JOINED) {
-    if (ce.payload.case === 'member' && ce.payload.value) {
+    if (ce.payload.case === "member" && ce.payload.value) {
       const joinedUserId = ce.payload.value.userId;
       if (joinedUserId === currentUserId) {
         chatApi
@@ -121,7 +135,7 @@ function handleChannelEvent(
   }
 
   if (ce.eventType === ChatEventType.MEMBER_LEFT) {
-    if (ce.payload.case === 'member' && ce.payload.value) {
+    if (ce.payload.case === "member" && ce.payload.value) {
       const leftUserId = ce.payload.value.userId;
       if (leftUserId === currentUserId) {
         dispatch(removeChannel(channelId));
@@ -135,19 +149,22 @@ function handleChannelEvent(
   }
 
   if (ce.eventType === ChatEventType.MEMBER_UPDATED) {
-    if (ce.payload.case === 'member' && ce.payload.value) {
+    if (ce.payload.case === "member" && ce.payload.value) {
       const { userId, role } = ce.payload.value;
-      dispatch(setMemberRole({
-        channelId,
-        userId,
-        role: role === ChannelRole.OWNER ? 'OWNER' : role === ChannelRole.ADMIN ? 'ADMIN' : 'MEMBER',
-      }));
+      dispatch(
+        setMemberRole({
+          channelId,
+          userId,
+          role:
+            role === ChannelRole.OWNER ? "OWNER" : role === ChannelRole.ADMIN ? "ADMIN" : "MEMBER",
+        }),
+      );
     }
     return;
   }
 
   if (ce.eventType === ChatEventType.MEMBERS_ADDED) {
-    if (ce.payload.case === 'membersChanged' && ce.payload.value) {
+    if (ce.payload.case === "membersChanged" && ce.payload.value) {
       const ids = ce.payload.value.userIds || [];
       if (ids.includes(currentUserId)) {
         chatApi
@@ -168,12 +185,12 @@ function handleChannelEvent(
     if (activeChannelId && channelId === activeChannelId) {
       dispatch(fetchMembers(activeChannelId));
     }
-    hydrateChannel(organizationId, channelId, dispatch, 'update');
+    hydrateChannel(organizationId, channelId, dispatch, "update");
     return;
   }
 
   if (ce.eventType === ChatEventType.MEMBERS_REMOVED) {
-    if (ce.payload.case === 'membersChanged' && ce.payload.value) {
+    if (ce.payload.case === "membersChanged" && ce.payload.value) {
       const ids = ce.payload.value.userIds || [];
       if (ids.includes(currentUserId)) {
         dispatch(removeChannel(channelId));
@@ -183,20 +200,26 @@ function handleChannelEvent(
     if (activeChannelId && channelId === activeChannelId) {
       dispatch(fetchMembers(activeChannelId));
     }
-    hydrateChannel(organizationId, channelId, dispatch, 'update');
+    hydrateChannel(organizationId, channelId, dispatch, "update");
     return;
   }
 
   // Sidebar last-activity ordering: every new message bumps its channel,
   // whether or not that channel is the one on screen.
-  if (ce.eventType === ChatEventType.MESSAGE_CREATED && ce.payload.case === 'message' && ce.payload.value) {
+  if (
+    ce.eventType === ChatEventType.MESSAGE_CREATED &&
+    ce.payload.case === "message" &&
+    ce.payload.value
+  ) {
     const created = timestampToIso(ce.payload.value.createdAt);
     if (created) {
-      dispatch(touchChannelActivity({
-        channelId,
-        at: created,
-        isRoot: !ce.payload.value.rootId,
-      }));
+      dispatch(
+        touchChannelActivity({
+          channelId,
+          at: created,
+          isRoot: !ce.payload.value.rootId,
+        }),
+      );
     }
   }
 
@@ -204,12 +227,12 @@ function handleChannelEvent(
 
   switch (ce.eventType) {
     case ChatEventType.MESSAGE_CREATED: {
-      if (ce.payload.case === 'message' && ce.payload.value) {
+      if (ce.payload.case === "message" && ce.payload.value) {
         const msg = messageToPlain(ce.payload.value);
         // An agent emits several rows mid-turn (tool calls/results, the final
         // placeholder); its working indicator is owned by AGENT_TYPING
         // start/stop, so only a human's own message clears their typing entry.
-        if (msg.senderType !== 'AGENT') {
+        if (msg.senderType !== "AGENT") {
           dispatch(clearTypingUser({ channelId: activeChannelId, userId: msg.senderId }));
         }
         if (msg.rootId) {
@@ -221,7 +244,9 @@ function handleChannelEvent(
           // the real id clears the just-arrived message too. Skip own sends;
           // thread replies do not count toward the channel badge.
           if (msg.senderId !== currentUserId && isDocumentVisible()) {
-            dispatch(updateUnreadCounts([{ channelId: activeChannelId, unreadCount: 0, mentionCount: 0 }]));
+            dispatch(
+              updateUnreadCounts([{ channelId: activeChannelId, unreadCount: 0, mentionCount: 0 }]),
+            );
             dispatch(markChannelRead({ channelId: activeChannelId, lastReadMessageId: msg.id }));
           }
         }
@@ -229,117 +254,137 @@ function handleChannelEvent(
       break;
     }
     case ChatEventType.MESSAGE_UPDATED: {
-      if (ce.payload.case === 'message' && ce.payload.value) {
-        dispatch(updateMessage({ channelId: activeChannelId, message: messageToPlain(ce.payload.value) }));
+      if (ce.payload.case === "message" && ce.payload.value) {
+        dispatch(
+          updateMessage({ channelId: activeChannelId, message: messageToPlain(ce.payload.value) }),
+        );
       }
       break;
     }
     case ChatEventType.MESSAGE_DELETED: {
-      if (ce.payload.case === 'messageDeleted' && ce.payload.value) {
-        dispatch(deleteMessage({ channelId: activeChannelId, messageId: ce.payload.value.messageId }));
+      if (ce.payload.case === "messageDeleted" && ce.payload.value) {
+        dispatch(
+          deleteMessage({ channelId: activeChannelId, messageId: ce.payload.value.messageId }),
+        );
       }
       break;
     }
     case ChatEventType.THREAD_UPDATED: {
-      if (ce.payload.case === 'threadUpdated' && ce.payload.value) {
+      if (ce.payload.case === "threadUpdated" && ce.payload.value) {
         const p = ce.payload.value;
         const existing = getMessageById(p.rootMessageId);
         const existingParticipants = existing?.thread?.participantIds ?? [];
         const updatedParticipants = existingParticipants.includes(p.latestParticipantId)
           ? existingParticipants
           : [...existingParticipants, p.latestParticipantId];
-        dispatch(updateMessage({
-          channelId: activeChannelId,
-          message: {
-            id: p.rootMessageId,
+        dispatch(
+          updateMessage({
             channelId: activeChannelId,
-            thread: {
-              replyCount: p.replyCount,
-              lastReplyAt: timestampToIso(p.lastReplyAt) ?? new Date().toISOString(),
-              participantIds: updatedParticipants,
-              hasUnread: existing?.thread?.hasUnread ?? false,
-            },
-          } as never,
-        }));
+            message: {
+              id: p.rootMessageId,
+              channelId: activeChannelId,
+              thread: {
+                replyCount: p.replyCount,
+                lastReplyAt: timestampToIso(p.lastReplyAt) ?? new Date().toISOString(),
+                participantIds: updatedParticipants,
+                hasUnread: existing?.thread?.hasUnread ?? false,
+              },
+            } as never,
+          }),
+        );
       }
       break;
     }
     case ChatEventType.TYPING_STARTED: {
-      if (ce.payload.case === 'typing' && ce.payload.value) {
-        dispatch(setTypingUser({
-          channelId: activeChannelId,
-          userId: ce.payload.value.userId,
-          displayName: ce.payload.value.displayName,
-        }));
+      if (ce.payload.case === "typing" && ce.payload.value) {
+        dispatch(
+          setTypingUser({
+            channelId: activeChannelId,
+            userId: ce.payload.value.userId,
+            displayName: ce.payload.value.displayName,
+          }),
+        );
       }
       break;
     }
     case ChatEventType.TYPING_STOPPED: {
-      if (ce.payload.case === 'typing' && ce.payload.value) {
+      if (ce.payload.case === "typing" && ce.payload.value) {
         dispatch(clearTypingUser({ channelId: activeChannelId, userId: ce.payload.value.userId }));
       }
       break;
     }
     case ChatEventType.REACTION_ADDED: {
-      if (ce.payload.case === 'reaction' && ce.payload.value) {
+      if (ce.payload.case === "reaction" && ce.payload.value) {
         const { messageId, emoji, userId } = ce.payload.value;
-        dispatch(addReactionToMessage({
-          channelId: activeChannelId,
-          messageId,
-          emoji,
-          userId,
-          currentUserId,
-        }));
-        dispatch(addReactionToThreadMessage({
-          messageId,
-          emoji,
-          userId,
-          currentUserId,
-        }));
+        dispatch(
+          addReactionToMessage({
+            channelId: activeChannelId,
+            messageId,
+            emoji,
+            userId,
+            currentUserId,
+          }),
+        );
+        dispatch(
+          addReactionToThreadMessage({
+            messageId,
+            emoji,
+            userId,
+            currentUserId,
+          }),
+        );
       }
       break;
     }
     case ChatEventType.REACTION_REMOVED: {
-      if (ce.payload.case === 'reaction' && ce.payload.value) {
+      if (ce.payload.case === "reaction" && ce.payload.value) {
         const { messageId, emoji, userId } = ce.payload.value;
-        dispatch(removeReactionFromMessage({
-          channelId: activeChannelId,
-          messageId,
-          emoji,
-          userId,
-          currentUserId,
-        }));
-        dispatch(removeReactionFromThreadMessage({
-          messageId,
-          emoji,
-          userId,
-          currentUserId,
-        }));
+        dispatch(
+          removeReactionFromMessage({
+            channelId: activeChannelId,
+            messageId,
+            emoji,
+            userId,
+            currentUserId,
+          }),
+        );
+        dispatch(
+          removeReactionFromThreadMessage({
+            messageId,
+            emoji,
+            userId,
+            currentUserId,
+          }),
+        );
       }
       break;
     }
     case ChatEventType.AGENT_TYPING: {
-      if (ce.payload.case === 'agentTyping' && ce.payload.value) {
+      if (ce.payload.case === "agentTyping" && ce.payload.value) {
         const { agentId, displayName, started, rootId } = ce.payload.value;
         if (started) {
-          dispatch(setAgentTyping({
-            channelId: activeChannelId,
-            agentId,
-            displayName,
-            rootId: rootId || undefined,
-          }));
+          dispatch(
+            setAgentTyping({
+              channelId: activeChannelId,
+              agentId,
+              displayName,
+              rootId: rootId || undefined,
+            }),
+          );
         } else {
-          dispatch(clearAgentTyping({
-            channelId: activeChannelId,
-            agentId,
-            rootId: rootId || undefined,
-          }));
+          dispatch(
+            clearAgentTyping({
+              channelId: activeChannelId,
+              agentId,
+              rootId: rootId || undefined,
+            }),
+          );
         }
       }
       break;
     }
     case ChatEventType.AGENT_TOKEN_DELTA: {
-      if (ce.payload.case === 'agentTokenDelta' && ce.payload.value) {
+      if (ce.payload.case === "agentTokenDelta" && ce.payload.value) {
         const { messageId, delta, sequence, final } = ce.payload.value;
         // Placeholder lives in channel store OR thread bucket; dispatch to both, the non-owner no-ops.
         const payload = {
@@ -350,26 +395,30 @@ function handleChannelEvent(
           final,
         };
         dispatch(appendDelta(payload));
-        dispatch(appendDeltaToThreadMessage({
-          messageId,
-          delta,
-          sequence: Number(sequence),
-          final,
-        }));
+        dispatch(
+          appendDeltaToThreadMessage({
+            messageId,
+            delta,
+            sequence: Number(sequence),
+            final,
+          }),
+        );
       }
       break;
     }
     case ChatEventType.AGENT_THINKING_DELTA: {
-      if (ce.payload.case === 'agentThinkingDelta' && ce.payload.value) {
+      if (ce.payload.case === "agentThinkingDelta" && ce.payload.value) {
         const { messageId, blockId, delta, sequence, final, elapsedMs } = ce.payload.value;
-        dispatch(appendAgentThinking({
-          messageId,
-          blockId,
-          delta,
-          sequence: Number(sequence),
-          final,
-          elapsedMs: Number(elapsedMs),
-        }));
+        dispatch(
+          appendAgentThinking({
+            messageId,
+            blockId,
+            delta,
+            sequence: Number(sequence),
+            final,
+            elapsedMs: Number(elapsedMs),
+          }),
+        );
       }
       break;
     }
@@ -378,22 +427,22 @@ function handleChannelEvent(
       break;
     }
     case ChatEventType.AGENT_CONFIRMATION_REQUESTED: {
-      if (ce.payload.case === 'agentConfirmationRequested' && ce.payload.value) {
+      if (ce.payload.case === "agentConfirmationRequested" && ce.payload.value) {
         const p = ce.payload.value;
         const expiresIso = p.expiresAt ? timestampToIso(p.expiresAt) : null;
-        const synthetic: import('@/features/chat/types').ChatMessage = {
+        const synthetic: import("@/features/chat/types").ChatMessage = {
           id: p.requestId,
           channelId: activeChannelId,
           senderId: p.agentId,
-          senderType: 'AGENT',
-          content: '',
+          senderType: "AGENT",
+          content: "",
           rootId: null,
           replyToId: null,
           editedAt: null,
           isDeleted: false,
           isPinned: false,
           metadata: {
-            kind: 'confirmation_request',
+            kind: "confirmation_request",
             agent_id: p.agentId,
             request_id: p.requestId,
             message_id: p.messageId,
@@ -411,7 +460,7 @@ function handleChannelEvent(
       break;
     }
     case ChatEventType.AGENT_CONFIRMATION_RESOLVED: {
-      if (ce.payload.case === 'agentConfirmationResolved' && ce.payload.value) {
+      if (ce.payload.case === "agentConfirmationResolved" && ce.payload.value) {
         const { requestId } = ce.payload.value;
         dispatch(removeMessage({ channelId: activeChannelId, messageId: requestId }));
       }
@@ -424,7 +473,7 @@ function usePersistentChatStream() {
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
-  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
+  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const channelIds = useAppSelector((state) => state.chatChannels.ids);
 
   // Refs keep the effect from re-running on channel switch or user change.
@@ -447,11 +496,11 @@ function usePersistentChatStream() {
         dispatch(clearActiveChannelUnread());
       }
     };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
     return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
     };
   }, [dispatch]);
 
@@ -499,7 +548,7 @@ function usePersistentChatStream() {
 
             switch (event.eventType) {
               case UserChatEventType.UNREAD_COUNT_CHANGED: {
-                if (event.payload.case === 'unreadCount' && event.payload.value) {
+                if (event.payload.case === "unreadCount" && event.payload.value) {
                   const p = event.payload.value;
 
                   // Channel open and window focused: the user is reading it now.
@@ -509,7 +558,11 @@ function usePersistentChatStream() {
                   if (p.channelId === channelIdRef.current && isDocumentVisible()) {
                     // Reading it live: keep the badge clear. The MESSAGE_CREATED
                     // handler advances the server read cursor with the real id.
-                    dispatch(updateUnreadCounts([{ channelId: p.channelId, unreadCount: 0, mentionCount: 0 }]));
+                    dispatch(
+                      updateUnreadCounts([
+                        { channelId: p.channelId, unreadCount: 0, mentionCount: 0 },
+                      ]),
+                    );
                     break;
                   }
 
@@ -537,16 +590,25 @@ function usePersistentChatStream() {
                         fetchingChannelsRef.current.delete(p.channelId);
                       });
                   } else {
-                    dispatch(incrementUnreadCount({
-                      channelId: p.channelId,
-                      mentionCount: p.mentionCount > 0 ? p.mentionCount : undefined,
-                    }));
+                    dispatch(
+                      incrementUnreadCount({
+                        channelId: p.channelId,
+                        mentionCount: p.mentionCount > 0 ? p.mentionCount : undefined,
+                      }),
+                    );
                   }
                 }
                 break;
               }
               case UserChatEventType.CHANNEL_EVENT: {
-                handleChannelEvent(event, channelIdRef.current, userIdRef.current, organizationId!, dispatch, (id) => byIdRef.current[id]);
+                handleChannelEvent(
+                  event,
+                  channelIdRef.current,
+                  userIdRef.current,
+                  organizationId!,
+                  dispatch,
+                  (id) => byIdRef.current[id],
+                );
                 break;
               }
               case UserChatEventType.THREAD_ACTIVITY: {
@@ -554,33 +616,41 @@ function usePersistentChatStream() {
                 break;
               }
               case UserChatEventType.MENTION_RECEIVED: {
-                if (event.payload.case === 'mentionReceived' && event.payload.value) {
+                if (event.payload.case === "mentionReceived" && event.payload.value) {
                   const p = event.payload.value;
                   if (p.channelId === channelIdRef.current && isDocumentVisible()) {
-                    dispatch(updateUnreadCounts([{ channelId: p.channelId, unreadCount: 0, mentionCount: 0 }]));
+                    dispatch(
+                      updateUnreadCounts([
+                        { channelId: p.channelId, unreadCount: 0, mentionCount: 0 },
+                      ]),
+                    );
                     break;
                   }
-                  dispatch(incrementUnreadCount({
-                    channelId: p.channelId,
-                    mentionCount: 1,
-                  }));
+                  dispatch(
+                    incrementUnreadCount({
+                      channelId: p.channelId,
+                      mentionCount: 1,
+                    }),
+                  );
                 }
                 break;
               }
               case UserChatEventType.DRAFT_CHANGED: {
-                if (event.payload.case === 'draftChanged' && event.payload.value) {
+                if (event.payload.case === "draftChanged" && event.payload.value) {
                   const p = event.payload.value;
                   // Skip our own echo; applying it would fight the local composer.
                   if (p.clientSessionId === draftClientSessionId) break;
                   if (p.deleted) {
                     dispatch(draftRemoved(draftKey(p.channelId, p.rootMessageId)));
                   } else {
-                    dispatch(draftUpserted({
-                      channelId: p.channelId,
-                      rootMessageId: p.rootMessageId ?? null,
-                      content: p.content,
-                      updatedAt: timestampToIso(p.updatedAt) ?? new Date().toISOString(),
-                    }));
+                    dispatch(
+                      draftUpserted({
+                        channelId: p.channelId,
+                        rootMessageId: p.rootMessageId ?? null,
+                        content: p.content,
+                        updatedAt: timestampToIso(p.updatedAt) ?? new Date().toISOString(),
+                      }),
+                    );
                   }
                 }
                 break;
@@ -596,7 +666,7 @@ function usePersistentChatStream() {
         if (!mounted) break;
 
         const jitter = Math.random() * 1000;
-        await new Promise(resolve => setTimeout(resolve, backoff + jitter));
+        await new Promise((resolve) => setTimeout(resolve, backoff + jitter));
         backoff = Math.min(backoff * 2, MAX_BACKOFF_MS);
       }
     }

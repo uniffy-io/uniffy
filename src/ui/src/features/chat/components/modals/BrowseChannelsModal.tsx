@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { X, Hash, MagnifyingGlass, Users, SignIn } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { selectChannels } from '@/features/chat/store/chatChannelsSlice';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Modal } from '@/components/ui/modal';
-import { closeBrowseChannelsModal } from '@/features/chat/store/chatUiSlice';
-import { fetchPublicChannels, joinChannel } from '@/features/chat/store/chatThunks';
-import type { ChatChannel } from '@/features/chat/types';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { X, Hash, MagnifyingGlass, Users, SignIn } from "@phosphor-icons/react";
+import { useNavigate } from "react-router-dom";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { selectChannels } from "@/features/chat/store/chatChannelsSlice";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { closeBrowseChannelsModal } from "@/features/chat/store/chatUiSlice";
+import { fetchPublicChannels, joinChannel } from "@/features/chat/store/chatThunks";
+import type { ChatChannel } from "@/features/chat/types";
 
 export function BrowseChannelsModal() {
   const dispatch = useAppDispatch();
@@ -17,7 +17,7 @@ export function BrowseChannelsModal() {
 
   const [publicChannels, setPublicChannels] = useState<ChatChannel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [joiningId, setJoiningId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -31,62 +31,66 @@ export function BrowseChannelsModal() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [dispatch]);
 
   const handleClose = useCallback(() => {
     dispatch(closeBrowseChannelsModal());
   }, [dispatch]);
 
-  const myChannelIds = useMemo(
-    () => new Set(myChannels.map(c => c.id)),
-    [myChannels],
-  );
+  const myChannelIds = useMemo(() => new Set(myChannels.map((c) => c.id)), [myChannels]);
 
   const filteredChannels = useMemo(() => {
     const query = searchQuery.toLowerCase();
-    return publicChannels.filter(c =>
-      !query ||
-      c.name.toLowerCase().includes(query) ||
-      c.description.toLowerCase().includes(query)
+    return publicChannels.filter(
+      (c) =>
+        !query ||
+        c.name.toLowerCase().includes(query) ||
+        c.description.toLowerCase().includes(query),
     );
   }, [publicChannels, searchQuery]);
 
-  const handleJoin = useCallback(async (channelId: string) => {
-    setJoiningId(channelId);
-    try {
-      await dispatch(joinChannel(channelId)).unwrap();
+  const handleJoin = useCallback(
+    async (channelId: string) => {
+      setJoiningId(channelId);
+      try {
+        await dispatch(joinChannel(channelId)).unwrap();
+        navigate(`/chat/${channelId}`);
+        handleClose();
+      } finally {
+        setJoiningId(null);
+      }
+    },
+    [dispatch, navigate, handleClose],
+  );
+
+  const handleOpen = useCallback(
+    (channelId: string) => {
       navigate(`/chat/${channelId}`);
       handleClose();
-    } finally {
-      setJoiningId(null);
-    }
-  }, [dispatch, navigate, handleClose]);
-
-  const handleOpen = useCallback((channelId: string) => {
-    navigate(`/chat/${channelId}`);
-    handleClose();
-  }, [navigate, handleClose]);
+    },
+    [navigate, handleClose],
+  );
 
   return (
     <Modal onClose={handleClose} className="flex flex-col max-h-[80vh]">
       <div data-testid="chat-browse-channels-modal" className="flex flex-col max-h-[80vh]">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-        <div className="flex items-center gap-2">
-          <Hash size={20} weight="bold" className="text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">
-            Browse Channels
-          </h3>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <Hash size={20} weight="bold" className="text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">Browse Channels</h3>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            data-testid="chat-browse-channels-close"
+          >
+            <X size={20} />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleClose}
-          className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          data-testid="chat-browse-channels-close"
-        >
-          <X size={20} />
-        </button>
-      </div>
 
         <div className="px-6 py-3 border-b border-border shrink-0">
           <div className="relative">
@@ -115,19 +119,19 @@ export function BrowseChannelsModal() {
               <div className="text-center text-muted-foreground">
                 <Hash size={32} className="mx-auto mb-2 text-muted-foreground/30" />
                 <p className="text-sm">
-                  {searchQuery ? 'No channels match your search.' : 'No public channels yet.'}
+                  {searchQuery ? "No channels match your search." : "No public channels yet."}
                 </p>
               </div>
             </div>
           ) : (
-            filteredChannels.map(channel => {
+            filteredChannels.map((channel) => {
               const isMember = myChannelIds.has(channel.id);
               return (
                 <div
                   key={channel.id}
                   className="flex items-start gap-3 px-6 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors"
                   data-testid={`chat-browse-channels-row-${channel.id}`}
-                  data-member={isMember ? 'true' : 'false'}
+                  data-member={isMember ? "true" : "false"}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

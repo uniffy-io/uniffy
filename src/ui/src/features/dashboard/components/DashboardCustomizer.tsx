@@ -7,23 +7,23 @@ import {
   X,
   Check,
   Sliders,
-} from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import type { WidgetPreference, WidgetId } from '@/features/dashboard/hooks/useDashboardLayout';
+} from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import type { WidgetPreference, WidgetId } from "@/features/dashboard/hooks/useDashboardLayout";
 
 const WIDGET_LABELS: Record<WidgetId, string> = {
-  'today-agenda': "Today's Agenda",
-  'my-tasks': 'My Tasks',
-  'recent-activity': 'Recent Activity',
-  'quick-actions': 'Quick Actions',
-  'team-presence': 'Team Online',
-  people: 'People',
-  notifications: 'Notifications',
-  'recent-notes': 'Recent Notes',
-  'recent-files': 'Recent Files',
-  bookmarks: 'Bookmarks',
-  analytics: 'Your Activity',
-  agents: 'Agent Sessions',
+  "today-agenda": "Today's Agenda",
+  "my-tasks": "My Tasks",
+  "recent-activity": "Recent Activity",
+  "quick-actions": "Quick Actions",
+  "team-presence": "Team Online",
+  people: "People",
+  notifications: "Notifications",
+  "recent-notes": "Recent Notes",
+  "recent-files": "Recent Files",
+  bookmarks: "Bookmarks",
+  analytics: "Your Activity",
+  agents: "Agent Sessions",
 };
 
 interface DashboardCustomizerButtonProps {
@@ -35,9 +35,9 @@ export function DashboardCustomizerButton({ onStartEditing }: DashboardCustomize
     <button
       onClick={onStartEditing}
       className={cn(
-        'flex items-center gap-1.5 text-xs text-muted-foreground',
-        'hover:text-foreground transition-colors px-2 py-1 rounded-md',
-        'hover:bg-muted/50',
+        "flex items-center gap-1.5 text-xs text-muted-foreground",
+        "hover:text-foreground transition-colors px-2 py-1 rounded-md",
+        "hover:bg-muted/50",
       )}
     >
       <Sliders size={14} />
@@ -97,20 +97,18 @@ export function DashboardCustomizerPanel({
           <div
             key={widget.id}
             className={cn(
-              'flex items-center justify-between rounded-lg border p-2.5 transition-colors',
-              widget.visible ? 'border-border bg-card' : 'border-border/50 bg-muted/30 opacity-60',
+              "flex items-center justify-between rounded-lg border p-2.5 transition-colors",
+              widget.visible ? "border-border bg-card" : "border-border/50 bg-muted/30 opacity-60",
             )}
           >
-            <span className="text-xs font-medium truncate mr-2">
-              {WIDGET_LABELS[widget.id]}
-            </span>
+            <span className="text-xs font-medium truncate mr-2">{WIDGET_LABELS[widget.id]}</span>
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => onToggleSize(widget.id)}
                 className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                title={widget.size === 'expanded' ? 'Compact' : 'Expanded'}
+                title={widget.size === "expanded" ? "Compact" : "Expanded"}
               >
-                {widget.size === 'expanded' ? (
+                {widget.size === "expanded" ? (
                   <ArrowsInSimple size={12} />
                 ) : (
                   <ArrowsOutSimple size={12} />
@@ -119,7 +117,7 @@ export function DashboardCustomizerPanel({
               <button
                 onClick={() => onToggleVisibility(widget.id)}
                 className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                title={widget.visible ? 'Hide' : 'Show'}
+                title={widget.visible ? "Hide" : "Show"}
               >
                 {widget.visible ? <Eye size={12} /> : <EyeSlash size={12} />}
               </button>

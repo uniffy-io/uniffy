@@ -1,18 +1,18 @@
 export type EventActivityAction =
-  | 'created'
-  | 'title_changed'
-  | 'schedule_changed'
-  | 'location_changed'
-  | 'meeting_changed'
-  | 'description_changed'
-  | 'category_changed'
-  | 'calendar_changed'
-  | 'recurrence_changed'
-  | 'reminders_changed'
-  | 'attendees_added'
-  | 'attendees_removed'
-  | 'response_changed'
-  | 'field_updated';
+  | "created"
+  | "title_changed"
+  | "schedule_changed"
+  | "location_changed"
+  | "meeting_changed"
+  | "description_changed"
+  | "category_changed"
+  | "calendar_changed"
+  | "recurrence_changed"
+  | "reminders_changed"
+  | "attendees_added"
+  | "attendees_removed"
+  | "response_changed"
+  | "field_updated";
 
 export interface EventActivity {
   id: string;

@@ -1,18 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import * as Y from 'yjs';
-import { useAppSelector } from '@/app/hooks';
-import { useDocSession, type RealtimeStatus } from '@/features/realtime';
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as Y from "yjs";
+import { useAppSelector } from "@/app/hooks";
+import { useDocSession, type RealtimeStatus } from "@/features/realtime";
 import {
   Y_CANVAS_DEFAULTS_FIELD,
   Y_CANVAS_EDGES_FIELD,
   Y_CANVAS_NODES_FIELD,
   Y_CANVAS_ORDER_FIELD,
   getCanvasYTypes,
-} from '@/features/notes/realtime/canvasBinding';
+} from "@/features/notes/realtime/canvasBinding";
 
 export interface CanvasRealtimeBinding {
   ydoc: Y.Doc;
-  awareness: import('y-protocols/awareness').Awareness;
+  awareness: import("y-protocols/awareness").Awareness;
   sessionId: string;
   undoManager: Y.UndoManager;
   whenSynced: Promise<void>;
@@ -30,7 +30,7 @@ export function useCanvasRealtimeSession(
   status: RealtimeStatus;
 } {
   const session = useDocSession({
-    contentType: 'NOTE',
+    contentType: "NOTE",
     contentId: noteId,
     enabled: enabled && Boolean(noteId),
   });
@@ -80,22 +80,15 @@ export function useCanvasRealtimeSession(
   // Awareness user payload in its own effect so avatar/name changes do not rebuild UndoManager.
   useEffect(() => {
     if (!session) return;
-    session.awareness.setLocalStateField('user', {
+    session.awareness.setLocalStateField("user", {
       id: user?.id ?? null,
       // Peers paint carets, labels and avatars from the name via
       // ``identityPaint``, so no color travels on the wire.
-      name: user?.fullName ?? user?.username ?? 'Anonymous',
+      name: user?.fullName ?? user?.username ?? "Anonymous",
       avatarUrl: user?.avatarUrl ?? null,
       hasAvatar: user?.hasAvatar ?? false,
     });
-  }, [
-    session,
-    user?.id,
-    user?.fullName,
-    user?.username,
-    user?.hasAvatar,
-    user?.avatarUrl,
-  ]);
+  }, [session, user?.id, user?.fullName, user?.username, user?.hasAvatar, user?.avatarUrl]);
 
   const binding = useMemo<CanvasRealtimeBinding | null>(() => {
     if (!session || !undoManager) return null;
@@ -113,5 +106,5 @@ export function useCanvasRealtimeSession(
     };
   }, [session, undoManager]);
 
-  return { binding, status: session?.status ?? 'idle' };
+  return { binding, status: session?.status ?? "idle" };
 }

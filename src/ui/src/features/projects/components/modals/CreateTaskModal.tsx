@@ -50,19 +50,15 @@ export function CreateTaskModal() {
   }, []);
 
   // Get field options from project
-  const statusField = project?.fieldDefinitions.find(
-    (f) => f.id === SYSTEM_FIELD_IDS.STATUS
-  );
-  const priorityField = project?.fieldDefinitions.find(
-    (f) => f.id === SYSTEM_FIELD_IDS.PRIORITY
-  );
+  const statusField = project?.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
+  const priorityField = project?.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.PRIORITY);
   const statusOptions = useMemo(
     () => statusField?.config.options || [],
-    [statusField?.config.options]
+    [statusField?.config.options],
   );
   const priorityOptions = useMemo(
     () => priorityField?.config.options || [],
-    [priorityField?.config.options]
+    [priorityField?.config.options],
   );
 
   // Set defaults
@@ -113,9 +109,7 @@ export function CreateTaskModal() {
       taskType,
       project.typeFieldSchemas || {},
     );
-    const fields = project.fieldDefinitions.filter(
-      (f) => !f.isSystem && visibleFieldIds.has(f.id)
-    );
+    const fields = project.fieldDefinitions.filter((f) => !f.isSystem && visibleFieldIds.has(f.id));
     return { fields, requiredIds: requiredFieldIds };
   }, [project, taskType]);
 
@@ -149,24 +143,27 @@ export function CreateTaskModal() {
           dueDate: dueDate || null,
           taskType,
           recurrenceRule: recurrenceRule || null,
-          fieldValues: Object.keys(submittableFieldValues).length > 0 ? submittableFieldValues : undefined,
+          fieldValues:
+            Object.keys(submittableFieldValues).length > 0 ? submittableFieldValues : undefined,
           tagIds: tagIds.length ? tagIds : undefined,
-        })
+        }),
       ).unwrap();
 
       // Attach any files that were uploaded during creation (deferred mode)
       if (pendingFileIdsRef.current.length > 0 && organizationId && result.task.id) {
         await Promise.all(
           pendingFileIdsRef.current.map((fileId) =>
-            attachmentsApi.attachFile({
-              organizationId,
-              sourceFileId: fileId,
-              contentType: ContentType.TASK,
-              contentId: result.task.id,
-            }).catch((err) => {
-              console.error('[CreateTaskModal] Failed to attach file:', err);
-            })
-          )
+            attachmentsApi
+              .attachFile({
+                organizationId,
+                sourceFileId: fileId,
+                contentType: ContentType.TASK,
+                contentId: result.task.id,
+              })
+              .catch((err) => {
+                console.error("[CreateTaskModal] Failed to attach file:", err);
+              }),
+          ),
         );
         pendingFileIdsRef.current = [];
       }
@@ -207,9 +204,7 @@ export function CreateTaskModal() {
           <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
             {/* Issue Type */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Type
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Type</label>
               <div className="flex gap-2 flex-wrap">
                 {TASK_TYPES.map((type) => {
                   const TypeIcon = type.icon;
@@ -224,13 +219,10 @@ export function CreateTaskModal() {
                         "flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm transition-colors",
                         isActive
                           ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
                       )}
                     >
-                      <TypeIcon
-                        size={14}
-                        weight={isActive ? "fill" : "regular"}
-                      />
+                      <TypeIcon size={14} weight={isActive ? "fill" : "regular"} />
                       {type.label}
                     </button>
                   );
@@ -240,9 +232,7 @@ export function CreateTaskModal() {
 
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Title
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Title</label>
               <Input
                 ref={inputRef}
                 type="text"
@@ -257,9 +247,7 @@ export function CreateTaskModal() {
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
                 Description
-                <span className="text-muted-foreground font-normal ml-1">
-                  (optional)
-                </span>
+                <span className="text-muted-foreground font-normal ml-1">(optional)</span>
               </label>
               <ExpandableEditor
                 contentType={ContentType.TASK}
@@ -277,9 +265,7 @@ export function CreateTaskModal() {
             {/* Status & Priority row */}
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Status
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Status</label>
                 <Select
                   value={status}
                   onChange={setStatus}
@@ -294,9 +280,7 @@ export function CreateTaskModal() {
               </div>
 
               <div className="flex-1">
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Priority
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Priority</label>
                 <Select
                   value={priority}
                   onChange={setPriority}
@@ -313,9 +297,7 @@ export function CreateTaskModal() {
 
             {/* Assignees */}
             <div className="relative" ref={assigneeDropdownRef}>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Assignees
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Assignees</label>
 
               {/* Dropdown trigger */}
               <button
@@ -329,7 +311,7 @@ export function CreateTaskModal() {
                   "transition-colors hover:bg-muted/50",
                   "focus:outline-none focus:ring-2 focus:ring-ring",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "text-muted-foreground"
+                  "text-muted-foreground",
                 )}
               >
                 <span className="flex-1 text-left truncate">Select assignees...</span>
@@ -364,9 +346,7 @@ export function CreateTaskModal() {
               </div>
 
               <div className="flex-1">
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Due Date
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Due Date</label>
                 <DatePicker
                   value={dueDate}
                   onChange={setDueDate}
@@ -380,9 +360,7 @@ export function CreateTaskModal() {
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
                 Tags
-                <span className="text-muted-foreground font-normal ml-1">
-                  (optional)
-                </span>
+                <span className="text-muted-foreground font-normal ml-1">(optional)</span>
               </label>
               <TagPicker
                 selectedTagIds={tagIds}
@@ -418,10 +396,12 @@ export function CreateTaskModal() {
                           value={(fieldValues[field.id] as string) ?? ""}
                           onChange={(v) => handleFieldValueChange(field.id, v || null)}
                           disabled={isSubmitting}
-                          options={(field.config.options as SelectOption[] | undefined)?.map((opt) => ({
-                            value: opt.id,
-                            label: opt.label,
-                          })) ?? []}
+                          options={
+                            (field.config.options as SelectOption[] | undefined)?.map((opt) => ({
+                              value: opt.id,
+                              label: opt.label,
+                            })) ?? []
+                          }
                           placeholder={`Select ${field.name.toLowerCase()}...`}
                           className="w-full"
                         />
@@ -429,14 +409,21 @@ export function CreateTaskModal() {
                         <MultiSelectField
                           options={field.config.options || []}
                           value={parseMultiSelectValue(fieldValues[field.id])}
-                          onChange={(ids) => handleFieldValueChange(field.id, ids.length > 0 ? ids : null)}
+                          onChange={(ids) =>
+                            handleFieldValueChange(field.id, ids.length > 0 ? ids : null)
+                          }
                           disabled={isSubmitting}
                           placeholder={`Select ${field.name.toLowerCase()}...`}
                         />
                       ) : field.type === "number" ? (
                         <NumberInput
                           value={(fieldValues[field.id] as string) ?? ""}
-                          onChange={(e) => handleFieldValueChange(field.id, e.target.value ? Number(e.target.value) : null)}
+                          onChange={(e) =>
+                            handleFieldValueChange(
+                              field.id,
+                              e.target.value ? Number(e.target.value) : null,
+                            )
+                          }
                           disabled={isSubmitting}
                         />
                       ) : field.type === "date" ? (
@@ -463,12 +450,7 @@ export function CreateTaskModal() {
 
           {/* Footer */}
           <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={!title.trim() || isSubmitting}>

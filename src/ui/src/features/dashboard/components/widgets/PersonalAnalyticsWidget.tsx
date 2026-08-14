@@ -1,16 +1,20 @@
-import { useMemo } from 'react';
-import { ChartLine } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { WidgetCard, EmptyWidget } from '@/features/dashboard/components/widgets/WidgetCard';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { AreaChart, Area, Tooltip, ResponsiveContainer, XAxis } from 'recharts';
-import type { Task } from '@/features/projects/types/project';
+import { useMemo } from "react";
+import { ChartLine } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { WidgetCard, EmptyWidget } from "@/features/dashboard/components/widgets/WidgetCard";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { AreaChart, Area, Tooltip, ResponsiveContainer, XAxis } from "recharts";
+import type { Task } from "@/features/projects/types/project";
 
 function getDayLabel(date: Date): string {
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function isInDateRange(ts: { seconds: number; nanos: number } | undefined, dayStart: Date, dayEnd: Date): boolean {
+function isInDateRange(
+  ts: { seconds: number; nanos: number } | undefined,
+  dayStart: Date,
+  dayEnd: Date,
+): boolean {
   if (!ts) return false;
   const d = ts.seconds * 1000;
   return d >= dayStart.getTime() && d < dayEnd.getTime();
@@ -28,7 +32,7 @@ export function PersonalAnalyticsWidget() {
   const notes = useAppSelector((state) => state.notes?.notes ?? {});
   const files = useAppSelector((state) => state.files?.files ?? {});
   const tasks = useAppSelector((state) => state.projects?.tasks ?? {});
-  const userId = useAppSelector((state) => state.auth.user?.id ?? '');
+  const userId = useAppSelector((state) => state.auth.user?.id ?? "");
 
   const { chartData, weekSummary } = useMemo(() => {
     const now = new Date();
@@ -108,22 +112,22 @@ export function PersonalAnalyticsWidget() {
                 </defs>
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    padding: '6px 10px',
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    padding: "6px 10px",
                   }}
-                  labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
-                  itemStyle={{ color: 'hsl(var(--muted-foreground))' }}
-                  formatter={(value) => [value as number, 'Items']}
+                  labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                  itemStyle={{ color: "hsl(var(--muted-foreground))" }}
+                  formatter={(value) => [value as number, "Items"]}
                 />
                 <Area
                   type="monotone"
@@ -138,10 +142,12 @@ export function PersonalAnalyticsWidget() {
 
           {(weekSummary.tasks > 0 || weekSummary.notes > 0) && (
             <p className="text-xs text-muted-foreground text-center">
-              {weekSummary.tasks > 0 && `${weekSummary.tasks} task${weekSummary.tasks !== 1 ? 's' : ''} completed`}
-              {weekSummary.tasks > 0 && weekSummary.notes > 0 && ' and '}
-              {weekSummary.notes > 0 && `${weekSummary.notes} note${weekSummary.notes !== 1 ? 's' : ''} edited`}
-              {' this week'}
+              {weekSummary.tasks > 0 &&
+                `${weekSummary.tasks} task${weekSummary.tasks !== 1 ? "s" : ""} completed`}
+              {weekSummary.tasks > 0 && weekSummary.notes > 0 && " and "}
+              {weekSummary.notes > 0 &&
+                `${weekSummary.notes} note${weekSummary.notes !== 1 ? "s" : ""} edited`}
+              {" this week"}
             </p>
           )}
         </div>

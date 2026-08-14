@@ -1,8 +1,5 @@
 import { useDroppable } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Plus } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -64,9 +61,7 @@ export function BoardColumn({
             className="w-2.5 h-2.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: statusOption.color }}
           />
-          <span className="font-medium text-sm text-foreground truncate">
-            {statusOption.label}
-          </span>
+          <span className="font-medium text-sm text-foreground truncate">{statusOption.label}</span>
           <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
             {tasks.length}
           </span>
@@ -79,13 +74,10 @@ export function BoardColumn({
           ref={setNodeRef}
           className={cn(
             "p-2 space-y-2 min-h-[200px]",
-            isOver && "bg-primary/5 ring-2 ring-primary/20 ring-inset rounded"
+            isOver && "bg-primary/5 ring-2 ring-primary/20 ring-inset rounded",
           )}
         >
-          <SortableContext
-            items={tasks.map((t) => t.id)}
-            strategy={verticalListSortingStrategy}
-          >
+          <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
             {tasks.map((task) => (
               <TaskCard
                 key={task.id}

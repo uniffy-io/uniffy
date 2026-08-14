@@ -1,363 +1,369 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { clearAdminError } from '@/features/admin/store/adminSlice';
+import { useCallback, useEffect, useMemo } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { clearAdminError } from "@/features/admin/store/adminSlice";
 import {
-    fetchPermissionDefaults,
-    updatePermissionDefaults,
-    fetchOrganizationOverview,
-    fetchMembers,
-    updateMemberRole,
-    removeMember,
-    fetchGroups,
-    createGroup,
-    updateGroup,
-    deleteGroup,
-    fetchGroupMembers,
-    addGroupMember,
-    removeGroupMember,
-    fetchDomainAdmins,
-    grantDomainAdmin,
-    revokeDomainAdmin,
-} from '@/features/admin/store/adminThunks';
-import { ContentType, AccessMode, ContentRole, OrganizationRole, DomainType } from '@uniffy/proto/common/v1/common_pb';
+  fetchPermissionDefaults,
+  updatePermissionDefaults,
+  fetchOrganizationOverview,
+  fetchMembers,
+  updateMemberRole,
+  removeMember,
+  fetchGroups,
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  fetchGroupMembers,
+  addGroupMember,
+  removeGroupMember,
+  fetchDomainAdmins,
+  grantDomainAdmin,
+  revokeDomainAdmin,
+} from "@/features/admin/store/adminThunks";
+import {
+  ContentType,
+  AccessMode,
+  ContentRole,
+  OrganizationRole,
+  DomainType,
+} from "@uniffy/proto/common/v1/common_pb";
 
 export function useAdminAccess() {
-    const user = useAppSelector((state) => state.auth.user);
-    const currentOrganizationRole = useAppSelector((state) => state.auth.currentOrganizationRole);
+  const user = useAppSelector((state) => state.auth.user);
+  const currentOrganizationRole = useAppSelector((state) => state.auth.currentOrganizationRole);
 
-    return useMemo(() => {
-        const isSystemAdmin = user?.isSystemAdmin ?? false;
-        const isOrgAdminRole = ['ADMIN', 'OWNER'].includes(currentOrganizationRole ?? '');
+  return useMemo(() => {
+    const isSystemAdmin = user?.isSystemAdmin ?? false;
+    const isOrgAdminRole = ["ADMIN", "OWNER"].includes(currentOrganizationRole ?? "");
 
-        return {
-            isSystemAdmin,
-            isOrgAdmin: isOrgAdminRole,
-            canAccessAdmin: isOrgAdminRole || isSystemAdmin,
-        };
-    }, [user?.isSystemAdmin, currentOrganizationRole]);
+    return {
+      isSystemAdmin,
+      isOrgAdmin: isOrgAdminRole,
+      canAccessAdmin: isOrgAdminRole || isSystemAdmin,
+    };
+  }, [user?.isSystemAdmin, currentOrganizationRole]);
 }
 
 export function usePermissionDefaults() {
-    const dispatch = useAppDispatch();
-    const defaults = useAppSelector((state) => state.admin.permissionDefaults);
-    const loading = useAppSelector((state) => state.admin.permissionDefaultsLoading);
-    const error = useAppSelector((state) => state.admin.permissionDefaultsError);
+  const dispatch = useAppDispatch();
+  const defaults = useAppSelector((state) => state.admin.permissionDefaults);
+  const loading = useAppSelector((state) => state.admin.permissionDefaultsLoading);
+  const error = useAppSelector((state) => state.admin.permissionDefaultsError);
 
-    const refresh = useCallback(() => {
-        dispatch(fetchPermissionDefaults());
-    }, [dispatch]);
+  const refresh = useCallback(() => {
+    dispatch(fetchPermissionDefaults());
+  }, [dispatch]);
 
-    const update = useCallback(
-        async (
-            contentType: number,
-            updates: {
-                defaultAccessMode?: number;
-                defaultBaselineRole?: number | null;
-            }
-        ) => {
-            await dispatch(
-                updatePermissionDefaults({
-                    contentType,
-                    ...updates,
-                })
-            ).unwrap();
-        },
-        [dispatch]
-    );
+  const update = useCallback(
+    async (
+      contentType: number,
+      updates: {
+        defaultAccessMode?: number;
+        defaultBaselineRole?: number | null;
+      },
+    ) => {
+      await dispatch(
+        updatePermissionDefaults({
+          contentType,
+          ...updates,
+        }),
+      ).unwrap();
+    },
+    [dispatch],
+  );
 
-    const dismissError = useCallback(() => {
-        dispatch(clearAdminError());
-    }, [dispatch]);
+  const dismissError = useCallback(() => {
+    dispatch(clearAdminError());
+  }, [dispatch]);
 
-    return {
-        defaults,
-        loading,
-        error,
-        refresh,
-        update,
-        dismissError,
-    };
+  return {
+    defaults,
+    loading,
+    error,
+    refresh,
+    update,
+    dismissError,
+  };
 }
 
 export function useOrganizationOverview() {
-    const dispatch = useAppDispatch();
-    const overview = useAppSelector((state) => state.admin.overview);
-    const loading = useAppSelector((state) => state.admin.overviewLoading);
+  const dispatch = useAppDispatch();
+  const overview = useAppSelector((state) => state.admin.overview);
+  const loading = useAppSelector((state) => state.admin.overviewLoading);
 
-    const refresh = useCallback(() => {
-        dispatch(fetchOrganizationOverview());
-    }, [dispatch]);
+  const refresh = useCallback(() => {
+    dispatch(fetchOrganizationOverview());
+  }, [dispatch]);
 
-    useEffect(() => {
-        refresh();
-    }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-    return {
-        overview,
-        loading,
-        refresh,
-    };
+  return {
+    overview,
+    loading,
+    refresh,
+  };
 }
 
 export function useOrgMembers() {
-    const dispatch = useAppDispatch();
-    const members = useAppSelector((state) => state.admin.members);
-    const loading = useAppSelector((state) => state.admin.membersLoading);
-    const totalCount = useAppSelector((state) => state.admin.membersTotalCount);
-    const error = useAppSelector((state) => state.admin.error);
+  const dispatch = useAppDispatch();
+  const members = useAppSelector((state) => state.admin.members);
+  const loading = useAppSelector((state) => state.admin.membersLoading);
+  const totalCount = useAppSelector((state) => state.admin.membersTotalCount);
+  const error = useAppSelector((state) => state.admin.error);
 
-    const refresh = useCallback(
-        (options?: { page?: number; pageSize?: number; roleFilter?: number; search?: string }) => {
-            dispatch(fetchMembers(options || {}));
-        },
-        [dispatch]
-    );
+  const refresh = useCallback(
+    (options?: { page?: number; pageSize?: number; roleFilter?: number; search?: string }) => {
+      dispatch(fetchMembers(options || {}));
+    },
+    [dispatch],
+  );
 
-    const updateRole = useCallback(
-        async (userId: string, role: number) => {
-            await dispatch(updateMemberRole({ userId, role })).unwrap();
-        },
-        [dispatch]
-    );
+  const updateRole = useCallback(
+    async (userId: string, role: number) => {
+      await dispatch(updateMemberRole({ userId, role })).unwrap();
+    },
+    [dispatch],
+  );
 
-    const remove = useCallback(
-        async (userId: string) => {
-            await dispatch(removeMember({ userId })).unwrap();
-        },
-        [dispatch]
-    );
+  const remove = useCallback(
+    async (userId: string) => {
+      await dispatch(removeMember({ userId })).unwrap();
+    },
+    [dispatch],
+  );
 
-    return {
-        members,
-        loading,
-        totalCount,
-        error,
-        refresh,
-        updateRole,
-        remove,
-    };
+  return {
+    members,
+    loading,
+    totalCount,
+    error,
+    refresh,
+    updateRole,
+    remove,
+  };
 }
 
 export function useGroups() {
-    const dispatch = useAppDispatch();
-    const groups = useAppSelector((state) => state.admin.groups);
-    const loading = useAppSelector((state) => state.admin.groupsLoading);
-    const totalCount = useAppSelector((state) => state.admin.groupsTotalCount);
+  const dispatch = useAppDispatch();
+  const groups = useAppSelector((state) => state.admin.groups);
+  const loading = useAppSelector((state) => state.admin.groupsLoading);
+  const totalCount = useAppSelector((state) => state.admin.groupsTotalCount);
 
-    const refresh = useCallback(
-        (options?: { page?: number; pageSize?: number; includePrivate?: boolean }) => {
-            dispatch(fetchGroups(options || {}));
-        },
-        [dispatch]
-    );
+  const refresh = useCallback(
+    (options?: { page?: number; pageSize?: number; includePrivate?: boolean }) => {
+      dispatch(fetchGroups(options || {}));
+    },
+    [dispatch],
+  );
 
-    const create = useCallback(
-        async (params: {
-            name: string;
-            description?: string;
-            kind?: number;
-            parentGroupId?: string;
-            leadUserId?: string;
-            isPrivate?: boolean;
-        }) => {
-            return await dispatch(createGroup(params)).unwrap();
-        },
-        [dispatch]
-    );
+  const create = useCallback(
+    async (params: {
+      name: string;
+      description?: string;
+      kind?: number;
+      parentGroupId?: string;
+      leadUserId?: string;
+      isPrivate?: boolean;
+    }) => {
+      return await dispatch(createGroup(params)).unwrap();
+    },
+    [dispatch],
+  );
 
-    const update = useCallback(
-        async (
-            groupId: string,
-            updates: {
-                name?: string;
-                description?: string;
-                kind?: number;
-                parentGroupId?: string;
-                leadUserId?: string;
-                isPrivate?: boolean;
-                clearParentGroup?: boolean;
-                clearLead?: boolean;
-            }
-        ) => {
-            await dispatch(updateGroup({ groupId, ...updates })).unwrap();
-        },
-        [dispatch]
-    );
+  const update = useCallback(
+    async (
+      groupId: string,
+      updates: {
+        name?: string;
+        description?: string;
+        kind?: number;
+        parentGroupId?: string;
+        leadUserId?: string;
+        isPrivate?: boolean;
+        clearParentGroup?: boolean;
+        clearLead?: boolean;
+      },
+    ) => {
+      await dispatch(updateGroup({ groupId, ...updates })).unwrap();
+    },
+    [dispatch],
+  );
 
-    const remove = useCallback(
-        async (groupId: string) => {
-            await dispatch(deleteGroup({ groupId })).unwrap();
-        },
-        [dispatch]
-    );
+  const remove = useCallback(
+    async (groupId: string) => {
+      await dispatch(deleteGroup({ groupId })).unwrap();
+    },
+    [dispatch],
+  );
 
-    return {
-        groups,
-        loading,
-        totalCount,
-        refresh,
-        create,
-        update,
-        remove,
-    };
+  return {
+    groups,
+    loading,
+    totalCount,
+    refresh,
+    create,
+    update,
+    remove,
+  };
 }
 
 export function useGroupMembers(groupId: string) {
-    const dispatch = useAppDispatch();
-    const members = useAppSelector((state) => state.admin.groupMembers[groupId] || []);
-    const loading = useAppSelector((state) => state.admin.groupMembersLoading[groupId] || false);
+  const dispatch = useAppDispatch();
+  const members = useAppSelector((state) => state.admin.groupMembers[groupId] || []);
+  const loading = useAppSelector((state) => state.admin.groupMembersLoading[groupId] || false);
 
-    const refresh = useCallback(
-        (options?: { page?: number; pageSize?: number }) => {
-            dispatch(fetchGroupMembers({ groupId, ...options }));
-        },
-        [dispatch, groupId]
-    );
+  const refresh = useCallback(
+    (options?: { page?: number; pageSize?: number }) => {
+      dispatch(fetchGroupMembers({ groupId, ...options }));
+    },
+    [dispatch, groupId],
+  );
 
-    const add = useCallback(
-        async (userId: string, role?: number) => {
-            await dispatch(addGroupMember({ groupId, userId, role })).unwrap();
-        },
-        [dispatch, groupId]
-    );
+  const add = useCallback(
+    async (userId: string, role?: number) => {
+      await dispatch(addGroupMember({ groupId, userId, role })).unwrap();
+    },
+    [dispatch, groupId],
+  );
 
-    const remove = useCallback(
-        async (userId: string) => {
-            await dispatch(removeGroupMember({ groupId, userId })).unwrap();
-        },
-        [dispatch, groupId]
-    );
+  const remove = useCallback(
+    async (userId: string) => {
+      await dispatch(removeGroupMember({ groupId, userId })).unwrap();
+    },
+    [dispatch, groupId],
+  );
 
-    useEffect(() => {
-        if (groupId) {
-            refresh();
-        }
-    }, [groupId, refresh]);
+  useEffect(() => {
+    if (groupId) {
+      refresh();
+    }
+  }, [groupId, refresh]);
 
-    return {
-        members,
-        loading,
-        refresh,
-        add,
-        remove,
-    };
+  return {
+    members,
+    loading,
+    refresh,
+    add,
+    remove,
+  };
 }
 
 export function getContentTypeLabel(contentType: number): string {
-    switch (contentType) {
-        case ContentType.NOTE:
-            return 'Notes';
-        case ContentType.FILE:
-            return 'Files';
-        case ContentType.CALENDAR_EVENT:
-            return 'Calendar';
-        case ContentType.CHAT_MESSAGE:
-            return 'Chat Messages';
-        case ContentType.USER:
-            return 'Users';
-        case ContentType.PROJECT:
-            return 'Projects';
-        case ContentType.AGENT:
-            return 'Agents';
-        default:
-            return 'Unknown';
-    }
+  switch (contentType) {
+    case ContentType.NOTE:
+      return "Notes";
+    case ContentType.FILE:
+      return "Files";
+    case ContentType.CALENDAR_EVENT:
+      return "Calendar";
+    case ContentType.CHAT_MESSAGE:
+      return "Chat Messages";
+    case ContentType.USER:
+      return "Users";
+    case ContentType.PROJECT:
+      return "Projects";
+    case ContentType.AGENT:
+      return "Agents";
+    default:
+      return "Unknown";
+  }
 }
 
 export function getAccessModeLabel(mode: number): string {
-    switch (mode) {
-        case AccessMode.OWNER_ONLY:
-            return 'Owner Only';
-        case AccessMode.EXPLICIT_MEMBERS:
-            return 'Explicit Members';
-        case AccessMode.OPEN_TO_ORG:
-            return 'Open to Organization';
-        default:
-            return 'Unknown';
-    }
+  switch (mode) {
+    case AccessMode.OWNER_ONLY:
+      return "Owner Only";
+    case AccessMode.EXPLICIT_MEMBERS:
+      return "Explicit Members";
+    case AccessMode.OPEN_TO_ORG:
+      return "Open to Organization";
+    default:
+      return "Unknown";
+  }
 }
 
 export function getContentRoleLabel(role: number): string {
-    switch (role) {
-        case ContentRole.VIEWER:
-            return 'Viewer';
-        case ContentRole.COMMENTER:
-            return 'Commenter';
-        case ContentRole.EDITOR:
-            return 'Editor';
-        case ContentRole.ADMIN:
-            return 'Admin';
-        case ContentRole.OWNER:
-            return 'Owner';
-        case ContentRole.BLOCKED:
-            return 'Blocked';
-        default:
-            return 'None';
-    }
+  switch (role) {
+    case ContentRole.VIEWER:
+      return "Viewer";
+    case ContentRole.COMMENTER:
+      return "Commenter";
+    case ContentRole.EDITOR:
+      return "Editor";
+    case ContentRole.ADMIN:
+      return "Admin";
+    case ContentRole.OWNER:
+      return "Owner";
+    case ContentRole.BLOCKED:
+      return "Blocked";
+    default:
+      return "None";
+  }
 }
 
 export function getOrgRoleLabel(role: number): string {
-    switch (role) {
-        case OrganizationRole.OWNER:
-            return 'Owner';
-        case OrganizationRole.ADMIN:
-            return 'Admin';
-        case OrganizationRole.MEMBER:
-            return 'Member';
-        default:
-            return 'Unknown';
-    }
+  switch (role) {
+    case OrganizationRole.OWNER:
+      return "Owner";
+    case OrganizationRole.ADMIN:
+      return "Admin";
+    case OrganizationRole.MEMBER:
+      return "Member";
+    default:
+      return "Unknown";
+  }
 }
 
 export function isOrgAdmin(role: number): boolean {
-    return role === OrganizationRole.OWNER || role === OrganizationRole.ADMIN;
+  return role === OrganizationRole.OWNER || role === OrganizationRole.ADMIN;
 }
 
 export function useDomainAdmins() {
-    const dispatch = useAppDispatch();
-    const domainAdmins = useAppSelector((state) => state.admin.domainAdmins);
-    const loading = useAppSelector((state) => state.admin.domainAdminsLoading);
-    const totalCount = useAppSelector((state) => state.admin.domainAdminsTotalCount);
+  const dispatch = useAppDispatch();
+  const domainAdmins = useAppSelector((state) => state.admin.domainAdmins);
+  const loading = useAppSelector((state) => state.admin.domainAdminsLoading);
+  const totalCount = useAppSelector((state) => state.admin.domainAdminsTotalCount);
 
-    const refresh = useCallback(
-        (options?: { domainFilter?: number; page?: number; pageSize?: number }) => {
-            dispatch(fetchDomainAdmins(options || {}));
-        },
-        [dispatch],
-    );
+  const refresh = useCallback(
+    (options?: { domainFilter?: number; page?: number; pageSize?: number }) => {
+      dispatch(fetchDomainAdmins(options || {}));
+    },
+    [dispatch],
+  );
 
-    const grant = useCallback(
-        async (userId: string, domain: number) => {
-            await dispatch(grantDomainAdmin({ userId, domain })).unwrap();
-        },
-        [dispatch],
-    );
+  const grant = useCallback(
+    async (userId: string, domain: number) => {
+      await dispatch(grantDomainAdmin({ userId, domain })).unwrap();
+    },
+    [dispatch],
+  );
 
-    const revoke = useCallback(
-        async (userId: string, domain: number) => {
-            await dispatch(revokeDomainAdmin({ userId, domain })).unwrap();
-        },
-        [dispatch],
-    );
+  const revoke = useCallback(
+    async (userId: string, domain: number) => {
+      await dispatch(revokeDomainAdmin({ userId, domain })).unwrap();
+    },
+    [dispatch],
+  );
 
-    return { domainAdmins, loading, totalCount, refresh, grant, revoke };
+  return { domainAdmins, loading, totalCount, refresh, grant, revoke };
 }
 
 export function getDomainTypeLabel(domain: number): string {
-    switch (domain) {
-        case DomainType.CHAT:
-            return 'Chat';
-        case DomainType.FILES:
-            return 'Files';
-        case DomainType.NOTES:
-            return 'Notes';
-        case DomainType.CALENDAR:
-            return 'Calendar';
-        case DomainType.PROJECTS:
-            return 'Projects';
-        case DomainType.AGENTS:
-            return 'Agents';
-        default:
-            return 'Unknown';
-    }
+  switch (domain) {
+    case DomainType.CHAT:
+      return "Chat";
+    case DomainType.FILES:
+      return "Files";
+    case DomainType.NOTES:
+      return "Notes";
+    case DomainType.CALENDAR:
+      return "Calendar";
+    case DomainType.PROJECTS:
+      return "Projects";
+    case DomainType.AGENTS:
+      return "Agents";
+    default:
+      return "Unknown";
+  }
 }

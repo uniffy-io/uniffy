@@ -1,20 +1,20 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { composeWhenSynced } from '@/features/realtime/hooks/useDocSession';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { composeWhenSynced } from "@/features/realtime/hooks/useDocSession";
 
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-describe('composeWhenSynced', () => {
+describe("composeWhenSynced", () => {
   beforeEach(() => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('stays pending after server sync until hydrate completes', async () => {
+  it("stays pending after server sync until hydrate completes", async () => {
     let resolveServer!: () => void;
     let resolveHydrate!: () => void;
     const server = new Promise<void>((resolve) => (resolveServer = resolve));
@@ -32,7 +32,7 @@ describe('composeWhenSynced', () => {
     expect(settled).toBe(true);
   });
 
-  it('stays pending after hydrate until the server syncs', async () => {
+  it("stays pending after hydrate until the server syncs", async () => {
     let resolveServer!: () => void;
     const server = new Promise<void>((resolve) => (resolveServer = resolve));
 
@@ -47,8 +47,8 @@ describe('composeWhenSynced', () => {
     expect(settled).toBe(true);
   });
 
-  it('resolves and warns when hydrate rejects', async () => {
-    const hydrate = Promise.reject(new Error('idb unavailable'));
+  it("resolves and warns when hydrate rejects", async () => {
+    const hydrate = Promise.reject(new Error("idb unavailable"));
 
     let settled = false;
     void composeWhenSynced(Promise.resolve(), hydrate).then(() => (settled = true));
@@ -56,7 +56,7 @@ describe('composeWhenSynced', () => {
     await flush();
     expect(settled).toBe(true);
     expect(console.warn).toHaveBeenCalledWith(
-      '[realtime] persistence hydrate failed',
+      "[realtime] persistence hydrate failed",
       expect.any(Error),
     );
   });

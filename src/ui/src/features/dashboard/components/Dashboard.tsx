@@ -1,42 +1,45 @@
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { useAppSelector } from '@/app/hooks';
-import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
-import { useDashboardFetch } from '@/features/dashboard/hooks/useDashboardFetch';
-import { cn } from '@/shared/utils/cn';
-import { QuickStatsWidget } from '@/features/dashboard/components/widgets/QuickStatsWidget';
-import { QuickActionsWidget } from '@/features/dashboard/components/widgets/QuickActionsWidget';
-import { TodayAgendaWidget } from '@/features/dashboard/components/widgets/TodayAgendaWidget';
-import { MyTasksWidget } from '@/features/dashboard/components/widgets/MyTasksWidget';
-import { BookmarkedItemsWidget } from '@/features/dashboard/components/widgets/BookmarkedItemsWidget';
-import { RecentActivityWidget } from '@/features/dashboard/components/widgets/RecentActivityWidget';
-import { AgentQuickAccessWidget } from '@/features/dashboard/components/widgets/AgentQuickAccessWidget';
-import { PeopleWidget } from '@/features/dashboard/components/widgets/PeopleWidget';
-import { TeamPresenceWidget } from '@/features/dashboard/components/widgets/TeamPresenceWidget';
-import { NotificationsSummaryWidget } from '@/features/dashboard/components/widgets/NotificationsSummaryWidget';
-import { RecentNotesWidget } from '@/features/dashboard/components/widgets/RecentNotesWidget';
-import { RecentFilesWidget } from '@/features/dashboard/components/widgets/RecentFilesWidget';
-import { PersonalAnalyticsWidget } from '@/features/dashboard/components/widgets/PersonalAnalyticsWidget';
-import { DashboardCustomizerButton, DashboardCustomizerPanel } from '@/features/dashboard/components/DashboardCustomizer';
-import { useDashboardRefresh } from '@/features/dashboard/hooks/useDashboardRefresh';
-import { useDashboardLayout } from '@/features/dashboard/hooks/useDashboardLayout';
-import { ArrowsClockwise, WarningCircle, ArrowRight } from '@phosphor-icons/react';
-import type { Task } from '@/features/projects/types/project';
-import type { CalendarEvent } from '@/features/calendar/types';
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { useAppSelector } from "@/app/hooks";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { useDashboardFetch } from "@/features/dashboard/hooks/useDashboardFetch";
+import { cn } from "@/shared/utils/cn";
+import { QuickStatsWidget } from "@/features/dashboard/components/widgets/QuickStatsWidget";
+import { QuickActionsWidget } from "@/features/dashboard/components/widgets/QuickActionsWidget";
+import { TodayAgendaWidget } from "@/features/dashboard/components/widgets/TodayAgendaWidget";
+import { MyTasksWidget } from "@/features/dashboard/components/widgets/MyTasksWidget";
+import { BookmarkedItemsWidget } from "@/features/dashboard/components/widgets/BookmarkedItemsWidget";
+import { RecentActivityWidget } from "@/features/dashboard/components/widgets/RecentActivityWidget";
+import { AgentQuickAccessWidget } from "@/features/dashboard/components/widgets/AgentQuickAccessWidget";
+import { PeopleWidget } from "@/features/dashboard/components/widgets/PeopleWidget";
+import { TeamPresenceWidget } from "@/features/dashboard/components/widgets/TeamPresenceWidget";
+import { NotificationsSummaryWidget } from "@/features/dashboard/components/widgets/NotificationsSummaryWidget";
+import { RecentNotesWidget } from "@/features/dashboard/components/widgets/RecentNotesWidget";
+import { RecentFilesWidget } from "@/features/dashboard/components/widgets/RecentFilesWidget";
+import { PersonalAnalyticsWidget } from "@/features/dashboard/components/widgets/PersonalAnalyticsWidget";
+import {
+  DashboardCustomizerButton,
+  DashboardCustomizerPanel,
+} from "@/features/dashboard/components/DashboardCustomizer";
+import { useDashboardRefresh } from "@/features/dashboard/hooks/useDashboardRefresh";
+import { useDashboardLayout } from "@/features/dashboard/hooks/useDashboardLayout";
+import { ArrowsClockwise, WarningCircle, ArrowRight } from "@phosphor-icons/react";
+import type { Task } from "@/features/projects/types/project";
+import type { CalendarEvent } from "@/features/calendar/types";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 function formatTodayDate(): string {
   return new Date().toLocaleDateString(undefined, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 }
 
@@ -44,7 +47,7 @@ function useContextualSummary() {
   const events = useAppSelector((state) => state.calendar?.events ?? {});
   const tasks = useAppSelector((state) => state.projects?.tasks ?? {});
   const unreadCount = useAppSelector((state) => state.notifications?.unreadCount ?? 0);
-  const userId = useAppSelector((state) => state.auth.user?.id ?? '');
+  const userId = useAppSelector((state) => state.auth.user?.id ?? "");
 
   return useMemo(() => {
     const now = new Date();
@@ -77,11 +80,12 @@ function useContextualSummary() {
     });
 
     const parts: string[] = [];
-    if (eventsToday > 0) parts.push(`${eventsToday} event${eventsToday !== 1 ? 's' : ''} today`);
-    if (tasksDueToday > 0) parts.push(`${tasksDueToday} task${tasksDueToday !== 1 ? 's' : ''} due`);
-    if (unreadCount > 0) parts.push(`${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`);
+    if (eventsToday > 0) parts.push(`${eventsToday} event${eventsToday !== 1 ? "s" : ""} today`);
+    if (tasksDueToday > 0) parts.push(`${tasksDueToday} task${tasksDueToday !== 1 ? "s" : ""} due`);
+    if (unreadCount > 0)
+      parts.push(`${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`);
 
-    return { summary: parts.join(', '), overdueCount };
+    return { summary: parts.join(", "), overdueCount };
   }, [events, tasks, unreadCount, userId]);
 }
 
@@ -106,7 +110,7 @@ export function Dashboard() {
   } = useDashboardLayout();
 
   const { summary, overdueCount } = useContextualSummary();
-  const displayName = user?.fullName?.split(' ')[0] || user?.username || 'there';
+  const displayName = user?.fullName?.split(" ")[0] || user?.username || "there";
 
   if (isZenMode) {
     return (
@@ -137,19 +141,16 @@ export function Dashboard() {
               onClick={manualRefresh}
               disabled={isRefreshing}
               className={cn(
-                'hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground',
-                'hover:text-foreground transition-colors',
+                "hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground",
+                "hover:text-foreground transition-colors",
               )}
               title="Refresh dashboard"
             >
-              <ArrowsClockwise
-                size={14}
-                className={cn(isRefreshing && 'animate-spin')}
-              />
+              <ArrowsClockwise size={14} className={cn(isRefreshing && "animate-spin")} />
               <span>
                 {isRefreshing
-                  ? 'Refreshing...'
-                  : `${lastRefreshed.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`}
+                  ? "Refreshing..."
+                  : `${lastRefreshed.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
               </span>
             </button>
           )}
@@ -163,7 +164,7 @@ export function Dashboard() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-red-800 dark:text-red-300">
-              You have {overdueCount} overdue task{overdueCount !== 1 ? 's' : ''}
+              You have {overdueCount} overdue task{overdueCount !== 1 ? "s" : ""}
             </p>
           </div>
           <Link
@@ -190,21 +191,21 @@ export function Dashboard() {
       <QuickStatsWidget />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        {isWidgetVisible('today-agenda') && <TodayAgendaWidget />}
-        {isWidgetVisible('my-tasks') && <MyTasksWidget />}
+        {isWidgetVisible("today-agenda") && <TodayAgendaWidget />}
+        {isWidgetVisible("my-tasks") && <MyTasksWidget />}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        {isWidgetVisible('quick-actions') && <QuickActionsWidget />}
-        {isWidgetVisible('team-presence') && <TeamPresenceWidget />}
-        {isWidgetVisible('people') && <PeopleWidget />}
-        {isWidgetVisible('recent-notes') && <RecentNotesWidget />}
-        {isWidgetVisible('recent-files') && <RecentFilesWidget />}
-        {isWidgetVisible('bookmarks') && <BookmarkedItemsWidget />}
-        {isWidgetVisible('analytics') && <PersonalAnalyticsWidget />}
-        {isWidgetVisible('agents') && <AgentQuickAccessWidget />}
-        {isWidgetVisible('notifications') && <NotificationsSummaryWidget />}
-        {isWidgetVisible('recent-activity') && <RecentActivityWidget />}
+        {isWidgetVisible("quick-actions") && <QuickActionsWidget />}
+        {isWidgetVisible("team-presence") && <TeamPresenceWidget />}
+        {isWidgetVisible("people") && <PeopleWidget />}
+        {isWidgetVisible("recent-notes") && <RecentNotesWidget />}
+        {isWidgetVisible("recent-files") && <RecentFilesWidget />}
+        {isWidgetVisible("bookmarks") && <BookmarkedItemsWidget />}
+        {isWidgetVisible("analytics") && <PersonalAnalyticsWidget />}
+        {isWidgetVisible("agents") && <AgentQuickAccessWidget />}
+        {isWidgetVisible("notifications") && <NotificationsSummaryWidget />}
+        {isWidgetVisible("recent-activity") && <RecentActivityWidget />}
       </div>
     </div>
   );

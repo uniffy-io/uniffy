@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { TagPicker } from "@/features/tags";
 import type { FieldDefinition } from "@/features/projects/types";
-import type { FilterCondition, FilterConfig, FilterOperator } from "@/features/projects/types/views";
+import type {
+  FilterCondition,
+  FilterConfig,
+  FilterOperator,
+} from "@/features/projects/types/views";
 import {
   HIERARCHY_DEPTH_FIELD_ID,
   HIERARCHY_HAS_SUBTASKS_FIELD_ID,
@@ -27,7 +31,11 @@ const TAGS_PSEUDO_FIELD: FieldDefinition = {
   updatedAt: "",
 };
 
-function _makePseudoField(id: string, name: string, type: FieldDefinition["type"]): FieldDefinition {
+function _makePseudoField(
+  id: string,
+  name: string,
+  type: FieldDefinition["type"],
+): FieldDefinition {
   return {
     id,
     projectId: "",
@@ -44,7 +52,11 @@ function _makePseudoField(id: string, name: string, type: FieldDefinition["type"
 
 const IN_EPIC_PSEUDO_FIELD = _makePseudoField(HIERARCHY_IN_EPIC_FIELD_ID, "In Epic", "text");
 const ROOT_ONLY_PSEUDO_FIELD = _makePseudoField(HIERARCHY_ROOT_ONLY_FIELD_ID, "Root only", "text");
-const HAS_SUBTASKS_PSEUDO_FIELD = _makePseudoField(HIERARCHY_HAS_SUBTASKS_FIELD_ID, "Has subtasks", "text");
+const HAS_SUBTASKS_PSEUDO_FIELD = _makePseudoField(
+  HIERARCHY_HAS_SUBTASKS_FIELD_ID,
+  "Has subtasks",
+  "text",
+);
 const DEPTH_PSEUDO_FIELD = _makePseudoField(HIERARCHY_DEPTH_FIELD_ID, "Depth", "number");
 
 const IN_EPIC_OPERATORS: { value: FilterOperator; label: string }[] = [
@@ -154,7 +166,13 @@ function needsValueInput(operator: FilterOperator): boolean {
   return operator !== "is_empty" && operator !== "is_not_empty";
 }
 
-export function FilterBuilder({ fields: rawFields, filterConfig, onApply, onClose, epicOptions }: FilterBuilderProps) {
+export function FilterBuilder({
+  fields: rawFields,
+  filterConfig,
+  onApply,
+  onClose,
+  epicOptions,
+}: FilterBuilderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // The unified-tags filter and the hierarchy filters are exposed as
   // pseudo-fields so they slot into the existing condition row UI without
@@ -167,9 +185,7 @@ export function FilterBuilder({ fields: rawFields, filterConfig, onApply, onClos
     HAS_SUBTASKS_PSEUDO_FIELD,
     DEPTH_PSEUDO_FIELD,
   ];
-  const [conditions, setConditions] = useState<FilterCondition[]>(
-    filterConfig?.conditions ?? []
-  );
+  const [conditions, setConditions] = useState<FilterCondition[]>(filterConfig?.conditions ?? []);
   const [logic, setLogic] = useState<"and" | "or">(filterConfig?.logic ?? "and");
 
   // Close on outside click
@@ -203,9 +219,7 @@ export function FilterBuilder({ fields: rawFields, filterConfig, onApply, onClos
   };
 
   const updateCondition = (id: string, updates: Partial<FilterCondition>) => {
-    setConditions(
-      conditions.map((c) => (c.id === id ? { ...c, ...updates } : c))
-    );
+    setConditions(conditions.map((c) => (c.id === id ? { ...c, ...updates } : c)));
   };
 
   const handleFieldChange = (conditionId: string, fieldId: string) => {
@@ -322,7 +336,12 @@ export function FilterBuilder({ fields: rawFields, filterConfig, onApply, onClos
 
         <div className="flex items-center gap-2">
           {filterConfig && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={handleClear}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground"
+              onClick={handleClear}
+            >
               Clear all
             </Button>
           )}
@@ -347,7 +366,11 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number }>({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
 
   const selectedOption = options.find((o) => o.value === value);
   const displayLabel = selectedOption?.label ?? placeholder ?? "Select...";
@@ -371,8 +394,10 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
-        triggerRef.current && !triggerRef.current.contains(target) &&
-        dropdownRef.current && !dropdownRef.current.contains(target)
+        triggerRef.current &&
+        !triggerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
       ) {
         handleClose();
       }
@@ -391,7 +416,7 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
           "flex items-center justify-between gap-1 w-full h-7 px-2 text-xs rounded-md border border-border bg-background transition-colors",
           "hover:bg-muted/50",
           isOpen && "border-primary/50 ring-1 ring-primary/20",
-          selectedOption ? "text-foreground" : "text-muted-foreground"
+          selectedOption ? "text-foreground" : "text-muted-foreground",
         )}
       >
         <span className="truncate flex-1 text-left">
@@ -403,7 +428,13 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
           )}
           {displayLabel}
         </span>
-        <CaretDown size={10} className={cn("shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+        <CaretDown
+          size={10}
+          className={cn(
+            "shrink-0 text-muted-foreground transition-transform",
+            isOpen && "rotate-180",
+          )}
+        />
       </button>
 
       {isOpen && (
@@ -428,9 +459,7 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
                 }}
                 className={cn(
                   "flex w-full items-center gap-2 px-2.5 py-1.5 text-xs transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted"
+                  isActive ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted",
                 )}
               >
                 {option.color && (
@@ -453,7 +482,13 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
 const NUMBER_INPUT_CLASS =
   "h-7 px-2 text-xs text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors";
 
-function ConditionValueInput({ field, operator, value, onChange, epicOptions }: {
+function ConditionValueInput({
+  field,
+  operator,
+  value,
+  onChange,
+  epicOptions,
+}: {
   field?: FieldDefinition;
   operator: FilterOperator;
   value: string | number | string[] | null;
@@ -461,11 +496,7 @@ function ConditionValueInput({ field, operator, value, onChange, epicOptions }: 
   epicOptions?: { value: string; label: string }[];
 }) {
   if (field?.id === TAGS_FILTER_FIELD_ID) {
-    const selectedIds = Array.isArray(value)
-      ? (value as string[])
-      : value
-        ? [String(value)]
-        : [];
+    const selectedIds = Array.isArray(value) ? (value as string[]) : value ? [String(value)] : [];
     return (
       <div className="flex-1 min-w-[160px]">
         <TagPicker
@@ -479,7 +510,10 @@ function ConditionValueInput({ field, operator, value, onChange, epicOptions }: 
 
   if (field?.id === HIERARCHY_IN_EPIC_FIELD_ID) {
     const options = [
-      { value: "", label: epicOptions && epicOptions.length ? "Pick an Epic..." : "No Epics in this project" },
+      {
+        value: "",
+        label: epicOptions && epicOptions.length ? "Pick an Epic..." : "No Epics in this project",
+      },
       ...(epicOptions ?? []),
     ];
     return (
@@ -549,7 +583,9 @@ function ConditionValueInput({ field, operator, value, onChange, epicOptions }: 
             value={minVal !== null && minVal !== undefined ? String(minVal) : ""}
             onChange={(e) => {
               const next = e.target.value ? Number(e.target.value) : null;
-              onChange(next !== null || maxVal !== null ? ([next, maxVal] as unknown as string[]) : null);
+              onChange(
+                next !== null || maxVal !== null ? ([next, maxVal] as unknown as string[]) : null,
+              );
             }}
             placeholder="Min"
             className={NUMBER_INPUT_CLASS}
@@ -560,7 +596,9 @@ function ConditionValueInput({ field, operator, value, onChange, epicOptions }: 
             value={maxVal !== null && maxVal !== undefined ? String(maxVal) : ""}
             onChange={(e) => {
               const next = e.target.value ? Number(e.target.value) : null;
-              onChange(minVal !== null || next !== null ? ([minVal, next] as unknown as string[]) : null);
+              onChange(
+                minVal !== null || next !== null ? ([minVal, next] as unknown as string[]) : null,
+              );
             }}
             placeholder="Max"
             className={NUMBER_INPUT_CLASS}

@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { fetchAvailableRoomIds } from '@/features/rooms/store/roomsThunks';
+import { useEffect, useMemo, useRef } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { fetchAvailableRoomIds } from "@/features/rooms/store/roomsThunks";
 import {
   selectAvailableRoomIds,
   clearAvailableRoomIds,
   selectRoomsLoading,
-} from '@/features/rooms/store/roomsSlice';
+} from "@/features/rooms/store/roomsSlice";
 
 export function usePickerAvailability(
   startTime: string | undefined,
@@ -39,10 +39,7 @@ export function usePickerAvailability(
     };
   }, [dispatch]);
 
-  const availableRoomIds = useMemo(
-    () => (rawIds ? new Set(rawIds) : null),
-    [rawIds],
-  );
+  const availableRoomIds = useMemo(() => (rawIds ? new Set(rawIds) : null), [rawIds]);
 
   return { availableRoomIds, loading };
 }

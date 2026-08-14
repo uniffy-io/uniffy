@@ -6,38 +6,38 @@
  */
 
 export interface ToolEntry {
-    name: string;
-    displayName: string;
-    description: string;
-    destructive: boolean;
+  name: string;
+  displayName: string;
+  description: string;
+  destructive: boolean;
 }
 
 export interface ToolGroup {
-    group: string;
-    tools: ToolEntry[];
-    /** Integration provider id whose org connection these tools call through. */
-    requiresConnection?: string;
+  group: string;
+  tools: ToolEntry[];
+  /** Integration provider id whose org connection these tools call through. */
+  requiresConnection?: string;
 }
 
 export type ToolCategory = "platform" | "external";
 
 export interface ToolCategorySection {
-    category: string;
-    label: string;
-    description: string;
-    groups: ToolGroup[];
+  category: string;
+  label: string;
+  description: string;
+  groups: ToolGroup[];
 }
 
 /** Section chrome, keyed by the `category` the server sends. */
 export const CATEGORY_SECTIONS: Record<string, { label: string; description: string }> = {
-    platform: {
-        label: "Platform Tools",
-        description: "Select which workspace tools this agent can use",
-    },
-    external: {
-        label: "External Tools",
-        description: "Tools that use external provider APIs",
-    },
+  platform: {
+    label: "Platform Tools",
+    description: "Select which workspace tools this agent can use",
+  },
+  external: {
+    label: "External Tools",
+    description: "Tools that use external provider APIs",
+  },
 };
 
 // The only tool that needs the image model configured to do anything.

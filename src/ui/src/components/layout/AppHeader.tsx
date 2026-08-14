@@ -1,21 +1,21 @@
-import { useState, useCallback, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Kanban, Cpu, List, MagnifyingGlass } from '@phosphor-icons/react';
-import type { Icon } from '@phosphor-icons/react';
-import { UserMenu } from '@/components/layout/UserMenu';
-import { GlobalSearch } from '@/features/search';
-import { NotificationBell } from '@/features/notifications';
-import { CalendarQuickView } from '@/features/calendar';
-import { RecordingNavTrigger } from '@/features/recording';
-import { CallHeaderPill } from '@/features/calls/components/CallHeaderPill';
-import { cn } from '@/shared/utils/cn';
-import { UrnType } from '@/shared/utils/urn';
-import { getContentTypeConfig } from '@/config/theme/contentTypes';
-import { useAppSelector } from '@/app/hooks';
-import { useAgentsBuilderAccess } from '@/features/agents/hooks/useAgentsBuilderAccess';
-import { UniffyLogo } from '@/components/ui/uniffy-logo';
-import { Drawer } from '@/components/ui/drawer';
-import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { useState, useCallback, useMemo } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Kanban, Cpu, List, MagnifyingGlass } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+import { UserMenu } from "@/components/layout/UserMenu";
+import { GlobalSearch } from "@/features/search";
+import { NotificationBell } from "@/features/notifications";
+import { CalendarQuickView } from "@/features/calendar";
+import { RecordingNavTrigger } from "@/features/recording";
+import { CallHeaderPill } from "@/features/calls/components/CallHeaderPill";
+import { cn } from "@/shared/utils/cn";
+import { UrnType } from "@/shared/utils/urn";
+import { getContentTypeConfig } from "@/config/theme/contentTypes";
+import { useAppSelector } from "@/app/hooks";
+import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
+import { UniffyLogo } from "@/components/ui/uniffy-logo";
+import { Drawer } from "@/components/ui/drawer";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 
 const noteConfig = getContentTypeConfig(UrnType.NOTE);
 const fileConfig = getContentTypeConfig(UrnType.FILE);
@@ -30,57 +30,60 @@ interface NavItem {
 
 // Nav paths (`/chat`) differ from URN paths (`/chats/{id}`) so we keep the override here.
 const navItems: NavItem[] = [
-  { name: noteConfig.labelPlural, path: '/notes', icon: noteConfig.icon },
-  { name: fileConfig.labelPlural, path: '/files', icon: fileConfig.icon },
-  { name: 'Chat', path: '/chat', icon: chatConfig.icon },
-  { name: 'Calendar', path: '/calendar', icon: calendarConfig.icon },
-  { name: 'Projects', path: '/projects', icon: Kanban },
-  { name: 'Agents', path: '/agents', icon: Cpu },
+  { name: noteConfig.labelPlural, path: "/notes", icon: noteConfig.icon },
+  { name: fileConfig.labelPlural, path: "/files", icon: fileConfig.icon },
+  { name: "Chat", path: "/chat", icon: chatConfig.icon },
+  { name: "Calendar", path: "/calendar", icon: calendarConfig.icon },
+  { name: "Projects", path: "/projects", icon: Kanban },
+  { name: "Agents", path: "/agents", icon: Cpu },
 ];
 
 // The builder surface is gated; non-builders never see the Agents entry.
 function useVisibleNavItems(): NavItem[] {
   const { isBuilder } = useAgentsBuilderAccess();
   return useMemo(
-    () => navItems.filter((item) => item.path !== '/agents' || isBuilder),
-    [isBuilder]
+    () => navItems.filter((item) => item.path !== "/agents" || isBuilder),
+    [isBuilder],
   );
 }
 
 function LogoNavItem({ isActive }: { isActive: boolean }) {
-
   return (
     <Link
       to="/"
       className={cn(
         "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
         "hover:px-2.5",
-        isActive && "text-foreground"
+        isActive && "text-foreground",
       )}
     >
       <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
 
-      <span className={cn(
-        "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
-        isActive
-          ? "border-2 border-primary/30"
-          : "border border-border text-muted-foreground group-hover:border-transparent group-hover:text-primary"
-      )}>
+      <span
+        className={cn(
+          "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
+          isActive
+            ? "border-2 border-primary/30"
+            : "border border-border text-muted-foreground group-hover:border-transparent group-hover:text-primary",
+        )}
+      >
         <UniffyLogo className="w-5 h-5 transition-all duration-500" />
       </span>
 
-      <span className={cn(
-        "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
-        "group-hover:ml-1.5 group-hover:max-w-24",
-        isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
-      )}>
+      <span
+        className={cn(
+          "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
+          "group-hover:ml-1.5 group-hover:max-w-24",
+          isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+        )}
+      >
         Home
       </span>
     </Link>
   );
 }
 
-function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive: boolean }) {
+function CompactNavItem({ item, isActive }: { item: (typeof navItems)[0]; isActive: boolean }) {
   const Icon = item.icon;
 
   return (
@@ -89,32 +92,36 @@ function CompactNavItem({ item, isActive }: { item: typeof navItems[0]; isActive
       className={cn(
         "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
         "hover:px-2.5",
-        isActive && "text-foreground"
+        isActive && "text-foreground",
       )}
     >
       <span
         className={cn(
           "absolute inset-0 rounded-lg transition-all duration-500",
-          isActive ? "bg-primary/10" : "bg-transparent"
+          isActive ? "bg-primary/10" : "bg-transparent",
         )}
       />
 
       <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
 
-      <span className={cn(
-        "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
-        isActive
-          ? "border border-primary/30 bg-primary/10 text-primary"
-          : "border border-border text-muted-foreground group-hover:border-transparent group-hover:text-primary"
-      )}>
+      <span
+        className={cn(
+          "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
+          isActive
+            ? "border border-primary/30 bg-primary/10 text-primary"
+            : "border border-border text-muted-foreground group-hover:border-transparent group-hover:text-primary",
+        )}
+      >
         <Icon size={20} weight={isActive ? "fill" : "duotone"} />
       </span>
 
-      <span className={cn(
-        "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
-        "group-hover:ml-1.5 group-hover:max-w-24",
-        isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
-      )}>
+      <span
+        className={cn(
+          "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
+          "group-hover:ml-1.5 group-hover:max-w-24",
+          isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+        )}
+      >
         {item.name}
       </span>
     </Link>
@@ -140,9 +147,9 @@ function MobileNavDrawer({
             onClick={onClose}
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-              currentPath === '/'
+              currentPath === "/"
                 ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             <UniffyLogo className="w-5 h-5" />
@@ -160,7 +167,7 @@ function MobileNavDrawer({
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                   isActive
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 <NavIcon size={20} weight={isActive ? "fill" : "duotone"} />
@@ -188,7 +195,7 @@ export function AppHeader() {
       <header
         className={cn(
           "sticky top-0 z-40 w-full transition-[height,opacity] duration-300 ease-in-out",
-          isZenMode ? "h-0 opacity-0 delay-150 overflow-hidden" : "h-12 opacity-100 delay-0"
+          isZenMode ? "h-0 opacity-0 delay-150 overflow-hidden" : "h-12 opacity-100 delay-0",
         )}
       >
         <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border" />
@@ -203,31 +210,29 @@ export function AppHeader() {
               >
                 <List size={20} weight="bold" />
               </button>
-              <LogoNavItem isActive={location.pathname === '/'} />
+              <LogoNavItem isActive={location.pathname === "/"} />
             </div>
 
             <nav className="hidden md:flex items-center gap-0.5">
-              <LogoNavItem isActive={location.pathname === '/'} />
+              <LogoNavItem isActive={location.pathname === "/"} />
               {visibleNavItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.path);
-                return (
-                  <CompactNavItem key={item.path} item={item} isActive={isActive} />
-                );
+                return <CompactNavItem key={item.path} item={item} isActive={isActive} />;
               })}
             </nav>
           </div>
 
-          <div className={cn(
-            "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10",
-            "hidden sm:block"
-          )}>
+          <div
+            className={cn(
+              "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10",
+              "hidden sm:block",
+            )}
+          >
             <GlobalSearch />
           </div>
 
           <div className="flex items-center gap-2 z-20">
-            {isMobile && (
-              <MobileSearchButton />
-            )}
+            {isMobile && <MobileSearchButton />}
             <CallHeaderPill />
             <RecordingNavTrigger />
             <CalendarQuickView />
@@ -249,7 +254,7 @@ export function AppHeader() {
 function MobileSearchButton() {
   const handleClick = () => {
     // Trigger spotlight via the registered keyboard shortcut.
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
   };
 
   return (

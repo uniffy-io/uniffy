@@ -1,33 +1,33 @@
 /* eslint-disable react-refresh/only-export-components -- pure popover logic is co-located for unit tests */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { ArrowCounterClockwise, Faders } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ArrowCounterClockwise, Faders } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   selectAvailableModels,
   selectModelsForKey,
-} from '@/features/agents/store/agentProvidersSlice';
-import { fetchModelsForKey } from '@/features/agents/store/agentProvidersThunks';
-import type { SerializedModelInfo } from '@/features/agents/store/agentProvidersThunks';
-import type { SerializedAgent } from '@/features/agents/store/agentsThunks';
-import { ModelParamsSection } from '@/features/agents/components/ModelParamsSection';
-import { ImageCostHint } from '@/features/agents/components/ImageCostHint';
-import { parseImagePriceEstimates } from '@/features/agents/utils/imageParams';
-import { IMAGE_GENERATION_TOOL } from '@/features/agents/config/toolCatalog';
+} from "@/features/agents/store/agentProvidersSlice";
+import { fetchModelsForKey } from "@/features/agents/store/agentProvidersThunks";
+import type { SerializedModelInfo } from "@/features/agents/store/agentProvidersThunks";
+import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
+import { ModelParamsSection } from "@/features/agents/components/ModelParamsSection";
+import { ImageCostHint } from "@/features/agents/components/ImageCostHint";
+import { parseImagePriceEstimates } from "@/features/agents/utils/imageParams";
+import { IMAGE_GENERATION_TOOL } from "@/features/agents/config/toolCatalog";
 import {
   parseModelParamValues,
   type ModelParamValues,
-} from '@/features/agents/utils/modelParamsSchema';
+} from "@/features/agents/utils/modelParamsSchema";
 import {
   modelDisplayName,
   resolveEffectiveModelId,
-} from '@/features/chat/components/compose/AgentModelPicker';
+} from "@/features/chat/components/compose/AgentModelPicker";
 import type {
   ChannelAgentConfigChanges,
   ChannelAgentConfigState,
-} from '@/features/chat/hooks/useChannelAgentConfig';
+} from "@/features/chat/hooks/useChannelAgentConfig";
 
 export const hasParamsOverride = (config: ChannelAgentConfigState | null): boolean =>
   Object.keys(config?.modelParams ?? {}).length > 0 ||
@@ -36,26 +36,26 @@ export const hasParamsOverride = (config: ChannelAgentConfigState | null): boole
 /** The agent's image model generates nothing here unless the tool is enabled. */
 export const imageSchemaFor = (
   models: SerializedModelInfo[],
-  agent: Pick<SerializedAgent, 'enabledTools' | 'imageModel'>,
+  agent: Pick<SerializedAgent, "enabledTools" | "imageModel">,
 ): { schemaJson: string; estimatesJson: string } => {
   if (!agent.imageModel || !agent.enabledTools.includes(IMAGE_GENERATION_TOOL)) {
-    return { schemaJson: '', estimatesJson: '' };
+    return { schemaJson: "", estimatesJson: "" };
   }
   const model = models.find((m) => m.id === agent.imageModel);
   return {
-    schemaJson: model?.imageParameterSchemaJson ?? '',
-    estimatesJson: model?.imagePriceEstimatesJson ?? '',
+    schemaJson: model?.imageParameterSchemaJson ?? "",
+    estimatesJson: model?.imagePriceEstimatesJson ?? "",
   };
 };
 
 /** Schema of the model the conversation actually runs on (override else agent primary). */
 export const effectiveParamsSchemaJson = (
   models: SerializedModelInfo[],
-  config: Pick<ChannelAgentConfigState, 'modelOverride'> | null,
+  config: Pick<ChannelAgentConfigState, "modelOverride"> | null,
   primaryModel: string,
 ): string => {
   const effectiveId = resolveEffectiveModelId(config, primaryModel);
-  return models.find((m) => m.id === effectiveId)?.parameterSchemaJson ?? '';
+  return models.find((m) => m.id === effectiveId)?.parameterSchemaJson ?? "";
 };
 
 const POPOVER_WIDTH = 320;
@@ -119,10 +119,7 @@ export function AgentParamsPopover({
   // An unset knob here falls through to the agent's own configuration, so that
   // is what the controls must show - not the provider default the builder may
   // already have moved away from.
-  const agentParams = useMemo(
-    () => parseModelParamValues(agent.modelParams),
-    [agent.modelParams],
-  );
+  const agentParams = useMemo(() => parseModelParamValues(agent.modelParams), [agent.modelParams]);
   const agentImageParams = useMemo(
     () => parseModelParamValues(agent.imageParams),
     [agent.imageParams],
@@ -141,17 +138,17 @@ export function AgentParamsPopover({
       if (buttonRef.current?.contains(target)) return;
       // Enum params render their dropdown in a body portal; a click there
       // must not count as outside the popover.
-      if (target.closest?.('[data-select-portal]')) return;
+      if (target.closest?.("[data-select-portal]")) return;
       setOpen(false);
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
 
@@ -202,12 +199,12 @@ export function AgentParamsPopover({
         aria-label="Model parameters for this conversation"
         title="Model parameters for this conversation"
         className={cn(
-          'relative flex items-center px-2 py-1.5 rounded-md',
-          'text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
+          "relative flex items-center px-2 py-1.5 rounded-md",
+          "text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
         )}
         data-testid="chat-compose-params-button"
-        data-state={open ? 'open' : 'closed'}
-        data-override-active={overrideActive ? 'true' : 'false'}
+        data-state={open ? "open" : "closed"}
+        data-override-active={overrideActive ? "true" : "false"}
       >
         <Faders size={16} />
         {overrideActive && (
@@ -217,84 +214,83 @@ export function AgentParamsPopover({
           />
         )}
       </button>
-      {open && position && createPortal(
-        <div
-          ref={containerRef}
-          className="fixed z-[200]"
-          style={{ bottom: position.bottom, left: position.left }}
-          data-testid="chat-compose-params-popover"
-        >
+      {open &&
+        position &&
+        createPortal(
           <div
-            className="w-80 overflow-y-auto rounded-xl border border-border bg-card shadow-xl p-3"
-            style={{ maxHeight: position.maxHeight }}
+            ref={containerRef}
+            className="fixed z-[200]"
+            style={{ bottom: position.bottom, left: position.left }}
+            data-testid="chat-compose-params-popover"
           >
-            <p className="px-2 pb-2 text-xs leading-snug text-muted-foreground">
-              Overrides for{' '}
-              <span className="text-foreground">
-                {effectiveId
-                  ? modelDisplayName(models, effectiveId)
-                  : 'the organization default model'}
-              </span>{' '}
-              in this conversation. The agent itself is not changed.
-            </p>
-            {schemaJson ? (
-              <ModelParamsSection
-                schemaJson={schemaJson}
-                values={config?.modelParams ?? {}}
-                inheritedValues={agentParams}
-                onChange={handleParamsChange}
-                disabled={disabled}
-              />
-            ) : effectiveId ? (
-              <p className="px-2 py-3 text-xs text-muted-foreground">
-                No tunable parameters for this model.
+            <div
+              className="w-80 overflow-y-auto rounded-xl border border-border bg-card shadow-xl p-3"
+              style={{ maxHeight: position.maxHeight }}
+            >
+              <p className="px-2 pb-2 text-xs leading-snug text-muted-foreground">
+                Overrides for{" "}
+                <span className="text-foreground">
+                  {effectiveId
+                    ? modelDisplayName(models, effectiveId)
+                    : "the organization default model"}
+                </span>{" "}
+                in this conversation. The agent itself is not changed.
               </p>
-            ) : (
-              <p className="px-2 py-3 text-xs text-muted-foreground">
-                This agent follows the organization default model. Pick a model
-                for this conversation to tune its parameters.
-              </p>
-            )}
-            {image.schemaJson && (
-              <ModelParamsSection
-                title="Image Generation"
-                audience="user"
-                schemaJson={image.schemaJson}
-                values={config?.imageParams ?? {}}
-                inheritedValues={agentImageParams}
-                onChange={handleImageParamsChange}
-                disabled={disabled}
-                renderRowSuffix={(key) =>
-                  key === 'resolution' || key === 'quality' ? (
-                    <ImageCostHint
-                      estimates={imageEstimates}
-                      values={effectiveImageParams}
-                    />
-                  ) : null
-                }
-              />
-            )}
-            <div className="mt-3 border-t border-border pt-2">
-              <button
-                type="button"
-                onClick={handleReset}
-                disabled={disabled || !overrideActive}
-                className={cn(
-                  'flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                  overrideActive && !disabled
-                    ? 'text-foreground hover:bg-muted'
-                    : 'text-muted-foreground opacity-50 cursor-not-allowed',
-                )}
-                data-testid="chat-compose-params-reset"
-              >
-                <ArrowCounterClockwise size={14} weight="bold" className="shrink-0" />
-                <span>Reset to agent defaults</span>
-              </button>
+              {schemaJson ? (
+                <ModelParamsSection
+                  schemaJson={schemaJson}
+                  values={config?.modelParams ?? {}}
+                  inheritedValues={agentParams}
+                  onChange={handleParamsChange}
+                  disabled={disabled}
+                />
+              ) : effectiveId ? (
+                <p className="px-2 py-3 text-xs text-muted-foreground">
+                  No tunable parameters for this model.
+                </p>
+              ) : (
+                <p className="px-2 py-3 text-xs text-muted-foreground">
+                  This agent follows the organization default model. Pick a model for this
+                  conversation to tune its parameters.
+                </p>
+              )}
+              {image.schemaJson && (
+                <ModelParamsSection
+                  title="Image Generation"
+                  audience="user"
+                  schemaJson={image.schemaJson}
+                  values={config?.imageParams ?? {}}
+                  inheritedValues={agentImageParams}
+                  onChange={handleImageParamsChange}
+                  disabled={disabled}
+                  renderRowSuffix={(key) =>
+                    key === "resolution" || key === "quality" ? (
+                      <ImageCostHint estimates={imageEstimates} values={effectiveImageParams} />
+                    ) : null
+                  }
+                />
+              )}
+              <div className="mt-3 border-t border-border pt-2">
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  disabled={disabled || !overrideActive}
+                  className={cn(
+                    "flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+                    overrideActive && !disabled
+                      ? "text-foreground hover:bg-muted"
+                      : "text-muted-foreground opacity-50 cursor-not-allowed",
+                  )}
+                  data-testid="chat-compose-params-reset"
+                >
+                  <ArrowCounterClockwise size={14} weight="bold" className="shrink-0" />
+                  <span>Reset to agent defaults</span>
+                </button>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

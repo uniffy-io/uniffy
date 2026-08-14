@@ -1,19 +1,23 @@
-import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
-import { toast } from 'sonner';
-import { X, LinkSimple } from '@phosphor-icons/react';
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { closeThreadPanel, selectReplyToMessage, clearReplyToMessage } from '@/features/chat/store/chatUiSlice';
+import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { toast } from "sonner";
+import { X, LinkSimple } from "@phosphor-icons/react";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import {
+  closeThreadPanel,
+  selectReplyToMessage,
+  clearReplyToMessage,
+} from "@/features/chat/store/chatUiSlice";
 import {
   setActiveThread,
   selectActiveThreadId,
   selectActiveThreadMessages,
-} from '@/features/chat/store/chatThreadsSlice';
-import { fetchThreadMessages, sendMessage, stopAgentRun } from '@/features/chat/store/chatThunks';
-import { selectTypingInThread, evictExpiredTyping } from '@/features/chat/store/chatMessagesSlice';
-import { useDraftSync } from '@/features/chat/hooks/useDraftSync';
-import { MessageItem } from '@/features/chat/components/channel/MessageItem';
-import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
-import { TypingIndicator } from '@/features/chat/components/channel/TypingIndicator';
+} from "@/features/chat/store/chatThreadsSlice";
+import { fetchThreadMessages, sendMessage, stopAgentRun } from "@/features/chat/store/chatThunks";
+import { selectTypingInThread, evictExpiredTyping } from "@/features/chat/store/chatMessagesSlice";
+import { useDraftSync } from "@/features/chat/hooks/useDraftSync";
+import { MessageItem } from "@/features/chat/components/channel/MessageItem";
+import { MessageCompose } from "@/features/chat/components/compose/MessageCompose";
+import { TypingIndicator } from "@/features/chat/components/channel/TypingIndicator";
 
 export function ThreadPanel() {
   const dispatch = useAppDispatch();
@@ -28,21 +32,23 @@ export function ThreadPanel() {
   );
 
   const rootMessage = useAppSelector((state) =>
-    activeThreadId ? state.chatMessages.byId[activeThreadId] ?? null : null,
+    activeThreadId ? (state.chatMessages.byId[activeThreadId] ?? null) : null,
   );
 
   const channelName = useAppSelector((state) => {
-    if (!rootMessage) return '';
+    if (!rootMessage) return "";
     const channel = state.chatChannels.byId[rootMessage.channelId];
-    return channel ? `#${channel.name}` : '';
+    return channel ? `#${channel.name}` : "";
   });
 
   useEffect(() => {
     if (activeThreadId && rootMessage) {
-      dispatch(fetchThreadMessages({
-        channelId: rootMessage.channelId,
-        rootMessageId: activeThreadId,
-      }));
+      dispatch(
+        fetchThreadMessages({
+          channelId: rootMessage.channelId,
+          rootMessageId: activeThreadId,
+        }),
+      );
     }
   }, [activeThreadId, rootMessage, dispatch]);
 
@@ -75,13 +81,13 @@ export function ThreadPanel() {
       stickToBottomRef.current = distanceFromBottom < 40;
     };
 
-    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    scrollEl.addEventListener("scroll", onScroll, { passive: true });
     const observer = new ResizeObserver(scrollToBottom);
     observer.observe(contentEl);
     scrollToBottom();
 
     return () => {
-      scrollEl.removeEventListener('scroll', onScroll);
+      scrollEl.removeEventListener("scroll", onScroll);
       observer.disconnect();
     };
   }, [activeThreadId]);
@@ -96,9 +102,9 @@ export function ThreadPanel() {
     const url = `${window.location.origin}/chat/${rootMessage.channelId}#${rootMessage.id}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Thread link copied');
+      toast.success("Thread link copied");
     } catch {
-      toast.error('Failed to copy link');
+      toast.error("Failed to copy link");
     }
   }, [rootMessage]);
 
@@ -108,26 +114,34 @@ export function ThreadPanel() {
     activeThreadId ?? undefined,
   );
 
-  const handleSend = useCallback((content: string) => {
-    if (!activeThreadId || !rootMessage) return;
-    flushOnSend();
-    dispatch(sendMessage({
-      channelId: rootMessage.channelId,
-      content,
-      rootId: activeThreadId,
-      replyToId: replyToMessage?.id,
-    }));
-    dispatch(clearReplyToMessage());
-  }, [activeThreadId, rootMessage, replyToMessage, dispatch, flushOnSend]);
+  const handleSend = useCallback(
+    (content: string) => {
+      if (!activeThreadId || !rootMessage) return;
+      flushOnSend();
+      dispatch(
+        sendMessage({
+          channelId: rootMessage.channelId,
+          content,
+          rootId: activeThreadId,
+          replyToId: replyToMessage?.id,
+        }),
+      );
+      dispatch(clearReplyToMessage());
+    },
+    [activeThreadId, rootMessage, replyToMessage, dispatch, flushOnSend],
+  );
 
   const handleCancelReply = useCallback(() => {
     dispatch(clearReplyToMessage());
   }, [dispatch]);
 
-  const handleStopAgent = useCallback((agentId: string) => {
-    if (!rootMessage) return;
-    dispatch(stopAgentRun({ channelId: rootMessage.channelId, agentId }));
-  }, [rootMessage, dispatch]);
+  const handleStopAgent = useCallback(
+    (agentId: string) => {
+      if (!rootMessage) return;
+      dispatch(stopAgentRun({ channelId: rootMessage.channelId, agentId }));
+    },
+    [rootMessage, dispatch],
+  );
 
   if (!activeThreadId) {
     return null;
@@ -185,41 +199,39 @@ export function ThreadPanel() {
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto" data-testid="chat-thread-scroll">
-       <div ref={contentRef} data-testid="chat-thread-messages" data-reply-count={replyCount}>
-        <div className="border-b border-border">
-          <MessageItem
-            message={rootMessage}
-            isGrouped={false}
-            isFirstInGroup={true}
-          />
-        </div>
-
-        {replyCount > 0 && (
-          <div className="flex items-center gap-3 px-4 py-2">
-            <div className="flex-1 border-t border-border" />
-            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
-              {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
-            </span>
-            <div className="flex-1 border-t border-border" />
+        <div ref={contentRef} data-testid="chat-thread-messages" data-reply-count={replyCount}>
+          <div className="border-b border-border">
+            <MessageItem message={rootMessage} isGrouped={false} isFirstInGroup={true} />
           </div>
-        )}
 
-        {threadMessages.map((reply, index) => {
-          const prevReply = index > 0 ? threadMessages[index - 1] : null;
-          const isGrouped = prevReply !== null
-            && prevReply.senderId === reply.senderId
-            && new Date(reply.createdAt).getTime() - new Date(prevReply.createdAt).getTime() < 300000;
+          {replyCount > 0 && (
+            <div className="flex items-center gap-3 px-4 py-2">
+              <div className="flex-1 border-t border-border" />
+              <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                {replyCount} {replyCount === 1 ? "reply" : "replies"}
+              </span>
+              <div className="flex-1 border-t border-border" />
+            </div>
+          )}
 
-          return (
-            <MessageItem
-              key={reply.id}
-              message={reply}
-              isGrouped={isGrouped}
-              isFirstInGroup={!isGrouped}
+          {threadMessages.map((reply, index) => {
+            const prevReply = index > 0 ? threadMessages[index - 1] : null;
+            const isGrouped =
+              prevReply !== null &&
+              prevReply.senderId === reply.senderId &&
+              new Date(reply.createdAt).getTime() - new Date(prevReply.createdAt).getTime() <
+                300000;
+
+            return (
+              <MessageItem
+                key={reply.id}
+                message={reply}
+                isGrouped={isGrouped}
+                isFirstInGroup={!isGrouped}
               />
-          );
-        })}
-       </div>
+            );
+          })}
+        </div>
       </div>
 
       <TypingIndicator typingUsers={threadTyping} onStopAgent={handleStopAgent} />

@@ -1,20 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import { X, Door, Plus } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select } from '@/components/ui/select';
-import type { SelectOption } from '@/components/ui/select';
-import { selectRoomsLoading } from '@/features/rooms/store/roomsSlice';
-import { createRoom, updateRoom } from '@/features/rooms/store/roomsThunks';
-import {
-  ROOM_TYPE_LABELS,
-  ROOM_STATUS_LABELS,
-  AMENITY_OPTIONS,
-} from '@/features/rooms/types';
-import type { Room, RoomType, RoomStatus } from '@/features/rooms/types';
+import { useState, useEffect, useCallback } from "react";
+import { X, Door, Plus } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select } from "@/components/ui/select";
+import type { SelectOption } from "@/components/ui/select";
+import { selectRoomsLoading } from "@/features/rooms/store/roomsSlice";
+import { createRoom, updateRoom } from "@/features/rooms/store/roomsThunks";
+import { ROOM_TYPE_LABELS, ROOM_STATUS_LABELS, AMENITY_OPTIONS } from "@/features/rooms/types";
+import type { Room, RoomType, RoomStatus } from "@/features/rooms/types";
 
 interface RoomFormModalProps {
   isOpen: boolean;
@@ -31,8 +27,8 @@ const ROOM_STATUS_OPTIONS: SelectOption[] = Object.entries(ROOM_STATUS_LABELS).m
 );
 
 const VISIBILITY_OPTIONS: SelectOption[] = [
-  { value: 'private', label: 'Private' },
-  { value: 'organization', label: 'Organization' },
+  { value: "private", label: "Private" },
+  { value: "organization", label: "Organization" },
 ];
 
 interface FormState {
@@ -44,7 +40,7 @@ interface FormState {
   floor: string;
   location: string;
   amenities: string[];
-  visibility: 'private' | 'organization';
+  visibility: "private" | "organization";
   status: RoomStatus;
 }
 
@@ -55,16 +51,16 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
   const isEdit = !!room;
 
   const [form, setForm] = useState<FormState>({
-    name: '',
-    description: '',
-    roomType: 'meeting_room',
-    capacity: '1',
-    building: '',
-    floor: '',
-    location: '',
+    name: "",
+    description: "",
+    roomType: "meeting_room",
+    capacity: "1",
+    building: "",
+    floor: "",
+    location: "",
     amenities: [],
-    visibility: 'organization',
-    status: 'active',
+    visibility: "organization",
+    status: "active",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -87,16 +83,16 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
         });
       } else {
         setForm({
-          name: '',
-          description: '',
-          roomType: 'meeting_room',
-          capacity: '1',
-          building: '',
-          floor: '',
-          location: '',
+          name: "",
+          description: "",
+          roomType: "meeting_room",
+          capacity: "1",
+          building: "",
+          floor: "",
+          location: "",
           amenities: [],
-          visibility: 'organization',
-          status: 'active',
+          visibility: "organization",
+          status: "active",
         });
       }
       setErrors({});
@@ -108,34 +104,34 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
 
     const name = form.name.trim();
     if (!name) {
-      newErrors.name = 'Name is required';
+      newErrors.name = "Name is required";
     } else if (name.length > 255) {
-      newErrors.name = 'Name must be 255 characters or less';
+      newErrors.name = "Name must be 255 characters or less";
     }
 
     const cap = parseInt(form.capacity, 10);
     if (!form.capacity.trim()) {
-      newErrors.capacity = 'Capacity is required';
+      newErrors.capacity = "Capacity is required";
     } else if (isNaN(cap) || cap < 0) {
-      newErrors.capacity = 'Capacity must be 0 or greater';
+      newErrors.capacity = "Capacity must be 0 or greater";
     } else if (cap > 10000) {
-      newErrors.capacity = 'Capacity seems too high';
+      newErrors.capacity = "Capacity seems too high";
     }
 
     if (form.building.length > 100) {
-      newErrors.building = 'Building must be 100 characters or less';
+      newErrors.building = "Building must be 100 characters or less";
     }
 
     if (form.floor.length > 50) {
-      newErrors.floor = 'Floor must be 50 characters or less';
+      newErrors.floor = "Floor must be 50 characters or less";
     }
 
     if (form.location.length > 500) {
-      newErrors.location = 'Location must be 500 characters or less';
+      newErrors.location = "Location must be 500 characters or less";
     }
 
     if (form.description.length > 2000) {
-      newErrors.description = 'Description must be 2000 characters or less';
+      newErrors.description = "Description must be 2000 characters or less";
     }
 
     setErrors(newErrors);
@@ -199,7 +195,7 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
     onClose();
   };
 
-  const [customAmenity, setCustomAmenity] = useState('');
+  const [customAmenity, setCustomAmenity] = useState("");
 
   const handleAmenityToggle = (amenity: string) => {
     setForm((prev) => ({
@@ -214,23 +210,23 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
     const trimmed = customAmenity.trim();
     if (!trimmed) return;
     if (form.amenities.includes(trimmed)) {
-      setCustomAmenity('');
+      setCustomAmenity("");
       return;
     }
     setForm((prev) => ({
       ...prev,
       amenities: [...prev.amenities, trimmed],
     }));
-    setCustomAmenity('');
+    setCustomAmenity("");
   }, [customAmenity, form.amenities]);
 
   useEffect(() => {
     if (!isOpen) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -246,17 +242,17 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
 
       <div
         className={cn(
-          'relative bg-card w-[calc(100vw-2rem)] max-w-lg mx-4',
-          'rounded-t-xl sm:rounded-xl',
-          'shadow-2xl border border-border overflow-hidden',
-          'animate-in zoom-in-95 fade-in duration-200',
+          "relative bg-card w-[calc(100vw-2rem)] max-w-lg mx-4",
+          "rounded-t-xl sm:rounded-xl",
+          "shadow-2xl border border-border overflow-hidden",
+          "animate-in zoom-in-95 fade-in duration-200",
         )}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Door size={20} weight="duotone" className="text-muted-foreground" />
             <h2 className="text-base font-semibold text-foreground">
-              {isEdit ? 'Edit Room' : 'New Room'}
+              {isEdit ? "Edit Room" : "New Room"}
             </h2>
           </div>
           <button
@@ -276,28 +272,26 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
               </label>
               <Input
                 value={form.name}
-                onChange={(e) => handleFieldChange('name', e.target.value)}
+                onChange={(e) => handleFieldChange("name", e.target.value)}
                 placeholder="Conference Room A"
-                className={cn(errors.name && 'border-red-500')}
+                className={cn(errors.name && "border-red-500")}
               />
-              {errors.name && (
-                <span className="text-xs text-red-500">{errors.name}</span>
-              )}
+              {errors.name && <span className="text-xs text-red-500">{errors.name}</span>}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-foreground">Description</label>
               <textarea
                 value={form.description}
-                onChange={(e) => handleFieldChange('description', e.target.value)}
+                onChange={(e) => handleFieldChange("description", e.target.value)}
                 placeholder="A brief description of this room..."
                 rows={3}
                 className={cn(
-                  'flex w-full rounded-md border bg-background px-3 py-2 text-sm',
-                  'placeholder:text-muted-foreground',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                  'resize-none',
-                  errors.description ? 'border-red-500' : 'border-input',
+                  "flex w-full rounded-md border bg-background px-3 py-2 text-sm",
+                  "placeholder:text-muted-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  "resize-none",
+                  errors.description ? "border-red-500" : "border-input",
                 )}
               />
               {errors.description && (
@@ -323,14 +317,12 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
                   pattern="[0-9]*"
                   value={form.capacity}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, '');
-                    handleFieldChange('capacity', val);
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    handleFieldChange("capacity", val);
                   }}
-                  className={cn('h-8', errors.capacity && 'border-red-500')}
+                  className={cn("h-8", errors.capacity && "border-red-500")}
                 />
-                {errors.capacity && (
-                  <span className="text-xs text-red-500">{errors.capacity}</span>
-                )}
+                {errors.capacity && <span className="text-xs text-red-500">{errors.capacity}</span>}
               </div>
             </div>
 
@@ -351,25 +343,21 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
                 <label className="text-sm font-medium text-foreground">Building</label>
                 <Input
                   value={form.building}
-                  onChange={(e) => handleFieldChange('building', e.target.value)}
+                  onChange={(e) => handleFieldChange("building", e.target.value)}
                   placeholder="Main Office"
-                  className={cn('h-8', errors.building && 'border-red-500')}
+                  className={cn("h-8", errors.building && "border-red-500")}
                 />
-                {errors.building && (
-                  <span className="text-xs text-red-500">{errors.building}</span>
-                )}
+                {errors.building && <span className="text-xs text-red-500">{errors.building}</span>}
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-foreground">Floor</label>
                 <Input
                   value={form.floor}
-                  onChange={(e) => handleFieldChange('floor', e.target.value)}
+                  onChange={(e) => handleFieldChange("floor", e.target.value)}
                   placeholder="3"
-                  className={cn('h-8', errors.floor && 'border-red-500')}
+                  className={cn("h-8", errors.floor && "border-red-500")}
                 />
-                {errors.floor && (
-                  <span className="text-xs text-red-500">{errors.floor}</span>
-                )}
+                {errors.floor && <span className="text-xs text-red-500">{errors.floor}</span>}
               </div>
             </div>
 
@@ -377,13 +365,11 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
               <label className="text-sm font-medium text-foreground">Location</label>
               <Input
                 value={form.location}
-                onChange={(e) => handleFieldChange('location', e.target.value)}
+                onChange={(e) => handleFieldChange("location", e.target.value)}
                 placeholder="Wing B, near elevator"
-                className={cn(errors.location && 'border-red-500')}
+                className={cn(errors.location && "border-red-500")}
               />
-              {errors.location && (
-                <span className="text-xs text-red-500">{errors.location}</span>
-              )}
+              {errors.location && <span className="text-xs text-red-500">{errors.location}</span>}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -426,7 +412,7 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
                   value={customAmenity}
                   onChange={(e) => setCustomAmenity(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       e.preventDefault();
                       handleAddCustomAmenity();
                     }
@@ -455,7 +441,7 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
                 onChange={(val) =>
                   setForm((prev) => ({
                     ...prev,
-                    visibility: val as 'private' | 'organization',
+                    visibility: val as "private" | "organization",
                   }))
                 }
                 options={VISIBILITY_OPTIONS}
@@ -474,13 +460,8 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              size="md"
-              loading={isSubmitting}
-              disabled={isSubmitting}
-            >
-              {isEdit ? 'Save Changes' : 'New Room'}
+            <Button type="submit" size="md" loading={isSubmitting} disabled={isSubmitting}>
+              {isEdit ? "Save Changes" : "New Room"}
             </Button>
           </div>
         </form>

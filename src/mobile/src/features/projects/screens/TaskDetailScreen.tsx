@@ -73,7 +73,15 @@ import type { SerializedTask } from "@features/projects/projectsSerializer";
 
 type EditableField = "status" | "priority" | null;
 type DetailSheet =
-  "type" | "sprint" | "parent" | "estimate" | "spent" | "tags" | "blockers" | "repeat" | null;
+  | "type"
+  | "sprint"
+  | "parent"
+  | "estimate"
+  | "spent"
+  | "tags"
+  | "blockers"
+  | "repeat"
+  | null;
 
 /** Every task under `rootId`, plus `rootId` itself. */
 function collectDescendantIds(tasks: SerializedTask[], rootId: string): string[] {

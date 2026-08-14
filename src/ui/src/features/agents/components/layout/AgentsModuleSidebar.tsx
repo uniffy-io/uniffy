@@ -84,9 +84,11 @@ export function AgentsModuleSidebar() {
           title={isOverlay ? "Pin sidebar" : "Collapse sidebar"}
           data-testid="agents-sidebar-collapse-toggle"
         >
-          {isOverlay
-            ? <CaretDoubleRight size={16} weight="bold" className="text-primary" />
-            : <CaretDoubleLeft size={16} weight="bold" className="text-primary" />}
+          {isOverlay ? (
+            <CaretDoubleRight size={16} weight="bold" className="text-primary" />
+          ) : (
+            <CaretDoubleLeft size={16} weight="bold" className="text-primary" />
+          )}
         </button>
       </div>
 

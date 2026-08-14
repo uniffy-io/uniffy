@@ -1,6 +1,12 @@
-import { createSlice, createSelector, type PayloadAction } from '@reduxjs/toolkit';
-import type { ChatChannel, ChatChannelMember, ChatChannelCategory, ChatAgentFolder, ChannelPreferences } from '@/features/chat/types';
-import type { RootState } from '@/app/store';
+import { createSlice, createSelector, type PayloadAction } from "@reduxjs/toolkit";
+import type {
+  ChatChannel,
+  ChatChannelMember,
+  ChatChannelCategory,
+  ChatAgentFolder,
+  ChannelPreferences,
+} from "@/features/chat/types";
+import type { RootState } from "@/app/store";
 
 // Channels are normalized (byId + ids) so per-channel mutations - unread
 // bumps, activity touches - invalidate only that channel's subscribers.
@@ -30,7 +36,7 @@ const initialState: ChatChannelsState = {
 };
 
 export const chatChannelsSlice = createSlice({
-  name: 'chatChannels',
+  name: "chatChannels",
   initialState,
   reducers: {
     setChannels: (state, action: PayloadAction<ChatChannel[]>) => {
@@ -74,12 +80,17 @@ export const chatChannelsSlice = createSlice({
     },
     updateUnreadCounts: (
       state,
-      action: PayloadAction<Array<{ channelId: string; unreadCount: number; mentionCount: number }>>,
+      action: PayloadAction<
+        Array<{ channelId: string; unreadCount: number; mentionCount: number }>
+      >,
     ) => {
       for (const item of action.payload) {
         const channel = state.byId[item.channelId];
         // Skip no-op writes so an already-clear channel keeps its object identity.
-        if (channel && (channel.unreadCount !== item.unreadCount || channel.mentionCount !== item.mentionCount)) {
+        if (
+          channel &&
+          (channel.unreadCount !== item.unreadCount || channel.mentionCount !== item.mentionCount)
+        ) {
           channel.unreadCount = item.unreadCount;
           channel.mentionCount = item.mentionCount;
         }
@@ -124,11 +135,11 @@ export const chatChannelsSlice = createSlice({
     },
     setMemberRole: (
       state,
-      action: PayloadAction<{ channelId: string; userId: string; role: ChatChannelMember['role'] }>,
+      action: PayloadAction<{ channelId: string; userId: string; role: ChatChannelMember["role"] }>,
     ) => {
       const members = state.channelMembers[action.payload.channelId];
       const member = members?.find(
-        (m) => m.subjectType === 'USER' && m.userId === action.payload.userId,
+        (m) => m.subjectType === "USER" && m.userId === action.payload.userId,
       );
       if (member) {
         member.role = action.payload.role;
@@ -169,10 +180,7 @@ export const chatChannelsSlice = createSlice({
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
-    setChannelPreferences: (
-      state,
-      action: PayloadAction<Record<string, ChannelPreferences>>,
-    ) => {
+    setChannelPreferences: (state, action: PayloadAction<Record<string, ChannelPreferences>>) => {
       state.channelPreferences = action.payload;
     },
     updateChannelPreference: (
@@ -188,7 +196,7 @@ export const chatChannelsSlice = createSlice({
       } else {
         state.channelPreferences[action.payload.channelId] = {
           isMuted: false,
-          notificationLevel: 'ALL',
+          notificationLevel: "ALL",
           mutedUntil: null,
           ...action.payload.prefs,
         };
@@ -245,33 +253,29 @@ export const selectChannelById = (state: RootState, id: string): ChatChannel | u
   state.chatChannels.byId[id];
 
 export const sortByLastActivity = (a: ChatChannel, b: ChatChannel): number => {
-  const aTime = a.lastMessageAt ?? a.createdAt ?? '';
-  const bTime = b.lastMessageAt ?? b.createdAt ?? '';
+  const aTime = a.lastMessageAt ?? a.createdAt ?? "";
+  const bTime = b.lastMessageAt ?? b.createdAt ?? "";
   return bTime.localeCompare(aTime);
 };
 
 // Channels order by root-message activity so thread replies do not reshuffle the list.
 export const sortByRootActivity = (a: ChatChannel, b: ChatChannel): number => {
-  const aTime = a.lastRootMessageAt ?? a.createdAt ?? '';
-  const bTime = b.lastRootMessageAt ?? b.createdAt ?? '';
+  const aTime = a.lastRootMessageAt ?? a.createdAt ?? "";
+  const bTime = b.lastRootMessageAt ?? b.createdAt ?? "";
   return bTime.localeCompare(aTime);
 };
 
 export const selectPublicChannels = createSelector([selectChannels], (channels) =>
-  channels.filter((c) => c.channelType === 'PUBLIC').sort(sortByLastActivity),
+  channels.filter((c) => c.channelType === "PUBLIC").sort(sortByLastActivity),
 );
 
 export const selectPrivateChannels = createSelector([selectChannels], (channels) =>
-  channels.filter((c) => c.channelType === 'PRIVATE').sort(sortByLastActivity),
+  channels.filter((c) => c.channelType === "PRIVATE").sort(sortByLastActivity),
 );
 
 export const selectDirectMessages = createSelector([selectChannels], (channels) =>
   channels
-    .filter(
-      (c) =>
-        !c.isAgentDm &&
-        (c.channelType === 'DIRECT' || c.channelType === 'GROUP_DM'),
-    )
+    .filter((c) => !c.isAgentDm && (c.channelType === "DIRECT" || c.channelType === "GROUP_DM"))
     .sort(sortByLastActivity),
 );
 
@@ -279,10 +283,8 @@ export const selectAgentChats = createSelector([selectChannels], (channels) =>
   channels.filter((c) => c.isAgentDm).sort(sortByLastActivity),
 );
 
-export const selectChannelMembers = (
-  state: RootState,
-  channelId: string,
-): ChatChannelMember[] => state.chatChannels.channelMembers[channelId] ?? [];
+export const selectChannelMembers = (state: RootState, channelId: string): ChatChannelMember[] =>
+  state.chatChannels.channelMembers[channelId] ?? [];
 
 export const selectCategories = (state: RootState): ChatChannelCategory[] =>
   state.chatChannels.categories;
@@ -290,8 +292,7 @@ export const selectCategories = (state: RootState): ChatChannelCategory[] =>
 export const selectAgentFolders = (state: RootState): ChatAgentFolder[] =>
   state.chatChannels.agentFolders;
 
-export const selectIsLoading = (state: RootState): boolean =>
-  state.chatChannels.isLoading;
+export const selectIsLoading = (state: RootState): boolean => state.chatChannels.isLoading;
 
 export const selectChannelPreferences = (state: RootState): Record<string, ChannelPreferences> =>
   state.chatChannels.channelPreferences;

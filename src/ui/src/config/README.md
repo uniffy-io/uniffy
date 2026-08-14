@@ -22,11 +22,11 @@ src/config/
 Access environment configuration through the `env` object:
 
 ```typescript
-import { env } from '@/config';
+import { env } from "@/config";
 
-console.log(env.apiBaseUrl);  // Backend API URL
-console.log(env.isDev);       // true in development
-console.log(env.isProd);      // true in production
+console.log(env.apiBaseUrl); // Backend API URL
+console.log(env.isDev); // true in development
+console.log(env.isProd); // true in production
 ```
 
 ### API Transport
@@ -34,14 +34,15 @@ console.log(env.isProd);      // true in production
 Use the centralized transport for all ConnectRPC clients:
 
 ```typescript
-import { createClient } from '@connectrpc/connect';
-import { transport } from '@/config';
-import { AuthService } from '@/gen/auth/v1/auth_connect';
+import { createClient } from "@connectrpc/connect";
+import { transport } from "@/config";
+import { AuthService } from "@/gen/auth/v1/auth_connect";
 
 const client = createClient(AuthService, transport);
 ```
 
 **Benefits:**
+
 - Consistent configuration across all API calls
 - Single point of configuration for baseUrl
 - Easy to mock in tests
@@ -66,9 +67,9 @@ interface EnvConfig {
 
 function createEnvConfig(): EnvConfig {
   return {
-    apiBaseUrl: import.meta.env.VITE_API_URL || 'http://dev.local.uniffy.io:8000',
+    apiBaseUrl: import.meta.env.VITE_API_URL || "http://dev.local.uniffy.io:8000",
     // Parse new variable
-    featureFlagX: import.meta.env.VITE_FEATURE_X === 'true',
+    featureFlagX: import.meta.env.VITE_FEATURE_X === "true",
   };
 }
 ```
@@ -105,14 +106,16 @@ All environment variables must be prefixed with `VITE_` to be exposed to the cli
 If you have existing code with hardcoded configuration:
 
 **Before:**
+
 ```typescript
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://dev.local.uniffy.io:8000";
 const transport = createConnectTransport({ baseUrl: API_BASE_URL });
 ```
 
 **After:**
+
 ```typescript
-import { transport } from '@/config';
+import { transport } from "@/config";
 ```
 
 That's it! No need to recreate the transport or access environment variables directly.

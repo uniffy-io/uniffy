@@ -20,7 +20,10 @@ import {
   optimisticUpdateTask,
   updateFieldDefinition,
 } from "@/features/projects/store/projectsSlice";
-import { selectActiveSprint, selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
+import {
+  selectActiveSprint,
+  selectSprintsForProject,
+} from "@/features/projects/store/sprintsSlice";
 import { moveTask, updateFieldThunk, updateTask } from "@/features/projects/store/projectsThunks";
 import { checkReparent } from "@/features/projects/utils/reparent";
 import { getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
@@ -108,14 +111,10 @@ export function BoardView() {
     return null;
   }
 
-  const statusField = project.fieldDefinitions.find(
-    (f) => f.id === SYSTEM_FIELD_IDS.STATUS
-  );
+  const statusField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
   const statusOptions = statusField?.config.options || [];
 
-  const priorityField = project.fieldDefinitions.find(
-    (f) => f.id === SYSTEM_FIELD_IDS.PRIORITY
-  );
+  const priorityField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.PRIORITY);
   const priorityOptions = priorityField?.config.options || [];
 
   const tasksByStatus = statusOptions.reduce(
@@ -123,7 +122,7 @@ export function BoardView() {
       acc[option.id] = tasks.filter((t) => t.status === option.id);
       return acc;
     },
-    {} as Record<string, Task[]>
+    {} as Record<string, Task[]>,
   );
 
   const epicTasks = isSwimlaneMode
@@ -146,10 +145,13 @@ export function BoardView() {
   const epicLanes = isSwimlaneMode
     ? epicTasks.map((epic) => {
         const laneTasks = tasks.filter((t) => t.parentId === epic.id && !taskIsEpic(t));
-        const byStatus = statusOptions.reduce((acc, opt) => {
-          acc[opt.id] = laneTasks.filter((t) => t.status === opt.id);
-          return acc;
-        }, {} as Record<string, Task[]>);
+        const byStatus = statusOptions.reduce(
+          (acc, opt) => {
+            acc[opt.id] = laneTasks.filter((t) => t.status === opt.id);
+            return acc;
+          },
+          {} as Record<string, Task[]>,
+        );
         return { laneId: epic.id, epic, tasksByStatus: byStatus };
       })
     : [];
@@ -158,10 +160,13 @@ export function BoardView() {
     ? tasks.filter((t) => !taskIsEpic(t) && laneIdForTask(t) === NO_EPIC_LANE_ID)
     : [];
   const noEpicByStatus = isSwimlaneMode
-    ? statusOptions.reduce((acc, opt) => {
-        acc[opt.id] = noEpicTasks.filter((t) => t.status === opt.id);
-        return acc;
-      }, {} as Record<string, Task[]>)
+    ? statusOptions.reduce(
+        (acc, opt) => {
+          acc[opt.id] = noEpicTasks.filter((t) => t.status === opt.id);
+          return acc;
+        },
+        {} as Record<string, Task[]>,
+      )
     : {};
 
   // Status IDs that count toward "done" in lane progress badges.
@@ -190,7 +195,7 @@ export function BoardView() {
 
   const handleAddStatus = (label: string, color: string) => {
     if (!statusField) return;
-    
+
     const existingOptions = statusField.config.options || [];
     const maxSortOrder = existingOptions.reduce((max, item) => Math.max(max, item.sortOrder), -1);
 
@@ -200,20 +205,24 @@ export function BoardView() {
       color,
       sortOrder: maxSortOrder + 1,
     };
-    
+
     const updatedConfig = { ...statusField.config, options: [...existingOptions, newOption] };
 
-    dispatch(updateFieldDefinition({
-      projectId: project.id,
-      fieldId: SYSTEM_FIELD_IDS.STATUS,
-      changes: { config: updatedConfig },
-    }));
+    dispatch(
+      updateFieldDefinition({
+        projectId: project.id,
+        fieldId: SYSTEM_FIELD_IDS.STATUS,
+        changes: { config: updatedConfig },
+      }),
+    );
 
-    dispatch(updateFieldThunk({
-      projectId: project.id,
-      fieldId: SYSTEM_FIELD_IDS.STATUS,
-      updates: { config: updatedConfig },
-    }));
+    dispatch(
+      updateFieldThunk({
+        projectId: project.id,
+        fieldId: SYSTEM_FIELD_IDS.STATUS,
+        updates: { config: updatedConfig },
+      }),
+    );
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -318,7 +327,10 @@ export function BoardView() {
 
       // In-lane, in-column drag onto another task -> reorder
       if (!parentChange && !statusChange && overTask && over.rect) {
-        const laneTasks = destLaneId === NO_EPIC_LANE_ID ? noEpicTasks : tasks.filter((t) => t.parentId === destLaneId);
+        const laneTasks =
+          destLaneId === NO_EPIC_LANE_ID
+            ? noEpicTasks
+            : tasks.filter((t) => t.parentId === destLaneId);
         const columnTasks = laneTasks.filter((t) => t.status === destStatus);
         reorderWithinColumn(taskId, task, columnTasks, overTask, over.rect, pointerY);
         return;
@@ -379,7 +391,7 @@ export function BoardView() {
           id: taskId,
           status: newStatus,
           sortOrder: 0,
-        })
+        }),
       );
     }
   };

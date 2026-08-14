@@ -1,8 +1,8 @@
-import { forwardRef, useId } from 'react';
-import { Check } from '@phosphor-icons/react';
-import { cn } from '@/shared/utils/cn';
+import { forwardRef, useId } from "react";
+import { Check } from "@phosphor-icons/react";
+import { cn } from "@/shared/utils/cn";
 
-interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
   label?: string;
   description?: string;
 }
@@ -13,7 +13,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     const checkboxId = id || generatedId;
 
     return (
-      <div className={cn('flex items-start gap-3', className)}>
+      <div className={cn("flex items-start gap-3", className)}>
         <div className="relative flex items-center">
           <input
             ref={ref}
@@ -25,13 +25,13 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           />
           <div
             className={cn(
-              'h-5 w-5 rounded border-2 transition-all duration-150 cursor-pointer',
-              'flex items-center justify-center',
-              'border-border bg-background',
-              'peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background',
-              'peer-checked:border-primary peer-checked:bg-primary',
-              'peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
-              'hover:border-primary/70'
+              "h-5 w-5 rounded border-2 transition-all duration-150 cursor-pointer",
+              "flex items-center justify-center",
+              "border-border bg-background",
+              "peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background",
+              "peer-checked:border-primary peer-checked:bg-primary",
+              "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+              "hover:border-primary/70",
             )}
             onClick={() => {
               const input = document.getElementById(checkboxId) as HTMLInputElement;
@@ -44,8 +44,8 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
               size={14}
               weight="bold"
               className={cn(
-                'text-primary-foreground transition-opacity duration-150',
-                checked ? 'opacity-100' : 'opacity-0'
+                "text-primary-foreground transition-opacity duration-150",
+                checked ? "opacity-100" : "opacity-0",
               )}
             />
           </div>
@@ -60,15 +60,12 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
                 {label}
               </label>
             )}
-            {description && (
-              <span className="text-xs text-muted-foreground">{description}</span>
-            )}
+            {description && <span className="text-xs text-muted-foreground">{description}</span>}
           </div>
         )}
       </div>
     );
-  }
+  },
 );
 
-Checkbox.displayName = 'Checkbox';
-
+Checkbox.displayName = "Checkbox";

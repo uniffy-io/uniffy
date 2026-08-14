@@ -1,5 +1,5 @@
 // Inline-only markup so the card stays HTML-valid as a descendant of `<p>`.
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 import {
   Clock,
   ArrowSquareOut,
@@ -9,10 +9,10 @@ import {
   Lock,
   ChatCircle,
   UsersThree,
-} from '@phosphor-icons/react';
-import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
-import type { MentionLiveState } from '@/components/mention/types';
+} from "@phosphor-icons/react";
+import { formatRelativeTime } from "@/shared/utils/dateFormatting";
+import { ParentBadge, MetaSeparator } from "@/components/mention/previews/ParentBadge";
+import type { MentionLiveState } from "@/components/mention/types";
 
 interface ChatMentionPreviewProps {
   urn: string;
@@ -25,20 +25,29 @@ interface ChatMentionPreviewProps {
 
 function ChannelIconBadge({ channelType }: { channelType?: string }) {
   switch (channelType) {
-    case 'PRIVATE': return <Lock size={18} weight="duotone" />;
-    case 'DIRECT': return <ChatCircle size={18} weight="duotone" />;
-    case 'GROUP_DM': return <UsersThree size={18} weight="duotone" />;
-    default: return <Hash size={18} weight="duotone" />;
+    case "PRIVATE":
+      return <Lock size={18} weight="duotone" />;
+    case "DIRECT":
+      return <ChatCircle size={18} weight="duotone" />;
+    case "GROUP_DM":
+      return <UsersThree size={18} weight="duotone" />;
+    default:
+      return <Hash size={18} weight="duotone" />;
   }
 }
 
 function getChannelTypeLabel(channelType?: string): string {
   switch (channelType) {
-    case 'PUBLIC': return 'Public channel';
-    case 'PRIVATE': return 'Private channel';
-    case 'DIRECT': return 'Direct message';
-    case 'GROUP_DM': return 'Group message';
-    default: return 'Channel';
+    case "PUBLIC":
+      return "Public channel";
+    case "PRIVATE":
+      return "Private channel";
+    case "DIRECT":
+      return "Direct message";
+    case "GROUP_DM":
+      return "Group message";
+    default:
+      return "Channel";
   }
 }
 
@@ -76,12 +85,14 @@ export function ChatMentionPreview({
                   <MetaSeparator />
                 </>
               )}
-              <span className="text-xs font-medium text-violet-600 dark:text-violet-400">{typeLabel}</span>
+              <span className="text-xs font-medium text-violet-600 dark:text-violet-400">
+                {typeLabel}
+              </span>
               {(liveState.memberCount ?? 0) > 0 && (
                 <>
                   <MetaSeparator />
                   <span className="text-xs text-muted-foreground">
-                    {liveState.memberCount} {liveState.memberCount === 1 ? 'member' : 'members'}
+                    {liveState.memberCount} {liveState.memberCount === 1 ? "member" : "members"}
                   </span>
                 </>
               )}
@@ -92,22 +103,31 @@ export function ChatMentionPreview({
 
       {description && (
         <span className="block px-4 pb-2.5 pl-5">
-          <span className="block text-xs text-muted-foreground leading-relaxed line-clamp-2">{description}</span>
+          <span className="block text-xs text-muted-foreground leading-relaxed line-clamp-2">
+            {description}
+          </span>
         </span>
       )}
 
       <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
-          <span>{formatRelativeTime(liveState.updatedAt) || 'No date'}</span>
+          <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>
         </span>
         <span className="flex items-center gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopy();
+            }}
             className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title="Copy URN"
           >
-            {copied ? <Check size={12} weight="bold" className="text-green-500" /> : <CopySimple size={12} weight="bold" />}
+            {copied ? (
+              <Check size={12} weight="bold" className="text-green-500" />
+            ) : (
+              <CopySimple size={12} weight="bold" />
+            )}
           </button>
           <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
             <ArrowSquareOut size={11} weight="bold" />

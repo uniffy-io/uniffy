@@ -1,5 +1,5 @@
-import { createClient } from '@connectrpc/connect';
-import { transport, unaryTransport } from '@/config/api';
+import { createClient } from "@connectrpc/connect";
+import { transport, unaryTransport } from "@/config/api";
 import {
   ChatService,
   CreateChannelRequestSchema,
@@ -62,12 +62,12 @@ import {
   GetChannelAgentConfigRequestSchema,
   UpdateChannelAgentConfigRequestSchema,
   StopAgentRunRequestSchema,
-} from '@uniffy/proto/chat/v1/chat_pb';
+} from "@uniffy/proto/chat/v1/chat_pb";
 import {
   ChatStreamService,
   StreamUserChatEventsRequestSchema,
-} from '@uniffy/proto/chat/v1/chat_stream_pb';
-import type { MessageInitShape } from '@bufbuild/protobuf';
+} from "@uniffy/proto/chat/v1/chat_stream_pb";
+import type { MessageInitShape } from "@bufbuild/protobuf";
 
 const chatClient = createClient(ChatService, unaryTransport);
 const chatStreamClient = createClient(ChatStreamService, transport);
@@ -75,8 +75,7 @@ const chatStreamClient = createClient(ChatStreamService, transport);
 export const chatApi = {
   createChannel: (req: MessageInitShape<typeof CreateChannelRequestSchema>) =>
     chatClient.createChannel(req),
-  getChannel: (req: MessageInitShape<typeof GetChannelRequestSchema>) =>
-    chatClient.getChannel(req),
+  getChannel: (req: MessageInitShape<typeof GetChannelRequestSchema>) => chatClient.getChannel(req),
   updateChannel: (req: MessageInitShape<typeof UpdateChannelRequestSchema>) =>
     chatClient.updateChannel(req),
   archiveChannel: (req: MessageInitShape<typeof ArchiveChannelRequestSchema>) =>
@@ -97,12 +96,10 @@ export const chatApi = {
     chatClient.joinChannel(req),
   leaveChannel: (req: MessageInitShape<typeof LeaveChannelRequestSchema>) =>
     chatClient.leaveChannel(req),
-  addMembers: (req: MessageInitShape<typeof AddMembersRequestSchema>) =>
-    chatClient.addMembers(req),
+  addMembers: (req: MessageInitShape<typeof AddMembersRequestSchema>) => chatClient.addMembers(req),
   removeMembers: (req: MessageInitShape<typeof RemoveMembersRequestSchema>) =>
     chatClient.removeMembers(req),
-  getMembers: (req: MessageInitShape<typeof GetMembersRequestSchema>) =>
-    chatClient.getMembers(req),
+  getMembers: (req: MessageInitShape<typeof GetMembersRequestSchema>) => chatClient.getMembers(req),
   updateChannelMember: (req: MessageInitShape<typeof UpdateChannelMemberRequestSchema>) =>
     chatClient.updateChannelMember(req),
   updateMemberRole: (req: MessageInitShape<typeof UpdateMemberRoleRequestSchema>) =>
@@ -112,22 +109,19 @@ export const chatApi = {
     chatClient.sendMessage(req),
   getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>) =>
     chatClient.getMessages(req),
-  getMessage: (req: MessageInitShape<typeof GetMessageRequestSchema>) =>
-    chatClient.getMessage(req),
+  getMessage: (req: MessageInitShape<typeof GetMessageRequestSchema>) => chatClient.getMessage(req),
   updateMessage: (req: MessageInitShape<typeof UpdateMessageRequestSchema>) =>
     chatClient.updateMessage(req),
   deleteMessage: (req: MessageInitShape<typeof DeleteMessageRequestSchema>) =>
     chatClient.deleteMessage(req),
 
-  pinMessage: (req: MessageInitShape<typeof PinMessageRequestSchema>) =>
-    chatClient.pinMessage(req),
+  pinMessage: (req: MessageInitShape<typeof PinMessageRequestSchema>) => chatClient.pinMessage(req),
   unpinMessage: (req: MessageInitShape<typeof UnpinMessageRequestSchema>) =>
     chatClient.unpinMessage(req),
   getPinnedMessages: (req: MessageInitShape<typeof GetPinnedMessagesRequestSchema>) =>
     chatClient.getPinnedMessages(req),
 
-  getThread: (req: MessageInitShape<typeof GetThreadRequestSchema>) =>
-    chatClient.getThread(req),
+  getThread: (req: MessageInitShape<typeof GetThreadRequestSchema>) => chatClient.getThread(req),
   getThreadMessages: (req: MessageInitShape<typeof GetThreadMessagesRequestSchema>) =>
     chatClient.getThreadMessages(req),
   getThreadsInbox: (req: MessageInitShape<typeof GetThreadsInboxRequestSchema>) =>
@@ -142,8 +136,7 @@ export const chatApi = {
   removeReaction: (req: MessageInitShape<typeof RemoveReactionRequestSchema>) =>
     chatClient.removeReaction(req),
 
-  setTyping: (req: MessageInitShape<typeof SetTypingRequestSchema>) =>
-    chatClient.setTyping(req),
+  setTyping: (req: MessageInitShape<typeof SetTypingRequestSchema>) => chatClient.setTyping(req),
   markChannelRead: (req: MessageInitShape<typeof MarkChannelReadRequestSchema>) =>
     chatClient.markChannelRead(req),
   markThreadRead: (req: MessageInitShape<typeof MarkThreadReadRequestSchema>) =>
@@ -151,12 +144,10 @@ export const chatApi = {
   getUnreadCounts: (req: MessageInitShape<typeof GetUnreadCountsRequestSchema>) =>
     chatClient.getUnreadCounts(req),
 
-  saveDraft: (req: MessageInitShape<typeof SaveDraftRequestSchema>) =>
-    chatClient.saveDraft(req),
+  saveDraft: (req: MessageInitShape<typeof SaveDraftRequestSchema>) => chatClient.saveDraft(req),
   deleteDraft: (req: MessageInitShape<typeof DeleteDraftRequestSchema>) =>
     chatClient.deleteDraft(req),
-  listDrafts: (req: MessageInitShape<typeof ListDraftsRequestSchema>) =>
-    chatClient.listDrafts(req),
+  listDrafts: (req: MessageInitShape<typeof ListDraftsRequestSchema>) => chatClient.listDrafts(req),
 
   getChannelResources: (req: MessageInitShape<typeof GetChannelResourcesRequestSchema>) =>
     chatClient.getChannelResources(req),
@@ -188,18 +179,22 @@ export const chatApi = {
   setAgentChatFolder: (req: MessageInitShape<typeof SetAgentChatFolderRequestSchema>) =>
     chatClient.setAgentChatFolder(req),
 
-  respondToAgentConfirmation: (req: MessageInitShape<typeof RespondToAgentConfirmationRequestSchema>) =>
-    chatClient.respondToAgentConfirmation(req),
-  getChannelPendingApprovals: (req: MessageInitShape<typeof GetChannelPendingApprovalsRequestSchema>) =>
-    chatClient.getChannelPendingApprovals(req),
+  respondToAgentConfirmation: (
+    req: MessageInitShape<typeof RespondToAgentConfirmationRequestSchema>,
+  ) => chatClient.respondToAgentConfirmation(req),
+  getChannelPendingApprovals: (
+    req: MessageInitShape<typeof GetChannelPendingApprovalsRequestSchema>,
+  ) => chatClient.getChannelPendingApprovals(req),
 
-  getChannelAgentContextStats: (req: MessageInitShape<typeof GetChannelAgentContextStatsRequestSchema>) =>
-    chatClient.getChannelAgentContextStats(req),
+  getChannelAgentContextStats: (
+    req: MessageInitShape<typeof GetChannelAgentContextStatsRequestSchema>,
+  ) => chatClient.getChannelAgentContextStats(req),
   getChannelAgentContextStatsBatch: (
     req: MessageInitShape<typeof GetChannelAgentContextStatsBatchRequestSchema>,
   ) => chatClient.getChannelAgentContextStatsBatch(req),
-  compactChannelAgentContext: (req: MessageInitShape<typeof CompactChannelAgentContextRequestSchema>) =>
-    chatClient.compactChannelAgentContext(req),
+  compactChannelAgentContext: (
+    req: MessageInitShape<typeof CompactChannelAgentContextRequestSchema>,
+  ) => chatClient.compactChannelAgentContext(req),
   resetChannelAgentContext: (req: MessageInitShape<typeof ResetChannelAgentContextRequestSchema>) =>
     chatClient.resetChannelAgentContext(req),
   getChannelAgentConfig: (req: MessageInitShape<typeof GetChannelAgentConfigRequestSchema>) =>
@@ -211,6 +206,8 @@ export const chatApi = {
 };
 
 export const chatStreamApi = {
-  streamUserChatEvents: (req: MessageInitShape<typeof StreamUserChatEventsRequestSchema>, signal?: AbortSignal) =>
-    chatStreamClient.streamUserChatEvents(req, { signal }),
+  streamUserChatEvents: (
+    req: MessageInitShape<typeof StreamUserChatEventsRequestSchema>,
+    signal?: AbortSignal,
+  ) => chatStreamClient.streamUserChatEvents(req, { signal }),
 };

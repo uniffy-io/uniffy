@@ -1,18 +1,18 @@
-import * as Y from 'yjs';
-import { diffStrings } from '@/features/notes/realtime/textDiff';
+import * as Y from "yjs";
+import { diffStrings } from "@/features/notes/realtime/textDiff";
 import type {
   CanvasDefaults,
   CanvasEdge,
   CanvasEdgeData,
   CanvasNode,
   CanvasNodeData,
-} from '@/features/notes/canvas/types';
+} from "@/features/notes/canvas/types";
 
 /** Per-node text fields stored as Y.Text so concurrent typing merges char-by-char. Mirror of backend `_NODE_TEXT_FIELDS`. */
 export const NODE_TEXT_FIELDS: Record<string, string> = {
-  text: 'content',
-  shape: 'label',
-  mindmap: 'label',
+  text: "content",
+  shape: "label",
+  mindmap: "label",
 };
 
 export function nodeTextFieldKey(nodeType: string | undefined): string | null {
@@ -21,10 +21,10 @@ export function nodeTextFieldKey(nodeType: string | undefined): string | null {
 }
 
 // Viewport (pan/zoom) is intentionally not synced - per-user UI state.
-export const Y_CANVAS_NODES_FIELD = 'nodes';
-export const Y_CANVAS_EDGES_FIELD = 'edges';
-export const Y_CANVAS_ORDER_FIELD = 'order';
-export const Y_CANVAS_DEFAULTS_FIELD = 'defaults';
+export const Y_CANVAS_NODES_FIELD = "nodes";
+export const Y_CANVAS_EDGES_FIELD = "edges";
+export const Y_CANVAS_ORDER_FIELD = "order";
+export const Y_CANVAS_DEFAULTS_FIELD = "defaults";
 
 export function getCanvasYTypes(ydoc: Y.Doc): {
   nodes: Y.Map<Y.Map<unknown>>;
@@ -42,81 +42,84 @@ export function getCanvasYTypes(ydoc: Y.Doc): {
 
 function nodeToYMap(node: CanvasNode): Y.Map<unknown> {
   const map = new Y.Map<unknown>();
-  map.set('id', node.id);
-  map.set('type', node.type ?? 'text');
-  map.set('position', { x: node.position.x, y: node.position.y });
-  if (node.width !== undefined) map.set('width', node.width);
-  if (node.height !== undefined) map.set('height', node.height);
-  if (node.selectable !== undefined) map.set('selectable', node.selectable);
-  if (node.deletable !== undefined) map.set('deletable', node.deletable);
-  if (node.draggable !== undefined) map.set('draggable', node.draggable);
+  map.set("id", node.id);
+  map.set("type", node.type ?? "text");
+  map.set("position", { x: node.position.x, y: node.position.y });
+  if (node.width !== undefined) map.set("width", node.width);
+  if (node.height !== undefined) map.set("height", node.height);
+  if (node.selectable !== undefined) map.set("selectable", node.selectable);
+  if (node.deletable !== undefined) map.set("deletable", node.deletable);
+  if (node.draggable !== undefined) map.set("draggable", node.draggable);
   const dataMap = new Y.Map<unknown>();
   const textFieldKey = nodeTextFieldKey(node.type);
   for (const [key, value] of Object.entries(node.data ?? {})) {
     if (key === textFieldKey) {
-      dataMap.set(key, new Y.Text(typeof value === 'string' ? value : ''));
+      dataMap.set(key, new Y.Text(typeof value === "string" ? value : ""));
     } else {
       dataMap.set(key, value);
     }
   }
-  map.set('data', dataMap);
+  map.set("data", dataMap);
   return map;
 }
 
 function edgeToYMap(edge: CanvasEdge): Y.Map<unknown> {
   const map = new Y.Map<unknown>();
-  map.set('id', edge.id);
-  map.set('source', edge.source);
-  map.set('target', edge.target);
-  if (edge.sourceHandle !== undefined) map.set('sourceHandle', edge.sourceHandle);
-  if (edge.targetHandle !== undefined) map.set('targetHandle', edge.targetHandle);
-  if (edge.type !== undefined) map.set('type', edge.type);
-  if (edge.selectable !== undefined) map.set('selectable', edge.selectable);
-  if (edge.deletable !== undefined) map.set('deletable', edge.deletable);
-  if (edge.data) map.set('data', { ...edge.data });
+  map.set("id", edge.id);
+  map.set("source", edge.source);
+  map.set("target", edge.target);
+  if (edge.sourceHandle !== undefined) map.set("sourceHandle", edge.sourceHandle);
+  if (edge.targetHandle !== undefined) map.set("targetHandle", edge.targetHandle);
+  if (edge.type !== undefined) map.set("type", edge.type);
+  if (edge.selectable !== undefined) map.set("selectable", edge.selectable);
+  if (edge.deletable !== undefined) map.set("deletable", edge.deletable);
+  if (edge.data) map.set("data", { ...edge.data });
   return map;
 }
 
 function yMapToNode(map: Y.Map<unknown>): CanvasNode | null {
-  const id = map.get('id') as string | undefined;
-  const type = map.get('type') as string | undefined;
-  const position = map.get('position') as { x: number; y: number } | undefined;
+  const id = map.get("id") as string | undefined;
+  const type = map.get("type") as string | undefined;
+  const position = map.get("position") as { x: number; y: number } | undefined;
   if (!id || !position) return null;
-  const dataAny = map.get('data');
+  const dataAny = map.get("data");
   const data =
     dataAny instanceof Y.Map
       ? (materializeDataMap(dataAny) as CanvasNodeData)
       : (dataAny as CanvasNodeData);
   const node: CanvasNode = {
     id,
-    type: (type ?? 'text') as CanvasNode['type'],
+    type: (type ?? "text") as CanvasNode["type"],
     position: { x: position.x, y: position.y },
     data,
   } as CanvasNode;
-  if (map.has('width')) (node as { width?: number }).width = map.get('width') as number;
-  if (map.has('height')) (node as { height?: number }).height = map.get('height') as number;
-  if (map.has('selectable')) (node as { selectable?: boolean }).selectable = map.get('selectable') as boolean;
-  if (map.has('deletable')) (node as { deletable?: boolean }).deletable = map.get('deletable') as boolean;
-  if (map.has('draggable')) (node as { draggable?: boolean }).draggable = map.get('draggable') as boolean;
+  if (map.has("width")) (node as { width?: number }).width = map.get("width") as number;
+  if (map.has("height")) (node as { height?: number }).height = map.get("height") as number;
+  if (map.has("selectable"))
+    (node as { selectable?: boolean }).selectable = map.get("selectable") as boolean;
+  if (map.has("deletable"))
+    (node as { deletable?: boolean }).deletable = map.get("deletable") as boolean;
+  if (map.has("draggable"))
+    (node as { draggable?: boolean }).draggable = map.get("draggable") as boolean;
   return node;
 }
 
 function yMapToEdge(map: Y.Map<unknown>): CanvasEdge | null {
-  const id = map.get('id') as string | undefined;
-  const source = map.get('source') as string | undefined;
-  const target = map.get('target') as string | undefined;
+  const id = map.get("id") as string | undefined;
+  const source = map.get("source") as string | undefined;
+  const target = map.get("target") as string | undefined;
   if (!id || !source || !target) return null;
   const edge: CanvasEdge = {
     id,
     source,
     target,
-    data: (map.get('data') as CanvasEdgeData | undefined) ?? undefined,
+    data: (map.get("data") as CanvasEdgeData | undefined) ?? undefined,
   };
-  if (map.has('sourceHandle')) edge.sourceHandle = map.get('sourceHandle') as string;
-  if (map.has('targetHandle')) edge.targetHandle = map.get('targetHandle') as string;
-  if (map.has('type')) edge.type = map.get('type') as string;
-  if (map.has('selectable')) edge.selectable = map.get('selectable') as boolean;
-  if (map.has('deletable')) edge.deletable = map.get('deletable') as boolean;
+  if (map.has("sourceHandle")) edge.sourceHandle = map.get("sourceHandle") as string;
+  if (map.has("targetHandle")) edge.targetHandle = map.get("targetHandle") as string;
+  if (map.has("type")) edge.type = map.get("type") as string;
+  if (map.has("selectable")) edge.selectable = map.get("selectable") as boolean;
+  if (map.has("deletable")) edge.deletable = map.get("deletable") as boolean;
   return edge;
 }
 
@@ -161,7 +164,12 @@ export function seedCanvasYDoc(
   state: { nodes: CanvasNode[]; edges: CanvasEdge[]; defaults?: CanvasDefaults },
   origin: unknown,
 ): void {
-  const { nodes: yNodes, edges: yEdges, order: yOrder, defaults: yDefaults } = getCanvasYTypes(ydoc);
+  const {
+    nodes: yNodes,
+    edges: yEdges,
+    order: yOrder,
+    defaults: yDefaults,
+  } = getCanvasYTypes(ydoc);
   if (yNodes.size > 0 || yEdges.size > 0 || yOrder.length > 0 || yDefaults.size > 0) return;
   ydoc.transact(() => {
     for (const node of state.nodes) {
@@ -228,8 +236,7 @@ export function writeCanvasToYDoc(
 
     const targetOrder = nodes.map((n) => n.id);
     const orderDrift =
-      targetOrder.length !== yOrder.length ||
-      targetOrder.some((id, idx) => yOrder.get(idx) !== id);
+      targetOrder.length !== yOrder.length || targetOrder.some((id, idx) => yOrder.get(idx) !== id);
     if (orderDrift) {
       if (yOrder.length > 0) yOrder.delete(0, yOrder.length);
       if (targetOrder.length > 0) yOrder.push(targetOrder);
@@ -247,19 +254,19 @@ export function writeCanvasToYDoc(
 }
 
 function mutateNodeYMap(map: Y.Map<unknown>, node: CanvasNode): void {
-  if (map.get('type') !== node.type) map.set('type', node.type ?? 'text');
-  const pos = map.get('position') as { x: number; y: number } | undefined;
+  if (map.get("type") !== node.type) map.set("type", node.type ?? "text");
+  const pos = map.get("position") as { x: number; y: number } | undefined;
   if (!pos || pos.x !== node.position.x || pos.y !== node.position.y) {
-    map.set('position', { x: node.position.x, y: node.position.y });
+    map.set("position", { x: node.position.x, y: node.position.y });
   }
-  setOptionalNumber(map, 'width', node.width);
-  setOptionalNumber(map, 'height', node.height);
-  setOptionalBool(map, 'selectable', node.selectable);
-  setOptionalBool(map, 'deletable', node.deletable);
-  setOptionalBool(map, 'draggable', node.draggable);
+  setOptionalNumber(map, "width", node.width);
+  setOptionalNumber(map, "height", node.height);
+  setOptionalBool(map, "selectable", node.selectable);
+  setOptionalBool(map, "deletable", node.deletable);
+  setOptionalBool(map, "draggable", node.draggable);
 
   const textFieldKey = nodeTextFieldKey(node.type);
-  const dataMap = map.get('data');
+  const dataMap = map.get("data");
   if (dataMap instanceof Y.Map) {
     const liveKeys = new Set<string>();
     for (const [key, value] of Object.entries(node.data ?? {})) {
@@ -267,7 +274,7 @@ function mutateNodeYMap(map: Y.Map<unknown>, node: CanvasNode): void {
       // Y.Text fields owned by `writeNodeTextDiff` - structural write would clobber concurrent char edits.
       if (key === textFieldKey) {
         if (!(dataMap.get(key) instanceof Y.Text)) {
-          dataMap.set(key, new Y.Text(typeof value === 'string' ? value : ''));
+          dataMap.set(key, new Y.Text(typeof value === "string" ? value : ""));
         }
         continue;
       }
@@ -280,20 +287,16 @@ function mutateNodeYMap(map: Y.Map<unknown>, node: CanvasNode): void {
     const next = new Y.Map<unknown>();
     for (const [key, value] of Object.entries(node.data ?? {})) {
       if (key === textFieldKey) {
-        next.set(key, new Y.Text(typeof value === 'string' ? value : ''));
+        next.set(key, new Y.Text(typeof value === "string" ? value : ""));
       } else {
         next.set(key, value);
       }
     }
-    map.set('data', next);
+    map.set("data", next);
   }
 }
 
-function setOptionalNumber(
-  map: Y.Map<unknown>,
-  key: string,
-  value: number | undefined,
-): void {
+function setOptionalNumber(map: Y.Map<unknown>, key: string, value: number | undefined): void {
   if (value === undefined) {
     if (map.has(key)) map.delete(key);
   } else if (map.get(key) !== value) {
@@ -301,11 +304,7 @@ function setOptionalNumber(
   }
 }
 
-function setOptionalBool(
-  map: Y.Map<unknown>,
-  key: string,
-  value: boolean | undefined,
-): void {
+function setOptionalBool(map: Y.Map<unknown>, key: string, value: boolean | undefined): void {
   if (value === undefined) {
     if (map.has(key)) map.delete(key);
   } else if (map.get(key) !== value) {
@@ -321,22 +320,18 @@ function materializeDataMap(dataMap: Y.Map<unknown>): Record<string, unknown> {
   return out;
 }
 
-export function readNodeTextField(
-  ydoc: Y.Doc,
-  nodeId: string,
-  fieldKey: string,
-): string | null {
+export function readNodeTextField(ydoc: Y.Doc, nodeId: string, fieldKey: string): string | null {
   const { nodes } = getCanvasYTypes(ydoc);
   const yNode = nodes.get(nodeId);
   if (!yNode) return null;
-  const dataAny = yNode.get('data');
+  const dataAny = yNode.get("data");
   if (!(dataAny instanceof Y.Map)) {
     const value = (dataAny as Record<string, unknown> | undefined)?.[fieldKey];
-    return typeof value === 'string' ? value : null;
+    return typeof value === "string" ? value : null;
   }
   const raw = dataAny.get(fieldKey);
   if (raw instanceof Y.Text) return raw.toString();
-  return typeof raw === 'string' ? raw : null;
+  return typeof raw === "string" ? raw : null;
 }
 
 /** Diff against `prev` (last local snapshot), not current Y.Text, so concurrent peer inserts survive. */
@@ -352,27 +347,27 @@ export function writeNodeTextDiff(
   const { nodes } = getCanvasYTypes(ydoc);
   const yNode = nodes.get(nodeId);
   if (!yNode) return;
-  let dataMap = yNode.get('data');
+  let dataMap = yNode.get("data");
   if (!(dataMap instanceof Y.Map)) {
     // Cold-start seed may leave `data` as a plain dict - upgrade in place.
     const upgraded = new Y.Map<unknown>();
-    if (dataMap && typeof dataMap === 'object') {
+    if (dataMap && typeof dataMap === "object") {
       for (const [key, value] of Object.entries(dataMap as Record<string, unknown>)) {
         if (key === fieldKey) {
-          upgraded.set(key, new Y.Text(typeof value === 'string' ? value : ''));
+          upgraded.set(key, new Y.Text(typeof value === "string" ? value : ""));
         } else {
           upgraded.set(key, value);
         }
       }
     }
     ydoc.transact(() => {
-      yNode.set('data', upgraded);
+      yNode.set("data", upgraded);
     }, origin);
     dataMap = upgraded;
   }
   let yText = (dataMap as Y.Map<unknown>).get(fieldKey);
   if (!(yText instanceof Y.Text)) {
-    const seed = typeof yText === 'string' ? yText : prev;
+    const seed = typeof yText === "string" ? yText : prev;
     const replacement = new Y.Text(seed);
     ydoc.transact(() => {
       (dataMap as Y.Map<unknown>).set(fieldKey, replacement);
@@ -391,7 +386,7 @@ export function writeNodeTextDiff(
 function shallowEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (typeof a !== typeof b) return false;
-  if (a === null || b === null || typeof a !== 'object') return false;
+  if (a === null || b === null || typeof a !== "object") return false;
   const ka = Object.keys(a as Record<string, unknown>);
   const kb = Object.keys(b as Record<string, unknown>);
   if (ka.length !== kb.length) return false;

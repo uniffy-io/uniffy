@@ -11,7 +11,12 @@ import type { CallRingPayload } from "@uniffy/proto/chat/v1/chat_stream_pb";
 
 export type CallKind = "DIRECT" | "GROUP_DM" | "CHANNEL";
 export type CallEndReason =
-  "HOST_ENDED" | "ALL_LEFT" | "MAX_DURATION" | "SOLO_TIMEOUT" | "CHANNEL_ARCHIVED" | "UNKNOWN";
+  | "HOST_ENDED"
+  | "ALL_LEFT"
+  | "MAX_DURATION"
+  | "SOLO_TIMEOUT"
+  | "CHANNEL_ARCHIVED"
+  | "UNKNOWN";
 
 export interface PlainParticipant {
   userId: string;

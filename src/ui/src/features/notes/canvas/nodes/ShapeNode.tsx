@@ -6,12 +6,12 @@
  * and border width.
  */
 
-import { memo, useCallback, useState } from 'react';
-import { type NodeProps, NodeResizer, Handle, Position } from '@xyflow/react';
-import { cn } from '@/shared/utils/cn';
-import type { ShapeCanvasNode } from '@/features/notes/canvas/types';
-import { useCanvasCallbacks } from '@/features/notes/canvas/hooks/useCanvasCallbacks';
-import { NodeStyleToolbar } from '@/features/notes/canvas/components/NodeStyleToolbar';
+import { memo, useCallback, useState } from "react";
+import { type NodeProps, NodeResizer, Handle, Position } from "@xyflow/react";
+import { cn } from "@/shared/utils/cn";
+import type { ShapeCanvasNode } from "@/features/notes/canvas/types";
+import { useCanvasCallbacks } from "@/features/notes/canvas/hooks/useCanvasCallbacks";
+import { NodeStyleToolbar } from "@/features/notes/canvas/components/NodeStyleToolbar";
 
 export const ShapeNode = memo(function ShapeNode({
   id,
@@ -21,16 +21,16 @@ export const ShapeNode = memo(function ShapeNode({
   const { onShapeLabelChange, onNodeStyleChange, readonly } = useCanvasCallbacks();
   const fillOpacity = 1;
   const [isEditingLabel, setIsEditingLabel] = useState(false);
-  const [localLabel, setLocalLabel] = useState(data.label || '');
-  const shape = data.shape || 'rect';
-  const color = data.color || 'var(--color-primary)';
+  const [localLabel, setLocalLabel] = useState(data.label || "");
+  const shape = data.shape || "rect";
+  const color = data.color || "var(--color-primary)";
   const borderColor = data.borderColor || color;
   const borderWidth = data.borderWidth ?? 2;
 
   const handleDoubleClick = useCallback(() => {
     if (!readonly) {
       setIsEditingLabel(true);
-      setLocalLabel(data.label || '');
+      setLocalLabel(data.label || "");
     }
   }, [readonly, data.label]);
 
@@ -45,31 +45,31 @@ export const ShapeNode = memo(function ShapeNode({
     (updates: Record<string, unknown>) => {
       onNodeStyleChange(id, updates);
     },
-    [id, onNodeStyleChange]
+    [id, onNodeStyleChange],
   );
 
   const renderShape = () => {
     const commonProps = {
-      fill: color === 'transparent' ? 'transparent' : color,
-      fillOpacity: color === 'transparent' ? 1 : fillOpacity,
-      stroke: borderColor === 'transparent' ? 'none' : borderColor,
+      fill: color === "transparent" ? "transparent" : color,
+      fillOpacity: color === "transparent" ? 1 : fillOpacity,
+      stroke: borderColor === "transparent" ? "none" : borderColor,
       strokeWidth: borderWidth,
     };
 
     switch (shape) {
-      case 'ellipse':
+      case "ellipse":
         return (
           <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
             <ellipse cx="50" cy="50" rx="48" ry="48" {...commonProps} />
           </svg>
         );
-      case 'diamond':
+      case "diamond":
         return (
           <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
             <polygon points="50,2 98,50 50,98 2,50" {...commonProps} />
           </svg>
         );
-      case 'rect':
+      case "rect":
       default:
         return (
           <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -94,10 +94,7 @@ export const ShapeNode = memo(function ShapeNode({
       <Handle type="source" position={Position.Right} className="!bg-primary !w-2 !h-2" />
 
       <div
-        className={cn(
-          'relative w-full h-full',
-          selected ? 'ring-1 ring-primary/30 rounded' : ''
-        )}
+        className={cn("relative w-full h-full", selected ? "ring-1 ring-primary/30 rounded" : "")}
         onDoubleClick={handleDoubleClick}
       >
         {renderShape()}
@@ -111,8 +108,8 @@ export const ShapeNode = memo(function ShapeNode({
               onChange={(e) => setLocalLabel(e.target.value)}
               onBlur={handleLabelBlur}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleLabelBlur();
-                if (e.key === 'Escape') setIsEditingLabel(false);
+                if (e.key === "Enter") handleLabelBlur();
+                if (e.key === "Escape") setIsEditingLabel(false);
               }}
               className="text-center text-sm bg-transparent border-none outline-none focus:ring-0 pointer-events-auto max-w-[80%]"
               autoFocus

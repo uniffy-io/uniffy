@@ -1,7 +1,7 @@
-import type { RefObject } from 'react';
-import { Check } from '@phosphor-icons/react';
-import { PortalMenu } from '@/components/ui/portal-menu';
-import { cn } from '@/shared/utils/cn';
+import type { RefObject } from "react";
+import { Check } from "@phosphor-icons/react";
+import { PortalMenu } from "@/components/ui/portal-menu";
+import { cn } from "@/shared/utils/cn";
 
 interface DevicePickerMenuProps {
   open: boolean;
@@ -39,8 +39,8 @@ export function DevicePickerMenu({
               onClose();
             }}
             className={cn(
-              'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted',
-              active ? 'text-foreground' : 'text-muted-foreground',
+              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted",
+              active ? "text-foreground" : "text-muted-foreground",
             )}
           >
             <span className="w-4 shrink-0">{active && <Check size={14} />}</span>

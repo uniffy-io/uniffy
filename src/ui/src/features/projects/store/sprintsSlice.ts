@@ -28,7 +28,7 @@ export const sprintsSlice = createSlice({
     },
     setSprintsForProject: (
       state,
-      action: PayloadAction<{ projectId: string; sprints: Sprint[] }>
+      action: PayloadAction<{ projectId: string; sprints: Sprint[] }>,
     ) => {
       const { projectId, sprints } = action.payload;
       state.sprintsByProject[projectId] = sprints.map((s) => s.id);
@@ -47,9 +47,9 @@ export const sprintsSlice = createSlice({
     removeSprint: (state, action: PayloadAction<{ sprintId: string; projectId: string }>) => {
       const { sprintId, projectId } = action.payload;
       delete state.sprints[sprintId];
-      state.sprintsByProject[projectId] = (
-        state.sprintsByProject[projectId] ?? []
-      ).filter((id) => id !== sprintId);
+      state.sprintsByProject[projectId] = (state.sprintsByProject[projectId] ?? []).filter(
+        (id) => id !== sprintId,
+      );
     },
     clearSprints: () => initialState,
   },
@@ -64,25 +64,31 @@ export const {
   clearSprints,
 } = sprintsSlice.actions;
 
-export const selectSprintsForProject = (projectId: string) => (state: RootState): Sprint[] => {
-  const ids = state.sprints.sprintsByProject[projectId] ?? [];
-  return ids
-    .map((id) => state.sprints.sprints[id])
-    .filter(Boolean)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-};
+export const selectSprintsForProject =
+  (projectId: string) =>
+  (state: RootState): Sprint[] => {
+    const ids = state.sprints.sprintsByProject[projectId] ?? [];
+    return ids
+      .map((id) => state.sprints.sprints[id])
+      .filter(Boolean)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  };
 
-export const selectActiveSprint = (projectId: string) => (state: RootState): Sprint | null => {
-  const ids = state.sprints.sprintsByProject[projectId] ?? [];
-  for (const id of ids) {
-    const sprint = state.sprints.sprints[id];
-    if (sprint?.status === "active") return sprint;
-  }
-  return null;
-};
+export const selectActiveSprint =
+  (projectId: string) =>
+  (state: RootState): Sprint | null => {
+    const ids = state.sprints.sprintsByProject[projectId] ?? [];
+    for (const id of ids) {
+      const sprint = state.sprints.sprints[id];
+      if (sprint?.status === "active") return sprint;
+    }
+    return null;
+  };
 
-export const selectSprintById = (sprintId: string) => (state: RootState): Sprint | null =>
-  state.sprints.sprints[sprintId] ?? null;
+export const selectSprintById =
+  (sprintId: string) =>
+  (state: RootState): Sprint | null =>
+    state.sprints.sprints[sprintId] ?? null;
 
 export const selectSprintsLoading = (state: RootState) => state.sprints.loading;
 

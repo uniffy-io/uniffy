@@ -1,16 +1,16 @@
-import { useEffect } from 'react';
-import { Phone, PhoneDisconnect } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { getInitials } from '@/components/subject/utils';
+import { useEffect } from "react";
+import { Phone, PhoneDisconnect } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { getInitials } from "@/components/subject/utils";
 import {
   prejoinOpened,
   ringDismissed,
   selectCallSession,
   selectRingInvites,
-} from '@/features/calls/store/callsSlice';
-import { selectCallPreferences } from '@/features/calls/store/callPreferencesSlice';
-import { declineCall } from '@/features/calls/store/callsThunks';
-import type { RingInvite } from '@/features/calls/types';
+} from "@/features/calls/store/callsSlice";
+import { selectCallPreferences } from "@/features/calls/store/callPreferencesSlice";
+import { declineCall } from "@/features/calls/store/callsThunks";
+import type { RingInvite } from "@/features/calls/types";
 
 const RING_FALLBACK_TIMEOUT_MS = 30_000;
 
@@ -27,7 +27,7 @@ function useRingtone(active: boolean) {
     gain.gain.value = 0;
     gain.connect(ctx.destination);
     const osc = ctx.createOscillator();
-    osc.type = 'sine';
+    osc.type = "sine";
     osc.connect(gain);
     osc.start();
 
@@ -45,7 +45,10 @@ function useRingtone(active: boolean) {
       timer = setTimeout(loop, 2_000);
     };
     let timer: ReturnType<typeof setTimeout> | null = null;
-    void ctx.resume().then(loop).catch(() => {});
+    void ctx
+      .resume()
+      .then(loop)
+      .catch(() => {});
 
     return () => {
       stopped = true;
@@ -75,9 +78,7 @@ function InviteCard({ invite }: { invite: RingInvite }) {
   }, [dispatch, invite.callId, invite.expiresAt]);
 
   const subtitle =
-    invite.callType === 'DIRECT'
-      ? 'Incoming call'
-      : `Incoming call in ${invite.channelName}`;
+    invite.callType === "DIRECT" ? "Incoming call" : `Incoming call in ${invite.channelName}`;
 
   return (
     <div
@@ -128,7 +129,7 @@ export function CallInviteToasts() {
   const invites = useAppSelector(selectRingInvites);
   const session = useAppSelector(selectCallSession);
   const preferences = useAppSelector(selectCallPreferences);
-  const inCall = session.status !== 'idle';
+  const inCall = session.status !== "idle";
 
   useRingtone(invites.length > 0 && !inCall && preferences.ringtoneEnabled);
 

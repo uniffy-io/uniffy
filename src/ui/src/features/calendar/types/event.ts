@@ -1,21 +1,15 @@
-import type { Attendee } from '@/features/calendar/types/attendee';
+import type { Attendee } from "@/features/calendar/types/attendee";
 
-export type RecurrencePattern =
-  | 'none'
-  | 'daily'
-  | 'weekly'
-  | 'biweekly'
-  | 'monthly'
-  | 'yearly';
+export type RecurrencePattern = "none" | "daily" | "weekly" | "biweekly" | "monthly" | "yearly";
 
 export type DayOfWeek =
-  | 'monday'
-  | 'tuesday'
-  | 'wednesday'
-  | 'thursday'
-  | 'friday'
-  | 'saturday'
-  | 'sunday';
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
 
 export interface RecurrenceConfig {
   pattern: RecurrencePattern;
@@ -28,7 +22,7 @@ export interface RecurrenceConfig {
   maxOccurrences?: number;
 }
 
-export type ResourceType = 'note' | 'file' | 'chat';
+export type ResourceType = "note" | "file" | "chat";
 
 export interface LinkedResource {
   id: string;
@@ -84,9 +78,9 @@ export interface CalendarEvent {
   userRole: number;
 }
 
-export type RecurrenceEditScope = 'this_event' | 'all_events' | 'this_and_following';
+export type RecurrenceEditScope = "this_event" | "all_events" | "this_and_following";
 
-export type MultiDayPosition = 'start' | 'middle' | 'end' | 'single';
+export type MultiDayPosition = "start" | "middle" | "end" | "single";
 
 /** CalendarEvent with grid-layout fields computed for rendering. */
 export interface PositionedEvent extends CalendarEvent {

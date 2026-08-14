@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function NotesSidebarSkeleton() {
   return (
@@ -19,7 +19,7 @@ export function NotesSidebarSkeleton() {
                 <Skeleton variant="rectangular" className="w-4 h-4" />
                 <Skeleton
                   variant="text"
-                  className={`h-3 ${i % 3 === 0 ? 'w-28' : i % 3 === 1 ? 'w-20' : 'w-24'}`}
+                  className={`h-3 ${i % 3 === 0 ? "w-28" : i % 3 === 1 ? "w-20" : "w-24"}`}
                 />
               </div>
             ))}

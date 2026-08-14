@@ -15,10 +15,7 @@ interface DependencyLinesProps {
 }
 
 /** Right-stub then vertical then horizontal with rounded corners. */
-function buildOrthogonalPath(
-  sx: number, sy: number,
-  ex: number, ey: number,
-): string {
+function buildOrthogonalPath(sx: number, sy: number, ex: number, ey: number): string {
   // Same row - just a straight horizontal line
   if (sy === ey) {
     return `M ${sx} ${sy} L ${ex} ${ey}`;
@@ -53,7 +50,11 @@ function buildOrthogonalPath(
   // Clamp radius so it fits within the shortest segment
   const halfVertical = Math.abs(midY - sy);
   const horizontalDist = Math.abs(enterX - stubEndX);
-  const r = Math.min(CORNER_RADIUS, halfVertical / 2, horizontalDist > 0 ? horizontalDist / 2 : CORNER_RADIUS);
+  const r = Math.min(
+    CORNER_RADIUS,
+    halfVertical / 2,
+    horizontalDist > 0 ? horizontalDist / 2 : CORNER_RADIUS,
+  );
 
   const ry = goingDown ? r : -r;
   const hx = goingLeft ? -r : r;
@@ -82,13 +83,13 @@ function buildOrthogonalPath(
 }
 
 export function DependencyLines({ tasks }: DependencyLinesProps) {
-  const taskMap = new Map(tasks.map(t => [t.id, t]));
+  const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const lines: React.ReactNode[] = [];
 
-  tasks.forEach(task => {
+  tasks.forEach((task) => {
     if (!task.blockedByTaskIds || task.blockedByTaskIds.length === 0) return;
 
-    task.blockedByTaskIds.forEach(blockerId => {
+    task.blockedByTaskIds.forEach((blockerId) => {
       const blocker = taskMap.get(blockerId);
       if (!blocker) return;
 
@@ -110,7 +111,7 @@ export function DependencyLines({ tasks }: DependencyLinesProps) {
             opacity="0.8"
             markerEnd="url(#dep-arrow)"
           />
-        </g>
+        </g>,
       );
     });
   });
@@ -123,14 +124,7 @@ export function DependencyLines({ tasks }: DependencyLinesProps) {
       style={{ minHeight: tasks.length * LAYOUT.ROADMAP_ROW_HEIGHT }}
     >
       <defs>
-        <marker
-          id="dep-arrow"
-          markerWidth="8"
-          markerHeight="6"
-          refX="7"
-          refY="3"
-          orient="auto"
-        >
+        <marker id="dep-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
           <polygon points="0 0, 8 3, 0 6" fill="#64748b" opacity="0.8" />
         </marker>
       </defs>

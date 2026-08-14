@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ConnectionState,
   DisconnectReason,
@@ -6,9 +6,9 @@ import {
   RoomEvent,
   Track,
   createLocalAudioTrack,
-} from 'livekit-client';
-import { toast } from 'sonner';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
+} from "livekit-client";
+import { toast } from "sonner";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   callUpserted,
   clearCalls,
@@ -21,7 +21,7 @@ import {
   sessionDisconnected,
   sessionReconnecting,
   sessionReset,
-} from '@/features/calls/store/callsSlice';
+} from "@/features/calls/store/callsSlice";
 import {
   endCall as endCallThunk,
   fetchActiveCall,
@@ -30,29 +30,26 @@ import {
   joinCallRequest,
   leaveCall,
   refreshCallToken,
-} from '@/features/calls/store/callsThunks';
-import { selectCallPreferences } from '@/features/calls/store/callPreferencesSlice';
-import { callsApi } from '@/features/calls/api/callsApi';
-import { resolveSignalingUrl } from '@/features/calls/utils/signalingUrl';
-import { buildRtcConfiguration } from '@/features/calls/utils/iceConfig';
-import { getTokenExpiryMs } from '@/features/calls/utils/livekitToken';
+} from "@/features/calls/store/callsThunks";
+import { selectCallPreferences } from "@/features/calls/store/callPreferencesSlice";
+import { callsApi } from "@/features/calls/api/callsApi";
+import { resolveSignalingUrl } from "@/features/calls/utils/signalingUrl";
+import { buildRtcConfiguration } from "@/features/calls/utils/iceConfig";
+import { getTokenExpiryMs } from "@/features/calls/utils/livekitToken";
 import {
   clearCallMarkers,
   consumeSessionMarker,
   readRecentMarker,
   writeCallMarkers,
-} from '@/features/calls/utils/sessionMarkers';
-import { getDeviceId } from '@/shared/utils/deviceId';
-import { env } from '@/config/env';
-import { getAccessToken } from '@/config/api';
-import { CallContext } from '@/features/calls/components/callContext';
-import { clampQuality, screenShareConfig } from '@/features/calls/utils/screenShareQuality';
-import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
-import type { CallJoinResult } from '@/features/calls/store/callsThunks';
-import type {
-  CallContextValue,
-  JoinMediaOptions,
-} from '@/features/calls/components/callContext';
+} from "@/features/calls/utils/sessionMarkers";
+import { getDeviceId } from "@/shared/utils/deviceId";
+import { env } from "@/config/env";
+import { getAccessToken } from "@/config/api";
+import { CallContext } from "@/features/calls/components/callContext";
+import { clampQuality, screenShareConfig } from "@/features/calls/utils/screenShareQuality";
+import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
+import type { CallJoinResult } from "@/features/calls/store/callsThunks";
+import type { CallContextValue, JoinMediaOptions } from "@/features/calls/components/callContext";
 
 const TOKEN_REFRESH_LEAD_MS = 10 * 60 * 1000;
 const REJOIN_WINDOW_MS = 90_000;
@@ -66,11 +63,11 @@ function sleepOrOnline(ms: number): Promise<void> {
   return new Promise((resolve) => {
     const done = () => {
       clearTimeout(timer);
-      window.removeEventListener('online', done);
+      window.removeEventListener("online", done);
       resolve();
     };
     const timer = setTimeout(done, ms);
-    window.addEventListener('online', done);
+    window.addEventListener("online", done);
   });
 }
 
@@ -84,10 +81,10 @@ function sendLeaveBeacon(organizationId: string, callId: string): void {
   if (!token) return;
   try {
     void fetch(`${env.apiBaseUrl}/calls.v1.CallService/LeaveCall`, {
-      method: 'POST',
+      method: "POST",
       keepalive: true,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ organizationId, callId, deviceId: getDeviceId() }),
@@ -103,23 +100,23 @@ function isCallGoneError(error: unknown): boolean {
 }
 
 type TabMessage =
-  | { type: 'probe'; nonce: string }
-  | { type: 'active'; nonce: string }
-  | { type: 'focus' };
+  | { type: "probe"; nonce: string }
+  | { type: "active"; nonce: string }
+  | { type: "focus" };
 
 /** Same-browser tabs share a device_id; only one of them may hold the call. */
 function useCallTabChannel(isInCall: () => boolean) {
   const channelRef = useRef<BroadcastChannel | null>(null);
 
   useEffect(() => {
-    if (typeof BroadcastChannel === 'undefined') return;
-    const bc = new BroadcastChannel('uniffy-call-tab');
+    if (typeof BroadcastChannel === "undefined") return;
+    const bc = new BroadcastChannel("uniffy-call-tab");
     channelRef.current = bc;
     bc.onmessage = (e: MessageEvent<TabMessage>) => {
       const msg = e.data;
-      if (msg.type === 'probe' && isInCall()) {
-        bc.postMessage({ type: 'active', nonce: msg.nonce } satisfies TabMessage);
-      } else if (msg.type === 'focus' && isInCall()) {
+      if (msg.type === "probe" && isInCall()) {
+        bc.postMessage({ type: "active", nonce: msg.nonce } satisfies TabMessage);
+      } else if (msg.type === "focus" && isInCall()) {
         window.focus();
       }
     };
@@ -135,23 +132,23 @@ function useCallTabChannel(isInCall: () => boolean) {
     const nonce = Math.random().toString(36).slice(2);
     return new Promise<boolean>((resolve) => {
       const timer = setTimeout(() => {
-        bc.removeEventListener('message', onMessage);
+        bc.removeEventListener("message", onMessage);
         resolve(false);
       }, TAB_PROBE_TIMEOUT_MS);
       const onMessage = (e: MessageEvent<TabMessage>) => {
-        if (e.data.type === 'active' && e.data.nonce === nonce) {
+        if (e.data.type === "active" && e.data.nonce === nonce) {
           clearTimeout(timer);
-          bc.removeEventListener('message', onMessage);
+          bc.removeEventListener("message", onMessage);
           resolve(true);
         }
       };
-      bc.addEventListener('message', onMessage);
-      bc.postMessage({ type: 'probe', nonce } satisfies TabMessage);
+      bc.addEventListener("message", onMessage);
+      bc.postMessage({ type: "probe", nonce } satisfies TabMessage);
     });
   }, []);
 
   const requestFocus = useCallback(() => {
-    channelRef.current?.postMessage({ type: 'focus' } satisfies TabMessage);
+    channelRef.current?.postMessage({ type: "focus" } satisfies TabMessage);
   }, []);
 
   return { probeOtherTab, requestFocus };
@@ -162,7 +159,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const session = useAppSelector(selectCallSession);
   const sessionCall = useAppSelector(selectSessionCall);
   const preferences = useAppSelector(selectCallPreferences);
-  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
   const currentOrgId = useAppSelector((s) => s.auth.currentOrganizationId);
   const endedInfo = useAppSelector(selectEndedInfo);
 
@@ -186,7 +183,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const restoreAttemptedRef = useRef(false);
 
   const isInCall = useCallback(
-    () => sessionRef.current.status === 'connected' || sessionRef.current.status === 'reconnecting',
+    () => sessionRef.current.status === "connected" || sessionRef.current.status === "reconnecting",
     [],
   );
   const { probeOtherTab, requestFocus } = useCallTabChannel(isInCall);
@@ -344,12 +341,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       let delay = REJOIN_BASE_DELAY_MS;
       while (Date.now() < deadline) {
         // The user left, or CALL_ENDED reset the session mid-loop.
-        if (sessionRef.current.status !== 'reconnecting') return;
+        if (sessionRef.current.status !== "reconnecting") return;
         try {
           // Bypass the joinCall thunk so a failed attempt is not a rejected
           // action the error-toast middleware turns into a "could not connect"
           // toast on every one of the loop's iterations.
-          const result = await joinCallRequest(orgIdRef.current ?? '', callId);
+          const result = await joinCallRequest(orgIdRef.current ?? "", callId);
           dispatch(callUpserted(result.call));
           await connectRoomRef.current?.(result, {
             micEnabled: sessionRef.current.micEnabled,
@@ -370,7 +367,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         await sleepOrOnline(delay);
         delay = Math.min(delay * 2, REJOIN_MAX_DELAY_MS);
       }
-      if (sessionRef.current.status === 'reconnecting') dispatch(sessionDisconnected());
+      if (sessionRef.current.status === "reconnecting") dispatch(sessionDisconnected());
     } finally {
       rejoiningRef.current = false;
     }
@@ -379,7 +376,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const handleDisconnected = useCallback(
     (reason?: DisconnectReason) => {
       const status = sessionRef.current.status;
-      if (status === 'idle') return;
+      if (status === "idle") return;
       switch (reason) {
         case DisconnectReason.CLIENT_INITIATED:
           return;
@@ -411,7 +408,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         // pixelDensity 'screen' factors in the device pixel ratio so a high-DPI
         // viewer requests the full layer instead of a downscaled one - otherwise
         // a Retina screen-share tile reads as ~720p even at native capture.
-        adaptiveStream: { pixelDensity: 'screen' },
+        adaptiveStream: { pixelDensity: "screen" },
         dynacast: true,
         audioCaptureDefaults: { deviceId: prefs.audioInputId ?? undefined },
         videoCaptureDefaults: { deviceId: prefs.videoInputId ?? undefined },
@@ -484,21 +481,28 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
       if (prefs.audioOutputId) {
         try {
-          await r.switchActiveDevice('audiooutput', prefs.audioOutputId);
+          await r.switchActiveDevice("audiooutput", prefs.audioOutputId);
         } catch {
           // Speaker selection is unsupported on some browsers (Firefox/Safari).
         }
       }
     },
-    [dispatch, handleDisconnected, publishInitialMedia, reportMediaState, scheduleTokenRefresh, teardown],
+    [
+      dispatch,
+      handleDisconnected,
+      publishInitialMedia,
+      reportMediaState,
+      scheduleTokenRefresh,
+      teardown,
+    ],
   );
   connectRoomRef.current = connectRoom;
 
   const guardOtherTab = useCallback(async (): Promise<boolean> => {
     const otherTabActive = await probeOtherTab();
     if (otherTabActive) {
-      toast.error('Already in a call in another tab', {
-        action: { label: 'Go to call', onClick: () => requestFocus() },
+      toast.error("Already in a call in another tab", {
+        action: { label: "Go to call", onClick: () => requestFocus() },
       });
       return false;
     }
@@ -605,15 +609,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const r = roomRef.current;
     if (!r) return;
     const enabled = r.localParticipant.isScreenShareEnabled;
-    const tier = clampQuality(
-      preferencesRef.current.screenShareQuality,
-      screenShareCapRef.current,
-    );
+    const tier = clampQuality(preferencesRef.current.screenShareQuality, screenShareCapRef.current);
     const cfg = screenShareConfig(tier);
     try {
       await r.localParticipant.setScreenShareEnabled(
         !enabled,
-        { audio: true, resolution: cfg.captureResolution, contentHint: 'detail' },
+        { audio: true, resolution: cfg.captureResolution, contentHint: "detail" },
         { screenShareEncoding: cfg.encoding, screenShareSimulcastLayers: cfg.simulcastLayers },
       );
       dispatch(localMediaChanged({ screenSharing: !enabled }));
@@ -636,7 +637,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (
       !stillInRoster &&
-      sessionRef.current.status === 'connected' &&
+      sessionRef.current.status === "connected" &&
       // Identity is user:device and survives refresh, so a stale leave event
       // for the pre-refresh session can arrive right after a rejoin; a fresh
       // connection is trusted over the roster for a short grace.
@@ -651,20 +652,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   // Second device of the same user joining: surface the switch-primary toast.
   const otherDeviceCount =
-    sessionCall?.participants.filter(
-      (p) => p.userId === currentUserId && p.identity !== myIdentity,
-    ).length ?? 0;
+    sessionCall?.participants.filter((p) => p.userId === currentUserId && p.identity !== myIdentity)
+      .length ?? 0;
   const prevOtherDeviceCountRef = useRef(otherDeviceCount);
   useEffect(() => {
     if (
       otherDeviceCount > prevOtherDeviceCountRef.current &&
-      sessionRef.current.status === 'connected'
+      sessionRef.current.status === "connected"
     ) {
       const other = sessionCall?.participants.find(
         (p) => p.userId === currentUserId && p.identity !== myIdentity,
       );
       toast.info(
-        `You joined this call on ${other?.deviceLabel ?? 'another device'}. Mic is muted there.`,
+        `You joined this call on ${other?.deviceLabel ?? "another device"}. Mic is muted there.`,
       );
     }
     prevOtherDeviceCountRef.current = otherDeviceCount;
@@ -678,8 +678,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const onPageHide = () => {
       const { status, callId, channelId, micEnabled, cameraEnabled } = sessionRef.current;
-      const active =
-        status === 'connected' || status === 'connecting' || status === 'reconnecting';
+      const active = status === "connected" || status === "connecting" || status === "reconnecting";
       if (!active || !callId || !channelId) return;
       writeCallMarkers({ callId, channelId, micEnabled, cameraEnabled, ts: Date.now() });
       const others = roomRef.current?.remoteParticipants.size ?? 0;
@@ -687,8 +686,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         sendLeaveBeacon(orgIdRef.current, callId);
       }
     };
-    window.addEventListener('pagehide', onPageHide);
-    return () => window.removeEventListener('pagehide', onPageHide);
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
   }, []);
 
   // Session continuity: a fresh marker in sessionStorage (refresh or
@@ -714,10 +713,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           });
         } else {
           clearCallMarkers();
-          toast.info('A call you were in is still going.', {
+          toast.info("A call you were in is still going.", {
             duration: 15_000,
             action: {
-              label: 'Rejoin',
+              label: "Rejoin",
               onClick: () => {
                 void joinCallById(target.callId, target.channelId, {
                   micEnabled: false,
@@ -731,10 +730,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         // A transient fetchActiveCall failure must not strand the user out of a
         // still-live call. Leave the recent (localStorage) marker in place so a
         // reload can retry within its TTL, and offer a manual rejoin now.
-        toast.info('A call you were in may still be going.', {
+        toast.info("A call you were in may still be going.", {
           duration: 15_000,
           action: {
-            label: 'Rejoin',
+            label: "Rejoin",
             onClick: () => {
               void joinCallById(target.callId, target.channelId, {
                 micEnabled: false,

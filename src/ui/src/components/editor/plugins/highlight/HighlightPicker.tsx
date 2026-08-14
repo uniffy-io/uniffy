@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { HIGHLIGHT_COLORS, colorToBg } from '@/components/editor/plugins/highlight/index';
+import { useEffect, useRef } from "react";
+import { HIGHLIGHT_COLORS, colorToBg } from "@/components/editor/plugins/highlight/index";
 
 interface HighlightPickerProps {
   anchorRect: DOMRect;
@@ -21,35 +21,28 @@ const ERASER_ICON = (
   </svg>
 );
 
-export function HighlightPicker({
-  anchorRect,
-  onSelect,
-  onClose,
-}: HighlightPickerProps) {
+export function HighlightPicker({ anchorRect, onSelect, onClose }: HighlightPickerProps) {
   const pickerRef = useRef<HTMLDivElement>(null);
 
   // Close on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        pickerRef.current &&
-        !pickerRef.current.contains(e.target as Node)
-      ) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [onClose]);
 
@@ -64,7 +57,7 @@ export function HighlightPicker({
       style={{
         top: `${top}px`,
         left: `${left}px`,
-        transform: 'translateX(-50%)',
+        transform: "translateX(-50%)",
       }}
     >
       {HIGHLIGHT_COLORS.map((color) => (
@@ -76,10 +69,7 @@ export function HighlightPicker({
           style={{ backgroundColor: colorToBg(color.value) }}
           onClick={() => onSelect(color.value)}
         >
-          <span
-            className="block h-3 w-3 rounded-full"
-            style={{ backgroundColor: color.value }}
-          />
+          <span className="block h-3 w-3 rounded-full" style={{ backgroundColor: color.value }} />
         </button>
       ))}
 

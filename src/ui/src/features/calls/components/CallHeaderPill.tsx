@@ -1,26 +1,26 @@
-import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowUpRight, PhoneDisconnect } from '@phosphor-icons/react';
-import { useAppSelector } from '@/app/hooks';
-import { cn } from '@/shared/utils/cn';
-import { getInitials } from '@/components/subject/utils';
-import { useCall } from '@/features/calls/components/callContext';
-import { useRoomParticipants } from '@/features/calls/hooks/useRoomParticipants';
-import { ControlsBar } from '@/features/calls/components/ControlsBar';
-import { selectCallSession, selectSessionCall } from '@/features/calls/store/callsSlice';
-import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowUpRight, PhoneDisconnect } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
+import { getInitials } from "@/components/subject/utils";
+import { useCall } from "@/features/calls/components/callContext";
+import { useRoomParticipants } from "@/features/calls/hooks/useRoomParticipants";
+import { ControlsBar } from "@/features/calls/components/ControlsBar";
+import { selectCallSession, selectSessionCall } from "@/features/calls/store/callsSlice";
+import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
 
 function LiveDot({ speaking, reconnecting }: { speaking: boolean; reconnecting: boolean }) {
-  const color = reconnecting ? 'bg-amber-500' : 'bg-emerald-500';
+  const color = reconnecting ? "bg-amber-500" : "bg-emerald-500";
   return (
     <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
       <span
         className={cn(
-          'absolute inline-flex h-full w-full rounded-full opacity-75',
+          "absolute inline-flex h-full w-full rounded-full opacity-75",
           color,
-          (reconnecting || speaking) && 'motion-safe:animate-ping',
+          (reconnecting || speaking) && "motion-safe:animate-ping",
         )}
       />
-      <span className={cn('relative inline-flex h-2 w-2 rounded-full', color)} />
+      <span className={cn("relative inline-flex h-2 w-2 rounded-full", color)} />
     </span>
   );
 }
@@ -42,18 +42,18 @@ export function CallHeaderPill() {
   const { room, leaveCurrentCall } = useCall();
   const participants = useRoomParticipants(room);
 
-  const inCall = session.status === 'connected' || session.status === 'reconnecting';
+  const inCall = session.status === "connected" || session.status === "reconnecting";
   const viewingCallChannel =
-    location.pathname.startsWith('/chat') && activeChannelId === session.channelId;
+    location.pathname.startsWith("/chat") && activeChannelId === session.channelId;
 
   if (!inCall || viewingCallChannel || !session.channelId) return null;
 
-  const channelName = channel ? getChannelDisplayName(channel) : 'call';
+  const channelName = channel ? getChannelDisplayName(channel) : "call";
   const roster = sessionCall?.participants ?? [];
   const count = roster.length || participants.length;
   const anySpeaking = participants.some((p) => !p.isLocal && p.isSpeaking);
   const returnToCall = () => navigate(`/chat/${session.channelId}`);
-  const reconnecting = session.status === 'reconnecting';
+  const reconnecting = session.status === "reconnecting";
 
   return (
     <>
@@ -78,7 +78,10 @@ export function CallHeaderPill() {
             ))}
           </div>
           <span className="text-[11px] tabular-nums text-muted-foreground">{count}</span>
-          <ArrowUpRight size={12} className="text-muted-foreground transition-colors group-hover:text-foreground" />
+          <ArrowUpRight
+            size={12}
+            className="text-muted-foreground transition-colors group-hover:text-foreground"
+          />
         </button>
 
         <ControlsBar compact />
@@ -92,7 +95,7 @@ export function CallHeaderPill() {
           aria-label={`Return to call in ${channelName}`}
         >
           <LiveDot speaking={anySpeaking} reconnecting={reconnecting} />
-          {reconnecting ? 'Reconnecting' : 'Live'}
+          {reconnecting ? "Reconnecting" : "Live"}
         </button>
         <button
           type="button"
