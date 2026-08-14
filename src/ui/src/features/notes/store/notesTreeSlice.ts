@@ -147,7 +147,7 @@ export const fetchNotesTree = createAsyncThunk<
     if (firstResponse.totalPages > 1) {
       const remainingPages = Array.from(
         { length: firstResponse.totalPages - 1 },
-        (element, i) => i + 2,
+        (_element, i) => i + 2,
       );
 
       const pageResponses = await Promise.all(
