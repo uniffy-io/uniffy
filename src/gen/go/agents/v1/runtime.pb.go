@@ -801,7 +801,7 @@ func (x *GetUsageStatsResponse) GetCronTotalCacheCreationInputTokens() int64 {
 
 type DailyUsage struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
-	Date         string                 `protobuf:"bytes,1,opt,name=date,proto3" json:"date,omitempty"` // YYYY-MM-DD
+	Date         string                 `protobuf:"bytes,1,opt,name=date,proto3" json:"date,omitempty"` // YYYY-MM-DD for 1d buckets; ISO 8601 with offset for sub-daily buckets
 	Runs         int64                  `protobuf:"varint,2,opt,name=runs,proto3" json:"runs,omitempty"`
 	InputTokens  int64                  `protobuf:"varint,3,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
 	OutputTokens int64                  `protobuf:"varint,4,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`

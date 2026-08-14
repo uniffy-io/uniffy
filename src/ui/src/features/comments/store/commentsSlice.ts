@@ -153,7 +153,11 @@ const commentsSlice = createSlice({
     },
     addComment(
       state,
-      action: PayloadAction<{ contentType: number; contentId: string; comment: SerializedComment }>,
+      action: PayloadAction<{
+        contentType: number;
+        contentId: string;
+        comment: SerializedComment;
+      }>,
     ) {
       const key = contentKey(action.payload.contentType, action.payload.contentId);
       const content = state.commentsByContent[key];
@@ -174,7 +178,11 @@ const commentsSlice = createSlice({
     },
     updateCommentInList(
       state,
-      action: PayloadAction<{ contentType: number; contentId: string; comment: SerializedComment }>,
+      action: PayloadAction<{
+        contentType: number;
+        contentId: string;
+        comment: SerializedComment;
+      }>,
     ) {
       const key = contentKey(action.payload.contentType, action.payload.contentId);
       const content = state.commentsByContent[key];

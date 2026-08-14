@@ -83,8 +83,9 @@ export function SprintCompletionDialog({
         ) : (
           <>
             <p className="text-sm text-muted-foreground mb-4 shrink-0">
-              {incompleteTasks.length} incomplete task{incompleteTasks.length !== 1 ? "s" : ""} will
-              be moved. Choose a destination for each:
+              {incompleteTasks.length} incomplete task
+              {incompleteTasks.length !== 1 ? "s" : ""} will be moved. Choose a destination for
+              each:
             </p>
 
             <div className="flex-1 overflow-y-auto divide-y divide-border border border-border rounded-lg mb-4">
@@ -99,7 +100,10 @@ export function SprintCompletionDialog({
                   <select
                     value={dispositions[task.id]}
                     onChange={(e) =>
-                      setDispositions((prev) => ({ ...prev, [task.id]: e.target.value }))
+                      setDispositions((prev) => ({
+                        ...prev,
+                        [task.id]: e.target.value,
+                      }))
                     }
                     className="text-sm border border-border rounded-md px-2 py-1 bg-card text-foreground shrink-0"
                   >

@@ -162,7 +162,10 @@ export function ResourcePanel() {
                   >
                     <span
                       className="p-1.5 rounded-md shrink-0"
-                      style={{ backgroundColor: `${hexColor}20`, color: hexColor }}
+                      style={{
+                        backgroundColor: `${hexColor}20`,
+                        color: hexColor,
+                      }}
                     >
                       <Icon size={14} />
                     </span>

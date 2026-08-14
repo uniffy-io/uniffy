@@ -217,7 +217,12 @@ describe("applyFilters - composing hierarchy filters", () => {
     const tasks = buildSampleTasks();
     const config: FilterConfig = {
       conditions: [
-        { id: "c1", fieldId: HIERARCHY_IN_EPIC_FIELD_ID, operator: "equals", value: "epic" },
+        {
+          id: "c1",
+          fieldId: HIERARCHY_IN_EPIC_FIELD_ID,
+          operator: "equals",
+          value: "epic",
+        },
         { id: "c2", fieldId: HIERARCHY_DEPTH_FIELD_ID, operator: "equals", value: 1 },
       ],
       logic: "and",
@@ -230,7 +235,12 @@ describe("applyFilters - composing hierarchy filters", () => {
     const tasks = buildSampleTasks();
     const config: FilterConfig = {
       conditions: [
-        { id: "c1", fieldId: HIERARCHY_ROOT_ONLY_FIELD_ID, operator: "is_empty", value: null },
+        {
+          id: "c1",
+          fieldId: HIERARCHY_ROOT_ONLY_FIELD_ID,
+          operator: "is_empty",
+          value: null,
+        },
         {
           id: "c2",
           fieldId: HIERARCHY_HAS_SUBTASKS_FIELD_ID,

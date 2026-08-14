@@ -17,6 +17,7 @@ import {
   isValid,
 } from "date-fns";
 import { cn } from "@/shared/utils/cn";
+import { getWeekStartsOn } from "@/shared/utils/weekStart";
 
 interface DatePickerProps {
   /** ISO date string `YYYY-MM-DD`, or empty. */
@@ -33,7 +34,12 @@ interface DropdownPosition {
   openUpward: boolean;
 }
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+function weekdayHeader(): string[] {
+  const start = getWeekStartsOn();
+  return [...WEEKDAY_LABELS.slice(start), ...WEEKDAY_LABELS.slice(0, start)];
+}
 
 export function DatePicker({
   value,
@@ -66,8 +72,9 @@ export function DatePicker({
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(displayMonth);
     const monthEnd = endOfMonth(displayMonth);
-    const calendarStart = startOfWeek(monthStart);
-    const calendarEnd = endOfWeek(monthEnd);
+    const weekStartsOn = getWeekStartsOn();
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn });
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   }, [displayMonth]);
 
@@ -180,7 +187,7 @@ export function DatePicker({
         </div>
 
         <div className="grid grid-cols-7 px-2 pt-2">
-          {WEEKDAYS.map((day) => (
+          {weekdayHeader().map((day) => (
             <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
               {day}
             </div>

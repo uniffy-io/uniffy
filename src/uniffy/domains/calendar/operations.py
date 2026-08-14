@@ -51,7 +51,10 @@ from uniffy.core.types import (
 )
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calendar import queries
-from uniffy.domains.calendar.recurrence import expand_recurrence
+from uniffy.domains.calendar.recurrence import (
+    expand_recurrence,
+    occurrence_start_for_date,
+)
 from uniffy.domains.tags import TagAssignment, TagOperations
 
 logger = logger.bind(component="calendar.operations")
@@ -1179,14 +1182,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         }
 
         duration = master.end_time - master.start_time
-        occ_start = datetime(
-            occurrence_date.year,
-            occurrence_date.month,
-            occurrence_date.day,
-            master.start_time.hour,
-            master.start_time.minute,
-            master.start_time.second,
-            tzinfo=master.start_time.tzinfo,
+        occ_start = occurrence_start_for_date(
+            master.start_time, master.timezone or "UTC", occurrence_date
         )
         occ_end = occ_start + duration
 
@@ -1301,14 +1298,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         master.updated_at = datetime.now(UTC)
 
         duration = master.end_time - master.start_time
-        new_start = datetime(
-            occurrence_date.year,
-            occurrence_date.month,
-            occurrence_date.day,
-            master.start_time.hour,
-            master.start_time.minute,
-            master.start_time.second,
-            tzinfo=master.start_time.tzinfo,
+        new_start = occurrence_start_for_date(
+            master.start_time, master.timezone or "UTC", occurrence_date
         )
         new_end = new_start + duration
 

@@ -247,7 +247,12 @@ function handleChannelEvent(
             dispatch(
               updateUnreadCounts([{ channelId: activeChannelId, unreadCount: 0, mentionCount: 0 }]),
             );
-            dispatch(markChannelRead({ channelId: activeChannelId, lastReadMessageId: msg.id }));
+            dispatch(
+              markChannelRead({
+                channelId: activeChannelId,
+                lastReadMessageId: msg.id,
+              }),
+            );
           }
         }
       }
@@ -256,7 +261,10 @@ function handleChannelEvent(
     case ChatEventType.MESSAGE_UPDATED: {
       if (ce.payload.case === "message" && ce.payload.value) {
         dispatch(
-          updateMessage({ channelId: activeChannelId, message: messageToPlain(ce.payload.value) }),
+          updateMessage({
+            channelId: activeChannelId,
+            message: messageToPlain(ce.payload.value),
+          }),
         );
       }
       break;
@@ -264,7 +272,10 @@ function handleChannelEvent(
     case ChatEventType.MESSAGE_DELETED: {
       if (ce.payload.case === "messageDeleted" && ce.payload.value) {
         dispatch(
-          deleteMessage({ channelId: activeChannelId, messageId: ce.payload.value.messageId }),
+          deleteMessage({
+            channelId: activeChannelId,
+            messageId: ce.payload.value.messageId,
+          }),
         );
       }
       break;
@@ -309,7 +320,12 @@ function handleChannelEvent(
     }
     case ChatEventType.TYPING_STOPPED: {
       if (ce.payload.case === "typing" && ce.payload.value) {
-        dispatch(clearTypingUser({ channelId: activeChannelId, userId: ce.payload.value.userId }));
+        dispatch(
+          clearTypingUser({
+            channelId: activeChannelId,
+            userId: ce.payload.value.userId,
+          }),
+        );
       }
       break;
     }
@@ -564,7 +580,11 @@ function usePersistentChatStream() {
                     // handler advances the server read cursor with the real id.
                     dispatch(
                       updateUnreadCounts([
-                        { channelId: p.channelId, unreadCount: 0, mentionCount: 0 },
+                        {
+                          channelId: p.channelId,
+                          unreadCount: 0,
+                          mentionCount: 0,
+                        },
                       ]),
                     );
                     break;
@@ -625,7 +645,11 @@ function usePersistentChatStream() {
                   if (p.channelId === channelIdRef.current && isDocumentVisible()) {
                     dispatch(
                       updateUnreadCounts([
-                        { channelId: p.channelId, unreadCount: 0, mentionCount: 0 },
+                        {
+                          channelId: p.channelId,
+                          unreadCount: 0,
+                          mentionCount: 0,
+                        },
                       ]),
                     );
                     break;

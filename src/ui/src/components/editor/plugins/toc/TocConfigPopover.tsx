@@ -83,7 +83,12 @@ export function TocConfigPopover({ anchorRect, attrs, onChange, onClose }: TocCo
           <Select<TocAttrs["style"]>
             value={attrs.style}
             onChange={(style) => onChange({ style })}
-            options={STYLE_OPTIONS as unknown as { value: TocAttrs["style"]; label: string }[]}
+            options={
+              STYLE_OPTIONS as unknown as {
+                value: TocAttrs["style"];
+                label: string;
+              }[]
+            }
             size="sm"
           />
         </div>
@@ -92,7 +97,12 @@ export function TocConfigPopover({ anchorRect, attrs, onChange, onClose }: TocCo
           <Select<TocAttrs["bullets"]>
             value={attrs.bullets}
             onChange={(bullets) => onChange({ bullets })}
-            options={BULLET_OPTIONS as unknown as { value: TocAttrs["bullets"]; label: string }[]}
+            options={
+              BULLET_OPTIONS as unknown as {
+                value: TocAttrs["bullets"];
+                label: string;
+              }[]
+            }
             size="sm"
           />
         </div>

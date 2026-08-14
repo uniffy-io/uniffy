@@ -795,7 +795,10 @@ export const resolveThreadForMessage = createAsyncThunk<
       });
       if (resp.message) {
         dispatch(
-          appendMessage({ channelId: params.channelId, message: messageToPlain(resp.message) }),
+          appendMessage({
+            channelId: params.channelId,
+            message: messageToPlain(resp.message),
+          }),
         );
       }
     } catch {

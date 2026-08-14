@@ -57,7 +57,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     ChatNotificationLevel as ProtoNL,
 )
 
-from uniffy.core.converters import SUBJECT_TYPE_FROM_PROTO
+from uniffy.core.converters import SUBJECT_TYPE_FROM_PROTO, timestamp_to_datetime
 from uniffy.core.errors import (
     ConflictError,
     NotFoundError,
@@ -905,7 +905,7 @@ class ChannelHandlers:
 
         muted_until = ChatChannelOperations._MUTED_UNTIL_UNSET
         if request.HasField("muted_until"):
-            muted_until = request.muted_until.ToDatetime()
+            muted_until = timestamp_to_datetime(request.muted_until)
 
         follow_all_threads = None
         if request.HasField("follow_all_threads"):

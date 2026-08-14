@@ -107,7 +107,12 @@ describe("toolMessagesToSteps", () => {
         toolName: "x.do",
         toolResult: "Permission denied",
       }),
-      makeMessage({ id: "t3", role: MessageRole.TOOL, toolName: "x.do", toolResult: "all good" }),
+      makeMessage({
+        id: "t3",
+        role: MessageRole.TOOL,
+        toolName: "x.do",
+        toolResult: "all good",
+      }),
     ]);
     expect(steps.map((s) => s.status)).toEqual(["failed", "failed", "completed"]);
   });
@@ -117,7 +122,13 @@ describe("streamingToolCallsToSteps", () => {
   it("maps pending, failed, and successful calls to statuses", () => {
     const steps = streamingToolCallsToSteps([
       { toolCallId: "c1", toolName: "x.do", toolArgsJson: "{}" },
-      { toolCallId: "c2", toolName: "x.do", toolArgsJson: "{}", result: "boom", success: false },
+      {
+        toolCallId: "c2",
+        toolName: "x.do",
+        toolArgsJson: "{}",
+        result: "boom",
+        success: false,
+      },
       { toolCallId: "c3", toolName: "x.do", toolArgsJson: "{}", result: "ok", success: true },
     ]);
     expect(steps.map((s) => s.status)).toEqual(["running", "failed", "completed"]);

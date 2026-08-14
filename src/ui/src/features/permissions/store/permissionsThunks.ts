@@ -88,7 +88,11 @@ export const fetchContentMembers = createAsyncThunk<
     const organizationId = getOrgId(getState);
     if (!organizationId) return rejectWithValue("No organization selected");
     try {
-      const response = await membersApi.listMembers({ organizationId, contentType, contentId });
+      const response = await membersApi.listMembers({
+        organizationId,
+        contentType,
+        contentId,
+      });
       return {
         policy: serializePolicy(response.policy),
         members: response.members.map(serializeMember),

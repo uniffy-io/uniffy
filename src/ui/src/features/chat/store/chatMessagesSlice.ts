@@ -59,7 +59,11 @@ export const chatMessagesSlice = createSlice({
   reducers: {
     setMessages: (
       state,
-      action: PayloadAction<{ channelId: string; messages: ChatMessage[]; windowed?: boolean }>,
+      action: PayloadAction<{
+        channelId: string;
+        messages: ChatMessage[];
+        windowed?: boolean;
+      }>,
     ) => {
       const { channelId, messages, windowed = false } = action.payload;
       const ids: string[] = [];
@@ -115,7 +119,10 @@ export const chatMessagesSlice = createSlice({
     },
     updateMessage: (
       state,
-      action: PayloadAction<{ channelId: string; message: Partial<ChatMessage> & { id: string } }>,
+      action: PayloadAction<{
+        channelId: string;
+        message: Partial<ChatMessage> & { id: string };
+      }>,
     ) => {
       const { channelId, message } = action.payload;
       const existing = state.byId[message.id];

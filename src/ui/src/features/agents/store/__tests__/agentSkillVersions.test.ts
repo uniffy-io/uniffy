@@ -157,7 +157,10 @@ describe("agentSkillVersions slice", () => {
         {
           skillId: SKILL,
           skill: skill({ activeVersionNumber: 4, latestVersionNumber: 4 }),
-          version: version(4, { content: "body v1", changeSummary: "Reverted to version 1" }),
+          version: version(4, {
+            content: "body v1",
+            changeSummary: "Reverted to version 1",
+          }),
         },
         "req",
         { skillId: SKILL, versionNumber: 1 },

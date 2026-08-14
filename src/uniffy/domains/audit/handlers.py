@@ -23,6 +23,7 @@ from uniffy_proto.audit.v1.audit_pb2 import (
     ListEventsResponse,
 )
 
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.db import open_session
 from uniffy.domains.audit.converters import audit_event_to_proto
@@ -87,12 +88,14 @@ class AuditHandlers:
             ),
             resource_id=resource_id,
             from_time=(
-                request.from_time.ToDatetime()
+                timestamp_to_datetime(request.from_time)
                 if request.HasField("from_time")
                 else None
             ),
             to_time=(
-                request.to_time.ToDatetime() if request.HasField("to_time") else None
+                timestamp_to_datetime(request.to_time)
+                if request.HasField("to_time")
+                else None
             ),
             page_size=request.page_size,
             page_token=request.page_token if request.HasField("page_token") else None,
@@ -160,12 +163,12 @@ class AuditHandlers:
             ),
             resource_id=resource_id,
             from_time=(
-                filter_msg.from_time.ToDatetime()
+                timestamp_to_datetime(filter_msg.from_time)
                 if filter_msg.HasField("from_time")
                 else None
             ),
             to_time=(
-                filter_msg.to_time.ToDatetime()
+                timestamp_to_datetime(filter_msg.to_time)
                 if filter_msg.HasField("to_time")
                 else None
             ),

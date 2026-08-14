@@ -216,7 +216,9 @@ export function TaskRecurrenceSelector({ value, onChange, disabled }: TaskRecurr
       if (condition === "on_date") {
         const d = new Date();
         d.setMonth(d.getMonth() + 3);
-        updated.end_date = d.toISOString().split("T")[0];
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        updated.end_date = `${d.getFullYear()}-${month}-${day}`;
       }
       emitChange(updated);
     },

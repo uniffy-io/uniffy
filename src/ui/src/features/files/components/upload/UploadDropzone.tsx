@@ -186,7 +186,10 @@ export function UploadDropzone({
         type="file"
         onChange={handleFolderChange}
         className="hidden"
-        {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+        {...({
+          webkitdirectory: "",
+          directory: "",
+        } as React.InputHTMLAttributes<HTMLInputElement>)}
       />
       <div
         onClick={handleClick}

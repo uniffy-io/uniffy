@@ -69,7 +69,9 @@ class RecordingController {
           code: "permission_denied",
         });
       }
-      throw Object.assign(new Error("Could not start screen capture"), { code: "not_supported" });
+      throw Object.assign(new Error("Could not start screen capture"), {
+        code: "not_supported",
+      });
     }
 
     let micStream: MediaStream | null = null;
@@ -93,7 +95,9 @@ class RecordingController {
       displayStream.getTracks().forEach((t) => t.stop());
       micStream?.getTracks().forEach((t) => t.stop());
       audioContext?.close().catch(() => undefined);
-      throw Object.assign(new Error("Could not start screen capture"), { code: "not_supported" });
+      throw Object.assign(new Error("Could not start screen capture"), {
+        code: "not_supported",
+      });
     }
 
     videoTrack.addEventListener("ended", () => {

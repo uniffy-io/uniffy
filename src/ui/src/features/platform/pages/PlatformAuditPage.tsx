@@ -131,7 +131,13 @@ export function PlatformAuditPage() {
 
   useEffect(() => {
     platformOrgsApi
-      .list({ page: 0, pageSize: 200, search: "", includeDeleted: true, onlySuspended: false })
+      .list({
+        page: 0,
+        pageSize: 200,
+        search: "",
+        includeDeleted: true,
+        onlySuspended: false,
+      })
       .then((response) => {
         setOrgOptions(
           response.organizations.map((o) => ({

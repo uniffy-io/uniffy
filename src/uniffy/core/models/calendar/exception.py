@@ -1,6 +1,6 @@
 """RecurrenceException model for tracking cancelled or rescheduled occurrences."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from sqlalchemy import Column, Date, DateTime, UniqueConstraint
@@ -24,7 +24,7 @@ class RecurrenceException(SQLModel, table=True):
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     event_id: UUID = Field(foreign_key="calendar_events.id", nullable=False, index=True)
-    original_date: datetime = Field(sa_column=Column(Date, nullable=False, index=True))
+    original_date: date = Field(sa_column=Column(Date, nullable=False, index=True))
     is_cancelled: bool = Field(default=False, nullable=False)
     override_event_id: UUID | None = Field(default=None, foreign_key="calendar_events.id")
     created_at: datetime = Field(

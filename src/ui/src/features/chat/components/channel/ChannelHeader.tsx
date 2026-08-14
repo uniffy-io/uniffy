@@ -408,7 +408,12 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
               anchorRef={pinnedBtnRef}
               onClose={() => setShowPinned(false)}
               onJumpToMessage={(messageId) =>
-                dispatch(jumpToChannelMessage({ channelId: activeChannel.id, messageId }))
+                dispatch(
+                  jumpToChannelMessage({
+                    channelId: activeChannel.id,
+                    messageId,
+                  }),
+                )
               }
             />
           )}

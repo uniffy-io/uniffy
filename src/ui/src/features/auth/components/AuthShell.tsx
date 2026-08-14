@@ -81,7 +81,9 @@ export function AuthShell({ children }: AuthShellProps) {
       <div className="flex min-h-screen relative overflow-hidden">
         <div
           className="hidden lg:block absolute inset-y-0 left-0 w-[52%]"
-          style={{ background: "linear-gradient(160deg, #09090b 0%, #171723 60%, #1a1a2e 100%)" }}
+          style={{
+            background: "linear-gradient(160deg, #09090b 0%, #171723 60%, #1a1a2e 100%)",
+          }}
         />
         <div className="absolute inset-y-0 lg:left-[52%] left-0 right-0 bg-background" />
 

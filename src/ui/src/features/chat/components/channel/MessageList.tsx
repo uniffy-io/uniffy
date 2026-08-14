@@ -6,6 +6,8 @@ import { Virtuoso, type Components, type VirtuosoHandle } from "react-virtuoso";
 import { useAvatarUrl } from "@/shared/hooks/useAvatarUrl";
 import { getInitials } from "@/components/subject/utils";
 import { cn } from "@/shared/utils/cn";
+import { effectiveDayKey } from "@/shared/utils/dateFormatting";
+import { getPreferredTimeZone } from "@/shared/utils/timezone";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { selectActiveChannelId } from "@/features/chat/store/chatChannelsSlice";
 import {
@@ -35,8 +37,12 @@ const EVICTION_DROP = 500;
 const JUMP_SCROLL_ATTEMPTS = 8;
 const JUMP_RETRY_MS = 120;
 
+function dayKey(value: string | Date): string {
+  return effectiveDayKey(typeof value === "string" ? new Date(value) : value);
+}
+
 function isSameDay(a: string, b: string): boolean {
-  return a.slice(0, 10) === b.slice(0, 10);
+  return dayKey(a) === dayKey(b);
 }
 
 function resolveMessageKind(message: ChatMessage): string {
@@ -55,14 +61,15 @@ function formatDateLabel(dateStr: string): string {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
 
-  if (isSameDay(dateStr, today.toISOString())) return "Today";
-  if (isSameDay(dateStr, yesterday.toISOString())) return "Yesterday";
+  if (dayKey(dateStr) === dayKey(today)) return "Today";
+  if (dayKey(dateStr) === dayKey(yesterday)) return "Yesterday";
 
   return date.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
     year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+    timeZone: getPreferredTimeZone() ?? undefined,
   });
 }
 

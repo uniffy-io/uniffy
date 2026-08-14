@@ -52,6 +52,7 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
 )
 
 from uniffy.core.config.push import get_vapid_config
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.models.login.user import User
 from uniffy.core.valkey import subscribe_channels
 from uniffy.db import open_session
@@ -345,11 +346,11 @@ class NotificationsHandlers:
 
         date_from = None
         if request.HasField("date_from"):
-            date_from = request.date_from.ToDatetime().replace(tzinfo=datetime.now(UTC).tzinfo)
+            date_from = timestamp_to_datetime(request.date_from)
 
         date_to = None
         if request.HasField("date_to"):
-            date_to = request.date_to.ToDatetime().replace(tzinfo=datetime.now(UTC).tzinfo)
+            date_to = timestamp_to_datetime(request.date_to)
 
         actor_id = None
         if request.actor_id:

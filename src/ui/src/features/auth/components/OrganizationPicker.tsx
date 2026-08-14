@@ -355,7 +355,9 @@ export function OrganizationPicker() {
                   type="button"
                   onClick={() => navigate("/platform")}
                   className="w-full text-left rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/50 transition-all duration-200 group cursor-pointer opacity-0"
-                  style={{ animation: "org-slide-up 0.4s ease-out 0.1s forwards" }}
+                  style={{
+                    animation: "org-slide-up 0.4s ease-out 0.1s forwards",
+                  }}
                 >
                   <div className="flex items-center gap-4 p-4">
                     <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
@@ -422,7 +424,9 @@ export function OrganizationPicker() {
                         {isSelecting ? (
                           <CircleNotch
                             className="h-5 w-5 text-primary"
-                            style={{ animation: "org-spinner 0.8s linear infinite" }}
+                            style={{
+                              animation: "org-spinner 0.8s linear infinite",
+                            }}
                             weight="bold"
                           />
                         ) : (

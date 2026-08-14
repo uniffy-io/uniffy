@@ -11,26 +11,24 @@ import {
   subDays,
   subWeeks,
   subMonths,
-  isSameDay,
   isSameMonth,
-  isToday,
   isWeekend,
   differenceInMinutes,
   getDay,
   getDate,
   getYear,
-  getHours,
-  getMinutes,
   setHours,
   setMinutes,
   eachDayOfInterval,
 } from "date-fns";
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
+import { getWeekStartsOn } from "@/shared/utils/weekStart";
 import type { DayColumn, ViewMode } from "@/features/calendar/types";
 
 export function getWeekDates(
   date: Date | string,
-  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1,
+  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = getWeekStartsOn(),
 ): Date[] {
   const d = typeof date === "string" ? parseISO(date) : date;
   const weekStart = startOfWeek(d, { weekStartsOn });
@@ -42,17 +40,17 @@ export function getWeekDates(
 
 export function getWeekColumns(
   date: Date | string,
-  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1,
+  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = getWeekStartsOn(),
 ): DayColumn[] {
   const weekDates = getWeekDates(date, weekStartsOn);
-  const today = new Date();
+  const todayKey = instantDayKey(new Date());
 
   return weekDates.map((d) => ({
     date: d,
     dayOfWeek: getDay(d),
     dayName: format(d, "EEE"),
     dayNumber: getDate(d),
-    isToday: isSameDay(d, today),
+    isToday: format(d, "yyyy-MM-dd") === todayKey,
     isCurrentMonth: isSameMonth(d, date),
     isWeekend: isWeekend(d),
     dateString: format(d, "yyyy-MM-dd"),
@@ -60,7 +58,10 @@ export function getWeekColumns(
 }
 
 /** Always returns 42 dates (6 weeks) including overflow from prev/next month. */
-function getMonthDates(date: Date | string, weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1): Date[] {
+function getMonthDates(
+  date: Date | string,
+  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = getWeekStartsOn(),
+): Date[] {
   const d = typeof date === "string" ? parseISO(date) : date;
   const monthStart = startOfMonth(d);
   const monthEnd = endOfMonth(d);
@@ -72,10 +73,10 @@ function getMonthDates(date: Date | string, weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 
 
 export function getMonthColumns(
   date: Date | string,
-  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1,
+  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = getWeekStartsOn(),
 ): DayColumn[] {
   const monthDates = getMonthDates(date, weekStartsOn);
-  const today = new Date();
+  const todayKey = instantDayKey(new Date());
   const referenceDate = typeof date === "string" ? parseISO(date) : date;
 
   return monthDates.map((d) => ({
@@ -83,18 +84,29 @@ export function getMonthColumns(
     dayOfWeek: getDay(d),
     dayName: format(d, "EEE"),
     dayNumber: getDate(d),
-    isToday: isSameDay(d, today),
+    isToday: format(d, "yyyy-MM-dd") === todayKey,
     isCurrentMonth: isSameMonth(d, referenceDate),
     isWeekend: isWeekend(d),
     dateString: format(d, "yyyy-MM-dd"),
   }));
 }
 
-/** Renders in the browser's local timezone (events are stored UTC). */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Renders in the user's display timezone (events are stored UTC).
+ *
+ * Date-only strings and Date objects are CALENDAR values (day keys, grid
+ * column tokens) - their own year/month/day already name the day, so they
+ * render as-is. Only ISO strings with a time component are instants that
+ * convert through the display zone.
+ */
 export function formatDate(date: Date | string, formatStr: string = "MMM d, yyyy"): string {
+  if (typeof date === "string" && !DATE_ONLY.test(date)) {
+    return formatInTimeZone(parseISO(date), getEffectiveTimeZone(), formatStr);
+  }
   const d = typeof date === "string" ? parseISO(date) : date;
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return formatInTimeZone(d, timezone, formatStr);
+  return format(d, formatStr);
 }
 
 export function formatDateWithDay(date: Date | string): string {
@@ -103,8 +115,7 @@ export function formatDateWithDay(date: Date | string): string {
 
 export function formatTime(date: Date | string, use24Hour: boolean = false): string {
   const d = typeof date === "string" ? parseISO(date) : date;
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return formatInTimeZone(d, timezone, use24Hour ? "HH:mm" : "h:mm a");
+  return formatInTimeZone(d, getEffectiveTimeZone(), use24Hour ? "HH:mm" : "h:mm a");
 }
 
 export function formatTimeRange(
@@ -114,7 +125,7 @@ export function formatTimeRange(
 ): string {
   const startDate = typeof start === "string" ? parseISO(start) : start;
   const endDate = typeof end === "string" ? parseISO(end) : end;
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const timezone = getEffectiveTimeZone();
 
   if (use24Hour) {
     return `${formatInTimeZone(startDate, timezone, "HH:mm")} – ${formatInTimeZone(endDate, timezone, "HH:mm")}`;
@@ -155,19 +166,32 @@ export function navigateDate(
   }
 }
 
-/** Compares yyyy-MM-dd in the local zone so DST and UTC-midnight events do not get mis-bucketed. */
+/**
+ * Display-zone calendar day of a value. Date-only strings and Date tokens
+ * (grid columns, day keys) already name their day; ISO instants convert
+ * through the display zone.
+ */
+export function displayDayKey(value: Date | string): string {
+  if (typeof value === "string") {
+    if (DATE_ONLY.test(value)) return value;
+    return formatInTimeZone(parseISO(value), getEffectiveTimeZone(), "yyyy-MM-dd");
+  }
+  return format(value, "yyyy-MM-dd");
+}
+
+/** Display-zone calendar day containing an instant. */
+export function instantDayKey(instant: Date | string): string {
+  const d = typeof instant === "string" ? parseISO(instant) : instant;
+  return formatInTimeZone(d, getEffectiveTimeZone(), "yyyy-MM-dd");
+}
+
+/** Compares display-zone yyyy-MM-dd so DST and UTC-midnight events do not get mis-bucketed. */
 export function areSameDay(date1: Date | string, date2: Date | string): boolean {
-  const d1 = typeof date1 === "string" ? parseISO(date1) : date1;
-  const d2 = typeof date2 === "string" ? parseISO(date2) : date2;
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const date1Local = formatInTimeZone(d1, timezone, "yyyy-MM-dd");
-  const date2Local = formatInTimeZone(d2, timezone, "yyyy-MM-dd");
-  return date1Local === date2Local;
+  return displayDayKey(date1) === displayDayKey(date2);
 }
 
 export function isDateToday(date: Date | string): boolean {
-  const d = typeof date === "string" ? parseISO(date) : date;
-  return isToday(d);
+  return displayDayKey(date) === instantDayKey(new Date());
 }
 
 export function getDurationMinutes(start: Date | string, end: Date | string): number {
@@ -207,14 +231,41 @@ export function toDateString(date: Date | string): string {
   return format(d, "yyyy-MM-dd");
 }
 
+/**
+ * The instant at a wall-clock time on a calendar day, read in the DISPLAY
+ * zone. Grid clicks, drops and time pickers all mean "this hour on the
+ * clock the grid renders", which is not the device clock when a timezone
+ * preference is set.
+ */
+export function instantFromDisplayParts(day: Date | string, hours: number, minutes: number): Date {
+  const d = typeof day === "string" ? parseISO(day) : day;
+  const wall = `${format(d, "yyyy-MM-dd")}T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
+  return fromZonedTime(wall, getEffectiveTimeZone());
+}
+
+/** Wall-clock parts of an instant on the display zone's clock. */
+export function displayParts(instant: Date | string): {
+  hours: number;
+  minutes: number;
+} {
+  const d = typeof instant === "string" ? parseISO(instant) : instant;
+  const zone = getEffectiveTimeZone();
+  return {
+    hours: Number(formatInTimeZone(d, zone, "H")),
+    minutes: Number(formatInTimeZone(d, zone, "m")),
+  };
+}
+
 export function getCurrentTimeInfo(): {
   hour: number;
   minutes: number;
   percentOfHour: number;
 } {
+  // The now-line sits on the display zone's clock, not the device clock.
   const now = new Date();
-  const hour = getHours(now);
-  const minutes = getMinutes(now);
+  const zone = getEffectiveTimeZone();
+  const hour = Number(formatInTimeZone(now, zone, "H"));
+  const minutes = Number(formatInTimeZone(now, zone, "m"));
   return {
     hour,
     minutes,
@@ -237,9 +288,7 @@ export function getDateRangeLabel(startDate: Date | string, endDate: Date | stri
   return `${format(start, "MMM yyyy")} – ${format(end, "MMM yyyy")}`;
 }
 
-export function getTimezoneOffset(
-  timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
-): string {
+export function getTimezoneOffset(timezone: string = getEffectiveTimeZone()): string {
   const now = new Date();
   const formatted = formatInTimeZone(now, timezone, "xxx");
   return `GMT${formatted.replace(":", "")}`;

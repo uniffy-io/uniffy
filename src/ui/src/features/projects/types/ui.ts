@@ -101,6 +101,13 @@ export interface ProjectsUiState {
   redoStack: HistoryEntry[];
 }
 
+function localTodayString(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
 import { loadColumnWidths, loadHiddenColumns } from "@/features/projects/utils/tableColumnStorage";
 
 export const initialProjectsUiState: ProjectsUiState = {
@@ -147,7 +154,7 @@ export const initialProjectsUiState: ProjectsUiState = {
 
   tableOutlineEnabled: true,
 
-  roadmapStartDate: new Date().toISOString().split("T")[0],
+  roadmapStartDate: localTodayString(),
   roadmapZoomLevel: "week",
 
   autosave: {

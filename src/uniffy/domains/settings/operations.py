@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, select, update
 from sqlalchemy.exc import IntegrityError
@@ -18,6 +19,30 @@ from uniffy.domains.settings.defaults import (
     get_keyboard_shortcuts_defaults_dict,
     get_notifications_defaults_dict,
 )
+
+_WEEK_START_VALUES = {"monday", "saturday", "sunday"}
+
+
+def _validate_appearance(appearance: dict[str, Any] | None) -> None:
+    if not appearance:
+        return
+    tz = appearance.get("timezone")
+    if tz:
+        try:
+            ZoneInfo(tz)
+        except (KeyError, ValueError) as exc:
+            raise ValidationError("timezone", f"Unknown timezone '{tz}'") from exc
+    week_start = appearance.get("week_start")
+    if week_start and week_start not in _WEEK_START_VALUES:
+        raise ValidationError("week_start", f"Unknown week start '{week_start}'")
+
+
+async def get_user_timezone(session: AsyncSession, user_id: UUID) -> str | None:
+    """Stored display timezone from the user's default profile; None = automatic."""
+    profile = await SettingsOperations(session).get_default_profile(user_id)
+    if not profile or not profile.appearance:
+        return None
+    return profile.appearance.get("timezone") or None
 
 
 class SettingsOperations:
@@ -38,6 +63,8 @@ class SettingsOperations:
         existing = await self._get_profile_by_name(user_id, name)
         if existing:
             raise ValidationError("name", f"Profile with name '{name}' already exists")
+
+        _validate_appearance(appearance)
 
         if is_default:
             await self._unset_default_profiles(user_id)
@@ -118,6 +145,7 @@ class SettingsOperations:
             profile.name = name
 
         if appearance is not None:
+            _validate_appearance(appearance)
             profile.appearance = self._merge_settings(profile.appearance, appearance)
 
         if keyboard_shortcuts is not None:

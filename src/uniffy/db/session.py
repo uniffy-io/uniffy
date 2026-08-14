@@ -158,6 +158,10 @@ async def init_db(*, skip_migrations: bool = False) -> None:
             "command_timeout": command_timeout_seconds,
             # TCP keepalive catches dead connections through firewalls/LBs.
             "server_settings": {
+                # Bare date/timestamp literals and date_trunc() resolve in the
+                # session TimeZone; pin it so a non-UTC server default cannot
+                # shift bucketing or partition bounds.
+                "TimeZone": "UTC",
                 "statement_timeout": str(statement_timeout_ms),
                 "tcp_keepalives_idle": "60",
                 "tcp_keepalives_interval": "10",

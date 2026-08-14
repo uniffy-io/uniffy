@@ -240,9 +240,21 @@ export function NotificationsSection() {
               <div className="font-medium text-foreground mb-3">Email Frequency</div>
               <div className="space-y-2">
                 {[
-                  { id: "instant", label: "Instant", description: "Get notified immediately" },
-                  { id: "hourly", label: "Hourly Digest", description: "Summary every hour" },
-                  { id: "daily", label: "Daily Digest", description: "Summary once a day" },
+                  {
+                    id: "instant",
+                    label: "Instant",
+                    description: "Get notified immediately",
+                  },
+                  {
+                    id: "hourly",
+                    label: "Hourly Digest",
+                    description: "Summary every hour",
+                  },
+                  {
+                    id: "daily",
+                    label: "Daily Digest",
+                    description: "Summary once a day",
+                  },
                 ].map(({ id, label, description }) => (
                   <button
                     key={id}
@@ -293,7 +305,11 @@ export function NotificationsSection() {
 
           {NOTIFICATION_TYPE_ROWS.map(({ type, label }) => {
             const channels = notifications.channelOverrides?.[type] ?? {};
-            const defaults = DEFAULT_CHANNELS[type] ?? { in_app: true, browser: true, email: true };
+            const defaults = DEFAULT_CHANNELS[type] ?? {
+              in_app: true,
+              browser: true,
+              email: true,
+            };
 
             return (
               <div

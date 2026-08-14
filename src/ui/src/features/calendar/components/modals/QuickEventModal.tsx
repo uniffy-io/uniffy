@@ -12,11 +12,13 @@ import {
   Link as LinkIcon,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { instantDayKey, instantFromDisplayParts } from "@/features/calendar/utils";
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
 import { createEvent } from "@/features/calendar/store/calendarThunks";
 import { attachmentsApi } from "@/features/files/api/attachmentsApi";
 import { cn } from "@/shared/utils/cn";
-import { formatDateWithWeekday } from "@/shared/utils/dateFormatting";
+import { formatDateWithWeekday, parseCalendarDate } from "@/shared/utils/dateFormatting";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
@@ -49,7 +51,7 @@ function getDateString(date: Date): string {
 
 function generateDateOptions(): { value: string; label: string }[] {
   const options: { value: string; label: string }[] = [];
-  const today = new Date();
+  const today = parseCalendarDate(instantDayKey(new Date()));
 
   for (let i = 7; i >= 1; i--) {
     const date = new Date(today);
@@ -89,8 +91,13 @@ export function QuickEventModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isMultiDay, setIsMultiDay] = useState(false);
-  const [startDate, setStartDate] = useState(getDateString(initialDate || new Date()));
-  const [endDate, setEndDate] = useState(getDateString(initialDate || new Date()));
+  // `initialDate` is a calendar token; bare "today" is the display zone's day.
+  const [startDate, setStartDate] = useState(() =>
+    initialDate ? getDateString(initialDate) : instantDayKey(new Date()),
+  );
+  const [endDate, setEndDate] = useState(() =>
+    initialDate ? getDateString(initialDate) : instantDayKey(new Date()),
+  );
   const [startHour, setStartHour] = useState(initialStartHour);
   const [endHour, setEndHour] = useState(initialEndHour);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
@@ -112,23 +119,25 @@ export function QuickEventModal({
     pendingFileIdsRef.current.push(fileId);
   }, []);
 
-  // Conflict detection
+  // Conflict detection compares stored instants, so the picked wall clock
+  // converts through the display zone like the submit path does.
   const startIso = useMemo(() => {
     if (!startDate) return null;
-    const [y, m, d] = startDate.split("-").map(Number);
-    const dt = new Date(y, m - 1, d);
-    dt.setHours(Math.floor(startHour), Math.round((startHour % 1) * 60), 0, 0);
-    return dt.toISOString();
+    return instantFromDisplayParts(
+      startDate,
+      Math.floor(startHour),
+      Math.round((startHour % 1) * 60),
+    ).toISOString();
   }, [startDate, startHour]);
 
   const endIso = useMemo(() => {
-    if (!isMultiDay && !startDate) return null;
     const dateStr = isMultiDay ? endDate : startDate;
     if (!dateStr) return null;
-    const [y, m, d] = dateStr.split("-").map(Number);
-    const dt = new Date(y, m - 1, d);
-    dt.setHours(Math.floor(endHour), Math.round((endHour % 1) * 60), 0, 0);
-    return dt.toISOString();
+    return instantFromDisplayParts(
+      dateStr,
+      Math.floor(endHour),
+      Math.round((endHour % 1) * 60),
+    ).toISOString();
   }, [startDate, endDate, endHour, isMultiDay]);
 
   const conflicts = useConflictDetection(startIso, endIso);
@@ -148,14 +157,14 @@ export function QuickEventModal({
   // Reset form when modal opens + Escape key to close
   useEffect(() => {
     if (isOpen) {
-      const date = initialDate || new Date();
+      const day = initialDate ? getDateString(initialDate) : instantDayKey(new Date());
       // The modal stays mounted and only renders null while closed, so each open reseeds the form.
       // eslint-disable-next-line react/react-compiler
       setTitle("");
       setDescription("");
       setIsMultiDay(false);
-      setStartDate(getDateString(date));
-      setEndDate(getDateString(date));
+      setStartDate(day);
+      setEndDate(day);
       setStartHour(initialStartHour);
       setEndHour(initialEndHour);
       setRecurrence(undefined);
@@ -223,25 +232,17 @@ export function QuickEventModal({
     let eventEndTime: Date;
 
     if (isMultiDay) {
-      const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
       const startMinutes = Math.round((startHour % 1) * 60);
-      eventStartTime = new Date(startYear, startMonth - 1, startDay);
-      eventStartTime.setHours(Math.floor(startHour), startMinutes, 0, 0);
+      eventStartTime = instantFromDisplayParts(startDate, Math.floor(startHour), startMinutes);
 
-      const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
       const endMinutes = Math.round((endHour % 1) * 60);
-      eventEndTime = new Date(endYear, endMonth - 1, endDay);
-      eventEndTime.setHours(Math.floor(endHour), endMinutes, 0, 0);
+      eventEndTime = instantFromDisplayParts(endDate, Math.floor(endHour), endMinutes);
     } else {
-      const [year, month, day] = startDate.split("-").map(Number);
-
-      eventStartTime = new Date(year, month - 1, day);
       const startMinutes = Math.round((startHour % 1) * 60);
-      eventStartTime.setHours(Math.floor(startHour), startMinutes, 0, 0);
+      eventStartTime = instantFromDisplayParts(startDate, Math.floor(startHour), startMinutes);
 
-      eventEndTime = new Date(year, month - 1, day);
       const endMinutes = Math.round((endHour % 1) * 60);
-      eventEndTime.setHours(Math.floor(endHour), endMinutes, 0, 0);
+      eventEndTime = instantFromDisplayParts(startDate, Math.floor(endHour), endMinutes);
     }
 
     const result = await dispatch(
@@ -251,7 +252,7 @@ export function QuickEventModal({
         startTime: eventStartTime.toISOString(),
         endTime: eventEndTime.toISOString(),
         isAllDay: isMultiDay,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezone: getEffectiveTimeZone(),
         calendarId: "",
         categoryId: isValidUuid(selectedCategoryId) ? selectedCategoryId : undefined,
         isFocusTime: selectedCategoryId === "cat-deepwork",
@@ -363,7 +364,11 @@ export function QuickEventModal({
                   {[
                     { mode: "none" as const, icon: Prohibit, label: "None" },
                     { mode: "link" as const, icon: LinkIcon, label: "Link" },
-                    { mode: "channel" as const, icon: VideoCamera, label: "Uniffy meeting" },
+                    {
+                      mode: "channel" as const,
+                      icon: VideoCamera,
+                      label: "Uniffy meeting",
+                    },
                   ].map(({ mode, icon: Icon, label }) => (
                     <button
                       key={mode}

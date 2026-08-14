@@ -95,6 +95,9 @@ def run_migrations_online() -> None:
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        # Migrations emit date literals against timestamptz columns; pin the
+        # session zone so they resolve identically on any server default.
+        connect_args={"options": "-c TimeZone=UTC"},
     )
 
     with connectable.connect() as connection:

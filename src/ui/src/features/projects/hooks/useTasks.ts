@@ -65,7 +65,11 @@ export function useTasks() {
   const reorderTask = useCallback(
     (data: MoveTaskRequest) => {
       dispatch(
-        optimisticUpdateTask({ id: data.id, status: data.status, sortOrder: data.sortOrder }),
+        optimisticUpdateTask({
+          id: data.id,
+          status: data.status,
+          sortOrder: data.sortOrder,
+        }),
       );
       return dispatch(moveTask(data));
     },

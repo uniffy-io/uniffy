@@ -446,7 +446,7 @@ export const GetUsageStatsResponseSchema: GenMessage<GetUsageStatsResponse> = /*
  */
 export type DailyUsage = Message<"agents.v1.DailyUsage"> & {
   /**
-   * YYYY-MM-DD
+   * YYYY-MM-DD for 1d buckets; ISO 8601 with offset for sub-daily buckets
    *
    * @generated from field: string date = 1;
    */

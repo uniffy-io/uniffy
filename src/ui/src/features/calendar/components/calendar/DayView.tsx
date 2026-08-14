@@ -11,7 +11,7 @@ import { GridLines } from "@/features/calendar/components/calendar/GridLines";
 import { DayCurrentTimeIndicator } from "@/features/calendar/components/calendar/CurrentTimeIndicator";
 import { EventBlock } from "@/features/calendar/components/calendar/EventBlock";
 import { GRID, LAYOUT } from "@/features/calendar/constants";
-import { parseISO, format } from "@/features/calendar/utils";
+import { parseISO, format, instantFromDisplayParts } from "@/features/calendar/utils";
 
 export function DayView() {
   const dispatch = useAppDispatch();
@@ -122,8 +122,7 @@ export function DayView() {
       const slot = getSlotFromCoordinates(e.clientY);
       if (!slot) return;
 
-      const newStartDate = new Date(currentDate);
-      newStartDate.setHours(slot.hour, slot.isHalf ? 30 : 0, 0, 0);
+      const newStartDate = instantFromDisplayParts(currentDate, slot.hour, slot.isHalf ? 30 : 0);
 
       const match = positionedEvents.find((event) => event.id === draggedEventId);
       if (!match) return;
@@ -176,13 +175,10 @@ export function DayView() {
       const endHourVal = clickedHour + 1;
       const endMinutes = Math.round((endHourVal % 1) * 60);
 
-      const dayDate = parseISO(currentDate);
-      const startDt = new Date(dayDate);
-      startDt.setHours(Math.floor(clickedHour), startMinutes, 0, 0);
-      const endDt = new Date(dayDate);
-      endDt.setHours(Math.floor(endHourVal), endMinutes, 0, 0);
+      const startDt = instantFromDisplayParts(currentDate, Math.floor(clickedHour), startMinutes);
+      const endDt = instantFromDisplayParts(currentDate, Math.floor(endHourVal), endMinutes);
 
-      const dateStr = format(dayDate, "yyyy-MM-dd");
+      const dateStr = currentDate;
       dispatch(
         openEventModal({
           mode: "create",

@@ -1527,7 +1527,9 @@ function CanvasEditorInner({
                     onToggleCollapse: handleMindMapToggleCollapse,
                     onDeleteSubtree: handleMindMapDeleteNode,
                     onBranchColorChange: (color: string) =>
-                      handleNodeStyleChange(contextMenu.nodeId, { branchColor: color }),
+                      handleNodeStyleChange(contextMenu.nodeId, {
+                        branchColor: color,
+                      }),
                     onRotate: () => handleMindMapRotate(contextMenu.nodeId),
                   }
                 : undefined

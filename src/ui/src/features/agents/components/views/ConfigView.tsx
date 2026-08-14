@@ -514,7 +514,11 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                           size="icon"
                           onClick={() => {
                             if (modelsTab === "all") {
-                              dispatch(fetchAvailableModels({ force: true }));
+                              dispatch(
+                                fetchAvailableModels({
+                                  force: true,
+                                }),
+                              );
                             } else {
                               dispatch(
                                 fetchModelsForKey({

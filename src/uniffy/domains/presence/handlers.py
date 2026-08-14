@@ -1,6 +1,6 @@
 """Presence RPC handlers - thin layer delegating to operations."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -20,6 +20,7 @@ from uniffy_proto.presence.v1.presence_pb2 import (
     UserPresence,
 )
 
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
     get_organization_id_from_context,
@@ -135,7 +136,7 @@ class PresenceHandlers:
 
         expires_at = None
         if request.HasField("expires_at"):
-            expires_at = request.expires_at.ToDatetime().replace(tzinfo=UTC)
+            expires_at = timestamp_to_datetime(request.expires_at)
 
         try:
             async with open_session() as session:

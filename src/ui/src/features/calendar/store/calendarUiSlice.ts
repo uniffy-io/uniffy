@@ -8,7 +8,7 @@ import type {
   SidebarSectionId,
 } from "@/features/calendar/types";
 import { LAYOUT, SIDEBAR_SECTIONS } from "@/features/calendar/constants";
-import { toDateString } from "@/features/calendar/utils";
+import { instantDayKey } from "@/features/calendar/utils";
 
 interface CalendarUiState {
   viewMode: ViewMode;
@@ -24,7 +24,6 @@ interface CalendarUiState {
   draggedEventId: string | null;
   dropTarget: DropTarget | null;
   isDragging: boolean;
-  displayTimezone: string;
   isAddCategoryModalOpen: boolean;
   editingCategoryId: string | null;
   isCreateTemplateModalOpen: boolean;
@@ -39,7 +38,7 @@ function getDefaultCollapsedSections(): SidebarSectionId[] {
 
 const initialState: CalendarUiState = {
   viewMode: "week",
-  currentDate: toDateString(new Date()),
+  currentDate: instantDayKey(new Date()),
   quickAccessFilter: null,
   selectedEventId: null,
   isEventModalOpen: false,
@@ -51,7 +50,6 @@ const initialState: CalendarUiState = {
   draggedEventId: null,
   dropTarget: null,
   isDragging: false,
-  displayTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   isAddCategoryModalOpen: false,
   editingCategoryId: null,
   isCreateTemplateModalOpen: false,
@@ -71,7 +69,7 @@ const calendarUiSlice = createSlice({
     },
 
     goToToday: (state) => {
-      state.currentDate = toDateString(new Date());
+      state.currentDate = instantDayKey(new Date());
     },
 
     setQuickAccessFilter: (state, action: PayloadAction<QuickAccessFilter | null>) => {

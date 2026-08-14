@@ -86,6 +86,8 @@ class AppearanceDefaults:
     mention_display: str = "expanded"  # one of: "expanded", "compact"
     markdown_show_preview: bool = True
     markdown_show_line_numbers: bool = True
+    timezone: str | None = None  # IANA zone; None = automatic (browser/device)
+    week_start: str = "monday"  # one of: "monday", "saturday", "sunday"
 
 
 DEFAULT_REMINDER_INTERVALS: list[int] = [15]
@@ -140,6 +142,8 @@ def get_appearance_defaults_dict() -> dict[str, Any]:
         "mention_display": APPEARANCE_DEFAULTS.mention_display,
         "markdown_show_preview": APPEARANCE_DEFAULTS.markdown_show_preview,
         "markdown_show_line_numbers": APPEARANCE_DEFAULTS.markdown_show_line_numbers,
+        "timezone": APPEARANCE_DEFAULTS.timezone,
+        "week_start": APPEARANCE_DEFAULTS.week_start,
     }
 
 

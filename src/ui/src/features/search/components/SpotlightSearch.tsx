@@ -392,7 +392,11 @@ export function SpotlightSearch() {
                             className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-muted/50 hover:bg-muted transition-colors"
                           >
                             <SubjectAvatar
-                              subject={{ id: otherId, type: SUBJECT_TYPE.USER, name }}
+                              subject={{
+                                id: otherId,
+                                type: SUBJECT_TYPE.USER,
+                                name,
+                              }}
                               size="sm"
                             />
                             <span className="text-sm text-foreground/80">{name}</span>

@@ -40,7 +40,10 @@ export function usePushSubscription(): UsePushSubscriptionResult {
 
   const subscribe = useCallback(async (): Promise<SubscribeResult> => {
     if (!isPushSupported())
-      return { success: false, error: "Push notifications are not supported in this browser." };
+      return {
+        success: false,
+        error: "Push notifications are not supported in this browser.",
+      };
 
     try {
       const permission = await Notification.requestPermission();
@@ -50,7 +53,10 @@ export function usePushSubscription(): UsePushSubscriptionResult {
 
       const { publicKey } = await notificationsApi.getVapidPublicKey({});
       if (!publicKey)
-        return { success: false, error: "Could not retrieve push configuration from server." };
+        return {
+          success: false,
+          error: "Could not retrieve push configuration from server.",
+        };
 
       // Dedicated notification-only worker (no auth/fetch); registered on demand when the user opts in.
       const registration = await navigator.serviceWorker.register("/notification-worker.js");
@@ -97,7 +103,10 @@ export function usePushSubscription(): UsePushSubscriptionResult {
         return { success: false, error: "Notification permission was denied." };
       }
 
-      return { success: false, error: "Could not enable notifications. Please try again later." };
+      return {
+        success: false,
+        error: "Could not enable notifications. Please try again later.",
+      };
     }
   }, []);
 

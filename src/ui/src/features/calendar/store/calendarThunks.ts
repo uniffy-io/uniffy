@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { calendarApi } from "@/features/calendar/api/calendarApi";
 import type { RootState } from "@/app/store";
 import { bulkUpsertTags, tagToPlain } from "@/features/tags";
@@ -337,7 +338,7 @@ export const createEvent = createAsyncThunk<
       startTime: isoToTimestamp(params.startTime),
       endTime: isoToTimestamp(params.endTime),
       isAllDay: params.isAllDay || false,
-      timezone: params.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timezone: params.timezone || getEffectiveTimeZone(),
       location: params.location || "",
       meetingUrl: params.meetingUrl,
       calendarId: params.calendarId,

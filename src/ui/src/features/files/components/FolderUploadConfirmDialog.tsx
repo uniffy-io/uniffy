@@ -280,7 +280,8 @@ export function FolderUploadConfirmDialog({
               onClick={handleConfirm}
               disabled={quotaImpact.wouldExceed || includedFiles.length === 0}
             >
-              Upload {includedFiles.length} File{includedFiles.length !== 1 ? "s" : ""}
+              Upload {includedFiles.length} File
+              {includedFiles.length !== 1 ? "s" : ""}
             </Button>
           </div>
         </div>

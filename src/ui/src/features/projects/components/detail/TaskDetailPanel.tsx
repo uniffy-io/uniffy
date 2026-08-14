@@ -212,7 +212,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                   currentOption={statusOption}
                   options={(statusField.config.options ?? []) as SelectOption[]}
                   onSelect={(newStatus) => {
-                    dispatch(optimisticUpdateTask({ id: task.id, status: newStatus }));
+                    dispatch(
+                      optimisticUpdateTask({
+                        id: task.id,
+                        status: newStatus,
+                      }),
+                    );
                     dispatch(updateTask({ id: task.id, status: newStatus }));
                   }}
                   disabled={!canEdit}
@@ -243,7 +248,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                 <TagPicker
                   selectedTagIds={task.tagIds}
                   onChange={(nextTagIds) => {
-                    dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
+                    dispatch(
+                      optimisticUpdateTask({
+                        id: task.id,
+                        tagIds: nextTagIds,
+                      }),
+                    );
                     dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
                   }}
                   disabled={!canEdit}
@@ -292,7 +302,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                   currentOption={statusOption}
                   options={(statusField.config.options ?? []) as SelectOption[]}
                   onSelect={(newStatus) => {
-                    dispatch(optimisticUpdateTask({ id: task.id, status: newStatus }));
+                    dispatch(
+                      optimisticUpdateTask({
+                        id: task.id,
+                        status: newStatus,
+                      }),
+                    );
                     dispatch(updateTask({ id: task.id, status: newStatus }));
                   }}
                   disabled={!canEdit}
@@ -323,7 +338,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                 <TagPicker
                   selectedTagIds={task.tagIds}
                   onChange={(nextTagIds) => {
-                    dispatch(optimisticUpdateTask({ id: task.id, tagIds: nextTagIds }));
+                    dispatch(
+                      optimisticUpdateTask({
+                        id: task.id,
+                        tagIds: nextTagIds,
+                      }),
+                    );
                     dispatch(updateTask({ id: task.id, tagIds: nextTagIds }));
                   }}
                   disabled={!canEdit}
@@ -347,8 +367,18 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                       currentOption={priorityOption}
                       options={(priorityField.config.options ?? []) as SelectOption[]}
                       onSelect={(newPriority) => {
-                        dispatch(optimisticUpdateTask({ id: task.id, priority: newPriority }));
-                        dispatch(updateTask({ id: task.id, priority: newPriority }));
+                        dispatch(
+                          optimisticUpdateTask({
+                            id: task.id,
+                            priority: newPriority,
+                          }),
+                        );
+                        dispatch(
+                          updateTask({
+                            id: task.id,
+                            priority: newPriority,
+                          }),
+                        );
                       }}
                       disabled={!canEdit}
                     />
@@ -367,7 +397,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                           key={type.value}
                           type="button"
                           onClick={() => {
-                            dispatch(updateTask({ id: task.id, taskType: type.value }));
+                            dispatch(
+                              updateTask({
+                                id: task.id,
+                                taskType: type.value,
+                              }),
+                            );
                             const parentType = task.parentId
                               ? (allProjectTasks.find((t) => t.id === task.parentId)?.taskType ??
                                 null)
@@ -423,7 +458,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                     <AssigneeField
                       assigneeIds={task.assigneeIds}
                       onChange={(ids) => {
-                        dispatch(optimisticUpdateTask({ id: task.id, assigneeIds: ids }));
+                        dispatch(
+                          optimisticUpdateTask({
+                            id: task.id,
+                            assigneeIds: ids,
+                          }),
+                        );
                         dispatch(updateTask({ id: task.id, assigneeIds: ids }));
                       }}
                       disabled={!canEdit}
@@ -439,7 +479,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                       value={task.startDate ?? ""}
                       onChange={(v) => {
                         const next = v || null;
-                        dispatch(optimisticUpdateTask({ id: task.id, startDate: next }));
+                        dispatch(
+                          optimisticUpdateTask({
+                            id: task.id,
+                            startDate: next,
+                          }),
+                        );
                         dispatch(updateTask({ id: task.id, startDate: next }));
                       }}
                       disabled={!canEdit}
@@ -461,7 +506,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                       value={task.dueDate ?? ""}
                       onChange={(v) => {
                         const next = v || null;
-                        dispatch(optimisticUpdateTask({ id: task.id, dueDate: next }));
+                        dispatch(
+                          optimisticUpdateTask({
+                            id: task.id,
+                            dueDate: next,
+                          }),
+                        );
                         dispatch(updateTask({ id: task.id, dueDate: next }));
                       }}
                       disabled={!canEdit}
@@ -476,7 +526,14 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                   <div className="flex-1">
                     <TaskRecurrenceSelector
                       value={task.recurrenceRule}
-                      onChange={(val) => dispatch(updateTask({ id: task.id, recurrenceRule: val }))}
+                      onChange={(val) =>
+                        dispatch(
+                          updateTask({
+                            id: task.id,
+                            recurrenceRule: val,
+                          }),
+                        )
+                      }
                       disabled={!canEdit}
                     />
                   </div>
@@ -502,7 +559,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                   label="Estimated"
                   minutes={task.estimatedMinutes}
                   onSave={(minutes) => {
-                    dispatch(optimisticUpdateTask({ id: task.id, estimatedMinutes: minutes }));
+                    dispatch(
+                      optimisticUpdateTask({
+                        id: task.id,
+                        estimatedMinutes: minutes,
+                      }),
+                    );
                     dispatch(updateTask({ id: task.id, estimatedMinutes: minutes }));
                   }}
                 />
@@ -510,7 +572,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                   label="Time Spent"
                   minutes={task.timeSpentMinutes}
                   onSave={(minutes) => {
-                    dispatch(optimisticUpdateTask({ id: task.id, timeSpentMinutes: minutes }));
+                    dispatch(
+                      optimisticUpdateTask({
+                        id: task.id,
+                        timeSpentMinutes: minutes,
+                      }),
+                    );
                     dispatch(updateTask({ id: task.id, timeSpentMinutes: minutes }));
                   }}
                 />

@@ -80,6 +80,12 @@ def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance
     if settings.get("markdown_show_line_numbers") is not None:
         proto.markdown_show_line_numbers = settings["markdown_show_line_numbers"]
 
+    if settings.get("timezone") is not None:
+        proto.timezone = settings["timezone"]
+
+    if settings.get("week_start") is not None:
+        proto.week_start = settings["week_start"]
+
     return proto
 
 
@@ -182,6 +188,13 @@ def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | Non
 
     if proto.HasField("markdown_show_line_numbers"):
         result["markdown_show_line_numbers"] = proto.markdown_show_line_numbers
+
+    if proto.HasField("timezone"):
+        # Empty string clears the preference back to automatic.
+        result["timezone"] = proto.timezone or None
+
+    if proto.HasField("week_start"):
+        result["week_start"] = proto.week_start or None
 
     return result if result else None
 

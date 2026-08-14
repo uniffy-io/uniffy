@@ -117,7 +117,10 @@ export function ChannelNotificationMenu({ channelId, onClose }: ChannelNotificat
         label: "For 24 hours",
         action: () => handleMute(new Date(Date.now() + 86_400_000).toISOString()),
       },
-      { label: "Until tomorrow 9:00 AM", action: () => handleMute(getNextMorning().toISOString()) },
+      {
+        label: "Until tomorrow 9:00 AM",
+        action: () => handleMute(getNextMorning().toISOString()),
+      },
     ],
     [handleMute],
   );

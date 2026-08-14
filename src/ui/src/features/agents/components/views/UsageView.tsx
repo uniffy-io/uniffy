@@ -217,8 +217,8 @@ function StatCard({
 
 function formatChartTimestamp(dateStr: string, interval: string): string {
   if (interval === "1d") return formatShortDate(dateStr);
-  // Sub-daily input is "YYYY-MM-DD HH:MM"
-  const d = new Date(dateStr.replace(" ", "T"));
+  // Sub-daily buckets arrive as ISO 8601 with offset.
+  const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   return d.toLocaleDateString("en-US", {
     month: "short",

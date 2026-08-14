@@ -8,15 +8,15 @@ import {
   EmptyWidget,
   WidgetSkeleton,
 } from "@/features/dashboard/components/widgets/WidgetCard";
-import { formatDateFull } from "@/shared/utils/dateFormatting";
+import { effectiveDayKey, formatDateFull, formatTimeInZone } from "@/shared/utils/dateFormatting";
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import type { CalendarEvent } from "@/features/calendar/types";
 
 function formatEventTime(event: CalendarEvent): string {
   if (event.isAllDay) return "All day";
-  const start = new Date(event.startTime);
-  const end = new Date(event.endTime);
-  const startStr = start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  const endStr = end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const zone = getEffectiveTimeZone();
+  const startStr = formatTimeInZone(new Date(event.startTime), zone);
+  const endStr = formatTimeInZone(new Date(event.endTime), zone);
   return `${startStr} - ${endStr}`;
 }
 
@@ -107,13 +107,12 @@ export function TodayAgendaWidget() {
 
   const { allDayEvents, timedEvents, nextEventOutsideToday } = useMemo(() => {
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    // "Today" is the display zone's calendar day, not the device's.
+    const todayKey = effectiveDayKey(now);
 
-    const todayEvents = Object.values(events).filter((event: CalendarEvent) => {
-      const start = new Date(event.startTime);
-      return start >= todayStart && start < todayEnd;
-    });
+    const todayEvents = Object.values(events).filter(
+      (event: CalendarEvent) => effectiveDayKey(new Date(event.startTime)) === todayKey,
+    );
 
     const allDay = todayEvents
       .filter((e: CalendarEvent) => e.isAllDay)

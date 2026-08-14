@@ -6,6 +6,7 @@ Two worker classes, two queues, one Valkey instance. Run via:
 """
 
 import os
+from datetime import UTC
 
 from dotenv import load_dotenv
 
@@ -63,6 +64,8 @@ _health_check_interval = int(os.getenv("WORKER_HEALTH_CHECK_INTERVAL", "30"))
 class CoreWorkerSettings:
     """Core worker fleet: short jobs + cron schedules."""
 
+    # Hour-pinned crons must not follow the host zone (DST double-fire/skip).
+    timezone = UTC
     queue_name = "uniffy:queue:core"
     functions = list(CORE_TASKS)
     cron_jobs = [
@@ -95,6 +98,7 @@ class CoreWorkerSettings:
 class EgressWorkerSettings:
     """Egress worker fleet: outbound LLM + slow IO jobs."""
 
+    timezone = UTC
     queue_name = "uniffy:queue:egress"
     functions = list(EGRESS_TASKS)
     cron_jobs = [

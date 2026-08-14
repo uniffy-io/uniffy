@@ -9,11 +9,9 @@ import {
   updateEventThunk,
 } from "@/features/calendar/store";
 import { ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
+import { displayParts, instantFromDisplayParts } from "@/features/calendar/utils";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
-
-const DAY_HEADERS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_HEADERS_SHORT = ["M", "T", "W", "T", "F", "S", "S"];
 
 export function MonthView() {
   const dispatch = useAppDispatch();
@@ -69,18 +67,12 @@ export function MonthView() {
     const event = events[eventId];
     if (!event) return;
 
-    // Move date while preserving local time-of-day and duration.
-    const targetDate = new Date(targetDateStr);
+    // Move date while preserving display-zone time-of-day and duration.
     const oldStart = new Date(event.startTime);
     const oldEnd = new Date(event.endTime);
 
-    const newStart = new Date(targetDate);
-    newStart.setHours(
-      oldStart.getHours(),
-      oldStart.getMinutes(),
-      oldStart.getSeconds(),
-      oldStart.getMilliseconds(),
-    );
+    const { hours, minutes } = displayParts(oldStart);
+    const newStart = instantFromDisplayParts(targetDateStr, hours, minutes);
 
     const duration = oldEnd.getTime() - oldStart.getTime();
     const newEnd = new Date(newStart.getTime() + duration);
@@ -101,12 +93,13 @@ export function MonthView() {
   return (
     <div className="h-full flex flex-col p-2 md:p-4">
       <div className="grid grid-cols-7 border-b border-border mb-1 md:mb-2">
-        {(isMobile ? DAY_HEADERS_SHORT : DAY_HEADERS).map((day, i) => (
+        {/* Labels come from the first grid row so they always follow the week-start setting. */}
+        {(weeks[0] ?? []).map((col) => (
           <div
-            key={`${day}-${i}`}
+            key={col.dateString}
             className="py-1.5 md:py-2 text-center text-xs md:text-sm font-medium text-muted-foreground"
           >
-            {day}
+            {isMobile ? col.dayName.charAt(0) : col.dayName}
           </div>
         ))}
       </div>

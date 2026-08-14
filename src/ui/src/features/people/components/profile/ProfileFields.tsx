@@ -134,7 +134,7 @@ export function ProfileFields({ person }: ProfileFieldsProps) {
           )}
           {person.startDateMs !== null && (
             <FieldRow label="Started">
-              {formatDateFull(new Date(person.startDateMs).toISOString())}
+              {formatDateFull(new Date(person.startDateMs).toISOString().slice(0, 10))}
             </FieldRow>
           )}
           {person.birthday && (

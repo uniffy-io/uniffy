@@ -13,9 +13,8 @@ export function CalendarHeader() {
   const { headerTitle, viewMode, goToPrevious, goToNext, goToToday, changeViewMode } =
     useCalendarNavigation();
 
-  const displayTimezone = useAppSelector((state) => state.calendarUi.displayTimezone);
   const isSidebarCollapsed = useAppSelector((state) => state.calendarUi.isSidebarCollapsed);
-  const timezoneOffset = getTimezoneOffset(displayTimezone);
+  const timezoneOffset = getTimezoneOffset();
 
   const viewModes: ViewMode[] = ["day", "week", "month", "agenda"];
 

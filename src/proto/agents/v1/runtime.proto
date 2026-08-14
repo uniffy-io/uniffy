@@ -163,7 +163,7 @@ message GetUsageStatsResponse {
 }
 
 message DailyUsage {
-  string date = 1; // YYYY-MM-DD
+  string date = 1; // YYYY-MM-DD for 1d buckets; ISO 8601 with offset for sub-daily buckets
   int64 runs = 2;
   int64 input_tokens = 3;
   int64 output_tokens = 4;

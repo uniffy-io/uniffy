@@ -9,21 +9,24 @@ import { RecurrenceSelector } from "@/features/calendar/components/modals/Recurr
 import { ReminderSelector } from "@/features/calendar/components/modals/ReminderSelector";
 import type { CalendarEvent, RecurrenceConfig } from "@/features/calendar/types";
 import { DAY_OF_WEEK_LABELS } from "@/features/calendar/constants";
-import { formatDateWithDay, formatTimeRange, getTimezoneOffset } from "@/features/calendar/utils";
+import {
+  displayParts,
+  formatDateWithDay,
+  formatTimeRange,
+  getTimezoneOffset,
+  instantDayKey,
+  instantFromDisplayParts,
+} from "@/features/calendar/utils";
 import type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
 
-/** Hours as a decimal in the local zone (9:15 -> 9.25). */
+/** Hours as a decimal on the display zone's clock (9:15 -> 9.25). */
 function getTimeValue(isoString: string): number {
-  const date = new Date(isoString);
-  return date.getHours() + date.getMinutes() / 60;
+  const { hours, minutes } = displayParts(isoString);
+  return hours + minutes / 60;
 }
 
 function getDateString(isoString: string): string {
-  const date = new Date(isoString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return instantDayKey(isoString);
 }
 
 function generateDateOptions(): { value: string; label: string }[] {
@@ -96,40 +99,35 @@ function describeRecurrence(r: RecurrenceConfig): string {
 interface EventScheduleSectionProps {
   event: CalendarEvent;
   canEdit: boolean;
-  displayTimezone: string;
   commit: (patch: EventPatch) => void;
 }
 
-export function EventScheduleSection({
-  event,
-  canEdit,
-  displayTimezone,
-  commit,
-}: EventScheduleSectionProps) {
+export function EventScheduleSection({ event, canEdit, commit }: EventScheduleSectionProps) {
   const dateOptions = useMemo(() => generateDateOptions(), []);
 
   const startDate = getDateString(event.startTime);
   const startTime = getTimeValue(event.startTime);
   const endDate = getDateString(event.endTime);
   const endTime = getTimeValue(event.endTime);
-  const timezoneOffset = getTimezoneOffset(displayTimezone);
+  const timezoneOffset = getTimezoneOffset();
 
   const commitStartDate = (next: string) => {
-    const current = new Date(event.startTime);
-    const [year, month, day] = next.split("-").map(Number);
-    current.setFullYear(year, month - 1, day);
+    const { hours, minutes } = displayParts(event.startTime);
+    const current = instantFromDisplayParts(next, hours, minutes);
     commit({ startTime: current.toISOString() });
   };
 
   // Dragging the start past the end would invert the event, so the end follows by 30 minutes.
   const commitStartTime = (next: number) => {
-    const current = new Date(event.startTime);
-    current.setHours(Math.floor(next), Math.round((next % 1) * 60), 0, 0);
+    const current = instantFromDisplayParts(
+      instantDayKey(event.startTime),
+      Math.floor(next),
+      Math.round((next % 1) * 60),
+    );
 
     const end = new Date(event.endTime);
     if (current >= end) {
-      const shifted = new Date(current);
-      shifted.setMinutes(shifted.getMinutes() + 30);
+      const shifted = new Date(current.getTime() + 30 * 60000);
       commit({ startTime: current.toISOString(), endTime: shifted.toISOString() });
       return;
     }
@@ -137,15 +135,17 @@ export function EventScheduleSection({
   };
 
   const commitEndDate = (next: string) => {
-    const current = new Date(event.endTime);
-    const [year, month, day] = next.split("-").map(Number);
-    current.setFullYear(year, month - 1, day);
+    const { hours, minutes } = displayParts(event.endTime);
+    const current = instantFromDisplayParts(next, hours, minutes);
     commit({ endTime: current.toISOString() });
   };
 
   const commitEndTime = (next: number) => {
-    const current = new Date(event.endTime);
-    current.setHours(Math.floor(next), Math.round((next % 1) * 60), 0, 0);
+    const current = instantFromDisplayParts(
+      instantDayKey(event.endTime),
+      Math.floor(next),
+      Math.round((next % 1) * 60),
+    );
     commit({ endTime: current.toISOString() });
   };
 

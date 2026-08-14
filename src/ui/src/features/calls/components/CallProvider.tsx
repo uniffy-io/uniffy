@@ -631,7 +631,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       await r.localParticipant.setScreenShareEnabled(
         !enabled,
         { audio: true, resolution: cfg.captureResolution, contentHint: "detail" },
-        { screenShareEncoding: cfg.encoding, screenShareSimulcastLayers: cfg.simulcastLayers },
+        {
+          screenShareEncoding: cfg.encoding,
+          screenShareSimulcastLayers: cfg.simulcastLayers,
+        },
       );
       dispatch(localMediaChanged({ screenSharing: !enabled }));
       reportMediaState();

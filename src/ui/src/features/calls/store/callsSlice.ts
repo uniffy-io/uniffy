@@ -83,7 +83,11 @@ const callsSlice = createSlice({
     },
     callEnded(
       state,
-      action: PayloadAction<{ callId: string; channelId: string; reason: CallEndReason | null }>,
+      action: PayloadAction<{
+        callId: string;
+        channelId: string;
+        reason: CallEndReason | null;
+      }>,
     ) {
       const { callId, channelId, reason } = action.payload;
       const known = state.activeByChannel[channelId];

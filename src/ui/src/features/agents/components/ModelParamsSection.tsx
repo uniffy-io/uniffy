@@ -149,7 +149,10 @@ function NumberParamControl({
   onCommit: (value: number) => void;
   onReset: () => void;
 }) {
-  const [editState, setEditState] = useState<{ tracked: number | undefined; text: string | null }>({
+  const [editState, setEditState] = useState<{
+    tracked: number | undefined;
+    text: string | null;
+  }>({
     tracked: value,
     text: null,
   });

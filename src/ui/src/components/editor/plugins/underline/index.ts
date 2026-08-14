@@ -65,7 +65,10 @@ export const underlineRemarkPlugin = $remark("underlineRemarkPlugin", () => {
       handlers: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         underline: (node: any, _parent: any, state: any, info: any) => {
-          const content = state.containerPhrasing(node, { before: info.before, after: info.after });
+          const content = state.containerPhrasing(node, {
+            before: info.before,
+            after: info.after,
+          });
           return `<u>${content}</u>`;
         },
       },
