@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useCallback, useMemo, useEffect, type RefObject } from "react";
+import { memo, useState, useRef, useMemo, useEffect, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { CaretDown, Trash } from "@phosphor-icons/react";
 import { parseUrn, getUrnTypeLabel, UrnType } from "@/shared/utils/urn";
@@ -189,6 +189,30 @@ function isLiveContent(updatedAt?: string): boolean {
   return Date.now() - new Date(updatedAt).getTime() < 60_000;
 }
 
+/** Which live fields earn a pulse dot. The compact chip has no room for the
+ *  file and project ones, so it opts out of those two. */
+function hasLiveIndicator(
+  urnType: UrnType,
+  live: MentionLiveState | null,
+  compact = false,
+): boolean {
+  if (!live) return false;
+  switch (urnType) {
+    case UrnType.TASK:
+      return !!live.taskStatus;
+    case UrnType.CALENDAR_EVENT:
+      return !!live.eventStartTime;
+    case UrnType.NOTE:
+      return !!live.noteIsBeingEdited;
+    case UrnType.FILE:
+      return !compact && !!live.fileProcessingStatus;
+    case UrnType.PROJECT:
+      return !compact && (live.projectTotalTasks ?? 0) > 0;
+    default:
+      return false;
+  }
+}
+
 function MentionChipInner({
   urn,
   label,
@@ -197,14 +221,14 @@ function MentionChipInner({
   onReplaceWithMedia,
   liveState,
 }: MentionChipProps) {
-  const parsed = parseUrn(urn);
-  const style = getTypeStyle(parsed.type);
+  const { type: urnType, id: urnId, isValid: isValidUrn } = parseUrn(urn);
+  const style = getTypeStyle(urnType);
   const typeLabel = getUrnTypeLabel(urn);
   const TypeIcon = style.icon;
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
-  const isPeopleToken = isPeopleTokenType(parsed.type);
-  const isSelfMention = parsed.type === UrnType.USER && !!parsed.id && parsed.id === currentUserId;
+  const isPeopleToken = isPeopleTokenType(urnType);
+  const isSelfMention = urnType === UrnType.USER && !!urnId && urnId === currentUserId;
 
   const contextState = useMentionState(urn);
 
@@ -213,7 +237,7 @@ function MentionChipInner({
   const mentionDisplay = useMentionDisplay();
   const defaultExpanded = mentionDisplay !== "compact";
 
-  const canExpand = hasExpandedCard(parsed.type);
+  const canExpand = hasExpandedCard(urnType);
 
   const resolvedLiveState = useMemo((): MentionLiveState | null => {
     if (liveState) return liveState;
@@ -228,13 +252,10 @@ function MentionChipInner({
   const displayLabel = resolvedLiveState?.title || label;
 
   const [userToggled, setUserToggled] = useState<boolean | null>(() => readToggle(urn));
-  const persistToggle = useCallback(
-    (value: boolean) => {
-      setUserToggled(value);
-      writeToggle(urn, value);
-    },
-    [urn],
-  );
+  const persistToggle = (value: boolean) => {
+    setUserToggled(value);
+    writeToggle(urn, value);
+  };
   const wantsExpanded = canExpand && (userToggled ?? defaultExpanded);
   const isExpanded = wantsExpanded && !!resolvedLiveState;
 
@@ -250,21 +271,21 @@ function MentionChipInner({
   const chipRef = useRef<HTMLSpanElement>(null);
   useTimeoutCleanup(hoverTimeoutRef, closeTimeoutRef);
 
-  const cancelClose = useCallback(() => {
+  const cancelClose = () => {
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
     }
-  }, []);
+  };
 
-  const scheduleClose = useCallback(() => {
+  const scheduleClose = () => {
     cancelClose();
     closeTimeoutRef.current = setTimeout(() => {
       setShowPreview(false);
     }, CLOSE_DELAY);
-  }, [cancelClose]);
+  };
 
-  const handleMouseEnter = useCallback(() => {
+  const handleMouseEnter = () => {
     cancelClose();
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
 
@@ -273,82 +294,61 @@ function MentionChipInner({
         const rect = chipRef.current.getBoundingClientRect();
         setPreviewPosition({ x: rect.left, y: rect.bottom, top: rect.top });
         // USER hovers render the person card from the people store; a preview resolve would be wasted.
-        if (parsed.type !== UrnType.USER) fetchPreview(urn);
+        if (urnType !== UrnType.USER) fetchPreview(urn);
         setShowPreview(true);
       }
     }, HOVER_DELAY);
-  }, [urn, parsed.type, fetchPreview, cancelClose]);
+  };
 
-  const handleMouseLeave = useCallback(() => {
+  const handleMouseLeave = () => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
     scheduleClose();
-  }, [scheduleClose]);
+  };
 
   // The expand caret must stay clickable: entering it cancels any pending or open preview.
-  const suppressPreview = useCallback(() => {
+  const suppressPreview = () => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
     cancelClose();
     setShowPreview(false);
-  }, [cancelClose]);
+  };
 
-  const handleClosePreview = useCallback(() => {
+  const handleClosePreview = () => {
     cancelClose();
     setShowPreview(false);
-  }, [cancelClose]);
+  };
 
-  // parseUrn hands back a fresh record of primitives; the compiler cannot see that across the
-  // module boundary and treats every parsed.* dep as mutable, so it drops the whole callback.
-  /* eslint-disable react/react-compiler */
-  const handleEmbed = useCallback(() => {
+  const handleEmbed = () => {
     if (!preview || !onReplaceWithMedia || !organizationId) return;
     const mimeType = preview.metadata?.mime_type;
-    if (!mimeType || !parsed.isValid || !parsed.id) return;
+    if (!mimeType || !isValidUrn || !urnId) return;
 
     let mediaType: "image" | "video" | "audio";
     let url: string;
 
     if (mimeType.startsWith("image/")) {
       mediaType = "image";
-      url = buildFileUrl(organizationId, parsed.id);
+      url = buildFileUrl(organizationId, urnId);
     } else if (mimeType.startsWith("video/")) {
       mediaType = "video";
-      url = buildMediaUrl(organizationId, parsed.id);
+      url = buildMediaUrl(organizationId, urnId);
     } else if (mimeType.startsWith("audio/")) {
       mediaType = "audio";
-      url = buildMediaUrl(organizationId, parsed.id);
+      url = buildMediaUrl(organizationId, urnId);
     } else {
       return;
     }
 
     setShowPreview(false);
     onReplaceWithMedia(mediaType, url, label);
-  }, [preview, onReplaceWithMedia, organizationId, parsed.isValid, parsed.id, label]);
-  /* eslint-enable react/react-compiler */
+  };
 
-  const hasLiveIndicator = useMemo(() => {
-    if (!resolvedLiveState) return false;
-    switch (parsed.type) {
-      case UrnType.TASK:
-        return !!resolvedLiveState.taskStatus;
-      case UrnType.CALENDAR_EVENT:
-        return !!resolvedLiveState.eventStartTime;
-      case UrnType.NOTE:
-        return !!resolvedLiveState.noteIsBeingEdited;
-      case UrnType.FILE:
-        return !!resolvedLiveState.fileProcessingStatus;
-      case UrnType.PROJECT:
-        return (resolvedLiveState.projectTotalTasks ?? 0) > 0;
-      default:
-        return false;
-    }
-    // eslint-disable-next-line react/react-compiler -- parseUrn hands back a fresh record of primitives; the compiler cannot see that across the module boundary and treats every parsed.* dep as mutable
-  }, [parsed.type, resolvedLiveState]);
+  const showLiveIndicator = hasLiveIndicator(urnType, resolvedLiveState);
 
   if (isDeleted) {
     return wantsExpanded ? (
@@ -453,7 +453,7 @@ function MentionChipInner({
           <TypeIcon size={11} weight="duotone" />
         </span>
 
-        {parsed.type === UrnType.TASK && resolvedLiveState?.taskPriorityColor && (
+        {urnType === UrnType.TASK && resolvedLiveState?.taskPriorityColor && (
           <span
             className="w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: resolvedLiveState.taskPriorityColor }}
@@ -462,7 +462,7 @@ function MentionChipInner({
         )}
 
         <span className="inline-flex items-baseline gap-1.5 min-w-0">
-          {parsed.type === UrnType.TASK &&
+          {urnType === UrnType.TASK &&
             resolvedLiveState?.taskProjectSlug &&
             resolvedLiveState.taskNumber && (
               <span className="text-[11px] font-mono text-muted-foreground shrink-0">
@@ -481,13 +481,13 @@ function MentionChipInner({
           </span>
         </span>
 
-        {parsed.type === UrnType.FILE && resolvedLiveState?.fileMimeType && (
+        {urnType === UrnType.FILE && resolvedLiveState?.fileMimeType && (
           <span className="text-[9px] font-semibold uppercase text-muted-foreground bg-muted rounded px-1 py-px shrink-0">
             {resolvedLiveState.fileMimeType.split("/")[1]?.toUpperCase().slice(0, 4) || "FILE"}
           </span>
         )}
 
-        {parsed.type === UrnType.PROJECT && (resolvedLiveState?.projectTotalTasks ?? 0) > 0 && (
+        {urnType === UrnType.PROJECT && (resolvedLiveState?.projectTotalTasks ?? 0) > 0 && (
           <span className="text-[10px] font-medium text-muted-foreground tabular-nums shrink-0">
             {Math.round(
               ((resolvedLiveState?.projectCompletedTasks ?? 0) /
@@ -498,15 +498,15 @@ function MentionChipInner({
           </span>
         )}
 
-        {parsed.type === UrnType.FOLDER && resolvedLiveState?.folderFileCount != null && (
+        {urnType === UrnType.FOLDER && resolvedLiveState?.folderFileCount != null && (
           <span className="text-[10px] font-medium text-muted-foreground tabular-nums shrink-0">
             {resolvedLiveState.folderFileCount}
           </span>
         )}
 
-        {hasLiveIndicator && resolvedLiveState && (
+        {showLiveIndicator && resolvedLiveState && (
           <span className="inline-flex items-center shrink-0 ml-0.5">
-            <LiveIndicator urnType={parsed.type} liveState={resolvedLiveState} />
+            <LiveIndicator urnType={urnType} liveState={resolvedLiveState} />
           </span>
         )}
 
@@ -542,13 +542,13 @@ function MentionChipCompactInner({
   onClick,
   liveState,
 }: MentionChipCompactProps) {
-  const parsed = parseUrn(urn);
-  const style = getTypeStyle(parsed.type);
+  const { type: urnType, id: urnId } = parseUrn(urn);
+  const style = getTypeStyle(urnType);
   const typeLabel = getUrnTypeLabel(urn);
   const TypeIcon = style.icon;
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
-  const isPeopleToken = isPeopleTokenType(parsed.type);
-  const isSelfMention = parsed.type === UrnType.USER && !!parsed.id && parsed.id === currentUserId;
+  const isPeopleToken = isPeopleTokenType(urnType);
+  const isSelfMention = urnType === UrnType.USER && !!urnId && urnId === currentUserId;
 
   const contextState = useMentionState(urn);
   const resolvedLiveState = liveState ?? contextState;
@@ -567,53 +567,40 @@ function MentionChipCompactInner({
   const { preview, isLoading, error, fetchPreview } = useUrnPreview();
   useTimeoutCleanup(hoverTimeoutRef, closeTimeoutRef);
 
-  const cancelClose = useCallback(() => {
+  const cancelClose = () => {
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
     }
-  }, []);
+  };
 
-  const scheduleClose = useCallback(() => {
+  const scheduleClose = () => {
     cancelClose();
     closeTimeoutRef.current = setTimeout(() => setShowPreview(false), CLOSE_DELAY);
-  }, [cancelClose]);
+  };
 
-  const handleMouseEnter = useCallback(() => {
+  const handleMouseEnter = () => {
     cancelClose();
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     hoverTimeoutRef.current = setTimeout(() => {
       if (chipRef.current) {
         const rect = chipRef.current.getBoundingClientRect();
         setPreviewPosition({ x: rect.left, y: rect.bottom, top: rect.top });
-        if (parsed.type !== UrnType.USER) fetchPreview(urn);
+        if (urnType !== UrnType.USER) fetchPreview(urn);
         setShowPreview(true);
       }
     }, HOVER_DELAY);
-  }, [urn, parsed.type, fetchPreview, cancelClose]);
+  };
 
-  const handleMouseLeave = useCallback(() => {
+  const handleMouseLeave = () => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
     scheduleClose();
-  }, [scheduleClose]);
+  };
 
-  const hasLiveIndicator = useMemo(() => {
-    if (!resolvedLiveState) return false;
-    switch (parsed.type) {
-      case UrnType.TASK:
-        return !!resolvedLiveState.taskStatus;
-      case UrnType.CALENDAR_EVENT:
-        return !!resolvedLiveState.eventStartTime;
-      case UrnType.NOTE:
-        return !!resolvedLiveState.noteIsBeingEdited;
-      default:
-        return false;
-    }
-    // eslint-disable-next-line react/react-compiler -- parseUrn hands back a fresh record of primitives; the compiler cannot see that across the module boundary and treats every parsed.* dep as mutable
-  }, [parsed.type, resolvedLiveState]);
+  const showLiveIndicator = hasLiveIndicator(urnType, resolvedLiveState, true);
 
   if (isDeleted) {
     return <MentionTombstoneChip typeLabel={typeLabel} compact />;
@@ -709,8 +696,8 @@ function MentionChipCompactInner({
           {displayLabel}
         </span>
 
-        {hasLiveIndicator && resolvedLiveState && (
-          <LiveIndicator urnType={parsed.type} liveState={resolvedLiveState} compact />
+        {showLiveIndicator && resolvedLiveState && (
+          <LiveIndicator urnType={urnType} liveState={resolvedLiveState} compact />
         )}
       </span>
 

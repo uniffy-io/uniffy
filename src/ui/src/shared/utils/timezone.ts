@@ -21,3 +21,9 @@ export function getPreferredTimeZone(): string | null {
 export function getEffectiveTimeZone(): string {
   return preferredTimeZone ?? getBrowserTimeZone();
 }
+
+/** Zone id as a reader sees it ("Europe/Sofia"). Underscores are the only change,
+ *  so the label matches the id shown in the settings picker. */
+export function formatTimeZoneLabel(timeZone: string = getEffectiveTimeZone()): string {
+  return timeZone.replace(/_/g, " ");
+}

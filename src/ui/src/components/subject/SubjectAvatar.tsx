@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { TreeStructure } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useAvatarUrl } from "@/shared/hooks/useAvatarUrl";
+import { avatarUrlAtVariant, avatarVariantForPx } from "@/shared/utils/fileUrls";
 
 // Avoid repeated requests for avatar URLs that already 404'd.
 const _failedAvatars = new Set<string>();
@@ -16,6 +17,14 @@ const SIZE_CLASSES: Record<SubjectAvatarSize, string> = {
   sm: "w-6 h-6 text-[10px]",
   md: "w-8 h-8 text-xs",
   lg: "w-10 h-10 text-sm",
+};
+
+// Rendered box per size, in CSS px, to pick the avatar variant that keeps it sharp.
+const SIZE_PX: Record<SubjectAvatarSize, number> = {
+  xs: 20,
+  sm: 24,
+  md: 32,
+  lg: 40,
 };
 
 const INDICATOR_SIZE_MAP: Record<SubjectAvatarSize, "sm" | "md" | "lg"> = {
@@ -50,11 +59,14 @@ export function SubjectAvatar({
   showPresence = false,
 }: SubjectAvatarProps) {
   const sizeClass = SIZE_CLASSES[size];
+  const variant = avatarVariantForPx(SIZE_PX[size]);
   const resolvedAvatarUrl = useAvatarUrl(
     subject.type === SUBJECT_TYPE.USER ? subject.id : "",
-    size === "lg" ? "md" : "sm",
+    variant,
   );
-  const avatarSrc = subject.avatarUrl || resolvedAvatarUrl || null;
+  const avatarSrc = subject.avatarUrl
+    ? avatarUrlAtVariant(subject.avatarUrl, variant)
+    : resolvedAvatarUrl;
   const [imgFailed, setImgFailed] = useState(() => !!avatarSrc && _failedAvatars.has(avatarSrc));
   const handleImgError = useCallback(() => {
     if (avatarSrc) _failedAvatars.add(avatarSrc);
@@ -163,6 +175,9 @@ interface SubjectAvatarByIdProps {
   bordered?: boolean;
   /** Show presence indicator dot. */
   showPresence?: boolean;
+  /** Largest factor the avatar can be scaled up by beyond its box, for zoomable
+   *  canvases where CSS transforms stretch a box far past its declared size. */
+  maxScale?: number;
 }
 
 export function SubjectAvatarById({
@@ -173,10 +188,12 @@ export function SubjectAvatarById({
   className,
   bordered = false,
   showPresence = false,
+  maxScale = 1,
 }: SubjectAvatarByIdProps) {
   const sizeClass = SIZE_CLASSES[size];
-  const resolvedUrl = useAvatarUrl(userId, size === "lg" ? "md" : "sm");
-  const avatarSrc = avatarUrl || resolvedUrl;
+  const variant = avatarVariantForPx(SIZE_PX[size] * maxScale);
+  const resolvedUrl = useAvatarUrl(userId, variant);
+  const avatarSrc = avatarUrl ? avatarUrlAtVariant(avatarUrl, variant) : resolvedUrl;
   const [imgFailed, setImgFailed] = useState(() => !!avatarSrc && _failedAvatars.has(avatarSrc));
   const handleImgError = useCallback(() => {
     if (avatarSrc) _failedAvatars.add(avatarSrc);

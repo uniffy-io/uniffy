@@ -7,9 +7,10 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { usePresence } from "@/features/presence/hooks/usePresence";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { useAvatarUrl } from "@/shared/hooks/useAvatarUrl";
+import { avatarUrlAtVariant } from "@/shared/utils/fileUrls";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { PresenceIndicator } from "@/components/subject/PresenceIndicator";
-import { getInitials } from "@/components/subject/utils";
+import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
 import { ParentBadge, MetaSeparator } from "@/components/mention/previews/ParentBadge";
 import { formatTimeInZone, formatTimeRemaining } from "@/shared/utils/dateFormatting";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
@@ -63,7 +64,7 @@ export function PersonCardContent({
   const currentUserId = useAppSelector((s) => s.auth.user?.id);
   const presenceStatus = usePresence(userId);
   const customStatus = useCustomStatus(userId);
-  const resolvedAvatarUrl = useAvatarUrl(userId, "md");
+  const resolvedAvatarUrl = useAvatarUrl(userId, "lg");
   const [imgFailed, setImgFailed] = useState(false);
   const [messagePending, setMessagePending] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -128,13 +129,11 @@ export function PersonCardContent({
   const email = live?.userEmail || person?.email;
   const isSelf = userId === currentUserId;
 
-  const avatarSrc = imgFailed
-    ? null
-    : person
-      ? person.hasAvatar
-        ? person.avatarUrl || resolvedAvatarUrl
-        : null
-      : resolvedAvatarUrl;
+  // The profile payload is a cached snapshot, so its `hasAvatar` may predate an
+  // upload the member directory already knows about. Both are tried and `onError`
+  // is what settles it, rather than one source vetoing the other.
+  const personAvatarUrl = person?.avatarUrl ? avatarUrlAtVariant(person.avatarUrl, "lg") : null;
+  const avatarSrc = imgFailed ? null : personAvatarUrl || resolvedAvatarUrl;
 
   return (
     <div
@@ -169,7 +168,10 @@ export function PersonCardContent({
                     className="w-10 h-10 rounded-lg object-cover"
                   />
                 ) : (
-                  <div className="grid place-items-center w-10 h-10 rounded-lg border border-primary/55 bg-primary/10 text-primary text-sm font-semibold">
+                  <div
+                    className="grid place-items-center w-10 h-10 rounded-lg text-sm font-semibold text-white"
+                    style={getAvatarGradientStyle(name)}
+                  >
                     {getInitials(name)}
                   </div>
                 )}

@@ -42,7 +42,7 @@ export function PeerAvatar({
     >
       {showImage ? (
         <img
-          src={buildAvatarUrl(userId as string, "sm")}
+          src={buildAvatarUrl(userId as string, "md")}
           alt=""
           className="h-full w-full object-cover"
           onError={() => setImageFailed(true)}

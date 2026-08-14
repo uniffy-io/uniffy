@@ -208,7 +208,7 @@ function HeroAvatar({
   displayName: string;
   className?: string;
 }) {
-  const avatarSrc = useAvatarUrl(userId, "md");
+  const avatarSrc = useAvatarUrl(userId, "lg");
   const [failed, setFailed] = useState(false);
   if (avatarSrc && !failed) {
     return (

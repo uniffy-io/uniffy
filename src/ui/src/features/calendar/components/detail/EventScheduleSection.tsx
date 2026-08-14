@@ -4,6 +4,7 @@ import { Select } from "@/components/ui/select";
 import { SectionLabel } from "@/features/calendar/components/detail/SectionLabel";
 import { cn } from "@/shared/utils/cn";
 import { formatDateWithWeekday } from "@/shared/utils/dateFormatting";
+import { formatTimeZoneLabel } from "@/shared/utils/timezone";
 import { TimeSelect } from "@/features/calendar/components/modals/TimeSelect";
 import { RecurrenceSelector } from "@/features/calendar/components/modals/RecurrenceSelector";
 import { ReminderSelector } from "@/features/calendar/components/modals/ReminderSelector";
@@ -109,7 +110,8 @@ export function EventScheduleSection({ event, canEdit, commit }: EventScheduleSe
   const startTime = getTimeValue(event.startTime);
   const endDate = getDateString(event.endTime);
   const endTime = getTimeValue(event.endTime);
-  const timezoneOffset = getTimezoneOffset();
+  const timezoneLabel = formatTimeZoneLabel();
+  const timezoneTitle = `${timezoneLabel} (${getTimezoneOffset()})`;
 
   const commitStartDate = (next: string) => {
     const { hours, minutes } = displayParts(event.startTime);
@@ -165,7 +167,9 @@ export function EventScheduleSection({ event, canEdit, commit }: EventScheduleSe
               <span className="text-foreground">
                 {formatTimeRange(event.startTime, event.endTime)}
               </span>
-              <span className="text-muted-foreground text-xs">({timezoneOffset})</span>
+              <span className="text-muted-foreground text-xs" title={timezoneTitle}>
+                ({timezoneLabel})
+              </span>
             </>
           )}
         </div>
@@ -207,7 +211,10 @@ export function EventScheduleSection({ event, canEdit, commit }: EventScheduleSe
             </button>
           }
         >
-          When <span className="normal-case font-normal">({timezoneOffset})</span>
+          When{" "}
+          <span className="normal-case font-normal" title={timezoneTitle}>
+            ({timezoneLabel})
+          </span>
         </SectionLabel>
 
         {event.isAllDay ? (

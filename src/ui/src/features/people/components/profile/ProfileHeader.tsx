@@ -5,6 +5,7 @@ import { cn } from "@/shared/utils/cn";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { usePresence } from "@/features/presence/hooks/usePresence";
 import { useAvatarUrl } from "@/shared/hooks/useAvatarUrl";
+import { avatarUrlAtVariant } from "@/shared/utils/fileUrls";
 import { PresenceIndicator } from "@/components/subject";
 import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
 import { Button } from "@/components/ui/button";
@@ -32,11 +33,12 @@ const PRESENCE_COLORS: Record<string, string> = {
 
 export function ProfileHeader({ person, onMessage, messagePending }: ProfileHeaderProps) {
   const presenceStatus = usePresence(person.userId);
-  const resolvedAvatarUrl = useAvatarUrl(person.userId, "md");
+  const resolvedAvatarUrl = useAvatarUrl(person.userId, "lg");
   const [imgFailed, setImgFailed] = useState(false);
-  // The payload's has_avatar is authoritative; the URL fallback can 404
-  // before the member cache is warm, so a load error also drops to initials.
-  const avatarSrc = person.hasAvatar && !imgFailed ? person.avatarUrl || resolvedAvatarUrl : null;
+  // Either source can be a step behind an upload, and either URL can 404 before
+  // the member cache is warm, so a load error is what drops this to initials.
+  const personAvatarUrl = person.avatarUrl ? avatarUrlAtVariant(person.avatarUrl, "lg") : null;
+  const avatarSrc = imgFailed ? null : personAvatarUrl || resolvedAvatarUrl;
 
   const handleCopyLink = () => {
     navigator.clipboard

@@ -4,6 +4,9 @@ import { CaretDown, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatarById } from "@/components/subject";
 
+/** Ceiling for the canvas zoom, and so for how far a node's avatar gets stretched. */
+export const ORG_CHART_MAX_ZOOM = 2;
+
 export interface OrgChartNodeData extends Record<string, unknown> {
   userId: string;
   displayName: string;
@@ -35,6 +38,7 @@ export const OrgChartNode = memo(function OrgChartNode({ data }: NodeProps<Perso
         displayName={data.displayName}
         avatarUrl={data.avatarUrl ?? undefined}
         size="md"
+        maxScale={ORG_CHART_MAX_ZOOM}
         showPresence
       />
       <div className="min-w-0 flex-1">

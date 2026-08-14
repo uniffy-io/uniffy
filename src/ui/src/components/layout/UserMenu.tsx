@@ -51,6 +51,7 @@ import { unaryTransport } from "@/config/api";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { useTheme } from "@/config/theme/ThemeProvider";
 import { cn } from "@/shared/utils/cn";
+import { avatarUrlAtVariant } from "@/shared/utils/fileUrls";
 import { getInitials } from "@/components/subject/utils";
 import { useNavigate } from "react-router-dom";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -166,6 +167,7 @@ export function UserMenu() {
   };
 
   const displayName = user.fullName || user.username || "User";
+  const avatarUrl = user.avatarUrl ? avatarUrlAtVariant(user.avatarUrl, "lg") : "";
 
   const themeIcons = {
     dark: Moon,
@@ -184,8 +186,8 @@ export function UserMenu() {
           isOpen ? "border-primary/30" : "hover:border-border",
         )}
       >
-        {user.avatarUrl ? (
-          <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
         ) : (
           <span
             className={cn(
@@ -207,15 +209,11 @@ export function UserMenu() {
               <div
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden",
-                  !user.avatarUrl && "bg-primary text-primary-foreground text-sm font-semibold",
+                  !avatarUrl && "bg-primary text-primary-foreground text-sm font-semibold",
                 )}
               >
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt=""
-                    className="w-full h-full object-cover rounded-lg"
-                  />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                 ) : user.fullName ? (
                   getInitials(user.fullName)
                 ) : (

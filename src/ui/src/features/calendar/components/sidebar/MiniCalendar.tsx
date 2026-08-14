@@ -79,7 +79,7 @@ export function MiniCalendar() {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
         {monthColumns.slice(0, 7).map((column) => (
           <div
             key={column.dateString}
@@ -92,7 +92,7 @@ export function MiniCalendar() {
 
       <div className="space-y-1">
         {weeks.map((week, weekIndex) => (
-          <div key={weekIndex} className="grid grid-cols-7 gap-1">
+          <div key={weekIndex} className="grid grid-cols-7 gap-0.5">
             {week.map((day) => {
               const isToday = isDateToday(day.date);
               const isSelected = areSameDay(day.date, currentDate);
@@ -102,7 +102,10 @@ export function MiniCalendar() {
                   key={day.dateString}
                   onClick={() => handleDateClick(day.dateString)}
                   className={cn(
-                    "w-7 h-7 text-[11px] rounded-full flex items-center justify-center transition-colors",
+                    // Square cell that tracks the column, so a resized sidebar
+                    // shrinks the circles instead of overlapping them.
+                    "mx-auto aspect-square w-full max-w-7 text-[11px] rounded-full",
+                    "flex items-center justify-center transition-colors",
                     !day.isCurrentMonth && "text-muted-foreground/50",
                     day.isCurrentMonth &&
                       !isToday &&

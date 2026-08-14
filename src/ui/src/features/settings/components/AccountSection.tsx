@@ -4,6 +4,7 @@ import { updateUser } from "@/features/auth/store/authSlice";
 import { usersApi } from "@/features/settings/api/usersApi";
 import { getInitials } from "@/components/subject/utils";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
+import { avatarUrlAtVariant } from "@/shared/utils/fileUrls";
 import { ProfileFieldsSection } from "@/features/settings/components/ProfileFieldsSection";
 
 export function AccountSection() {
@@ -52,7 +53,7 @@ export function AccountSection() {
         <h2 className="text-lg font-semibold text-foreground">Avatar</h2>
         <div className="bg-card rounded-lg border border-border p-4 md:p-6">
           <AvatarUpload
-            imageUrl={user.avatarUrl || undefined}
+            imageUrl={user.avatarUrl ? avatarUrlAtVariant(user.avatarUrl, "lg") : undefined}
             fallback={displayInitials}
             onUpload={handleUpload}
             onDelete={handleDelete}

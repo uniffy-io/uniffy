@@ -16,10 +16,18 @@ def _audit_rows(session: MagicMock) -> list:
     ]
 
 
-def _scalar(value):
+def _result(org_id) -> MagicMock:
+    """Answers both shapes the operation reads: one org id, or the full list."""
     inner = MagicMock()
-    inner.scalar_one_or_none.return_value = value
+    inner.scalar_one_or_none.return_value = org_id
+    inner.scalars.return_value.all.return_value = [org_id]
     return inner
+
+
+def _indexer_mock() -> MagicMock:
+    indexer = MagicMock()
+    indexer.return_value.index_for_organization = AsyncMock(return_value=None)
+    return indexer
 
 
 def _make_user(**overrides) -> User:
@@ -40,22 +48,39 @@ async def test_upload_avatar_emits_avatar_changed() -> None:
     user = _make_user(avatar_key=None)
     org = generate_id()
     session = MagicMock()
-    session.execute = AsyncMock(side_effect=[_scalar(org)])
+    session.execute = AsyncMock(return_value=_result(org))
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
     ops = UserOperations(session)
 
-    with patch.object(UserOperations, "get_by_id", AsyncMock(return_value=user)), patch(
-        "uniffy.domains.users.operations.s3_upload_avatar",
-        AsyncMock(return_value="avatars/abc"),
-    ), patch(
-        "uniffy.domains.users.operations.s3_delete_avatar",
-        AsyncMock(return_value=None),
-    ), patch(
-        "uniffy.domains.users.operations.invalidate_user_profile",
-        AsyncMock(return_value=None),
+    with (
+        patch.object(UserOperations, "get_by_id", AsyncMock(return_value=user)),
+        patch(
+            "uniffy.domains.users.operations.s3_upload_avatar",
+            AsyncMock(return_value="avatars/abc"),
+        ),
+        patch(
+            "uniffy.domains.users.operations.s3_delete_avatar",
+            AsyncMock(return_value=None),
+        ),
+        patch(
+            "uniffy.domains.users.operations.invalidate_user_profile",
+            AsyncMock(return_value=None),
+        ),
+        patch(
+            "uniffy.domains.users.operations.cache_invalidate_by_tag",
+            AsyncMock(return_value=None),
+        ),
+        patch(
+            "uniffy.domains.users.operations.invalidate_chart",
+            AsyncMock(return_value=None),
+        ),
+        patch(
+            "uniffy.domains.users.operations.UserSearchIndexer",
+            _indexer_mock(),
+        ),
     ):
         await ops.upload_avatar(user.id, b"img", "a.png")
 

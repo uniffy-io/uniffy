@@ -17,7 +17,11 @@ import "@xyflow/react/dist/style.css";
 import { UsersThree } from "@phosphor-icons/react";
 import { useTheme } from "@/config/theme/ThemeProvider";
 import { layoutTree } from "@/features/people/utils/treeLayout";
-import { OrgChartNode, type PersonFlowNode } from "@/features/people/components/chart/OrgChartNode";
+import {
+  ORG_CHART_MAX_ZOOM,
+  OrgChartNode,
+  type PersonFlowNode,
+} from "@/features/people/components/chart/OrgChartNode";
 import { PersonHoverCard } from "@/components/subject";
 import type {
   SerializedOrgChartNode,
@@ -401,7 +405,7 @@ export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasP
         panOnScroll
         zoomOnScroll
         minZoom={0.1}
-        maxZoom={2}
+        maxZoom={ORG_CHART_MAX_ZOOM}
         colorMode={resolvedTheme}
         proOptions={{ hideAttribution: true }}
       >

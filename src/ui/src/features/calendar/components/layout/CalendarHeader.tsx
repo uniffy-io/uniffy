@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSidebar } from "@/features/calendar/store";
 import { getTimezoneOffset } from "@/features/calendar/utils";
 import { cn } from "@/shared/utils/cn";
+import { formatTimeZoneLabel } from "@/shared/utils/timezone";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import type { ViewMode } from "@/features/calendar/types";
 
@@ -14,6 +15,7 @@ export function CalendarHeader() {
     useCalendarNavigation();
 
   const isSidebarCollapsed = useAppSelector((state) => state.calendarUi.isSidebarCollapsed);
+  const timezoneLabel = formatTimeZoneLabel();
   const timezoneOffset = getTimezoneOffset();
 
   const viewModes: ViewMode[] = ["day", "week", "month", "agenda"];
@@ -65,10 +67,11 @@ export function CalendarHeader() {
             "items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground rounded-md",
             isMobile ? "hidden" : "flex",
           )}
-          title="Your current timezone"
+          title={`Your current timezone: ${timezoneLabel} (${timezoneOffset})`}
         >
           <GlobeHemisphereWest size={16} weight="duotone" />
-          <span>{timezoneOffset}</span>
+          {/* Zone ids run long ("America/Argentina/Buenos Aires"); the title carries the full one. */}
+          <span className="max-w-[11rem] truncate">{timezoneLabel}</span>
         </span>
 
         <div className="flex items-center gap-0.5">
