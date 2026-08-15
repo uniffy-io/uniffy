@@ -13,6 +13,7 @@ from uniffy.core.models.chat.draft import ChatDraft
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.reaction import ChatReaction
 from uniffy.core.models.chat.read_cursor import ChatReadCursor, ChatThreadReadCursor
+from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 
@@ -27,6 +28,7 @@ __all__ = [
     "ChatMessage",
     "ChatReaction",
     "ChatReadCursor",
+    "ChatSearchAclRefresh",
     "ChatThread",
     "ChatThreadFollow",
     "ChatThreadParticipant",

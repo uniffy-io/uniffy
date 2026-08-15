@@ -378,8 +378,7 @@ class MeilisearchClient:
             await self._await_task(task)
         except Exception:
             logger.opt(exception=True).warning(
-                "Meilisearch: delete_documents_by_filter_expr failed",
-                filter=filter_expr
+                "Meilisearch: delete_documents_by_filter_expr failed", filter=filter_expr
             )
             raise
         elapsed_ms = (time.perf_counter() - start) * 1000
@@ -487,7 +486,7 @@ class MeilisearchClient:
         org_filter = f'organization_id = "{organization_id}"'
 
         permission_conditions = [
-            f'owner_id = "{user_id}"',
+            f'(entity_type != "chat_message" AND owner_id = "{user_id}")',
             f'shared_user_ids = "{user_id}"',
             f'attendee_user_ids = "{user_id}"',
             '(access_mode = "OPEN_TO_ORG" AND baseline_role EXISTS)',
@@ -545,6 +544,59 @@ class MeilisearchClient:
             ms=f"{elapsed_ms:.1f}",
             urn=urn,
         )
+
+    async def update_chat_message_sharing(
+        self,
+        *,
+        organization_id: UUID,
+        channel_id: UUID,
+        shared_user_ids: list[UUID],
+    ) -> int:
+        """Replace sharing on every existing indexed message in one channel."""
+        index = self.client.index(self.config.index_name)
+        filter_expr = (
+            f'organization_id = "{organization_id}" AND '
+            f'entity_type = "chat_message" AND metadata.channel_id = "{channel_id}"'
+        )
+        serialized_ids = [str(user_id) for user_id in shared_user_ids]
+        batch_size = 500
+        offset = 0
+        updated = 0
+
+        while True:
+            docs = await index.get_documents(
+                filter=filter_expr,
+                fields=["id"],
+                limit=batch_size,
+                offset=offset,
+            )
+            rows = list(docs.results)
+            if not rows:
+                break
+            partials = [
+                {"id": row["id"], "shared_user_ids": serialized_ids} for row in rows if row.get("id")
+            ]
+            if partials:
+                task = await index.update_documents(partials, skip_creation=True)
+                task_uid = getattr(task, "task_uid", None) or getattr(task, "taskUid", None)
+                if task_uid is not None:
+                    completed = await self.client.wait_for_task(task_uid, timeout_in_ms=5000)
+                    status = str(getattr(completed, "status", "succeeded")).lower()
+                    if not status.endswith("succeeded"):
+                        raise RuntimeError(
+                            f"Meilisearch chat ACL refresh task {task_uid} ended with {status}"
+                        )
+                updated += len(partials)
+            if len(rows) < batch_size:
+                break
+            offset += len(rows)
+
+        SEARCH_OPERATIONS_TOTAL.labels(operation="update_sharing").inc()
+        logger.info(
+            f"Meilisearch: refreshed chat message sharing count={updated}",
+            channel_id=str(channel_id),
+        )
+        return updated
 
     async def update_document_attendees(
         self,
@@ -631,8 +683,7 @@ class MeilisearchClient:
         if not items:
             return
         partials = [
-            {"id": build_document_id(urn, organization_id), "tags": tags}
-            for urn, tags in items
+            {"id": build_document_id(urn, organization_id), "tags": tags} for urn, tags in items
         ]
 
         start = time.perf_counter()
@@ -640,9 +691,7 @@ class MeilisearchClient:
         await index.update_documents(partials)
         elapsed_ms = (time.perf_counter() - start) * 1000
         SEARCH_OPERATIONS_TOTAL.labels(operation="update_tags_bulk").inc()
-        SEARCH_OPERATION_DURATION.labels(operation="update_tags_bulk").observe(
-            elapsed_ms / 1000
-        )
+        SEARCH_OPERATION_DURATION.labels(operation="update_tags_bulk").observe(elapsed_ms / 1000)
         logger.info(
             f"Meilisearch: update_tags_bulk batch={len(partials)}",
             ms=f"{elapsed_ms:.1f}",
@@ -706,7 +755,7 @@ class MeilisearchClient:
                     limit=len(chunk),
                 )
                 for doc in docs.results:
-                    if "urn" in doc:
+                    if "urn" in doc:  # noqa: PLR2004
                         result[doc["urn"]] = doc
 
             elapsed_ms = (time.perf_counter() - start) * 1000
@@ -732,7 +781,7 @@ class MeilisearchClient:
         start = time.perf_counter()
         try:
             health = await self.client.health()
-            is_healthy = health.status == "available"
+            is_healthy = health.status == "available"  # noqa: PLR2004
             elapsed_ms = (time.perf_counter() - start) * 1000
             logger.info(
                 f"Meilisearch: health_check status={health.status}",
