@@ -200,7 +200,6 @@ export function NotificationsSection() {
               disabled={saving || !isSupported || permissionState === "denied"}
             />
           </div>
-
         </div>
       </section>
 
