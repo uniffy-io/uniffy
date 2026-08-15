@@ -355,7 +355,6 @@ type ChatChannel struct {
 	Slug           string                 `protobuf:"bytes,5,opt,name=slug,proto3" json:"slug,omitempty"`
 	Description    string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	ChannelType    ChannelType            `protobuf:"varint,7,opt,name=channel_type,json=channelType,proto3,enum=chat.v1.ChannelType" json:"channel_type,omitempty"`
-	IsEncrypted    bool                   `protobuf:"varint,8,opt,name=is_encrypted,json=isEncrypted,proto3" json:"is_encrypted,omitempty"`
 	IsArchived     bool                   `protobuf:"varint,9,opt,name=is_archived,json=isArchived,proto3" json:"is_archived,omitempty"`
 	IsDefault      bool                   `protobuf:"varint,10,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
 	Icon           string                 `protobuf:"bytes,11,opt,name=icon,proto3" json:"icon,omitempty"`
@@ -472,13 +471,6 @@ func (x *ChatChannel) GetChannelType() ChannelType {
 		return x.ChannelType
 	}
 	return ChannelType_CHANNEL_TYPE_UNSPECIFIED
-}
-
-func (x *ChatChannel) GetIsEncrypted() bool {
-	if x != nil {
-		return x.IsEncrypted
-	}
-	return false
 }
 
 func (x *ChatChannel) GetIsArchived() bool {
@@ -8687,7 +8679,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x12chat/v1/chat.proto\x12\achat.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"I\n" +
 	"\vChatSubject\x12*\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x16.common.v1.SubjectTypeR\x04type\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\"\xcf\t\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\"\xac\t\n" +
 	"\vChatChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -8695,8 +8687,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x04name\x18\x04 \x01(\tR\x04name\x12\x12\n" +
 	"\x04slug\x18\x05 \x01(\tR\x04slug\x12 \n" +
 	"\vdescription\x18\x06 \x01(\tR\vdescription\x127\n" +
-	"\fchannel_type\x18\a \x01(\x0e2\x14.chat.v1.ChannelTypeR\vchannelType\x12!\n" +
-	"\fis_encrypted\x18\b \x01(\bR\visEncrypted\x12\x1f\n" +
+	"\fchannel_type\x18\a \x01(\x0e2\x14.chat.v1.ChannelTypeR\vchannelType\x12\x1f\n" +
 	"\vis_archived\x18\t \x01(\bR\n" +
 	"isArchived\x12\x1d\n" +
 	"\n" +

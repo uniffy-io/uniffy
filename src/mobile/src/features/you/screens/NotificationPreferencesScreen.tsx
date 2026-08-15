@@ -22,7 +22,6 @@ import { useRingtoneEnabled } from "@features/calls/callPrefs";
 
 interface Prefs {
   toastEnabled: boolean;
-  soundEnabled: boolean;
   emailEnabled: boolean;
   emailFrequency: string;
 }
@@ -60,7 +59,6 @@ export function NotificationPreferencesScreen() {
     setProfileId(data.profile?.id ?? null);
     setPrefs({
       toastEnabled: n?.toastEnabled ?? true,
-      soundEnabled: n?.soundEnabled ?? true,
       emailEnabled: n?.emailEnabled ?? false,
       emailFrequency: n?.emailFrequency || "instant",
     });
@@ -74,7 +72,6 @@ export function NotificationPreferencesScreen() {
           profileId,
           notifications: {
             toastEnabled: next.toastEnabled,
-            soundEnabled: next.soundEnabled,
             emailEnabled: next.emailEnabled,
             emailFrequency: next.emailFrequency,
           },
@@ -114,14 +111,6 @@ export function NotificationPreferencesScreen() {
               sub="Show toast banners for new activity"
               value={prefs.toastEnabled}
               onValueChange={(v) => update({ toastEnabled: v })}
-              border
-            />
-            <ToggleRow
-              T={T}
-              label="Sound"
-              sub="Play a sound for new notifications"
-              value={prefs.soundEnabled}
-              onValueChange={(v) => update({ soundEnabled: v })}
               border
             />
             <ToggleRow

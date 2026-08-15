@@ -11,7 +11,6 @@ interface ChatUiState {
   resourcePanelOpen: boolean;
   density: ChatDensity;
   activePanel: ChatActivePanel;
-  selectedMessageIds: string[];
   channelHeaderExpanded: boolean;
   channelsSectionCollapsed: boolean;
   dmSectionCollapsed: boolean;
@@ -49,7 +48,6 @@ const initialState: ChatUiState = {
   resourcePanelOpen: false,
   density: "comfortable",
   activePanel: null,
-  selectedMessageIds: [],
   channelHeaderExpanded: false,
   channelsSectionCollapsed: false,
   dmSectionCollapsed: false,
@@ -120,17 +118,6 @@ export const chatUiSlice = createSlice({
     },
     toggleDensity: (state) => {
       state.density = state.density === "comfortable" ? "compact" : "comfortable";
-    },
-    selectMessage: (state, action: PayloadAction<string>) => {
-      if (!state.selectedMessageIds.includes(action.payload)) {
-        state.selectedMessageIds.push(action.payload);
-      }
-    },
-    deselectMessage: (state, action: PayloadAction<string>) => {
-      state.selectedMessageIds = state.selectedMessageIds.filter((id) => id !== action.payload);
-    },
-    clearSelection: (state) => {
-      state.selectedMessageIds = [];
     },
     toggleChannelHeaderExpanded: (state) => {
       state.channelHeaderExpanded = !state.channelHeaderExpanded;
@@ -262,9 +249,6 @@ export const {
   closeResourcePanel,
   setDensity,
   toggleDensity,
-  selectMessage,
-  deselectMessage,
-  clearSelection,
   toggleChannelHeaderExpanded,
   toggleChannelsSection,
   toggleDmSection,
@@ -309,9 +293,6 @@ export const selectResourcePanelOpen = (state: RootState): boolean =>
 export const selectDensity = (state: RootState): ChatDensity => state.chatUi.density;
 
 export const selectActivePanel = (state: RootState): ChatActivePanel => state.chatUi.activePanel;
-
-export const selectSelectedMessageIds = (state: RootState): string[] =>
-  state.chatUi.selectedMessageIds;
 
 export const selectChannelHeaderExpanded = (state: RootState): boolean =>
   state.chatUi.channelHeaderExpanded;

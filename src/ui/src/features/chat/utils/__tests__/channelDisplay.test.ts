@@ -12,7 +12,6 @@ function buildChannel(overrides: Partial<ChatChannel> = {}): ChatChannel {
     description: "",
     channelType: "DIRECT",
     categoryId: null,
-    isEncrypted: false,
     isArchived: false,
     isDefault: false,
     isDeleted: false,

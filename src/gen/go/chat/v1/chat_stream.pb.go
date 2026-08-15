@@ -33,7 +33,6 @@ const (
 	ChatEventType_CHAT_EVENT_TYPE_REACTION_ADDED   ChatEventType = 4
 	ChatEventType_CHAT_EVENT_TYPE_REACTION_REMOVED ChatEventType = 5
 	ChatEventType_CHAT_EVENT_TYPE_TYPING_STARTED   ChatEventType = 6
-	ChatEventType_CHAT_EVENT_TYPE_TYPING_STOPPED   ChatEventType = 7
 	ChatEventType_CHAT_EVENT_TYPE_MEMBER_JOINED    ChatEventType = 8
 	ChatEventType_CHAT_EVENT_TYPE_MEMBER_LEFT      ChatEventType = 9
 	ChatEventType_CHAT_EVENT_TYPE_CHANNEL_UPDATED  ChatEventType = 10
@@ -87,7 +86,6 @@ var (
 		4:  "CHAT_EVENT_TYPE_REACTION_ADDED",
 		5:  "CHAT_EVENT_TYPE_REACTION_REMOVED",
 		6:  "CHAT_EVENT_TYPE_TYPING_STARTED",
-		7:  "CHAT_EVENT_TYPE_TYPING_STOPPED",
 		8:  "CHAT_EVENT_TYPE_MEMBER_JOINED",
 		9:  "CHAT_EVENT_TYPE_MEMBER_LEFT",
 		10: "CHAT_EVENT_TYPE_CHANNEL_UPDATED",
@@ -119,7 +117,6 @@ var (
 		"CHAT_EVENT_TYPE_REACTION_ADDED":               4,
 		"CHAT_EVENT_TYPE_REACTION_REMOVED":             5,
 		"CHAT_EVENT_TYPE_TYPING_STARTED":               6,
-		"CHAT_EVENT_TYPE_TYPING_STOPPED":               7,
 		"CHAT_EVENT_TYPE_MEMBER_JOINED":                8,
 		"CHAT_EVENT_TYPE_MEMBER_LEFT":                  9,
 		"CHAT_EVENT_TYPE_CHANNEL_UPDATED":              10,
@@ -560,7 +557,7 @@ type ChatEvent_Reaction struct {
 }
 
 type ChatEvent_Typing struct {
-	// TYPING_STARTED, TYPING_STOPPED
+	// TYPING_STARTED
 	Typing *TypingPayload `protobuf:"bytes,13,opt,name=typing,proto3,oneof"`
 }
 
@@ -2491,7 +2488,7 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\tsender_id\x18\x04 \x01(\tR\bsenderId\x12\x1f\n" +
 	"\vsender_name\x18\x05 \x01(\tR\n" +
 	"senderName\x12\x18\n" +
-	"\apreview\x18\x06 \x01(\tR\apreview*\xf5\b\n" +
+	"\apreview\x18\x06 \x01(\tR\apreview*\xd1\b\n" +
 	"\rChatEventType\x12\x1f\n" +
 	"\x1bCHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fCHAT_EVENT_TYPE_MESSAGE_CREATED\x10\x01\x12#\n" +
@@ -2499,8 +2496,7 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x1fCHAT_EVENT_TYPE_MESSAGE_DELETED\x10\x03\x12\"\n" +
 	"\x1eCHAT_EVENT_TYPE_REACTION_ADDED\x10\x04\x12$\n" +
 	" CHAT_EVENT_TYPE_REACTION_REMOVED\x10\x05\x12\"\n" +
-	"\x1eCHAT_EVENT_TYPE_TYPING_STARTED\x10\x06\x12\"\n" +
-	"\x1eCHAT_EVENT_TYPE_TYPING_STOPPED\x10\a\x12!\n" +
+	"\x1eCHAT_EVENT_TYPE_TYPING_STARTED\x10\x06\x12!\n" +
 	"\x1dCHAT_EVENT_TYPE_MEMBER_JOINED\x10\b\x12\x1f\n" +
 	"\x1bCHAT_EVENT_TYPE_MEMBER_LEFT\x10\t\x12#\n" +
 	"\x1fCHAT_EVENT_TYPE_CHANNEL_UPDATED\x10\n" +

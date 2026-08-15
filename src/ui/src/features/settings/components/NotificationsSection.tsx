@@ -201,19 +201,6 @@ export function NotificationsSection() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium text-foreground">Sound</div>
-              <div className="text-sm text-muted-foreground">
-                Play a sound when notifications arrive
-              </div>
-            </div>
-            <ToggleSwitch
-              enabled={notifications.soundEnabled}
-              onChange={(v) => handleToggle("soundEnabled", v)}
-              disabled={saving}
-            />
-          </div>
         </div>
       </section>
 

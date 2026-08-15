@@ -26,7 +26,6 @@ enum ChatEventType {
   CHAT_EVENT_TYPE_REACTION_ADDED = 4;
   CHAT_EVENT_TYPE_REACTION_REMOVED = 5;
   CHAT_EVENT_TYPE_TYPING_STARTED = 6;
-  CHAT_EVENT_TYPE_TYPING_STOPPED = 7;
   CHAT_EVENT_TYPE_MEMBER_JOINED = 8;
   CHAT_EVENT_TYPE_MEMBER_LEFT = 9;
   CHAT_EVENT_TYPE_CHANNEL_UPDATED = 10;
@@ -85,7 +84,7 @@ message ChatEvent {
     MessageDeletedPayload message_deleted = 11;
     // REACTION_ADDED, REACTION_REMOVED
     ReactionPayload reaction = 12;
-    // TYPING_STARTED, TYPING_STOPPED
+    // TYPING_STARTED
     TypingPayload typing = 13;
     // MEMBER_JOINED, MEMBER_LEFT
     MemberPayload member = 14;
