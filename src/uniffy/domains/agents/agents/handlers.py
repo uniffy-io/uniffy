@@ -1,6 +1,5 @@
 """Agents RPC handlers."""
 
-import json
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -41,6 +40,7 @@ from uniffy.core.converters.common_proto import (
     content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
@@ -144,8 +144,8 @@ def _parse_uuid(value: str, field: str) -> UUID:
 def _parse_params(raw: str, field: str) -> dict:
     """Parse a tuned-parameter JSON string into a plain object."""
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
+        parsed = loads(raw)
+    except JSONDecodeError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"{field} is not valid JSON") from exc
     if not isinstance(parsed, dict):
         raise ConnectError(Code.INVALID_ARGUMENT, f"{field} must be a JSON object")

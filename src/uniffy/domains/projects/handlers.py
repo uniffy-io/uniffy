@@ -1,4 +1,3 @@
-import json
 import secrets
 from datetime import UTC, datetime
 from typing import NamedTuple
@@ -84,6 +83,7 @@ from uniffy.core.converters.common_proto import (
     content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.models.projects.field_definition import FieldDefinition, SystemProjectFieldId
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.view_config import ViewConfig
@@ -570,8 +570,8 @@ class ProjectsHandlers:
             field_values: dict = {}
             for key, value in request.field_values.items():
                 try:
-                    field_values[key] = json.loads(value)
-                except json.JSONDecodeError, ValueError:
+                    field_values[key] = loads(value)
+                except ValueError:
                     field_values[key] = value
             kwargs["field_values"] = field_values
 
@@ -698,8 +698,8 @@ class ProjectsHandlers:
             field_values: dict = {}
             for key, value in request.field_values.items():
                 try:
-                    field_values[key] = json.loads(value)
-                except json.JSONDecodeError, ValueError:
+                    field_values[key] = loads(value)
+                except ValueError:
                     field_values[key] = value
             updates["field_values"] = field_values
         if request.HasField("tag_ids"):
@@ -1041,8 +1041,8 @@ class ProjectsHandlers:
         config: dict = {}
         if request.HasField("config_json"):
             try:
-                config = json.loads(request.config_json)
-            except json.JSONDecodeError as exc:
+                config = loads(request.config_json)
+            except JSONDecodeError as exc:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
 
         try:
@@ -1105,8 +1105,8 @@ class ProjectsHandlers:
                     field.sort_order = request.sort_order
                 if request.HasField("config_json"):
                     try:
-                        config = json.loads(request.config_json)
-                    except json.JSONDecodeError as exc:
+                        config = loads(request.config_json)
+                    except JSONDecodeError as exc:
                         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
                     if field.id == SystemProjectFieldId.STATUS:
                         parse_task_status_semantics(config, require_explicit=True)
@@ -1172,8 +1172,8 @@ class ProjectsHandlers:
         config: dict = {}
         if request.HasField("config_json"):
             try:
-                config = json.loads(request.config_json)
-            except json.JSONDecodeError as exc:
+                config = loads(request.config_json)
+            except JSONDecodeError as exc:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
 
         try:
@@ -1232,8 +1232,8 @@ class ProjectsHandlers:
                     view.is_default = request.is_default
                 if request.HasField("config_json"):
                     try:
-                        view.config = json.loads(request.config_json)
-                    except json.JSONDecodeError as exc:
+                        view.config = loads(request.config_json)
+                    except JSONDecodeError as exc:
                         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
 
                 view.updated_at = datetime.now(UTC)

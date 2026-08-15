@@ -11,7 +11,6 @@ channel `provider_keys:invalidate:{key_id}` mirrors the Valkey wipe so
 every pod drops its LRU entry on the same signal.
 """
 
-import json
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -20,6 +19,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.json_codec import dumps_bytes
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.types import AccessMode, ContentRole
@@ -449,7 +449,7 @@ async def publish_provider_key_invalidation(key_id: UUID) -> None:
     try:
         await client.publish(
             provider_key_invalidate_channel(key_id),
-            json.dumps({"key_id": str(key_id)}),
+            dumps_bytes({"key_id": str(key_id)}),
         )
     except Exception:
         logger.warning(

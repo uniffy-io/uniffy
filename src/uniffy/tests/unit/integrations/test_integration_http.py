@@ -4,13 +4,13 @@ No network: the pyqwest client is a MagicMock and responses are plain
 FullResponse-shaped fakes.
 """
 
-import json
 import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from uniffy.core.errors import NotFoundError, RateLimitExceededError, ValidationError
+from uniffy.core.json_codec import dumps_bytes
 from uniffy.domains.integrations.base import (
     IntegrationApiError,
     IntegrationAuthError,
@@ -49,7 +49,7 @@ class _Response:
         if content is not None:
             self.content = content
         elif json_data is not None:
-            self.content = json.dumps(json_data).encode()
+            self.content = dumps_bytes(json_data)
         else:
             self.content = text.encode()
         self._json = json_data

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 from sqlalchemy.sql import text
 
+from uniffy.core.json_codec import dumps_str, loads
 from uniffy.observability.metrics import DB_POOL_TIMEOUT_TOTAL
 
 logger = logger.bind(component="db.session")
@@ -148,6 +149,8 @@ async def init_db(*, skip_migrations: bool = False) -> None:
     _engine = create_async_engine(
         database_url,
         echo=os.getenv("SQL_ECHO", "false").lower() == "true",  # noqa: PLR2004
+        json_serializer=dumps_str,
+        json_deserializer=loads,
         poolclass=AsyncAdaptedQueuePool,
         pool_pre_ping=True,
         pool_size=pool_size,

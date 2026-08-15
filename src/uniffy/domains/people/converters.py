@@ -4,7 +4,6 @@ The payload dict is the cacheable form; it is viewer-independent because a
 profile carries no per-viewer redaction - one cached payload serves everyone.
 """
 
-import json
 from datetime import UTC, datetime, time
 from datetime import date as date_type
 from typing import Any
@@ -13,6 +12,7 @@ from uniffy_proto.people.v1 import people_pb2 as pb
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp, org_role_to_proto
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
@@ -93,7 +93,7 @@ def identity_source_to_proto(source: IdentitySource) -> pb.IdentitySource:
         kind=_SOURCE_KIND_TO_PROTO[source.kind],
         name=source.name,
         is_active=source.is_active,
-        config_json=json.dumps(source.config or {}),
+        config_json=dumps_str(source.config or {}),
         created_at=datetime_to_timestamp(source.created_at),
     )
     if source.last_sync_at:

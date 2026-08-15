@@ -4,13 +4,13 @@ Events arrive at-least-once and possibly out of order, so every handler is
 idempotent: it re-checks current DB state before mutating.
 """
 
-import json
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.json_codec import loads
 from uniffy.core.models.calls import Call, CallEndReason
 from uniffy.db import open_session
 from uniffy.domains.calls.config import get_livekit_config
@@ -24,7 +24,7 @@ logger = logger.bind(component="calls.webhook")
 def _participant_jti(participant: dict[str, Any]) -> str:
     """jti of the token the SFU session was established with (from minted metadata)."""
     try:
-        return (json.loads(participant.get("metadata") or "") or {}).get("jti", "")
+        return (loads(participant.get("metadata") or "") or {}).get("jti", "")
     except ValueError:
         return ""
 

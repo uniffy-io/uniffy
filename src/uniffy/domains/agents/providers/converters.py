@@ -1,13 +1,12 @@
 """Proto <-> domain converters for providers."""
 
-import json
-
 from uniffy_proto.agents.v1.providers_pb2 import (
     ModelInfo as ProtoModelInfo,
 )
 from uniffy_proto.agents.v1.providers_pb2 import ProviderKeyInfo
 
 from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.domains.agents.pricing import image_price_estimates
 from uniffy.domains.agents.providers.base import ModelInfo as DomainModelInfo
@@ -85,18 +84,18 @@ def _parameter_schema_json(model: DomainModelInfo) -> str:
     if not model.catalog_known:
         return ""
     schema = get_parameter_schema(model.provider, model.id)
-    return json.dumps(schema) if schema else ""
+    return dumps_str(schema) if schema else ""
 
 
 def _image_parameter_schema_json(model: DomainModelInfo) -> str:
     if not model.catalog_known:
         return ""
     schema = get_image_parameter_schema(model.provider, model.id)
-    return json.dumps(schema) if schema else ""
+    return dumps_str(schema) if schema else ""
 
 
 def _image_price_estimates_json(model: DomainModelInfo) -> str:
     if not (model.catalog_known and model.supports_image_generation):
         return ""
     estimates = image_price_estimates(model.provider, model.id)
-    return json.dumps(estimates) if estimates else ""
+    return dumps_str(estimates) if estimates else ""

@@ -12,7 +12,6 @@ to prevent loader stampedes; lock losers poll every 100ms then fall through.
 """
 
 import asyncio
-import json
 import os
 import time
 from collections.abc import Awaitable, Callable
@@ -21,6 +20,7 @@ from typing import Any, TypeVar
 
 from loguru import logger
 
+from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
 from uniffy.observability.metrics import (
     CACHE_HIT_TOTAL,
@@ -106,8 +106,8 @@ async def cache_get(key: str) -> dict[str, Any] | None | _CacheMiss:
         return None
 
     try:
-        decoded = json.loads(raw)
-    except json.JSONDecodeError, TypeError:
+        decoded = loads(raw)
+    except JSONDecodeError, TypeError:
         logger.warning(f"Cache decode failed for key {key}", component="cache")
         CACHE_MISS_TOTAL.labels(namespace=namespace).inc()
         return CACHE_MISS
@@ -171,8 +171,8 @@ async def cache_get_many(
             hits[key] = None
             continue
         try:
-            decoded = json.loads(raw)
-        except json.JSONDecodeError, TypeError:
+            decoded = loads(raw)
+        except JSONDecodeError, TypeError:
             logger.warning(f"Cache decode failed for key {key}", component="cache")
             CACHE_MISS_TOTAL.labels(namespace=ns).inc()
             misses.append(key)
@@ -201,7 +201,7 @@ async def cache_set(
         return
 
     namespace = _namespace_for_key(key)
-    serialized = _SENTINEL if value is None else json.dumps(value)
+    serialized = _SENTINEL if value is None else dumps_bytes(value)
 
     try:
         async with ops_call(namespace, "set"):

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import base64
 import enum
-import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
@@ -16,6 +15,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.json_codec import dumps_bytes, loads
 from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
@@ -176,10 +176,7 @@ class AuditOperations:
 
 
 def _encode_cursor(created_at: datetime, event_id: UUID) -> str:
-    payload = json.dumps(
-        {"t": created_at.isoformat(), "i": str(event_id)},
-        separators=(",", ":"),
-    ).encode("utf-8")
+    payload = dumps_bytes({"t": created_at.isoformat(), "i": str(event_id)})
     return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
 
 
@@ -187,7 +184,7 @@ def _decode_cursor(token: str) -> tuple[datetime, UUID]:
     try:
         padding = "=" * (-len(token) % 4)
         payload = base64.urlsafe_b64decode((token + padding).encode("ascii"))
-        data = json.loads(payload)
+        data = loads(payload)
         return datetime.fromisoformat(data["t"]), UUID(data["i"])
     except (ValueError, KeyError, TypeError) as exc:
         raise ValidationError("page_token", "Malformed pagination cursor") from exc

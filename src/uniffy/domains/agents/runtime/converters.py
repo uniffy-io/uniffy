@@ -1,6 +1,5 @@
 """Proto converters for runtime responses."""
 
-import json
 from dataclasses import fields
 from typing import Any
 from uuid import UUID
@@ -39,6 +38,7 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     ToolUsage,
 )
 
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
@@ -81,7 +81,7 @@ def _message_id_str(event: StreamEvent) -> str:
 
 
 def _args_json(args: dict | None) -> str:
-    return json.dumps(args) if args else "{}"
+    return dumps_str(args) if args else "{}"
 
 
 def runtime_stream_event_to_proto(event: StreamEvent) -> AgentStreamEvent:

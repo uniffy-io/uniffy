@@ -12,7 +12,6 @@ refreshed on every publish).
 
 import asyncio
 import contextlib
-import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -22,6 +21,7 @@ from loguru import logger
 from valkey.exceptions import ConnectionError as ValkeyConnectionError
 from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
+from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
 
@@ -106,7 +106,7 @@ async def stream_xadd(
     if client is None:
         return None
 
-    encoded = {"data": json.dumps(payload)}
+    encoded = {"data": dumps_bytes(payload)}
     try:
         async with ops_call(STREAMS_NAMESPACE, "xadd"):
             return await client.xadd(
@@ -166,8 +166,8 @@ async def stream_xread(
             if raw is None:
                 continue
             try:
-                entries.append((message_id, json.loads(raw)))
-            except json.JSONDecodeError, TypeError:
+                entries.append((message_id, loads(raw)))
+            except JSONDecodeError, TypeError:
                 logger.warning(
                     f"Stream payload decode failed (stream={stream_key}, id={message_id})",
                     component=LOGGER_COMPONENT,
@@ -187,7 +187,7 @@ async def stream_set_state(
     if client is None:
         return
 
-    encoded = {k: json.dumps(v) for k, v in state.items()}
+    encoded = {k: dumps_bytes(v) for k, v in state.items()}
     try:
         async with ops_call(STREAMS_NAMESPACE, "set_state"):
             pipe = client.pipeline(transaction=False)
@@ -221,8 +221,8 @@ async def stream_get_state(state_key: str) -> dict[str, Any] | None:
     decoded: dict[str, Any] = {}
     for key, value in raw.items():
         try:
-            decoded[key] = json.loads(value)
-        except json.JSONDecodeError, TypeError:
+            decoded[key] = loads(value)
+        except JSONDecodeError, TypeError:
             decoded[key] = value
     return decoded
 
@@ -365,7 +365,7 @@ async def request_run_cancel(run_id: UUID) -> bool:
             await client.hset(
                 run_state_key(run_id),
                 "cancel_requested",
-                json.dumps(True),
+                dumps_bytes(True),
             )
         return True
     except TimeoutError:

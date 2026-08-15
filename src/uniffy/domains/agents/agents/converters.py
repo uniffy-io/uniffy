@@ -1,7 +1,5 @@
 """Proto <-> domain converters for the agents domain."""
 
-import json
-
 from uniffy_proto.agents.v1.agents_pb2 import AgentInfo, ToolInfo
 from uniffy_proto.agents.v1.agents_pb2 import AgentTemplate as AgentTemplateProto
 
@@ -11,6 +9,7 @@ from uniffy.core.converters.common_proto import (
     access_mode_to_proto,
     content_role_to_proto,
 )
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.agents.templates import AgentTemplate
@@ -67,10 +66,10 @@ def agent_to_proto(
         image_provider_key_id=(
             str(agent.image_provider_key_id) if agent.image_provider_key_id else ""
         ),
-        model_params=json.dumps(agent.model_params or {}),
-        image_params=json.dumps(agent.image_params or {}),
+        model_params=dumps_str(agent.model_params or {}),
+        image_params=dumps_str(agent.image_params or {}),
         image_style_prompt=agent.image_style_prompt or "",
-        integration_connections=json.dumps(agent.integration_connections or {}),
+        integration_connections=dumps_str(agent.integration_connections or {}),
         is_deleted=agent.is_deleted,
     )
 

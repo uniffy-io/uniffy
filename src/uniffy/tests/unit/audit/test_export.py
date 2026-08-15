@@ -14,13 +14,13 @@ DB calls are mocked. We assert:
 """
 
 import csv
-import json
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.json_codec import loads
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
@@ -139,7 +139,7 @@ async def test_csv_serialises_an_event_row_into_the_expected_columns() -> None:
     assert row["resource_id"] == str(event.resource_id)
     assert row["actor_org_role"] == "ADMIN"
     assert row["ip_address"] == "127.0.0.1"
-    assert json.loads(row["details_json"]) == {"reason": "cleanup"}
+    assert loads(row["details_json"]) == {"reason": "cleanup"}
 
 
 async def test_ndjson_emits_one_json_object_per_line_with_parsed_details() -> None:
@@ -153,7 +153,7 @@ async def test_ndjson_emits_one_json_object_per_line_with_parsed_details() -> No
 
     lines = [line for line in output.decode("utf-8").splitlines() if line]
     assert len(lines) == 1
-    payload = json.loads(lines[0])
+    payload = loads(lines[0])
     assert payload["action"] == event.action
     assert payload["resource_id"] == str(event.resource_id)
     assert payload["details"] == {"reason": "cleanup"}

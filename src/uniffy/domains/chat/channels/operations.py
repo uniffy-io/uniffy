@@ -1,7 +1,6 @@
 """Chat channel operations; access is membership-based, not access_mode/baseline_role."""
 
 import base64
-import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -27,6 +26,7 @@ from uniffy.core.errors import (
 )
 from uniffy.core.events.bus import emit_notification
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.json_codec import dumps_bytes, loads
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.audit.event import AuditResourceType
@@ -82,7 +82,7 @@ GROUP_DM_MAX_PARTICIPANTS = 4
 
 
 def _encode_cursor(payload: dict[str, Any]) -> str:
-    raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    raw = dumps_bytes(payload)
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
@@ -91,8 +91,8 @@ def _decode_cursor(cursor: str) -> dict[str, Any]:
     try:
         padding = "=" * (-len(cursor) % 4)
         raw = base64.urlsafe_b64decode(cursor + padding)
-        return json.loads(raw.decode("utf-8"))
-    except (ValueError, json.JSONDecodeError) as exc:
+        return loads(raw)
+    except ValueError as exc:
         raise ValidationError("cursor", "Invalid pagination cursor") from exc
 
 

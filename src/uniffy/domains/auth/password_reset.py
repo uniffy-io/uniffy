@@ -24,7 +24,6 @@ SHA256 hex digest. A DB leak is therefore not replayable against the
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import secrets
 from dataclasses import dataclass
@@ -37,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
@@ -363,7 +363,7 @@ class PasswordResetOperations:
             JobName.SEND_EMAIL,
             user.email,
             _TEMPLATE,
-            json.dumps(context),
+            dumps_str(context),
             organization_id=str(org.id) if org else None,
             idempotency_key=f"password-reset/{token_record_id}",
             user_id=str(user.id),

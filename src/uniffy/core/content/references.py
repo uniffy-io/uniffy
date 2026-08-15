@@ -4,6 +4,7 @@ import re
 from enum import StrEnum
 from uuid import UUID
 
+from uniffy.core.json_codec import loads
 from uniffy.core.types import ContentType
 
 # ``[[[label|urn]]]`` mentions, with backslash escapes some editors emit.
@@ -122,10 +123,8 @@ def extract_all_outgoing_references_from_canvas(
         return []
 
     if isinstance(canvas_data, str):
-        import json as _json
-
         try:
-            data = _json.loads(canvas_data)
+            data = loads(canvas_data)
         except ValueError, TypeError:
             return []
     else:

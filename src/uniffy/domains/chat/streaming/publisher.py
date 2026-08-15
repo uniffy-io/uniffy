@@ -1,17 +1,17 @@
 """Fan out chat events to per-user Valkey channels (chat:user:{user_id})."""
 
-import json
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.json_codec import dumps_bytes
 from uniffy.core.valkey import pubsub
 
 LOGGER_COMPONENT = "chat.publisher"
 
 
-async def _publish_to_channel(channel_name: str, payload: str) -> None:
+async def _publish_to_channel(channel_name: str, payload: bytes) -> None:
     # Read through the module so a post-import init_pubsub rebind is picked up.
     publisher = pubsub._pubsub_client
     if publisher is None:
@@ -41,7 +41,7 @@ async def publish_channel_event_to_members(
     data: dict[str, Any] = {"_type": event_type, **payload}
     if channel_id and "channel_id" not in data:  # noqa: PLR2004
         data["channel_id"] = str(channel_id)
-    message = json.dumps(data, default=str)
+    message = dumps_bytes(data, default=str)
 
     targets = [uid for uid in member_ids if uid != exclude_user_id]
     if not targets:
@@ -72,7 +72,7 @@ async def publish_user_chat_event(
         "_type": event_type,
         **payload,
     }
-    message = json.dumps(data, default=str)
+    message = dumps_bytes(data, default=str)
     await _publish_to_channel(f"chat:user:{user_id}", message)
 
 
@@ -89,7 +89,7 @@ async def publish_user_chat_events(
     try:
         async with publisher.pipeline(transaction=False) as pipe:
             for user_id, event_type, payload in events:
-                message = json.dumps({"_type": event_type, **payload}, default=str)
+                message = dumps_bytes({"_type": event_type, **payload}, default=str)
                 pipe.publish(f"chat:user:{user_id}", message)
             await pipe.execute()
     except Exception:

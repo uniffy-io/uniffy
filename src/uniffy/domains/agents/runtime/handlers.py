@@ -11,7 +11,6 @@ itself - the worker drives that turn.
 """
 
 import asyncio
-import json
 import os
 import time
 from collections.abc import AsyncIterator
@@ -50,6 +49,7 @@ from uniffy.core.errors import (
     RateLimitExceededError,
     ValidationError,
 )
+from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
@@ -783,8 +783,8 @@ class RuntimeHandlers:
         patch: dict = {}
         if request.params_patch.strip():
             try:
-                patch = json.loads(request.params_patch)
-            except json.JSONDecodeError as exc:
+                patch = loads(request.params_patch)
+            except JSONDecodeError as exc:
                 raise ConnectError(Code.INVALID_ARGUMENT, "params_patch is not valid JSON") from exc
             if not isinstance(patch, dict):
                 raise ConnectError(Code.INVALID_ARGUMENT, "params_patch must be a JSON object")
@@ -799,7 +799,7 @@ class RuntimeHandlers:
             )
             return RegenerateImageResponse(
                 message_id=str(new_id),
-                result_metadata=json.dumps(metadata),
+                result_metadata=dumps_str(metadata),
             )
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))

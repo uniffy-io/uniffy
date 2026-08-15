@@ -1,6 +1,5 @@
 """RPC handlers for per-(channel, agent) context management."""
 
-import json
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -30,6 +29,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.db import open_session
 from uniffy.domains.agents.chat_integration.context import (
@@ -69,10 +69,10 @@ def _config_to_proto(binding: AgentChannelBinding) -> ProtoChannelAgentConfig:
     return ProtoChannelAgentConfig(
         model_override=binding.model_override or "",
         model_params_override=(
-            json.dumps(binding.model_params_override) if binding.model_params_override else ""
+            dumps_str(binding.model_params_override) if binding.model_params_override else ""
         ),
         image_params_override=(
-            json.dumps(binding.image_params_override) if binding.image_params_override else ""
+            dumps_str(binding.image_params_override) if binding.image_params_override else ""
         ),
     )
 
@@ -82,8 +82,8 @@ def _parse_params_json(raw: str, field: str = "model_params_override") -> dict:
     if not raw.strip():
         return {}
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
+        parsed = loads(raw)
+    except JSONDecodeError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"{field} is not valid JSON") from exc
     if not isinstance(parsed, dict):
         raise ConnectError(Code.INVALID_ARGUMENT, f"{field} must be a JSON object")

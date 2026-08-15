@@ -1,12 +1,11 @@
 """Stale-session detection for at-least-once, out-of-order LiveKit webhooks."""
 
-import json
-
+from uniffy.core.json_codec import dumps_str
 from uniffy.domains.calls.webhook import _is_stale_session_event, _participant_jti
 
 
 def _participant(jti: str | None) -> dict:
-    metadata = json.dumps({"jti": jti}) if jti is not None else ""
+    metadata = dumps_str({"jti": jti}) if jti is not None else ""
     return {"identity": "u1:d1", "metadata": metadata}
 
 

@@ -1,6 +1,5 @@
 """People service RPC handlers."""
 
-import json
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -16,6 +15,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
@@ -105,8 +105,8 @@ def _parse_config_json(raw: str) -> dict:
     if not raw or not raw.strip():
         return {}
     try:
-        value = json.loads(raw)
-    except json.JSONDecodeError as e:
+        value = loads(raw)
+    except JSONDecodeError as e:
         raise ValidationError("config_json", "must be valid JSON") from e
     if not isinstance(value, dict):
         raise ValidationError("config_json", "must be a JSON object")

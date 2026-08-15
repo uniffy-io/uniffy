@@ -5,12 +5,12 @@ Event types: ``tag.created`` / ``tag.updated`` (payload ``{"tag": {...}}``),
 (``{"content_urn", "content_type", "added", "removed"}``).
 """
 
-import json
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.json_codec import dumps_bytes
 from uniffy.core.valkey.ops import ops_call
 
 LOGGER_COMPONENT = "tags"
@@ -56,7 +56,7 @@ async def publish_tag_event(
 
     try:
         async with ops_call(_NAMESPACE, "tags_publish"):
-            await redis.publish(channel, json.dumps(message, default=str))
+            await redis.publish(channel, dumps_bytes(message, default=str))
         logger.debug(
             f"published {event_type} on {channel}",
             component=LOGGER_COMPONENT,

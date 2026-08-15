@@ -5,7 +5,6 @@ a skill. Saving a draft is always an explicit user action through
 ``SaveSkillDraft`` - this module must preserve that invariant.
 """
 
-import json
 import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -14,6 +13,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import and_, or_, select
 
+from uniffy.core.json_codec import loads
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
 from uniffy.core.models.agents.message_feedback import AgentFeedbackRating, AgentMessageFeedback
 from uniffy.core.models.agents.skill import AgentSkill
@@ -503,7 +503,7 @@ def parse_proposals(text: str) -> list[SkillProposal]:
     if start == -1 or end == -1 or end < start:
         return []
     try:
-        data = json.loads(raw[start : end + 1])
+        data = loads(raw[start : end + 1])
     except ValueError, TypeError:
         logger.debug("skill analysis: could not parse LLM output as JSON")
         return []

@@ -1,11 +1,11 @@
 """Fire-and-forget notification event bus over ARQ; never raises on a missing queue."""
 
-import json
 from typing import Any
 
 from loguru import logger
 
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.json_codec import dumps_str, loads
 from uniffy.core.valkey import QueueName, get_queue
 from uniffy.workers.tasks import JobName
 
@@ -32,7 +32,7 @@ def _event_to_json(event: NotificationEvent) -> str:
     if event.metadata is not None:
         data["metadata"] = event.metadata
 
-    return json.dumps(data)
+    return dumps_str(data)
 
 
 def event_from_json(json_str: str) -> NotificationEvent:
@@ -40,7 +40,7 @@ def event_from_json(json_str: str) -> NotificationEvent:
 
     from uniffy.core.types import ContentType, NotificationType
 
-    data = json.loads(json_str)
+    data = loads(json_str)
 
     target_user_ids = None
     if "target_user_ids" in data:  # noqa: PLR2004

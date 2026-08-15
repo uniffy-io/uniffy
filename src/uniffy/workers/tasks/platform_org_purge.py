@@ -11,7 +11,6 @@ promising a deletion that will not happen. Idempotent via
 
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -21,6 +20,7 @@ from sqlalchemy import select
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
@@ -87,7 +87,7 @@ async def _enqueue_warning(
         JobName.SEND_EMAIL,
         recipient,
         _TEMPLATE,
-        json.dumps(context),
+        dumps_str(context),
         organization_id=str(org.id),
         idempotency_key=idempotency_key,
         user_id=str(user_id),

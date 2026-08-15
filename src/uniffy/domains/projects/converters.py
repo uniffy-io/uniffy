@@ -1,7 +1,5 @@
 """Projects proto converters."""
 
-import json
-
 from uniffy_proto.projects.v1.projects_pb2 import (
     ActivityAction,
     FieldType,
@@ -34,6 +32,7 @@ from uniffy.core.converters.common_proto import (
     content_role_to_proto,
 )
 from uniffy.core.converters.proto import datetime_to_timestamp
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
@@ -176,7 +175,7 @@ def task_to_proto(
     if task.field_values:
         for key, value in task.field_values.items():
             if isinstance(value, (list, dict)):
-                field_values_map[key] = json.dumps(value)
+                field_values_map[key] = dumps_str(value)
             else:
                 field_values_map[key] = str(value) if value is not None else ""
 
@@ -232,7 +231,7 @@ def task_to_proto(
 
 
 def field_to_proto(field: FieldDefinition) -> ProtoFieldDefinition:
-    config_json = json.dumps(field.config) if field.config else "{}"
+    config_json = dumps_str(field.config) if field.config else "{}"
 
     return ProtoFieldDefinition(
         id=field.id,
@@ -249,7 +248,7 @@ def field_to_proto(field: FieldDefinition) -> ProtoFieldDefinition:
 
 
 def view_to_proto(view: ViewConfig) -> ProtoViewConfig:
-    config_json = json.dumps(view.config) if view.config else "{}"
+    config_json = dumps_str(view.config) if view.config else "{}"
 
     return ProtoViewConfig(
         id=view.id,

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from uuid import UUID
 
 from sqlalchemy import select
@@ -12,6 +11,7 @@ from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.extraction import UnsupportedFormatError, can_extract, extract_text
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.types import ContentType
 from uniffy.domains.agents.tools.builtin.args import (
@@ -395,7 +395,7 @@ async def _execute_get_file_info(ctx: ToolContext, args: dict) -> ToolResult:
     file_tag_slugs = [tag.slug for tag in tags_by_urn.get(urn, [])]
     folder_names = await _fetch_folder_names(ctx, {file.folder_id} if file.folder_id else set())
 
-    data = json.dumps(
+    data = dumps_str(
         {
             "id": str(file.id),
             "filename": file.filename,

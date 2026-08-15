@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
@@ -10,6 +9,7 @@ from pathlib import Path
 from loguru import logger
 
 from uniffy.core.data_files import load_documents
+from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.types import RecurrencePattern
 
 logger = logger.bind(component="scripts.demo_company.loader")
@@ -343,8 +343,8 @@ def _read_json(path: Path) -> object:
     if not path.is_file():
         raise ContentError(f"Missing content file: {path}")
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
+        return loads(path.read_bytes())
+    except JSONDecodeError as exc:
         raise ContentError(f"{path.name} is not valid JSON: {exc}") from exc
 
 

@@ -1,7 +1,5 @@
 """Proto <-> domain converters for the notes domain."""
 
-import json
-
 from uniffy_proto.notes.v1.notes_pb2 import (
     NodeType as ProtoNodeType,
 )
@@ -26,6 +24,7 @@ from uniffy.core.converters.common_proto import (
     access_mode_to_proto,
     content_role_to_proto,
 )
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.notes.note import Note
 from uniffy.core.types import AccessMode, ContentRole, NodeType
 from uniffy.domains.tags import Tag
@@ -140,7 +139,7 @@ def note_to_reference(
 def _serialize_body(note: Note) -> str:
     # Canvas notes serialize ``canvas_content`` as JSON; rest use ``content``.
     if note.node_type == NodeType.CANVAS and note.canvas_content:
-        return json.dumps(note.canvas_content)
+        return dumps_str(note.canvas_content)
     return note.content
 
 
@@ -153,7 +152,7 @@ def _build_metadata_dict(note: Note) -> dict[str, str]:
     for key, val in note.note_metadata.items():
         if key == "icon":  # noqa: PLR2004
             continue
-        out[key] = val if isinstance(val, str) else json.dumps(val)
+        out[key] = val if isinstance(val, str) else dumps_str(val)
     return out
 
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from uuid import UUID
 
@@ -11,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.mail import MailConfig
 from uniffy.core.mail.config import MAIL_NAMESPACE
 from uniffy.core.models.login.user import User
@@ -112,7 +112,7 @@ class EmailAdapter(DeliveryAdapter):
             JobName.SEND_EMAIL,
             recipient,
             "notifications/instant",
-            json.dumps(context),
+            dumps_str(context),
             organization_id=str(event.organization_id),
             idempotency_key=idempotency_key,
             user_id=str(user_id),

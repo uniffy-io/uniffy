@@ -29,7 +29,7 @@ dependencies = [
   "starlette>=1.3.1",
   "jinja2>=3.1.6",
   "loguru>=0.7.3",
-  "meilisearch-python-sdk>=5.5.0",
+  "meilisearch-python-sdk[orjson]>=7.5.0",
   "psycopg2-binary>=2.9.10",
   "pydantic[email]>=2.13.4",
   "pyjwt>=2.10.0",
@@ -70,6 +70,7 @@ dependencies = [
   # Realtime collaboration (CRDT)
   "pycrdt>=0.13.0",
   "pycrdt-websocket>=0.16.1",
+  "orjson>=3.12.0",
 ]
 
 [dependency-groups]
@@ -154,10 +155,15 @@ select = [
   "I",
   # Product-owned comparison values use enums or named constants.
   "PLR2004",
+  # Backend JSON goes through the shared orjson codec.
+  "TID251",
 ]
 
 [tool.ruff.lint.pylint]
 allow-magic-value-types = ["int", "float", "bytes"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"json".msg = "Use uniffy.core.json_codec instead of the stdlib json module."
 
 [tool.ruff.format]
 # Like Black, use double quotes for strings.

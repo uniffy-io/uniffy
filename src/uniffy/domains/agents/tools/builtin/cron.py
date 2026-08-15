@@ -1,8 +1,8 @@
 """Built-in cron scheduling tools for agents."""
 
-import json
 from datetime import timedelta
 
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.run_log import AgentRunStatus
 from uniffy.core.types import AccessMode
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
@@ -47,7 +47,7 @@ async def _execute_cron_create(ctx: ToolContext, args: dict) -> ToolResult:
 
     return ToolResult(
         success=True,
-        data=json.dumps({
+        data=dumps_str({
             "id": str(task.id),
             "name": task.name,
             "cron_expression": task.cron_expression,

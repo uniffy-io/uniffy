@@ -3,13 +3,13 @@
 Keys ``presence:{org_id}:{user_id}``; channel ``presence:{org_id}``.
 """
 
-import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
 
 _PRESENCE_TTL = 120
@@ -42,7 +42,7 @@ async def presence_set(
 
     key = _presence_key(org_id, user_id)
     now = datetime.now(UTC).isoformat()
-    new_value = json.dumps({"status": status, "last_active": now, "client": client})
+    new_value = dumps_bytes({"status": status, "last_active": now, "client": client})
 
     try:
         async with ops_call(_NAMESPACE, "presence_get"):
@@ -50,9 +50,9 @@ async def presence_set(
         previous_status: str | None = None
         if existing_raw is not None:
             try:
-                existing = json.loads(existing_raw)
+                existing = loads(existing_raw)
                 previous_status = existing.get("status")
-            except json.JSONDecodeError, TypeError:
+            except JSONDecodeError, TypeError:
                 pass
 
         async with ops_call(_NAMESPACE, "presence_set"):
@@ -102,9 +102,9 @@ async def presence_get_bulk(
         if raw is None:
             continue
         try:
-            data = json.loads(raw)
+            data = loads(raw)
             result[str(uid)] = data
-        except json.JSONDecodeError, TypeError:
+        except JSONDecodeError, TypeError:
             logger.warning(f"Invalid presence data for user {uid}", component=LOGGER_COMPONENT)
 
     return result
@@ -136,7 +136,7 @@ async def presence_publish_change(
 
     try:
         async with ops_call(_NAMESPACE, "presence_publish"):
-            message = json.dumps(payload)
+            message = dumps_bytes(payload)
             await redis.publish(channel, message)
         logger.debug(f"published presence change for {user_id}", component=LOGGER_COMPONENT)
     except TimeoutError:

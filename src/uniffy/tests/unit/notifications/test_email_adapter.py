@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.json_codec import loads
 from uniffy.core.types import NotificationType, generate_id
 from uniffy.domains.notifications.delivery.email import EmailAdapter
 
@@ -61,6 +62,8 @@ class TestDeliver:
         assert args[0] == "send_email"
         assert args[1] == "USER@example.com"
         assert args[2] == "notifications/instant"
+        assert isinstance(args[3], str)
+        assert loads(args[3])["user_name"] == "Alice"
         assert kwargs["organization_id"] == str(org_id)
         assert kwargs["user_id"] == str(user_id)
         assert "notification/CONTENT_MENTIONED" in kwargs["idempotency_key"]

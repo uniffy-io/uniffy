@@ -7,7 +7,6 @@ Publisher reconnects on transient failures.
 
 import asyncio
 import contextlib
-import json
 from collections.abc import AsyncGenerator
 from enum import StrEnum
 from typing import Any
@@ -16,6 +15,7 @@ from uuid import UUID
 import valkey.asyncio as aioredis
 from loguru import logger
 
+from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.observability.metrics import PUBSUB_ACTIVE_SUBSCRIBERS
 
@@ -129,7 +129,7 @@ async def publish_to_channel(channel: str, payload: dict[str, Any]) -> None:
         return
 
     try:
-        await publisher.publish(channel, json.dumps(payload))
+        await publisher.publish(channel, dumps_bytes(payload))
         logger.debug(f"published to {channel}", component=LOGGER_COMPONENT)
     except Exception:
         logger.warning(f"Failed to publish to channel {channel}", component=LOGGER_COMPONENT)
@@ -193,9 +193,9 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
             )
             if message is not None and message["type"] == "message":  # noqa: PLR2004
                 try:
-                    data = json.loads(message["data"])
+                    data = loads(message["data"])
                     yield data
-                except json.JSONDecodeError, TypeError:
+                except JSONDecodeError, TypeError:
                     logger.warning(f"Invalid message on channel {channel}")
             else:
                 yield None
@@ -235,9 +235,9 @@ async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | 
             )
             if message is not None and message["type"] == "message":  # noqa: PLR2004
                 try:
-                    data = json.loads(message["data"])
+                    data = loads(message["data"])
                     yield data
-                except json.JSONDecodeError, TypeError:
+                except JSONDecodeError, TypeError:
                     logger.warning(f"Invalid message on channels {channel_label}")
             else:
                 yield None
@@ -289,9 +289,9 @@ async def subscribe_patterns(
                 if isinstance(channel, bytes):
                     channel = channel.decode("utf-8", errors="replace")
                 try:
-                    data = json.loads(message["data"])
+                    data = loads(message["data"])
                     yield channel, data
-                except json.JSONDecodeError, TypeError:
+                except JSONDecodeError, TypeError:
                     logger.warning(f"Invalid pmessage on {channel}", component=LOGGER_COMPONENT)
             else:
                 yield None

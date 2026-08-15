@@ -17,6 +17,7 @@ from typing import Any
 
 import pytest
 
+from uniffy.core.json_codec import loads
 from uniffy.core.valkey import streams as streams_mod
 
 
@@ -65,6 +66,32 @@ async def test_stream_xread_returns_empty_when_streams_client_missing(monkeypatc
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: None)
     result = await streams_mod.stream_xread("agent:run:test")
     assert result == []
+
+
+async def test_stream_xadd_writes_json_bytes(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    class _Client:
+        async def xadd(self, key: str, fields: dict[str, bytes], **kwargs: Any) -> str:
+            captured.update({"key": key, "fields": fields, "kwargs": kwargs})
+            return "1-0"
+
+    monkeypatch.setattr(streams_mod, "_get_ops_client", lambda: _Client())
+
+    result = await streams_mod.stream_xadd("agent:run:test", {"seq": 1})
+
+    assert result == "1-0"
+    assert isinstance(captured["fields"]["data"], bytes)
+    assert loads(captured["fields"]["data"]) == {"seq": 1}
+
+
+async def test_stream_xread_accepts_json_bytes(monkeypatch) -> None:
+    client = _FakeStreamsClient(
+        result=[("agent:run:test", [("1-0", {"data": b'{"seq":1}'})])]
+    )
+    monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: client)
+
+    assert await streams_mod.stream_xread("agent:run:test") == [("1-0", {"seq": 1})]
 
 
 async def test_stream_xread_swallows_redis_timeout(monkeypatch, caplog) -> None:

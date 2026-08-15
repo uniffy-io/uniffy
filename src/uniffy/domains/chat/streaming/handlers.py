@@ -1,6 +1,5 @@
 """Unified chat event stream over a single `chat:user:{user_id}` subscription."""
 
-import json
 import time
 from collections.abc import AsyncIterator
 from contextlib import aclosing
@@ -62,6 +61,7 @@ from uniffy_proto.chat.v1.chat_stream_pb2 import (
     UserChatEventType,
 )
 
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.valkey import subscribe_channels
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.chat.streaming import events as evt
@@ -543,7 +543,7 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
     meta = payload.get("metadata")
     if isinstance(meta, dict):
         for k, v in meta.items():
-            msg.metadata[str(k)] = v if isinstance(v, str) else json.dumps(v, default=str)
+            msg.metadata[str(k)] = v if isinstance(v, str) else dumps_str(v, default=str)
 
     return msg
 

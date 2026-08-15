@@ -1,6 +1,5 @@
 """Notes RPC handlers."""
 
-import json
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -41,6 +40,7 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     ValidationError,
 )
+from uniffy.core.json_codec import loads
 from uniffy.core.models.notes.note import Note
 from uniffy.core.types import ContentRole, ContentType, NodeType, ParentSelection, SortOrder
 from uniffy.db import open_session
@@ -111,7 +111,7 @@ def _parse_canvas_content(content: str | None) -> dict | None:
     if not content:
         return None
     try:
-        parsed = json.loads(content)
+        parsed = loads(content)
     except ValueError, TypeError:
         return None
     return parsed if isinstance(parsed, dict) else None

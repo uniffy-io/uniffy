@@ -1,10 +1,9 @@
 """Proto <-> domain converters for ``audit.v1``."""
 
-import json
-
 from uniffy_proto.audit.v1.audit_pb2 import AuditEvent as ProtoAuditEvent
 
 from uniffy.core.converters.proto import datetime_to_timestamp
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditEvent
 
 
@@ -14,7 +13,7 @@ def audit_event_to_proto(event: AuditEvent) -> ProtoAuditEvent:
         id=str(event.id),
         organization_id=str(event.organization_id),
         action=event.action,
-        details_json=json.dumps(event.details or {}, separators=(",", ":")),
+        details_json=dumps_str(event.details or {}),
         created_at=datetime_to_timestamp(event.created_at),
     )
     if event.actor_user_id is not None:

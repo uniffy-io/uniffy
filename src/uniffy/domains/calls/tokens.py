@@ -6,7 +6,6 @@ JWT_SECRET_KEY). Grants ride in the `video` claim per the LiveKit token spec.
 
 import base64
 import hashlib
-import json
 import time
 import uuid
 from dataclasses import dataclass
@@ -15,6 +14,7 @@ from uuid import UUID
 
 import jwt
 
+from uniffy.core.json_codec import dumps_str, loads
 from uniffy.core.webhooks import WebhookVerificationError
 from uniffy.domains.calls.config import LiveKitConfig
 
@@ -86,7 +86,7 @@ class LiveKitTokenMinter:
             "nbf": now - CLOCK_SKEW_LEEWAY_SECONDS,
             "exp": expires_at,
             "jti": token_jti,
-            "metadata": json.dumps(metadata),
+            "metadata": dumps_str(metadata),
             "video": {
                 "room": livekit_room_name(organization_id, call_id),
                 "roomJoin": True,
@@ -142,6 +142,6 @@ class LiveKitTokenMinter:
             raise WebhookVerificationError("webhook body hash mismatch")
 
         try:
-            return json.loads(body)
+            return loads(body)
         except ValueError as exc:
             raise WebhookVerificationError("webhook body is not valid JSON") from exc

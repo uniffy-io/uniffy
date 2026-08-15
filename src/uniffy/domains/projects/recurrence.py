@@ -1,9 +1,9 @@
 """Task recurrence; reuses the calendar domain's date generation logic."""
 
-import json
 from datetime import date, timedelta
 from typing import Any
 
+from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.shared import RecurrencePattern
 from uniffy.domains.calendar.recurrence import _generate_occurrence_dates
 
@@ -12,16 +12,16 @@ def parse_recurrence_config(recurrence_rule: str | None) -> dict[str, Any] | Non
     if not recurrence_rule:
         return None
     try:
-        config = json.loads(recurrence_rule)
+        config = loads(recurrence_rule)
         if not isinstance(config, dict) or "pattern" not in config:  # noqa: PLR2004
             return None
         return config
-    except json.JSONDecodeError, TypeError:
+    except JSONDecodeError, TypeError:
         return None
 
 
 def serialize_recurrence_config(config: dict[str, Any]) -> str:
-    return json.dumps(config, separators=(",", ":"))
+    return dumps_str(config)
 
 
 def compute_next_occurrence(due_date: str, config: dict[str, Any]) -> str | None:

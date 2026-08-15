@@ -21,7 +21,6 @@ events land.
 from __future__ import annotations
 
 import asyncio
-import json
 import os
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Protocol
@@ -30,6 +29,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThreadStats
@@ -647,7 +647,7 @@ def _truncate_json(payload: dict | None, limit: int = 200) -> str:
         return ""
     try:
         return _truncate(
-            json.dumps(payload, default=str, separators=(",", ":")),
+            dumps_str(payload, default=str),
             limit,
         )
     except TypeError, ValueError:

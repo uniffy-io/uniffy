@@ -1,4 +1,3 @@
-import json
 import logging
 import sys
 import traceback
@@ -7,6 +6,8 @@ from typing import TYPE_CHECKING, cast
 
 from colorama import just_fix_windows_console
 from loguru import logger
+
+from uniffy.core.json_codec import dumps_str
 
 try:
     from loguru._recattrs import RecordException
@@ -268,7 +269,7 @@ def serialize(record):
         }
         subset["exc"] = exception
 
-    return json.dumps(subset, default=str, ensure_ascii=False)
+    return dumps_str(subset, default=str)
 
 
 def sink(message):

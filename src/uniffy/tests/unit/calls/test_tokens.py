@@ -2,12 +2,12 @@
 
 import base64
 import hashlib
-import json
 import time
 
 import jwt
 import pytest
 
+from uniffy.core.json_codec import dumps_bytes, loads
 from uniffy.core.types import generate_id
 from uniffy.core.webhooks import WebhookVerificationError
 from uniffy.domains.calls.config import LiveKitConfig
@@ -73,7 +73,7 @@ def test_user_token_grants(minter):
     assert claims["video"]["roomJoin"] is True
     assert claims["video"]["canPublish"] is True
     assert "microphone" in claims["video"]["canPublishSources"]
-    metadata = json.loads(claims["metadata"])
+    metadata = loads(claims["metadata"])
     assert metadata["user_id"] == str(user_id)
     assert metadata["jti"] == minted.jti
     assert claims["exp"] - time.time() == pytest.approx(USER_TOKEN_TTL_SECONDS, abs=30)
@@ -113,7 +113,7 @@ def _webhook_auth(
 
 
 def test_webhook_verify_accepts_valid(minter):
-    body = json.dumps({"event": "participant_left", "room": {"name": "r"}}).encode()
+    body = dumps_bytes({"event": "participant_left", "room": {"name": "r"}})
     event = minter.verify_webhook(body, f"Bearer {_webhook_auth(body)}")
     assert event["event"] == "participant_left"
 

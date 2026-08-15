@@ -4,7 +4,6 @@ content stays unreachable here (no PermissionChecker bypass).
 
 from __future__ import annotations
 
-import json
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Any, NamedTuple
@@ -18,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import email_hash, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.mail.config import MAIL_FROM_ADDRESS_KEY, MAIL_NAMESPACE, MailConfig
 from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
@@ -1457,7 +1457,7 @@ class PlatformDirectoryOperations:
                 JobName.SEND_EMAIL,
                 email,
                 "platform/org_deleted",
-                json.dumps(context),
+                dumps_str(context),
                 organization_id=str(org.id),
                 idempotency_key=idempotency_key,
                 user_id=str(owner_id),

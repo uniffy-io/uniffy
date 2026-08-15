@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,6 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.json_codec import dumps_bytes, dumps_str
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.login.user import User
 from uniffy.domains.audit.operations import (
@@ -135,7 +135,7 @@ class ExportOperations:
         pending = bytearray()
         async for row, emails in self._stream_rows(filters):
             payload = _format_ndjson_row(row, emails)
-            pending.extend(payload.encode("utf-8"))
+            pending.extend(payload)
             pending.append(0x0A)
             if len(pending) >= CHUNK_FLUSH_BYTES:
                 yield bytes(pending)
@@ -223,33 +223,30 @@ def _format_csv_row(
         str(event.resource_id) if event.resource_id else "",
         str(event.ip_address) if event.ip_address else "",
         event.user_agent or "",
-        json.dumps(event.details or {}, separators=(",", ":")),
+        dumps_str(event.details or {}),
     )
 
 
 def _format_ndjson_row(
     event: AuditEvent,
     emails: dict[UUID, str],
-) -> str:
-    return json.dumps(
-        {
-            "timestamp_utc": event.created_at.isoformat() if event.created_at else None,
-            "organization_id": str(event.organization_id) if event.organization_id else None,
-            "actor_user_id": str(event.actor_user_id) if event.actor_user_id else None,
-            "actor_email": emails.get(event.actor_user_id) if event.actor_user_id else None,
-            "actor_org_role": event.actor_org_role,
-            "on_behalf_of_user_id": str(event.on_behalf_of_user_id)
-            if event.on_behalf_of_user_id
-            else None,
-            "on_behalf_of_email": emails.get(event.on_behalf_of_user_id)
-            if event.on_behalf_of_user_id
-            else None,
-            "action": event.action,
-            "resource_type": event.resource_type,
-            "resource_id": str(event.resource_id) if event.resource_id else None,
-            "ip_address": str(event.ip_address) if event.ip_address else None,
-            "user_agent": event.user_agent,
-            "details": event.details or {},
-        },
-        separators=(",", ":"),
-    )
+) -> bytes:
+    return dumps_bytes({
+        "timestamp_utc": event.created_at.isoformat() if event.created_at else None,
+        "organization_id": str(event.organization_id) if event.organization_id else None,
+        "actor_user_id": str(event.actor_user_id) if event.actor_user_id else None,
+        "actor_email": emails.get(event.actor_user_id) if event.actor_user_id else None,
+        "actor_org_role": event.actor_org_role,
+        "on_behalf_of_user_id": str(event.on_behalf_of_user_id)
+        if event.on_behalf_of_user_id
+        else None,
+        "on_behalf_of_email": emails.get(event.on_behalf_of_user_id)
+        if event.on_behalf_of_user_id
+        else None,
+        "action": event.action,
+        "resource_type": event.resource_type,
+        "resource_id": str(event.resource_id) if event.resource_id else None,
+        "ip_address": str(event.ip_address) if event.ip_address else None,
+        "user_agent": event.user_agent,
+        "details": event.details or {},
+    })

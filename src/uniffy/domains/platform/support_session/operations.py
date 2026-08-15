@@ -4,7 +4,6 @@ an actual org OWNER/ADMIN (sysadmin does not bypass).
 
 from __future__ import annotations
 
-import json
 import os
 from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
@@ -24,6 +23,7 @@ from uniffy.core.errors import (
 )
 from uniffy.core.events.bus import emit_notification
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
@@ -1036,7 +1036,7 @@ class SupportSessionOperations:
                     JobName.SEND_EMAIL,
                     email,
                     template,
-                    json.dumps(context),
+                    dumps_str(context),
                     organization_id=str(row.organization_id),
                     idempotency_key=idempotency_key,
                     user_id=str(user_id),

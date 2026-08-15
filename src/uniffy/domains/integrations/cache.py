@@ -4,7 +4,6 @@ The metadata entry holds non-secret routing fields only; decrypted
 credentials live exclusively in the in-process client LRU.
 """
 
-import json
 from typing import Any
 from uuid import UUID
 
@@ -12,6 +11,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.json_codec import dumps_bytes
 from uniffy.core.models.integrations.connection import IntegrationConnection
 from uniffy.core.valkey.cache import CACHE_MISS, cache_delete, cache_get, cache_set
 from uniffy.core.valkey.ops import _get_ops_client
@@ -79,7 +79,7 @@ async def publish_connection_invalidation(connection_id: UUID) -> None:
     try:
         await client.publish(
             connection_invalidate_channel(connection_id),
-            json.dumps({"connection_id": str(connection_id)}),
+            dumps_bytes({"connection_id": str(connection_id)}),
         )
     except Exception:
         logger.warning(f"Integration connection invalidate publish failed for {connection_id}")

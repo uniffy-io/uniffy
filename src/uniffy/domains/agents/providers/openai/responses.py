@@ -11,7 +11,6 @@ that map 1:1 onto the unified stream protocol. State is self-hosted
 on tool-loop continuations, mirroring the Anthropic signature re-feed.
 """
 
-import json
 from collections.abc import AsyncIterator, Callable
 from copy import deepcopy
 from decimal import Decimal
@@ -20,6 +19,7 @@ from uuid import uuid4
 
 from loguru import logger
 
+from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.domains.agents.providers.base import (
     CanonicalContentBlockType,
@@ -148,7 +148,7 @@ def _assistant_blocks_to_items(blocks: list[dict]) -> list[dict]:
                 "type": "function_call",
                 "call_id": block["id"],
                 "name": block["name"],
-                "arguments": json.dumps(block.get("input", {})),
+                "arguments": dumps_str(block.get("input", {})),
             })
     text = "\n".join(p for p in text_parts if p)
     if text:
@@ -264,8 +264,8 @@ def _result_from_response(
                     content_parts.append(part.refusal)
         elif itype == "function_call":  # noqa: PLR2004
             try:
-                args = json.loads(item.arguments)
-            except json.JSONDecodeError, TypeError:
+                args = loads(item.arguments)
+            except JSONDecodeError, TypeError:
                 args = {}
             tool_calls.append(ToolCall(id=item.call_id, name=item.name, input=args))
         elif itype == "reasoning":  # noqa: PLR2004
@@ -415,8 +415,8 @@ async def stream_completion(
                     yield StreamEvent(type=EventType.TEXT_BLOCK_END, block_id=block_id)
                 elif item.type == "function_call":  # noqa: PLR2004
                     try:
-                        args = json.loads(item.arguments)
-                    except json.JSONDecodeError, TypeError:
+                        args = loads(item.arguments)
+                    except JSONDecodeError, TypeError:
                         args = {}
                     yield StreamEvent(
                         type=EventType.TOOL_CALL_END,

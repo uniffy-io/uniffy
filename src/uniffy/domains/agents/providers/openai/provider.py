@@ -1,7 +1,6 @@
 """OpenAI LLM provider implementation using the official SDK."""
 
 import base64
-import json
 from collections.abc import AsyncIterator
 from decimal import Decimal
 from typing import Any
@@ -10,6 +9,7 @@ from uuid import uuid4
 import openai
 from loguru import logger
 
+from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.domains.agents.providers.base import (
     VISIBLE_REFUSAL_MESSAGE,
     CompletionResult,
@@ -290,8 +290,8 @@ class OpenAIProvider(LLMProvider):
         if message.tool_calls:
             for tc in message.tool_calls:
                 try:
-                    args = json.loads(tc.function.arguments)
-                except json.JSONDecodeError, TypeError:
+                    args = loads(tc.function.arguments)
+                except JSONDecodeError, TypeError:
                     args = {}
                 tool_calls.append(
                     ToolCall(
@@ -446,8 +446,8 @@ class OpenAIProvider(LLMProvider):
 
             for idx, pending in sorted(pending_tool_calls.items()):
                 try:
-                    args = json.loads(pending["arguments"])
-                except json.JSONDecodeError, TypeError:
+                    args = loads(pending["arguments"])
+                except JSONDecodeError, TypeError:
                     args = {}
                 tc = ToolCall(
                     id=pending["id"],

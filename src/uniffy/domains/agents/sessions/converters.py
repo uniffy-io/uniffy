@@ -1,7 +1,5 @@
 """Proto <-> domain converters for sessions and messages."""
 
-import json
-
 from uniffy_proto.agents.v1.sessions_pb2 import (
     MESSAGE_ROLE_ASSISTANT,
     MESSAGE_ROLE_SUMMARY,
@@ -21,6 +19,7 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
 )
 
 from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.agents.session import AgentSession
@@ -173,7 +172,7 @@ def message_to_proto(message: AgentMessage, *, feedback_rating: str = "") -> Mes
     info = MessageInfo(
         id=str(message.id),
         session_id=str(message.session_id),
-        thinking_json=json.dumps(message.thinking) if message.thinking else "",
+        thinking_json=dumps_str(message.thinking) if message.thinking else "",
         role=message_role_to_proto(message.role),
         input_tokens=message.input_tokens,
         output_tokens=message.output_tokens,
@@ -197,7 +196,7 @@ def message_to_proto(message: AgentMessage, *, feedback_rating: str = "") -> Mes
         info.tool_call_id = message.tool_call_id
 
     if message.tool_args is not None:
-        info.tool_args_json = json.dumps(message.tool_args)
+        info.tool_args_json = dumps_str(message.tool_args)
 
     if message.tool_result is not None:
         info.tool_result = message.tool_result

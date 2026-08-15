@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 from uuid import UUID
 
 import valkey.asyncio as aioredis
@@ -18,6 +17,7 @@ from valkey.exceptions import ConnectionError as ValkeyConnectionError
 from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
 from uniffy.core.crypto.cache import get_deployment_dek_cache, get_org_dek_lru
+from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.core.valkey.pubsub import publish_to_channel
 
@@ -146,8 +146,8 @@ async def _handle_invalidate_message(raw: object) -> None:
     if raw is None:
         return
     try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError, TypeError:
+        payload = loads(raw)
+    except JSONDecodeError, TypeError:
         logger.warning(f"Org DEK invalidate message decode failed: {raw!r}")
         return
     raw_id = payload.get("organization_id") if isinstance(payload, dict) else None

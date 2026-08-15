@@ -4,9 +4,9 @@ Converts between the Anthropic/internal message format used by the
 runtime and the OpenAI Chat Completions API format.
 """
 
-import json
 from typing import Any
 
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.domains.agents.providers.base import CanonicalContentBlockType
 
@@ -178,7 +178,7 @@ def _convert_assistant_blocks(content_blocks: list[dict]) -> dict:
                 "type": "function",
                 "function": {
                     "name": block["name"],
-                    "arguments": json.dumps(block.get("input", {})),
+                    "arguments": dumps_str(block.get("input", {})),
                 },
             })
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import json
 from uuid import UUID
 
 from sqlalchemy import select
@@ -11,6 +10,7 @@ from sqlalchemy import select
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.json_codec import OPTION_INDENT_2, dumps_str
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
 from uniffy.core.types import ContentType
@@ -370,7 +370,7 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
             f"Content truncated: showing {_MAX_NOTE_CONTENT_CHARS:,} of {original_len:,} characters"
         )
 
-    return ToolResult(success=True, data=json.dumps(result_dict, indent=2))
+    return ToolResult(success=True, data=dumps_str(result_dict, option=OPTION_INDENT_2))
 
 
 async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:

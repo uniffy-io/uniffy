@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import os
 import time
 from collections import OrderedDict
@@ -28,6 +27,7 @@ from loguru import logger
 from valkey.exceptions import ConnectionError as ValkeyConnectionError
 from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
+from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.observability.metrics import (
     LLM_PROVIDER_LRU_HIT_TOTAL,
@@ -223,8 +223,8 @@ async def _handle_invalidate_message(raw: object) -> None:
     if raw is None:
         return
     try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError, TypeError:
+        payload = loads(raw)
+    except JSONDecodeError, TypeError:
         logger.warning(f"Provider invalidate message decode failed: {raw!r}")
         return
     raw_id = payload.get("key_id") if isinstance(payload, dict) else None

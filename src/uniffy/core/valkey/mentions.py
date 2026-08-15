@@ -2,12 +2,12 @@
 under the ops deadline guard.
 """
 
-import json
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.json_codec import dumps_bytes
 from uniffy.core.valkey.ops import ops_call
 
 LOGGER_COMPONENT = "mentions"
@@ -43,7 +43,7 @@ async def publish_mention_state(
 
     try:
         async with ops_call(_NAMESPACE, "mentions_publish"):
-            message = json.dumps(payload)
+            message = dumps_bytes(payload)
             await redis.publish(channel, message)
         logger.debug(f"published mention state change for {urn}", component=LOGGER_COMPONENT)
     except TimeoutError:

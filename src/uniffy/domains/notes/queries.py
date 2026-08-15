@@ -8,6 +8,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.references import CanvasNodeType
+from uniffy.core.json_codec import loads
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
 from uniffy.core.types import slugify  # noqa: F401 - re-exported, used via queries.slugify
@@ -37,10 +38,8 @@ def extract_inline_tags_from_canvas(canvas_data: dict | str) -> list[str]:
         return []
 
     if isinstance(canvas_data, str):
-        import json as _json
-
         try:
-            data = _json.loads(canvas_data)
+            data = loads(canvas_data)
         except ValueError, TypeError:
             return []
     else:

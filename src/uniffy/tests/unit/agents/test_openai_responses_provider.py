@@ -389,6 +389,8 @@ class TestResponsesRequest:
         assert items[2]["content"] == [{"type": "output_text", "text": "Working on it"}]
         assert items[3]["type"] == "function_call"
         assert items[3]["call_id"] == "call_1"
+        assert items[3]["arguments"] == '{"q":1}'
+        assert isinstance(items[3]["arguments"], str)
         assert items[4] == {
             "type": "function_call_output",
             "call_id": "call_1",

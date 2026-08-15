@@ -5,9 +5,9 @@ to the right channel with a JSON-serialisable payload, and that an
 unknown event type is rejected without touching Valkey.
 """
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from uniffy.core.json_codec import loads
 from uniffy.core.types import generate_id
 from uniffy.core.valkey import tags as tags_pubsub
 
@@ -30,7 +30,7 @@ async def test_publish_emits_to_org_channel() -> None:
     fake_client.publish.assert_awaited_once()
     channel, payload = fake_client.publish.await_args.args
     assert channel == f"tags:{org_id}"
-    decoded = json.loads(payload)
+    decoded = loads(payload)
     assert decoded["_type"] == tags_pubsub.EVENT_TAG_CREATED
     assert "tag" in decoded["payload"]
 

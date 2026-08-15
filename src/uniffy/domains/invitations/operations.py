@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import secrets
 from dataclasses import dataclass
@@ -24,6 +23,7 @@ from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.domain_admin import get_user_domain_admins
 from uniffy.core.errors import NotFoundError
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.organization import Organization
@@ -669,7 +669,7 @@ class InvitationOperations:
             job_name,
             recipient,
             template,
-            json.dumps(context),
+            dumps_str(context),
             organization_id=str(org_id),
             idempotency_key=idempotency_key,
             user_id=str(user_id) if user_id else None,

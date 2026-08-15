@@ -6,12 +6,12 @@ suppression and "not configured" are terminal.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.mail import (
     MailNotConfiguredError,
     MailProviderError,
@@ -46,8 +46,8 @@ async def send_email(
 ) -> dict[str, Any]:
     """Render `template_name` with `context_json` and send via `MailSender`."""
     try:
-        context = json.loads(context_json)
-    except json.JSONDecodeError:
+        context = loads(context_json)
+    except JSONDecodeError:
         logger.error("send_email: context_json is not valid JSON", component="mail")
         return {"status": "failed", "reason": "invalid_context_json"}
 

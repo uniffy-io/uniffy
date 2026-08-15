@@ -4,7 +4,6 @@ a fiddled request cannot widen scope.
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from typing import NamedTuple
 from uuid import UUID
@@ -12,6 +11,7 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
@@ -171,7 +171,7 @@ class PlatformAuditOperations:
                 actor_org_role=e.actor_org_role,
                 resource_type=e.resource_type,
                 resource_id=e.resource_id,
-                details_json=json.dumps(e.details or {}, default=str),
+                details_json=dumps_str(e.details or {}, default=str),
             )
             for e in events
         ]

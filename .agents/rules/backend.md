@@ -45,6 +45,16 @@ Adding a new domain:
 - **Internal and domain vocabularies use enums or typed constants colocated with their owner.** States, actions, event kinds, selectors, and job or queue names must not be passed or compared as raw strings.
 - **Raw string comparisons are boundary-only:** external protocol values, parser tokens, MIME/schema metadata, and CLI or environment inputs. Mark an intentional comparison with a narrow `# noqa: PLR2004` and a short reason; never suppress the whole file.
 
+## JSON serialization
+
+Backend JSON goes through `uniffy.core.json_codec`; never import the stdlib `json` module in active backend code. Ruff enforces this with `TID251` (historical migrations and vendored code remain excluded).
+
+- `dumps_bytes(...)` for Valkey, files, HTTP bodies, and any other byte-capable transport.
+- `dumps_str(...)` only where the contract requires text: protobuf string fields/maps, OpenAI tool arguments, ARQ string arguments, and SQLAlchemy's JSON serializer.
+- `loads(...)` accepts `str`, `bytes`, `bytearray`, and `memoryview`; catch the codec's `JSONDecodeError` alias when malformed input is expected.
+- Preserve a boundary's existing shape with the codec's `default` and `option` parameters. `OPTION_INDENT_2` is the shared pretty-print option; compact output is the default.
+- Do not import `orjson` directly outside `core/json_codec.py`. The wrapper is the compatibility boundary and keeps byte-versus-string choices explicit at call sites.
+
 ## Migrations
 
 Prefer module-level enum variables over inline definitions inside `sa.Column()` - inline forms drift between migrations:

@@ -6,7 +6,6 @@ agent-chat bridge guards, runtime writers + approvals, and chat-channel
 agent context handlers + summariser.
 """
 
-import json
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -22,6 +21,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.json_codec import loads
 from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import SenderType
@@ -907,7 +907,7 @@ class TestChannelAgentConfigHandlers:
             GetChannelAgentConfigRequest(**self._request_ids()), MagicMock()
         )
         assert response.config.model_override == "claude-sonnet-5"
-        assert json.loads(response.config.model_params_override) == {"reasoning_effort": "max"}
+        assert loads(response.config.model_params_override) == {"reasoning_effort": "max"}
         assert len(fake_ops.get_calls) == 1
 
     async def test_get_config_empty_binding_serialises_empty_strings(self, monkeypatch) -> None:

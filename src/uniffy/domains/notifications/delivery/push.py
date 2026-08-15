@@ -1,6 +1,5 @@
 """Web Push (VAPID) delivery adapter."""
 
-import json
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -11,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.config.push import get_vapid_config
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.domains.notifications.converters import notification_type_to_proto
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter, NotificationChannel
@@ -57,7 +57,7 @@ class PushAdapter(DeliveryAdapter):
 
         # The worker resolves the click target from these; it cannot map a URN to a
         # route on its own, and the route table is frontend-owned.
-        payload = json.dumps({
+        payload = dumps_str({
             "title": event.title,
             "body": event.body or "",
             "source_urn": event.source_urn or "",
