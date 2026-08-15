@@ -1,0 +1,155 @@
+from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID
+
+import pytest
+
+from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.models.chat.channel import ChannelType, ChatChannel
+from uniffy.core.models.chat.channel_member import ChatChannelMember
+from uniffy.core.types import SubjectType, generate_id
+from uniffy.domains.chat import access as access_module
+from uniffy.domains.chat.access import ChatAccessChecker
+from uniffy.domains.chat.channels.operations import ChatChannelOperations
+from uniffy.domains.chat.streaming import publisher as streaming_publisher
+from uniffy.domains.chat.subjects import ChatSubject
+
+
+def _channel(channel_type: ChannelType = ChannelType.PRIVATE) -> ChatChannel:
+    return ChatChannel(
+        organization_id=generate_id(),
+        owner_id=generate_id(),
+        name="security",
+        slug="security",
+        channel_type=channel_type,
+    )
+
+
+def _stale_member(channel: ChatChannel, user_id) -> ChatChannelMember:
+    return ChatChannelMember(
+        channel_id=channel.id,
+        subject_type=SubjectType.USER,
+        subject_id=user_id,
+        user_id=user_id,
+    )
+
+
+async def test_inactive_org_member_is_denied_despite_private_channel_row(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user_id = generate_id()
+    channel = _channel()
+    checker = ChatAccessChecker(MagicMock())
+    checker.get_membership = AsyncMock(return_value=_stale_member(channel, user_id))
+    monkeypatch.setattr(
+        access_module,
+        "is_active_member",
+        AsyncMock(return_value=False),
+    )
+
+    with pytest.raises(PermissionDeniedError):
+        await checker.check_access(user_id, channel.organization_id, channel)
+    with pytest.raises(PermissionDeniedError):
+        await checker.require_send(user_id, channel)
+    with pytest.raises(PermissionDeniedError):
+        await checker.require_elevated(user_id, channel.organization_id, channel.id)
+
+    checker.get_membership.assert_not_awaited()
+
+
+async def test_inactive_org_member_is_denied_from_public_channel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user_id = generate_id()
+    channel = _channel(ChannelType.PUBLIC)
+    checker = ChatAccessChecker(MagicMock())
+    monkeypatch.setattr(
+        access_module,
+        "is_active_member",
+        AsyncMock(return_value=False),
+    )
+
+    with pytest.raises(PermissionDeniedError):
+        await checker.check_access(user_id, channel.organization_id, channel)
+
+
+def _denied_operations() -> tuple[ChatChannelOperations, tuple[UUID, UUID]]:
+    user_id = generate_id()
+    organization_id = generate_id()
+    access = MagicMock()
+    access.require_org_member = AsyncMock(
+        side_effect=PermissionDeniedError("access", "organization")
+    )
+    operations = ChatChannelOperations.__new__(ChatChannelOperations)
+    operations.session = MagicMock()
+    operations.session.execute = AsyncMock()
+    operations.access = access
+    return operations, (user_id, organization_id)
+
+
+async def test_non_member_cannot_create_channel() -> None:
+    operations, (user_id, organization_id) = _denied_operations()
+
+    with pytest.raises(PermissionDeniedError):
+        await operations.create_channel(
+            user_id,
+            organization_id,
+            "blocked",
+            ChannelType.PRIVATE,
+        )
+
+    operations.session.execute.assert_not_awaited()
+
+
+async def test_non_member_cannot_create_user_dm() -> None:
+    operations, (user_id, organization_id) = _denied_operations()
+
+    with pytest.raises(PermissionDeniedError):
+        await operations.create_dm(user_id, organization_id, [generate_id()])
+
+    operations.session.execute.assert_not_awaited()
+
+
+async def test_non_member_cannot_create_subject_dm() -> None:
+    operations, (user_id, organization_id) = _denied_operations()
+
+    with pytest.raises(PermissionDeniedError):
+        await operations.create_dm_with_subjects(
+            user_id,
+            organization_id,
+            [ChatSubject.user(generate_id())],
+        )
+
+    operations.session.execute.assert_not_awaited()
+
+
+async def test_non_member_cannot_create_agent_chat() -> None:
+    operations, (user_id, organization_id) = _denied_operations()
+
+    with pytest.raises(PermissionDeniedError):
+        await operations.create_agent_chat(
+            user_id,
+            organization_id,
+            generate_id(),
+        )
+
+    operations.session.execute.assert_not_awaited()
+
+
+async def test_member_removal_event_reaches_removed_user(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    remaining_user_id = generate_id()
+    removed_user_id = generate_id()
+    channel_id = generate_id()
+    operations = ChatChannelOperations.__new__(ChatChannelOperations)
+    operations._get_all_member_ids = AsyncMock(return_value=[remaining_user_id])
+    publish = AsyncMock()
+    monkeypatch.setattr(streaming_publisher, "publish_channel_event_to_members", publish)
+
+    await operations._publish_members_changed(
+        channel_id,
+        [removed_user_id],
+        added=False,
+    )
+
+    assert publish.await_args.args[0] == [remaining_user_id, removed_user_id]

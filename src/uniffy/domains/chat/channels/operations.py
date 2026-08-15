@@ -25,8 +25,11 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     ValidationError,
 )
+from uniffy.core.events.bus import emit_notification
+from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calls import CallEndReason
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_category import ChatChannelCategory
@@ -34,9 +37,17 @@ from uniffy.core.models.chat.channel_member import (
     ChannelRole,
     ChatChannelMember,
 )
+from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.types import AccessMode, ContentType, SubjectType, generate_id, slugify
+from uniffy.core.types import (
+    AccessMode,
+    ContentType,
+    NotificationType,
+    SubjectType,
+    generate_id,
+    slugify,
+)
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calls.operations import (
     end_active_call_for_channel,
@@ -48,6 +59,15 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_channel,
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
+)
+from uniffy.domains.chat.rate_limits import (
+    CHANNEL_CREATE,
+    MEMBER_ADD,
+    check_chat_mutation_limit,
+)
+from uniffy.domains.chat.search_acl import (
+    enqueue_chat_search_acl_refresh,
+    record_chat_search_acl_refresh,
 )
 from uniffy.domains.chat.sender_resolver import SenderResolver
 from uniffy.domains.chat.subjects import ChatSubject
@@ -215,18 +235,14 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             shared_user_ids = member_ids if member_ids else None
 
         stats_result = await self.session.execute(
-            select(ChatChannelStats.member_count).where(
-                ChatChannelStats.channel_id == model.id
-            )
+            select(ChatChannelStats.member_count).where(ChatChannelStats.channel_id == model.id)
         )
         member_count = stats_result.scalar_one_or_none() or 0
 
         category_name = ""
         if model.category_id:
             cat_result = await self.session.execute(
-                select(ChatChannelCategory.name).where(
-                    ChatChannelCategory.id == model.category_id
-                )
+                select(ChatChannelCategory.name).where(ChatChannelCategory.id == model.category_id)
             )
             category_name = cat_result.scalar_one_or_none() or ""
 
@@ -324,6 +340,23 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         tag_ids: list[UUID] | None = None,
     ) -> ChatChannel:
         """Create a channel with stats row and initial membership."""
+        await self.access.require_org_member(user_id, organization_id)
+        initial_member_ids = list(dict.fromkeys(member_ids or []))
+        await self._require_active_user_subjects(organization_id, initial_member_ids)
+        if category_id is not None:
+            category = await self.session.execute(
+                select(ChatChannelCategory.id).where(
+                    ChatChannelCategory.id == category_id,
+                    ChatChannelCategory.organization_id == organization_id,
+                )
+            )
+            if category.scalar_one_or_none() is None:
+                raise NotFoundError("category", category_id)
+        await check_chat_mutation_limit(
+            CHANNEL_CREATE,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
         slug = slugify(name)
 
         existing = await self.session.execute(
@@ -362,9 +395,9 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         )
         self.session.add(creator_member)
 
-        if member_ids:
+        if initial_member_ids:
             count = 1
-            for mid in member_ids:
+            for mid in initial_member_ids:
                 if mid != user_id:
                     m = ChatChannelMember(
                         channel_id=channel.id,
@@ -382,7 +415,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.CHAT_CHANNEL_CREATED,
-            resource_type=ContentType.CHAT.value,
+            resource_type=AuditResourceType.CHAT,
             resource_id=channel.id,
             details={
                 "name": channel.name,
@@ -406,6 +439,12 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             logger.warning(f"Failed to index channel {channel.id}")
 
         await self._publish_channel_created(channel.id)
+        await self._notify_membership_changed(
+            channel,
+            actor_user_id=user_id,
+            target_user_ids=[mid for mid in initial_member_ids if mid != user_id],
+            added=True,
+        )
 
         return channel
 
@@ -416,6 +455,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         target_user_ids: list[UUID],
     ) -> ChatChannel:
         """Create or find existing DM (1:1) / GROUP_DM (3+)."""
+        await self.access.require_org_member(user_id, organization_id)
+        await self._require_active_user_subjects(organization_id, target_user_ids)
         all_user_ids = sorted(set([user_id] + target_user_ids))
 
         if len(all_user_ids) < 2:
@@ -457,6 +498,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         limit: int = DEFAULT_PAGE_SIZE,
         tag_ids: list[UUID] | None = None,
     ) -> tuple[list[tuple[ChatChannel, ChatChannelStats, ChannelRole, UUID | None]], str | None]:
+        await self.access.require_org_member(user_id, organization_id)
         # Keyset by (coalesce(last_root_message_at, epoch) DESC, channel_id ASC).
         epoch_ts = datetime(1, 1, 1, tzinfo=UTC)
         sort_ts = func.coalesce(ChatChannelStats.last_root_message_at, epoch_ts)
@@ -486,9 +528,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         )
 
         if tag_ids:
-            base_query = base_query.where(
-                ChatChannel.id.in_(self._tag_filter_subquery(tag_ids))
-            )
+            base_query = base_query.where(ChatChannel.id.in_(self._tag_filter_subquery(tag_ids)))
 
         if cursor:
             payload = _decode_cursor(cursor)
@@ -512,9 +552,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             rows = rows[:page_size]
             last_channel, last_stats, _, _ = rows[-1]
             last_ts = last_stats.last_root_message_at or epoch_ts
-            next_cursor = _encode_cursor(
-                {"sort_ts": last_ts.isoformat(), "channel_id": str(last_channel.id)}
-            )
+            next_cursor = _encode_cursor({
+                "sort_ts": last_ts.isoformat(),
+                "channel_id": str(last_channel.id),
+            })
         return rows, next_cursor
 
     async def list_user_channel_ids(
@@ -525,6 +566,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         """ID-only fan-out fetch for unread aggregation; same visibility
         filter as list_user_channels.
         """
+        await self.access.require_org_member(user_id, organization_id)
         result = await self.session.execute(
             select(ChatChannel.id)
             .join(
@@ -542,12 +584,14 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
     async def list_public_channels(
         self,
+        user_id: UUID,
         organization_id: UUID,
         *,
         cursor: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
         tag_ids: list[UUID] | None = None,
     ) -> tuple[list[tuple[ChatChannel, ChatChannelStats]], str | None]:
+        await self.access.require_org_member(user_id, organization_id)
         # Keyset by (member_count DESC, channel_id ASC).
         base_query = (
             select(ChatChannel, ChatChannelStats)
@@ -564,9 +608,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         )
 
         if tag_ids:
-            base_query = base_query.where(
-                ChatChannel.id.in_(self._tag_filter_subquery(tag_ids))
-            )
+            base_query = base_query.where(ChatChannel.id.in_(self._tag_filter_subquery(tag_ids)))
 
         if cursor:
             payload = _decode_cursor(cursor)
@@ -592,12 +634,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if len(rows) > page_size:
             rows = rows[:page_size]
             last_channel, last_stats = rows[-1]
-            next_cursor = _encode_cursor(
-                {
-                    "member_count": last_stats.member_count,
-                    "channel_id": str(last_channel.id),
-                }
-            )
+            next_cursor = _encode_cursor({
+                "member_count": last_stats.member_count,
+                "channel_id": str(last_channel.id),
+            })
         return rows, next_cursor
 
     async def update(
@@ -644,7 +684,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.CHAT_CHANNEL_UPDATED,
-                resource_type=ContentType.CHAT.value,
+                resource_type=AuditResourceType.CHAT,
                 resource_id=channel.id,
                 details={"changed_keys": changed_keys},
             )
@@ -715,7 +755,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.CHAT_CHANNEL_UPDATED,
-            resource_type=ContentType.CHAT.value,
+            resource_type=AuditResourceType.CHAT,
             resource_id=channel.id,
             details={"converted_from": "GROUP_DM", "name": clean, "channel_type": target_type.value},
         )
@@ -786,7 +826,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.CHAT_CHANNEL_ARCHIVED,
-            resource_type=ContentType.CHAT.value,
+            resource_type=AuditResourceType.CHAT,
             resource_id=channel.id,
             details={"name": channel.name},
         )
@@ -795,9 +835,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         await invalidate_cached_channel(channel.id)
 
-        await end_active_call_for_channel(
-            self.session, channel.id, CallEndReason.CHANNEL_ARCHIVED
-        )
+        await end_active_call_for_channel(self.session, channel.id, CallEndReason.CHANNEL_ARCHIVED)
 
         await self._broadcast_channel_removed(channel)
 
@@ -824,7 +862,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.CHAT_CHANNEL_DELETED,
-            resource_type=ContentType.CHAT.value,
+            resource_type=AuditResourceType.CHAT,
             resource_id=channel.id,
             details={
                 "name": channel.name,
@@ -838,9 +876,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await invalidate_cached_member_ids(channel.id)
         await invalidate_cached_dm_peers(channel.id)
 
-        await end_active_call_for_channel(
-            self.session, channel.id, CallEndReason.CHANNEL_ARCHIVED
-        )
+        await end_active_call_for_channel(self.session, channel.id, CallEndReason.CHANNEL_ARCHIVED)
 
         await self._broadcast_channel_removed(channel)
 
@@ -892,6 +928,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
     ) -> ChatChannel:
         """Self-join a PUBLIC channel."""
+        await self.access.require_org_member(user_id, organization_id)
         channel = await self._fetch_by_id(channel_id, organization_id)
         if not channel:
             raise NotFoundError("channel", channel_id)
@@ -970,6 +1007,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
     ) -> None:
         """Leave a channel."""
+        await self.access.require_org_member(user_id, organization_id)
         channel = await self._fetch_by_id(channel_id, organization_id)
         if not channel:
             raise NotFoundError("channel", channel_id)
@@ -995,9 +1033,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
             owner_count, user_member_count = counts.one()
             if owner_count <= 1 and user_member_count > 1:
-                raise ValidationError(
-                    "channel", "Promote another member to owner before leaving"
-                )
+                raise ValidationError("channel", "Promote another member to owner before leaving")
 
         # send_message requires membership, so the departure notice posts
         # while the row still exists.
@@ -1006,7 +1042,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             organization_id,
             channel,
             [ChatSubject(SubjectType.USER, user_id)],
-            action="removed",
+            added=False,
         )
 
         await self.session.execute(
@@ -1051,6 +1087,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if not member_user_ids:
             return []
 
+        await self._require_active_user_subjects(organization_id, member_user_ids)
+        await check_chat_mutation_limit(
+            MEMBER_ADD,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+
         rows = [
             {
                 "channel_id": channel_id,
@@ -1065,9 +1108,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         stmt = (
             pg_insert(ChatChannelMember)
             .values(rows)
-            .on_conflict_do_nothing(
-                index_elements=["channel_id", "subject_type", "subject_id"]
-            )
+            .on_conflict_do_nothing(index_elements=["channel_id", "subject_type", "subject_id"])
             .returning(ChatChannelMember)
         )
         result = await self.session.execute(stmt)
@@ -1087,7 +1128,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                         organization_id=organization_id,
                         actor_user_id=user_id,
                         action=Action.CHAT_CHANNEL_MEMBER_ADDED,
-                        resource_type=ContentType.CHAT.value,
+                        resource_type=AuditResourceType.CHAT,
                         resource_id=channel_id,
                         details={
                             "target_user_id": str(member.user_id),
@@ -1095,19 +1136,33 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                         },
                     )
 
+            if channel.channel_type != ChannelType.PUBLIC:
+                await record_chat_search_acl_refresh(
+                    self.session,
+                    organization_id=organization_id,
+                    channel_id=channel_id,
+                )
+
             await self.session.commit()
+
+            if channel.channel_type != ChannelType.PUBLIC:
+                await enqueue_chat_search_acl_refresh(channel_id)
 
             await invalidate_cached_member_ids(channel_id)
 
             for member in added:
                 if member.user_id is not None:
-                    await invalidate_visible_sets_for_user(
-                        organization_id, member.user_id
-                    )
+                    await invalidate_visible_sets_for_user(organization_id, member.user_id)
 
             await self._publish_members_changed(
                 channel_id,
                 [m.user_id for m in added if m.user_id is not None],
+                added=True,
+            )
+            await self._notify_membership_changed(
+                channel,
+                actor_user_id=user_id,
+                target_user_ids=[m.user_id for m in added if m.user_id is not None],
                 added=True,
             )
 
@@ -1180,14 +1235,23 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                         if self_removal
                         else Action.CHAT_CHANNEL_MEMBER_KICKED
                     ),
-                    resource_type=ContentType.CHAT.value,
+                    resource_type=AuditResourceType.CHAT,
                     resource_id=channel_id,
                     details={"target_user_id": str(removed_id)},
                 )
 
             if channel.channel_type == ChannelType.GROUP_DM:
                 await self._refresh_group_dm_name(channel)
+            if channel.channel_type != ChannelType.PUBLIC:
+                await record_chat_search_acl_refresh(
+                    self.session,
+                    organization_id=organization_id,
+                    channel_id=channel_id,
+                )
             await self.session.commit()
+
+            if channel.channel_type != ChannelType.PUBLIC:
+                await enqueue_chat_search_acl_refresh(channel_id)
 
             await invalidate_cached_member_ids(channel_id)
             if channel.channel_type == ChannelType.GROUP_DM:
@@ -1195,15 +1259,15 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
             for removed_id in removable_ids:
                 if removed_id is not None:
-                    await invalidate_visible_sets_for_user(
-                        organization_id, removed_id
-                    )
-                    await kick_user_from_active_call(
-                        self.session, channel_id, removed_id
-                    )
+                    await invalidate_visible_sets_for_user(organization_id, removed_id)
+                    await kick_user_from_active_call(self.session, channel_id, removed_id)
 
-            await self._publish_members_changed(
-                channel_id, removable_ids, added=False
+            await self._publish_members_changed(channel_id, removable_ids, added=False)
+            await self._notify_membership_changed(
+                channel,
+                actor_user_id=user_id,
+                target_user_ids=[uid for uid in removable_ids if uid is not None],
+                added=False,
             )
 
             await self._refresh_channel_live_state(channel)
@@ -1263,12 +1327,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if len(rows) > page_size:
             rows = rows[:page_size]
             last_member, _, _ = rows[-1]
-            next_cursor = _encode_cursor(
-                {
-                    "joined_at": last_member.joined_at.isoformat(),
-                    "subject_id": str(last_member.subject_id),
-                }
-            )
+            next_cursor = _encode_cursor({
+                "joined_at": last_member.joined_at.isoformat(),
+                "subject_id": str(last_member.subject_id),
+            })
         return rows, next_cursor
 
     _MUTED_UNTIL_UNSET = object()
@@ -1381,9 +1443,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         touches_owner = ChannelRole.OWNER in (role, member.role)
         if touches_owner and not actor_is_owner:
-            raise PermissionDeniedError(
-                "members", "Only an owner can grant or revoke ownership"
-            )
+            raise PermissionDeniedError("members", "Only an owner can grant or revoke ownership")
 
         if member.role == ChannelRole.OWNER and role != ChannelRole.OWNER:
             owners_result = await self.session.execute(
@@ -1398,9 +1458,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             if owners_result.scalar_one() <= 1:
                 raise ValidationError("role", "Promote another member to owner first")
 
-        user_result = await self.session.execute(
-            select(User).where(User.id == target_user_id)
-        )
+        user_result = await self.session.execute(select(User).where(User.id == target_user_id))
         user = user_result.scalar_one()
 
         if member.role == role:
@@ -1414,7 +1472,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.CHAT_CHANNEL_MEMBER_ROLE_CHANGED,
-            resource_type=ContentType.CHAT.value,
+            resource_type=AuditResourceType.CHAT,
             resource_id=channel_id,
             details={
                 "target_user_id": str(target_user_id),
@@ -1463,9 +1521,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 channel_id=channel_id,
             )
         except Exception as exc:
-            logger.warning(
-                f"Failed to publish member role change for channel {channel_id}: {exc}"
-            )
+            logger.warning(f"Failed to publish member role change for channel {channel_id}: {exc}")
 
     async def require_send(
         self,
@@ -1499,9 +1555,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             display_name = user.full_name if user else ""
 
             recipients = (
-                member_ids
-                if member_ids is not None
-                else await self._get_all_member_ids(channel_id)
+                member_ids if member_ids is not None else await self._get_all_member_ids(channel_id)
             )
             await publish_channel_event_to_members(
                 recipients,
@@ -1588,6 +1642,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
 
             recipients = await self._get_all_member_ids(channel_id)
+            if not added:
+                recipients = list(dict.fromkeys([*recipients, *affected_user_ids]))
             await publish_channel_event_to_members(
                 recipients,
                 MEMBERS_ADDED if added else MEMBERS_REMOVED,
@@ -1598,6 +1654,43 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             logger.warning(
                 f"Failed to publish members-changed event for channel {channel_id}: {exc}"
             )
+
+    async def _notify_membership_changed(
+        self,
+        channel: ChatChannel,
+        *,
+        actor_user_id: UUID,
+        target_user_ids: list[UUID],
+        added: bool,
+    ) -> None:
+        recipients = list(
+            dict.fromkeys(user_id for user_id in target_user_ids if user_id != actor_user_id)
+        )
+        if not recipients:
+            return
+        await emit_notification(
+            NotificationEvent(
+                notification_type=(
+                    NotificationType.CHAT_CHANNEL_INVITE
+                    if added
+                    else NotificationType.CHAT_CHANNEL_REMOVED
+                ),
+                organization_id=channel.organization_id,
+                actor_id=actor_user_id,
+                title=(
+                    f"Added you to {channel.effective_name}"
+                    if added
+                    else f"Removed you from {channel.effective_name}"
+                ),
+                source_urn=f"urn:uniffy:content:CHAT:{channel.id}",
+                target_user_ids=recipients,
+                metadata={
+                    "channel_id": str(channel.id),
+                    "channel_name": channel.effective_name,
+                    "channel_type": channel.channel_type.value,
+                },
+            )
+        )
 
     async def _get_all_member_ids(self, channel_id: UUID) -> list[UUID]:
         """Member user_ids via the cache; AGENT rows with NULL user_id are dropped."""
@@ -1794,6 +1887,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         """Create / find a DM across mixed USER + AGENT subjects; 1:1 dedup
         by sorted subject tuple.
         """
+        await self.access.require_org_member(user_id, organization_id)
+        await self._require_active_user_subjects(
+            organization_id,
+            [s.subject_id for s in subjects if s.subject_type == SubjectType.USER],
+        )
         actor_subject = ChatSubject.user(user_id)
         dedup = {s.as_key: s for s in subjects}
         dedup[actor_subject.as_key] = actor_subject
@@ -1817,6 +1915,12 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         for s in participants:
             if s.subject_type == SubjectType.AGENT:
                 await self._require_agent_usable(user_id, organization_id, s.subject_id)
+
+        await check_chat_mutation_limit(
+            CHANNEL_CREATE,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
 
         name = await self._build_dm_name_from_subjects(participants)
         slug = slugify(name)
@@ -1862,6 +1966,17 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         await self.session.commit()
         await self.session.refresh(channel)
+        await self._publish_channel_created(channel.id)
+        await self._notify_membership_changed(
+            channel,
+            actor_user_id=user_id,
+            target_user_ids=[
+                subject.subject_id
+                for subject in participants
+                if subject.subject_type == SubjectType.USER and subject.subject_id != user_id
+            ],
+            added=True,
+        )
         return channel
 
     async def create_agent_chat(
@@ -1872,7 +1987,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         custom_name: str | None = None,
     ) -> ChatChannel:
         """Create a new named (user, agent) chat; multiple chats per pair are allowed."""
+        await self.access.require_org_member(user_id, organization_id)
         await self._require_agent_usable(user_id, organization_id, agent_id)
+        await check_chat_mutation_limit(
+            CHANNEL_CREATE,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
 
         agent_subject = ChatSubject.agent(agent_id)
         actor_subject = ChatSubject.user(user_id)
@@ -2012,6 +2133,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         limit: int = DEFAULT_PAGE_SIZE,
     ) -> tuple[list[tuple[ChatChannel, ChatChannelStats]], str | None]:
         """User's agent chats with same keyset as list_user_channels; restricted to is_agent_dm."""
+        await self.access.require_org_member(user_id, organization_id)
         epoch_ts = datetime(1, 1, 1, tzinfo=UTC)
         sort_ts = func.coalesce(ChatChannelStats.last_root_message_at, epoch_ts)
 
@@ -2060,9 +2182,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             rows = rows[:page_size]
             last_channel, last_stats = rows[-1]
             last_ts = last_stats.last_root_message_at or epoch_ts
-            next_cursor = _encode_cursor(
-                {"sort_ts": last_ts.isoformat(), "channel_id": str(last_channel.id)}
-            )
+            next_cursor = _encode_cursor({
+                "sort_ts": last_ts.isoformat(),
+                "channel_id": str(last_channel.id),
+            })
         return rows, next_cursor
 
     async def add_members_with_subjects(
@@ -2104,21 +2227,30 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         else:
             await self._require_edit(user_id, organization_id, channel)
 
+        if not subjects:
+            return []
+
+        await self._require_active_user_subjects(
+            organization_id,
+            [s.subject_id for s in subjects if s.subject_type == SubjectType.USER],
+        )
+
         for s in subjects:
             if s.subject_type == SubjectType.AGENT:
                 await self._require_agent_usable(user_id, organization_id, s.subject_id)
 
-        if not subjects:
-            return []
+        await check_chat_mutation_limit(
+            MEMBER_ADD,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
 
         rows = [
             {
                 "channel_id": channel_id,
                 "subject_type": s.subject_type,
                 "subject_id": s.subject_id,
-                "user_id": (
-                    s.subject_id if s.subject_type == SubjectType.USER else None
-                ),
+                "user_id": (s.subject_id if s.subject_type == SubjectType.USER else None),
                 "role": ChannelRole.MEMBER,
             }
             for s in subjects
@@ -2126,9 +2258,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         stmt = (
             pg_insert(ChatChannelMember)
             .values(rows)
-            .on_conflict_do_nothing(
-                index_elements=["channel_id", "subject_type", "subject_id"]
-            )
+            .on_conflict_do_nothing(index_elements=["channel_id", "subject_type", "subject_id"])
             .returning(ChatChannelMember)
         )
         result = await self.session.execute(stmt)
@@ -2145,9 +2275,36 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 [m.subject_id for m in added if m.subject_type == SubjectType.AGENT],
                 actor_user_id=user_id,
             )
+            for member in added:
+                await write_audit_event(
+                    self.session,
+                    organization_id=organization_id,
+                    actor_user_id=user_id,
+                    action=Action.CHAT_CHANNEL_MEMBER_ADDED,
+                    resource_type=AuditResourceType.CHAT,
+                    resource_id=channel_id,
+                    details={
+                        "target_subject_type": member.subject_type.value,
+                        "target_subject_id": str(member.subject_id),
+                        "role": member.role.value,
+                    },
+                )
             if channel.channel_type == ChannelType.GROUP_DM:
                 await self._refresh_group_dm_name(channel)
+            if channel.channel_type != ChannelType.PUBLIC and any(
+                member.subject_type == SubjectType.USER for member in added
+            ):
+                await record_chat_search_acl_refresh(
+                    self.session,
+                    organization_id=organization_id,
+                    channel_id=channel_id,
+                )
             await self.session.commit()
+
+            if channel.channel_type != ChannelType.PUBLIC and any(
+                member.subject_type == SubjectType.USER for member in added
+            ):
+                await enqueue_chat_search_acl_refresh(channel_id)
 
             await invalidate_cached_member_ids(channel_id)
             if channel.channel_type == ChannelType.GROUP_DM:
@@ -2163,18 +2320,48 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 added=True,
                 agents_affected=any(m.subject_type == SubjectType.AGENT for m in added),
             )
+            await self._notify_membership_changed(
+                channel,
+                actor_user_id=user_id,
+                target_user_ids=[
+                    member.subject_id for member in added if member.subject_type == SubjectType.USER
+                ],
+                added=True,
+            )
 
             await self._post_membership_system_message(
                 user_id,
                 organization_id,
                 channel,
                 [ChatSubject(m.subject_type, m.subject_id) for m in added],
-                action="added",
+                added=True,
             )
 
             await self._refresh_channel_live_state(channel)
 
         return added
+
+    async def _require_active_user_subjects(
+        self,
+        organization_id: UUID,
+        user_ids: list[UUID],
+    ) -> None:
+        unique_ids = set(user_ids)
+        if not unique_ids:
+            return
+        result = await self.session.execute(
+            select(OrganizationMember.user_id).where(
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.user_id.in_(unique_ids),
+                OrganizationMember.is_active.is_(True),
+            )
+        )
+        active_ids = set(result.scalars().all())
+        if active_ids != unique_ids:
+            raise ValidationError(
+                "members",
+                "Every user subject must be an active member of the organization",
+            )
 
     async def remove_members_with_subjects(
         self,
@@ -2230,9 +2417,40 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 .where(ChatChannelStats.channel_id == channel_id)
                 .values(member_count=ChatChannelStats.member_count - len(removable))
             )
+            for subject_type, subject_id in removable:
+                self_removal = subject_type == SubjectType.USER and subject_id == user_id
+                await write_audit_event(
+                    self.session,
+                    organization_id=organization_id,
+                    actor_user_id=user_id,
+                    action=(
+                        Action.CHAT_CHANNEL_MEMBER_REMOVED
+                        if self_removal
+                        else Action.CHAT_CHANNEL_MEMBER_KICKED
+                    ),
+                    resource_type=AuditResourceType.CHAT,
+                    resource_id=channel_id,
+                    details={
+                        "target_subject_type": subject_type.value,
+                        "target_subject_id": str(subject_id),
+                    },
+                )
             if channel.channel_type == ChannelType.GROUP_DM:
                 await self._refresh_group_dm_name(channel)
+            if channel.channel_type != ChannelType.PUBLIC and any(
+                subject_type == SubjectType.USER for subject_type, _ in removable
+            ):
+                await record_chat_search_acl_refresh(
+                    self.session,
+                    organization_id=organization_id,
+                    channel_id=channel_id,
+                )
             await self.session.commit()
+
+            if channel.channel_type != ChannelType.PUBLIC and any(
+                subject_type == SubjectType.USER for subject_type, _ in removable
+            ):
+                await enqueue_chat_search_acl_refresh(channel_id)
 
             await invalidate_cached_member_ids(channel_id)
             if channel.channel_type == ChannelType.GROUP_DM:
@@ -2248,13 +2466,19 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 added=False,
                 agents_affected=any(t == SubjectType.AGENT for (t, _sid) in removable),
             )
+            await self._notify_membership_changed(
+                channel,
+                actor_user_id=user_id,
+                target_user_ids=removed_user_ids,
+                added=False,
+            )
 
             await self._post_membership_system_message(
                 user_id,
                 organization_id,
                 channel,
                 [ChatSubject(t, i) for (t, i) in removable],
-                action="removed",
+                added=False,
             )
 
             await self._refresh_channel_live_state(channel)
@@ -2266,7 +2490,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel: ChatChannel,
         subjects: list[ChatSubject],
         *,
-        action: str,
+        added: bool,
     ) -> None:
         """Post "Actor added/removed X, Y" as a SYSTEM message; non-fatal."""
         try:
@@ -2296,9 +2520,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             place = (
                 "the conversation" if channel.channel_type == ChannelType.GROUP_DM else "the channel"
             )
-            if is_self and action == "removed":
+            action = "added" if added else "removed"
+            if is_self and not added:
                 content = f"{actor} left {place}"
-            elif action == "added":
+            elif added:
                 content = f"{actor} {action} {targets} to {place}"
             else:
                 content = f"{actor} {action} {targets} from {place}"

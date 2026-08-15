@@ -49,6 +49,7 @@ def _make_ops(channel: ChatChannel) -> ChatChannelOperations:
     ops.session.commit = AsyncMock()
     ops.session.refresh = AsyncMock()
     ops.access = MagicMock()
+    ops.access.require_org_member = AsyncMock()
     ops.access.get_membership = AsyncMock(return_value=None)
     ops.access.is_org_admin = AsyncMock(return_value=False)
     ops.access.is_chat_domain_admin = AsyncMock(return_value=False)
@@ -149,9 +150,7 @@ class TestUpdateMemberRole:
         channel = _make_channel()
         ops = _make_ops(channel)
         actor_id = generate_id()
-        ops.access.get_membership.return_value = _make_member(
-            ChannelRole.OWNER, user_id=actor_id
-        )
+        ops.access.get_membership.return_value = _make_member(ChannelRole.OWNER, user_id=actor_id)
         target = _make_member(ChannelRole.OWNER, user_id=actor_id)
         ops.session.execute.side_effect = [
             _result(scalar_one_or_none=target),
@@ -243,9 +242,7 @@ class TestLeaveChannelOwnerGuard:
         channel = _make_channel(ChannelType.PRIVATE)
         ops = self._make_leave_ops(channel)
         user_id = generate_id()
-        ops.access.get_membership.return_value = _make_member(
-            ChannelRole.OWNER, user_id=user_id
-        )
+        ops.access.get_membership.return_value = _make_member(ChannelRole.OWNER, user_id=user_id)
         ops.session.execute.return_value = _result(one=(1, 3))
         with pytest.raises(ValidationError, match="Promote another member"):
             await ops.leave_channel(user_id, channel.organization_id, channel.id)
@@ -254,9 +251,7 @@ class TestLeaveChannelOwnerGuard:
         channel = _make_channel(ChannelType.PRIVATE)
         ops = self._make_leave_ops(channel)
         user_id = generate_id()
-        ops.access.get_membership.return_value = _make_member(
-            ChannelRole.OWNER, user_id=user_id
-        )
+        ops.access.get_membership.return_value = _make_member(ChannelRole.OWNER, user_id=user_id)
         ops.session.execute.side_effect = [
             _result(one=(2, 3)),
             _result(),
@@ -270,9 +265,7 @@ class TestLeaveChannelOwnerGuard:
         channel = _make_channel(ChannelType.PRIVATE)
         ops = self._make_leave_ops(channel)
         user_id = generate_id()
-        ops.access.get_membership.return_value = _make_member(
-            ChannelRole.OWNER, user_id=user_id
-        )
+        ops.access.get_membership.return_value = _make_member(ChannelRole.OWNER, user_id=user_id)
         ops.session.execute.side_effect = [
             _result(one=(1, 1)),
             _result(),
@@ -286,9 +279,7 @@ class TestLeaveChannelOwnerGuard:
         channel = _make_channel(ChannelType.PRIVATE)
         ops = self._make_leave_ops(channel)
         user_id = generate_id()
-        ops.access.get_membership.return_value = _make_member(
-            ChannelRole.MEMBER, user_id=user_id
-        )
+        ops.access.get_membership.return_value = _make_member(ChannelRole.MEMBER, user_id=user_id)
         ops.session.execute.side_effect = [_result(), _result()]
         with self._leave_patches():
             await ops.leave_channel(user_id, channel.organization_id, channel.id)
@@ -298,9 +289,7 @@ class TestLeaveChannelOwnerGuard:
         channel = _make_channel(ChannelType.GROUP_DM)
         ops = self._make_leave_ops(channel)
         user_id = generate_id()
-        ops.access.get_membership.return_value = _make_member(
-            ChannelRole.MEMBER, user_id=user_id
-        )
+        ops.access.get_membership.return_value = _make_member(ChannelRole.MEMBER, user_id=user_id)
         ops.session.execute.side_effect = [_result(), _result()]
         peers_mock = AsyncMock()
         with patch.multiple(

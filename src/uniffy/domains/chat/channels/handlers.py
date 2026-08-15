@@ -74,6 +74,7 @@ from uniffy.db import open_session
 from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
+    fetch_channel_members,
     get_cached_dm_peers,
     get_cached_dm_peers_many,
     set_cached_dm_peers,
@@ -166,9 +167,7 @@ async def _hydrate_channel_tags(
     """Bulk-fetch tag rows for a batch of channel ids in one TagOperations call."""
     if not channel_ids:
         return {}
-    urn_to_id = {
-        build_content_urn(ContentType.CHAT, cid): cid for cid in channel_ids
-    }
+    urn_to_id = {build_content_urn(ContentType.CHAT, cid): cid for cid in channel_ids}
     tag_ops = TagOperations(session)
     bulk = await tag_ops.get_for_urns(
         organization_id=organization_id,
@@ -267,9 +266,7 @@ class ChannelHandlers:
                 tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
 
                 return CreateChannelResponse(
-                    channel=channel_to_proto(
-                        channel, stats, tags=tags_by_id.get(channel.id)
-                    )
+                    channel=channel_to_proto(channel, stats, tags=tags_by_id.get(channel.id))
                 )
         except (NotFoundError, PermissionDeniedError, ValidationError, ConflictError) as e:
             _handle_error(e)
@@ -316,9 +313,7 @@ class ChannelHandlers:
                                 ChatChannelMemberModel.channel_id == channel_id
                             )
                         )
-                        dm_ids = [
-                            str(r[0]) for r in member_rows.all() if r[0] is not None
-                        ]
+                        dm_ids = [str(r[0]) for r in member_rows.all() if r[0] is not None]
                         await set_cached_dm_peers(channel_id, dm_ids)
 
                 tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
@@ -379,9 +374,7 @@ class ChannelHandlers:
                 tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
 
                 return UpdateChannelResponse(
-                    channel=channel_to_proto(
-                        channel, stats, tags=tags_by_id.get(channel.id)
-                    )
+                    channel=channel_to_proto(channel, stats, tags=tags_by_id.get(channel.id))
                 )
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
@@ -637,6 +630,7 @@ class ChannelHandlers:
 
                 if request.browse_public:
                     rows, next_cursor = await ops.list_public_channels(
+                        user_id,
                         org_id,
                         cursor=cursor,
                         limit=page_size,
@@ -647,9 +641,7 @@ class ChannelHandlers:
                         for ch, _ in rows
                         if ch.channel_type not in (ChannelType.DIRECT, ChannelType.GROUP_DM)
                     ]
-                    public_tags = await _hydrate_channel_tags(
-                        session, org_id, public_channel_ids
-                    )
+                    public_tags = await _hydrate_channel_tags(session, org_id, public_channel_ids)
                     channels = [
                         channel_to_proto(
                             ch,
@@ -676,9 +668,7 @@ class ChannelHandlers:
                     ]
                     dm_members_map: dict[str, list[str]] = {}
                     if dm_channel_ids:
-                        hit_map, miss_cids = await get_cached_dm_peers_many(
-                            dm_channel_ids
-                        )
+                        hit_map, miss_cids = await get_cached_dm_peers_many(dm_channel_ids)
                         for cid, peers in hit_map.items():
                             dm_members_map[str(cid)] = peers
                         if miss_cids:
@@ -686,19 +676,13 @@ class ChannelHandlers:
                                 select(
                                     ChatChannelMemberModel.channel_id,
                                     ChatChannelMemberModel.subject_id,
-                                ).where(
-                                    ChatChannelMemberModel.channel_id.in_(miss_cids)
-                                )
+                                ).where(ChatChannelMemberModel.channel_id.in_(miss_cids))
                             )
-                            miss_buckets: dict[UUID, list[str]] = {
-                                cid: [] for cid in miss_cids
-                            }
+                            miss_buckets: dict[UUID, list[str]] = {cid: [] for cid in miss_cids}
                             for row in member_rows.all():
                                 if row[1] is None:
                                     continue
-                                miss_buckets.setdefault(row[0], []).append(
-                                    str(row[1])
-                                )
+                                miss_buckets.setdefault(row[0], []).append(str(row[1]))
                             for cid, peers in miss_buckets.items():
                                 dm_members_map[str(cid)] = peers
                                 await set_cached_dm_peers(cid, peers)
@@ -708,9 +692,7 @@ class ChannelHandlers:
                         for ch, _, _, _ in rows
                         if ch.channel_type not in (ChannelType.DIRECT, ChannelType.GROUP_DM)
                     ]
-                    user_tags = await _hydrate_channel_tags(
-                        session, org_id, user_channel_ids
-                    )
+                    user_tags = await _hydrate_channel_tags(session, org_id, user_channel_ids)
                     retired = await _retired_agent_ids(session, [ch for ch, _, _, _ in rows])
                     channels = [
                         channel_to_proto(
@@ -974,14 +956,12 @@ class ChannelHandlers:
         user_id = get_user_id_from_context(ctx)
         jwt_name, _ = get_sender_info_from_context(ctx)
         try:
+            org_id = UUID(request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid channel_id")
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
-            from sqlalchemy import select
-
-            from uniffy.core.models.chat.channel_member import ChatChannelMember
             from uniffy.domains.chat.streaming.events import (
                 TYPING_STARTED,
                 build_typing_payload,
@@ -991,12 +971,15 @@ class ChannelHandlers:
             )
 
             async with open_session() as session:
-                member_result = await session.execute(
-                    select(ChatChannelMember.user_id).where(
-                        ChatChannelMember.channel_id == channel_id
-                    )
-                )
-                member_ids = [r[0] for r in member_result.all()]
+                access = ChatAccessChecker(session)
+                channel = await access.get_channel(channel_id, org_id)
+                await access.require_send(user_id, channel)
+                members = await fetch_channel_members(session, channel_id)
+                member_ids = [
+                    UUID(member["user_id"])
+                    for member in members
+                    if member.get("subject_type") == SubjectType.USER.value and member.get("user_id")
+                ]
 
                 # Skip typing fan-out for large channels; per-keystroke
                 # N-publish overwhelms the stream.
@@ -1190,7 +1173,7 @@ class ChannelHandlers:
                         )
                     )
 
-                if not ct_filter or ct_filter.upper() == "FILE":
+                if not ct_filter or ct_filter.upper() == ContentType.FILE.value:
                     attachment_resources = await self._get_channel_attachments(
                         session,
                         channel_id,
@@ -1293,7 +1276,7 @@ class ChannelHandlers:
             logger.warning("Meilisearch title resolve failed, skipping")
 
         user_urns = [
-            r.urn for r in resources if r.content_type.value == "USER" and r.urn not in title_map
+            r.urn for r in resources if r.content_type == ContentType.USER and r.urn not in title_map
         ]
         if user_urns:
             from uniffy.core.models.login.user import User

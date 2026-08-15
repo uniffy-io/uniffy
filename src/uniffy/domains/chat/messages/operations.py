@@ -1,6 +1,7 @@
 """Chat message operations; permission checks delegate to ChatAccessChecker."""
 
 from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from uuid import UUID
 
 from loguru import logger
@@ -18,8 +19,9 @@ from uniffy.core.content.references import (
 from uniffy.core.content.team_mentions import TeamExpansion, expand_team_mentions
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
-from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKind, SenderType
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 from uniffy.core.models.login.organization_member import OrganizationMember
@@ -32,6 +34,8 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_pinned_messages,
     set_cached_pinned_message_ids,
 )
+from uniffy.domains.chat.rate_limits import SEND, check_chat_mutation_limit
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="chat.messages.operations")
 
@@ -75,7 +79,17 @@ async def bump_channel_message_stats(
 
 # Agent rows a reader sees as an answer in the thread. Tool cards, tool results
 # and compaction summaries are machinery, so they never move the reply counter.
-AGENT_THREAD_REPLY_KINDS = frozenset({"final", "agent_error", "skill_draft"})
+AGENT_THREAD_REPLY_KINDS = frozenset({
+    ChatMessageMetadataKind.FINAL,
+    ChatMessageMetadataKind.AGENT_ERROR,
+    ChatMessageMetadataKind.SKILL_DRAFT,
+})
+
+
+class ChatMessageAction(StrEnum):
+    EDIT = "edit"
+    DELETE = "delete"
+    PIN = "pin"
 
 
 def counts_as_thread_reply(message: ChatMessage) -> bool:
@@ -223,6 +237,12 @@ class ChatMessageOperations:
 
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.require_send(user_id, channel)
+        if sender_type == SenderType.USER:
+            await check_chat_mutation_limit(
+                SEND,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
 
         # An agent DM whose agent was deleted is frozen: the history stays
         # readable, but nothing new can be said to an agent that cannot answer.
@@ -402,12 +422,12 @@ class ChatMessageOperations:
             )
 
             try:
-                from uniffy.core.valkey.queue import get_queue
+                from uniffy.core.valkey.queue import QueueName, get_queue
 
-                queue = get_queue("egress")
+                queue = get_queue(QueueName.EGRESS)
                 for m in matches:
                     await queue.enqueue_job(
-                        "respond_to_chat_message",
+                        JobName.RESPOND_TO_CHAT_MESSAGE,
                         str(channel.id),
                         str(message.id),
                         str(m.agent_id),
@@ -648,9 +668,6 @@ class ChatMessageOperations:
         sender_name: str = "",
     ) -> None:
         """Index message to Meilisearch; caller threads member_ids from the fan-out path."""
-        if channel.is_encrypted:
-            return
-
         # System messages (joined/left channel, call started/ended, member
         # added) are UI narration, not content; they only pollute search.
         if message.sender_type == SenderType.SYSTEM:
@@ -842,9 +859,7 @@ class ChatMessageOperations:
             # them; a directly mentioned user keeps the "Mentioned you" copy.
             team_targets: list[UUID] = []
             for expansion, recipients in team_mentions or ():
-                targets = [
-                    uid for uid in recipients if uid != user_id and uid not in notified_ids
-                ]
+                targets = [uid for uid in recipients if uid != user_id and uid not in notified_ids]
                 if not targets:
                     continue
                 await emit_notification(
@@ -1096,7 +1111,9 @@ class ChatMessageOperations:
         if not msg or msg.channel_id != channel_id:
             raise NotFoundError("message", message_id)
 
-        await self._require_message_action(user_id, organization_id, channel_id, msg, "edit")
+        await self._require_message_action(
+            user_id, organization_id, channel_id, msg, ChatMessageAction.EDIT
+        )
 
         now = datetime.now(UTC)
         msg.content = content
@@ -1161,7 +1178,9 @@ class ChatMessageOperations:
         if not msg or msg.channel_id != channel_id:
             raise NotFoundError("message", message_id)
 
-        await self._require_message_action(user_id, organization_id, channel_id, msg, "delete")
+        await self._require_message_action(
+            user_id, organization_id, channel_id, msg, ChatMessageAction.DELETE
+        )
 
         was_pinned = msg.is_pinned
         now = datetime.now(UTC)
@@ -1176,7 +1195,7 @@ class ChatMessageOperations:
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.CHAT_MESSAGE_DELETED_BY_ADMIN,
-                resource_type=ContentType.CHAT_MESSAGE.value,
+                resource_type=AuditResourceType.CHAT_MESSAGE,
                 resource_id=message_id,
                 details={
                     "channel_id": str(channel_id),
@@ -1270,7 +1289,9 @@ class ChatMessageOperations:
         if not msg or msg.channel_id != channel_id:
             raise NotFoundError("message", message_id)
 
-        await self._require_message_action(user_id, organization_id, channel_id, msg, "pin")
+        await self._require_message_action(
+            user_id, organization_id, channel_id, msg, ChatMessageAction.PIN
+        )
 
         msg.is_pinned = True
         msg.updated_at = datetime.now(UTC)
@@ -1292,7 +1313,9 @@ class ChatMessageOperations:
         if not msg or msg.channel_id != channel_id:
             raise NotFoundError("message", message_id)
 
-        await self._require_message_action(user_id, organization_id, channel_id, msg, "pin")
+        await self._require_message_action(
+            user_id, organization_id, channel_id, msg, ChatMessageAction.PIN
+        )
 
         msg.is_pinned = False
         msg.updated_at = datetime.now(UTC)
@@ -1336,9 +1359,7 @@ class ChatMessageOperations:
             .order_by(ChatMessage.created_at.desc())
         )
         messages = list(result.scalars().all())
-        await set_cached_pinned_message_ids(
-            channel_id, [m.id for m in messages]
-        )
+        await set_cached_pinned_message_ids(channel_id, [m.id for m in messages])
         return messages
 
     async def _require_message_action(
@@ -1347,22 +1368,22 @@ class ChatMessageOperations:
         organization_id: UUID,
         channel_id: UUID,
         message: ChatMessage,
-        action: str,
+        action: ChatMessageAction,
     ) -> None:
         is_elevated = await self.access.require_elevated(user_id, organization_id, channel_id)
 
-        if action == "edit":
+        if action is ChatMessageAction.EDIT:
             if message.sender_id != user_id:
                 raise PermissionDeniedError("edit", "Can only edit own messages")
             window = datetime.now(UTC) - timedelta(minutes=EDIT_WINDOW_MINUTES)
             if message.created_at < window:
                 raise ValidationError("message", "Edit window has expired")
 
-        elif action == "delete":
+        elif action is ChatMessageAction.DELETE:
             if message.sender_id != user_id and not is_elevated:
                 raise PermissionDeniedError("delete", "Cannot delete other users' messages")
 
-        elif action == "pin":
+        elif action is ChatMessageAction.PIN:
             if not is_elevated:
                 raise PermissionDeniedError("pin", "Requires channel admin")
 

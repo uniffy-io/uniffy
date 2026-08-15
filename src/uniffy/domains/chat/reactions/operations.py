@@ -13,6 +13,7 @@ from uniffy.core.models.chat.reaction import ChatReaction
 from uniffy.core.types import SubjectType
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import fetch_channel_members
+from uniffy.domains.chat.rate_limits import REACTION_ADD, check_chat_mutation_limit
 
 
 class ChatReactionOperations:
@@ -31,6 +32,11 @@ class ChatReactionOperations:
     ) -> ChatReaction:
         """Idempotent reaction add via ON CONFLICT DO NOTHING RETURNING."""
         await self._verify_message_access(user_id, organization_id, channel_id, message_id)
+        await check_chat_mutation_limit(
+            REACTION_ADD,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
 
         now = datetime.now(UTC)
 
@@ -62,9 +68,9 @@ class ChatReactionOperations:
             message_id,
             emoji,
             user_id,
-            "added",
-            display_name,
-            member_ids,
+            added=True,
+            display_name=display_name,
+            member_ids=member_ids,
         )
 
         return reaction
@@ -95,9 +101,9 @@ class ChatReactionOperations:
             message_id,
             emoji,
             user_id,
-            "removed",
-            display_name,
-            member_ids,
+            added=False,
+            display_name=display_name,
+            member_ids=member_ids,
         )
 
     async def _publish_reaction_event(
@@ -106,7 +112,8 @@ class ChatReactionOperations:
         message_id: UUID,
         emoji: str,
         user_id: UUID,
-        action: str,
+        *,
+        added: bool,
         display_name: str,
         member_ids: list[UUID],
     ) -> None:
@@ -121,7 +128,7 @@ class ChatReactionOperations:
                 publish_channel_event_to_members,
             )
 
-            event_type = REACTION_ADDED if action == "added" else REACTION_REMOVED
+            event_type = REACTION_ADDED if added else REACTION_REMOVED
             await publish_channel_event_to_members(
                 member_ids,
                 event_type,

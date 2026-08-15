@@ -31,9 +31,7 @@ class ChatAccessChecker:
         if channel_id in self._channel_cache:
             return self._channel_cache[channel_id]
 
-        channel = await get_or_load_channel(
-            self.session, channel_id, organization_id
-        )
+        channel = await get_or_load_channel(self.session, channel_id, organization_id)
         if not channel:
             raise NotFoundError("channel", channel_id)
 
@@ -106,22 +104,23 @@ class ChatAccessChecker:
         self._org_member_cache[key] = result
         return result
 
+    async def require_org_member(self, user_id: UUID, organization_id: UUID) -> None:
+        if not await self.is_org_member(user_id, organization_id):
+            raise PermissionDeniedError("access", "organization")
+
     async def check_access(
         self,
         user_id: UUID,
         organization_id: UUID,
         channel: ChatChannel,
     ) -> None:
+        await self.require_org_member(user_id, organization_id)
         if await self.is_org_admin(user_id, organization_id):
             return
         if await self.is_chat_domain_admin(user_id, organization_id):
             return
         if channel.channel_type == ChannelType.PUBLIC:
-            # Open to the org means the org, not any authenticated user:
-            # the request org id is caller-supplied, so membership is the gate.
-            if await self.is_org_member(user_id, organization_id):
-                return
-            raise PermissionDeniedError("access", "channel")
+            return
         member = await self.get_membership(channel.id, user_id)
         if not member:
             raise PermissionDeniedError("access", "channel")
@@ -133,6 +132,8 @@ class ChatAccessChecker:
     ) -> ChatChannelMember:
         """Verify user can send messages; returns membership for role checks."""
         from uniffy.core.errors import ValidationError
+
+        await self.require_org_member(user_id, channel.organization_id)
 
         if channel.is_archived:
             raise ValidationError("channel", "Channel is archived")
@@ -149,6 +150,7 @@ class ChatAccessChecker:
         channel_id: UUID,
     ) -> bool:
         """User has admin/owner of the channel or org."""
+        await self.require_org_member(user_id, organization_id)
         if await self.is_org_admin(user_id, organization_id):
             return True
         if await self.is_chat_domain_admin(user_id, organization_id):
