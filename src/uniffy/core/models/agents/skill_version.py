@@ -1,6 +1,7 @@
 """Immutable version snapshot of an agent skill."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import (
@@ -18,6 +19,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class AgentSkillVersionAuthor(StrEnum):
+    USER = "user"
+    AGENT = "agent"
 
 
 class AgentSkillVersion(SQLModel, table=True):
@@ -65,8 +71,8 @@ class AgentSkillVersion(SQLModel, table=True):
         sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
     )
     author_id: UUID | None = Field(default=None, sa_column=Column(Uuid(), nullable=True))
-    author_kind: str = Field(
-        default="user",
+    author_kind: AgentSkillVersionAuthor = Field(
+        default=AgentSkillVersionAuthor.USER,
         sa_column=Column(String(16), nullable=False, server_default=text("'user'")),
     )
     change_summary: str = Field(

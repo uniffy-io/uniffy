@@ -12,7 +12,7 @@ import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -30,7 +30,11 @@ MAX_EXPORT_ROWS = 1_000_000
 ROW_BATCH = 1_000
 CHUNK_FLUSH_BYTES = 32 * 1024
 
-ExportFormat = Literal["csv", "ndjson"]
+
+class ExportFormat(StrEnum):
+    CSV = "csv"
+    NDJSON = "ndjson"
+
 
 CSV_COLUMNS = (
     "timestamp_utc",
@@ -68,13 +72,12 @@ class ExportOperations:
         export: ExportFilter,
     ) -> AsyncIterator[bytes]:
         """Yield CSV / NDJSON chunks for rows matching the filter."""
-        await self._read_ops.require_audit_view(
-            actor_user_id, export.filter.organization_id
-        )
+        await self._read_ops.require_audit_view(actor_user_id, export.filter.organization_id)
 
         await self._enforce_row_cap(export.filter)
 
-        if export.format == "csv":
+        export_format = ExportFormat(export.format)
+        if export_format is ExportFormat.CSV:
             async for chunk in self._stream_csv(export.filter):
                 yield chunk
         else:
@@ -82,8 +85,10 @@ class ExportOperations:
                 yield chunk
 
     async def _enforce_row_cap(self, filters: ListEventsFilter) -> None:
-        query = select(func.count()).select_from(AuditEvent).where(
-            AuditEvent.organization_id == filters.organization_id
+        query = (
+            select(func.count())
+            .select_from(AuditEvent)
+            .where(AuditEvent.organization_id == filters.organization_id)
         )
         if filters.actor_user_id is not None:
             query = query.where(AuditEvent.actor_user_id == filters.actor_user_id)
@@ -168,10 +173,7 @@ class ExportOperations:
                 cursor_created_at, cursor_id = cursor
                 query = query.where(
                     (AuditEvent.created_at < cursor_created_at)
-                    | (
-                        (AuditEvent.created_at == cursor_created_at)
-                        & (AuditEvent.id < cursor_id)
-                    )
+                    | ((AuditEvent.created_at == cursor_created_at) & (AuditEvent.id < cursor_id))
                 )
 
             rows = list((await self.session.execute(query)).scalars().all())
@@ -200,9 +202,7 @@ class ExportOperations:
         if not user_ids:
             return {}
 
-        result = await self.session.execute(
-            select(User.id, User.email).where(User.id.in_(user_ids))
-        )
+        result = await self.session.execute(select(User.id, User.email).where(User.id.in_(user_ids)))
         return {user_id: email for user_id, email in result.all()}
 
 
@@ -217,9 +217,7 @@ def _format_csv_row(
         emails.get(event.actor_user_id, "") if event.actor_user_id else "",
         event.actor_org_role or "",
         str(event.on_behalf_of_user_id) if event.on_behalf_of_user_id else "",
-        emails.get(event.on_behalf_of_user_id, "")
-        if event.on_behalf_of_user_id
-        else "",
+        emails.get(event.on_behalf_of_user_id, "") if event.on_behalf_of_user_id else "",
         event.action,
         event.resource_type or "",
         str(event.resource_id) if event.resource_id else "",
@@ -236,13 +234,9 @@ def _format_ndjson_row(
     return json.dumps(
         {
             "timestamp_utc": event.created_at.isoformat() if event.created_at else None,
-            "organization_id": str(event.organization_id)
-            if event.organization_id
-            else None,
+            "organization_id": str(event.organization_id) if event.organization_id else None,
             "actor_user_id": str(event.actor_user_id) if event.actor_user_id else None,
-            "actor_email": emails.get(event.actor_user_id)
-            if event.actor_user_id
-            else None,
+            "actor_email": emails.get(event.actor_user_id) if event.actor_user_id else None,
             "actor_org_role": event.actor_org_role,
             "on_behalf_of_user_id": str(event.on_behalf_of_user_id)
             if event.on_behalf_of_user_id

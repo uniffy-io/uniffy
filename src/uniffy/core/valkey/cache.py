@@ -39,9 +39,7 @@ _LOCK_TTL_SECONDS = 5
 _LOCK_POLL_INTERVAL_SECONDS = 0.1
 
 _DISABLED_NAMESPACES: frozenset[str] = frozenset(
-    ns.strip()
-    for ns in os.getenv("CACHE_DISABLED_NAMESPACES", "").split(",")
-    if ns.strip()
+    ns.strip() for ns in os.getenv("CACHE_DISABLED_NAMESPACES", "").split(",") if ns.strip()
 )
 
 T = TypeVar("T", bound=dict[str, Any] | None)
@@ -67,7 +65,7 @@ def _is_namespace_disabled(key: str) -> bool:
     if _namespace_for_key(key) in _DISABLED_NAMESPACES:
         return True
     for disabled in _DISABLED_NAMESPACES:
-        if ":" in disabled and (key == disabled or key.startswith(f"{disabled}:")):
+        if ":" in disabled and (key == disabled or key.startswith(f"{disabled}:")):  # noqa: PLR2004
             return True
     return False
 
@@ -109,7 +107,7 @@ async def cache_get(key: str) -> dict[str, Any] | None | _CacheMiss:
 
     try:
         decoded = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError, TypeError:
         logger.warning(f"Cache decode failed for key {key}", component="cache")
         CACHE_MISS_TOTAL.labels(namespace=namespace).inc()
         return CACHE_MISS
@@ -156,9 +154,7 @@ async def cache_get_many(
             misses.append(key)
         return hits, misses
     except Exception:
-        logger.warning(
-            f"Cache MGET failed for {len(enabled_keys)} keys", component="cache"
-        )
+        logger.warning(f"Cache MGET failed for {len(enabled_keys)} keys", component="cache")
         for key in enabled_keys:
             CACHE_MISS_TOTAL.labels(namespace=_namespace_for_key(key)).inc()
             misses.append(key)
@@ -176,7 +172,7 @@ async def cache_get_many(
             continue
         try:
             decoded = json.loads(raw)
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             logger.warning(f"Cache decode failed for key {key}", component="cache")
             CACHE_MISS_TOTAL.labels(namespace=ns).inc()
             misses.append(key)
@@ -262,9 +258,7 @@ async def cache_invalidate_many(*keys: str) -> None:
     except TimeoutError:
         return
     except Exception:
-        logger.warning(
-            f"Cache DEL many failed for {len(keys)} keys", component="cache"
-        )
+        logger.warning(f"Cache DEL many failed for {len(keys)} keys", component="cache")
 
 
 async def cache_invalidate_by_tag(tag: str) -> None:
@@ -304,9 +298,7 @@ async def cache_invalidate_by_tag(tag: str) -> None:
     except TimeoutError:
         return
     except Exception:
-        logger.warning(
-            f"Cache tag invalidate DEL failed for {tag_key}", component="cache"
-        )
+        logger.warning(f"Cache tag invalidate DEL failed for {tag_key}", component="cache")
 
 
 async def cache_get_or_set(
@@ -326,9 +318,7 @@ async def cache_get_or_set(
     namespace = _namespace_for_key(key)
     start = time.perf_counter()
     value = await loader()
-    CACHE_LOAD_DURATION.labels(namespace=namespace).observe(
-        time.perf_counter() - start
-    )
+    CACHE_LOAD_DURATION.labels(namespace=namespace).observe(time.perf_counter() - start)
 
     await cache_set(key, value, ttl=ttl, tags=tags)
     return value
@@ -356,9 +346,7 @@ async def cache_get_or_set_locked(
     acquired = False
     try:
         async with ops_call(namespace, "get_or_set_locked"):
-            acquired = bool(
-                await client.set(lock_key, "1", ex=_LOCK_TTL_SECONDS, nx=True)
-            )
+            acquired = bool(await client.set(lock_key, "1", ex=_LOCK_TTL_SECONDS, nx=True))
     except TimeoutError:
         acquired = False
     except Exception:
@@ -375,9 +363,7 @@ async def cache_get_or_set_locked(
             except TimeoutError:
                 pass
             except Exception:
-                logger.warning(
-                    f"Cache lock DEL failed for {lock_key}", component="cache"
-                )
+                logger.warning(f"Cache lock DEL failed for {lock_key}", component="cache")
 
     CACHE_STAMPEDE_LOCK_WAIT_TOTAL.labels(namespace=namespace).inc()
     deadline = time.monotonic() + _LOCK_TTL_SECONDS
@@ -399,8 +385,6 @@ async def _load_and_store(
 ) -> dict[str, Any] | None:
     start = time.perf_counter()
     value = await loader()
-    CACHE_LOAD_DURATION.labels(namespace=namespace).observe(
-        time.perf_counter() - start
-    )
+    CACHE_LOAD_DURATION.labels(namespace=namespace).observe(time.perf_counter() - start)
     await cache_set(key, value, ttl=ttl, tags=tags)
     return value

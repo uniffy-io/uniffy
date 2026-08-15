@@ -18,7 +18,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.crypto import DeploymentCipher, OrgCipher
-from uniffy.core.mail.config import MAIL_NAMESPACE, MailConfig
+from uniffy.core.mail.config import (
+    MAIL_NAMESPACE,
+    MAIL_PASSWORD_KEY,
+    MailConfig,
+    MailConfigSource,
+)
 from uniffy.core.mail.errors import MailNotConfiguredError
 from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
@@ -41,10 +46,10 @@ def _cache_tag(scope: str) -> str:
     return f"mail:cfg:scope:{scope}"
 
 
-def _password_source_for(config: MailConfig) -> str:
+def _password_source_for(config: MailConfig) -> MailConfigSource:
     """Tier the password lives in: ``"org"`` / ``"deployment"`` / ``"env"`` / ``"none"``."""
     if config.smtp_password is None or config.smtp_password == "":
-        return "none"
+        return MailConfigSource.NONE
     return config.source
 
 
@@ -59,17 +64,17 @@ class MailConfigResolver:
         scope = str(organization_id) if organization_id is not None else "system"
         cached = await cache_get(_cache_key(scope))
         if cached is not CACHE_MISS and cached is not None:
-            password_source = cached.pop(_PASSWORD_SOURCE_KEY, "none")
-            config = MailConfig.model_validate(cached)
-            return await self._rehydrate_password(
-                config, organization_id, password_source
+            password_source = MailConfigSource(
+                cached.pop(_PASSWORD_SOURCE_KEY, MailConfigSource.NONE)
             )
+            config = MailConfig.model_validate(cached)
+            return await self._rehydrate_password(config, organization_id, password_source)
 
         config = await self._load(organization_id)
         password_source = _password_source_for(config)
         payload = config.model_dump(mode="json")
         # Plaintext SMTP password must never enter Valkey.
-        payload["smtp_password"] = None
+        payload[MAIL_PASSWORD_KEY] = None
         payload[_PASSWORD_SOURCE_KEY] = password_source
         await cache_set(
             _cache_key(scope),
@@ -83,20 +88,20 @@ class MailConfigResolver:
         self,
         config: MailConfig,
         organization_id: UUID | None,
-        password_source: str,
+        password_source: MailConfigSource,
     ) -> MailConfig:
         """Re-fetch the SMTP password for a cached config; fall through to ``_load`` on row miss."""
-        if password_source == "none":
+        if password_source is MailConfigSource.NONE:
             return config
-        if password_source == "env":
+        if password_source is MailConfigSource.ENV:
             env_password = os.getenv("SMTP_PASSWORD") or None
             return config.model_copy(update={"smtp_password": env_password})
-        if password_source == "org" and organization_id is not None:
+        if password_source is MailConfigSource.ORGANIZATION and organization_id is not None:
             password = await self._load_org_password(organization_id)
             if password is None:
                 return await self._load(organization_id)
             return config.model_copy(update={"smtp_password": password})
-        if password_source == "deployment":
+        if password_source is MailConfigSource.DEPLOYMENT:
             password = await self._load_deployment_password()
             if password is None:
                 return await self._load(organization_id)
@@ -109,22 +114,20 @@ class MailConfigResolver:
                 select(OrgSetting).where(
                     OrgSetting.organization_id == organization_id,
                     OrgSetting.namespace == MAIL_NAMESPACE,
-                    OrgSetting.key == "smtp_password",
+                    OrgSetting.key == MAIL_PASSWORD_KEY,
                 )
             )
         ).scalar_one_or_none()
         if row is None or not row.value_encrypted:
             return None
-        return await OrgCipher(self._session).decrypt(
-            organization_id, row.value_encrypted
-        )
+        return await OrgCipher(self._session).decrypt(organization_id, row.value_encrypted)
 
     async def _load_deployment_password(self) -> str | None:
         row = (
             await self._session.execute(
                 select(DeploymentSetting).where(
                     DeploymentSetting.namespace == MAIL_NAMESPACE,
-                    DeploymentSetting.key == "smtp_password",
+                    DeploymentSetting.key == MAIL_PASSWORD_KEY,
                 )
             )
         ).scalar_one_or_none()
@@ -135,13 +138,17 @@ class MailConfigResolver:
     async def _load(self, organization_id: UUID | None) -> MailConfig:
         if organization_id is not None:
             rows = (
-                await self._session.execute(
-                    select(OrgSetting).where(
-                        OrgSetting.organization_id == organization_id,
-                        OrgSetting.namespace == MAIL_NAMESPACE,
+                (
+                    await self._session.execute(
+                        select(OrgSetting).where(
+                            OrgSetting.organization_id == organization_id,
+                            OrgSetting.namespace == MAIL_NAMESPACE,
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             if rows:
                 cipher = OrgCipher(self._session)
 
@@ -154,12 +161,14 @@ class MailConfigResolver:
                     return config
 
         deployment_rows = (
-            await self._session.execute(
-                select(DeploymentSetting).where(
-                    DeploymentSetting.namespace == MAIL_NAMESPACE
+            (
+                await self._session.execute(
+                    select(DeploymentSetting).where(DeploymentSetting.namespace == MAIL_NAMESPACE)
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         if deployment_rows:
             deployment_cipher = DeploymentCipher(self._session)
 

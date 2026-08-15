@@ -18,6 +18,24 @@ if TYPE_CHECKING:
 VISIBLE_REFUSAL_MESSAGE = "I can't help with that request."
 
 
+class CanonicalContentBlockType(StrEnum):
+    TEXT = "text"
+    IMAGE = "image"
+    DOCUMENT = "document"
+    TOOL_USE = "tool_use"
+    TOOL_RESULT = "tool_result"
+    TEXT_PENDING_EXTRACTION = "text_pending_extraction"
+
+
+class CompletionStopReason(StrEnum):
+    END_TURN = "end_turn"
+    TOOL_USE = "tool_use"
+    REFUSAL = "refusal"
+    SAFETY = "safety"
+    CONTENT_FILTER = "content_filter"
+    MAX_TOKENS = "max_tokens"
+
+
 @dataclass(frozen=True)
 class ModelInfo:
     """Static model metadata sourced from the catalog.
@@ -80,7 +98,7 @@ class CompletionResult:
     provider_cost_usd: Decimal | None = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     thinking_blocks: list[dict] = field(default_factory=list)
-    stop_reason: str = "end_turn"
+    stop_reason: str = CompletionStopReason.END_TURN
 
     @property
     def total_prompt_tokens(self) -> int:
@@ -96,7 +114,12 @@ def ensure_visible_terminal(result: CompletionResult) -> CompletionResult:
     if (
         not result.content
         and not result.tool_calls
-        and result.stop_reason in {"refusal", "safety", "content_filter"}
+        and result.stop_reason
+        in {
+            CompletionStopReason.REFUSAL,
+            CompletionStopReason.SAFETY,
+            CompletionStopReason.CONTENT_FILTER,
+        }
     ):
         result.content = VISIBLE_REFUSAL_MESSAGE
     return result

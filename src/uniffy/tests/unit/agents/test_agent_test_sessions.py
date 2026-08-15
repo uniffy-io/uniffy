@@ -1,5 +1,4 @@
-"""Test-session isolation: hidden from listings, memory writes suppressed.
-"""
+"""Test-session isolation: hidden from listings, memory writes suppressed."""
 
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -34,9 +33,7 @@ def _tool_ctx(*, is_test_session: bool) -> ToolContext:
 class TestMemoryWriteSuppression:
     async def test_save_refuses_in_test_session(self) -> None:
         ctx = _tool_ctx(is_test_session=True)
-        result = await _execute_memory_save(
-            ctx, {"key": "k", "description": "d", "content": "c"}
-        )
+        result = await _execute_memory_save(ctx, {"key": "k", "description": "d", "content": "c"})
         assert not result.success
         assert result.error == TEST_SESSION_WRITE_ERROR
         ctx.session.execute.assert_not_awaited()
@@ -83,9 +80,7 @@ class TestMemoryWriteSuppression:
                 captured.update(kwargs)
                 return NS(key="k", category="facts"), True
 
-        with patch(
-            "uniffy.domains.agents.memories.operations.MemoryOperations", FakeOps
-        ):
+        with patch("uniffy.domains.agents.memories.operations.MemoryOperations", FakeOps):
             result = await _execute_memory_save(
                 ctx, {"key": "k", "description": "d", "content": "c"}
             )

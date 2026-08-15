@@ -283,7 +283,7 @@ def runtime_stream_event_to_json(event: StreamEvent) -> dict[str, Any]:
             continue
         if name in _UUID_FIELDS:
             value = str(value)
-        elif name in _MESSAGE_FIELDS or name == "draft":
+        elif name in _MESSAGE_FIELDS or name == "draft":  # noqa: PLR2004
             value = value.model_dump(mode="json")
         payload[name] = value
     return payload
@@ -303,7 +303,7 @@ def runtime_stream_event_from_json(payload: dict[str, Any]) -> StreamEvent:
 
     kwargs: dict[str, Any] = {}
     for name, value in payload.items():
-        if name == "type":
+        if name == "type":  # noqa: PLR2004
             continue
         if name not in _STREAM_EVENT_FIELDS or name in _SKIPPED_FIELDS:
             raise ValueError(f"Unknown stream event field: {name!r}")
@@ -313,7 +313,7 @@ def runtime_stream_event_from_json(payload: dict[str, Any]) -> StreamEvent:
             kwargs[name] = UUID(value)
         elif name in _MESSAGE_FIELDS:
             kwargs[name] = AgentMessage.model_validate(value)
-        elif name == "draft":
+        elif name == "draft":  # noqa: PLR2004
             kwargs[name] = AgentSkillDraft.model_validate(value)
         else:
             kwargs[name] = value

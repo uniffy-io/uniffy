@@ -37,7 +37,7 @@ async def sync_bundled_skills() -> None:
 
 
 async def _sync_locked(session: AsyncSession) -> None:
-    from uniffy.core.models.agents.skill import AgentSkill
+    from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, AgentSkillStatus
 
     documents = load_documents(DATA_DIR / "skills")
     shipped: dict[UUID, dict[str, str]] = {}
@@ -49,9 +49,7 @@ async def _sync_locked(session: AsyncSession) -> None:
             "content": doc.body,
         }
 
-    result = await session.execute(
-        select(AgentSkill).where(AgentSkill.organization_id.is_(None))
-    )
+    result = await session.execute(select(AgentSkill).where(AgentSkill.organization_id.is_(None)))
     rows = list(result.scalars().all())
     existing = {row.id: row for row in rows}
     by_name = {row.name: row for row in rows}
@@ -77,7 +75,7 @@ async def _sync_locked(session: AsyncSession) -> None:
                 AgentSkill(
                     id=skill_id,
                     organization_id=None,
-                    source="bundled",
+                    source=AgentSkillSource.BUNDLED,
                     always_active=False,
                     **fields,
                 )
@@ -86,21 +84,21 @@ async def _sync_locked(session: AsyncSession) -> None:
             continue
 
         changed = any(getattr(row, key) != value for key, value in fields.items())
-        if changed or row.status != "active":
+        if changed or row.status != AgentSkillStatus.ACTIVE:
             for key, value in fields.items():
                 setattr(row, key, value)
-            row.status = "active"
+            row.status = AgentSkillStatus.ACTIVE
             updated += 1
 
     shipped_names = {fields["name"] for fields in shipped.values()}
     for skill_id, row in existing.items():
         if skill_id in shipped or row.name in shipped_names:
             continue
-        if row.status != "retired":
+        if row.status != AgentSkillStatus.RETIRED:
             # Dropping the row would cascade its versions and silently strip the
             # id out of every agent's enabled_skills; retiring only hides it from
             # the pickers while agents that already use it keep working.
-            row.status = "retired"
+            row.status = AgentSkillStatus.RETIRED
             retired += 1
             logger.warning(f"Bundled skill {row.name} no longer shipped, retired")
 

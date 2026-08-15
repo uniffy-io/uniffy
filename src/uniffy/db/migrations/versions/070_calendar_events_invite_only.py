@@ -26,12 +26,7 @@ def upgrade() -> None:
             "OR baseline_role IS NOT NULL"
         )
     )
-    op.execute(
-        sa.text(
-            "DELETE FROM permissions_org_defaults "
-            "WHERE content_type = 'CALENDAR_EVENT'"
-        )
-    )
+    op.execute(sa.text("DELETE FROM permissions_org_defaults WHERE content_type = 'CALENDAR_EVENT'"))
 
 
 def downgrade() -> None:

@@ -163,30 +163,28 @@ class TestToolDefinitions:
 class TestSearchIssuesExecutor:
     async def test_renders_issue_and_pr_lines_from_search_payload(self) -> None:
         ctx = _ctx()
-        http = _FakeHttp(
-            [
-                {
-                    "total_count": 2,
-                    "items": [
-                        {
-                            "number": 42,
-                            "title": "Fix login flow",
-                            "state": "open",
-                            "repository_url": "https://api.github.com/repos/acme/webapp",
-                            "user": {"login": "alice"},
-                        },
-                        {
-                            "number": 7,
-                            "title": "Add caching",
-                            "state": "closed",
-                            "repository_url": "https://api.github.com/repos/acme/api",
-                            "user": {"login": "bob"},
-                            "pull_request": {"url": "https://example.invalid/pr"},
-                        },
-                    ],
-                }
-            ]
-        )
+        http = _FakeHttp([
+            {
+                "total_count": 2,
+                "items": [
+                    {
+                        "number": 42,
+                        "title": "Fix login flow",
+                        "state": "open",
+                        "repository_url": "https://api.github.com/repos/acme/webapp",
+                        "user": {"login": "alice"},
+                    },
+                    {
+                        "number": 7,
+                        "title": "Add caching",
+                        "state": "closed",
+                        "repository_url": "https://api.github.com/repos/acme/api",
+                        "user": {"login": "bob"},
+                        "pull_request": {"url": "https://example.invalid/pr"},
+                    },
+                ],
+            }
+        ])
         with patch(_RESOLVE, new=AsyncMock(return_value=(_meta(), http))) as resolve:
             result = await _execute_search_issues(ctx, {"query": "is:open bug"})
         assert result.success
@@ -248,9 +246,7 @@ class TestSearchIssuesExecutor:
         with patch(_RESOLVE, new=AsyncMock(return_value=(_meta(), http))):
             result = await _execute_search_issues(_ctx(), {"query": "bug"})
         assert result.success
-        assert (
-            "#42 [issue] Fix login flow (open) - acme/webapp - @alice [bug, evil]" in result.data
-        )
+        assert "#42 [issue] Fix login flow (open) - acme/webapp - @alice [bug, evil]" in result.data
         assert "[[[" not in result.data
 
     async def test_label_list_caps_at_five(self) -> None:
@@ -378,23 +374,21 @@ class TestPinnedConnectionResolution:
 class TestSearchReposExecutor:
     async def test_renders_repo_lines_from_search_payload(self) -> None:
         ctx = _ctx()
-        http = _FakeHttp(
-            [
-                {
-                    "total_count": 2,
-                    "items": [
-                        {
-                            "full_name": "acme/webapp",
-                            "private": True,
-                            "stargazers_count": 12,
-                            "description": "Customer portal",
-                            "updated_at": "2026-07-01T10:00:00Z",
-                        },
-                        {"full_name": "acme/docs", "private": False, "stargazers_count": 0},
-                    ],
-                }
-            ]
-        )
+        http = _FakeHttp([
+            {
+                "total_count": 2,
+                "items": [
+                    {
+                        "full_name": "acme/webapp",
+                        "private": True,
+                        "stargazers_count": 12,
+                        "description": "Customer portal",
+                        "updated_at": "2026-07-01T10:00:00Z",
+                    },
+                    {"full_name": "acme/docs", "private": False, "stargazers_count": 0},
+                ],
+            }
+        ])
         with patch(_RESOLVE, new=AsyncMock(return_value=(_meta(), http))) as resolve:
             result = await _execute_search_repos(ctx, {"query": "acme"})
         assert result.success
@@ -411,21 +405,19 @@ class TestSearchReposExecutor:
         assert resolve.await_args.args == (ctx, "github", None)
 
     async def test_resolves_a_bare_name_to_its_full_form(self) -> None:
-        http = _FakeHttp(
-            [
-                {
-                    "total_count": 1,
-                    "items": [
-                        {
-                            "full_name": "n8n-io/n8n",
-                            "private": False,
-                            "stargazers_count": 45000,
-                            "description": "Workflow automation",
-                        }
-                    ],
-                }
-            ]
-        )
+        http = _FakeHttp([
+            {
+                "total_count": 1,
+                "items": [
+                    {
+                        "full_name": "n8n-io/n8n",
+                        "private": False,
+                        "stargazers_count": 45000,
+                        "description": "Workflow automation",
+                    }
+                ],
+            }
+        ])
         with patch(_RESOLVE, new=AsyncMock(return_value=(_meta(), http))):
             result = await _execute_search_repos(_ctx(), {"query": "n8n"})
         assert result.success
@@ -483,26 +475,23 @@ class TestSearchReposExecutor:
 
 class TestListReposExecutor:
     async def test_renders_repo_lines_with_visibility(self) -> None:
-        http = _FakeHttp(
+        http = _FakeHttp([
             [
-                [
-                    {
-                        "full_name": "acme/webapp",
-                        "private": True,
-                        "description": "Customer portal",
-                        "updated_at": "2026-07-01T10:00:00Z",
-                    },
-                    {"full_name": "acme/docs", "private": False},
-                ]
+                {
+                    "full_name": "acme/webapp",
+                    "private": True,
+                    "description": "Customer portal",
+                    "updated_at": "2026-07-01T10:00:00Z",
+                },
+                {"full_name": "acme/docs", "private": False},
             ]
-        )
+        ])
         with patch(_RESOLVE, new=AsyncMock(return_value=(_meta(), http))):
             result = await _execute_list_repos(_ctx(), {})
         assert result.success
         assert result.data.startswith(_SOURCE_LINE)
         assert (
-            "acme/webapp (private) - Customer portal - updated 2026-07-01T10:00:00Z"
-            in result.data
+            "acme/webapp (private) - Customer portal - updated 2026-07-01T10:00:00Z" in result.data
         )
         assert "acme/docs (public)" in result.data
         assert http.calls == [
@@ -740,8 +729,7 @@ class TestGetPullRequestExecutor:
             "changed_files": 80,
         }
         files = [
-            {"filename": f"src/module_{i}.py", "additions": i, "deletions": 1}
-            for i in range(50)
+            {"filename": f"src/module_{i}.py", "additions": i, "deletions": 1} for i in range(50)
         ]
         http = _FakeHttp([pull, files])
         with patch(_RESOLVE, new=AsyncMock(return_value=(_meta(), http))):

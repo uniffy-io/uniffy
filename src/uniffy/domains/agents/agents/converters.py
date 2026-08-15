@@ -38,13 +38,9 @@ def agent_to_proto(
         url_prefix="/api/agents/avatars",
     )
 
-    resolved_mode = (
-        effective_access_mode if effective_access_mode is not None else agent.access_mode
-    )
+    resolved_mode = effective_access_mode if effective_access_mode is not None else agent.access_mode
     resolved_baseline = (
-        effective_baseline_role
-        if effective_baseline_role is not None
-        else agent.baseline_role
+        effective_baseline_role if effective_baseline_role is not None else agent.baseline_role
     )
 
     proto = AgentInfo(

@@ -1,5 +1,6 @@
 """Built-in skill tool: load an advertised skill's full instructions on demand."""
 
+from uniffy.core.models.agents.skill_draft import AgentSkillDraftKind
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
 
@@ -79,7 +80,7 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
     # with a visible skill is treated as an edit of it - two skills can never
     # share a name in an org, so a same-named "create" would only fail at save.
     target_skill_id = None
-    kind = "create"
+    kind = AgentSkillDraftKind.CREATE
     if ctx.agent_id is not None:
         from uniffy.domains.agents.cache import fetch_agent_row
 
@@ -105,7 +106,7 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
                 match = next((s for s in visible if s.name.lower() == name.lower()), None)
             if match is not None:
                 target_skill_id = match.id
-                kind = "edit"
+                kind = AgentSkillDraftKind.EDIT
 
     draft = await ops.propose_skill_draft(
         user_id=ctx.user_id,
@@ -124,7 +125,7 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
 
     ctx.pending_events.append(StreamEvent(type=EventType.SKILL_DRAFT, draft=draft))
 
-    verb = "an update to" if kind == "edit" else "a new skill"
+    verb = "an update to" if kind == AgentSkillDraftKind.EDIT else "a new skill"
     return ToolResult(
         success=True,
         data=(

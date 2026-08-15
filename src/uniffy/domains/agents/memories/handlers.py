@@ -62,9 +62,7 @@ def _parse_scope_ref(
     scope = memory_scope_from_proto(scope_value)
     try:
         if scope is not MemoryScope.ORG and agent_id:
-            raise ValidationError(
-                "agent_id", "Only organization memory can be scoped to one agent"
-            )
+            raise ValidationError("agent_id", "Only organization memory can be scoped to one agent")
         if scope is MemoryScope.USER:
             return MemoryScopeRef.user(user_id)
         if scope is MemoryScope.CHANNEL:
@@ -80,9 +78,7 @@ def _parse_scope_ref(
         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
 
-async def _resolve_names(
-    session: AsyncSession, user_ids: set[UUID]
-) -> dict[UUID, str]:
+async def _resolve_names(session: AsyncSession, user_ids: set[UUID]) -> dict[UUID, str]:
     if not user_ids:
         return {}
     rows = (
@@ -95,9 +91,7 @@ async def _resolve_names(
     return {uid: (full_name or username or "") for uid, full_name, username in rows}
 
 
-async def _resolve_agent_names(
-    session: AsyncSession, agent_ids: set[UUID]
-) -> dict[UUID, str]:
+async def _resolve_agent_names(session: AsyncSession, agent_ids: set[UUID]) -> dict[UUID, str]:
     """Provenance labels: which agent wrote an entry the whole audience shares."""
     if not agent_ids:
         return {}
@@ -109,9 +103,7 @@ async def _resolve_agent_names(
     return dict(rows)
 
 
-async def _to_proto_list(
-    session: AsyncSession, memories: list
-) -> list:
+async def _to_proto_list(session: AsyncSession, memories: list) -> list:
     names = await _resolve_names(session, {m.created_by_user_id for m in memories})
     agent_names = await _resolve_agent_names(
         session, {m.created_by_agent_id for m in memories if m.created_by_agent_id}
@@ -268,12 +260,8 @@ class MemoriesHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         content: str | None = request.content if request.HasField("content") else None
-        importance: float | None = (
-            request.importance if request.HasField("importance") else None
-        )
-        description: str | None = (
-            request.description if request.HasField("description") else None
-        )
+        importance: float | None = request.importance if request.HasField("importance") else None
+        description: str | None = request.description if request.HasField("description") else None
 
         category: str | None = None
         if request.HasField("category") and request.category != MEMORY_CATEGORY_UNSPECIFIED:

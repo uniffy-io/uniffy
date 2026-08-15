@@ -74,11 +74,7 @@ async def is_verify_locked(user_id: UUID, ip: str | None) -> VerifyLockStatus:
         return VerifyLockStatus(user_locked=False, ip_locked=False)
 
     user_count = await _read_count(client, _USER_KEY.format(user_id=user_id))
-    ip_count = (
-        await _read_count(client, _IP_KEY.format(ip=ip))
-        if ip
-        else 0
-    )
+    ip_count = await _read_count(client, _IP_KEY.format(ip=ip)) if ip else 0
     return VerifyLockStatus(
         user_locked=user_count >= _USER_MAX_ATTEMPTS,
         ip_locked=ip_count >= _IP_MAX_ATTEMPTS,
@@ -117,9 +113,7 @@ async def record_verify_attempt(
         return RateLimitVerdict.LOCKED_USER
 
     if ip:
-        ip_count = await _incr_with_ttl(
-            client, _IP_KEY.format(ip=ip), _IP_WINDOW_SECONDS
-        )
+        ip_count = await _incr_with_ttl(client, _IP_KEY.format(ip=ip), _IP_WINDOW_SECONDS)
         if ip_count >= _IP_MAX_ATTEMPTS:
             return RateLimitVerdict.LOCKED_IP
 
@@ -166,7 +160,7 @@ async def _read_count(client, key: str) -> int:
         return 0
     try:
         return int(raw)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return 0
 
 

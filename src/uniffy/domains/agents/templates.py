@@ -42,10 +42,8 @@ def _load_catalog() -> tuple[AgentTemplate, ...]:
                 enabled_tools=doc.items("tools"),
                 bundled_skill_names=doc.items("skills"),
                 recommended_model=str(doc.meta.get("recommended_model", "")),
-                recommended_image_model=str(
-                    doc.meta.get("recommended_image_model", "")
-                ),
-                is_default=str(doc.meta.get("default", "")).lower() == "true",
+                recommended_image_model=str(doc.meta.get("recommended_image_model", "")),
+                is_default=str(doc.meta.get("default", "")).lower() == "true",  # noqa: PLR2004
             ),
         ))
 

@@ -32,7 +32,7 @@ def _secure_enabled() -> bool:
     override = os.getenv("ASSET_COOKIE_SECURE")
     if override is not None:
         return override.strip().lower() in ("1", "true", "yes", "on")
-    return os.getenv("ENVIRONMENT", "development").lower() != "development"
+    return os.getenv("ENVIRONMENT", "development").lower() != "development"  # noqa: PLR2004
 
 
 def resolve_asset_cookie_config() -> AssetCookieConfig:

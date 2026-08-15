@@ -115,8 +115,10 @@ async def _ensure_folder(
         Folder.name == name,
         Folder.is_deleted == False,  # noqa: E712
     )
-    query = query.where(Folder.parent_id == parent_id) if parent_id else query.where(
-        Folder.parent_id.is_(None)
+    query = (
+        query.where(Folder.parent_id == parent_id)
+        if parent_id
+        else query.where(Folder.parent_id.is_(None))
     )
 
     existing = (await ctx.session.execute(query)).scalars().first()
@@ -147,7 +149,9 @@ async def _find_file_id(ctx: DemoContext, filename: str, folder_id: UUID | None)
         File.filename == filename,
         File.is_deleted == False,  # noqa: E712
     )
-    query = query.where(File.folder_id == folder_id) if folder_id else query.where(
-        File.folder_id.is_(None)
+    query = (
+        query.where(File.folder_id == folder_id)
+        if folder_id
+        else query.where(File.folder_id.is_(None))
     )
     return (await ctx.session.execute(query)).scalars().first()

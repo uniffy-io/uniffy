@@ -48,7 +48,7 @@ def parse_frontmatter(text: str) -> dict[str, FrontmatterValue]:
                 current_list.append(line[2:].strip())
             continue
 
-        if ":" not in line:
+        if ":" not in line:  # noqa: PLR2004
             continue
 
         key, _, value = line.partition(":")

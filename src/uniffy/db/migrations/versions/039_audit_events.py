@@ -98,12 +98,10 @@ def upgrade() -> None:
         )
 
     op.execute(
-        "CREATE INDEX ix_audit_org_created ON audit_events "
-        "(organization_id, created_at DESC)"
+        "CREATE INDEX ix_audit_org_created ON audit_events (organization_id, created_at DESC)"
     )
     op.execute(
-        "CREATE INDEX ix_audit_actor_created ON audit_events "
-        "(actor_user_id, created_at DESC)"
+        "CREATE INDEX ix_audit_actor_created ON audit_events (actor_user_id, created_at DESC)"
     )
     op.execute(
         "CREATE INDEX ix_audit_resource_created ON audit_events "

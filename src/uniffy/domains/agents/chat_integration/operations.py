@@ -27,7 +27,7 @@ from sqlalchemy import select
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.approval_audit import AgentApprovalAudit
+from uniffy.core.models.agents.approval_audit import AgentApprovalAudit, AgentApprovalStatus
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage, SenderType
@@ -331,7 +331,11 @@ class AgentChatBridge:
         rationale: str | None = None,
     ) -> None:
         """Resolve a pending destructive-tool approval."""
-        if decision not in ("approved", "denied"):
+        try:
+            resolved_decision = AgentApprovalStatus(decision)
+        except ValueError:
+            raise ValidationError("decision", "must be 'approved' or 'denied'")
+        if resolved_decision is AgentApprovalStatus.PENDING:
             raise ValidationError("decision", "must be 'approved' or 'denied'")
 
         store = get_approval_store()
@@ -340,7 +344,7 @@ class AgentChatBridge:
             raise NotFoundError("AgentApproval", str(request_id))
 
         existing_status = state.get("status")
-        if existing_status in ("approved", "denied"):
+        if existing_status in (AgentApprovalStatus.APPROVED, AgentApprovalStatus.DENIED):
             logger.info(
                 f"Approval {request_id} already {existing_status}; "
                 f"ignoring new {decision} from {decided_by}"
@@ -354,7 +358,7 @@ class AgentChatBridge:
         ok = await store.respond(
             channel_id,
             request_id,
-            decision == "approved",
+            resolved_decision is AgentApprovalStatus.APPROVED,
             decided_by=decided_by,
             rationale=rationale,
         )
@@ -375,7 +379,7 @@ class AgentChatBridge:
             requested_at = (
                 datetime.fromisoformat(requested_at_raw) if requested_at_raw else datetime.now(UTC)
             )
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             requested_at = datetime.now(UTC)
 
         decided_at = datetime.now(UTC)
@@ -390,7 +394,7 @@ class AgentChatBridge:
                     agent_id=agent_id,
                     tool_name=tool_name,
                     args_json=state.get("args_json") or {},
-                    status=decision,
+                    status=resolved_decision,
                     decided_by=decided_by,
                     decided_at=decided_at,
                     requested_at=requested_at,

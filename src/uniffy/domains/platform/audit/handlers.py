@@ -56,17 +56,9 @@ class PlatformAuditHandlers:
     ) -> ListPlatformAuditResponse:
         actor_id = get_user_id_from_context(ctx)
         org_id = _parse_optional_uuid(request.organization_id, "organization_id")
-        actor_filter = _parse_optional_uuid(
-            request.actor_user_id, "actor_user_id"
-        )
-        from_ts = (
-            timestamp_to_datetime(request.from_ts)
-            if request.HasField("from_ts")
-            else None
-        )
-        to_ts = (
-            timestamp_to_datetime(request.to_ts) if request.HasField("to_ts") else None
-        )
+        actor_filter = _parse_optional_uuid(request.actor_user_id, "actor_user_id")
+        from_ts = timestamp_to_datetime(request.from_ts) if request.HasField("from_ts") else None
+        to_ts = timestamp_to_datetime(request.to_ts) if request.HasField("to_ts") else None
         try:
             async with open_session() as session:
                 page = await PlatformAuditOperations(session).list_events(
@@ -97,13 +89,9 @@ class PlatformAuditHandlers:
         actor_id = get_user_id_from_context(ctx)
         try:
             async with open_session() as session:
-                entries = await PlatformAuditOperations(session).list_actions(
-                    actor_user_id=actor_id
-                )
+                entries = await PlatformAuditOperations(session).list_actions(actor_user_id=actor_id)
         except ConnectError:
             raise
         except Exception as exc:
             raise _map_domain_error(exc) from exc
-        return ListPlatformActionsResponse(
-            actions=[action_entry_to_proto(e) for e in entries]
-        )
+        return ListPlatformActionsResponse(actions=[action_entry_to_proto(e) for e in entries])

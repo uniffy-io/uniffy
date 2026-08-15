@@ -58,8 +58,5 @@ def sanitize_tool_error(tool_name: str, exc: Exception) -> str:
                 tool=tool_name,
                 original_error=raw,
             )
-            return (
-                f"Internal error executing {tool_name}. "
-                "The operation could not be completed."
-            )
+            return f"Internal error executing {tool_name}. The operation could not be completed."
     return f"Internal error executing {tool_name}: {raw}"

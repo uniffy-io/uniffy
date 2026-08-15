@@ -52,7 +52,7 @@ async def presence_set(
             try:
                 existing = json.loads(existing_raw)
                 previous_status = existing.get("status")
-            except (json.JSONDecodeError, TypeError):
+            except json.JSONDecodeError, TypeError:
                 pass
 
         async with ops_call(_NAMESPACE, "presence_set"):
@@ -104,7 +104,7 @@ async def presence_get_bulk(
         try:
             data = json.loads(raw)
             result[str(uid)] = data
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             logger.warning(f"Invalid presence data for user {uid}", component=LOGGER_COMPONENT)
 
     return result
@@ -126,7 +126,7 @@ async def presence_publish_change(
 
     channel = _presence_channel(org_id)
     payload: dict[str, Any] = {
-        "_type": "presence_changed",
+        "_type": pubsub.NotificationPayloadType.PRESENCE_CHANGED,
         "user_id": str(user_id),
         "status": status,
         "last_active": last_active,

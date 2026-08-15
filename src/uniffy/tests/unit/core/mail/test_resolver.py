@@ -62,12 +62,14 @@ class TestResolveFromOrgRows:
         ]
         session = _session_returning(rows)
 
-        with patch(
-            "uniffy.core.mail.resolver.cache_get",
-            new=AsyncMock(return_value=_miss()),
-        ), patch(
-            "uniffy.core.mail.resolver.cache_set", new=AsyncMock()
-        ), patch("uniffy.core.mail.resolver.OrgCipher") as cipher_cls:
+        with (
+            patch(
+                "uniffy.core.mail.resolver.cache_get",
+                new=AsyncMock(return_value=_miss()),
+            ),
+            patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()),
+            patch("uniffy.core.mail.resolver.OrgCipher") as cipher_cls,
+        ):
             cipher = AsyncMock()
             cipher.decrypt = AsyncMock(return_value="plain-secret")
             cipher_cls.return_value = cipher
@@ -90,10 +92,13 @@ class TestResolveFromOrgRows:
         ]
         session = _session_returning(rows)
 
-        with patch(
-            "uniffy.core.mail.resolver.cache_get",
-            new=AsyncMock(return_value=_miss()),
-        ), patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()):
+        with (
+            patch(
+                "uniffy.core.mail.resolver.cache_get",
+                new=AsyncMock(return_value=_miss()),
+            ),
+            patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()),
+        ):
             resolver = MailConfigResolver(session)
             cfg = await resolver.resolve(generate_id())
 
@@ -106,10 +111,13 @@ class TestResolveFromOrgRows:
         monkeypatch.setenv("SMTP_PORT", "2525")
 
         session = _session_returning([])
-        with patch(
-            "uniffy.core.mail.resolver.cache_get",
-            new=AsyncMock(return_value=_miss()),
-        ), patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()):
+        with (
+            patch(
+                "uniffy.core.mail.resolver.cache_get",
+                new=AsyncMock(return_value=_miss()),
+            ),
+            patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()),
+        ):
             resolver = MailConfigResolver(session)
             cfg = await resolver.resolve(generate_id())
 
@@ -122,10 +130,13 @@ class TestResolveFromOrgRows:
         monkeypatch.delenv("SMTP_HOST", raising=False)
 
         session = _session_returning([])
-        with patch(
-            "uniffy.core.mail.resolver.cache_get",
-            new=AsyncMock(return_value=_miss()),
-        ), patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()):
+        with (
+            patch(
+                "uniffy.core.mail.resolver.cache_get",
+                new=AsyncMock(return_value=_miss()),
+            ),
+            patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()),
+        ):
             resolver = MailConfigResolver(session)
             with pytest.raises(MailNotConfiguredError):
                 await resolver.resolve(generate_id())
@@ -140,10 +151,13 @@ class TestResolveFromOrgRows:
         monkeypatch.setenv("SMTP_HOST", "smtp.local")
 
         session = _session_returning([])  # empty for deployment query
-        with patch(
-            "uniffy.core.mail.resolver.cache_get",
-            new=AsyncMock(return_value=_miss()),
-        ), patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()):
+        with (
+            patch(
+                "uniffy.core.mail.resolver.cache_get",
+                new=AsyncMock(return_value=_miss()),
+            ),
+            patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()),
+        ):
             resolver = MailConfigResolver(session)
             cfg = await resolver.resolve(None)
 

@@ -211,12 +211,7 @@ def _render_canvas_content(ydoc: pycrdt.Doc) -> dict[str, Any] | None:
     edges = ydoc.get("edges", type=pycrdt.Map)
     order = ydoc.get("order", type=pycrdt.Array)
     defaults = ydoc.get("defaults", type=pycrdt.Map)
-    if (
-        len(nodes) == 0
-        and len(edges) == 0
-        and len(order) == 0
-        and len(defaults) == 0
-    ):
+    if len(nodes) == 0 and len(edges) == 0 and len(order) == 0 and len(defaults) == 0:
         return None
 
     nodes_dict = nodes.to_py()

@@ -240,7 +240,7 @@ async def get_documents_by_urns(
                     limit=len(chunk),
                 )
                 for doc in docs.results:
-                    if "urn" in doc:
+                    if "urn" in doc:  # noqa: PLR2004
                         all_results[doc["urn"]] = SearchResult.from_meilisearch_hit(doc)
             except Exception:
                 pass

@@ -39,12 +39,17 @@ def _master_cipher() -> Fernet:
 
 def _active_deployment_dek(bind, master: Fernet) -> tuple[Fernet, int]:
     """Return (Fernet-on-DEK, version), provisioning a v1 DEK if none exists."""
-    row = bind.execute(
-        sa.text(
-            "SELECT version, wrapped_dek FROM deployment_encryption_keys "
-            "WHERE is_active = true LIMIT 1"
+    row = (
+        bind
+        .execute(
+            sa.text(
+                "SELECT version, wrapped_dek FROM deployment_encryption_keys "
+                "WHERE is_active = true LIMIT 1"
+            )
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
     if row is not None:
         dek = master.decrypt(row["wrapped_dek"].encode("ascii"))
         return Fernet(dek), int(row["version"])
@@ -94,12 +99,17 @@ def _insert_org_setting(bind, organization_id, namespace: str, key: str, blob: d
 
 
 def _migrate_vapid(bind) -> None:
-    rows = bind.execute(
-        sa.text(
-            "SELECT key, value, is_encrypted FROM application_settings "
-            "WHERE key IN ('vapid_private_key', 'vapid_public_key', 'vapid_contact_email')"
+    rows = (
+        bind
+        .execute(
+            sa.text(
+                "SELECT key, value, is_encrypted FROM application_settings "
+                "WHERE key IN ('vapid_private_key', 'vapid_public_key', 'vapid_contact_email')"
+            )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
     if not rows:
         return
     data = {r["key"]: r for r in rows}
@@ -130,12 +140,17 @@ def _migrate_calls_policies(bind) -> None:
     # calls_org_policies (migration 054) predates the per-type screen-share caps,
     # so existing rows carry none; they migrate as UNSPECIFIED (0) and the server
     # resolves its built-in per-type default. New writes store real caps in the blob.
-    rows = bind.execute(
-        sa.text(
-            "SELECT organization_id, calls_enabled, max_participants, max_duration_minutes "
-            "FROM calls_org_policies"
+    rows = (
+        bind
+        .execute(
+            sa.text(
+                "SELECT organization_id, calls_enabled, max_participants, max_duration_minutes "
+                "FROM calls_org_policies"
+            )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
     for r in rows:
         blob = {
             "calls_enabled": bool(r["calls_enabled"]),
@@ -149,13 +164,18 @@ def _migrate_calls_policies(bind) -> None:
 
 
 def _migrate_agent_runtime_settings(bind) -> None:
-    rows = bind.execute(
-        sa.text(
-            "SELECT organization_id, send_deadline_seconds, failover_enabled, resume_enabled, "
-            "circuit_breaker_failure_threshold, circuit_breaker_recovery_seconds, "
-            "display_currency FROM agents_runtime_settings"
+    rows = (
+        bind
+        .execute(
+            sa.text(
+                "SELECT organization_id, send_deadline_seconds, failover_enabled, resume_enabled, "
+                "circuit_breaker_failure_threshold, circuit_breaker_recovery_seconds, "
+                "display_currency FROM agents_runtime_settings"
+            )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
     for r in rows:
         blob = {
             "send_deadline_seconds": r["send_deadline_seconds"],
@@ -229,9 +249,7 @@ def downgrade() -> None:
         sa.Column(
             "circuit_breaker_recovery_seconds", sa.Integer(), nullable=False, server_default="60"
         ),
-        sa.Column(
-            "display_currency", sa.String(length=3), nullable=False, server_default="USD"
-        ),
+        sa.Column("display_currency", sa.String(length=3), nullable=False, server_default="USD"),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
         ),

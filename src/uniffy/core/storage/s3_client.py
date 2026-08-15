@@ -47,7 +47,7 @@ class S3Config:
             secret_key=os.getenv("S3_SECRET_KEY", "minioadmin"),
             bucket_name=os.getenv("S3_BUCKET_NAME", "uniffy-files"),
             region=os.getenv("S3_REGION", "us-east-1"),
-            use_ssl=os.getenv("S3_USE_SSL", "false").lower() == "true",
+            use_ssl=os.getenv("S3_USE_SSL", "false").lower() == "true",  # noqa: PLR2004
             connect_timeout=int(os.getenv("S3_CONNECT_TIMEOUT", "10")),
             read_timeout=int(os.getenv("S3_READ_TIMEOUT", "30")),
             max_retries=int(os.getenv("S3_MAX_RETRIES", "3")),

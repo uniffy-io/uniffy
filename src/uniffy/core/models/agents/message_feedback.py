@@ -1,12 +1,18 @@
 """Thumbs up/down feedback on an agent reply, in a session or in chat."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, String, Text, text
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class AgentFeedbackRating(StrEnum):
+    UP = "up"
+    DOWN = "down"
 
 
 class AgentMessageFeedback(SQLModel, table=True):
@@ -46,7 +52,7 @@ class AgentMessageFeedback(SQLModel, table=True):
         sa_column=Column(ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=True),
     )
     user_id: UUID = Field(sa_column=Column(ForeignKey("login_users.id"), nullable=False))
-    rating: str = Field(sa_column=Column(String(8), nullable=False))
+    rating: AgentFeedbackRating = Field(sa_column=Column(String(8), nullable=False))
     comment: str | None = Field(default=None, sa_column=Column(Text(), nullable=True))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

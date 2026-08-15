@@ -74,12 +74,16 @@ async def resolve_organization(session: AsyncSession, slug: str | None) -> Organ
         return row
 
     rows = (
-        await session.execute(
-            select(Organization)
-            .where(Organization.deleted_at.is_(None))
-            .order_by(Organization.created_at)
+        (
+            await session.execute(
+                select(Organization)
+                .where(Organization.deleted_at.is_(None))
+                .order_by(Organization.created_at)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     if not rows:
         raise ResolutionError("No organizations exist yet; start the backend once to bootstrap one")
     if len(rows) > 1:
@@ -111,8 +115,10 @@ async def resolve_actor(
         return row
 
     row = (
-        await session.execute(query.where(OrganizationMember.role == OrganizationRole.OWNER))
-    ).scalars().first()
+        (await session.execute(query.where(OrganizationMember.role == OrganizationRole.OWNER)))
+        .scalars()
+        .first()
+    )
     if row is None:
         raise ResolutionError(
             "This organization has no active owner; pass --actor-email to choose an actor"

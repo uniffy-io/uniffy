@@ -11,6 +11,12 @@ from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.content.references import parse_urn
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import ContentRole, ContentType
+from uniffy.core.valkey.tags import (
+    EVENT_TAG_ASSIGNMENT_CHANGED,
+    EVENT_TAG_CREATED,
+    EVENT_TAG_DELETED,
+    EVENT_TAG_UPDATED,
+)
 from uniffy.db import open_session
 from uniffy.domains.tags.visibility import TagVisibilityFilter
 
@@ -31,23 +37,19 @@ class TagEventRelay:
         body = payload.get("payload") or {}
 
         try:
-            if event_type == "tag.assignment.changed":
+            if event_type == EVENT_TAG_ASSIGNMENT_CHANGED:
                 return await self._project_assignment_changed(body)
-            if event_type == "tag.created":
+            if event_type == EVENT_TAG_CREATED:
                 return await self._project_tag_lifecycle(body, urn_status=None)
-            if event_type == "tag.updated":
+            if event_type == EVENT_TAG_UPDATED:
                 return await self._project_tag_lifecycle(body, urn_status=None)
-            if event_type == "tag.deleted":
+            if event_type == EVENT_TAG_DELETED:
                 return self._project_tag_deleted(body)
         except Exception:
-            logger.warning(
-                "tag-event projection failed", component="notifications.tag_relay"
-            )
+            logger.warning("tag-event projection failed", component="notifications.tag_relay")
         return []
 
-    async def _project_assignment_changed(
-        self, body: dict[str, Any]
-    ) -> list[dict[str, str]]:
+    async def _project_assignment_changed(self, body: dict[str, Any]) -> list[dict[str, str]]:
         content_urn = body.get("content_urn") or ""
         content_type_raw = body.get("content_type") or ""
         if not content_urn or not content_type_raw:
@@ -70,13 +72,11 @@ class TagEventRelay:
 
         events: list[dict[str, str]] = []
         if added_csv or removed_csv:
-            events.append(
-                {
-                    "urn": content_urn,
-                    "tag_assignments_added": added_csv,
-                    "tag_assignments_removed": removed_csv,
-                }
-            )
+            events.append({
+                "urn": content_urn,
+                "tag_assignments_added": added_csv,
+                "tag_assignments_removed": removed_csv,
+            })
 
         tag_counts: dict[str, Any] = body.get("tag_counts") or {}
         tag_urns: dict[str, Any] = body.get("tag_urns") or {}
@@ -84,12 +84,10 @@ class TagEventRelay:
             tag_urn = tag_urns.get(tag_id_str)
             if not tag_urn:
                 continue
-            events.append(
-                {
-                    "urn": str(tag_urn),
-                    "usage_count": str(count),
-                }
-            )
+            events.append({
+                "urn": str(tag_urn),
+                "usage_count": str(count),
+            })
         return events
 
     async def _project_tag_lifecycle(
@@ -122,24 +120,20 @@ class TagEventRelay:
         try:
             return await self._can_view_content(content_type, content_id)
         except Exception:
-            logger.opt(exception=True).warning(
-                "mention-state recipient gate failed; dropping event"
-            )
+            logger.opt(exception=True).warning("mention-state recipient gate failed; dropping event")
             return False
 
     def _project_tag_deleted(self, body: dict[str, Any]) -> list[dict[str, str]]:
         tag_id_raw = body.get("tag_id") or ""
         try:
             tag_id = UUID(tag_id_raw)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return []
         urn = f"urn:uniffy:content:TAG:{tag_id}"
         self._tag_visibility_cache.pop(tag_id, None)
         return [{"urn": urn, "urn_status": "DELETED"}]
 
-    async def _can_view_content(
-        self, content_type: ContentType, content_id: UUID
-    ) -> bool:
+    async def _can_view_content(self, content_type: ContentType, content_id: UUID) -> bool:
         if content_type == ContentType.CHAT:
             return await self._can_view_channel(content_id)
 
@@ -180,9 +174,7 @@ class TagEventRelay:
             checker = PermissionChecker(session)
             if await checker.is_org_admin(self.user_id, self.organization_id):
                 return True
-            if await checker.is_domain_admin(
-                self.user_id, self.organization_id, ContentType.CHAT
-            ):
+            if await checker.is_domain_admin(self.user_id, self.organization_id, ContentType.CHAT):
                 return True
             channel = (
                 await session.execute(
@@ -222,9 +214,7 @@ class TagEventRelay:
             if tag_row is None:
                 self._tag_visibility_cache[tag_id] = False
                 return False
-            visibility = TagVisibilityFilter(
-                session, self.user_id, self.organization_id
-            )
+            visibility = TagVisibilityFilter(session, self.user_id, self.organization_id)
             visible = await visibility.is_visible(tag_row)
         self._tag_visibility_cache[tag_id] = visible
         return visible

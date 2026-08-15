@@ -38,17 +38,19 @@ PROJECT_NAME = "Hierarchy QA"
 
 
 async def _resolve_admin(session, email: str) -> tuple[UUID, UUID]:
-    user_row = (
-        await session.execute(select(User).where(User.email == email))
-    ).scalar_one_or_none()
+    user_row = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if user_row is None:
         raise SystemExit(f"User {email!r} not found. Set ADMIN_EMAIL env var to override.")
 
     membership = (
-        await session.execute(
-            select(OrganizationMember).where(OrganizationMember.user_id == user_row.id)
+        (
+            await session.execute(
+                select(OrganizationMember).where(OrganizationMember.user_id == user_row.id)
+            )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     if membership is None:
         raise SystemExit(f"User {email!r} is not a member of any organization.")
     return user_row.id, membership.organization_id
@@ -56,14 +58,18 @@ async def _resolve_admin(session, email: str) -> tuple[UUID, UUID]:
 
 async def _delete_existing_project(session, user_id: UUID, organization_id: UUID) -> None:
     existing = (
-        await session.execute(
-            select(Project).where(
-                Project.organization_id == organization_id,
-                Project.name == PROJECT_NAME,
-                Project.is_deleted == False,  # noqa: E712
+        (
+            await session.execute(
+                select(Project).where(
+                    Project.organization_id == organization_id,
+                    Project.name == PROJECT_NAME,
+                    Project.is_deleted == False,  # noqa: E712
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     if not existing:
         return
     ops = ProjectOperations(session)
@@ -93,9 +99,7 @@ async def _create_task(
     return task.id
 
 
-async def _seed_tree(
-    session, user_id: UUID, organization_id: UUID, project_id: UUID
-) -> None:
+async def _seed_tree(session, user_id: UUID, organization_id: UUID, project_id: UUID) -> None:
     ops = TaskOperations(session)
 
     epic_a = await _create_task(

@@ -230,9 +230,7 @@ def _pdf(title: str, sections: list[tuple[str, list[str]]]) -> bytes:
     page_object_numbers = [4 + index * 2 for index in range(len(pages))]
     kids = " ".join(f"{number} 0 R" for number in page_object_numbers)
     objects.append(b"<< /Type /Catalog /Pages 2 0 R >>")
-    objects.append(
-        f"<< /Type /Pages /Kids [{kids}] /Count {len(pages)} >>".encode()
-    )
+    objects.append(f"<< /Type /Pages /Kids [{kids}] /Count {len(pages)} >>".encode())
     objects.append(
         b"<< /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
         b" /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >>"
@@ -382,8 +380,14 @@ def _offsite_photo() -> bytes:
         (
             (70, 60, 66),
             [
-                (0, 1000), (0, 620), (330, 400), (620, 660),
-                (980, 380), (1290, 640), (1600, 520), (1600, 1000),
+                (0, 1000),
+                (0, 620),
+                (330, 400),
+                (620, 660),
+                (980, 380),
+                (1290, 640),
+                (1600, 520),
+                (1600, 1000),
             ],
         ),
         (
@@ -399,7 +403,7 @@ def _offsite_photo() -> bytes:
 
 def _encode(image: Image.Image, image_format: str) -> bytes:
     buffer = io.BytesIO()
-    if image_format == "JPEG":
+    if image_format == "JPEG":  # noqa: PLR2004
         image.save(buffer, format="JPEG", quality=85)
     else:
         image.save(buffer, format="PNG")

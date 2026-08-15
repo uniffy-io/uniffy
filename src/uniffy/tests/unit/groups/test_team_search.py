@@ -64,9 +64,7 @@ def _as_admin():
     row = OrganizationMember(
         user_id=ACTOR, organization_id=ORG, role=OrganizationRole.ADMIN, is_active=True
     )
-    return patch.object(
-        OrganizationOperations, "get_membership", AsyncMock(return_value=row)
-    )
+    return patch.object(OrganizationOperations, "get_membership", AsyncMock(return_value=row))
 
 
 def _ops_patches():
@@ -91,8 +89,9 @@ class TestIndexTeam:
         session = _session([_scalar_result(7), _scalar_result("Product")])
         index_mock = AsyncMock()
         publish_mock = AsyncMock()
-        with patch.object(SearchIndexer, "index", index_mock), patch(
-            "uniffy.domains.groups.search.publish_mention_state", publish_mock
+        with (
+            patch.object(SearchIndexer, "index", index_mock),
+            patch("uniffy.domains.groups.search.publish_mention_state", publish_mock),
         ):
             await TeamSearchIndexer(session).index_team(group)
 
@@ -116,8 +115,9 @@ class TestIndexTeam:
         group = _group()
         session = _session([_scalar_result(0)])
         publish_mock = AsyncMock()
-        with patch.object(SearchIndexer, "index", AsyncMock()) as index_mock, patch(
-            "uniffy.domains.groups.search.publish_mention_state", publish_mock
+        with (
+            patch.object(SearchIndexer, "index", AsyncMock()) as index_mock,
+            patch("uniffy.domains.groups.search.publish_mention_state", publish_mock),
         ):
             await TeamSearchIndexer(session).index_team(group)
         assert index_mock.call_args.kwargs["metadata"] == {"member_count": "0"}
@@ -129,9 +129,11 @@ class TestIndexTeam:
         index_mock = AsyncMock()
         remove_mock = AsyncMock()
         publish_mock = AsyncMock()
-        with patch.object(SearchIndexer, "index", index_mock), patch.object(
-            SearchIndexer, "remove", remove_mock
-        ), patch("uniffy.domains.groups.search.publish_mention_state", publish_mock):
+        with (
+            patch.object(SearchIndexer, "index", index_mock),
+            patch.object(SearchIndexer, "remove", remove_mock),
+            patch("uniffy.domains.groups.search.publish_mention_state", publish_mock),
+        ):
             await TeamSearchIndexer(session).index_team(group)
         index_mock.assert_not_awaited()
         remove_mock.assert_awaited_once_with(build_team_urn(group.id), ORG)
@@ -141,8 +143,9 @@ class TestIndexTeam:
         group_id = generate_id()
         remove_mock = AsyncMock()
         publish_mock = AsyncMock()
-        with patch.object(SearchIndexer, "remove", remove_mock), patch(
-            "uniffy.domains.groups.search.publish_mention_state", publish_mock
+        with (
+            patch.object(SearchIndexer, "remove", remove_mock),
+            patch("uniffy.domains.groups.search.publish_mention_state", publish_mock),
         ):
             await TeamSearchIndexer(_session()).remove_team(group_id, ORG)
         remove_mock.assert_awaited_once_with(build_team_urn(group_id), ORG)
@@ -170,7 +173,13 @@ class TestGroupOperationsWiring:
         p = _ops_patches()
         with (
             _as_admin(),
-            p[0], p[1], p[2], p[3], p[4], p[5], p[6],
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
             patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team,
         ):
             group = await ops.create(
@@ -187,12 +196,16 @@ class TestGroupOperationsWiring:
         p = _ops_patches()
         with (
             _as_admin(),
-            p[0], p[1], p[2], p[3], p[4], p[5], p[6],
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
             patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team,
         ):
-            await ops.create(
-                organization_id=ORG, name="Secret", created_by_user_id=ACTOR
-            )
+            await ops.create(organization_id=ORG, name="Secret", created_by_user_id=ACTOR)
         index_team.assert_not_awaited()
 
     async def test_rename_reindexes_team_children_and_members(self) -> None:
@@ -205,16 +218,18 @@ class TestGroupOperationsWiring:
         sync_people = AsyncMock()
         with (
             _as_admin(),
-            p[0], p[1], p[2], p[3], p[4], p[5], p[6],
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
             patch("uniffy.domains.groups.operations.sync_people_search", sync_people),
             patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
-            patch.object(
-                GroupOperations, "_active_member_ids", AsyncMock(return_value=member_ids)
-            ),
+            patch.object(GroupOperations, "_active_member_ids", AsyncMock(return_value=member_ids)),
             patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team,
-            patch.object(
-                TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=child_ids)
-            ),
+            patch.object(TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=child_ids)),
             patch.object(TeamSearchIndexer, "sync_teams", AsyncMock()) as sync_teams,
         ):
             await ops.update(
@@ -234,7 +249,13 @@ class TestGroupOperationsWiring:
         p = _ops_patches()
         with (
             _as_admin(),
-            p[0], p[1], p[2], p[3], p[4], p[5], p[6],
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
             patch("uniffy.domains.groups.operations.sync_people_search", AsyncMock()),
             patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
             patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team,
@@ -257,16 +278,18 @@ class TestGroupOperationsWiring:
         p = _ops_patches()
         with (
             _as_admin(),
-            p[0], p[1], p[2], p[3], p[4], p[5], p[6],
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
             patch("uniffy.domains.groups.operations.sync_people_search", AsyncMock()),
             patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
-            patch.object(
-                GroupOperations, "_active_member_ids", AsyncMock(return_value=[])
-            ),
+            patch.object(GroupOperations, "_active_member_ids", AsyncMock(return_value=[])),
             patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team,
-            patch.object(
-                TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=detached)
-            ),
+            patch.object(TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=detached)),
             patch.object(TeamSearchIndexer, "remove_team", AsyncMock()) as remove_team,
             patch.object(TeamSearchIndexer, "sync_teams", AsyncMock()) as sync_teams,
         ):
@@ -287,17 +310,19 @@ class TestGroupOperationsWiring:
         p = _ops_patches()
         with (
             _as_admin(),
-            p[0], p[1], p[2], p[3], p[4], p[5], p[6],
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
             patch("uniffy.domains.groups.operations.sync_people_search", AsyncMock()),
             patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
-            patch.object(
-                GroupOperations, "_active_member_ids", AsyncMock(return_value=[])
-            ),
+            patch.object(GroupOperations, "_active_member_ids", AsyncMock(return_value=[])),
             patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team,
             patch.object(TeamSearchIndexer, "sync_teams", AsyncMock()),
-            patch.object(
-                TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=[])
-            ),
+            patch.object(TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=[])),
         ):
             await ops.update(
                 group_id=group.id,
@@ -316,12 +341,16 @@ class TestGroupOperationsWiring:
         p = _ops_patches()
         with (
             _as_admin(),
-            p[0], p[1], p[2], p[3], p[4], p[5], p[6],
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
             patch("uniffy.domains.groups.operations.sync_people_search", AsyncMock()),
             patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
-            patch.object(
-                TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=child_ids)
-            ),
+            patch.object(TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=child_ids)),
             patch.object(TeamSearchIndexer, "remove_team", AsyncMock()) as remove_team,
             patch.object(TeamSearchIndexer, "sync_teams", AsyncMock()) as sync_teams,
         ):
@@ -336,7 +365,10 @@ class TestGroupOperationsWiring:
         ops = GroupOperations(session)
         p = _ops_patches()
         with (
-            p[1], p[2], p[3], p[4],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
             patch("uniffy.domains.groups.operations.sync_people_search", AsyncMock()),
             patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team,
         ):
@@ -347,9 +379,10 @@ class TestGroupOperationsWiring:
         group = _group(kind=GroupKind.ACCESS)
         session = _session()
         ops = GroupOperations(session)
-        with patch.object(
-            TeamSearchIndexer, "index_team", AsyncMock()
-        ) as index_team, patch.object(TeamSearchIndexer, "remove_team", AsyncMock()):
+        with (
+            patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team,
+            patch.object(TeamSearchIndexer, "remove_team", AsyncMock()),
+        ):
             await ops._invalidate_team_membership(group, generate_id())
         index_team.assert_not_awaited()
 
@@ -366,16 +399,18 @@ class TestFirstTeamDerivation:
         sync_people = AsyncMock()
         with (
             _as_admin(),
-            p[0], p[1], p[2], p[3], p[4], p[5], p[6],
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
             patch("uniffy.domains.groups.operations.sync_people_search", sync_people),
             patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
-            patch.object(
-                GroupOperations, "_active_member_ids", AsyncMock(return_value=member_ids)
-            ),
+            patch.object(GroupOperations, "_active_member_ids", AsyncMock(return_value=member_ids)),
             patch.object(TeamSearchIndexer, "index_team", AsyncMock()),
-            patch.object(
-                TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=[])
-            ),
+            patch.object(TeamSearchIndexer, "child_team_ids", AsyncMock(return_value=[])),
             patch.object(TeamSearchIndexer, "sync_teams", AsyncMock()),
         ):
             await ops.update(

@@ -4,7 +4,7 @@ import openai
 from loguru import logger
 
 from uniffy.domains.agents.providers.base import ModelInfo
-from uniffy.domains.agents.providers.catalog import model_infos_for_provider
+from uniffy.domains.agents.providers.catalog import ReasoningControl, model_infos_for_provider
 from uniffy.domains.agents.providers.openai.provider import OpenAIProvider
 
 logger = logger.bind(component="agents.providers.xai")
@@ -30,5 +30,5 @@ class XAIProvider(OpenAIProvider):
         return model_infos_for_provider("xai")
 
     def _apply_reasoning(self, kwargs: dict, effort: str) -> None:
-        if kwargs["model"] == "grok-4.6" and effort != "off":
+        if kwargs["model"] == "grok-4.6" and effort != ReasoningControl.OFF:  # noqa: PLR2004
             kwargs["reasoning_effort"] = effort

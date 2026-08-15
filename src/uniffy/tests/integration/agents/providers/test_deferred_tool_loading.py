@@ -75,8 +75,7 @@ def test_mid_loop_schema_append(live_provider) -> None:
         user_turn = {
             "role": "user",
             "content": (
-                "What is the weather in Paris right now? "
-                "Use your tools; do not answer from memory."
+                "What is the weather in Paris right now? Use your tools; do not answer from memory."
             ),
         }
 
@@ -103,11 +102,7 @@ def test_mid_loop_schema_append(live_provider) -> None:
                 "role": "assistant",
                 "content": [
                     *first.thinking_blocks,
-                    *(
-                        [{"type": "text", "text": first.content}]
-                        if first.content
-                        else []
-                    ),
+                    *([{"type": "text", "text": first.content}] if first.content else []),
                     {
                         "type": "tool_use",
                         "id": load_call.id,

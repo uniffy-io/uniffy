@@ -56,15 +56,9 @@ class SavedTagFilterHandlersMixin:
             async with open_session() as session:
                 ops = SavedTagFilterOperations(session)
                 criteria = (
-                    criteria_from_proto(request.criteria)
-                    if request.HasField("criteria")
-                    else {}
+                    criteria_from_proto(request.criteria) if request.HasField("criteria") else {}
                 )
-                icon = (
-                    icon_from_proto(request.icon)
-                    if request.HasField("icon")
-                    else None
-                )
+                icon = icon_from_proto(request.icon) if request.HasField("icon") else None
                 saved = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -73,9 +67,7 @@ class SavedTagFilterHandlersMixin:
                     icon=icon,
                     criteria=criteria,
                     sort_by=request.sort_by if request.HasField("sort_by") else "count",
-                    sort_order=request.sort_order
-                    if request.HasField("sort_order")
-                    else "desc",
+                    sort_order=request.sort_order if request.HasField("sort_order") else "desc",
                 )
                 return CreateSavedFilterResponse(
                     filter=await saved_filter_to_proto(saved, session=session)
@@ -99,29 +91,19 @@ class SavedTagFilterHandlersMixin:
             async with open_session() as session:
                 ops = SavedTagFilterOperations(session)
                 criteria = (
-                    criteria_from_proto(request.criteria)
-                    if request.HasField("criteria")
-                    else None
+                    criteria_from_proto(request.criteria) if request.HasField("criteria") else None
                 )
-                icon = (
-                    icon_from_proto(request.icon)
-                    if request.HasField("icon")
-                    else None
-                )
+                icon = icon_from_proto(request.icon) if request.HasField("icon") else None
                 saved = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
                     filter_id=filter_id,
                     name=request.name if request.HasField("name") else None,
-                    description=request.description
-                    if request.HasField("description")
-                    else None,
+                    description=request.description if request.HasField("description") else None,
                     icon=icon,
                     criteria=criteria,
                     sort_by=request.sort_by if request.HasField("sort_by") else None,
-                    sort_order=request.sort_order
-                    if request.HasField("sort_order")
-                    else None,
+                    sort_order=request.sort_order if request.HasField("sort_order") else None,
                 )
                 return UpdateSavedFilterResponse(
                     filter=await saved_filter_to_proto(saved, session=session)
@@ -178,13 +160,9 @@ class SavedTagFilterHandlersMixin:
                 filters = await ops.list_filters(
                     user_id=user_id,
                     organization_id=organization_id,
-                    include_presets=request.include_presets
-                    if request.include_presets
-                    else True,
+                    include_presets=request.include_presets if request.include_presets else True,
                 )
-                proto_filters = [
-                    await saved_filter_to_proto(f, session=session) for f in filters
-                ]
+                proto_filters = [await saved_filter_to_proto(f, session=session) for f in filters]
             return ListSavedFiltersResponse(filters=proto_filters)
         except ConnectError:
             raise

@@ -6,6 +6,7 @@ import base64
 import secrets as _secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from uuid import UUID
 
 import pyotp
@@ -18,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
@@ -52,6 +54,11 @@ logger = logger.bind(component="auth.mfa.operations")
 
 TOTP_VALID_WINDOW = 1
 TOTP_ISSUER = "Uniffy"
+
+
+class MfaMethod(StrEnum):
+    TOTP = "totp"
+    RECOVERY_CODE = "recovery_code"
 
 
 @dataclass(frozen=True)
@@ -139,9 +146,7 @@ class MfaOperations:
         )
         qr_svg_base64 = _render_qr_svg_base64(provisioning_uri)
 
-        await self._audit_mfa_self_event(
-            user_id=user_id, action=Action.AUTH_MFA_ENROLLMENT_STARTED
-        )
+        await self._audit_mfa_self_event(user_id=user_id, action=Action.AUTH_MFA_ENROLLMENT_STARTED)
         await self._session.commit()
 
         return EnrollmentChallenge(
@@ -172,9 +177,7 @@ class MfaOperations:
             raise AuthenticationError("Invalid verification code")
 
         recovery_codes = generate_recovery_codes(RECOVERY_CODE_COUNT)
-        await replace_recovery_codes(
-            self._session, user_id=user_id, codes=recovery_codes
-        )
+        await replace_recovery_codes(self._session, user_id=user_id, codes=recovery_codes)
 
         now = datetime.now(UTC)
         mfa.enabled = True
@@ -252,9 +255,7 @@ class MfaOperations:
             raise TokenError("Invalid or expired challenge token") from exc
 
         user_id = UUID(payload["sub"])
-        organization_id = (
-            UUID(payload["org_id"]) if payload.get("org_id") else None
-        )
+        organization_id = UUID(payload["org_id"]) if payload.get("org_id") else None
         challenge_tkv = payload.get("tkv")
         # client_ip_for_rate_limit returns None when the resolved IP is the
         # local proxy address with no TRUSTED_PROXY_HOPS configured - in that
@@ -277,13 +278,13 @@ class MfaOperations:
             raise AuthenticationError("MFA is not enabled for this account")
 
         used_recovery_code = False
-        if method == "totp":
+        if method == MfaMethod.TOTP:
             matched_counter = await self._verify_totp_match_counter(mfa, code)
             if matched_counter is None:
                 ok = False
             else:
                 ok = await mark_code_used(user_id, matched_counter)
-        elif method == "recovery_code":
+        elif method == MfaMethod.RECOVERY_CODE:
             ok = await self._consume_recovery_code(user_id, code)
             used_recovery_code = ok
         else:
@@ -301,7 +302,7 @@ class MfaOperations:
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.AUTH_MFA_FAILED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=user_id,
                 details={"method": method},
             )
@@ -314,8 +315,8 @@ class MfaOperations:
         from uniffy.core.models.login.user_session import UserSession
         from uniffy.domains.auth.context import parse_device_label
 
-        bound_org_id, bound_slug, bound_role, bound_admin_domains = (
-            await self._resolve_pending_org(user.id, organization_id)
+        bound_org_id, bound_slug, bound_role, bound_admin_domains = await self._resolve_pending_org(
+            user.id, organization_id
         )
 
         session_record = UserSession(
@@ -354,7 +355,7 @@ class MfaOperations:
                 if used_recovery_code
                 else Action.AUTH_MFA_VERIFIED
             ),
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=user_id,
             details={"session_id": str(session_record.id), "method": method},
         )
@@ -386,20 +387,14 @@ class MfaOperations:
         await self._session.execute(
             delete(UserRecoveryCode).where(UserRecoveryCode.user_id == user_id)
         )
-        await self._session.execute(
-            delete(UserMfa).where(UserMfa.user_id == user_id)
-        )
+        await self._session.execute(delete(UserMfa).where(UserMfa.user_id == user_id))
         await self._bump_token_version(user)
 
-        await self._audit_mfa_self_event(
-            user_id=user_id, action=Action.AUTH_MFA_DISABLED
-        )
+        await self._audit_mfa_self_event(user_id=user_id, action=Action.AUTH_MFA_DISABLED)
         await self._session.commit()
         await mark_token_version_revoked(user.id, user.token_version)
 
-    async def regenerate_recovery_codes(
-        self, user_id: UUID, code: str
-    ) -> list[str]:
+    async def regenerate_recovery_codes(self, user_id: UUID, code: str) -> list[str]:
         """Re-issue 10 fresh recovery codes. Requires a current TOTP code."""
         mfa = await self._load_mfa(user_id)
         if mfa is None or not mfa.enabled:
@@ -408,9 +403,7 @@ class MfaOperations:
             raise AuthenticationError("Invalid verification code")
 
         recovery_codes = generate_recovery_codes(RECOVERY_CODE_COUNT)
-        await replace_recovery_codes(
-            self._session, user_id=user_id, codes=recovery_codes
-        )
+        await replace_recovery_codes(self._session, user_id=user_id, codes=recovery_codes)
         await self._audit_mfa_self_event(
             user_id=user_id, action=Action.AUTH_MFA_RECOVERY_CODES_REGENERATED
         )
@@ -523,9 +516,7 @@ class MfaOperations:
 
         target = await self._load_user(target_user_id)
         if target.is_system_admin:
-            raise PermissionDeniedError(
-                "platform_reset_mfa: peer reset requires co-sign", "mfa"
-            )
+            raise PermissionDeniedError("platform_reset_mfa: peer reset requires co-sign", "mfa")
 
         membership_count = (
             await self._session.execute(
@@ -564,9 +555,7 @@ class MfaOperations:
         if not actor.is_system_admin:
             raise PermissionDeniedError("request_platform_peer_reset", "mfa")
         if actor_user_id == target_user_id:
-            raise PermissionDeniedError(
-                "request_platform_peer_reset: cannot target self", "mfa"
-            )
+            raise PermissionDeniedError("request_platform_peer_reset: cannot target self", "mfa")
         target = await self._load_user(target_user_id)
         if not target.is_system_admin:
             raise PermissionDeniedError(
@@ -591,7 +580,7 @@ class MfaOperations:
             organization_id=None,
             actor_user_id=actor_user_id,
             action=Action.AUTH_MFA_PLATFORM_RESET_REQUESTED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target_user_id,
             details={
                 "request_id": str(request_row.id),
@@ -618,20 +607,24 @@ class MfaOperations:
 
         now = datetime.now(UTC)
         rows = (
-            await self._session.execute(
-                select(PlatformMfaResetRequest)
-                .where(PlatformMfaResetRequest.approved_at.is_(None))
-                .where(PlatformMfaResetRequest.expires_at > now)
-                .order_by(PlatformMfaResetRequest.created_at.desc())
+            (
+                await self._session.execute(
+                    select(PlatformMfaResetRequest)
+                    .where(PlatformMfaResetRequest.approved_at.is_(None))
+                    .where(PlatformMfaResetRequest.expires_at > now)
+                    .order_by(PlatformMfaResetRequest.created_at.desc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         if not rows:
             return []
 
         ids = {r.requester_user_id for r in rows} | {r.target_user_id for r in rows}
         user_rows = (
-            await self._session.execute(select(User).where(User.id.in_(ids)))
-        ).scalars().all()
+            (await self._session.execute(select(User).where(User.id.in_(ids)))).scalars().all()
+        )
         emails = {u.id: u.email for u in user_rows}
 
         return [
@@ -664,9 +657,7 @@ class MfaOperations:
 
         request_row = (
             await self._session.execute(
-                select(PlatformMfaResetRequest).where(
-                    PlatformMfaResetRequest.id == request_id
-                )
+                select(PlatformMfaResetRequest).where(PlatformMfaResetRequest.id == request_id)
             )
         ).scalar_one_or_none()
         if request_row is None:
@@ -682,9 +673,7 @@ class MfaOperations:
             )
         now = datetime.now(UTC)
         if now >= request_row.expires_at:
-            raise PermissionDeniedError(
-                "approve_platform_peer_reset: request has expired", "mfa"
-            )
+            raise PermissionDeniedError("approve_platform_peer_reset: request has expired", "mfa")
 
         request_row.approved_at = now
         request_row.approver_user_id = actor_user_id
@@ -727,9 +716,7 @@ class MfaOperations:
         await self._session.execute(
             delete(UserRecoveryCode).where(UserRecoveryCode.user_id == target.id)
         )
-        await self._session.execute(
-            delete(UserMfa).where(UserMfa.user_id == target.id)
-        )
+        await self._session.execute(delete(UserMfa).where(UserMfa.user_id == target.id))
         await self._bump_token_version(target)
 
         # Bumping token_version alone leaves the existing access tokens valid
@@ -767,7 +754,7 @@ class MfaOperations:
             organization_id=organization_id,
             actor_user_id=actor_user_id,
             action=action,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target.id,
             details=details,
         )
@@ -816,9 +803,7 @@ class MfaOperations:
     async def _verify_totp(self, mfa: UserMfa, code: str) -> bool:
         return await self._verify_totp_match_counter(mfa, code) is not None
 
-    async def _verify_totp_match_counter(
-        self, mfa: UserMfa, code: str
-    ) -> int | None:
+    async def _verify_totp_match_counter(self, mfa: UserMfa, code: str) -> int | None:
         """Return the matched 30s step or `None` when no code matches.
 
         Replay protection needs the exact step the code belongs to;
@@ -829,9 +814,7 @@ class MfaOperations:
         if mfa.totp_secret_encrypted is None:
             return None
         try:
-            secret_b32 = await decrypt_totp_secret(
-                self._session, mfa.totp_secret_encrypted
-            )
+            secret_b32 = await decrypt_totp_secret(self._session, mfa.totp_secret_encrypted)
         except Exception as exc:  # noqa: BLE001
             logger.error(f"TOTP decrypt failed for user {mfa.user_id}: {exc}")
             return None
@@ -858,7 +841,8 @@ class MfaOperations:
         another tx consumed the code and the verify is a miss.
         """
         result = await self._session.execute(
-            select(UserRecoveryCode).where(
+            select(UserRecoveryCode)
+            .where(
                 UserRecoveryCode.user_id == user_id,
                 UserRecoveryCode.used_at.is_(None),
             )
@@ -890,18 +874,14 @@ class MfaOperations:
         )
         return int(result.scalar_one() or 0)
 
-    async def _reserve_pending_secret(
-        self, user_id: UUID, existing: UserMfa | None
-    ) -> str:
+    async def _reserve_pending_secret(self, user_id: UUID, existing: UserMfa | None) -> str:
         """Return the plaintext secret for the user's pending enrollment.
 
         Persisted with `ON CONFLICT DO NOTHING` so racing callers can never
         end up with different secrets; the first writer wins.
         """
         if existing is not None and existing.totp_secret_encrypted:
-            return await decrypt_totp_secret(
-                self._session, existing.totp_secret_encrypted
-            )
+            return await decrypt_totp_secret(self._session, existing.totp_secret_encrypted)
 
         secret_b32 = generate_totp_secret()
         ciphertext = await encrypt_totp_secret(self._session, secret_b32)
@@ -926,14 +906,10 @@ class MfaOperations:
         stored = await self._load_mfa(user_id)
         if stored is None or stored.totp_secret_encrypted is None:
             return secret_b32
-        return await decrypt_totp_secret(
-            self._session, stored.totp_secret_encrypted
-        )
+        return await decrypt_totp_secret(self._session, stored.totp_secret_encrypted)
 
     async def _load_user(self, user_id: UUID) -> User:
-        result = await self._session.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self._session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if user is None:
             raise NotFoundError("User", str(user_id))
@@ -971,7 +947,7 @@ class MfaOperations:
                 organization_id=None,
                 actor_user_id=user_id,
                 action=action,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=user_id,
                 details=payload,
             )
@@ -982,24 +958,20 @@ class MfaOperations:
                 organization_id=org_id,
                 actor_user_id=user_id,
                 action=action,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=user_id,
                 details=payload,
             )
 
     async def _load_mfa(self, user_id: UUID) -> UserMfa | None:
-        result = await self._session.execute(
-            select(UserMfa).where(UserMfa.user_id == user_id)
-        )
+        result = await self._session.execute(select(UserMfa).where(UserMfa.user_id == user_id))
         return result.scalar_one_or_none()
 
     async def _bump_token_version(self, user: User) -> None:
         """Increment `User.token_version` so every prior session dies."""
         user.token_version = (user.token_version or 1) + 1
         await self._session.execute(
-            update(User)
-            .where(User.id == user.id)
-            .values(token_version=user.token_version)
+            update(User).where(User.id == user.id).values(token_version=user.token_version)
         )
 
     async def _resolve_pending_org(

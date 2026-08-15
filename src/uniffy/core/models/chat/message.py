@@ -1,7 +1,7 @@
 """Chat message model."""
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -20,6 +20,21 @@ class SenderType(str, Enum):
     AGENT = "AGENT"
     SYSTEM = "SYSTEM"
     GUEST = "GUEST"
+
+
+class ChatMessageMetadataKind(StrEnum):
+    FINAL = "final"
+    SUMMARY = "summary"
+    TOOL_CALL = "tool_call"
+    TOOL_RESULT = "tool_result"
+    CONTEXT_RESET = "context_reset"
+    AGENT_ERROR = "agent_error"
+    SKILL_DRAFT = "skill_draft"
+    IMAGE_GENERATION = "image_generation"
+
+
+class ChatMessageVisibility(StrEnum):
+    AGENT_INTERNAL = "agent_internal"
 
 
 class ChatMessage(SQLModel, table=True):

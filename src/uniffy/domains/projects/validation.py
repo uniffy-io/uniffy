@@ -4,7 +4,7 @@ import re
 from typing import Any
 from uuid import UUID
 
-from uniffy.core.models.projects.field_definition import FieldDefinition
+from uniffy.core.models.projects.field_definition import FieldDefinition, ProjectFieldType
 
 
 def validate_field_values(
@@ -54,27 +54,27 @@ def _validate_single_field(field_def: FieldDefinition, value: Any) -> str | None
     field_type = field_def.type
     config = field_def.config or {}
 
-    if field_type == "text":
+    if field_type == ProjectFieldType.TEXT:
         if not isinstance(value, str):
             return "must be a text value"
         max_length = config.get("max_length", 1000)
         if len(value) > max_length:
             return f"exceeds maximum length of {max_length} characters"
 
-    elif field_type == "number":
+    elif field_type == ProjectFieldType.NUMBER:
         if not isinstance(value, (int, float)):
             try:
                 float(value)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 return "must be a numeric value"
 
-    elif field_type == "single_select":
+    elif field_type == ProjectFieldType.SINGLE_SELECT:
         options = _get_option_ids(config)
         if options and str(value) not in options:
             labels = _get_option_labels(config)
             return f"must be one of: {', '.join(labels)}"
 
-    elif field_type == "multi_select":
+    elif field_type == ProjectFieldType.MULTI_SELECT:
         if not isinstance(value, list):
             return "must be a list of values"
         options = _get_option_ids(config)
@@ -84,13 +84,13 @@ def _validate_single_field(field_def: FieldDefinition, value: Any) -> str | None
                 labels = _get_option_labels(config)
                 return f"contains invalid options. Valid options: {', '.join(labels)}"
 
-    elif field_type == "date":
+    elif field_type == ProjectFieldType.DATE:
         if not isinstance(value, str):
             return "must be a date string (YYYY-MM-DD)"
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", value):
             return "must be in YYYY-MM-DD format"
 
-    elif field_type == "person":
+    elif field_type == ProjectFieldType.PERSON:
         if isinstance(value, list):
             for v in value:
                 if not _is_valid_uuid(str(v)):
@@ -98,7 +98,7 @@ def _validate_single_field(field_def: FieldDefinition, value: Any) -> str | None
         elif not _is_valid_uuid(str(value)):
             return "must be a valid user ID"
 
-    elif field_type == "reference":
+    elif field_type == ProjectFieldType.REFERENCE:
         if not isinstance(value, str) or not value.startswith("urn:uniffy:"):
             return "must be a valid URN reference"
 

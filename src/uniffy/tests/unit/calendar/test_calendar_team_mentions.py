@@ -31,16 +31,17 @@ def _ops() -> CalendarEventOperations:
 async def _emit(team_ids, excluded, expansions):
     emitted: list = []
     ops = _ops()
-    with patch(
-        "uniffy.domains.calendar.operations.emit_notification",
-        AsyncMock(side_effect=lambda event: emitted.append(event)),
-    ), patch(
-        "uniffy.domains.calendar.operations.expand_team_mentions",
-        AsyncMock(return_value=expansions),
-    ) as expander:
-        await ops._emit_team_mention_notifications(
-            _event(), ACTOR, ORG, team_ids, excluded
-        )
+    with (
+        patch(
+            "uniffy.domains.calendar.operations.emit_notification",
+            AsyncMock(side_effect=lambda event: emitted.append(event)),
+        ),
+        patch(
+            "uniffy.domains.calendar.operations.expand_team_mentions",
+            AsyncMock(return_value=expansions),
+        ) as expander,
+    ):
+        await ops._emit_team_mention_notifications(_event(), ACTOR, ORG, team_ids, excluded)
     return emitted, expander
 
 

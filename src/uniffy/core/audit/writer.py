@@ -15,7 +15,7 @@ from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.audit.request_context import audit_ip_var, audit_user_agent_var
-from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.audit.event import AuditActorKind, AuditEvent, AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
 from uniffy.observability.metrics import AUDIT_ROLE_LOOKUP_SECONDS
@@ -47,7 +47,7 @@ async def write_audit_event(
     organization_id: UUID | None,
     actor_user_id: UUID | None,
     action: str,
-    resource_type: str | None = None,
+    resource_type: AuditResourceType | None = None,
     resource_id: UUID | None = None,
     details: dict | None = None,
     on_behalf_of_user_id: UUID | None = None,
@@ -65,9 +65,7 @@ async def write_audit_event(
     ):
         return None
 
-    actor_org_role = await _snapshot_actor_role(
-        session, organization_id, actor_user_id
-    )
+    actor_org_role = await _snapshot_actor_role(session, organization_id, actor_user_id)
 
     merged_details = dict(details or {})
     _merge_support_session_tag(merged_details, organization_id)
@@ -88,9 +86,7 @@ async def write_audit_event(
     return event
 
 
-def _merge_support_session_tag(
-    details: dict, organization_id: UUID | None
-) -> None:
+def _merge_support_session_tag(details: dict, organization_id: UUID | None) -> None:
     """Stamp ``actor_kind``/``support_session_id``/``scope`` when a support session is active.
 
     The ``actor_kind`` field is overwritten unconditionally - a session tag is a
@@ -107,9 +103,9 @@ def _merge_support_session_tag(
     if organization_id is not None and active.organization_id != organization_id:
         return
     prior = details.get("actor_kind")
-    if prior is not None and prior != "support":
+    if prior is not None and prior != AuditActorKind.SUPPORT:
         details["actor_kind_pre"] = prior
-    details["actor_kind"] = "support"
+    details["actor_kind"] = AuditActorKind.SUPPORT
     details["support_session_id"] = str(active.session_id)
     details["scope"] = active.scope
 

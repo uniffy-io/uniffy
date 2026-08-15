@@ -13,6 +13,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.crypto import OrgCipher, ReEncryptingConsumer, register_consumer
 from uniffy.core.errors import ConflictError, NotFoundError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.integrations.connection import IntegrationConnection
 from uniffy.domains.agents.providers.utils import build_key_hint
 from uniffy.domains.integrations.base import IntegrationProvider
@@ -109,9 +110,7 @@ class ConnectionOperations:
             row.is_valid = False
             row.last_error = str(exc)
             outcome = "error"
-        INTEGRATION_CONNECTION_VALIDATIONS_TOTAL.labels(
-            provider=row.provider, outcome=outcome
-        ).inc()
+        INTEGRATION_CONNECTION_VALIDATIONS_TOTAL.labels(provider=row.provider, outcome=outcome).inc()
 
     async def add_connection(
         self,
@@ -174,7 +173,7 @@ class ConnectionOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.INTEGRATION_CONNECTION_ADDED,
-            resource_type="integration_connection",
+            resource_type=AuditResourceType.INTEGRATION_CONNECTION,
             resource_id=row.id,
             details={
                 "provider": provider,
@@ -234,13 +233,10 @@ class ConnectionOperations:
 
         if name is not None and name.strip() and name.strip() != row.name:
             name = name.strip()
-            if await self._name_taken(
-                organization_id, row.provider, name, exclude_id=row.id
-            ):
+            if await self._name_taken(organization_id, row.provider, name, exclude_id=row.id):
                 raise ConflictError(
                     "IntegrationConnection",
-                    f"A connection named '{name}' already exists for provider "
-                    f"'{row.provider}'",
+                    f"A connection named '{name}' already exists for provider '{row.provider}'",
                 )
             row.name = name
             changed.append("name")
@@ -263,9 +259,7 @@ class ConnectionOperations:
 
         if credential is not None and credential.strip():
             credential = credential.strip()
-            row.encrypted_credential = await self._org_cipher.encrypt(
-                organization_id, credential
-            )
+            row.encrypted_credential = await self._org_cipher.encrypt(organization_id, credential)
             row.credential_hint = build_key_hint(credential)
             provider_obj = get_integration_registry().require_known(row.provider)
             await self._run_probe(row, provider_obj, credential)
@@ -283,7 +277,7 @@ class ConnectionOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.INTEGRATION_CONNECTION_UPDATED,
-            resource_type="integration_connection",
+            resource_type=AuditResourceType.INTEGRATION_CONNECTION,
             resource_id=row.id,
             details={
                 "provider": row.provider,
@@ -317,7 +311,7 @@ class ConnectionOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.INTEGRATION_CONNECTION_REMOVED,
-            resource_type="integration_connection",
+            resource_type=AuditResourceType.INTEGRATION_CONNECTION,
             resource_id=connection_id,
             details={"provider": provider, "name": name},
         )
@@ -337,9 +331,7 @@ class ConnectionOperations:
         await self._org_ops.require_org_admin(user_id, organization_id)
         row = await self._load_connection(connection_id, organization_id)
 
-        credential = await self._org_cipher.decrypt(
-            row.organization_id, row.encrypted_credential
-        )
+        credential = await self._org_cipher.decrypt(row.organization_id, row.encrypted_credential)
         provider_obj = get_integration_registry().require_known(row.provider)
         await self._run_probe(row, provider_obj, credential)
         row.updated_at = datetime.now(UTC)
@@ -371,7 +363,7 @@ class ConnectionOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.INTEGRATION_CONNECTION_TOGGLED,
-            resource_type="integration_connection",
+            resource_type=AuditResourceType.INTEGRATION_CONNECTION,
             resource_id=connection_id,
             details={"provider": row.provider, "name": row.name, "enabled": enabled},
         )
@@ -500,9 +492,7 @@ async def _list_connections_for_org(
 ):
     """Yield every connection row owned by an organization for DEK rotation."""
     result = await session.execute(
-        select(IntegrationConnection).where(
-            IntegrationConnection.organization_id == organization_id
-        )
+        select(IntegrationConnection).where(IntegrationConnection.organization_id == organization_id)
     )
     for row in result.scalars():
         yield row

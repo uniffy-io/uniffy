@@ -1,5 +1,4 @@
-"""Tests for skill-driven tool schema resolution and the view_skill lookup.
-"""
+"""Tests for skill-driven tool schema resolution and the view_skill lookup."""
 
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock
@@ -222,9 +221,7 @@ class TestNameCollisionShadowing:
         for ordered in ([bundled, org], [org, bundled]):
             fake_ops = MagicMock()
             fake_ops.get_skills_for_agent = AsyncMock(return_value=ordered)
-            monkeypatch.setattr(
-                ops_mod, "SkillOperations", lambda _session, _ops=fake_ops: _ops
-            )
+            monkeypatch.setattr(ops_mod, "SkillOperations", lambda _session, _ops=fake_ops: _ops)
 
             result = await _execute_view_skill(ctx, {"name": "report"})
 

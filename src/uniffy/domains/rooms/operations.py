@@ -14,6 +14,7 @@ from uniffy.core.content.members import (
     register_content_loader,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.booking import RoomBooking
@@ -126,7 +127,7 @@ class RoomOperations(BaseContentOperations[Room]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.ROOM_CREATED,
-            resource_type=ContentType.ROOM.value,
+            resource_type=AuditResourceType.ROOM,
             resource_id=room.id,
             details={"name": room.name, "room_type": room_type.value},
         )
@@ -215,7 +216,7 @@ class RoomOperations(BaseContentOperations[Room]):
                     if status == RoomStatus.RETIRED and was_active
                     else Action.ROOM_UPDATED
                 ),
-                resource_type=ContentType.ROOM.value,
+                resource_type=AuditResourceType.ROOM,
                 resource_id=room_id,
                 details={"changed_keys": changed_keys},
             )
@@ -296,7 +297,7 @@ class RoomOperations(BaseContentOperations[Room]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.ROOM_DELETED,
-            resource_type=ContentType.ROOM.value,
+            resource_type=AuditResourceType.ROOM,
             resource_id=room_id,
             details={"name": room.name, "permanent": permanent},
         )
@@ -316,9 +317,7 @@ class RoomOperations(BaseContentOperations[Room]):
                 restricted=effective_mode != AccessMode.OPEN_TO_ORG,
             )
         except Exception:
-            logger.opt(exception=True).warning(
-                f"Failed to publish room tombstone for {room_id}"
-            )
+            logger.opt(exception=True).warning(f"Failed to publish room tombstone for {room_id}")
 
     async def list_rooms(
         self,

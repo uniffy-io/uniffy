@@ -28,6 +28,7 @@ from uniffy.core.events import (
     extract_mentioned_team_ids,
     extract_mentioned_user_ids,
 )
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
@@ -47,11 +48,14 @@ from uniffy.core.types import (
     ContentRole,
     ContentType,
     NotificationType,
+    RecurrenceEditScope,
     RecurrencePattern,
+    SortOrder,
 )
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.recurrence import (
+    OCCURRENCE_ID_SEPARATOR,
     expand_recurrence,
     occurrence_start_for_date,
 )
@@ -101,8 +105,8 @@ def _master_event_id(event: CalendarEvent) -> UUID:
     virtual and must resolve to the master so the tag pipeline stays consistent.
     """
     raw = str(event.id)
-    if "__occurrence__" in raw:
-        return UUID(raw.split("__occurrence__")[0])
+    if OCCURRENCE_ID_SEPARATOR in raw:
+        return UUID(raw.split(OCCURRENCE_ID_SEPARATOR)[0])
     return event.id if isinstance(event.id, UUID) else UUID(raw)
 
 
@@ -261,9 +265,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         # Recurring instances resolve to the master, same as tags; override rows
         # carry their own copied attendee set.
         result = await self.session.execute(
-            select(EventAttendee.user_id).where(
-                EventAttendee.event_id == _master_event_id(model)
-            )
+            select(EventAttendee.user_id).where(EventAttendee.event_id == _master_event_id(model))
         )
         ids = [row[0] for row in result.all()]
         return ids or None
@@ -278,9 +280,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 attendee_user_ids=attendee_ids or [],
             )
         except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to refresh attendee search sharing"
-            )
+            logger.opt(exception=True).warning("Failed to refresh attendee search sharing")
 
     async def _emit_team_mention_notifications(
         self,
@@ -365,9 +365,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             if await room_queries.check_booking_conflict(
                 self.session, room_id, start_time, end_time
             ):
-                raise ValidationError(
-                    "room", "Room is already booked for this time slot."
-                )
+                raise ValidationError("room", "Room is already booked for this time slot.")
 
         if channel_id is not None:
             if meeting_url:
@@ -541,7 +539,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         linked_resources: list[dict] | None = None,
         attendee_ids: list[UUID] | None = None,
         reminders: list[int] | None = None,
-        recurrence_edit_scope: str | None = None,
+        recurrence_edit_scope: RecurrenceEditScope | None = None,
         occurrence_date: date | None = None,
         room_id: str | None = None,
         channel_id: str | None = None,
@@ -552,7 +550,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         Access-policy changes go through `permissions.v1.MembersService`.
         """
         if recurrence_edit_scope and occurrence_date:
-            if recurrence_edit_scope == "this_event":
+            if recurrence_edit_scope == RecurrenceEditScope.THIS_EVENT:
                 real_event_id = self._parse_master_event_id(event_id)
                 updates = self._collect_update_kwargs(
                     title=title,
@@ -573,7 +571,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     occurrence_date,
                     **updates,
                 )
-            elif recurrence_edit_scope == "this_and_following":
+            elif recurrence_edit_scope == RecurrenceEditScope.THIS_AND_FOLLOWING:
                 real_event_id = self._parse_master_event_id(event_id)
                 updates = self._collect_update_kwargs(
                     title=title,
@@ -642,9 +640,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             channel_auto_created=bool(channel_auto_created),
         )
         previous_calendar_id = event.calendar_id
-        calendar_moved = (
-            calendar_id is not None and calendar_id != event.calendar_id
-        )
+        calendar_moved = calendar_id is not None and calendar_id != event.calendar_id
         if calendar_id is not None:
             event.calendar_id = calendar_id
         if category_id is not None:
@@ -760,8 +756,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 await self.session.commit()
             except Exception:
                 logger.opt(exception=True).warning(
-                    "Failed to propagate calendar event rename to mentions",
-                    event_id=str(event_id)
+                    "Failed to propagate calendar event rename to mentions", event_id=str(event_id)
                 )
 
         if newly_invited_ids:
@@ -831,8 +826,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 )
             except Exception:
                 logger.opt(exception=True).warning(
-                    "Failed to publish calendar event mention state change",
-                    event_id=str(event_id)
+                    "Failed to publish calendar event mention state change", event_id=str(event_id)
                 )
 
         if room_id is not None:
@@ -860,7 +854,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.CALENDAR_EVENT_MOVED,
-                resource_type=ContentType.CALENDAR_EVENT.value,
+                resource_type=AuditResourceType.CALENDAR_EVENT,
                 resource_id=event_id,
                 details={
                     "previous_calendar_id": (
@@ -883,12 +877,12 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         organization_id: UUID,
         event_id: UUID,
         permanent: bool = False,
-        recurrence_edit_scope: str | None = None,
+        recurrence_edit_scope: RecurrenceEditScope | None = None,
         occurrence_date: date | None = None,
     ) -> bool:
         """Delete an event (soft by default, handles recurrences)."""
         if recurrence_edit_scope and occurrence_date:
-            if recurrence_edit_scope == "this_event":
+            if recurrence_edit_scope == RecurrenceEditScope.THIS_EVENT:
                 real_event_id = self._parse_master_event_id(event_id)
                 await self.cancel_occurrence(
                     user_id,
@@ -897,7 +891,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     occurrence_date,
                 )
                 return True
-            elif recurrence_edit_scope == "this_and_following":
+            elif recurrence_edit_scope == RecurrenceEditScope.THIS_AND_FOLLOWING:
                 real_event_id = self._parse_master_event_id(event_id)
                 master = await self._fetch_by_id(real_event_id, organization_id)
                 if not master:
@@ -951,7 +945,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 if permanent
                 else Action.CALENDAR_EVENT_DELETED
             ),
-            resource_type=ContentType.CALENDAR_EVENT.value,
+            resource_type=AuditResourceType.CALENDAR_EVENT,
             resource_id=event_id,
             details={
                 "title": event.title,
@@ -1035,8 +1029,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
     def _parse_master_event_id(event_id: UUID | str) -> UUID:
         """Extract the real master UUID from a possibly synthetic occurrence id."""
         event_id_str = str(event_id)
-        if "__occurrence__" in event_id_str:
-            return UUID(event_id_str.split("__occurrence__")[0])
+        if OCCURRENCE_ID_SEPARATOR in event_id_str:
+            return UUID(event_id_str.split(OCCURRENCE_ID_SEPARATOR)[0])
         return UUID(event_id_str) if isinstance(event_id, str) else event_id
 
     @staticmethod
@@ -1112,7 +1106,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 virtual = copy.copy(event)
                 virtual.start_time = occ.start_time
                 virtual.end_time = occ.end_time
-                synthetic_id = f"{event.id}__occurrence__{occ.occurrence_date.isoformat()}"
+                synthetic_id = (
+                    f"{event.id}{OCCURRENCE_ID_SEPARATOR}{occ.occurrence_date.isoformat()}"
+                )
                 virtual.id = synthetic_id  # type: ignore[assignment]
                 virtual._occurrence_date = occ.occurrence_date.isoformat()  # type: ignore[attr-defined]
                 result.append(virtual)
@@ -1176,9 +1172,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         # Only the explicitly requested fields are diffed; the override's own
         # start/end come from the occurrence date, which is not a user edit.
         edited_before = {
-            name: value
-            for name, value in self._activity_snapshot(master).items()
-            if name in updates
+            name: value for name, value in self._activity_snapshot(master).items() if name in updates
         }
 
         duration = master.end_time - master.start_time
@@ -1281,9 +1275,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             raise NotFoundError("Not a recurring event", event_id)
 
         edited_before = {
-            name: value
-            for name, value in self._activity_snapshot(master).items()
-            if name in updates
+            name: value for name, value in self._activity_snapshot(master).items() if name in updates
         }
 
         config = dict(master.recurrence_config or {})
@@ -1429,7 +1421,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         total = (await self.session.execute(count_query)).scalar() or 0
 
         sort_col = getattr(CalendarEvent, sort_by, CalendarEvent.start_time)
-        if sort_order == "desc":
+        if sort_order == SortOrder.DESCENDING:
             query = query.order_by(sort_col.desc())
         else:
             query = query.order_by(sort_col.asc())
@@ -1906,9 +1898,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 OrganizationMember.user_id == user_id,
                 OrganizationMember.organization_id == organization_id,
                 OrganizationMember.is_active.is_(True),
-                OrganizationMember.role.in_(
-                    [OrganizationRole.OWNER, OrganizationRole.ADMIN]
-                ),
+                OrganizationMember.role.in_([OrganizationRole.OWNER, OrganizationRole.ADMIN]),
             )
         )
         return result.scalar_one_or_none() is not None
@@ -1955,9 +1945,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 event.channel_auto_created = False
             else:
                 new_channel_id = UUID(channel_id)
-                await self._validate_channel_binding(
-                    user_id, organization_id, new_channel_id
-                )
+                await self._validate_channel_binding(user_id, organization_id, new_channel_id)
                 if event.channel_id != new_channel_id:
                     # A new binding takes the caller's flag: True for a room the
                     # editor auto-created, False for a picked channel.
@@ -2248,10 +2236,15 @@ class EventTemplateOperations:
         from uniffy.core.auth.permissions.defaults import resolve_content_defaults
 
         default_mode, default_baseline = await resolve_content_defaults(
-            self.session, organization_id, ContentType.CALENDAR_EVENT,
+            self.session,
+            organization_id,
+            ContentType.CALENDAR_EVENT,
         )
         effective_mode, _ = resolve_effective_policy(
-            template.access_mode, template.baseline_role, default_mode, default_baseline,
+            template.access_mode,
+            template.baseline_role,
+            default_mode,
+            default_baseline,
         )
         if effective_mode == AccessMode.OWNER_ONLY and template.created_by != user_id:
             raise PermissionDeniedError("read", "event template")

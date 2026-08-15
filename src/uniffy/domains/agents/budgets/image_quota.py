@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import BudgetExceededError
 from uniffy.core.models.agents.budget import AgentBudget
-from uniffy.core.models.agents.run_log import AgentRunLog
+from uniffy.core.models.agents.run_log import AgentRunKind, AgentRunLog
 from uniffy.core.models.agents.user_quota import AgentUserQuota
 from uniffy.domains.agents.budgets.defaults import (
     DEFAULT_DAILY_IMAGE_LIMIT_PER_USER,
@@ -52,7 +52,7 @@ async def _count_images_today_for_user(
         select(func.coalesce(func.sum(AgentRunLog.image_count), 0)).where(
             AgentRunLog.user_id == user_id,
             AgentRunLog.organization_id == organization_id,
-            AgentRunLog.kind == "image",
+            AgentRunLog.kind == AgentRunKind.IMAGE,
             AgentRunLog.created_at >= day_start,
         )
     )
@@ -70,7 +70,7 @@ async def _count_images_this_month_for_org(
     result = await session.execute(
         select(func.coalesce(func.sum(AgentRunLog.image_count), 0)).where(
             AgentRunLog.organization_id == organization_id,
-            AgentRunLog.kind == "image",
+            AgentRunLog.kind == AgentRunKind.IMAGE,
             AgentRunLog.created_at >= period_start,
             AgentRunLog.created_at < period_end,
         )
@@ -120,17 +120,11 @@ async def check_image_quota(
 
     daily_cap_from_row = quota.daily_image_limit if quota else None
     daily_cap = (
-        daily_cap_from_row
-        if daily_cap_from_row is not None
-        else DEFAULT_DAILY_IMAGE_LIMIT_PER_USER
+        daily_cap_from_row if daily_cap_from_row is not None else DEFAULT_DAILY_IMAGE_LIMIT_PER_USER
     )
     # Only a row-backed cap can trigger hard enforcement; a default is
     # always soft because no admin has explicitly opted in.
-    daily_hard = bool(
-        quota is not None
-        and quota.hard_limit
-        and daily_cap_from_row is not None
-    )
+    daily_hard = bool(quota is not None and quota.hard_limit and daily_cap_from_row is not None)
 
     daily_count = await _count_images_today_for_user(
         session,
@@ -162,9 +156,7 @@ async def check_image_quota(
         else DEFAULT_MONTHLY_IMAGE_LIMIT_PER_ORG
     )
     monthly_hard = bool(
-        budget is not None
-        and budget.hard_limit
-        and monthly_cap_from_budget is not None
+        budget is not None and budget.hard_limit and monthly_cap_from_budget is not None
     )
 
     reset_day = budget.reset_day if budget else 1

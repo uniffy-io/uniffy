@@ -1,6 +1,7 @@
 """Pending skill draft awaiting user review; one path for user- and agent-authored drafts."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import Boolean, Column, DateTime, Index, String, Text, Uuid, text
@@ -9,6 +10,18 @@ from sqlmodel import Field, SQLModel
 
 from uniffy.core.content.model_mixins import deleted_at_field, is_deleted_field
 from uniffy.core.types import generate_id
+
+
+class AgentSkillDraftKind(StrEnum):
+    CREATE = "create"
+    EDIT = "edit"
+    EVOLVE = "evolve"
+
+
+class AgentSkillDraftStatus(StrEnum):
+    PENDING = "pending"
+    SAVED = "saved"
+    DISCARDED = "discarded"
 
 
 class AgentSkillDraft(SQLModel, table=True):
@@ -34,7 +47,7 @@ class AgentSkillDraft(SQLModel, table=True):
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False)
     # Null target = a create draft; set = an edit/evolve of that skill.
     target_skill_id: UUID | None = Field(default=None, sa_column=Column(Uuid(), nullable=True))
-    kind: str = Field(sa_column=Column(String(16), nullable=False))
+    kind: AgentSkillDraftKind = Field(sa_column=Column(String(16), nullable=False))
     proposed_by_agent_id: UUID | None = Field(
         default=None,
         sa_column=Column(Uuid(), nullable=True),
@@ -79,8 +92,8 @@ class AgentSkillDraft(SQLModel, table=True):
         default=False,
         sa_column=Column(Boolean, nullable=False, server_default=text("false")),
     )
-    status: str = Field(
-        default="pending",
+    status: AgentSkillDraftStatus = Field(
+        default=AgentSkillDraftStatus.PENDING,
         sa_column=Column(String(16), nullable=False, server_default=text("'pending'")),
     )
     is_deleted: bool = is_deleted_field()

@@ -92,18 +92,14 @@ class TestSet:
                 value="supersecret",
                 is_secret=True,
             )
-        cipher.encrypt.assert_awaited_once_with(
-            cipher.encrypt.await_args.args[0], "supersecret"
-        )
+        cipher.encrypt.assert_awaited_once_with(cipher.encrypt.await_args.args[0], "supersecret")
         stmt = session.execute.call_args.args[0]
         values = stmt.compile().params
         assert values["value"] is None
         assert values["value_encrypted"] == "v1:abc"
         assert values["is_secret"] is True
         # plaintext must never be passed as a bound parameter
-        assert "supersecret" not in {
-            v for v in values.values() if isinstance(v, str)
-        }
+        assert "supersecret" not in {v for v in values.values() if isinstance(v, str)}
 
     async def test_secret_rejects_non_string_value(self) -> None:
         session = _session()
@@ -155,11 +151,14 @@ class TestDelete:
         patcher, _cipher = _patch_cipher()
         with patcher:
             ops = OrgSettingsOperations(session)
-            assert await ops.delete_key(
+            assert (
+                await ops.delete_key(
                     organization_id=generate_id(),
                     namespace="mail",
                     key="from_address",
-                ) is True
+                )
+                is True
+            )
 
     async def test_delete_namespace_returns_count(self) -> None:
         session = AsyncMock()

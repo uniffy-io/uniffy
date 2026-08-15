@@ -9,7 +9,7 @@ from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.valkey import publish_notification
 from uniffy.domains.notifications.converters import notification_type_to_proto
-from uniffy.domains.notifications.delivery.base import DeliveryAdapter
+from uniffy.domains.notifications.delivery.base import DeliveryAdapter, NotificationChannel
 
 logger = logger.bind(component="notifications.delivery.in_app")
 
@@ -18,8 +18,8 @@ class InAppAdapter(DeliveryAdapter):
     """In-app delivery: writes a DB row and publishes for real-time streaming."""
 
     @property
-    def channel_name(self) -> str:
-        return "in_app"
+    def channel_name(self) -> NotificationChannel:
+        return NotificationChannel.IN_APP
 
     async def deliver(
         self,

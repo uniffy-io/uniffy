@@ -31,7 +31,7 @@ class StreamDisconnectMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] != "http":  # noqa: PLR2004
             await self.app(scope, receive, send)
             return
 
@@ -43,7 +43,7 @@ class StreamDisconnectMiddleware:
         response_started = asyncio.Event()
 
         async def _send_proxy(message: dict) -> None:
-            if message.get("type") == "http.response.start":
+            if message.get("type") == "http.response.start":  # noqa: PLR2004
                 response_started.set()
             await send(message)
 
@@ -51,7 +51,7 @@ class StreamDisconnectMiddleware:
             await response_started.wait()
             while True:
                 msg = await receive()
-                if msg.get("type") == "http.disconnect":
+                if msg.get("type") == "http.disconnect":  # noqa: PLR2004
                     disconnect.set()
                     return
 

@@ -105,7 +105,7 @@ class OTLPHandler:
         if extra := record.get("extra"):
             attributes.update(extra)
 
-        if "exception" in record and record["exception"]:
+        if "exception" in record and record["exception"]:  # noqa: PLR2004
             exc_type, exc_value, exc_tb = record["exception"]
             if exc_type:
                 attributes.update({
@@ -127,7 +127,7 @@ class OTLPHandler:
         severity_number, severity_text = self._get_severity(record["level"].no)
         trace_id, span_id, trace_flags = self._get_trace_context()
 
-        if "exception" in record and record["exception"]:
+        if "exception" in record and record["exception"]:  # noqa: PLR2004
             severity_number = SeverityNumber.FATAL
             severity_text = "CRITICAL"
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from enum import StrEnum
 from typing import Any, NamedTuple
 from uuid import UUID
 
@@ -18,10 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
-from uniffy.core.mail.config import MAIL_NAMESPACE, MailConfig
+from uniffy.core.mail.config import MAIL_FROM_ADDRESS_KEY, MAIL_NAMESPACE, MailConfig
 from uniffy.core.mail.resolver import MailConfigResolver
 from uniffy.core.mail.suppression import SuppressionRepository, _normalize
-from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.mail.suppression import EmailSuppression
 from uniffy.core.models.settings.deployment_setting import DeploymentSetting
@@ -32,6 +33,12 @@ from uniffy.domains.users.operations import UserOperations
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 200
+
+
+class MailDeliveryOutcome(StrEnum):
+    SENT = "sent"
+    FAILED = "failed"
+    SUPPRESSED = "suppressed"
 
 
 class SystemMailConfigSummary(NamedTuple):
@@ -51,7 +58,6 @@ class SystemMailConfigSummary(NamedTuple):
 
 
 class OrgMailConfigRow(NamedTuple):
-
     organization_id: UUID
     organization_name: str
     organization_slug: str
@@ -79,7 +85,6 @@ class SuppressionPage(NamedTuple):
 
 
 class DeliveryRow(NamedTuple):
-
     id: UUID
     created_at: datetime
     action: str
@@ -141,7 +146,7 @@ def _summary_from_deployment_rows(
 ) -> SystemMailConfigSummary | None:
     # Returns None when ``from_address`` / ``smtp_host`` are missing so the
     # caller can fall through to env.
-    from_address = _row_str(rows.get("from_address"))
+    from_address = _row_str(rows.get(MAIL_FROM_ADDRESS_KEY))
     smtp_host = _row_str(rows.get("smtp_host"))
     if not from_address or not smtp_host:
         return None
@@ -248,7 +253,7 @@ class SystemMailOperations:
         had_deployment_config = bool(existing)
 
         updates: dict[str, Any] = {
-            "from_address": from_address,
+            MAIL_FROM_ADDRESS_KEY: from_address,
             "from_name": from_name.strip() or "Uniffy",
             "reply_to": reply_to.strip(),
             "smtp_host": smtp_host,
@@ -285,10 +290,10 @@ class SystemMailOperations:
             organization_id=None,
             actor_user_id=user_id,
             action=Action.MAIL_SYSTEM_CONFIG_UPDATED,
-            resource_type="system_mail_config",
+            resource_type=AuditResourceType.SYSTEM_MAIL_CONFIG,
             resource_id=None,
             details={
-                "from_address": updates["from_address"],
+                MAIL_FROM_ADDRESS_KEY: updates[MAIL_FROM_ADDRESS_KEY],
                 "smtp_host": updates["smtp_host"],
                 "smtp_port": updates["smtp_port"],
                 "smtp_username": updates["smtp_username"],
@@ -324,7 +329,7 @@ class SystemMailOperations:
                 organization_id=None,
                 actor_user_id=user_id,
                 action=Action.MAIL_SYSTEM_CONFIG_CLEARED,
-                resource_type="system_mail_config",
+                resource_type=AuditResourceType.SYSTEM_MAIL_CONFIG,
                 resource_id=None,
                 details={"deleted_keys": deleted, "reason": reason},
             )
@@ -362,7 +367,7 @@ class SystemMailOperations:
                     Organization.id.in_(
                         select(OrgSetting.organization_id)
                         .where(OrgSetting.namespace == MAIL_NAMESPACE)
-                        .where(OrgSetting.key == "from_address")
+                        .where(OrgSetting.key == MAIL_FROM_ADDRESS_KEY)
                         .where(OrgSetting.is_secret == False)  # noqa: E712
                     )
                 )
@@ -374,9 +379,7 @@ class SystemMailOperations:
             base = base.where(search_filter)
 
         total = (
-            await self._session.execute(
-                select(func.count()).select_from(base.subquery())
-            )
+            await self._session.execute(select(func.count()).select_from(base.subquery()))
         ).scalar_one()
 
         page_query = (
@@ -398,13 +401,17 @@ class SystemMailOperations:
 
         org_ids = [org.id for org in orgs]
         settings_rows = (
-            await self._session.execute(
-                select(OrgSetting).where(
-                    OrgSetting.organization_id.in_(org_ids),
-                    OrgSetting.namespace == MAIL_NAMESPACE,
+            (
+                await self._session.execute(
+                    select(OrgSetting).where(
+                        OrgSetting.organization_id.in_(org_ids),
+                        OrgSetting.namespace == MAIL_NAMESPACE,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         per_org: dict[UUID, dict[str, OrgSetting]] = {oid: {} for oid in org_ids}
         for row in settings_rows:
@@ -426,14 +433,12 @@ class SystemMailOperations:
                     organization_name=org.name,
                     organization_slug=org.slug,
                     effective_source="org" if has_org_config else "env",
-                    from_address=_row_str(rows.get("from_address")),
+                    from_address=_row_str(rows.get(MAIL_FROM_ADDRESS_KEY)),
                     smtp_host=_row_str(rows.get("smtp_host")),
                     smtp_password_set=smtp_password_set,
                     verified_at=_row_datetime(rows.get("verified_at")),
                     last_test_at=_row_datetime(rows.get("last_test_at")),
-                    last_test_status=(
-                        _row_str(rows.get("last_test_status")) or None
-                    ),
+                    last_test_status=(_row_str(rows.get("last_test_status")) or None),
                 )
             )
 
@@ -475,7 +480,7 @@ class SystemMailOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.MAIL_CONFIG_FORCE_CLEARED,
-            resource_type="mail_config",
+            resource_type=AuditResourceType.MAIL_CONFIG,
             resource_id=organization_id,
             details={
                 "deleted_keys": deleted,
@@ -509,12 +514,17 @@ class SystemMailOperations:
 
         total = (await self._session.execute(count_base)).scalar_one()
         rows = (
-            await self._session.execute(
-                base.order_by(EmailSuppression.created_at.desc())
-                .limit(page_size)
-                .offset(page * page_size)
+            (
+                await self._session.execute(
+                    base
+                    .order_by(EmailSuppression.created_at.desc())
+                    .limit(page_size)
+                    .offset(page * page_size)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         return SuppressionPage(
             entries=list(rows),
@@ -535,7 +545,7 @@ class SystemMailOperations:
         if not reason:
             raise ValidationError("reason", "reason is required")
         normalized = _normalize(email)
-        if not normalized or "@" not in normalized:
+        if not normalized or "@" not in normalized:  # noqa: PLR2004
             raise ValidationError("email", "email is not valid")
 
         removed = await self._suppressions.remove(normalized)
@@ -547,7 +557,7 @@ class SystemMailOperations:
             organization_id=None,
             actor_user_id=user_id,
             action=Action.MAIL_SUPPRESSION_REMOVED,
-            resource_type="mail_suppression",
+            resource_type=AuditResourceType.MAIL_SUPPRESSION,
             resource_id=None,
             details={"email": normalized, "reason": reason},
         )
@@ -583,14 +593,18 @@ class SystemMailOperations:
         ).scalar_one()
 
         events = (
-            await self._session.execute(
-                select(AuditEvent)
-                .where(where_clause)
-                .order_by(AuditEvent.created_at.desc())
-                .limit(page_size)
-                .offset(page * page_size)
+            (
+                await self._session.execute(
+                    select(AuditEvent)
+                    .where(where_clause)
+                    .order_by(AuditEvent.created_at.desc())
+                    .limit(page_size)
+                    .offset(page * page_size)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         if not events:
             return DeliveryPage(
@@ -605,17 +619,12 @@ class SystemMailOperations:
         if org_ids:
             orgs = (
                 await self._session.execute(
-                    select(Organization.id, Organization.name).where(
-                        Organization.id.in_(org_ids)
-                    )
+                    select(Organization.id, Organization.name).where(Organization.id.in_(org_ids))
                 )
             ).all()
             org_names = {oid: name for oid, name in orgs}
 
-        rows = [
-            _flatten_delivery(event, org_names.get(event.organization_id))
-            for event in events
-        ]
+        rows = [_flatten_delivery(event, org_names.get(event.organization_id)) for event in events]
 
         return DeliveryPage(
             entries=rows,
@@ -627,11 +636,11 @@ class SystemMailOperations:
 
 def _outcome_actions(outcome: str) -> list[str]:
     normalized = outcome.strip().lower()
-    if normalized == "sent":
+    if normalized == MailDeliveryOutcome.SENT:
         return [Action.MAIL_SENT]
-    if normalized == "failed":
+    if normalized == MailDeliveryOutcome.FAILED:
         return [Action.MAIL_SEND_FAILED]
-    if normalized == "suppressed":
+    if normalized == MailDeliveryOutcome.SUPPRESSED:
         return [Action.MAIL_SUPPRESSED]
     return [Action.MAIL_SENT, Action.MAIL_SEND_FAILED, Action.MAIL_SUPPRESSED]
 

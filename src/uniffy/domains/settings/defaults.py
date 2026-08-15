@@ -4,7 +4,10 @@ New keys added here become available to existing users without a migration.
 """
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
+
+from uniffy.core.types import NotificationType
 
 # Key: action identifier (dot-separated namespace). Value: shortcut (Ctrl == Cmd on macOS).
 DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
@@ -93,37 +96,66 @@ class AppearanceDefaults:
 DEFAULT_REMINDER_INTERVALS: list[int] = [15]
 
 
+class EmailFrequency(StrEnum):
+    INSTANT = "instant"
+    HOURLY = "hourly"
+    DAILY = "daily"
+
+
 @dataclass(frozen=True)
 class NotificationsDefaults:
     browser_enabled: bool = True
     email_enabled: bool = True
     sound_enabled: bool = True
-    email_frequency: str = "instant"
+    email_frequency: EmailFrequency = EmailFrequency.INSTANT
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
     toast_enabled: bool = True
 
 
-# Per-notification-type channel preferences. Keys are NotificationType values.
-DEFAULT_NOTIFICATION_CHANNELS: dict[str, dict[str, bool]] = {
-    "CONTENT_SHARED": {"in_app": True, "browser": True, "email": True},
-    "CONTENT_MENTIONED": {"in_app": True, "browser": True, "email": True},
-    "CONTENT_EDITED": {"in_app": True, "browser": False, "email": False},
-    "CALENDAR_REMINDER": {"in_app": True, "browser": True, "email": False},
-    "CALENDAR_INVITE": {"in_app": True, "browser": True, "email": True},
-    "CALENDAR_RESPONSE": {"in_app": True, "browser": False, "email": False},
-    "PERMISSION_GRANTED": {"in_app": True, "browser": False, "email": True},
-    "PERMISSION_REVOKED": {"in_app": True, "browser": False, "email": True},
-    "SYSTEM_ANNOUNCEMENT": {"in_app": True, "browser": True, "email": True},
-    "COMMENT_ADDED": {"in_app": True, "browser": True, "email": False},
-    "COMMENT_REPLY": {"in_app": True, "browser": True, "email": True},
-    "COMMENT_MENTIONED": {"in_app": True, "browser": True, "email": True},
-    "COMMENT_RESOLVED": {"in_app": True, "browser": False, "email": False},
-    "CHAT_MENTION": {"in_app": True, "browser": True, "email": False},
-    "CHAT_DM": {"in_app": True, "browser": True, "email": False},
-    "CHAT_CHANNEL_INVITE": {"in_app": True, "browser": False, "email": False},
-    "CHAT_CHANNEL_REMOVED": {"in_app": True, "browser": False, "email": False},
-    "CHAT_THREAD_REPLY": {"in_app": True, "browser": False, "email": False},
+DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
+    NotificationType.CONTENT_SHARED: {"in_app": True, "browser": True, "email": True},
+    NotificationType.CONTENT_MENTIONED: {"in_app": True, "browser": True, "email": True},
+    NotificationType.CONTENT_EDITED: {"in_app": True, "browser": False, "email": False},
+    NotificationType.CALENDAR_REMINDER: {"in_app": True, "browser": True, "email": False},
+    NotificationType.CALENDAR_INVITE: {"in_app": True, "browser": True, "email": True},
+    NotificationType.CALENDAR_RESPONSE: {"in_app": True, "browser": False, "email": False},
+    NotificationType.PERMISSION_GRANTED: {"in_app": True, "browser": False, "email": True},
+    NotificationType.PERMISSION_REVOKED: {"in_app": True, "browser": False, "email": True},
+    NotificationType.SYSTEM_ANNOUNCEMENT: {"in_app": True, "browser": True, "email": True},
+    NotificationType.COMMENT_ADDED: {"in_app": True, "browser": True, "email": False},
+    NotificationType.COMMENT_REPLY: {"in_app": True, "browser": True, "email": True},
+    NotificationType.COMMENT_MENTIONED: {"in_app": True, "browser": True, "email": True},
+    NotificationType.COMMENT_RESOLVED: {"in_app": True, "browser": False, "email": False},
+    NotificationType.TASK_ASSIGNED: {"in_app": True, "browser": True, "email": True},
+    NotificationType.TASK_DUE_SOON: {"in_app": True, "browser": True, "email": True},
+    NotificationType.TASK_OVERDUE: {"in_app": True, "browser": True, "email": True},
+    NotificationType.CHAT_MENTION: {"in_app": True, "browser": True, "email": False},
+    NotificationType.CHAT_DM: {"in_app": True, "browser": True, "email": False},
+    NotificationType.CHAT_CHANNEL_INVITE: {"in_app": True, "browser": False, "email": False},
+    NotificationType.CHAT_CHANNEL_REMOVED: {"in_app": True, "browser": False, "email": False},
+    NotificationType.CHAT_THREAD_REPLY: {"in_app": True, "browser": False, "email": False},
+    NotificationType.AGENTS_BUDGET_ALERT: {"in_app": True, "browser": True, "email": True},
+    NotificationType.SUPPORT_SESSION_REQUESTED: {
+        "in_app": True,
+        "browser": True,
+        "email": True,
+    },
+    NotificationType.SUPPORT_SESSION_STARTED: {
+        "in_app": True,
+        "browser": True,
+        "email": True,
+    },
+    NotificationType.SUPPORT_SESSION_REVOKED: {
+        "in_app": True,
+        "browser": True,
+        "email": True,
+    },
+    NotificationType.SUPPORT_SESSION_EXPIRED: {
+        "in_app": True,
+        "browser": True,
+        "email": True,
+    },
 }
 
 
@@ -196,7 +228,7 @@ def get_effective_keyboard_shortcuts(overrides: dict[str, Any] | None) -> dict[s
 
     result = defaults.copy()
 
-    if "bindings" in overrides and overrides["bindings"]:
+    if "bindings" in overrides and overrides["bindings"]:  # noqa: PLR2004
         result["bindings"] = {**result["bindings"], **overrides["bindings"]}
 
     return result
@@ -207,20 +239,17 @@ def get_effective_notifications(overrides: dict[str, Any] | None) -> dict[str, A
 
 
 def get_effective_notification_channels(
-    notification_type: str,
+    notification_type: NotificationType,
     overrides: dict[str, Any] | None,
 ) -> dict[str, bool]:
     """Resolve channel prefs for a NotificationType, applying master switches last."""
-    defaults = DEFAULT_NOTIFICATION_CHANNELS.get(
-        notification_type,
-        {"in_app": True, "browser": True, "email": True},
-    )
-    channels = defaults.copy()
+    channels = DEFAULT_NOTIFICATION_CHANNELS[notification_type].copy()
 
     effective = get_effective_notifications(overrides)
     user_channel_overrides = effective.get("channel_overrides", {})
-    if notification_type in user_channel_overrides:
-        type_overrides = user_channel_overrides[notification_type]
+    notification_type_key = notification_type.value
+    if notification_type_key in user_channel_overrides:
+        type_overrides = user_channel_overrides[notification_type_key]
         for channel, enabled in type_overrides.items():
             if enabled is not None:
                 channels[channel] = enabled

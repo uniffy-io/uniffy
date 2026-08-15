@@ -19,6 +19,7 @@ from sqlalchemy import delete, select, update
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.audit.writer import write_audit_event
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
@@ -26,10 +27,11 @@ from uniffy.db.session import open_session
 
 ENV_GATE = "ENABLE_BREAK_GLASS_CLI"
 OPERATOR_ENV = "UNIFFY_BREAK_GLASS_OPERATOR"
+MFA_RESET_FLAG = "--mfa-reset"
 
 
 def run() -> None:
-    if os.environ.get(ENV_GATE, "").strip() != "1":
+    if os.environ.get(ENV_GATE, "").strip() != "1":  # noqa: PLR2004
         print(
             f"break-glass disabled: set {ENV_GATE}=1 to enable this command",
             file=sys.stderr,
@@ -37,7 +39,7 @@ def run() -> None:
         sys.exit(2)
 
     parser = argparse.ArgumentParser(
-        prog="python -m uniffy --mfa-reset",
+        prog=f"python -m uniffy {MFA_RESET_FLAG}",
         description=(
             "Disable MFA on a single user as a self-hosted operator. "
             "Writes an unattributed audit row tagged 'break_glass'."
@@ -103,12 +105,8 @@ async def _reset(email: str, reason: str, *, operator: str) -> None:
             print(f"No user with email {email!r}", file=sys.stderr)
             sys.exit(3)
 
-        await session.execute(
-            delete(UserRecoveryCode).where(UserRecoveryCode.user_id == user.id)
-        )
-        await session.execute(
-            delete(UserMfa).where(UserMfa.user_id == user.id)
-        )
+        await session.execute(delete(UserRecoveryCode).where(UserRecoveryCode.user_id == user.id))
+        await session.execute(delete(UserMfa).where(UserMfa.user_id == user.id))
         new_version = (user.token_version or 1) + 1
         await session.execute(
             update(User).where(User.id == user.id).values(token_version=new_version)
@@ -119,7 +117,7 @@ async def _reset(email: str, reason: str, *, operator: str) -> None:
             organization_id=None,
             actor_user_id=None,
             action=Action.AUTH_MFA_BREAK_GLASS_RESET,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=user.id,
             details={
                 "kind": "break_glass",
@@ -141,4 +139,4 @@ async def _reset(email: str, reason: str, *, operator: str) -> None:
 
 
 def _consume_mode_arg(argv: list[str]) -> list[str]:
-    return [a for a in argv if a != "--mfa-reset"]
+    return [a for a in argv if a != MFA_RESET_FLAG]

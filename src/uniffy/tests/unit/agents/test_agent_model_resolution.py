@@ -1,5 +1,4 @@
-"""Model + provider resolution with the org default tier.
-"""
+"""Model + provider resolution with the org default tier."""
 
 from contextlib import asynccontextmanager
 from types import SimpleNamespace as NS
@@ -189,9 +188,7 @@ class TestResolveProviderAndModel:
 
     async def test_stale_org_default_key_raises_friendly_error(self) -> None:
         provider_ops = NS(
-            get_provider_for_key=AsyncMock(
-                side_effect=NotFoundError("ProviderKey", "gone")
-            ),
+            get_provider_for_key=AsyncMock(side_effect=NotFoundError("ProviderKey", "gone")),
             get_key_and_provider_for_model=AsyncMock(return_value=None),
         )
         agent = NS(
@@ -238,9 +235,7 @@ class TestCompactionWorkerNameOnlyAgent:
         )
 
         db = MagicMock()
-        db.execute = AsyncMock(
-            side_effect=[_result(agent_session_row), _result(agent_row)]
-        )
+        db.execute = AsyncMock(side_effect=[_result(agent_session_row), _result(agent_row)])
 
         @asynccontextmanager
         async def fake_open_session():
@@ -263,17 +258,11 @@ class TestCompactionWorkerNameOnlyAgent:
         )
 
         with (
-            patch.object(
-                agent_compaction, "_acquire_lock", AsyncMock(return_value=True)
-            ),
+            patch.object(agent_compaction, "_acquire_lock", AsyncMock(return_value=True)),
             patch.object(agent_compaction, "_release_lock", AsyncMock()),
             patch.object(agent_compaction, "open_session", fake_open_session),
-            patch.object(
-                agent_compaction, "SessionOperations", return_value=session_ops
-            ),
-            patch.object(
-                agent_compaction, "ProviderOperations", return_value=provider_ops
-            ),
+            patch.object(agent_compaction, "SessionOperations", return_value=session_ops),
+            patch.object(agent_compaction, "ProviderOperations", return_value=provider_ops),
             patch(_SETTINGS_PATCH, AsyncMock(return_value=settings)),
         ):
             result = await agent_compaction.compact_session({}, str(session_id))
@@ -300,9 +289,7 @@ class TestCompactionWorkerNameOnlyAgent:
             fallback_models=[],
         )
         db = MagicMock()
-        db.execute = AsyncMock(
-            side_effect=[_result(agent_session_row), _result(agent_row)]
-        )
+        db.execute = AsyncMock(side_effect=[_result(agent_session_row), _result(agent_row)])
 
         @asynccontextmanager
         async def fake_open_session():
@@ -310,9 +297,7 @@ class TestCompactionWorkerNameOnlyAgent:
 
         settings = NS(default_provider_key_id=None, default_chat_model=None)
         with (
-            patch.object(
-                agent_compaction, "_acquire_lock", AsyncMock(return_value=True)
-            ),
+            patch.object(agent_compaction, "_acquire_lock", AsyncMock(return_value=True)),
             patch.object(agent_compaction, "_release_lock", AsyncMock()),
             patch.object(agent_compaction, "open_session", fake_open_session),
             patch(_SETTINGS_PATCH, AsyncMock(return_value=settings)),

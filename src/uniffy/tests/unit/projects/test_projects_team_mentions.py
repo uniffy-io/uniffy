@@ -28,13 +28,16 @@ async def _emit(actor, old_refs, new_refs, expansions):
     emitted: list = []
     ops = TaskOperations.__new__(TaskOperations)
     ops.session = MagicMock()
-    with patch(
-        "uniffy.domains.projects.operations.emit_notification",
-        AsyncMock(side_effect=lambda event: emitted.append(event)),
-    ), patch(
-        "uniffy.domains.projects.operations.expand_team_mentions",
-        AsyncMock(return_value=expansions),
-    ) as expander:
+    with (
+        patch(
+            "uniffy.domains.projects.operations.emit_notification",
+            AsyncMock(side_effect=lambda event: emitted.append(event)),
+        ),
+        patch(
+            "uniffy.domains.projects.operations.expand_team_mentions",
+            AsyncMock(return_value=expansions),
+        ) as expander,
+    ):
         await ops._emit_mention_notifications(_task(), actor, old_refs, new_refs)
     return emitted, expander
 

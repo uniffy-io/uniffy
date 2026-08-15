@@ -1,4 +1,3 @@
-
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -356,9 +355,7 @@ class OrganizationsHandlers:
                     new_role=new_role,
                 )
 
-                return UpdateMemberRoleResponse(
-                    member=member_info_to_proto(target_user, membership)
-                )
+                return UpdateMemberRoleResponse(member=member_info_to_proto(target_user, membership))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -709,8 +706,8 @@ class OrganizationsHandlers:
         try:
             async with open_session() as session:
                 ops = OrganizationOperations(session)
-                previous_version, new_version, rotated_at = (
-                    await ops.rotate_encryption_key(user_id, org_id)
+                previous_version, new_version, rotated_at = await ops.rotate_encryption_key(
+                    user_id, org_id
                 )
                 return RotateEncryptionKeyResponse(
                     new_version=new_version,
@@ -749,15 +746,11 @@ class OrganizationsHandlers:
                 if result.outcome == InviteOutcome.ADDED:
                     assert result.member is not None and result.member_user is not None
                     return InviteMemberResponse(
-                        added_member=member_info_to_proto(
-                            result.member_user, result.member
-                        )
+                        added_member=member_info_to_proto(result.member_user, result.member)
                     )
                 assert result.invitation is not None
                 inviter_row = (
-                    await session.execute(
-                        select(User).where(User.id == user_id)
-                    )
+                    await session.execute(select(User).where(User.id == user_id))
                 ).scalar_one_or_none()
                 return InviteMemberResponse(
                     invitation=invitation_to_proto(result.invitation, inviter_row)
@@ -819,9 +812,7 @@ class OrganizationsHandlers:
                         select(User).where(User.id == invitation.invited_by_user_id)
                     )
                 ).scalar_one_or_none()
-                return RevokeInvitationResponse(
-                    invitation=invitation_to_proto(invitation, inviter)
-                )
+                return RevokeInvitationResponse(invitation=invitation_to_proto(invitation, inviter))
         except InvitationAlreadyUsedError as e:
             raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except PermissionDeniedError as e:
@@ -851,9 +842,7 @@ class OrganizationsHandlers:
                         select(User).where(User.id == invitation.invited_by_user_id)
                     )
                 ).scalar_one_or_none()
-                return ResendInvitationResponse(
-                    invitation=invitation_to_proto(invitation, inviter)
-                )
+                return ResendInvitationResponse(invitation=invitation_to_proto(invitation, inviter))
         except (InvitationAlreadyUsedError, InvitationRevokedError) as e:
             raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except PermissionDeniedError as e:

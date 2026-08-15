@@ -1,12 +1,19 @@
 """Sprint model for the projects feature."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, String
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class SprintStatus(StrEnum):
+    PLANNED = "planned"
+    ACTIVE = "active"
+    CLOSED = "closed"
 
 
 class Sprint(SQLModel, table=True):
@@ -19,7 +26,10 @@ class Sprint(SQLModel, table=True):
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     name: str = Field(max_length=255, nullable=False)
     goal: str = Field(default="", nullable=False)
-    status: str = Field(default="planned", max_length=20, nullable=False)
+    status: SprintStatus = Field(
+        default=SprintStatus.PLANNED,
+        sa_column=Column(String(20), nullable=False),
+    )
     start_date: str | None = Field(default=None, max_length=20)
     end_date: str | None = Field(default=None, max_length=20)
     sort_order: int = Field(default=0, nullable=False)

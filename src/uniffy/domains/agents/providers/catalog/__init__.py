@@ -31,6 +31,7 @@ from uniffy.domains.agents.providers.catalog.schema import (
     Model,
     ParamSpec,
     ProviderCatalog,
+    ReasoningControl,
 )
 
 __all__ = [
@@ -39,6 +40,7 @@ __all__ = [
     "Model",
     "ParamSpec",
     "ProviderCatalog",
+    "ReasoningControl",
     "clamp_image_params",
     "get_catalog",
     "get_image_parameter_schema",

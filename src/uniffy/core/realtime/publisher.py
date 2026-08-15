@@ -7,6 +7,7 @@ can drop echoes of their own writes.
 
 import base64
 import time
+from enum import StrEnum
 from uuid import UUID
 
 from uniffy.core.realtime.identity import replica_id
@@ -14,20 +15,46 @@ from uniffy.core.types import ContentType
 from uniffy.core.valkey.pubsub import publish_to_channel
 
 
+class RealtimeChannelNamespace(StrEnum):
+    REALTIME = "realtime"
+    AUTH = "auth"
+
+
+class RealtimeChannelKind(StrEnum):
+    DOC = "doc"
+    PERM = "perm"
+    DEFAULTS = "defaults"
+    REVOKE = "revoke"
+    REVOKE_SESSION = "revoke_sid"
+
+
+class RealtimePayloadKind(StrEnum):
+    CONTENT_REPLACE = "content_replace"
+
+
 def doc_channel(content_type: ContentType, content_id: UUID) -> str:
-    return f"realtime:doc:{content_type.value}:{content_id}"
+    return (
+        f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.DOC}:"
+        f"{content_type.value}:{content_id}"
+    )
 
 
 def perm_channel(content_type: ContentType, content_id: UUID) -> str:
-    return f"realtime:perm:{content_type.value}:{content_id}"
+    return (
+        f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.PERM}:"
+        f"{content_type.value}:{content_id}"
+    )
 
 
 def defaults_channel(organization_id: UUID, content_type: ContentType) -> str:
-    return f"realtime:defaults:{organization_id}:{content_type.value}"
+    return (
+        f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.DEFAULTS}:"
+        f"{organization_id}:{content_type.value}"
+    )
 
 
 def token_revoke_channel(user_id: UUID) -> str:
-    return f"auth:revoke:{user_id}"
+    return f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE}:{user_id}"
 
 
 def session_revoke_channel(user_id: UUID) -> str:
@@ -37,7 +64,7 @@ def session_revoke_channel(user_id: UUID) -> str:
     existing ``_user_handles`` registry to find the matching WS without
     a second index.
     """
-    return f"auth:revoke_sid:{user_id}"
+    return f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE_SESSION}:{user_id}"
 
 
 async def publish_doc_update(
@@ -74,7 +101,7 @@ async def publish_content_replace(
     await publish_to_channel(
         doc_channel(content_type, content_id),
         {
-            "kind": "content_replace",
+            "kind": RealtimePayloadKind.CONTENT_REPLACE,
             "origin_replica": replica_id(),
             "content": content,
             "published_at": time.time(),

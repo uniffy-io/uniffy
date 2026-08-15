@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage.s3_client import get_s3_client
-from uniffy.core.valkey import publish_notification
+from uniffy.core.valkey import NotificationPayloadType, publish_notification
 from uniffy.db.session import open_session
 from uniffy.vendor.arq import Retry
 
@@ -93,7 +93,7 @@ async def generate_image_thumbnail(
                 await publish_notification(
                     file.owner_id,
                     {
-                        "_type": "file_updated",
+                        "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": str(file.id),
                         "organization_id": str(file.organization_id),
                     },
@@ -185,7 +185,7 @@ async def generate_pdf_thumbnail(
                 await publish_notification(
                     file.owner_id,
                     {
-                        "_type": "file_updated",
+                        "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": str(file.id),
                         "organization_id": str(file.organization_id),
                     },
@@ -277,7 +277,7 @@ async def generate_video_thumbnail(
                 await publish_notification(
                     file.owner_id,
                     {
-                        "_type": "file_updated",
+                        "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": str(file.id),
                         "organization_id": str(file.organization_id),
                     },
@@ -320,7 +320,7 @@ def _create_thumbnail(image_bytes: bytes) -> tuple[bytes, int, int]:
             # Flatten transparency onto white before encoding to JPEG.
             if img.mode in ("RGBA", "LA", "P"):
                 background = Image.new("RGB", img.size, (255, 255, 255))
-                if img.mode == "P":
+                if img.mode == "P":  # noqa: PLR2004
                     img = img.convert("RGBA")
                 background.paste(img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None)
                 img = background
@@ -389,7 +389,7 @@ def _create_video_thumbnail(video_bytes: bytes) -> tuple[bytes, int, int]:
     if image is None:
         raise RuntimeError("ffmpeg: no decodable video frame")
 
-    if image.mode != "RGB":
+    if image.mode != "RGB":  # noqa: PLR2004
         image = image.convert("RGB")
 
     image.thumbnail(THUMB_MAX_SIZE, Image.Resampling.LANCZOS)

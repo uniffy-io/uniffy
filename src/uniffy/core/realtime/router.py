@@ -19,6 +19,11 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.realtime.identity import replica_id
+from uniffy.core.realtime.publisher import (
+    RealtimeChannelKind,
+    RealtimeChannelNamespace,
+    RealtimePayloadKind,
+)
 from uniffy.core.realtime.state import ClientHandle, DocKey, YDocSession
 from uniffy.core.types import ContentType
 from uniffy.core.valkey.pubsub import subscribe_patterns
@@ -29,11 +34,11 @@ from uniffy.observability.metrics import (
 
 LOGGER_COMPONENT = "realtime.router"
 
-_DOC_PATTERN = "realtime:doc:*"
-_PERM_PATTERN = "realtime:perm:*"
-_DEFAULTS_PATTERN = "realtime:defaults:*"
-_REVOKE_PATTERN = "auth:revoke:*"
-_REVOKE_SID_PATTERN = "auth:revoke_sid:*"
+_DOC_PATTERN = f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.DOC}:*"
+_PERM_PATTERN = f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.PERM}:*"
+_DEFAULTS_PATTERN = f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.DEFAULTS}:*"
+_REVOKE_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE}:*"
+_REVOKE_SID_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE_SESSION}:*"
 _RECONNECT_DELAY_INITIAL = 1.0
 _RECONNECT_DELAY_MAX = 30.0
 
@@ -52,27 +57,39 @@ class RouterCallbacks:
 
 def _parse_doc_channel(channel: str) -> DocKey | None:
     parts = channel.split(":")
-    if len(parts) != 4 or parts[0] != "realtime" or parts[1] != "doc":
+    if (
+        len(parts) != 4
+        or parts[0] != RealtimeChannelNamespace.REALTIME
+        or parts[1] != RealtimeChannelKind.DOC
+    ):
         return None
     try:
         return (ContentType[parts[2]], UUID(parts[3]))
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         return None
 
 
 def _parse_perm_channel(channel: str) -> DocKey | None:
     parts = channel.split(":")
-    if len(parts) != 4 or parts[0] != "realtime" or parts[1] != "perm":
+    if (
+        len(parts) != 4
+        or parts[0] != RealtimeChannelNamespace.REALTIME
+        or parts[1] != RealtimeChannelKind.PERM
+    ):
         return None
     try:
         return (ContentType[parts[2]], UUID(parts[3]))
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         return None
 
 
 def _parse_revoke_channel(channel: str) -> UUID | None:
     parts = channel.split(":")
-    if len(parts) != 3 or parts[0] != "auth" or parts[1] != "revoke":
+    if (
+        len(parts) != 3
+        or parts[0] != RealtimeChannelNamespace.AUTH
+        or parts[1] != RealtimeChannelKind.REVOKE
+    ):
         return None
     try:
         return UUID(parts[2])
@@ -82,7 +99,11 @@ def _parse_revoke_channel(channel: str) -> UUID | None:
 
 def _parse_revoke_sid_channel(channel: str) -> UUID | None:
     parts = channel.split(":")
-    if len(parts) != 3 or parts[0] != "auth" or parts[1] != "revoke_sid":
+    if (
+        len(parts) != 3
+        or parts[0] != RealtimeChannelNamespace.AUTH
+        or parts[1] != RealtimeChannelKind.REVOKE_SESSION
+    ):
         return None
     try:
         return UUID(parts[2])
@@ -105,11 +126,15 @@ def _observe_pubsub_latency(channel_label: str, payload: dict[str, object]) -> N
 
 def _parse_defaults_channel(channel: str) -> tuple[UUID, ContentType] | None:
     parts = channel.split(":")
-    if len(parts) != 4 or parts[0] != "realtime" or parts[1] != "defaults":
+    if (
+        len(parts) != 4
+        or parts[0] != RealtimeChannelNamespace.REALTIME
+        or parts[1] != RealtimeChannelKind.DEFAULTS
+    ):
         return None
     try:
         return (UUID(parts[2]), ContentType[parts[3]])
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         return None
 
 
@@ -151,9 +176,7 @@ class RealtimeRouter:
                 name="realtime-router-revoke",
             ),
             asyncio.create_task(
-                self._run_with_reconnect(
-                    _REVOKE_SID_PATTERN, self._handle_revoke_sid_message
-                ),
+                self._run_with_reconnect(_REVOKE_SID_PATTERN, self._handle_revoke_sid_message),
                 name="realtime-router-revoke-sid",
             ),
         ]
@@ -224,8 +247,7 @@ class RealtimeRouter:
             except Exception as exc:
                 REALTIME_PUBSUB_RECONNECTS_TOTAL.labels(pattern=pattern).inc()
                 logger.warning(
-                    f"pattern subscriber {pattern} crashed: {exc}; "
-                    f"reconnecting in {delay:.1f}s",
+                    f"pattern subscriber {pattern} crashed: {exc}; reconnecting in {delay:.1f}s",
                     component=LOGGER_COMPONENT,
                 )
                 try:
@@ -237,7 +259,7 @@ class RealtimeRouter:
             delay = _RECONNECT_DELAY_INITIAL
 
     async def _handle_doc_message(self, channel: str, payload: dict[str, object]) -> None:
-        if payload.get("kind") == "content_replace":
+        if payload.get("kind") == RealtimePayloadKind.CONTENT_REPLACE:
             # Not origin-deduped: the publishing process may hold the session.
             key = _parse_doc_channel(channel)
             if key is None or key not in self._doc_sessions:
@@ -291,7 +313,7 @@ class RealtimeRouter:
             return
         try:
             user_id = UUID(str(user_id_raw))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             logger.warning(
                 f"router: invalid user_id on {channel}: {user_id_raw!r}",
                 component=LOGGER_COMPONENT,
@@ -305,9 +327,7 @@ class RealtimeRouter:
                 continue
             await callbacks.enforce_role_change(handle, new_role_str)
 
-    async def _handle_defaults_message(
-        self, channel: str, payload: dict[str, object]
-    ) -> None:
+    async def _handle_defaults_message(self, channel: str, payload: dict[str, object]) -> None:
         """Re-authorize every doc on this replica matching ``(org_id, content_type)``."""
         parsed = _parse_defaults_channel(channel)
         if parsed is None:
@@ -336,9 +356,7 @@ class RealtimeRouter:
         _observe_pubsub_latency("revoke", payload)
         await callbacks.close_stale_user_sessions(user_id, new_version)
 
-    async def _handle_revoke_sid_message(
-        self, channel: str, payload: dict[str, object]
-    ) -> None:
+    async def _handle_revoke_sid_message(self, channel: str, payload: dict[str, object]) -> None:
         """Close a single user session targeted by its access-token ``sid``."""
         user_id = _parse_revoke_sid_channel(channel)
         if user_id is None:

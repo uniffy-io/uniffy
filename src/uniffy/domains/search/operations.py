@@ -85,7 +85,7 @@ class SearchOperations:
         # rule by dropping rows whose underlying assignments aren't visible
         # to the caller. ``total`` is a Meili estimate; the post-filter
         # only narrows the page so the estimate stays directionally correct.
-        tag_results = [r for r in results if r.entity_type == "tag"]
+        tag_results = [r for r in results if r.entity_type == ContentType.TAG.value.lower()]
         if tag_results:
             visible_tags = await self._filter_visible_tag_results(
                 user_id, organization_id, tag_results
@@ -94,7 +94,7 @@ class SearchOperations:
             results = [
                 r
                 for r in results
-                if r.entity_type != "tag" or r.urn in visible_urns
+                if r.entity_type != ContentType.TAG.value.lower() or r.urn in visible_urns
             ]
 
         if type_priority:
@@ -112,7 +112,7 @@ class SearchOperations:
         limit: int = 50,
     ) -> tuple[list[SearchResult], int]:
         """Today only notes track outgoing references."""
-        if type_filters and "note" not in type_filters:
+        if type_filters and ContentType.NOTE.value.lower() not in type_filters:
             return [], 0
 
         access_filter = await self.access_query.build_accessible_filter(
@@ -149,14 +149,19 @@ class SearchOperations:
         )
 
         default_mode, default_baseline = await resolve_content_defaults(
-            self.session, organization_id, ContentType.NOTE,
+            self.session,
+            organization_id,
+            ContentType.NOTE,
         )
 
         search_results: list[SearchResult] = []
         for note in notes:
             note_tags = [t.slug for t in tags_by_urn.get(urn_for(note), [])]
             effective_mode, effective_baseline = resolve_effective_policy(
-                note.access_mode, note.baseline_role, default_mode, default_baseline,
+                note.access_mode,
+                note.baseline_role,
+                default_mode,
+                default_baseline,
             )
             search_results.append(
                 SearchResult(
@@ -164,7 +169,7 @@ class SearchOperations:
                     organization_id=note.organization_id,
                     title=note.title,
                     description=note.content[:200] if note.content else None,
-                    entity_type="note",
+                    entity_type=ContentType.NOTE.value.lower(),
                     url_path=f"/notes/{note.id}",
                     access_mode=effective_mode.value,
                     baseline_role=(
@@ -260,23 +265,23 @@ class SearchOperations:
                 urn_to_id[urn] = content_id
 
                 et = result.entity_type.lower()
-                if et == "task":
+                if et == ContentType.TASK.value.lower():
                     task_ids.append(content_id)
-                elif et == "file":
+                elif et == ContentType.FILE.value.lower():
                     file_ids.append(content_id)
-                elif et == "project":
+                elif et == ContentType.PROJECT.value.lower():
                     project_ids.append(content_id)
-                elif et == "calendar_event":
+                elif et == ContentType.CALENDAR_EVENT.value.lower():
                     calendar_ids.append(content_id)
-                elif et == "note":
+                elif et == ContentType.NOTE.value.lower():
                     note_ids.append(content_id)
-                elif et == "chat":
+                elif et == ContentType.CHAT.value.lower():
                     chat_ids.append(content_id)
-                elif et == "agent":
+                elif et == ContentType.AGENT.value.lower():
                     agent_ids.append(content_id)
-                elif et == "tag":
+                elif et == ContentType.TAG.value.lower():
                     tag_ids.append(content_id)
-            except (ValueError, IndexError):
+            except ValueError, IndexError:
                 continue
 
         if task_ids:
@@ -294,9 +299,7 @@ class SearchOperations:
         if agent_ids:
             await self._enrich_agents(results, agent_ids, urn_to_id)
         if tag_ids:
-            await self._enrich_tags(
-                results, tag_ids, urn_to_id, user_id, organization_id
-            )
+            await self._enrich_tags(results, tag_ids, urn_to_id, user_id, organization_id)
 
     async def _enrich_tasks(
         self,
@@ -434,7 +437,7 @@ class SearchOperations:
 
         field_map: dict[UUID, dict[str, list[dict]]] = {}
         for row in result.all():
-            if row.config and "options" in row.config:
+            if row.config and "options" in row.config:  # noqa: PLR2004
                 field_map.setdefault(row.project_id, {})[row.id] = row.config["options"]
         return field_map
 
@@ -688,18 +691,10 @@ class SearchOperations:
         )
         tag_by_id = {t.id: t for t in result.scalars().all()}
 
-        candidates = [
-            tag_by_id[tag_id]
-            for tag_id in urn_to_tag_id.values()
-            if tag_id in tag_by_id
-        ]
+        candidates = [tag_by_id[tag_id] for tag_id in urn_to_tag_id.values() if tag_id in tag_by_id]
         visibility = TagVisibilityFilter(self.session, user_id, organization_id)
         visible_ids = await visibility.visible_id_set(candidates)
-        return [
-            sr
-            for sr in tag_results
-            if urn_to_tag_id.get(sr.urn) in visible_ids
-        ]
+        return [sr for sr in tag_results if urn_to_tag_id.get(sr.urn) in visible_ids]
 
     async def _enrich_tags(
         self,

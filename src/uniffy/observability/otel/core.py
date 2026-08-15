@@ -70,7 +70,7 @@ def setup_otel(
 
         _final_resource = resource
 
-        if protocol == "grpc":
+        if protocol == "grpc":  # noqa: PLR2004
             from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 

@@ -19,6 +19,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.auth.domain_admin import is_domain_admin
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.types import DomainType
 from uniffy.domains.org_settings.operations import OrgSettingsOperations
@@ -71,16 +72,14 @@ async def load_version_policy(
     session: AsyncSession, organization_id: UUID
 ) -> ResolvedFileVersionPolicy | None:
     """The org's stored policy, or ``None`` when no row exists."""
-    rows = await OrgSettingsOperations(session).get_namespace(
-        organization_id, FILES_NAMESPACE
-    )
+    rows = await OrgSettingsOperations(session).get_namespace(organization_id, FILES_NAMESPACE)
     row = rows.get(VERSION_POLICY_KEY)
     if row is None or not isinstance(row.value, dict):
         return None
     raw = row.value.get("keep_versions", DEFAULT_KEEP_VERSIONS)
     try:
         keep = clamp_keep_versions(int(raw))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         keep = DEFAULT_KEEP_VERSIONS
     return ResolvedFileVersionPolicy(organization_id=organization_id, keep_versions=keep)
 
@@ -96,9 +95,7 @@ async def resolve_version_policy(
     )
 
 
-async def _require_files_admin(
-    session: AsyncSession, user_id: UUID, organization_id: UUID
-) -> None:
+async def _require_files_admin(session: AsyncSession, user_id: UUID, organization_id: UUID) -> None:
     """Org admin or files domain admin; same gate as storage quotas."""
     if await PermissionChecker(session).is_org_admin(user_id, organization_id):
         return
@@ -128,9 +125,7 @@ async def update_org_version_policy(
             "keep_versions",
             f"Must be between {MIN_KEEP_VERSIONS} and {MAX_KEEP_VERSIONS}",
         )
-    policy = ResolvedFileVersionPolicy(
-        organization_id=organization_id, keep_versions=keep_versions
-    )
+    policy = ResolvedFileVersionPolicy(organization_id=organization_id, keep_versions=keep_versions)
     await OrgSettingsOperations(session).set(
         organization_id=organization_id,
         namespace=FILES_NAMESPACE,
@@ -143,7 +138,7 @@ async def update_org_version_policy(
         organization_id=organization_id,
         actor_user_id=user_id,
         action=Action.ORGANIZATION_SETTINGS_CHANGED,
-        resource_type="ORGANIZATION",
+        resource_type=AuditResourceType.ORGANIZATION,
         resource_id=organization_id,
         details={"setting": "file_version_retention", "keep_versions": keep_versions},
     )

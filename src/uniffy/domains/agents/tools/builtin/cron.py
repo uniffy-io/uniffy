@@ -3,6 +3,7 @@
 import json
 from datetime import timedelta
 
+from uniffy.core.models.agents.run_log import AgentRunStatus
 from uniffy.core.types import AccessMode
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
@@ -109,15 +110,15 @@ async def _execute_cron_update(ctx: ToolContext, args: dict) -> ToolResult:
     task_id = UUID(task_id_str)
 
     updates = {}
-    if "name" in args:
+    if "name" in args:  # noqa: PLR2004
         updates["name"] = args["name"]
-    if "prompt" in args:
+    if "prompt" in args:  # noqa: PLR2004
         updates["prompt"] = args["prompt"]
-    if "cron_expression" in args:
+    if "cron_expression" in args:  # noqa: PLR2004
         updates["cron_expression"] = args["cron_expression"]
-    if "timezone" in args:
+    if "timezone" in args:  # noqa: PLR2004
         updates["timezone"] = args["timezone"]
-    if "is_enabled" in args:
+    if "is_enabled" in args:  # noqa: PLR2004
         updates["is_enabled"] = args["is_enabled"]
 
     if not updates:
@@ -192,7 +193,7 @@ async def _execute_cron_get_runs(ctx: ToolContext, args: dict) -> ToolResult:
         # The run log row is written when the execution settles, so created_at
         # is the completion time; the start is derived from duration_ms.
         started = log.created_at
-        if log.status != "pending" and log.duration_ms:
+        if log.status != AgentRunStatus.PENDING and log.duration_ms:
             started = log.created_at - timedelta(milliseconds=log.duration_ms)
         started_str = started.strftime("%Y-%m-%d %H:%M UTC")
         tokens = f"{log.input_tokens} in / {log.output_tokens} out"

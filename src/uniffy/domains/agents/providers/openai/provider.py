@@ -13,6 +13,7 @@ from loguru import logger
 from uniffy.domains.agents.providers.base import (
     VISIBLE_REFUSAL_MESSAGE,
     CompletionResult,
+    CompletionStopReason,
     EventType,
     LLMProvider,
     ModelInfo,
@@ -38,15 +39,15 @@ PROVIDER_ID = "openai"
 _MIME_TYPES = {"png": "image/png", "jpeg": "image/jpeg", "webp": "image/webp"}
 
 
-def map_finish_reason(finish_reason: str | None) -> str:
+def map_finish_reason(finish_reason: str | None) -> CompletionStopReason:
     """Map an OpenAI ``finish_reason`` to an Anthropic-style stop reason."""
-    if finish_reason == "tool_calls":
-        return "tool_use"
-    if finish_reason == "length":
-        return "max_tokens"
-    if finish_reason == "content_filter":
-        return "refusal"
-    return "end_turn"
+    if finish_reason == "tool_calls":  # noqa: PLR2004
+        return CompletionStopReason.TOOL_USE
+    if finish_reason == "length":  # noqa: PLR2004
+        return CompletionStopReason.MAX_TOKENS
+    if finish_reason == "content_filter":  # noqa: PLR2004
+        return CompletionStopReason.REFUSAL
+    return CompletionStopReason.END_TURN
 
 
 class OpenAIProvider(LLMProvider):
@@ -463,7 +464,11 @@ class OpenAIProvider(LLMProvider):
                 )
 
             stop_reason = map_finish_reason(finish_reason)
-            if not accumulated_content and not tool_calls and stop_reason == "refusal":
+            if (
+                not accumulated_content
+                and not tool_calls
+                and stop_reason is CompletionStopReason.REFUSAL
+            ):
                 text_block_id = uuid4().hex[:12]
                 accumulated_content = VISIBLE_REFUSAL_MESSAGE
                 yield StreamEvent(type=EventType.TEXT_BLOCK_START, block_id=text_block_id)

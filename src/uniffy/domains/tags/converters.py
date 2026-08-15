@@ -21,15 +21,15 @@ from uniffy.core.converters import datetime_to_timestamp, optional_timestamp
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.types import ContentType
-from uniffy.domains.tags.operations import SOURCE_INLINE, SOURCE_MANUAL
+from uniffy.domains.tags.operations import SOURCE_INLINE, SOURCE_MANUAL, TagSort
 
-_SORT_FROM_PROTO: dict[int, str] = {
-    ProtoTagSort.TAG_SORT_UNSPECIFIED: "recent_desc",
-    ProtoTagSort.TAG_SORT_COUNT_DESC: "recent_desc",
-    ProtoTagSort.TAG_SORT_COUNT_ASC: "recent_desc",
-    ProtoTagSort.TAG_SORT_ALPHA_ASC: "alpha_asc",
-    ProtoTagSort.TAG_SORT_ALPHA_DESC: "alpha_desc",
-    ProtoTagSort.TAG_SORT_RECENT_DESC: "recent_desc",
+_SORT_FROM_PROTO: dict[int, TagSort] = {
+    ProtoTagSort.TAG_SORT_UNSPECIFIED: TagSort.RECENT_DESC,
+    ProtoTagSort.TAG_SORT_COUNT_DESC: TagSort.RECENT_DESC,
+    ProtoTagSort.TAG_SORT_COUNT_ASC: TagSort.RECENT_DESC,
+    ProtoTagSort.TAG_SORT_ALPHA_ASC: TagSort.ALPHA_ASC,
+    ProtoTagSort.TAG_SORT_ALPHA_DESC: TagSort.ALPHA_DESC,
+    ProtoTagSort.TAG_SORT_RECENT_DESC: TagSort.RECENT_DESC,
 }
 
 _SOURCE_FROM_PROTO: dict[int, str | None] = {
@@ -39,11 +39,11 @@ _SOURCE_FROM_PROTO: dict[int, str | None] = {
 }
 
 
-def sort_from_proto(value: int) -> str:
+def sort_from_proto(value: int) -> TagSort:
     # COUNT_DESC / COUNT_ASC fall back to recent_desc: counts live in Valkey, so
     # paginating by count over a Postgres window breaks (a tag can land on two
     # pages or none). UIs that need a counts view filter inside the first page.
-    return _SORT_FROM_PROTO.get(value, "recent_desc")
+    return _SORT_FROM_PROTO.get(value, TagSort.RECENT_DESC)
 
 
 def source_from_proto(value: int) -> str | None:
@@ -71,9 +71,7 @@ def tag_to_proto(tag: Tag, *, usage_count: int = 0) -> ProtoTag:
     return proto
 
 
-def tags_to_proto_list(
-    tags: Iterable[Tag], counts: dict[UUID, int]
-) -> list[ProtoTag]:
+def tags_to_proto_list(tags: Iterable[Tag], counts: dict[UUID, int]) -> list[ProtoTag]:
     return [tag_to_proto(t, usage_count=counts.get(t.id, 0)) for t in tags]
 
 

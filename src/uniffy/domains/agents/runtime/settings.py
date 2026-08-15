@@ -19,6 +19,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.provider_key import ProviderKey
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.agents.providers.catalog.image_params import (
     QUALITY_ORDER,
     RESOLUTION_ORDER,
@@ -84,7 +85,7 @@ def _coerce_key_id(raw: object) -> UUID | None:
         return None
     try:
         return UUID(str(raw))
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return None
 
 
@@ -93,7 +94,7 @@ def _coerce_positive_int(raw: object, default: int) -> int:
     # degrade to the default, never raise.
     try:
         value = int(raw)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return default
     return value if value > 0 else default
 
@@ -120,14 +121,10 @@ def _from_blob(blob: dict) -> ResolvedRuntimeSettings:
             DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS,
         ),
         display_currency=str(blob.get("display_currency") or DEFAULT_DISPLAY_CURRENCY),
-        personal_memory_bridge_enabled=bool(
-            blob.get("personal_memory_bridge_enabled", True)
-        ),
+        personal_memory_bridge_enabled=bool(blob.get("personal_memory_bridge_enabled", True)),
         default_provider_key_id=_coerce_key_id(blob.get("default_provider_key_id")),
         default_chat_model=str(model).strip() or None if model else None,
-        image_max_resolution=_coerce_choice(
-            blob.get("image_max_resolution"), RESOLUTION_ORDER
-        ),
+        image_max_resolution=_coerce_choice(blob.get("image_max_resolution"), RESOLUTION_ORDER),
         image_max_quality=_coerce_choice(blob.get("image_max_quality"), QUALITY_ORDER),
     )
 
@@ -144,9 +141,7 @@ async def get_runtime_settings(
             return value
 
     try:
-        rows = await OrgSettingsOperations(session).get_namespace(
-            organization_id, AGENTS_NAMESPACE
-        )
+        rows = await OrgSettingsOperations(session).get_namespace(organization_id, AGENTS_NAMESPACE)
         row = rows.get(RUNTIME_KEY)
     except Exception:
         logger.opt(exception=True).warning("Failed to load runtime settings; using defaults")
@@ -235,9 +230,8 @@ class RuntimeSettingsOperations:
             "personal_memory_bridge_enabled": bool(personal_memory_bridge_enabled),
             "default_provider_key_id": str(key_id) if key_id else "",
             "default_chat_model": (default_chat_model or "").strip(),
-            "image_max_resolution": _coerce_choice(
-                image_max_resolution, RESOLUTION_ORDER
-            ) or DEFAULT_IMAGE_MAX_RESOLUTION,
+            "image_max_resolution": _coerce_choice(image_max_resolution, RESOLUTION_ORDER)
+            or DEFAULT_IMAGE_MAX_RESOLUTION,
             "image_max_quality": _coerce_choice(image_max_quality, QUALITY_ORDER)
             or DEFAULT_IMAGE_MAX_QUALITY,
         }
@@ -254,7 +248,7 @@ class RuntimeSettingsOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_RUNTIME_SETTINGS_UPDATED,
-            resource_type="agent_runtime_settings",
+            resource_type=AuditResourceType.AGENT_RUNTIME_SETTINGS,
             resource_id=organization_id,
             details={
                 "default_provider_key_id": patch["default_provider_key_id"],
@@ -286,9 +280,7 @@ class RuntimeSettingsOperations:
         try:
             key_id = UUID(raw)
         except ValueError as exc:
-            raise ValidationError(
-                "default_provider_key_id", "Invalid provider key id"
-            ) from exc
+            raise ValidationError("default_provider_key_id", "Invalid provider key id") from exc
         result = await self._session.execute(
             select(ProviderKey).where(
                 ProviderKey.id == key_id,

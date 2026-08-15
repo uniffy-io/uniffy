@@ -15,6 +15,7 @@ from uniffy.core.mail.backends.base import MailResult
 from uniffy.core.mail.config import MAIL_NAMESPACE
 from uniffy.core.mail.errors import MailProviderError, MailSuppressedError
 from uniffy.core.mail.resolver import MailConfigResolver
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.domains.org_settings.operations import OrgSettingsOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -104,9 +105,7 @@ def _summarize(rows: dict[str, OrgSetting]) -> OrgMailConfigSummary:
     has_org_config = bool(rows)
     pw_row = rows.get("smtp_password")
     smtp_password_set = (
-        pw_row is not None
-        and pw_row.is_secret
-        and pw_row.value_encrypted is not None
+        pw_row is not None and pw_row.is_secret and pw_row.value_encrypted is not None
     )
     return OrgMailConfigSummary(
         has_org_config=has_org_config,
@@ -205,7 +204,7 @@ class OrgMailOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.MAIL_CONFIG_UPDATED,
-            resource_type="mail_config",
+            resource_type=AuditResourceType.MAIL_CONFIG,
             resource_id=organization_id,
             details={
                 "from_address": updates["from_address"],
@@ -243,7 +242,7 @@ class OrgMailOperations:
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.MAIL_CONFIG_CLEARED,
-                resource_type="mail_config",
+                resource_type=AuditResourceType.MAIL_CONFIG,
                 resource_id=organization_id,
                 details={"deleted_keys": deleted},
             )
@@ -262,7 +261,7 @@ class OrgMailOperations:
         """Send the admin/test template and stamp last_test_* on the org row."""
         await self._org_ops.require_org_admin(user_id, organization_id)
         recipient = recipient_email.strip()
-        if not recipient or "@" not in recipient:
+        if not recipient or "@" not in recipient:  # noqa: PLR2004
             raise ValueError("recipient_email must be a valid address")
 
         sender = sender or MailSender()

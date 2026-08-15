@@ -30,12 +30,14 @@ class DeploymentSettingsOperations:
     async def get_namespace(self, namespace: str) -> dict[str, DeploymentSetting]:
         """Returns {key: row} with ciphertext intact; plaintext requires get_secret."""
         rows = (
-            await self._session.execute(
-                select(DeploymentSetting).where(
-                    DeploymentSetting.namespace == namespace
+            (
+                await self._session.execute(
+                    select(DeploymentSetting).where(DeploymentSetting.namespace == namespace)
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return {row.key: row for row in rows}
 
     async def get_secret(self, namespace: str, key: str) -> str | None:
@@ -107,9 +109,7 @@ class DeploymentSettingsOperations:
 
     async def delete_namespace(self, namespace: str) -> int:
         result = await self._session.execute(
-            delete(DeploymentSetting).where(
-                DeploymentSetting.namespace == namespace
-            )
+            delete(DeploymentSetting).where(DeploymentSetting.namespace == namespace)
         )
         return int(result.rowcount or 0)
 
@@ -132,9 +132,7 @@ def _deployment_setting_get_ciphertext(row: DeploymentSetting) -> str:
     return row.value_encrypted
 
 
-def _deployment_setting_set_ciphertext(
-    row: DeploymentSetting, ciphertext: str
-) -> None:
+def _deployment_setting_set_ciphertext(row: DeploymentSetting, ciphertext: str) -> None:
     row.value_encrypted = ciphertext
 
 

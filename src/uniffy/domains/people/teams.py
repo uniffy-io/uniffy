@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember
@@ -42,19 +43,15 @@ async def teams_for_users(
     )
     teams: dict[UUID, list[dict]] = {}
     for user_id, group_id, name, lead_user_id in result.all():
-        teams.setdefault(user_id, []).append(
-            {
-                "group_id": str(group_id),
-                "name": name,
-                "lead_user_id": str(lead_user_id) if lead_user_id else None,
-            }
-        )
+        teams.setdefault(user_id, []).append({
+            "group_id": str(group_id),
+            "name": name,
+            "lead_user_id": str(lead_user_id) if lead_user_id else None,
+        })
     return teams
 
 
-async def user_team_ids(
-    session: AsyncSession, organization_id: UUID, user_id: UUID
-) -> list[UUID]:
+async def user_team_ids(session: AsyncSession, organization_id: UUID, user_id: UUID) -> list[UUID]:
     """TEAM ids the user actively belongs to; cached because the chat unread
     aggregate reads it on every bootstrap."""
     cached = await get_cached_user_team_ids(organization_id, user_id)
@@ -127,9 +124,7 @@ async def search_team_nodes(
     )
     if search:
         pattern = f"%{search}%"
-        base_query = base_query.where(
-            Group.name.ilike(pattern) | Group.description.ilike(pattern)
-        )
+        base_query = base_query.where(Group.name.ilike(pattern) | Group.description.ilike(pattern))
 
     total = (
         await session.execute(select(func.count()).select_from(base_query.subquery()))
@@ -207,7 +202,7 @@ async def update_team(
             organization_id=organization_id,
             actor_user_id=actor_id,
             action=Action.TEAM_LEAD_CHANGED,
-            resource_type="GROUP",
+            resource_type=AuditResourceType.GROUP,
             resource_id=group_id,
             details={
                 "previous_lead_user_id": str(previous) if previous else None,
@@ -229,7 +224,7 @@ async def update_team(
             organization_id=organization_id,
             actor_user_id=actor_id,
             action=Action.TEAM_PARENT_CHANGED,
-            resource_type="GROUP",
+            resource_type=AuditResourceType.GROUP,
             resource_id=group_id,
             details={
                 "previous_parent_group_id": str(previous) if previous else None,

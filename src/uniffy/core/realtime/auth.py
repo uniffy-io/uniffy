@@ -42,7 +42,7 @@ def extract_bearer_from_auth_header(authorization: str | None) -> str | None:
     if not authorization:
         return None
     scheme, _, value = authorization.partition(" ")
-    if scheme.lower() == "bearer" and value:
+    if scheme.lower() == "bearer" and value:  # noqa: PLR2004
         return value
     return None
 
@@ -53,7 +53,7 @@ def origin_is_allowed(origin: str | None, allowlist: list[str]) -> bool:
     """
     if origin is None:
         return True
-    if "*" in allowlist:
+    if "*" in allowlist:  # noqa: PLR2004
         return True
     return origin in allowlist
 
@@ -61,6 +61,6 @@ def origin_is_allowed(origin: str | None, allowlist: list[str]) -> bool:
 def get_ws_origin_allowlist() -> list[str]:
     """WS origin allowlist from env (reuses ``CORS_ORIGINS``)."""
     raw = os.getenv("CORS_ORIGINS", "*")
-    if raw == "*":
+    if raw == "*":  # noqa: PLR2004
         return ["*"]
     return [entry.strip() for entry in raw.split(",") if entry.strip()]

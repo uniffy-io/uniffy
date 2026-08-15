@@ -48,7 +48,7 @@ async def _process_due_tasks(session: AsyncSession) -> int:
         .where(
             and_(
                 Task.due_date.is_not(None),
-                Task.status != "status_done",
+                Task.completed_at.is_(None),
                 Task.is_deleted == False,  # noqa: E712
                 Task.due_date <= tomorrow,
             )

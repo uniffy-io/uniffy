@@ -56,12 +56,9 @@ async def _seed_initial_data_locked() -> None:
                 admin_password = "admin"
 
             admin_email = os.getenv("INITIAL_ADMIN_EMAIL", "admin@uniffy.io")
-            platform_email = (
-                os.getenv("INITIAL_PLATFORM_ADMIN_EMAIL", "").strip() or admin_email
-            )
+            platform_email = os.getenv("INITIAL_PLATFORM_ADMIN_EMAIL", "").strip() or admin_email
             platform_password = (
-                os.getenv("INITIAL_PLATFORM_ADMIN_PASSWORD", "").strip()
-                or admin_password
+                os.getenv("INITIAL_PLATFORM_ADMIN_PASSWORD", "").strip() or admin_password
             )
 
             collapsed = admin_email.strip().lower() == platform_email.strip().lower()
@@ -80,9 +77,7 @@ async def _seed_initial_data_locked() -> None:
             await session.refresh(admin_user)
 
             if collapsed:
-                logger.info(
-                    f"Created combined admin + platform user: {admin_user.email}"
-                )
+                logger.info(f"Created combined admin + platform user: {admin_user.email}")
             else:
                 logger.info(f"Created org-owner user: {admin_user.email}")
                 platform_user = User(
@@ -97,9 +92,7 @@ async def _seed_initial_data_locked() -> None:
                 session.add(platform_user)
                 await session.flush()
                 await session.refresh(platform_user)
-                logger.info(
-                    f"Created platform-admin-only user: {platform_user.email}"
-                )
+                logger.info(f"Created platform-admin-only user: {platform_user.email}")
 
             from uniffy.domains.organizations.operations import OrganizationOperations
 
@@ -137,14 +130,20 @@ async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
+    from uniffy.core.config.push import (
+        PUSH_SETTINGS_NAMESPACE,
+        VAPID_CONTACT_EMAIL_KEY,
+        VAPID_PRIVATE_KEY,
+        VAPID_PUBLIC_KEY,
+    )
     from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
 
     settings = DeploymentSettingsOperations(session)
 
     # Regenerating the keypair would silently invalidate every existing push
     # subscription, so a present key means we leave it untouched.
-    existing = await settings.get_namespace("push")
-    if "vapid_public_key" in existing:
+    existing = await settings.get_namespace(PUSH_SETTINGS_NAMESPACE)
+    if VAPID_PUBLIC_KEY in existing:
         return
 
     private_key = ec.generate_private_key(ec.SECP256R1())
@@ -157,10 +156,17 @@ async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
     pub_bytes = private_key.public_key().public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
     pub_b64 = base64.urlsafe_b64encode(pub_bytes).rstrip(b"=").decode("ascii")
 
-    await settings.set(namespace="push", key="vapid_private_key", value=priv_b64, is_secret=True)
-    await settings.set(namespace="push", key="vapid_public_key", value=pub_b64)
     await settings.set(
-        namespace="push", key="vapid_contact_email", value=f"mailto:{admin_email}"
+        namespace=PUSH_SETTINGS_NAMESPACE,
+        key=VAPID_PRIVATE_KEY,
+        value=priv_b64,
+        is_secret=True,
+    )
+    await settings.set(namespace=PUSH_SETTINGS_NAMESPACE, key=VAPID_PUBLIC_KEY, value=pub_b64)
+    await settings.set(
+        namespace=PUSH_SETTINGS_NAMESPACE,
+        key=VAPID_CONTACT_EMAIL_KEY,
+        value=f"mailto:{admin_email}",
     )
     await session.flush()
     logger.info("Generated and stored VAPID keypair in deployment_settings")

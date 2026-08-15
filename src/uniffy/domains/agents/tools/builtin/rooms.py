@@ -31,7 +31,7 @@ def _parse_datetime(value: str, user_timezone: str | None = None) -> datetime | 
         return dt.replace(tzinfo=UTC)
     try:
         local_tz = ZoneInfo(user_timezone)
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         return dt.replace(tzinfo=UTC)
     return dt.replace(tzinfo=local_tz).astimezone(UTC)
 
@@ -117,18 +117,14 @@ def _format_booking_detail(prefix: str, booking, room_name: str | None = None) -
 def _parse_room_type(raw: str) -> tuple[RoomType | None, str | None]:
     value = str(raw).upper()
     if value not in _ROOM_TYPE_VALUES:
-        return None, (
-            f"Invalid room_type: {raw}. Must be one of: {', '.join(_ROOM_TYPE_VALUES)}"
-        )
+        return None, (f"Invalid room_type: {raw}. Must be one of: {', '.join(_ROOM_TYPE_VALUES)}")
     return RoomType(value), None
 
 
 def _parse_booking_status(raw: str) -> tuple[BookingStatus | None, str | None]:
     value = str(raw).upper()
     if value not in _BOOKING_STATUS_VALUES:
-        return None, (
-            f"Invalid status: {raw}. Must be one of: {', '.join(_BOOKING_STATUS_VALUES)}"
-        )
+        return None, (f"Invalid status: {raw}. Must be one of: {', '.join(_BOOKING_STATUS_VALUES)}")
     return BookingStatus(value), None
 
 
@@ -145,27 +141,23 @@ async def _execute_list_rooms(ctx: ToolContext, args: dict) -> ToolResult:
             return ToolResult(success=False, data="", error=err)
         kwargs["room_type"] = room_type
 
-    if "min_capacity" in args:
+    if "min_capacity" in args:  # noqa: PLR2004
         try:
             kwargs["min_capacity"] = int(args["min_capacity"])
-        except (TypeError, ValueError):
-            return ToolResult(
-                success=False, data="", error="min_capacity must be an integer"
-            )
+        except TypeError, ValueError:
+            return ToolResult(success=False, data="", error="min_capacity must be an integer")
 
     amenities = args.get("amenities")
     if amenities:
         if not isinstance(amenities, list):
-            return ToolResult(
-                success=False, data="", error="amenities must be a list of strings"
-            )
+            return ToolResult(success=False, data="", error="amenities must be a list of strings")
         kwargs["amenities"] = [str(a) for a in amenities]
 
-    if "building" in args:
+    if "building" in args:  # noqa: PLR2004
         kwargs["building"] = str(args["building"])
-    if "floor" in args:
+    if "floor" in args:  # noqa: PLR2004
         kwargs["floor"] = str(args["floor"])
-    if "search_query" in args:
+    if "search_query" in args:  # noqa: PLR2004
         kwargs["search_query"] = str(args["search_query"])
 
     page = max(int(args.get("page", 1) or 1), 1)
@@ -247,17 +239,13 @@ async def _execute_list_bookings(ctx: ToolContext, args: dict) -> ToolResult:
     if raw_start:
         start_date = _parse_datetime(str(raw_start), tz)
         if start_date is None:
-            return ToolResult(
-                success=False, data="", error="Invalid start_date format."
-            )
+            return ToolResult(success=False, data="", error="Invalid start_date format.")
         kwargs["start_date"] = start_date
     raw_end = args.get("end_date")
     if raw_end:
         end_date = _parse_datetime(str(raw_end), tz)
         if end_date is None:
-            return ToolResult(
-                success=False, data="", error="Invalid end_date format."
-            )
+            return ToolResult(success=False, data="", error="Invalid end_date format.")
         kwargs["end_date"] = end_date
 
     raw_status = args.get("status")
@@ -296,9 +284,7 @@ async def _execute_find_available(ctx: ToolContext, args: dict) -> ToolResult:
     start_str = args.get("start_time", "")
     end_str = args.get("end_time", "")
     if not start_str or not end_str:
-        return ToolResult(
-            success=False, data="", error="start_time and end_time are required"
-        )
+        return ToolResult(success=False, data="", error="start_time and end_time are required")
     start_time = _parse_datetime(start_str, tz)
     end_time = _parse_datetime(end_str, tz)
     if start_time is None or end_time is None:
@@ -308,25 +294,19 @@ async def _execute_find_available(ctx: ToolContext, args: dict) -> ToolResult:
             error="Invalid datetime format. Use ISO 8601 (e.g. 2026-02-22T10:00:00).",
         )
     if end_time <= start_time:
-        return ToolResult(
-            success=False, data="", error="end_time must be after start_time"
-        )
+        return ToolResult(success=False, data="", error="end_time must be after start_time")
 
     kwargs: dict = {}
-    if "min_capacity" in args:
+    if "min_capacity" in args:  # noqa: PLR2004
         try:
             kwargs["min_capacity"] = int(args["min_capacity"])
-        except (TypeError, ValueError):
-            return ToolResult(
-                success=False, data="", error="min_capacity must be an integer"
-            )
+        except TypeError, ValueError:
+            return ToolResult(success=False, data="", error="min_capacity must be an integer")
 
     amenities = args.get("amenities")
     if amenities:
         if not isinstance(amenities, list):
-            return ToolResult(
-                success=False, data="", error="amenities must be a list of strings"
-            )
+            return ToolResult(success=False, data="", error="amenities must be a list of strings")
         kwargs["amenities"] = [str(a) for a in amenities]
 
     raw_type = args.get("room_type")
@@ -345,13 +325,9 @@ async def _execute_find_available(ctx: ToolContext, args: dict) -> ToolResult:
         **kwargs,
     )
 
-    window = (
-        f"{start_time.strftime('%Y-%m-%d %H:%M')} to {end_time.strftime('%Y-%m-%d %H:%M')}"
-    )
+    window = f"{start_time.strftime('%Y-%m-%d %H:%M')} to {end_time.strftime('%Y-%m-%d %H:%M')}"
     if not rooms:
-        return ToolResult(
-            success=True, data=f"No rooms available for {window}."
-        )
+        return ToolResult(success=True, data=f"No rooms available for {window}.")
     lines = [f"{len(rooms)} room(s) available for {window}:"]
     for room in rooms:
         lines.append(_format_room_line(room))
@@ -373,9 +349,7 @@ async def _execute_book_room(ctx: ToolContext, args: dict) -> ToolResult:
     start_str = args.get("start_time", "")
     end_str = args.get("end_time", "")
     if not start_str or not end_str:
-        return ToolResult(
-            success=False, data="", error="start_time and end_time are required"
-        )
+        return ToolResult(success=False, data="", error="start_time and end_time are required")
     start_time = _parse_datetime(start_str, tz)
     end_time = _parse_datetime(end_str, tz)
     if start_time is None or end_time is None:
@@ -385,9 +359,7 @@ async def _execute_book_room(ctx: ToolContext, args: dict) -> ToolResult:
             error="Invalid datetime format. Use ISO 8601 (e.g. 2026-02-22T10:00:00).",
         )
     if end_time <= start_time:
-        return ToolResult(
-            success=False, data="", error="end_time must be after start_time"
-        )
+        return ToolResult(success=False, data="", error="end_time must be after start_time")
 
     kwargs: dict = {
         "title": str(args.get("title", "")),
@@ -454,9 +426,7 @@ _BOOKING_ID_SCHEMA = {"type": "string", "description": "UUID of the booking."}
 _AMENITIES_SCHEMA = {
     "type": "array",
     "items": {"type": "string"},
-    "description": (
-        "Amenities the room must have (e.g. ['whiteboard', 'video', 'phone'])."
-    ),
+    "description": ("Amenities the room must have (e.g. ['whiteboard', 'video', 'phone'])."),
 }
 _ROOM_TYPE_SCHEMA = {
     "type": "string",
@@ -505,9 +475,7 @@ get_room = ToolDefinition(
     name="rooms.get_room",
     display_name="Get Room",
     group="Rooms",
-    description=(
-        "Get a single room's details plus its bookings for the next 7 days."
-    ),
+    description=("Get a single room's details plus its bookings for the next 7 days."),
     parameter_schema={
         "type": "object",
         "properties": {"room_id": _ROOM_ID_SCHEMA},

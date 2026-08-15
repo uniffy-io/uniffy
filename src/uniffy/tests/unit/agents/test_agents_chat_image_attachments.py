@@ -56,9 +56,7 @@ class TestLoadTriggerAttachments:
         assert result is None
         safe_loader.assert_not_awaited()
 
-    async def test_returns_file_contexts_when_trigger_has_attachments(
-        self, monkeypatch
-    ) -> None:
+    async def test_returns_file_contexts_when_trigger_has_attachments(self, monkeypatch) -> None:
         fid_a, fid_b = generate_id(), generate_id()
         fake_ops = MagicMock()
         fake_ops.list_attachments = AsyncMock(
@@ -82,9 +80,7 @@ class TestLoadTriggerAttachments:
         )
         assert result == loaded
         safe_loader.assert_awaited_once()
-        passed_session, passed_user, passed_org, passed_file_ids = (
-            safe_loader.await_args.args
-        )
+        passed_session, passed_user, passed_org, passed_file_ids = safe_loader.await_args.args
         assert passed_user == user_id
         assert passed_org == org_id
         assert passed_file_ids == [str(fid_a), str(fid_b)]
@@ -108,9 +104,7 @@ class TestLoadTriggerAttachments:
 
     async def test_returns_none_when_list_attachments_raises(self, monkeypatch) -> None:
         fake_ops = MagicMock()
-        fake_ops.list_attachments = AsyncMock(
-            side_effect=PermissionDeniedError("access", "content")
-        )
+        fake_ops.list_attachments = AsyncMock(side_effect=PermissionDeniedError("access", "content"))
         monkeypatch.setattr(bridge_mod, "AttachmentOperations", lambda _s: fake_ops)
 
         safe_loader = AsyncMock()

@@ -162,9 +162,7 @@ class TestCreateAgentBuilderGate:
         )
         with (
             _cache_passthrough(),
-            patch.object(
-                ops, "_resolve_access_policy", AsyncMock(side_effect=_Reached())
-            ),
+            patch.object(ops, "_resolve_access_policy", AsyncMock(side_effect=_Reached())),
             pytest.raises(_Reached if allowed else PermissionDeniedError),
         ):
             await call
@@ -334,10 +332,13 @@ class TestCreateSessionAgentGate:
         ops = self._ops()
         agent_ops = MagicMock()
         agent_ops.get_by_id = AsyncMock(side_effect=PermissionDeniedError("view"))
-        with patch(
-            "uniffy.domains.agents.sessions.operations.AgentOperations",
-            return_value=agent_ops,
-        ), pytest.raises(PermissionDeniedError):
+        with (
+            patch(
+                "uniffy.domains.agents.sessions.operations.AgentOperations",
+                return_value=agent_ops,
+            ),
+            pytest.raises(PermissionDeniedError),
+        ):
             await ops.create_session(
                 user_id=generate_id(),
                 organization_id=generate_id(),
@@ -627,9 +628,7 @@ class TestCronTransferOwnership:
         agent_ops = MagicMock()
         agent_ops.get_by_id = AsyncMock(return_value=NS(id=task.agent_id))
         members = MagicMock()
-        members.transfer_ownership = AsyncMock(
-            side_effect=PermissionDeniedError("transfer")
-        )
+        members.transfer_ownership = AsyncMock(side_effect=PermissionDeniedError("transfer"))
         with (
             patch(
                 "uniffy.domains.agents.cron.operations.AgentOperations",
@@ -638,7 +637,8 @@ class TestCronTransferOwnership:
             patch(
                 "uniffy.domains.agents.cron.operations.ContentMembersOperations",
                 return_value=members,
-            ), pytest.raises(PermissionDeniedError)
+            ),
+            pytest.raises(PermissionDeniedError),
         ):
             await ops.transfer_ownership(
                 actor_user_id=generate_id(),  # an admin who is not the owner
@@ -664,9 +664,7 @@ class TestCronTransferOwnership:
         hook = _ownership_transfer_hooks[ContentType.AGENT_CRON_TASK]
 
         async def run_hook(**kwargs):
-            await hook(
-                ops.session, task.organization_id, kwargs["content_id"], new_owner
-            )
+            await hook(ops.session, task.organization_id, kwargs["content_id"], new_owner)
 
         members = MagicMock()
         members.transfer_ownership = AsyncMock(side_effect=run_hook)
@@ -712,9 +710,7 @@ class TestCronExecutionIdentity:
         # The mutation gates resolve a content role on the task itself; these
         # cases are about the identity repoint, so the editor holds a grant.
         ops.permission_checker = MagicMock(
-            effective_role=AsyncMock(
-                return_value=ContentRole.ADMIN if role is None else role
-            )
+            effective_role=AsyncMock(return_value=ContentRole.ADMIN if role is None else role)
         )
         return ops
 
@@ -922,9 +918,7 @@ class TestAgentToolAuthorization:
         from uniffy.domains.agents.runtime.operations import _allowed_tool_names
 
         # Post-filter schemas carry API names; the executor compares internal ones.
-        allowed = _allowed_tool_names(
-            [{"name": "notes-read_note"}, {"name": "github-list_issues"}]
-        )
+        allowed = _allowed_tool_names([{"name": "notes-read_note"}, {"name": "github-list_issues"}])
         assert allowed == frozenset({"notes.read_note", "github.list_issues"})
         assert _allowed_tool_names(None) == frozenset()
 

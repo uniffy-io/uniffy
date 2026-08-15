@@ -83,6 +83,7 @@ from uniffy.domains.calendar.operations import (
     CategoryOperations,
     EventTemplateOperations,
 )
+from uniffy.domains.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
 from uniffy.domains.tags import TagOperations
 
 logger = logger.bind(component="calendar.handlers")
@@ -102,7 +103,7 @@ def _parse_event_id(value: str) -> UUID:
     Recurring occurrences are expanded as ``{master}__occurrence__{date}``; attendees,
     activity and the row itself live on the master.
     """
-    return _parse_uuid(value.split("__occurrence__")[0], "event_id")
+    return _parse_uuid(value.split(OCCURRENCE_ID_SEPARATOR)[0], "event_id")
 
 
 def _parse_tag_id_list(values) -> list[UUID]:
@@ -147,10 +148,14 @@ async def _resolve_template_effective_policy(
     """Return the template's effective ``(access_mode, baseline_role)`` for proto emission."""
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
-        organization_id, ContentType.CALENDAR_EVENT,
+        organization_id,
+        ContentType.CALENDAR_EVENT,
     )
     return resolve_effective_policy(
-        template.access_mode, template.baseline_role, default_mode, default_baseline,
+        template.access_mode,
+        template.baseline_role,
+        default_mode,
+        default_baseline,
     )
 
 
@@ -276,9 +281,7 @@ class CalendarHandlers:
 
                 attendees = await queries.get_event_attendees(session, event.id)
                 room_info = await self._get_event_room_info(session, event.id)
-                tags_by_urn = await _hydrate_event_tags(
-                    session, organization_id, [event.id]
-                )
+                tags_by_urn = await _hydrate_event_tags(session, organization_id, [event.id])
                 return CreateEventResponse(
                     event=event_to_proto(
                         event,
@@ -313,9 +316,7 @@ class CalendarHandlers:
                     user_id, organization_id, event_id
                 )
                 room_info = await self._get_event_room_info(session, event_id)
-                tags_by_urn = await _hydrate_event_tags(
-                    session, organization_id, [event.id]
-                )
+                tags_by_urn = await _hydrate_event_tags(session, organization_id, [event.id])
                 return GetEventResponse(
                     event=event_to_proto(
                         event,
@@ -343,7 +344,7 @@ class CalendarHandlers:
         organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
-            event_id = UUID(request.event_id.split("__occurrence__")[0])
+            event_id = UUID(request.event_id.split(OCCURRENCE_ID_SEPARATOR)[0])
         except ValueError as exc:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid event_id: {exc}") from exc
 
@@ -415,9 +416,7 @@ class CalendarHandlers:
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
                 room_info = await self._get_event_room_info(session, event.id)
-                tags_by_urn = await _hydrate_event_tags(
-                    session, organization_id, [event.id]
-                )
+                tags_by_urn = await _hydrate_event_tags(session, organization_id, [event.id])
                 return UpdateEventResponse(
                     event=event_to_proto(
                         event,
@@ -445,7 +444,7 @@ class CalendarHandlers:
         organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
-            event_id = UUID(request.event_id.split("__occurrence__")[0])
+            event_id = UUID(request.event_id.split(OCCURRENCE_ID_SEPARATOR)[0])
         except ValueError as exc:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid event_id: {exc}") from exc
 
@@ -541,9 +540,7 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                                 [],
                             ),
-                            user_role=await ops._resolve_role(
-                                user_id, organization_id, event
-                            ),
+                            user_role=await ops._resolve_role(user_id, organization_id, event),
                             **room_info,
                         )
                     )
@@ -596,9 +593,7 @@ class CalendarHandlers:
                 master_ids: set[UUID] = set()
                 for event in events:
                     master_ids.add(_parse_event_id(str(event.id)))
-                tags_by_urn = await _hydrate_event_tags(
-                    session, organization_id, list(master_ids)
-                )
+                tags_by_urn = await _hydrate_event_tags(session, organization_id, list(master_ids))
 
                 proto_events = []
                 for event in events:
@@ -806,9 +801,7 @@ class CalendarHandlers:
                     role=role,
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
-                tags_by_urn = await _hydrate_event_tags(
-                    session, organization_id, [event.id]
-                )
+                tags_by_urn = await _hydrate_event_tags(session, organization_id, [event.id])
                 return AddAttendeesResponse(
                     event=event_to_proto(
                         event,
@@ -847,9 +840,7 @@ class CalendarHandlers:
                     attendee_ids=attendee_ids,
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
-                tags_by_urn = await _hydrate_event_tags(
-                    session, organization_id, [event.id]
-                )
+                tags_by_urn = await _hydrate_event_tags(session, organization_id, [event.id])
                 return RemoveAttendeesResponse(
                     event=event_to_proto(
                         event,
@@ -878,7 +869,7 @@ class CalendarHandlers:
         organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
-            event_id = UUID(request.event_id.split("__occurrence__")[0])
+            event_id = UUID(request.event_id.split(OCCURRENCE_ID_SEPARATOR)[0])
         except ValueError as exc:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid event_id: {exc}") from exc
 
@@ -954,7 +945,9 @@ class CalendarHandlers:
                     baseline_role=baseline_role,
                 )
                 eff_mode, eff_baseline = await _resolve_template_effective_policy(
-                    session, organization_id, template,
+                    session,
+                    organization_id,
+                    template,
                 )
                 return CreateEventTemplateResponse(
                     template=template_to_proto(
@@ -983,7 +976,9 @@ class CalendarHandlers:
                 ops = EventTemplateOperations(session)
                 template = await ops.get_by_id(template_id, organization_id, user_id)
                 eff_mode, eff_baseline = await _resolve_template_effective_policy(
-                    session, organization_id, template,
+                    session,
+                    organization_id,
+                    template,
                 )
                 return GetEventTemplateResponse(
                     template=template_to_proto(
@@ -1036,7 +1031,9 @@ class CalendarHandlers:
                     **update_data,
                 )
                 eff_mode, eff_baseline = await _resolve_template_effective_policy(
-                    session, organization_id, template,
+                    session,
+                    organization_id,
+                    template,
                 )
                 return UpdateEventTemplateResponse(
                     template=template_to_proto(
@@ -1085,7 +1082,8 @@ class CalendarHandlers:
                 templates = await ops.list(organization_id, user_id)
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.CALENDAR_EVENT,
+                    organization_id,
+                    ContentType.CALENDAR_EVENT,
                 )
                 proto_templates = []
                 for template in templates:

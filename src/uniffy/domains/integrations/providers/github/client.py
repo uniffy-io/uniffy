@@ -36,7 +36,7 @@ def _name_segment(field: str, value: str) -> str:
 
 def _ref_segment(field: str, value: str) -> str:
     """Refs may contain '/', so they ride raw; gate the charset and forbid traversal."""
-    if not isinstance(value, str) or not _REF_RE.fullmatch(value) or ".." in value:
+    if not isinstance(value, str) or not _REF_RE.fullmatch(value) or ".." in value:  # noqa: PLR2004
         raise ValidationError(
             field, "Only letters, digits, '.', '_', '/' and '-' are allowed, without '..'"
         )
@@ -72,9 +72,7 @@ class GitHubClient:
     async def get_user(self) -> dict:
         return await self.http.request("GET", "/user")
 
-    async def _search(
-        self, path: str, query: str, limit: int, sort: str | None, page: int
-    ) -> dict:
+    async def _search(self, path: str, query: str, limit: int, sort: str | None, page: int) -> dict:
         params: dict[str, Any] = {"q": query, "per_page": limit, "page": page}
         if sort:
             params["sort"] = sort
@@ -164,18 +162,14 @@ class GitHubClient:
 
     async def compare(self, owner: str, repo: str, base: str, head: str) -> dict:
         span = f"{_ref_segment('base', base)}...{_ref_segment('head', head)}"
-        return await self.http.request(
-            "GET", f"{self._repo_path(owner, repo)}/compare/{span}"
-        )
+        return await self.http.request("GET", f"{self._repo_path(owner, repo)}/compare/{span}")
 
     async def get_issue(self, owner: str, repo: str, number: int) -> dict:
         return await self.http.request(
             "GET", f"{self._repo_path(owner, repo)}/issues/{encode_segment(number)}"
         )
 
-    async def list_issue_comments(
-        self, owner: str, repo: str, number: int, limit: int = 10
-    ) -> list:
+    async def list_issue_comments(self, owner: str, repo: str, number: int, limit: int = 10) -> list:
         return await self.http.request(
             "GET",
             f"{self._repo_path(owner, repo)}/issues/{encode_segment(number)}/comments",

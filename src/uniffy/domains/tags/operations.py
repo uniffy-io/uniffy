@@ -4,6 +4,7 @@
 
 from collections.abc import Iterable
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from loguru import logger
@@ -12,6 +13,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import invalidate_visible_sets_for_org
+from uniffy.core.content.references import CONTENT_URN_PREFIX
 from uniffy.core.errors import (
     ConflictError,
     NotFoundError,
@@ -51,6 +53,7 @@ MAX_MANUAL_TAGS_PER_CONTENT = 20
 
 _COUNT_CACHE_TTL = 60
 _COUNT_CACHE_PREFIX = "tag_count"
+_COUNT_CACHE_FIELD = "count"
 
 _DEFAULT_PAGE_SIZE = 100
 _MAX_PAGE_SIZE = 500
@@ -58,6 +61,12 @@ _DEFAULT_SUGGEST_LIMIT = 10
 _MAX_SUGGEST_LIMIT = 50
 
 _RECENT_ASSIGNMENT_LIMIT = 5
+
+
+class TagSort(StrEnum):
+    ALPHA_ASC = "alpha_asc"
+    ALPHA_DESC = "alpha_desc"
+    RECENT_DESC = "recent_desc"
 
 
 class TagSlugCollisionError(ConflictError):
@@ -71,9 +80,7 @@ class TagLimitExceededError(UNIFFYError):
     def __init__(self, content_urn: str, limit: int = MAX_MANUAL_TAGS_PER_CONTENT) -> None:
         self.content_urn = content_urn
         self.limit = limit
-        super().__init__(
-            f"Tag limit exceeded for {content_urn!r}: max {limit} manual tags"
-        )
+        super().__init__(f"Tag limit exceeded for {content_urn!r}: max {limit} manual tags")
 
 
 def _content_type_from_urn(urn: str) -> ContentType:
@@ -83,11 +90,13 @@ def _content_type_from_urn(urn: str) -> ContentType:
     segment is unknown. Tags inherit visibility from their content, so
     a typo here is a programmer error, not a permission decision.
     """
-    parts = urn.split(":")
-    if len(parts) != 5 or parts[0] != "urn" or parts[1] != "uniffy" or parts[2] != "content":
+    if not urn.startswith(CONTENT_URN_PREFIX):
+        raise ValidationError("content_urn", f"malformed URN {urn!r}")
+    raw_type, separator, content_id = urn[len(CONTENT_URN_PREFIX) :].partition(":")
+    if not separator or not content_id or content_id.count(":") > 0:
         raise ValidationError("content_urn", f"malformed URN {urn!r}")
     try:
-        return ContentType(parts[3])
+        return ContentType(raw_type)
     except ValueError as exc:
         raise ValidationError("content_urn", f"unknown content type in {urn!r}") from exc
 
@@ -235,9 +244,7 @@ class TagOperations:
         )
         urns = [row[0] for row in urns_result.all()]
 
-        await self.session.execute(
-            delete(TagAssignment).where(TagAssignment.tag_id == tag_id)
-        )
+        await self.session.execute(delete(TagAssignment).where(TagAssignment.tag_id == tag_id))
         tag_urn = tag.urn
         await self.session.delete(tag)
         await self.session.commit()
@@ -314,7 +321,7 @@ class TagOperations:
         organization_id: UUID,
         content_types: Iterable[ContentType] | None = None,
         query: str | None = None,
-        sort: str = "recent_desc",
+        sort: TagSort = TagSort.RECENT_DESC,
         page_size: int = _DEFAULT_PAGE_SIZE,
         page_token: str | None = None,
         actor_id: UUID | None = None,
@@ -344,9 +351,7 @@ class TagOperations:
 
         if query:
             needle = f"{query.strip().lower()}%"
-            stmt = stmt.where(
-                or_(func.lower(Tag.name).like(needle), Tag.slug.like(needle))
-            )
+            stmt = stmt.where(or_(func.lower(Tag.name).like(needle), Tag.slug.like(needle)))
 
         if content_types:
             content_type_values = [ct.value for ct in content_types]
@@ -364,11 +369,11 @@ class TagOperations:
         if visibility_predicate is not None:
             stmt = stmt.where(visibility_predicate)
 
-        if sort == "alpha_asc":
+        if sort == TagSort.ALPHA_ASC:
             stmt = stmt.order_by(Tag.name.asc(), Tag.id.asc())
-        elif sort == "alpha_desc":
+        elif sort == TagSort.ALPHA_DESC:
             stmt = stmt.order_by(Tag.name.desc(), Tag.id.desc())
-        elif sort == "recent_desc":
+        elif sort == TagSort.RECENT_DESC:
             stmt = stmt.order_by(
                 Tag.last_used_at.desc().nullslast(),
                 Tag.id.desc(),
@@ -465,11 +470,7 @@ class TagOperations:
                 1
                 for tag in tags
                 if SOURCE_MANUAL
-                not in (
-                    existing_by_tag[tag.id].sources
-                    if tag.id in existing_by_tag
-                    else []
-                )
+                not in (existing_by_tag[tag.id].sources if tag.id in existing_by_tag else [])
             )
             if current_manual + new_manual > MAX_MANUAL_TAGS_PER_CONTENT:
                 raise TagLimitExceededError(content_urn)
@@ -498,9 +499,7 @@ class TagOperations:
 
         if tags:
             await self.session.execute(
-                update(Tag)
-                .where(Tag.id.in_([t.id for t in tags]))
-                .values(last_used_at=now)
+                update(Tag).where(Tag.id.in_([t.id for t in tags])).values(last_used_at=now)
             )
 
         await self.session.commit()
@@ -656,17 +655,13 @@ class TagOperations:
 
         current_rows = await self._fetch_assignments(content_urn, None)
         current_by_tag = {row.tag_id: row for row in current_rows}
-        current_manual_ids = {
-            row.tag_id for row in current_rows if SOURCE_MANUAL in row.sources
-        }
+        current_manual_ids = {row.tag_id for row in current_rows if SOURCE_MANUAL in row.sources}
         desired_set = set(desired)
 
         to_remove = current_manual_ids - desired_set
         to_add = [tid for tid in desired if tid not in current_manual_ids]
 
-        resulting_manual = (
-            len(current_manual_ids) - len(to_remove) + len(to_add)
-        )
+        resulting_manual = len(current_manual_ids) - len(to_remove) + len(to_add)
         if resulting_manual > MAX_MANUAL_TAGS_PER_CONTENT:
             raise TagLimitExceededError(content_urn)
 
@@ -719,9 +714,7 @@ class TagOperations:
 
         if affected_tag_ids:
             await self.session.execute(
-                update(Tag)
-                .where(Tag.id.in_(list(affected_tag_ids)))
-                .values(last_used_at=now)
+                update(Tag).where(Tag.id.in_(list(affected_tag_ids))).values(last_used_at=now)
             )
 
         await self.session.commit()
@@ -817,9 +810,7 @@ class TagOperations:
 
         stmt = select(TagAssignment).where(TagAssignment.tag_id == tag.id)
         if content_types:
-            stmt = stmt.where(
-                TagAssignment.content_type.in_([ct.value for ct in content_types])
-            )
+            stmt = stmt.where(TagAssignment.content_type.in_([ct.value for ct in content_types]))
         if sources:
             valid = [s for s in sources if s in _VALID_SOURCES]
             if valid:
@@ -886,16 +877,14 @@ class TagOperations:
         if target is None:
             raise NotFoundError("Tag", target_tag_id)
 
-        select_source = (
-            select(
-                literal(target_tag_id).label("tag_id"),
-                TagAssignment.content_urn,
-                TagAssignment.content_type,
-                TagAssignment.sources,
-                TagAssignment.assigned_by,
-                TagAssignment.assigned_at,
-            ).where(TagAssignment.tag_id == source_tag_id)
-        )
+        select_source = select(
+            literal(target_tag_id).label("tag_id"),
+            TagAssignment.content_urn,
+            TagAssignment.content_type,
+            TagAssignment.sources,
+            TagAssignment.assigned_by,
+            TagAssignment.assigned_at,
+        ).where(TagAssignment.tag_id == source_tag_id)
         insert_stmt = pg_insert(TagAssignment.__table__).from_select(
             ["tag_id", "content_urn", "content_type", "sources", "assigned_by", "assigned_at"],
             select_source,
@@ -904,8 +893,7 @@ class TagOperations:
             index_elements=["tag_id", "content_urn"],
             set_={
                 "sources": text(
-                    "ARRAY(SELECT DISTINCT unnest("
-                    "tag_assignments.sources || EXCLUDED.sources))"
+                    "ARRAY(SELECT DISTINCT unnest(tag_assignments.sources || EXCLUDED.sources))"
                 ),
             },
         ).returning(TagAssignment.__table__.c.content_urn)
@@ -952,8 +940,7 @@ class TagOperations:
 
         if moved_count:
             logger.info(
-                f"merged {moved_count} assignments from {source_tag_id} "
-                f"into {target_tag_id}",
+                f"merged {moved_count} assignments from {source_tag_id} into {target_tag_id}",
                 component=LOGGER_COMPONENT,
             )
         return target
@@ -1063,9 +1050,7 @@ class TagOperations:
         )
         recent_rows = (await self.session.execute(recent_stmt)).all()
         recent_urns = [row[0] for row in recent_rows]
-        recent_at = [
-            row[1].isoformat() if row[1] is not None else "" for row in recent_rows
-        ]
+        recent_at = [row[1].isoformat() if row[1] is not None else "" for row in recent_rows]
         return breakdown, recent_urns, recent_at
 
     async def _remove_tag_entity(self, tag_urn: str, organization_id: UUID) -> None:
@@ -1080,9 +1065,7 @@ class TagOperations:
 
     async def _get_by_id(self, organization_id: UUID, tag_id: UUID) -> Tag | None:
         result = await self.session.execute(
-            select(Tag).where(
-                Tag.id == tag_id, Tag.organization_id == organization_id
-            )
+            select(Tag).where(Tag.id == tag_id, Tag.organization_id == organization_id)
         )
         return result.scalars().first()
 
@@ -1090,15 +1073,11 @@ class TagOperations:
         if not slug:
             return None
         result = await self.session.execute(
-            select(Tag).where(
-                Tag.organization_id == organization_id, Tag.slug == slug
-            )
+            select(Tag).where(Tag.organization_id == organization_id, Tag.slug == slug)
         )
         return result.scalars().first()
 
-    async def _fetch_tags(
-        self, organization_id: UUID, tag_ids: list[UUID]
-    ) -> list[Tag]:
+    async def _fetch_tags(self, organization_id: UUID, tag_ids: list[UUID]) -> list[Tag]:
         if not tag_ids:
             return []
         result = await self.session.execute(
@@ -1145,22 +1124,21 @@ class TagOperations:
         every concurrent caller onto one ``COUNT(*)`` via the locked
         loader, the rest poll the cache key for the lock TTL.
         """
+
         async def _load() -> dict[str, int]:
             result = await self.session.execute(
-                select(func.count())
-                .select_from(TagAssignment)
-                .where(TagAssignment.tag_id == tag_id)
+                select(func.count()).select_from(TagAssignment).where(TagAssignment.tag_id == tag_id)
             )
-            return {"count": int(result.scalar() or 0)}
+            return {_COUNT_CACHE_FIELD: int(result.scalar() or 0)}
 
         payload = await cache_get_or_set_locked(
             _count_cache_key(organization_id, tag_id),
             _load,
             ttl=_COUNT_CACHE_TTL,
         )
-        if payload is None or "count" not in payload:
+        if payload is None or _COUNT_CACHE_FIELD not in payload:
             return 0
-        return int(payload["count"])
+        return int(payload[_COUNT_CACHE_FIELD])
 
     async def _get_usage_counts(
         self,
@@ -1178,8 +1156,8 @@ class TagOperations:
         miss_id_by_key = dict(zip(keys, tag_ids, strict=True))
 
         for key, payload in hits.items():
-            if isinstance(payload, dict) and "count" in payload:
-                counts[miss_id_by_key[key]] = int(payload["count"])
+            if isinstance(payload, dict) and _COUNT_CACHE_FIELD in payload:
+                counts[miss_id_by_key[key]] = int(payload[_COUNT_CACHE_FIELD])
             else:
                 miss_ids.append(miss_id_by_key[key])
 
@@ -1198,7 +1176,7 @@ class TagOperations:
                 counts[tag_id] = count
                 await cache_set(
                     _count_cache_key(organization_id, tag_id),
-                    {"count": count},
+                    {_COUNT_CACHE_FIELD: count},
                     ttl=_COUNT_CACHE_TTL,
                 )
 
@@ -1211,10 +1189,7 @@ class TagOperations:
         organization_id: UUID,
         tag_ids: Iterable[UUID],
     ) -> None:
-        keys = [
-            _count_cache_key(organization_id, tag_id)
-            for tag_id in dict.fromkeys(tag_ids)
-        ]
+        keys = [_count_cache_key(organization_id, tag_id) for tag_id in dict.fromkeys(tag_ids)]
         if keys:
             await cache_invalidate_many(*keys)
 
@@ -1229,8 +1204,7 @@ def _format_breakdown(breakdown: dict[str, int]) -> str:
     if not breakdown:
         return ""
     return "|".join(
-        f"{ct}:{count}"
-        for ct, count in sorted(breakdown.items(), key=lambda kv: -kv[1])
+        f"{ct}:{count}" for ct, count in sorted(breakdown.items(), key=lambda kv: -kv[1])
     )
 
 
@@ -1253,5 +1227,3 @@ def _decode_offset(token: str | None) -> int:
     if value < 0:
         raise ValidationError("page_token", "negative offset")
     return value
-
-

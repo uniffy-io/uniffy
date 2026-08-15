@@ -1,6 +1,7 @@
 """Agent session model for conversation storage."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import Column, DateTime, String, text
@@ -8,6 +9,13 @@ from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class AgentSessionKind(StrEnum):
+    DIRECT = "direct"
+    GROUP = "group"
+    GLOBAL = "global"
+    CRON = "cron"
 
 
 class AgentSession(SQLModel, table=True):
@@ -19,7 +27,7 @@ class AgentSession(SQLModel, table=True):
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     agent_id: UUID = Field(foreign_key="agents_agents.id", nullable=False, index=True)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    kind: str = Field(
+    kind: AgentSessionKind = Field(
         sa_column=Column(String(20), nullable=False),
     )
     display_name: str | None = Field(

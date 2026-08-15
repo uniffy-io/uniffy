@@ -39,13 +39,9 @@ async def test_missing_row_falls_back_to_module_defaults() -> None:
         assert resolved.failover_enabled is True
         assert resolved.resume_enabled is True
         assert (
-            resolved.circuit_breaker_failure_threshold
-            == DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD
+            resolved.circuit_breaker_failure_threshold == DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD
         )
-        assert (
-            resolved.circuit_breaker_recovery_seconds
-            == DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS
-        )
+        assert resolved.circuit_breaker_recovery_seconds == DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS
         assert resolved.display_currency == DEFAULT_DISPLAY_CURRENCY
         assert resolved.default_provider_key_id is None
         assert resolved.default_chat_model is None
@@ -57,16 +53,14 @@ async def test_blob_overrides_defaults_only_for_set_keys() -> None:
     async def run() -> None:
         invalidate_runtime_settings_cache()
         org_id = generate_id()
-        session = _session_returning(
-            {
-                "send_deadline_seconds": 15,
-                "failover_enabled": False,
-                "resume_enabled": False,
-                "circuit_breaker_failure_threshold": 2,
-                "circuit_breaker_recovery_seconds": 5,
-                "display_currency": "EUR",
-            }
-        )
+        session = _session_returning({
+            "send_deadline_seconds": 15,
+            "failover_enabled": False,
+            "resume_enabled": False,
+            "circuit_breaker_failure_threshold": 2,
+            "circuit_breaker_recovery_seconds": 5,
+            "display_currency": "EUR",
+        })
 
         resolved = await get_runtime_settings(session, org_id)
 
@@ -315,34 +309,24 @@ async def test_coherent_default_key_and_model_accepted() -> None:
 def test_from_blob_survives_malformed_values() -> None:
     from uniffy.domains.agents.runtime.settings import _from_blob
 
-    parsed = _from_blob(
-        {
-            "send_deadline_seconds": "not-a-number",
-            "circuit_breaker_failure_threshold": None,
-            "circuit_breaker_recovery_seconds": -5,
-        }
-    )
+    parsed = _from_blob({
+        "send_deadline_seconds": "not-a-number",
+        "circuit_breaker_failure_threshold": None,
+        "circuit_breaker_recovery_seconds": -5,
+    })
     assert parsed.send_deadline_seconds == DEFAULT_SEND_DEADLINE_SECONDS
-    assert (
-        parsed.circuit_breaker_failure_threshold
-        == DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD
-    )
-    assert (
-        parsed.circuit_breaker_recovery_seconds
-        == DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS
-    )
+    assert parsed.circuit_breaker_failure_threshold == DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD
+    assert parsed.circuit_breaker_recovery_seconds == DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS
 
 
 def test_from_blob_parses_key_id_and_model() -> None:
     from uniffy.domains.agents.runtime.settings import _from_blob
 
     key_id = generate_id()
-    parsed = _from_blob(
-        {
-            "default_provider_key_id": str(key_id),
-            "default_chat_model": "  claude-sonnet-4-6  ",
-        }
-    )
+    parsed = _from_blob({
+        "default_provider_key_id": str(key_id),
+        "default_chat_model": "  claude-sonnet-4-6  ",
+    })
     assert parsed.default_provider_key_id == key_id
     assert parsed.default_chat_model == "claude-sonnet-4-6"
 

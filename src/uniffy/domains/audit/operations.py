@@ -16,7 +16,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
-from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
     OrganizationRole,
@@ -40,7 +40,7 @@ class ListEventsFilter:
     organization_id: UUID
     actor_user_id: UUID | None = None
     actions: tuple[str, ...] = ()
-    resource_type: str | None = None
+    resource_type: AuditResourceType | None = None
     resource_id: UUID | None = None
     from_time: datetime | None = None
     to_time: datetime | None = None
@@ -71,9 +71,7 @@ class AuditOperations:
 
         page_size = max(1, min(filters.page_size or DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE))
 
-        query = select(AuditEvent).where(
-            AuditEvent.organization_id == filters.organization_id
-        )
+        query = select(AuditEvent).where(AuditEvent.organization_id == filters.organization_id)
 
         if filters.actor_user_id is not None:
             query = query.where(AuditEvent.actor_user_id == filters.actor_user_id)
@@ -112,13 +110,9 @@ class AuditOperations:
                 )
 
         if filters.order is SortOrder.TIME_ASC:
-            query = query.order_by(
-                AuditEvent.created_at.asc(), AuditEvent.id.asc()
-            )
+            query = query.order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
         else:
-            query = query.order_by(
-                AuditEvent.created_at.desc(), AuditEvent.id.desc()
-            )
+            query = query.order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
 
         query = query.limit(page_size + 1)
 
@@ -161,9 +155,7 @@ class AuditOperations:
 
         if not await self._is_system_admin(actor_user_id):
             raise PermissionDeniedError("view", "audit_events")
-        if not await self._has_active_support_session(
-            actor_user_id, organization_id
-        ):
+        if not await self._has_active_support_session(actor_user_id, organization_id):
             raise PermissionDeniedError("view", "audit_events")
 
     async def _is_system_admin(self, actor_user_id: UUID) -> bool:

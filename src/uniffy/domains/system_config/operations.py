@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
 from uniffy.domains.users.operations import UserOperations
 
@@ -90,7 +91,7 @@ class SystemConfigOperations:
             organization_id=None,
             actor_user_id=user_id,
             action=Action.SYSTEM_PUBLIC_REGISTRATION_CHANGED,
-            resource_type="system_flag",
+            resource_type=AuditResourceType.SYSTEM_FLAG,
             resource_id=None,
             details={
                 "key": _KEY_PUBLIC_REGISTRATION,

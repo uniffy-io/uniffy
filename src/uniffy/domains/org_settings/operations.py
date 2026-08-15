@@ -35,13 +35,17 @@ class OrgSettingsOperations:
     ) -> dict[str, OrgSetting]:
         """Return ``{key: OrgSetting}`` for one (org, namespace); secrets stay ciphered."""
         rows = (
-            await self._session.execute(
-                select(OrgSetting).where(
-                    OrgSetting.organization_id == organization_id,
-                    OrgSetting.namespace == namespace,
+            (
+                await self._session.execute(
+                    select(OrgSetting).where(
+                        OrgSetting.organization_id == organization_id,
+                        OrgSetting.namespace == namespace,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return {row.key: row for row in rows}
 
     async def get_secret(
@@ -138,9 +142,9 @@ class OrgSettingsOperations:
             .on_conflict_do_update(
                 index_elements=["organization_id", "namespace", "key"],
                 set_={
-                    "value": func.coalesce(
-                        OrgSetting.__table__.c.value, text("'{}'::jsonb")
-                    ).op("||")(cast(patch, JSONB)),
+                    "value": func.coalesce(OrgSetting.__table__.c.value, text("'{}'::jsonb")).op(
+                        "||"
+                    )(cast(patch, JSONB)),
                     "value_encrypted": None,
                     "is_secret": False,
                     "updated_by_user_id": updated_by_user_id,

@@ -70,12 +70,14 @@ class DeploymentCipher:
 
     async def get_status(self) -> DeploymentEncryptionStatus:
         rows = (
-            await self._session.execute(
-                select(DeploymentEncryptionKey).order_by(
-                    DeploymentEncryptionKey.version.desc()
+            (
+                await self._session.execute(
+                    select(DeploymentEncryptionKey).order_by(DeploymentEncryptionKey.version.desc())
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         active = next((r for r in rows if r.is_active), None)
         return DeploymentEncryptionStatus(
             active_version=active.version if active else None,
@@ -92,9 +94,7 @@ class DeploymentCipher:
         """
         previous = await self._load_active()
         if previous is None:
-            raise CryptoError(
-                "Cannot rotate deployment DEK: no active row exists yet"
-            )
+            raise CryptoError("Cannot rotate deployment DEK: no active row exists yet")
 
         await self._session.execute(
             update(DeploymentEncryptionKey)
@@ -158,9 +158,7 @@ class DeploymentCipher:
         if row is None:
             row = await self._load_version(version)
             if row is None:
-                raise CryptoError(
-                    f"Deployment cipher has no DEK version v{version}"
-                )
+                raise CryptoError(f"Deployment cipher has no DEK version v{version}")
 
         started = time.perf_counter()
         dek = unwrap_dek(row.wrapped_dek)
@@ -179,9 +177,7 @@ class DeploymentCipher:
 
     async def _load_version(self, version: int) -> DeploymentEncryptionKey | None:
         result = await self._session.execute(
-            select(DeploymentEncryptionKey).where(
-                DeploymentEncryptionKey.version == version
-            )
+            select(DeploymentEncryptionKey).where(DeploymentEncryptionKey.version == version)
         )
         return result.scalar_one_or_none()
 
@@ -215,9 +211,7 @@ class DeploymentCipher:
         try:
             version = int(version_str)
         except ValueError as exc:
-            raise CiphertextFormatError(
-                f"Non-numeric version segment: {version_str!r}"
-            ) from exc
+            raise CiphertextFormatError(f"Non-numeric version segment: {version_str!r}") from exc
         return version, payload
 
 

@@ -59,13 +59,13 @@ class LiveKitWebhookProvider:
             logger.warning(f"Webhook for unrecognized room name: {room_name}")
             return
 
-        if event_name == "participant_joined":
+        if event_name == "participant_joined":  # noqa: PLR2004
             await self._on_participant_joined(call_id, room_name, event)
         elif event_name in ("participant_left", "participant_connection_aborted"):
             # Aborted = signaling succeeded but media never connected; the
             # participant row exists and must be released like a leave.
             await self._on_participant_left(call_id, event)
-        elif event_name == "room_finished":
+        elif event_name == "room_finished":  # noqa: PLR2004
             await self._on_room_finished(call_id)
         # Track publish/mute events are ignored: LiveKit emits no mute webhook and
         # a muted mic stays published, so roster mic/camera/screen state is synced

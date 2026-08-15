@@ -1,12 +1,23 @@
 """Agent budget alert dedupe model."""
 
 from datetime import UTC, date, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import Column, Date, DateTime, Index, Integer, String, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class AgentBudgetAlertScope(StrEnum):
+    ORGANIZATION = "org"
+    USER = "user"
+
+
+class AgentBudgetAlertKind(StrEnum):
+    SPEND = "spend"
+    IMAGE_COUNT = "image_count"
 
 
 class AgentBudgetAlert(SQLModel, table=True):
@@ -31,7 +42,7 @@ class AgentBudgetAlert(SQLModel, table=True):
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    scope: str = Field(
+    scope: AgentBudgetAlertScope = Field(
         sa_column=Column(String(16), nullable=False),
     )
     organization_id: UUID = Field(nullable=False)
@@ -42,7 +53,7 @@ class AgentBudgetAlert(SQLModel, table=True):
     threshold: int = Field(
         sa_column=Column(Integer, nullable=False),
     )
-    kind: str = Field(
+    kind: AgentBudgetAlertKind = Field(
         sa_column=Column(String(16), nullable=False),
     )
     fired_at: datetime = Field(

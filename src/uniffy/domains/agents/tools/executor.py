@@ -8,6 +8,7 @@ from loguru import logger
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import tool_call_action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditActorKind
 from uniffy.domains.agents.cache import fetch_agent_row
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
@@ -223,7 +224,7 @@ class ToolExecutor:
         """
         try:
             details: dict = {
-                "actor_kind": "agent",
+                "actor_kind": AuditActorKind.AGENT,
                 "tool_name": tool_def.name,
                 "status": "success" if result.success else "failed",
             }

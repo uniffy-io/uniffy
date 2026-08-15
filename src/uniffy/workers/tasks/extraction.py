@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage.s3_client import get_s3_client
-from uniffy.core.valkey import publish_notification
+from uniffy.core.valkey import NotificationPayloadType, publish_notification
 from uniffy.db.session import open_session
 from uniffy.vendor.arq import Retry
 from uniffy.workers.tasks.thumbnails import _create_thumbnail, get_thumbnail_key
@@ -80,7 +80,7 @@ async def extract_image_metadata(
                 await publish_notification(
                     file.owner_id,
                     {
-                        "_type": "file_updated",
+                        "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": str(file.id),
                         "organization_id": str(file.organization_id),
                     },
@@ -226,13 +226,13 @@ async def extract_audio_metadata(
             upsert_values: dict[str, Any] = {"file_id": file_uuid}
             update_set: dict[str, Any] = {}
 
-            if "duration_seconds" in metadata:
+            if "duration_seconds" in metadata:  # noqa: PLR2004
                 upsert_values["duration_seconds"] = metadata["duration_seconds"]
-            if "bitrate" in metadata:
+            if "bitrate" in metadata:  # noqa: PLR2004
                 upsert_values["bitrate"] = metadata["bitrate"]
-            if "sample_rate" in metadata:
+            if "sample_rate" in metadata:  # noqa: PLR2004
                 upsert_values["sample_rate"] = metadata["sample_rate"]
-            if "channels" in metadata:
+            if "channels" in metadata:  # noqa: PLR2004
                 upsert_values["channels"] = metadata["channels"]
 
             if album_art_bytes:
@@ -254,7 +254,7 @@ async def extract_audio_metadata(
             stmt = pg_insert(FileMediaInfo).values(**upsert_values)
 
             for key in upsert_values:
-                if key != "file_id":
+                if key != "file_id":  # noqa: PLR2004
                     update_set[key] = getattr(stmt.excluded, key)
 
             if update_set:
@@ -274,7 +274,7 @@ async def extract_audio_metadata(
                 await publish_notification(
                     file.owner_id,
                     {
-                        "_type": "file_updated",
+                        "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": str(file.id),
                         "organization_id": str(file.organization_id),
                     },
@@ -318,7 +318,7 @@ def _extract_album_art(audio: mutagen.FileType) -> bytes | None:
                 if hasattr(frame, "data") and frame.data:
                     return frame.data
 
-        if "covr" in tags:
+        if "covr" in tags:  # noqa: PLR2004
             covers = tags["covr"]
             if covers and len(covers) > 0:
                 cover = covers[0]
@@ -333,7 +333,7 @@ def _extract_album_art(audio: mutagen.FileType) -> bytes | None:
         if hasattr(pic, "data") and pic.data:
             return pic.data
 
-    if hasattr(audio, "tags") and audio.tags and "metadata_block_picture" in audio.tags:
+    if hasattr(audio, "tags") and audio.tags and "metadata_block_picture" in audio.tags:  # noqa: PLR2004
         pictures = audio.tags["metadata_block_picture"]
         if pictures:
             try:

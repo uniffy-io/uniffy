@@ -284,7 +284,7 @@ async def run_stress_seed(config: StressConfig) -> None:
     try:
         async with open_session() as session:
             result = await session.execute(
-                select(Organization).where(Organization.slug == "default")
+                select(Organization).where(Organization.slug == "default")  # noqa: PLR2004
             )
             org = result.scalar_one_or_none()
 
@@ -292,7 +292,7 @@ async def run_stress_seed(config: StressConfig) -> None:
                 logger.error("Default organization not found. Run normal seed first.")
                 return
 
-            result = await session.execute(select(User).where(User.username == "admin"))
+            result = await session.execute(select(User).where(User.username == "admin"))  # noqa: PLR2004
             admin = result.scalar_one_or_none()
 
             if not admin:

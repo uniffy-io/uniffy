@@ -147,7 +147,7 @@ async def init_db(*, skip_migrations: bool = False) -> None:
 
     _engine = create_async_engine(
         database_url,
-        echo=os.getenv("SQL_ECHO", "false").lower() == "true",
+        echo=os.getenv("SQL_ECHO", "false").lower() == "true",  # noqa: PLR2004
         poolclass=AsyncAdaptedQueuePool,
         pool_pre_ping=True,
         pool_size=pool_size,

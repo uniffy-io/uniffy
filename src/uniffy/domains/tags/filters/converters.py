@@ -147,13 +147,17 @@ async def saved_filter_to_proto(
             uuid_ids = []
         if uuid_ids:
             existing = (
-                await session.execute(
-                    select(Tag.id).where(
-                        Tag.organization_id == saved_filter.organization_id,
-                        Tag.id.in_(uuid_ids),
+                (
+                    await session.execute(
+                        select(Tag.id).where(
+                            Tag.organization_id == saved_filter.organization_id,
+                            Tag.id.in_(uuid_ids),
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             existing_set = {str(tid) for tid in existing}
             kept = [tid for tid in raw_tag_ids if tid in existing_set]
             removed_count = len(raw_tag_ids) - len(kept)

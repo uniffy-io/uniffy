@@ -31,9 +31,7 @@ def _make_user(**overrides) -> User:
 
 def _audited_actions(session: MagicMock) -> list[str]:
     return [
-        call.args[0].action
-        for call in session.add.call_args_list
-        if hasattr(call.args[0], "action")
+        call.args[0].action for call in session.add.call_args_list if hasattr(call.args[0], "action")
     ]
 
 
@@ -42,10 +40,13 @@ class TestUpdateUserRequiresAReason:
         ops = PlatformDirectoryOperations(MagicMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=_make_user())
 
-        with patch(
-            "uniffy.domains.platform.directory.operations.check_rate_limit",
-            AsyncMock(),
-        ), pytest.raises(ValidationError):
+        with (
+            patch(
+                "uniffy.domains.platform.directory.operations.check_rate_limit",
+                AsyncMock(),
+            ),
+            pytest.raises(ValidationError),
+        ):
             await ops.update_user(
                 user_id=generate_id(),
                 target_user_id=generate_id(),
@@ -61,10 +62,13 @@ class TestDeactivationGuards:
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
         ops._require_user = AsyncMock(return_value=actor)
 
-        with patch(
-            "uniffy.domains.platform.directory.operations.check_rate_limit",
-            AsyncMock(),
-        ), pytest.raises(PermissionDeniedError):
+        with (
+            patch(
+                "uniffy.domains.platform.directory.operations.check_rate_limit",
+                AsyncMock(),
+            ),
+            pytest.raises(PermissionDeniedError),
+        ):
             await ops.update_user(
                 user_id=actor.id,
                 target_user_id=actor.id,
@@ -82,10 +86,13 @@ class TestDeactivationGuards:
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
         ops._require_user = AsyncMock(return_value=target)
 
-        with patch(
-            "uniffy.domains.platform.directory.operations.check_rate_limit",
-            AsyncMock(),
-        ), pytest.raises(PermissionDeniedError):
+        with (
+            patch(
+                "uniffy.domains.platform.directory.operations.check_rate_limit",
+                AsyncMock(),
+            ),
+            pytest.raises(PermissionDeniedError),
+        ):
             await ops.update_user(
                 user_id=actor.id,
                 target_user_id=target.id,
@@ -145,9 +152,7 @@ class TestUpdateUserAuditAndRevocation:
         actor = _make_user(is_system_admin=True)
         target = _make_user(email="old@example.com")
         session = MagicMock()
-        session.execute = AsyncMock(
-            return_value=MagicMock(scalar_one_or_none=lambda: None)
-        )
+        session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
         session.add = MagicMock()
         session.commit = AsyncMock()
 
@@ -225,18 +230,14 @@ class TestCreateUserCleansUpAfterItself:
     async def test_membership_failure_discards_the_account(self) -> None:
         actor = _make_user(is_system_admin=True)
         session = MagicMock()
-        session.execute = AsyncMock(
-            return_value=MagicMock(scalar_one_or_none=lambda: None)
-        )
+        session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
         session.add = MagicMock()
         session.flush = AsyncMock()
         session.commit = AsyncMock()
 
         ops = PlatformDirectoryOperations(session)
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
-        ops._require_org = AsyncMock(
-            return_value=MagicMock(id=generate_id(), deleted_at=None)
-        )
+        ops._require_org = AsyncMock(return_value=MagicMock(id=generate_id(), deleted_at=None))
         ops._discard_partial_user = AsyncMock()
 
         failing = MagicMock()
@@ -258,7 +259,8 @@ class TestCreateUserCleansUpAfterItself:
             patch(
                 "uniffy.domains.platform.directory.operations.validate_password",
                 MagicMock(),
-            ), pytest.raises(RuntimeError)
+            ),
+            pytest.raises(RuntimeError),
         ):
             await ops.create_user(
                 user_id=actor.id,
@@ -280,10 +282,13 @@ class TestCreateUserCleansUpAfterItself:
         ops = PlatformDirectoryOperations(MagicMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=_make_user())
 
-        with patch(
-            "uniffy.domains.platform.directory.operations.check_rate_limit",
-            AsyncMock(),
-        ), pytest.raises(ValidationError):
+        with (
+            patch(
+                "uniffy.domains.platform.directory.operations.check_rate_limit",
+                AsyncMock(),
+            ),
+            pytest.raises(ValidationError),
+        ):
             await ops.create_user(
                 user_id=generate_id(),
                 email="new@example.com",
@@ -314,9 +319,7 @@ class TestMemberCapIsEnforced:
 
     async def test_uncapped_org_passes(self) -> None:
         session = MagicMock()
-        session.execute = AsyncMock(
-            return_value=MagicMock(scalar_one_or_none=lambda: None)
-        )
+        session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
         ops = OrganizationOperations(session)
         await ops._require_member_capacity(generate_id())

@@ -36,9 +36,7 @@ def _make_tag(*, organization_id=None, name="docs", slug="docs") -> Tag:
     )
 
 
-def _make_assignment(
-    tag_id, urn=None, sources=None
-) -> TagAssignment:
+def _make_assignment(tag_id, urn=None, sources=None) -> TagAssignment:
     return TagAssignment(
         tag_id=tag_id,
         content_urn=urn or f"urn:uniffy:content:NOTE:{generate_id().hex}",
@@ -110,10 +108,9 @@ class TestAssignSourceMerging:
 
         ops = _make_ops(session)
         ops._reindex_tag_docs = AsyncMock(return_value={})
-        with patch(
-            "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
-        ), patch(
-            "uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()
+        with (
+            patch("uniffy.domains.tags.operations.publish_tag_event", AsyncMock()),
+            patch("uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()),
         ):
             rows = await ops.assign(
                 actor_id=actor_id,
@@ -151,9 +148,10 @@ class TestAssignManualCap:
         session.execute = AsyncMock(side_effect=results)
 
         ops = _make_ops(session)
-        with patch(
-            "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
-        ), pytest.raises(TagLimitExceededError):
+        with (
+            patch("uniffy.domains.tags.operations.publish_tag_event", AsyncMock()),
+            pytest.raises(TagLimitExceededError),
+        ):
             await ops.assign(
                 actor_id=actor_id,
                 organization_id=org_id,
@@ -183,10 +181,9 @@ class TestAssignManualCap:
 
         ops = _make_ops(session)
         ops._reindex_tag_docs = AsyncMock(return_value={})
-        with patch(
-            "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
-        ), patch(
-            "uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()
+        with (
+            patch("uniffy.domains.tags.operations.publish_tag_event", AsyncMock()),
+            patch("uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()),
         ):
             await ops.assign(
                 actor_id=actor_id,
@@ -216,10 +213,9 @@ class TestUnassignSourceSemantics:
 
         ops = _make_ops(session)
         ops._reindex_tag_docs = AsyncMock(return_value={})
-        with patch(
-            "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
-        ), patch(
-            "uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()
+        with (
+            patch("uniffy.domains.tags.operations.publish_tag_event", AsyncMock()),
+            patch("uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()),
         ):
             removed = await ops.unassign(
                 actor_id=generate_id(),
@@ -244,16 +240,13 @@ class TestUnassignSourceSemantics:
         session.commit = AsyncMock()
         session.add = MagicMock()
         session.delete = AsyncMock()
-        session.execute = AsyncMock(
-            side_effect=[_scalars_result([row]), MagicMock()]
-        )
+        session.execute = AsyncMock(side_effect=[_scalars_result([row]), MagicMock()])
 
         ops = _make_ops(session)
         ops._reindex_tag_docs = AsyncMock(return_value={})
-        with patch(
-            "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
-        ), patch(
-            "uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()
+        with (
+            patch("uniffy.domains.tags.operations.publish_tag_event", AsyncMock()),
+            patch("uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()),
         ):
             removed = await ops.unassign(
                 actor_id=generate_id(),
@@ -305,12 +298,11 @@ class TestMergeTags:
         session.execute = AsyncMock(side_effect=results)
 
         ops = _make_ops(session)
-        with patch(
-            "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
-        ), patch(
-            "uniffy.domains.tags.operations.cache_delete", AsyncMock()
-        ), patch.object(ops, "_remove_tag_entity", AsyncMock()), patch.object(
-            ops, "_reindex_tag_docs", AsyncMock(return_value={})
+        with (
+            patch("uniffy.domains.tags.operations.publish_tag_event", AsyncMock()),
+            patch("uniffy.domains.tags.operations.cache_delete", AsyncMock()),
+            patch.object(ops, "_remove_tag_entity", AsyncMock()),
+            patch.object(ops, "_reindex_tag_docs", AsyncMock(return_value={})),
         ):
             target = await ops.merge_tags(
                 actor_id=actor_id,

@@ -27,8 +27,7 @@ class TestExtractContent:
         team = generate_id()
         user = generate_id()
         content = (
-            f"ping [[[Engineering|{_team_urn(team)}]]] and "
-            f"[[[Ada|urn:uniffy:content:USER:{user}]]]"
+            f"ping [[[Engineering|{_team_urn(team)}]]] and [[[Ada|urn:uniffy:content:USER:{user}]]]"
         )
         assert extract_mentioned_team_ids_from_content(content) == [team]
 

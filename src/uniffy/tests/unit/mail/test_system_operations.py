@@ -145,9 +145,11 @@ class TestFlattenDelivery:
 class TestRemoveSuppressionValidation:
     def _build_ops(self) -> SystemMailOperations:
         session = MagicMock()
-        with patch("uniffy.domains.mail.system_operations.UserOperations"), patch(
-            "uniffy.domains.mail.system_operations.OrgSettingsOperations"
-        ), patch("uniffy.domains.mail.system_operations.SuppressionRepository"):
+        with (
+            patch("uniffy.domains.mail.system_operations.UserOperations"),
+            patch("uniffy.domains.mail.system_operations.OrgSettingsOperations"),
+            patch("uniffy.domains.mail.system_operations.SuppressionRepository"),
+        ):
             ops = SystemMailOperations(session)
         ops._user_ops.require_system_admin = AsyncMock()
         return ops
@@ -174,9 +176,11 @@ class TestRemoveSuppressionValidation:
 class TestForceClearOrgConfigValidation:
     def _build_ops(self) -> SystemMailOperations:
         session = MagicMock()
-        with patch("uniffy.domains.mail.system_operations.UserOperations"), patch(
-            "uniffy.domains.mail.system_operations.OrgSettingsOperations"
-        ), patch("uniffy.domains.mail.system_operations.SuppressionRepository"):
+        with (
+            patch("uniffy.domains.mail.system_operations.UserOperations"),
+            patch("uniffy.domains.mail.system_operations.OrgSettingsOperations"),
+            patch("uniffy.domains.mail.system_operations.SuppressionRepository"),
+        ):
             ops = SystemMailOperations(session)
         ops._user_ops.require_system_admin = AsyncMock()
         return ops

@@ -79,8 +79,7 @@ def upgrade() -> None:
     # promoting a personal memory to channel scope would widen who can read it.
     op.execute(
         sa.text(
-            "UPDATE agents_memories SET scope = 'user', channel_id = NULL "
-            "WHERE user_id IS NOT NULL"
+            "UPDATE agents_memories SET scope = 'user', channel_id = NULL WHERE user_id IS NOT NULL"
         )
     )
     op.execute(
@@ -111,9 +110,7 @@ def upgrade() -> None:
     )
 
     op.drop_constraint("agents_memories_scope_present", "agents_memories", type_="check")
-    op.create_check_constraint(
-        "agents_memories_scope_consistent", "agents_memories", _SCOPE_CHECK
-    )
+    op.create_check_constraint("agents_memories_scope_consistent", "agents_memories", _SCOPE_CHECK)
     op.create_check_constraint(
         "agents_memories_source_valid",
         "agents_memories",
@@ -290,9 +287,7 @@ def downgrade() -> None:
     )
 
     op.drop_index("uq_agents_message_feedback_chat", table_name="agents_message_feedback")
-    op.drop_index(
-        "uq_agents_message_feedback_session", table_name="agents_message_feedback"
-    )
+    op.drop_index("uq_agents_message_feedback_session", table_name="agents_message_feedback")
     op.drop_table("agents_message_feedback")
     op.create_table(
         "agents_message_feedback",
@@ -337,19 +332,11 @@ def downgrade() -> None:
         sa.Column("input_tokens", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("output_tokens", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(
-            ["cron_task_id"], ["agents_cron_tasks.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["agent_run_log_id"], ["agents_run_logs.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["cron_task_id"], ["agents_cron_tasks.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["agent_run_log_id"], ["agents_run_logs.id"], ondelete="SET NULL"),
     )
-    op.create_index(
-        "ix_agents_cron_run_logs_task_id", "agents_cron_run_logs", ["cron_task_id"]
-    )
-    op.create_index(
-        "ix_agents_cron_run_logs_org_id", "agents_cron_run_logs", ["organization_id"]
-    )
+    op.create_index("ix_agents_cron_run_logs_task_id", "agents_cron_run_logs", ["cron_task_id"])
+    op.create_index("ix_agents_cron_run_logs_org_id", "agents_cron_run_logs", ["organization_id"])
     op.create_index(
         "ix_agents_cron_run_logs_task_started",
         "agents_cron_run_logs",
@@ -368,9 +355,7 @@ def downgrade() -> None:
         sa.Column("content", sa.Text(), nullable=False, server_default=""),
         sa.Column("source", sa.String(20), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=True),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=True, server_default="OPEN_TO_ORG"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=True, server_default="OPEN_TO_ORG"),
         sa.Column("baseline_role", _content_role_enum, nullable=True, server_default="VIEWER"),
         sa.Column("created_by", sa.Uuid(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -378,9 +363,7 @@ def downgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"]),
     )
-    op.create_index(
-        "ix_agents_prompts_organization_id", "agents_prompts", ["organization_id"]
-    )
+    op.create_index("ix_agents_prompts_organization_id", "agents_prompts", ["organization_id"])
     op.create_index("ix_agents_prompts_access_mode", "agents_prompts", ["access_mode"])
     op.create_index(
         "uq_agents_prompts_org_name",
@@ -424,9 +407,7 @@ def downgrade() -> None:
         )
     )
     op.drop_constraint("agents_memories_source_valid", "agents_memories", type_="check")
-    op.drop_constraint(
-        "agents_memories_scope_consistent", "agents_memories", type_="check"
-    )
+    op.drop_constraint("agents_memories_scope_consistent", "agents_memories", type_="check")
     op.create_check_constraint(
         "agents_memories_scope_present",
         "agents_memories",

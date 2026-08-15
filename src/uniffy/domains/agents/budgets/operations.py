@@ -33,6 +33,7 @@ from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.models.agents.currency_rate import AgentCurrencyRate
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.agents.user_quota import AgentUserQuota
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.agents.budgets.period import day_window, month_window
 from uniffy.domains.agents.currency import get_display_currency
 from uniffy.domains.agents.runtime.settings import (
@@ -182,12 +183,10 @@ class BudgetsOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=action,
-            resource_type="budget",
+            resource_type=AuditResourceType.BUDGET,
             resource_id=row.id,
             details={
-                "monthly_limit": (
-                    str(dollar_cap) if dollar_cap is not None else None
-                ),
+                "monthly_limit": (str(dollar_cap) if dollar_cap is not None else None),
                 "image_monthly_limit": image_monthly_limit,
                 "hard_limit": hard_limit,
                 "reset_day": resolved_day,
@@ -219,7 +218,7 @@ class BudgetsOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_BUDGET_DELETED,
-            resource_type="budget",
+            resource_type=AuditResourceType.BUDGET,
             resource_id=row_id,
         )
         await self._session.commit()
@@ -343,16 +342,12 @@ class BudgetsOperations:
             organization_id=organization_id,
             actor_user_id=actor_user_id,
             action=action,
-            resource_type="user_quota",
+            resource_type=AuditResourceType.USER_QUOTA,
             resource_id=row.id,
             details={
                 "target_user_id": str(target_user_id),
-                "daily_limit": (
-                    str(daily_dollar) if daily_dollar is not None else None
-                ),
-                "monthly_limit": (
-                    str(monthly_dollar) if monthly_dollar is not None else None
-                ),
+                "daily_limit": (str(daily_dollar) if daily_dollar is not None else None),
+                "monthly_limit": (str(monthly_dollar) if monthly_dollar is not None else None),
                 "hard_limit": hard_limit,
             },
         )
@@ -386,7 +381,7 @@ class BudgetsOperations:
             organization_id=organization_id,
             actor_user_id=actor_user_id,
             action=Action.AGENT_USER_QUOTA_DELETED,
-            resource_type="user_quota",
+            resource_type=AuditResourceType.USER_QUOTA,
             resource_id=row_id,
             details={"target_user_id": str(target_user_id)},
         )
@@ -408,9 +403,7 @@ class BudgetsOperations:
         is_admin = await self._is_org_admin(actor_user_id, organization_id)
         if not is_admin:
             if target_user_id is not None and target_user_id != actor_user_id:
-                raise PermissionDeniedError(
-                    "read_spend", "another user's spend requires org admin"
-                )
+                raise PermissionDeniedError("read_spend", "another user's spend requires org admin")
             target_user_id = actor_user_id
 
         budget = await self._get_budget_row(organization_id)
@@ -442,8 +435,8 @@ class BudgetsOperations:
             else:
                 pct = 100 if spend > 0 else 0
 
-        currency = budget.currency if budget else await get_display_currency(
-            self._session, organization_id
+        currency = (
+            budget.currency if budget else await get_display_currency(self._session, organization_id)
         )
 
         return SpendSummary(
@@ -579,12 +572,8 @@ class BudgetsOperations:
         zero = sa_literal(0, type_=Numeric)
         result = await self._session.execute(
             select(
-                func.coalesce(
-                    func.sum(case((and_(in_user, in_day), cost), else_=zero)), 0
-                ),
-                func.coalesce(
-                    func.sum(case((in_user, cost), else_=zero)), 0
-                ),
+                func.coalesce(func.sum(case((and_(in_user, in_day), cost), else_=zero)), 0),
+                func.coalesce(func.sum(case((in_user, cost), else_=zero)), 0),
                 func.coalesce(func.sum(cost), 0),
             ).where(
                 AgentRunLog.organization_id == organization_id,
@@ -599,9 +588,7 @@ class BudgetsOperations:
             org_month=Decimal(org_month or 0),
         )
 
-    async def _get_budget_row(
-        self, organization_id: UUID
-    ) -> AgentBudget | None:
+    async def _get_budget_row(self, organization_id: UUID) -> AgentBudget | None:
         """Internal: load the AgentBudget row without permission checks."""
         result = await self._session.execute(
             select(AgentBudget).where(AgentBudget.organization_id == organization_id)
@@ -629,9 +616,7 @@ class BudgetsOperations:
         )
         return Decimal(result.scalar() or 0)
 
-    async def _is_org_admin(
-        self, user_id: UUID, organization_id: UUID
-    ) -> bool:
+    async def _is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
         """Return True if the user is org admin or org owner."""
         from uniffy.core.models.login.organization_member import OrganizationRole
 
@@ -711,7 +696,7 @@ class BudgetsOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_CURRENCY_RATE_UPSERTED,
-            resource_type="currency_rate",
+            resource_type=AuditResourceType.CURRENCY_RATE,
             resource_id=row.id,
             details={"from": from_cur, "to": to_cur, "rate": str(rate_value)},
         )
@@ -749,7 +734,7 @@ class BudgetsOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_CURRENCY_RATE_DELETED,
-            resource_type="currency_rate",
+            resource_type=AuditResourceType.CURRENCY_RATE,
             resource_id=row_id,
             details={"from": from_currency, "to": to_currency},
         )
@@ -794,11 +779,9 @@ class BudgetsOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_DISPLAY_CURRENCY_SET,
-            resource_type="runtime_settings",
+            resource_type=AuditResourceType.RUNTIME_SETTINGS,
             resource_id=organization_id,
             details={"display_currency": cur},
         )
         await self._session.commit()
         return cur
-
-

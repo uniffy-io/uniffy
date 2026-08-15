@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.users.cache import invalidate_user_profile
@@ -119,7 +120,7 @@ class UserOperations:
             organization_id=org_id,
             actor_user_id=user_id,
             action=Action.USER_AVATAR_CHANGED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=user_id,
             details={"change": "set"},
         )
@@ -144,7 +145,7 @@ class UserOperations:
                 organization_id=org_id,
                 actor_user_id=user_id,
                 action=Action.USER_AVATAR_CHANGED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=user_id,
                 details={"change": "cleared"},
             )

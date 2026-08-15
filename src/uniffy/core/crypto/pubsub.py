@@ -65,7 +65,7 @@ async def close_dek_invalidation_subscriber() -> None:
     if _subscriber_task is not None:
         try:
             await asyncio.wait_for(_subscriber_task, timeout=3.0)
-        except (TimeoutError, asyncio.CancelledError):
+        except TimeoutError, asyncio.CancelledError:
             _subscriber_task.cancel()
         except Exception as exc:
             logger.warning(f"Org DEK invalidation subscriber teardown failed: {exc}")
@@ -92,9 +92,7 @@ async def _run_subscriber() -> None:
             )
             pubsub = client.pubsub()
             await pubsub.psubscribe(_INVALIDATE_PATTERN)
-            logger.info(
-                f"Org DEK invalidation subscriber listening on {_INVALIDATE_PATTERN}"
-            )
+            logger.info(f"Org DEK invalidation subscriber listening on {_INVALIDATE_PATTERN}")
 
             while _subscriber_shutdown is None or not _subscriber_shutdown.is_set():
                 msg = await pubsub.get_message(
@@ -103,7 +101,7 @@ async def _run_subscriber() -> None:
                 )
                 if msg is None:
                     continue
-                if msg.get("type") != "pmessage":
+                if msg.get("type") != "pmessage":  # noqa: PLR2004
                     continue
                 await _handle_invalidate_message(msg.get("data"))
 
@@ -149,20 +147,16 @@ async def _handle_invalidate_message(raw: object) -> None:
         return
     try:
         payload = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError, TypeError:
         logger.warning(f"Org DEK invalidate message decode failed: {raw!r}")
         return
-    raw_id = (
-        payload.get("organization_id") if isinstance(payload, dict) else None
-    )
+    raw_id = payload.get("organization_id") if isinstance(payload, dict) else None
     if not isinstance(raw_id, str):
         return
     try:
         organization_id = UUID(raw_id)
     except ValueError:
-        logger.warning(
-            f"Org DEK invalidate message invalid organization_id: {raw_id!r}"
-        )
+        logger.warning(f"Org DEK invalidate message invalid organization_id: {raw_id!r}")
         return
     dropped = await get_org_dek_lru().invalidate(organization_id)
     if dropped:
@@ -184,10 +178,7 @@ async def subscribe_deployment_dek_invalidations() -> None:
     """Start the deployment-DEK listener; idempotent while the task is alive."""
     global _deployment_subscriber_task, _deployment_subscriber_shutdown
 
-    if (
-        _deployment_subscriber_task is not None
-        and not _deployment_subscriber_task.done()
-    ):
+    if _deployment_subscriber_task is not None and not _deployment_subscriber_task.done():
         return
 
     _deployment_subscriber_shutdown = asyncio.Event()
@@ -204,12 +195,10 @@ async def close_deployment_dek_invalidation_subscriber() -> None:
     if _deployment_subscriber_task is not None:
         try:
             await asyncio.wait_for(_deployment_subscriber_task, timeout=3.0)
-        except (TimeoutError, asyncio.CancelledError):
+        except TimeoutError, asyncio.CancelledError:
             _deployment_subscriber_task.cancel()
         except Exception as exc:
-            logger.warning(
-                f"Deployment DEK invalidation subscriber teardown failed: {exc}"
-            )
+            logger.warning(f"Deployment DEK invalidation subscriber teardown failed: {exc}")
         _deployment_subscriber_task = None
 
     _deployment_subscriber_shutdown = None
@@ -219,10 +208,7 @@ async def close_deployment_dek_invalidation_subscriber() -> None:
 async def _run_deployment_subscriber() -> None:
     url = ValkeyConfig.from_env().to_url()
 
-    while (
-        _deployment_subscriber_shutdown is None
-        or not _deployment_subscriber_shutdown.is_set()
-    ):
+    while _deployment_subscriber_shutdown is None or not _deployment_subscriber_shutdown.is_set():
         client: aioredis.Redis | None = None
         pubsub = None
         try:
@@ -251,13 +237,11 @@ async def _run_deployment_subscriber() -> None:
                 )
                 if msg is None:
                     continue
-                if msg.get("type") != "message":
+                if msg.get("type") != "message":  # noqa: PLR2004
                     continue
                 dropped = await get_deployment_dek_cache().invalidate_all()
                 if dropped:
-                    logger.debug(
-                        f"Deployment DEK cache dropped {dropped} entries"
-                    )
+                    logger.debug(f"Deployment DEK cache dropped {dropped} entries")
 
         except (ValkeyConnectionError, ValkeyTimeoutError, OSError) as exc:
             logger.warning(
@@ -281,10 +265,7 @@ async def _run_deployment_subscriber() -> None:
                 with contextlib.suppress(Exception):
                     await client.aclose()
 
-        if (
-            _deployment_subscriber_shutdown is not None
-            and _deployment_subscriber_shutdown.is_set()
-        ):
+        if _deployment_subscriber_shutdown is not None and _deployment_subscriber_shutdown.is_set():
             break
         try:
             await asyncio.wait_for(

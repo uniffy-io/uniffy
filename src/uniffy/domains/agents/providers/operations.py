@@ -12,6 +12,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.crypto import OrgCipher, ReEncryptingConsumer, register_consumer
 from uniffy.core.errors import ConflictError, NotFoundError, ValidationError
 from uniffy.core.models.agents.provider_key import ProviderKey
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.agents.cache import publish_provider_key_invalidation
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo
 from uniffy.domains.agents.providers.catalog import provider_for_model
@@ -109,7 +110,7 @@ class ProviderOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_PROVIDER_KEY_ADDED,
-            resource_type="provider_key",
+            resource_type=AuditResourceType.PROVIDER_KEY,
             resource_id=key.id,
             details={
                 "provider": provider,
@@ -173,7 +174,7 @@ class ProviderOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_PROVIDER_KEY_DELETED,
-            resource_type="provider_key",
+            resource_type=AuditResourceType.PROVIDER_KEY,
             resource_id=key_id,
             details={"provider": key_provider, "label": key_label},
         )
@@ -312,9 +313,7 @@ class ProviderOperations:
         if key is None:
             return None
 
-        llm = await self._resolve_or_build_provider(
-            get_provider_lru(), key, get_provider_registry()
-        )
+        llm = await self._resolve_or_build_provider(get_provider_lru(), key, get_provider_registry())
         key.last_used_at = datetime.now(UTC)
         await self._session.commit()
         return llm, key
@@ -485,7 +484,7 @@ class ProviderOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_PROVIDER_KEY_TOGGLED,
-            resource_type="provider_key",
+            resource_type=AuditResourceType.PROVIDER_KEY,
             resource_id=key_id,
             details={"enabled": enabled},
         )

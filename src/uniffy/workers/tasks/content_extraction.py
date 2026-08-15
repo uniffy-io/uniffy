@@ -17,7 +17,7 @@ from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage.s3_client import get_s3_client
 from uniffy.core.types import ContentType
-from uniffy.core.valkey import publish_notification
+from uniffy.core.valkey import NotificationPayloadType, publish_notification
 from uniffy.db.session import open_session
 from uniffy.domains.tags import TagOperations
 from uniffy.vendor.arq import Retry
@@ -101,7 +101,7 @@ async def extract_document_content(
                 await publish_notification(
                     file.owner_id,
                     {
-                        "_type": "file_updated",
+                        "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": str(file.id),
                         "organization_id": str(file.organization_id),
                     },
@@ -170,10 +170,15 @@ async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
         description = file.description or (extracted_text[:300].strip() if extracted_text else None)
 
         default_mode, default_baseline = await resolve_content_defaults(
-            session, file.organization_id, ContentType.FILE,
+            session,
+            file.organization_id,
+            ContentType.FILE,
         )
         effective_mode, effective_baseline = resolve_effective_policy(
-            file.access_mode, file.baseline_role, default_mode, default_baseline,
+            file.access_mode,
+            file.baseline_role,
+            default_mode,
+            default_baseline,
         )
 
         indexer = SearchIndexer()
@@ -184,9 +189,7 @@ async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
             entity_type=ContentType.FILE.value,
             url_path=f"/files/{file.id}",
             access_mode=effective_mode.value,
-            baseline_role=(
-                effective_baseline.value if effective_baseline is not None else None
-            ),
+            baseline_role=(effective_baseline.value if effective_baseline is not None else None),
             owner_id=file.owner_id,
             keywords=keywords,
             description=description,

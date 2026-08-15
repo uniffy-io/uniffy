@@ -6,9 +6,12 @@ therefore call args over conversation override over agent default, with the org
 ceiling clamping whatever comes out.
 """
 
+from enum import StrEnum
+
 from loguru import logger
 
 from uniffy.domains.agents.providers.catalog.loader import get_catalog, get_model
+from uniffy.domains.agents.providers.catalog.schema import ParamAudience
 from uniffy.observability.metrics import AGENT_IMAGE_PARAM_DROPPED_TOTAL
 
 logger = logger.bind(component="agents.providers.catalog.image_params")
@@ -21,6 +24,20 @@ ASPECT_RATIO_KNOB = "aspect_ratio"
 # enum omits a tier simply never sees it.
 RESOLUTION_ORDER = ("512px", "1K", "2K", "4K")
 QUALITY_ORDER = ("low", "medium", "high")
+
+
+class ImageBackground(StrEnum):
+    TRANSPARENT = "transparent"
+
+
+class ImageOutputFormat(StrEnum):
+    JPEG = "jpeg"
+    PNG = "png"
+
+
+class ImageQuality(StrEnum):
+    AUTO = "auto"
+    MEDIUM = "medium"
 
 
 def image_params_schema(provider: str, model_id: str) -> dict:
@@ -56,13 +73,16 @@ def validate_image_params(
             raise ValueError(f"unknown image parameter {knob!r}")
         if knob in model.unsupported_image_params:
             raise ValueError(f"model {model_id!r} does not accept {knob!r}")
-        if audience == "user" and spec.audience == "builder":
+        if audience == ParamAudience.USER and spec.audience == ParamAudience.BUILDER:
             raise ValueError(f"image parameter {knob!r} is set on the agent, not per conversation")
         spec.check_value(knob, value)
         members = model.image_enums.get(knob)
         if members and value not in members:
             raise ValueError(f"{knob} {value!r} not supported by model {model_id!r}")
-    if params.get("background") == "transparent" and params.get("output_format") == "jpeg":
+    if (
+        params.get("background") == ImageBackground.TRANSPARENT
+        and params.get("output_format") == ImageOutputFormat.JPEG
+    ):
         raise ValueError("transparent backgrounds require PNG or WebP output")
 
 
@@ -86,9 +106,11 @@ def clamp_image_params(
         if not ceiling or ceiling not in order:
             continue
         # "auto" lets the provider pick, which can land above the ceiling.
-        effective = "medium" if (knob == QUALITY_KNOB and value == "auto") else value
+        effective = (
+            ImageQuality.MEDIUM if (knob == QUALITY_KNOB and value == ImageQuality.AUTO) else value
+        )
         if effective is None and knob == QUALITY_KNOB:
-            effective = "medium"
+            effective = ImageQuality.MEDIUM
         if effective not in order:
             continue
         if order.index(effective) > order.index(ceiling):
@@ -130,8 +152,11 @@ def resolve_image_params(
             )
             continue
         kept[knob] = value
-    if kept.get("background") == "transparent" and kept.get("output_format") == "jpeg":
-        kept["output_format"] = "png"
+    if (
+        kept.get("background") == ImageBackground.TRANSPARENT
+        and kept.get("output_format") == ImageOutputFormat.JPEG
+    ):
+        kept["output_format"] = ImageOutputFormat.PNG
     return kept
 
 
@@ -144,6 +169,9 @@ def strip_unsupported_image_params(provider: str, model_id: str, params: dict) -
         except ValueError:
             continue
         kept[knob] = value
-    if kept.get("background") == "transparent" and kept.get("output_format") == "jpeg":
-        kept["output_format"] = "png"
+    if (
+        kept.get("background") == ImageBackground.TRANSPARENT
+        and kept.get("output_format") == ImageOutputFormat.JPEG
+    ):
+        kept["output_format"] = ImageOutputFormat.PNG
     return kept

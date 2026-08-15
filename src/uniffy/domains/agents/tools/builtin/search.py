@@ -29,7 +29,7 @@ async def _execute_search_query(ctx: ToolContext, args: dict) -> ToolResult:
     lines = [f"Found {total} results (showing {len(results)}):"]
     for r in results:
         desc = f" - {r.description[:100]}..." if r.description else ""
-        content_type = r.urn.split(":")[3] if ":" in r.urn else "UNKNOWN"
+        content_type = r.urn.split(":")[3] if ":" in r.urn else "UNKNOWN"  # noqa: PLR2004
         lines.append(f"- [{content_type}] [[[{r.title}|{r.urn}]]]{desc}")
 
     return ToolResult(success=True, data="\n".join(lines))

@@ -10,8 +10,13 @@ from sqlalchemy import or_, select, update
 
 from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
-from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
+from uniffy.core.models.chat.message import (
+    ChatMessage,
+    ChatMessageMetadataKind,
+    ChatMessageVisibility,
+    SenderType,
+)
 from uniffy.domains.chat.messages.operations import (
     AGENT_THREAD_REPLY_KINDS,
     bump_channel_message_stats,
@@ -35,15 +40,15 @@ THREAD_REPLY_CONTEXT_LIMIT = 40
 THREAD_AMBIENT_CHANNEL_LIMIT = 10
 
 
-def _metadata_kind_for(role: str, tool_call_id: str | None) -> str:
+def _metadata_kind_for(role: str, tool_call_id: str | None) -> ChatMessageMetadataKind:
     """Map runtime role + tool_call_id to a chat `metadata.kind`."""
-    if role == "summary":
-        return "summary"
-    if role == "tool":
-        return "tool_result"
-    if role == "assistant" and tool_call_id:
-        return "tool_call"
-    return "final"
+    if role == AgentMessageRole.SUMMARY:
+        return ChatMessageMetadataKind.SUMMARY
+    if role == AgentMessageRole.TOOL:
+        return ChatMessageMetadataKind.TOOL_RESULT
+    if role == AgentMessageRole.ASSISTANT and tool_call_id:
+        return ChatMessageMetadataKind.TOOL_CALL
+    return ChatMessageMetadataKind.FINAL
 
 
 class MessageWriter(Protocol):
@@ -372,7 +377,7 @@ class ChatChannelMessageWriter:
         uniform. Other roles persist a `sender_type=AGENT` row whose
         `metadata.kind` drives the renderer card choice.
         """
-        if role == "user":
+        if role == AgentMessageRole.USER:
             return AgentMessage(
                 id=self._trigger_message_id,
                 session_id=self._channel_id,
@@ -439,7 +444,7 @@ class ChatChannelMessageWriter:
             cache_read_input_tokens,
         )
         # Compaction summaries are context artifacts, not conversation activity.
-        if role != "summary":
+        if role != AgentMessageRole.SUMMARY:
             await bump_channel_message_stats(
                 self._session,
                 self._channel_id,
@@ -687,7 +692,7 @@ class ChatChannelMessageWriter:
         envelopes: list[AgentMessage] = []
         for m in rows:
             meta = m.message_metadata or {}
-            if meta.get("visibility") == "agent_internal":
+            if meta.get("visibility") == ChatMessageVisibility.AGENT_INTERNAL:
                 continue
             # Stale in-flight placeholder (finalize failed); empty content
             # would inject a blank assistant turn.
@@ -695,26 +700,26 @@ class ChatChannelMessageWriter:
                 continue
             # Reset dividers are UI-only markers; guard catches the boundary
             # divider written exactly at `now()`.
-            if meta.get("kind") == "context_reset":
+            if meta.get("kind") == ChatMessageMetadataKind.CONTEXT_RESET:
                 continue
 
             kind = meta.get("kind")
             is_self_agent = m.sender_type == SenderType.AGENT and m.sender_id == self._agent_id
 
-            if is_self_agent and kind == "summary":
-                role = "summary"
-            elif is_self_agent and kind == "tool_call":
-                role = "assistant"
-            elif is_self_agent and kind == "tool_result":
-                role = "tool"
+            if is_self_agent and kind == ChatMessageMetadataKind.SUMMARY:
+                role = AgentMessageRole.SUMMARY
+            elif is_self_agent and kind == ChatMessageMetadataKind.TOOL_CALL:
+                role = AgentMessageRole.ASSISTANT
+            elif is_self_agent and kind == ChatMessageMetadataKind.TOOL_RESULT:
+                role = AgentMessageRole.TOOL
             elif is_self_agent:
-                role = "assistant"
+                role = AgentMessageRole.ASSISTANT
             else:
                 # Includes USER, SYSTEM, and AGENT-from-a-different-agent.
-                role = "user"
+                role = AgentMessageRole.USER
 
             content = m.content or None
-            if role == "user" and content:
+            if role == AgentMessageRole.USER and content:
                 info = resolved.get(m.sender_id) if m.sender_id else None
                 name = info.display_name if info else _FALLBACK_SENDER_NAME
                 content = f"[{name}]: {content}"

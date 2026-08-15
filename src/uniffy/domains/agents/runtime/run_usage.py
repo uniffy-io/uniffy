@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from uuid import UUID
 
+from uniffy.core.models.agents.run_log import AgentRunStatus
 from uniffy.domains.agents.pricing import compute_text_cost, get_pricing
 from uniffy.domains.agents.providers.base import CompletionResult
 
@@ -21,7 +22,7 @@ class ModelCallUsage:
     cache_read_input_tokens: int = 0
     thinking_tokens: int = 0
     provider_cost_usd: Decimal | None = None
-    status: str = "success"
+    status: AgentRunStatus = AgentRunStatus.SUCCESS
     error: str | None = None
 
     def cost_usd(self) -> Decimal | None:
@@ -101,7 +102,7 @@ class RunUsageAccumulator:
                 provider=provider,
                 provider_key_id=provider_key_id,
                 model=model,
-                status="error",
+                status=AgentRunStatus.ERROR,
                 error=error,
             )
         )
@@ -136,7 +137,7 @@ class RunUsageAccumulator:
 
     @property
     def retry_count(self) -> int:
-        return sum(call.status == "error" for call in self.calls)
+        return sum(call.status == AgentRunStatus.ERROR for call in self.calls)
 
     @property
     def failover_provider_key_ids(self) -> list[str]:
@@ -155,12 +156,12 @@ class RunUsageAccumulator:
 
     @property
     def deadline_exceeded(self) -> bool:
-        return any(call.error == "TimeoutError" for call in self.calls)
+        return any(call.error == "TimeoutError" for call in self.calls)  # noqa: PLR2004
 
     def cost_usd(self) -> Decimal | None:
         total = Decimal(0)
         for call in self.calls:
-            if call.status != "success":
+            if call.status != AgentRunStatus.SUCCESS:
                 continue
             cost = call.cost_usd()
             if cost is None:

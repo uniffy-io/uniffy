@@ -301,10 +301,7 @@ class QuotaOperations:
             .outerjoin(
                 UserStorageQuotaOverride,
                 (UserStorageQuotaOverride.user_id == OrganizationMember.user_id)
-                & (
-                    UserStorageQuotaOverride.organization_id
-                    == OrganizationMember.organization_id
-                ),
+                & (UserStorageQuotaOverride.organization_id == OrganizationMember.organization_id),
             )
             .where(
                 OrganizationMember.organization_id == organization_id,
@@ -317,9 +314,7 @@ class QuotaOperations:
         rows: list[UserUsageRow] = []
         for row in result.all():
             override_bytes = row.override_bytes
-            effective_quota = (
-                override_bytes if override_bytes is not None else org_default
-            )
+            effective_quota = override_bytes if override_bytes is not None else org_default
             rows.append(
                 UserUsageRow(
                     user_id=row.user_id,

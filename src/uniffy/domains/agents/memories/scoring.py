@@ -21,7 +21,7 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.models.agents.memory import AgentMemory, MemorySource
+from uniffy.core.models.agents.memory import AgentMemory, MemoryCategory, MemorySource
 from uniffy.domains.agents.memories.sanitize import escape_like
 from uniffy.domains.agents.memories.scope import MemoryScopeRef, scope_filters
 
@@ -59,9 +59,7 @@ class TrigramMemoryScorer:
         if not query or not refs:
             return []
 
-        bucket_filter = or_(
-            *[and_(*scope_filters(organization_id, ref)) for ref in refs]
-        )
+        bucket_filter = or_(*[and_(*scope_filters(organization_id, ref)) for ref in refs])
         haystack = func.concat_ws(
             " ",
             AgentMemory.key,
@@ -73,15 +71,13 @@ class TrigramMemoryScorer:
         pattern = f"%{escape_like(query)}%"
         substring = haystack.ilike(pattern, escape="\\")
         matches = (
-            or_(score > threshold, substring)
-            if len(query) >= MIN_TRIGRAM_QUERY_CHARS
-            else substring
+            or_(score > threshold, substring) if len(query) >= MIN_TRIGRAM_QUERY_CHARS else substring
         )
         # An agent-written "instructions" entry never rides into context
         # unrequested; it stays behind the memory.read pull.
         not_tool_instructions = ~and_(
             AgentMemory.source == MemorySource.TOOL.value,
-            AgentMemory.category == "instructions",
+            AgentMemory.category == MemoryCategory.INSTRUCTIONS,
         )
 
         stmt = (

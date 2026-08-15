@@ -10,7 +10,7 @@ from uniffy.core.converters.common_proto import (
     content_role_to_proto,
 )
 from uniffy.core.models.agents.cron_task import AgentCronTask
-from uniffy.core.models.agents.run_log import AgentRunLog
+from uniffy.core.models.agents.run_log import AgentRunLog, AgentRunStatus
 from uniffy.core.types import AccessMode, ContentRole
 
 
@@ -20,13 +20,9 @@ def cron_task_to_proto(
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
 ) -> CronTaskInfo:
-    resolved_mode = (
-        effective_access_mode if effective_access_mode is not None else task.access_mode
-    )
+    resolved_mode = effective_access_mode if effective_access_mode is not None else task.access_mode
     resolved_baseline = (
-        effective_baseline_role
-        if effective_baseline_role is not None
-        else task.baseline_role
+        effective_baseline_role if effective_baseline_role is not None else task.baseline_role
     )
 
     info = CronTaskInfo(
@@ -85,7 +81,7 @@ def cron_run_log_to_proto(log: AgentRunLog) -> CronRunLogInfo:
     is the completion time; the start is derived from ``duration_ms``.
     Pending placeholder rows have no completion yet.
     """
-    completed = log.created_at if log.status != "pending" else None
+    completed = log.created_at if log.status != AgentRunStatus.PENDING else None
     started = log.created_at
     if completed is not None and log.duration_ms:
         started = completed - timedelta(milliseconds=log.duration_ms)

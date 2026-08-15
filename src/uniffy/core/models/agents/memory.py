@@ -36,6 +36,13 @@ class MemorySource(str, Enum):
     MANUAL = "manual"
 
 
+class MemoryCategory(str, Enum):
+    PREFERENCES = "preferences"
+    FACTS = "facts"
+    CONTEXT = "context"
+    INSTRUCTIONS = "instructions"
+
+
 class AgentMemory(SQLModel, table=True):
     """A memory entry visible to the audience of its scope subject.
 
@@ -104,7 +111,7 @@ class AgentMemory(SQLModel, table=True):
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     agent_id: UUID | None = Field(default=None, nullable=True)
-    scope: str = Field(
+    scope: MemoryScope = Field(
         sa_column=Column(String(20), nullable=False),
     )
     user_id: UUID | None = Field(default=None, nullable=True)
@@ -127,7 +134,7 @@ class AgentMemory(SQLModel, table=True):
     organization_id: UUID = Field(nullable=False)
     created_by_user_id: UUID = Field(nullable=False)
     created_by_agent_id: UUID | None = Field(default=None, nullable=True)
-    source: str = Field(
+    source: MemorySource = Field(
         sa_column=Column(String(10), nullable=False, default=MemorySource.TOOL.value),
     )
     key: str = Field(
@@ -139,8 +146,9 @@ class AgentMemory(SQLModel, table=True):
     content: str = Field(
         sa_column=Column(Text, nullable=False),
     )
-    category: str = Field(
-        sa_column=Column(String(50), nullable=False, default="facts"),
+    category: MemoryCategory = Field(
+        default=MemoryCategory.FACTS,
+        sa_column=Column(String(50), nullable=False, default=MemoryCategory.FACTS.value),
     )
     importance: float = Field(
         sa_column=Column(Float, nullable=False, default=0.5),

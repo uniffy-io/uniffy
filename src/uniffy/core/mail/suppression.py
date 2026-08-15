@@ -74,18 +74,20 @@ class SuppressionRepository:
         from sqlalchemy import func
 
         total = (
-            await self._session.execute(
-                select(func.count()).select_from(EmailSuppression)
-            )
+            await self._session.execute(select(func.count()).select_from(EmailSuppression))
         ).scalar_one()
         rows = (
-            await self._session.execute(
-                select(EmailSuppression)
-                .order_by(EmailSuppression.created_at.desc())
-                .limit(limit)
-                .offset(offset)
+            (
+                await self._session.execute(
+                    select(EmailSuppression)
+                    .order_by(EmailSuppression.created_at.desc())
+                    .limit(limit)
+                    .offset(offset)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return list(rows), int(total)
 
 
@@ -101,10 +103,14 @@ async def list_for_recipients(
         return set()
     normalized = [_normalize(e) for e in emails]
     rows = (
-        await session.execute(
-            select(EmailSuppression.email).where(EmailSuppression.email.in_(normalized))
+        (
+            await session.execute(
+                select(EmailSuppression.email).where(EmailSuppression.email.in_(normalized))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return set(rows)
 
 

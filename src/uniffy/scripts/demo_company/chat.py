@@ -155,13 +155,17 @@ async def _ensure_categories(
 
     for name in names:
         existing = (
-            await ctx.session.execute(
-                select(ChatChannelCategory.id).where(
-                    ChatChannelCategory.organization_id == ctx.organization_id,
-                    ChatChannelCategory.name == name,
+            (
+                await ctx.session.execute(
+                    select(ChatChannelCategory.id).where(
+                        ChatChannelCategory.organization_id == ctx.organization_id,
+                        ChatChannelCategory.name == name,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if existing is not None:
             category_ids[name] = existing
             result.skipped += 1
@@ -206,11 +210,11 @@ async def _ensure_members(
     present = set(
         (
             await ctx.session.execute(
-                select(ChatChannelMember.user_id).where(
-                    ChatChannelMember.channel_id == channel_id
-                )
+                select(ChatChannelMember.user_id).where(ChatChannelMember.channel_id == channel_id)
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
     missing = [member_id for member_id in member_ids if member_id not in present]
     if not missing:
@@ -234,14 +238,18 @@ async def _ensure_channel(
     result: DomainResult,
 ) -> UUID | None:
     existing = (
-        await ctx.session.execute(
-            select(ChatChannel.id).where(
-                ChatChannel.organization_id == ctx.organization_id,
-                ChatChannel.name == spec.name,
-                ChatChannel.is_deleted == False,  # noqa: E712
+        (
+            await ctx.session.execute(
+                select(ChatChannel.id).where(
+                    ChatChannel.organization_id == ctx.organization_id,
+                    ChatChannel.name == spec.name,
+                    ChatChannel.is_deleted == False,  # noqa: E712
+                )
             )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     if existing is not None:
         result.skipped += 1
         return existing
@@ -299,14 +307,18 @@ async def _find_direct(ctx: DemoContext, participants: list[UUID]) -> UUID | Non
     channel_type = ChannelType.DIRECT if len(wanted) == 2 else ChannelType.GROUP_DM
 
     candidates = (
-        await ctx.session.execute(
-            select(ChatChannel.id).where(
-                ChatChannel.organization_id == ctx.organization_id,
-                ChatChannel.channel_type == channel_type,
-                ChatChannel.is_deleted == False,  # noqa: E712
+        (
+            await ctx.session.execute(
+                select(ChatChannel.id).where(
+                    ChatChannel.organization_id == ctx.organization_id,
+                    ChatChannel.channel_type == channel_type,
+                    ChatChannel.is_deleted == False,  # noqa: E712
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     for channel_id in candidates:
         members = set(
@@ -316,7 +328,9 @@ async def _find_direct(ctx: DemoContext, participants: list[UUID]) -> UUID | Non
                         ChatChannelMember.channel_id == channel_id
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         if members == wanted:
             return channel_id

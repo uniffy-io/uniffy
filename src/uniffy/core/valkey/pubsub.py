@@ -9,6 +9,7 @@ import asyncio
 import contextlib
 import json
 from collections.abc import AsyncGenerator
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -27,6 +28,14 @@ _pubsub_client: aioredis.Redis | None = None
 _shutdown_event: asyncio.Event | None = None
 
 LOGGER_COMPONENT = "pubsub"
+
+
+class NotificationPayloadType(StrEnum):
+    FILE_UPDATED = "file_updated"
+    PRESENCE_CHANGED = "presence_changed"
+    PERMISSIONS_CHANGED = "permissions_changed"
+    CONTENT_ACCESS_CHANGED = "content_access_changed"
+    MENTION_STATE_CHANGED = "mention_state_changed"
 
 
 def _build_client(url: str) -> aioredis.Redis:
@@ -146,7 +155,7 @@ async def publish_content_access_changed(
     ``content:{org}`` otherwise (OPEN_TO_ORG transitions).
     """
     payload = {
-        "_type": "content_access_changed",
+        "_type": NotificationPayloadType.CONTENT_ACCESS_CHANGED,
         "content_type": content_type,
         "content_id": str(content_id),
         "action": action,
@@ -182,11 +191,11 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
                 ignore_subscribe_messages=True,
                 timeout=1.0,
             )
-            if message is not None and message["type"] == "message":
+            if message is not None and message["type"] == "message":  # noqa: PLR2004
                 try:
                     data = json.loads(message["data"])
                     yield data
-                except (json.JSONDecodeError, TypeError):
+                except json.JSONDecodeError, TypeError:
                     logger.warning(f"Invalid message on channel {channel}")
             else:
                 yield None
@@ -197,7 +206,7 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
                 _close_subscriber(pubsub, subscriber, channel),
                 timeout=_CLEANUP_TIMEOUT,
             )
-        except (TimeoutError, BaseException):
+        except TimeoutError, BaseException:
             logger.warning(f"cleanup timed out for {channel}", component=LOGGER_COMPONENT)
         logger.info(f"unsubscribed from {channel} ", component=LOGGER_COMPONENT)
 
@@ -224,11 +233,11 @@ async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | 
                 ignore_subscribe_messages=True,
                 timeout=1.0,
             )
-            if message is not None and message["type"] == "message":
+            if message is not None and message["type"] == "message":  # noqa: PLR2004
                 try:
                     data = json.loads(message["data"])
                     yield data
-                except (json.JSONDecodeError, TypeError):
+                except json.JSONDecodeError, TypeError:
                     logger.warning(f"Invalid message on channels {channel_label}")
             else:
                 yield None
@@ -239,7 +248,7 @@ async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | 
                 _close_subscriber_channels(pubsub, subscriber, channels),
                 timeout=_CLEANUP_TIMEOUT,
             )
-        except (TimeoutError, BaseException):
+        except TimeoutError, BaseException:
             logger.warning(f"cleanup timed out for {channel_label}", component=LOGGER_COMPONENT)
         logger.info(f"unsubscribed from {channel_label}", component=LOGGER_COMPONENT)
 
@@ -275,17 +284,15 @@ async def subscribe_patterns(
                 ignore_subscribe_messages=True,
                 timeout=1.0,
             )
-            if message is not None and message["type"] == "pmessage":
+            if message is not None and message["type"] == "pmessage":  # noqa: PLR2004
                 channel = message["channel"]
                 if isinstance(channel, bytes):
                     channel = channel.decode("utf-8", errors="replace")
                 try:
                     data = json.loads(message["data"])
                     yield channel, data
-                except (json.JSONDecodeError, TypeError):
-                    logger.warning(
-                        f"Invalid pmessage on {channel}", component=LOGGER_COMPONENT
-                    )
+                except json.JSONDecodeError, TypeError:
+                    logger.warning(f"Invalid pmessage on {channel}", component=LOGGER_COMPONENT)
             else:
                 yield None
     finally:
@@ -295,7 +302,7 @@ async def subscribe_patterns(
                 _close_psubscriber(pubsub, subscriber, patterns),
                 timeout=_CLEANUP_TIMEOUT,
             )
-        except (TimeoutError, BaseException):
+        except TimeoutError, BaseException:
             logger.warning(
                 f"cleanup timed out for psubscribe {pattern_label}",
                 component=LOGGER_COMPONENT,

@@ -10,6 +10,7 @@ from pathlib import Path
 from loguru import logger
 
 from uniffy.core.data_files import load_documents
+from uniffy.core.types import RecurrencePattern
 
 logger = logger.bind(component="scripts.demo_company.loader")
 
@@ -138,7 +139,7 @@ class EventSpec:
     start: str
     duration_minutes: int
     is_all_day: bool
-    recurrence_pattern: str
+    recurrence_pattern: RecurrencePattern
     recurrence_config: dict | None
     room: str | None
     location: str
@@ -333,9 +334,7 @@ def _merge_generated(files: tuple[FileSpec, ...]) -> tuple[FileSpec, ...]:
 
     on_disk = {(spec.folder, spec.filename) for spec in files}
     rendered = tuple(
-        spec
-        for spec in generated_file_specs()
-        if (spec.folder, spec.filename) not in on_disk
+        spec for spec in generated_file_specs() if (spec.folder, spec.filename) not in on_disk
     )
     return files + rendered
 
@@ -421,12 +420,8 @@ def _load_people(path: Path, demo_user: DemoUser | None) -> PeopleContent:
             if not member.get("email"):
                 raise ContentError(f"{path.name}: every group member needs an 'email'")
             if member["email"] not in known:
-                raise ContentError(
-                    f"{path.name}: {entry['name']!r} lists unknown {member['email']}"
-                )
-            members.append(
-                GroupMemberSpec(email=member["email"], role=member.get("role", "MEMBER"))
-            )
+                raise ContentError(f"{path.name}: {entry['name']!r} lists unknown {member['email']}")
+            members.append(GroupMemberSpec(email=member["email"], role=member.get("role", "MEMBER")))
         access_groups.append(
             GroupSpec(
                 name=entry["name"],
@@ -582,11 +577,14 @@ def _load_events(path: Path) -> tuple[EventSpec, ...]:
                 raise ContentError(f"{path.name}: every event needs '{key}'")
 
         recurrence = entry.get("recurrence") or {}
-        pattern = recurrence.get("pattern", "NONE")
+        try:
+            pattern = RecurrencePattern(recurrence.get("pattern", RecurrencePattern.NONE))
+        except ValueError as exc:
+            raise ContentError(f"{path.name}: invalid recurrence pattern") from exc
         config = None
-        if pattern != "NONE":
+        if pattern != RecurrencePattern.NONE:
             # An empty config makes the expander return zero occurrences.
-            config = {k: v for k, v in recurrence.items() if k != "pattern"}
+            config = {k: v for k, v in recurrence.items() if k != "pattern"}  # noqa: PLR2004
             config.setdefault("interval", 1)
 
         events.append(

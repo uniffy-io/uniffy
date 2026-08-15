@@ -22,6 +22,7 @@ from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.models.agents.memory import AgentMemory
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.integrations.connection import IntegrationConnection
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
@@ -131,14 +132,12 @@ async def _validate_integration_connections(
         if found is None:
             raise ValidationError(
                 "integration_connections",
-                f"No {provider_id} connection with id {connection_id} exists "
-                f"in this organization",
+                f"No {provider_id} connection with id {connection_id} exists in this organization",
             )
         if found != provider_id:
             raise ValidationError(
                 "integration_connections",
-                f"Connection {connection_id} belongs to provider '{found}', "
-                f"not '{provider_id}'",
+                f"Connection {connection_id} belongs to provider '{found}', not '{provider_id}'",
             )
 
 
@@ -155,7 +154,7 @@ def _coerce_uuid_list(values: list | None) -> list[UUID]:
     for raw in values:
         try:
             out.append(UUID(str(raw)))
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             continue
     return out
 
@@ -381,7 +380,7 @@ class AgentOperations(BaseContentOperations[Agent]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_CREATED,
-            resource_type="agent",
+            resource_type=AuditResourceType.AGENT,
             resource_id=agent.id,
             details={"name": agent.name},
         )
@@ -390,9 +389,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         await set_cached_agent(agent)
         added_skill_uuids = _coerce_uuid_list(agent.enabled_skills)
         if added_skill_uuids:
-            await track_agent_skill_refs(
-                agent.id, added_skill_ids=added_skill_uuids
-            )
+            await track_agent_skill_refs(agent.id, added_skill_ids=added_skill_uuids)
 
         return agent
 
@@ -539,9 +536,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         await require_agents_builder(self.session, user_id, organization_id)
 
         if is_default is not None and is_default != agent.is_default:
-            await OrganizationOperations(self.session).require_org_admin(
-                user_id, organization_id
-            )
+            await OrganizationOperations(self.session).require_org_admin(user_id, organization_id)
 
         if is_default is not None and is_default and not agent.is_default:
             await self._clear_existing_default(organization_id)
@@ -677,7 +672,7 @@ class AgentOperations(BaseContentOperations[Agent]):
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.AGENT_SKILL_ENABLED,
-                resource_type="agent",
+                resource_type=AuditResourceType.AGENT,
                 resource_id=agent_id,
                 details={"skill_id": str(sid)},
             )
@@ -687,7 +682,7 @@ class AgentOperations(BaseContentOperations[Agent]):
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.AGENT_SKILL_DISABLED,
-                resource_type="agent",
+                resource_type=AuditResourceType.AGENT,
                 resource_id=agent_id,
                 details={"skill_id": str(sid)},
             )
@@ -713,7 +708,7 @@ class AgentOperations(BaseContentOperations[Agent]):
             for k, v in audit_fields.items():
                 if isinstance(v, UUID):
                     serializable[k] = str(v)
-                elif k == "soul_prompt" and isinstance(v, str) and len(v) > 200:
+                elif k == "soul_prompt" and isinstance(v, str) and len(v) > 200:  # noqa: PLR2004
                     serializable[k] = v[:200] + "..."
                 else:
                     serializable[k] = v
@@ -722,7 +717,7 @@ class AgentOperations(BaseContentOperations[Agent]):
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.AGENT_UPDATED,
-                resource_type="agent",
+                resource_type=AuditResourceType.AGENT,
                 resource_id=agent_id,
                 details={"changes": serializable},
             )
@@ -841,9 +836,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         await invalidate_cached_agent_skills(agent_id)
         await invalidate_memory_index(organization_id, MemoryScopeRef.org(agent_id))
         if old_skill_ids:
-            await track_agent_skill_refs(
-                agent_id, removed_skill_ids=old_skill_ids
-            )
+            await track_agent_skill_refs(agent_id, removed_skill_ids=old_skill_ids)
 
     async def restore_agent(
         self,

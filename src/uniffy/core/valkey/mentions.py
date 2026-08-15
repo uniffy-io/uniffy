@@ -34,7 +34,7 @@ async def publish_mention_state(
 
     channel = f"mentions:{organization_id}"
     payload: dict[str, Any] = {
-        "_type": "mention_state_changed",
+        "_type": pubsub.NotificationPayloadType.MENTION_STATE_CHANGED,
         "urn": urn,
         "changes": {k: str(v) for k, v in changes.items()},
     }

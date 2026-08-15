@@ -25,9 +25,9 @@ class TestComputeCrossings:
 
     def test_no_crossings_when_under_smallest_threshold(self) -> None:
         # 10% -> 20% of 100 cap
-        assert _compute_crossings(
-            Decimal("10"), Decimal("20"), Decimal("100"), [50, 75, 90, 100]
-        ) == []
+        assert (
+            _compute_crossings(Decimal("10"), Decimal("20"), Decimal("100"), [50, 75, 90, 100]) == []
+        )
 
     def test_single_crossing_at_50(self) -> None:
         assert _compute_crossings(
@@ -41,29 +41,19 @@ class TestComputeCrossings:
         ) == [50, 75, 90]
 
     def test_exactly_at_threshold_crosses(self) -> None:
-        assert _compute_crossings(
-            Decimal("49"), Decimal("50"), Decimal("100"), [50]
-        ) == [50]
+        assert _compute_crossings(Decimal("49"), Decimal("50"), Decimal("100"), [50]) == [50]
 
     def test_already_past_threshold_does_not_recross(self) -> None:
-        assert _compute_crossings(
-            Decimal("55"), Decimal("70"), Decimal("100"), [50]
-        ) == []
+        assert _compute_crossings(Decimal("55"), Decimal("70"), Decimal("100"), [50]) == []
 
     def test_zero_cap_returns_empty(self) -> None:
-        assert _compute_crossings(
-            Decimal("0"), Decimal("10"), Decimal("0"), [50]
-        ) == []
+        assert _compute_crossings(Decimal("0"), Decimal("10"), Decimal("0"), [50]) == []
 
     def test_one_hundred_threshold_requires_exact_cross(self) -> None:
         # Prev at 99.5, curr at 100: crosses.
-        assert _compute_crossings(
-            Decimal("99.5"), Decimal("100"), Decimal("100"), [100]
-        ) == [100]
+        assert _compute_crossings(Decimal("99.5"), Decimal("100"), Decimal("100"), [100]) == [100]
         # Prev at 100, curr at 120: already past, no fire.
-        assert _compute_crossings(
-            Decimal("100"), Decimal("120"), Decimal("100"), [100]
-        ) == []
+        assert _compute_crossings(Decimal("100"), Decimal("120"), Decimal("100"), [100]) == []
 
 
 def _bare_session(budget: AgentBudget | None) -> MagicMock:
@@ -170,9 +160,7 @@ class TestCheckAndFireAlertsFires:
 
         async def run() -> None:
             with (
-                patch.object(
-                    mod, "_sum_cost", AsyncMock(return_value=Decimal("60"))
-                ),
+                patch.object(mod, "_sum_cost", AsyncMock(return_value=Decimal("60"))),
                 patch.object(
                     mod,
                     "_resolve_recipients",
@@ -212,9 +200,7 @@ class TestCheckAndFireAlertsFires:
 
         async def run() -> None:
             with (
-                patch.object(
-                    mod, "_sum_cost", AsyncMock(return_value=Decimal("60"))
-                ),
+                patch.object(mod, "_sum_cost", AsyncMock(return_value=Decimal("60"))),
                 patch.object(
                     mod,
                     "_resolve_recipients",

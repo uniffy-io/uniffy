@@ -3,6 +3,7 @@
 import re
 import secrets
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from loguru import logger
@@ -33,14 +34,21 @@ from uniffy.core.events import (
     extract_mentioned_team_ids,
     extract_mentioned_user_ids,
 )
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.projects.activity import TaskActivity
-from uniffy.core.models.projects.field_definition import FieldDefinition
+from uniffy.core.models.projects.field_definition import (
+    DefaultTaskStatusId,
+    FieldDefinition,
+    ProjectFieldType,
+    SystemProjectFieldId,
+    TaskStatusSemantic,
+)
 from uniffy.core.models.projects.project import Project
-from uniffy.core.models.projects.sprint import Sprint
+from uniffy.core.models.projects.sprint import Sprint, SprintStatus
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.task_watcher import TaskWatcher
 from uniffy.core.models.projects.view_config import ViewConfig
@@ -61,12 +69,22 @@ from uniffy.domains.projects.recurrence import (
     parse_recurrence_config,
     serialize_recurrence_config,
 )
+from uniffy.domains.projects.statuses import (
+    TaskStatusSemantics,
+    load_task_status_semantics,
+)
 from uniffy.domains.projects.validation import validate_field_values
 from uniffy.domains.tags import TagAssignment, TagOperations
 
 logger = logger.bind(component="projects.operations")
 
 _SLUG_PATTERN = re.compile(r"^[A-Z][A-Z0-9]{1,4}$")
+
+
+class ProjectTagFilterMode(StrEnum):
+    ALL = "all"
+    ANY = "any"
+    NONE = "none"
 
 
 class ProjectOperations(BaseContentOperations[Project]):
@@ -208,7 +226,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         kwargs.pop("baseline_role", None)
         tag_ids = kwargs.pop("tag_ids", None)
 
-        name_changed = "name" in kwargs and kwargs["name"] != project.name
+        name_changed = "name" in kwargs and kwargs["name"] != project.name  # noqa: PLR2004
 
         for key, value in kwargs.items():
             if value is not None and hasattr(project, key):
@@ -241,8 +259,7 @@ class ProjectOperations(BaseContentOperations[Project]):
                 await self.session.commit()
             except Exception:
                 logger.opt(exception=True).warning(
-                    "Failed to propagate project rename to mentions",
-                    project_id=str(project_id)
+                    "Failed to propagate project rename to mentions", project_id=str(project_id)
                 )
 
         return project
@@ -284,12 +301,8 @@ class ProjectOperations(BaseContentOperations[Project]):
             self.session,
             organization_id=organization_id,
             actor_user_id=user_id,
-            action=(
-                Action.PROJECT_PERMANENTLY_DELETED
-                if permanent
-                else Action.PROJECT_DELETED
-            ),
-            resource_type=ContentType.PROJECT.value,
+            action=(Action.PROJECT_PERMANENTLY_DELETED if permanent else Action.PROJECT_DELETED),
+            resource_type=AuditResourceType.PROJECT,
             resource_id=project_id,
             details={"name": project.name},
         )
@@ -380,45 +393,49 @@ class ProjectOperations(BaseContentOperations[Project]):
     async def _create_default_fields(self, project_id: UUID) -> None:
         default_fields = [
             FieldDefinition(
-                id="field_title",
+                id=SystemProjectFieldId.TITLE,
                 project_id=project_id,
                 name="Title",
-                type="text",
+                type=ProjectFieldType.TEXT,
                 is_required=True,
                 is_system=True,
                 sort_order=0,
                 config={},
             ),
             FieldDefinition(
-                id="field_status",
+                id=SystemProjectFieldId.STATUS,
                 project_id=project_id,
                 name="Status",
-                type="single_select",
+                type=ProjectFieldType.SINGLE_SELECT,
                 is_required=False,
                 is_system=True,
                 sort_order=1,
                 config={
                     "options": [
                         {
-                            "id": "status_todo",
+                            "id": DefaultTaskStatusId.TODO,
+                            "semantic": TaskStatusSemantic.TODO,
                             "label": "To Do",
                             "color": "#6b7280",
                             "sortOrder": 0,
                         },
                         {
-                            "id": "status_in_progress",
+                            "id": DefaultTaskStatusId.IN_PROGRESS,
+                            "semantic": TaskStatusSemantic.IN_PROGRESS,
                             "label": "In Progress",
                             "color": "#3b82f6",
                             "sortOrder": 1,
                         },
                         {
-                            "id": "status_review",
+                            "id": DefaultTaskStatusId.REVIEW,
+                            "semantic": TaskStatusSemantic.REVIEW,
                             "label": "Review",
                             "color": "#f59e0b",
                             "sortOrder": 2,
                         },
                         {
-                            "id": "status_done",
+                            "id": DefaultTaskStatusId.COMPLETED,
+                            "semantic": TaskStatusSemantic.COMPLETED,
                             "label": "Done",
                             "color": "#22c55e",
                             "sortOrder": 3,
@@ -427,10 +444,10 @@ class ProjectOperations(BaseContentOperations[Project]):
                 },
             ),
             FieldDefinition(
-                id="field_priority",
+                id=SystemProjectFieldId.PRIORITY,
                 project_id=project_id,
                 name="Priority",
-                type="single_select",
+                type=ProjectFieldType.SINGLE_SELECT,
                 is_required=False,
                 is_system=True,
                 sort_order=2,
@@ -705,10 +722,15 @@ class TaskOperations(BaseContentOperations[Task]):
                         shared_group_ids.append(subject_id)
 
         default_mode, default_baseline = await resolve_content_defaults(
-            self.session, model.organization_id, ContentType.PROJECT,
+            self.session,
+            model.organization_id,
+            ContentType.PROJECT,
         )
         effective_mode, effective_baseline = resolve_effective_policy(
-            project.access_mode, project.baseline_role, default_mode, default_baseline,
+            project.access_mode,
+            project.baseline_role,
+            default_mode,
+            default_baseline,
         )
 
         await self.search_indexer.index(
@@ -719,9 +741,7 @@ class TaskOperations(BaseContentOperations[Task]):
             url_path=self._get_url_path(model),
             owner_id=model.owner_id,
             access_mode=effective_mode.value,
-            baseline_role=(
-                effective_baseline.value if effective_baseline is not None else None
-            ),
+            baseline_role=(effective_baseline.value if effective_baseline is not None else None),
             keywords=self._build_search_keywords(model),
             description=self._get_search_description(model),
             shared_user_ids=shared_user_ids if shared_user_ids else None,
@@ -783,7 +803,8 @@ class TaskOperations(BaseContentOperations[Task]):
         current_max = max_sort_order.scalar() or 0
         new_sort_order = current_max + 65536
 
-        initial_status = kwargs.get("status", "status_todo")
+        status_semantics = await load_task_status_semantics(self.session, project_id)
+        initial_status = kwargs.get("status") or status_semantics.id_for(TaskStatusSemantic.TODO)
 
         task = Task(
             project_id=project_id,
@@ -809,10 +830,9 @@ class TaskOperations(BaseContentOperations[Task]):
             sprint_id=kwargs.get("sprint_id"),
             estimated_minutes=kwargs.get("estimated_minutes"),
             time_spent_minutes=kwargs.get("time_spent_minutes"),
-            # Creating straight into the done column has to stamp completion the
-            # same way moving a task there does; otherwise the task reads as
-            # open everywhere completion is measured by ``completed_at``.
-            completed_at=datetime.now(UTC) if initial_status == "status_done" else None,
+            completed_at=(
+                datetime.now(UTC) if status_semantics.is_completed(initial_status) else None
+            ),
         )
         self.session.add(task)
         await self.session.flush()
@@ -822,9 +842,9 @@ class TaskOperations(BaseContentOperations[Task]):
 
         watcher_user_ids = [user_id]
         if task.assignee_ids:
-            watcher_user_ids += await self._expand_assignees_to_users(
-                [UUID(uid) for uid in task.assignee_ids]
-            )
+            watcher_user_ids += await self._expand_assignees_to_users([
+                UUID(uid) for uid in task.assignee_ids
+            ])
         await WatcherOperations(self.session).ensure_watching(
             watcher_user_ids, organization_id, task.id
         )
@@ -862,10 +882,15 @@ class TaskOperations(BaseContentOperations[Task]):
         channel; OPEN_TO_ORG projects are visible to everyone anyway.
         """
         default_mode, default_baseline = await resolve_content_defaults(
-            self.session, organization_id, ContentType.PROJECT,
+            self.session,
+            organization_id,
+            ContentType.PROJECT,
         )
         effective_mode, _ = resolve_effective_policy(
-            project.access_mode, project.baseline_role, default_mode, default_baseline,
+            project.access_mode,
+            project.baseline_role,
+            default_mode,
+            default_baseline,
         )
         if effective_mode == AccessMode.OPEN_TO_ORG:
             return None
@@ -909,9 +934,13 @@ class TaskOperations(BaseContentOperations[Task]):
         await self._require_edit(user_id, organization_id, task)
 
         tag_ids = kwargs.pop("tag_ids", None)
+        status_semantics = await load_task_status_semantics(self.session, task.project_id)
+        old_status_completed = status_semantics.is_completed(task.status)
+        proposed_status = kwargs.get("status", task.status)
+        new_status_completed = status_semantics.is_completed(proposed_status)
 
-        if "status" in kwargs and kwargs["status"] != task.status:
-            unresolved = await self._check_blockers_resolved(task, kwargs["status"])
+        if "status" in kwargs and kwargs["status"] != task.status:  # noqa: PLR2004
+            unresolved = await self._check_blockers_resolved(task, new_status_completed)
             if unresolved:
                 blocker_names = [f"#{b['number']} {b['title']}" for b in unresolved[:5]]
                 suffix = f" and {len(unresolved) - 5} more" if len(unresolved) > 5 else ""
@@ -921,10 +950,10 @@ class TaskOperations(BaseContentOperations[Task]):
                     f"{', '.join(blocker_names)}{suffix}",
                 )
 
-        if "blocked_by_task_ids" in kwargs and kwargs["blocked_by_task_ids"]:
+        if "blocked_by_task_ids" in kwargs and kwargs["blocked_by_task_ids"]:  # noqa: PLR2004
             await self._validate_no_circular_dependency(task_id, kwargs["blocked_by_task_ids"])
 
-        if "parent_id" in kwargs and kwargs["parent_id"] is not None:
+        if "parent_id" in kwargs and kwargs["parent_id"] is not None:  # noqa: PLR2004
             proposed_parent = kwargs["parent_id"]
             if isinstance(proposed_parent, str):
                 proposed_parent = UUID(proposed_parent)
@@ -945,16 +974,14 @@ class TaskOperations(BaseContentOperations[Task]):
 
         old_references = list(task.outgoing_references) if task.outgoing_references else None
 
-        title_changed = "title" in kwargs and kwargs["title"] != task.title
+        title_changed = "title" in kwargs and kwargs["title"] != task.title  # noqa: PLR2004
         old_status = task.status
         old_due_date = task.due_date
         old_priority = task.priority
         old_assignee_ids = list(task.assignee_ids) if task.assignee_ids else []
         old_title = task.title
         previous_parent_id = task.parent_id
-        parent_changed = (
-            "parent_id" in kwargs and kwargs.get("parent_id") != task.parent_id
-        )
+        parent_changed = "parent_id" in kwargs and kwargs.get("parent_id") != task.parent_id  # noqa: PLR2004
 
         nullable_fields = {
             "start_date",
@@ -974,46 +1001,46 @@ class TaskOperations(BaseContentOperations[Task]):
                 continue
             old_value = getattr(task, key)
 
-            if key == "field_values" and isinstance(value, dict):
+            if key == "field_values" and isinstance(value, dict):  # noqa: PLR2004
                 merged = dict(task.field_values or {})
                 merged.update(value)
                 setattr(task, key, merged)
             else:
                 setattr(task, key, value)
 
-            if key == "status" and old_value != value:
-                if value == "status_done" and task.completed_at is None:
+            if key == "status" and old_value != value:  # noqa: PLR2004
+                if new_status_completed and not old_status_completed:
                     task.completed_at = datetime.now(UTC)
-                elif old_value == "status_done" and value != "status_done":
+                elif old_status_completed and not new_status_completed:
                     task.completed_at = None
 
                 await self._log_activity(
                     task_id,
                     user_id,
                     "status_changed",
-                    field_id="field_status",
+                    field_id=SystemProjectFieldId.STATUS,
                     previous_value=str(old_value),
                     new_value=str(value),
                 )
-            elif key == "priority" and old_value != value:
+            elif key == "priority" and old_value != value:  # noqa: PLR2004
                 await self._log_activity(
                     task_id,
                     user_id,
                     "priority_changed",
-                    field_id="field_priority",
+                    field_id=SystemProjectFieldId.PRIORITY,
                     previous_value=str(old_value),
                     new_value=str(value),
                 )
-            elif key == "task_type" and old_value != value:
+            elif key == "task_type" and old_value != value:  # noqa: PLR2004
                 await self._log_activity(
                     task_id,
                     user_id,
                     "type_changed",
-                    field_id="field_type",
+                    field_id=SystemProjectFieldId.TYPE,
                     previous_value=str(old_value),
                     new_value=str(value),
                 )
-            elif key == "sprint_id" and old_value != value:
+            elif key == "sprint_id" and old_value != value:  # noqa: PLR2004
                 await self._log_activity(
                     task_id,
                     user_id,
@@ -1021,17 +1048,17 @@ class TaskOperations(BaseContentOperations[Task]):
                     previous_value=str(old_value) if old_value else None,
                     new_value=str(value) if value else None,
                 )
-            elif key == "assignee_ids" and old_value != value:
+            elif key == "assignee_ids" and old_value != value:  # noqa: PLR2004
                 await self._log_activity(
                     task_id,
                     user_id,
                     "assigned",
-                    field_id="field_assignee",
+                    field_id=SystemProjectFieldId.ASSIGNEE,
                     previous_value=",".join(old_value) if old_value else None,
                     new_value=",".join(value) if value else None,
                 )
 
-        if "description" in kwargs:
+        if "description" in kwargs:  # noqa: PLR2004
             task.outgoing_references = queries.extract_urns_from_content(task.description) or None
 
         task.version += 1
@@ -1043,22 +1070,20 @@ class TaskOperations(BaseContentOperations[Task]):
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.TASK_MOVED,
-                resource_type=ContentType.TASK.value,
+                resource_type=AuditResourceType.TASK,
                 resource_id=task_id,
                 details={
-                    "previous_parent_id": (
-                        str(previous_parent_id) if previous_parent_id else None
-                    ),
+                    "previous_parent_id": (str(previous_parent_id) if previous_parent_id else None),
                     "new_parent_id": str(task.parent_id) if task.parent_id else None,
                 },
             )
 
-        if "assignee_ids" in kwargs:
+        if "assignee_ids" in kwargs:  # noqa: PLR2004
             newly_assigned = set(task.assignee_ids or []) - set(old_assignee_ids or [])
             if newly_assigned:
-                member_ids = await self._expand_assignees_to_users(
-                    [UUID(uid) for uid in newly_assigned]
-                )
+                member_ids = await self._expand_assignees_to_users([
+                    UUID(uid) for uid in newly_assigned
+                ])
                 if member_ids:
                     await WatcherOperations(self.session).ensure_watching(
                         member_ids, organization_id, task.id
@@ -1077,17 +1102,17 @@ class TaskOperations(BaseContentOperations[Task]):
         )
 
         changes: list[str] = []
-        if "status" in kwargs and kwargs["status"] != old_status:
+        if "status" in kwargs and kwargs["status"] != old_status:  # noqa: PLR2004
             label = task.status.replace("status_", "").replace("_", " ").title()
             changes.append(f'Status changed to "{label}"')
-        if "priority" in kwargs:
+        if "priority" in kwargs:  # noqa: PLR2004
             label = task.priority.replace("priority_", "").replace("_", " ").title()
             changes.append(f'Priority changed to "{label}"')
-        if "assignee_ids" in kwargs:
+        if "assignee_ids" in kwargs:  # noqa: PLR2004
             changes.append("Assignees updated")
         if title_changed:
             changes.append("Title updated")
-        if "due_date" in kwargs and task.due_date != old_due_date:
+        if "due_date" in kwargs and task.due_date != old_due_date:  # noqa: PLR2004
             changes.append("Due date updated")
         if changes:
             await self._emit_watcher_notifications(task, user_id, "; ".join(changes))
@@ -1104,8 +1129,7 @@ class TaskOperations(BaseContentOperations[Task]):
                 await self.session.commit()
             except Exception:
                 logger.opt(exception=True).warning(
-                    "Failed to propagate task rename to mentions",
-                    task_id=str(task_id)
+                    "Failed to propagate task rename to mentions", task_id=str(task_id)
                 )
 
         mention_changes: dict[str, str] = {}
@@ -1136,18 +1160,20 @@ class TaskOperations(BaseContentOperations[Task]):
                 )
             except Exception:
                 logger.opt(exception=True).warning(
-                    "Failed to publish task mention state change",
-                    task_id=str(task_id)
+                    "Failed to publish task mention state change", task_id=str(task_id)
                 )
 
-        if task.parent_id and task.status == "status_done" and old_status != "status_done":
+        became_completed = new_status_completed and not old_status_completed
+        became_incomplete = old_status_completed and not new_status_completed
+
+        if task.parent_id and became_completed:
             parent_counts = await queries.get_subtask_counts(self.session, [task.parent_id])
             p_total, p_done = parent_counts.get(task.parent_id, (0, 0))
             if p_total > 0 and p_total == p_done:
                 parent = await self.session.get(Task, task.parent_id)
-                if parent and parent.status != "status_done" and not parent.is_deleted:
+                if parent and parent.completed_at is None and not parent.is_deleted:
                     old_parent_status = parent.status
-                    parent.status = "status_done"
+                    parent.status = status_semantics.id_for(TaskStatusSemantic.COMPLETED)
                     parent.completed_at = datetime.now(UTC)
                     parent.version += 1
                     parent.updated_at = datetime.now(UTC)
@@ -1158,14 +1184,15 @@ class TaskOperations(BaseContentOperations[Task]):
                         parent.id,
                         user_id,
                         "status_changed",
-                        field_id="field_status",
+                        field_id=SystemProjectFieldId.STATUS,
                         previous_value=old_parent_status,
-                        new_value="status_done",
+                        new_value=parent.status,
                     )
-        elif task.parent_id and old_status == "status_done" and task.status != "status_done":
+        elif task.parent_id and became_incomplete:
             parent = await self.session.get(Task, task.parent_id)
-            if parent and parent.status == "status_done" and not parent.is_deleted:
-                parent.status = "status_in_progress"
+            if parent and parent.completed_at is not None and not parent.is_deleted:
+                old_parent_status = parent.status
+                parent.status = status_semantics.id_for(TaskStatusSemantic.IN_PROGRESS)
                 parent.completed_at = None
                 parent.version += 1
                 parent.updated_at = datetime.now(UTC)
@@ -1176,14 +1203,18 @@ class TaskOperations(BaseContentOperations[Task]):
                     parent.id,
                     user_id,
                     "status_changed",
-                    field_id="field_status",
-                    previous_value="status_done",
-                    new_value="status_in_progress",
+                    field_id=SystemProjectFieldId.STATUS,
+                    previous_value=old_parent_status,
+                    new_value=parent.status,
                 )
 
         spawned_task: Task | None = None
-        if task.recurrence_rule and task.status == "status_done" and old_status != "status_done":
-            spawned_task = await self._spawn_next_recurring_instance(task, organization_id)
+        if task.recurrence_rule and became_completed:
+            spawned_task = await self._spawn_next_recurring_instance(
+                task,
+                organization_id,
+                status_semantics,
+            )
 
         return task, spawned_task
 
@@ -1191,6 +1222,7 @@ class TaskOperations(BaseContentOperations[Task]):
         self,
         completed_task: Task,
         organization_id: UUID,
+        status_semantics: TaskStatusSemantics,
     ) -> Task | None:
         config = parse_recurrence_config(completed_task.recurrence_rule)
         if not config:
@@ -1226,7 +1258,7 @@ class TaskOperations(BaseContentOperations[Task]):
             owner_id=completed_task.owner_id,
             title=completed_task.title,
             description=completed_task.description or "",
-            status="status_todo",
+            status=status_semantics.id_for(TaskStatusSemantic.TODO),
             priority=completed_task.priority,
             assignee_ids=(
                 list(completed_task.assignee_ids) if completed_task.assignee_ids else None
@@ -1314,10 +1346,8 @@ class TaskOperations(BaseContentOperations[Task]):
             self.session,
             organization_id=organization_id,
             actor_user_id=user_id,
-            action=(
-                Action.TASK_PERMANENTLY_DELETED if permanent else Action.TASK_DELETED
-            ),
-            resource_type=ContentType.TASK.value,
+            action=(Action.TASK_PERMANENTLY_DELETED if permanent else Action.TASK_DELETED),
+            resource_type=AuditResourceType.TASK,
             resource_id=task_id,
             details={"title": task.title, "project_id": str(task.project_id)},
         )
@@ -1338,7 +1368,7 @@ class TaskOperations(BaseContentOperations[Task]):
         sprint_id: UUID | None = None,
         backlog_only: bool = False,
         tag_ids: list[UUID] | None = None,
-        tag_filter_mode: str = "all",
+        tag_filter_mode: ProjectTagFilterMode = ProjectTagFilterMode.ALL,
         in_epic_id: UUID | None = None,
         root_only: bool = False,
         has_subtasks: bool | None = None,
@@ -1374,10 +1404,10 @@ class TaskOperations(BaseContentOperations[Task]):
             query = query.where(Task.sprint_id.is_(None))
 
         if tag_ids:
-            mode = (tag_filter_mode or "all").lower()
-            if mode == "any":
+            mode = ProjectTagFilterMode(tag_filter_mode or ProjectTagFilterMode.ALL)
+            if mode is ProjectTagFilterMode.ANY:
                 query = query.where(Task.id.in_(self._tag_any_subquery(tag_ids)))
-            elif mode == "none":
+            elif mode is ProjectTagFilterMode.NONE:
                 query = query.where(not_(Task.id.in_(self._tag_any_subquery(tag_ids))))
             else:
                 query = query.where(Task.id.in_(self._tag_filter_subquery(tag_ids)))
@@ -1401,21 +1431,14 @@ class TaskOperations(BaseContentOperations[Task]):
                     not_(Task.id.in_(child_exists.with_only_columns(Task.parent_id)))
                 )
 
-        needs_ancestry = (
-            in_epic_id is not None or min_depth is not None or max_depth is not None
-        )
+        needs_ancestry = in_epic_id is not None or min_depth is not None or max_depth is not None
         if needs_ancestry:
             ancestry = self._build_ancestry_cte(project_id, organization_id)
             ancestry_filter = select(ancestry.c.task_id)
             if in_epic_id is not None:
-                ancestry_filter = ancestry_filter.where(
-                    ancestry.c.ancestor_id == in_epic_id
-                )
+                ancestry_filter = ancestry_filter.where(ancestry.c.ancestor_id == in_epic_id)
             if min_depth is not None or max_depth is not None:
-                depth_per_task = (
-                    select(ancestry.c.task_id)
-                    .group_by(ancestry.c.task_id)
-                )
+                depth_per_task = select(ancestry.c.task_id).group_by(ancestry.c.task_id)
                 conditions = []
                 if min_depth is not None:
                     conditions.append(func.max(ancestry.c.depth) >= min_depth)
@@ -1442,19 +1465,16 @@ class TaskOperations(BaseContentOperations[Task]):
         0 marking the task itself.
         """
         task_alias = Task.__table__.alias("t_anchor")
-        base = (
-            select(
-                task_alias.c.id.label("task_id"),
-                task_alias.c.id.label("ancestor_id"),
-                task_alias.c.parent_id.label("next_parent_id"),
-                literal(0).label("depth"),
-            )
-            .where(
-                and_(
-                    task_alias.c.project_id == project_id,
-                    task_alias.c.organization_id == organization_id,
-                    task_alias.c.is_deleted == False,  # noqa: E712
-                )
+        base = select(
+            task_alias.c.id.label("task_id"),
+            task_alias.c.id.label("ancestor_id"),
+            task_alias.c.parent_id.label("next_parent_id"),
+            literal(0).label("depth"),
+        ).where(
+            and_(
+                task_alias.c.project_id == project_id,
+                task_alias.c.organization_id == organization_id,
+                task_alias.c.is_deleted == False,  # noqa: E712
             )
         )
         ancestry = base.cte(name="task_ancestry", recursive=True)
@@ -1467,9 +1487,7 @@ class TaskOperations(BaseContentOperations[Task]):
                 parent_alias.c.parent_id.label("next_parent_id"),
                 (ancestry.c.depth + 1).label("depth"),
             )
-            .select_from(
-                ancestry.join(parent_alias, parent_alias.c.id == ancestry.c.next_parent_id)
-            )
+            .select_from(ancestry.join(parent_alias, parent_alias.c.id == ancestry.c.next_parent_id))
             .where(
                 and_(
                     parent_alias.c.organization_id == organization_id,
@@ -1482,9 +1500,9 @@ class TaskOperations(BaseContentOperations[Task]):
     async def _check_blockers_resolved(
         self,
         task: Task,
-        new_status: str,
+        completing: bool,
     ) -> list[dict[str, str]]:
-        if new_status != "status_done":
+        if not completing:
             return []
 
         if not task.blocked_by_task_ids:
@@ -1496,7 +1514,7 @@ class TaskOperations(BaseContentOperations[Task]):
                 and_(
                     Task.id.in_(blocker_ids),
                     Task.is_deleted == False,  # noqa: E712
-                    Task.status != "status_done",
+                    Task.completed_at.is_(None),
                 )
             )
         )
@@ -1573,15 +1591,11 @@ class TaskOperations(BaseContentOperations[Task]):
 
         while current is not None:
             if current in visited:
-                raise ValidationError(
-                    "parent_id", "Parent chain already contains a cycle"
-                )
+                raise ValidationError("parent_id", "Parent chain already contains a cycle")
             visited.add(current)
 
             if depth > max_depth:
-                raise ValidationError(
-                    "parent_id", f"Maximum nesting depth is {max_depth}"
-                )
+                raise ValidationError("parent_id", f"Maximum nesting depth is {max_depth}")
 
             result = await self.session.execute(
                 select(Task.parent_id).where(
@@ -1634,18 +1648,19 @@ class TaskOperations(BaseContentOperations[Task]):
         status_id: str,
         priority_id: str,
     ) -> dict[str, str]:
-        from uniffy.core.models.projects.field_definition import FieldDefinition
-
         stmt = select(FieldDefinition.id, FieldDefinition.config).where(
             FieldDefinition.project_id == project_id,
-            FieldDefinition.id.in_(["field_status", "field_priority"]),
+            FieldDefinition.id.in_([
+                SystemProjectFieldId.STATUS,
+                SystemProjectFieldId.PRIORITY,
+            ]),
         )
         result = await self.session.execute(stmt)
         resolved: dict[str, str] = {}
         for row in result.all():
             options = (row.config or {}).get("options", [])
-            target_id = status_id if row.id == "field_status" else priority_id
-            prefix = "status" if row.id == "field_status" else "priority"
+            target_id = status_id if row.id == SystemProjectFieldId.STATUS else priority_id
+            prefix = "status" if row.id == SystemProjectFieldId.STATUS else "priority"
             for opt in options:
                 if opt.get("id") == target_id:
                     resolved[f"{prefix}_label"] = opt.get("label", "")
@@ -1662,9 +1677,7 @@ class TaskOperations(BaseContentOperations[Task]):
         if not assignee_ids:
             return []
 
-        group_rows = await self.session.execute(
-            select(Group.id).where(Group.id.in_(assignee_ids))
-        )
+        group_rows = await self.session.execute(select(Group.id).where(Group.id.in_(assignee_ids)))
         group_ids = {row[0] for row in group_rows.all()}
 
         resolved: set[UUID] = {uid for uid in assignee_ids if uid not in group_ids}
@@ -1922,10 +1935,10 @@ class SprintOperations:
         sprint = await self._get_sprint(sprint_id, organization_id)
         await self._verify_project_manage(user_id, organization_id, sprint.project_id)
 
-        if sprint.status == "active":
+        if sprint.status == SprintStatus.ACTIVE:
             return sprint
 
-        sprint.status = "active"
+        sprint.status = SprintStatus.ACTIVE
         if start_date is not None:
             sprint.start_date = start_date
         if end_date is not None:
@@ -1950,7 +1963,7 @@ class SprintOperations:
         sprint = await self._get_sprint(sprint_id, organization_id)
         await self._verify_project_manage(user_id, organization_id, sprint.project_id)
 
-        sprint.status = "closed"
+        sprint.status = SprintStatus.CLOSED
         sprint.updated_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(sprint)
@@ -1994,7 +2007,7 @@ class SprintOperations:
         )
 
         if not include_closed:
-            query = query.where(Sprint.status != "closed")
+            query = query.where(Sprint.status != SprintStatus.CLOSED)
 
         query = query.order_by(Sprint.sort_order.asc(), Sprint.created_at.asc())
 
@@ -2074,18 +2087,16 @@ class WatcherOperations:
         now = datetime.now(UTC)
         await self.session.execute(
             pg_insert(TaskWatcher)
-            .values(
-                [
-                    {
-                        "id": generate_id(),
-                        "user_id": uid,
-                        "organization_id": organization_id,
-                        "task_id": task_id,
-                        "created_at": now,
-                    }
-                    for uid in valid_ids
-                ]
-            )
+            .values([
+                {
+                    "id": generate_id(),
+                    "user_id": uid,
+                    "organization_id": organization_id,
+                    "task_id": task_id,
+                    "created_at": now,
+                }
+                for uid in valid_ids
+            ])
             .on_conflict_do_nothing(constraint="uq_task_watchers_user_task")
         )
 
@@ -2171,14 +2182,18 @@ async def _project_attachment_cascade(
     project_id: UUID,
 ) -> list[tuple[ContentType, UUID]]:
     rows = (
-        await session.execute(
-            select(Task.id).where(
-                Task.project_id == project_id,
-                Task.organization_id == organization_id,
-                Task.is_deleted == False,  # noqa: E712
+        (
+            await session.execute(
+                select(Task.id).where(
+                    Task.project_id == project_id,
+                    Task.organization_id == organization_id,
+                    Task.is_deleted == False,  # noqa: E712
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return [(ContentType.TASK, task_id) for task_id in rows]
 
 

@@ -1,5 +1,4 @@
-"""Bundled skill file-to-row sync.
-"""
+"""Bundled skill file-to-row sync."""
 
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID

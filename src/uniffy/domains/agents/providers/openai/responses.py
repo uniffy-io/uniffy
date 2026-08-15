@@ -20,7 +20,9 @@ from uuid import uuid4
 
 from loguru import logger
 
+from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.domains.agents.providers.base import (
+    CanonicalContentBlockType,
     CompletionResult,
     EventType,
     StreamEvent,
@@ -62,7 +64,7 @@ def _normalize_schema_node(node: object) -> None:
     if isinstance(items, dict):
         _normalize_schema_node(items)
 
-    if node.get("type") != "object" and "properties" not in node:
+    if node.get("type") != "object" and "properties" not in node:  # noqa: PLR2004
         return
     properties = node.setdefault("properties", {})
     if not isinstance(properties, dict):
@@ -82,13 +84,13 @@ def _make_nullable(schema: object) -> None:
     schema_type = schema.get("type")
     if isinstance(schema_type, str):
         schema["type"] = [schema_type, "null"]
-    elif isinstance(schema_type, list) and "null" not in schema_type:
+    elif isinstance(schema_type, list) and "null" not in schema_type:  # noqa: PLR2004
         schema["type"] = [*schema_type, "null"]
-    elif "anyOf" in schema:
+    elif "anyOf" in schema:  # noqa: PLR2004
         branches = schema["anyOf"]
-        if not any(isinstance(branch, dict) and branch.get("type") == "null" for branch in branches):
+        if not any(isinstance(branch, dict) and branch.get("type") == "null" for branch in branches):  # noqa: PLR2004
             branches.append({"type": "null"})
-    if "enum" in schema and None not in schema["enum"]:
+    if "enum" in schema and None not in schema["enum"]:  # noqa: PLR2004
         schema["enum"] = [*schema["enum"], None]
 
 
@@ -112,11 +114,11 @@ def convert_messages_to_responses(messages: list[dict]) -> list[dict]:
         if not isinstance(content, list):
             continue
 
-        if role == "assistant":
+        if role == AgentMessageRole.ASSISTANT:
             items.extend(_assistant_blocks_to_items(content))
             continue
 
-        tool_results = [b for b in content if b.get("type") == "tool_result"]
+        tool_results = [b for b in content if b.get("type") == CanonicalContentBlockType.TOOL_RESULT]
         if tool_results:
             for block in tool_results:
                 items.append({
@@ -139,9 +141,9 @@ def _assistant_blocks_to_items(blocks: list[dict]) -> list[dict]:
         btype = block.get("type")
         if btype == REASONING_BLOCK_TYPE:
             items.append(block["item"])
-        elif btype == "text":
+        elif btype == CanonicalContentBlockType.TEXT:
             text_parts.append(block.get("text", ""))
-        elif btype == "tool_use":
+        elif btype == CanonicalContentBlockType.TOOL_USE:
             items.append({
                 "type": "function_call",
                 "call_id": block["id"],
@@ -152,7 +154,7 @@ def _assistant_blocks_to_items(blocks: list[dict]) -> list[dict]:
     if text:
         # Prior-turn assistant text must precede its function calls.
         insert_at = next(
-            (i for i, item in enumerate(items) if item.get("type") == "function_call"),
+            (i for i, item in enumerate(items) if item.get("type") == "function_call"),  # noqa: PLR2004
             len(items),
         )
         items.insert(
@@ -169,16 +171,16 @@ def _user_blocks_to_parts(blocks: list[dict]) -> list[dict]:
     parts: list[dict] = []
     for block in blocks:
         btype = block.get("type", "")
-        if btype == "text":
+        if btype == CanonicalContentBlockType.TEXT:
             parts.append({"type": "input_text", "text": block["text"]})
-        elif btype == "image":
+        elif btype == CanonicalContentBlockType.IMAGE:
             media_type = block.get("media_type", "image/png")
             data = block.get("data", "")
             parts.append({
                 "type": "input_image",
                 "image_url": f"data:{media_type};base64,{data}",
             })
-        elif btype == "document":
+        elif btype == CanonicalContentBlockType.DOCUMENT:
             filename = block.get("filename", "document.pdf")
             if block.get("data"):
                 media_type = block.get("media_type", "application/pdf")
@@ -195,7 +197,9 @@ def _user_blocks_to_parts(blocks: list[dict]) -> list[dict]:
 def _tool_result_text(block: dict) -> str:
     content = block.get("content", "")
     if isinstance(content, list):
-        return "\n".join(b.get("text", "") for b in content if b.get("type") == "text")
+        return "\n".join(
+            b.get("text", "") for b in content if b.get("type") == CanonicalContentBlockType.TEXT
+        )
     return str(content)
 
 
@@ -251,20 +255,20 @@ def _result_from_response(
     thinking_blocks: list[dict] = []
     for item in response.output or []:
         itype = getattr(item, "type", "")
-        if itype == "message":
+        if itype == "message":  # noqa: PLR2004
             for part in getattr(item, "content", None) or []:
                 part_type = getattr(part, "type", "")
-                if part_type == "output_text":
+                if part_type == "output_text":  # noqa: PLR2004
                     content_parts.append(part.text)
-                elif part_type == "refusal":
+                elif part_type == "refusal":  # noqa: PLR2004
                     content_parts.append(part.refusal)
-        elif itype == "function_call":
+        elif itype == "function_call":  # noqa: PLR2004
             try:
                 args = json.loads(item.arguments)
             except json.JSONDecodeError, TypeError:
                 args = {}
             tool_calls.append(ToolCall(id=item.call_id, name=item.name, input=args))
-        elif itype == "reasoning":
+        elif itype == "reasoning":  # noqa: PLR2004
             thinking_blocks.append({
                 "type": REASONING_BLOCK_TYPE,
                 "item": item.model_dump(exclude_none=True),
@@ -289,9 +293,9 @@ def _result_from_response(
 
 
 def _stop_reason(response: Any, tool_calls: list[ToolCall]) -> str:
-    if getattr(response, "status", "") == "incomplete":
+    if getattr(response, "status", "") == "incomplete":  # noqa: PLR2004
         details = getattr(response, "incomplete_details", None)
-        if getattr(details, "reason", "") == "max_output_tokens":
+        if getattr(details, "reason", "") == "max_output_tokens":  # noqa: PLR2004
             return "max_tokens"
     return "tool_use" if tool_calls else "end_turn"
 
@@ -347,15 +351,15 @@ async def stream_completion(
         async for event in stream:
             etype = getattr(event, "type", "")
 
-            if etype == "response.output_item.added":
+            if etype == "response.output_item.added":  # noqa: PLR2004
                 item = event.item
                 block_id = uuid4().hex[:12]
                 block_ids[item.id or block_id] = block_id
-                if item.type == "reasoning":
+                if item.type == "reasoning":  # noqa: PLR2004
                     yield StreamEvent(type=EventType.THINKING_BLOCK_START, block_id=block_id)
-                elif item.type == "message":
+                elif item.type == "message":  # noqa: PLR2004
                     yield StreamEvent(type=EventType.TEXT_BLOCK_START, block_id=block_id)
-                elif item.type == "function_call":
+                elif item.type == "function_call":  # noqa: PLR2004
                     pending_calls[item.id or block_id] = {
                         "id": item.call_id or "",
                         "name": item.name or "",
@@ -367,7 +371,7 @@ async def stream_completion(
                         tool_name=item.name or "",
                     )
 
-            elif etype == "response.reasoning_summary_part.added":
+            elif etype == "response.reasoning_summary_part.added":  # noqa: PLR2004
                 # Summary parts are standalone sections; without a
                 # separator the next part's heading glues onto the
                 # previous sentence.
@@ -378,7 +382,7 @@ async def stream_completion(
                         delta="\n\n",
                     )
 
-            elif etype == "response.reasoning_summary_text.delta":
+            elif etype == "response.reasoning_summary_text.delta":  # noqa: PLR2004
                 yield StreamEvent(
                     type=EventType.THINKING_BLOCK_DELTA,
                     block_id=block_ids.get(event.item_id, ""),
@@ -392,7 +396,7 @@ async def stream_completion(
                     delta=event.delta,
                 )
 
-            elif etype == "response.function_call_arguments.delta":
+            elif etype == "response.function_call_arguments.delta":  # noqa: PLR2004
                 pending = pending_calls.get(event.item_id, {})
                 yield StreamEvent(
                     type=EventType.TOOL_CALL_DELTA,
@@ -402,14 +406,14 @@ async def stream_completion(
                     delta=event.delta,
                 )
 
-            elif etype == "response.output_item.done":
+            elif etype == "response.output_item.done":  # noqa: PLR2004
                 item = event.item
                 block_id = block_ids.get(item.id or "", "")
-                if item.type == "reasoning":
+                if item.type == "reasoning":  # noqa: PLR2004
                     yield StreamEvent(type=EventType.THINKING_BLOCK_END, block_id=block_id)
-                elif item.type == "message":
+                elif item.type == "message":  # noqa: PLR2004
                     yield StreamEvent(type=EventType.TEXT_BLOCK_END, block_id=block_id)
-                elif item.type == "function_call":
+                elif item.type == "function_call":  # noqa: PLR2004
                     try:
                         args = json.loads(item.arguments)
                     except json.JSONDecodeError, TypeError:
@@ -422,7 +426,7 @@ async def stream_completion(
                         tool_args=args,
                     )
 
-            elif etype == "response.completed":
+            elif etype == "response.completed":  # noqa: PLR2004
                 result = _result_from_response(event.response, cost_from_usage)
                 yield StreamEvent(
                     type=EventType.MODEL_CALL_END,
@@ -437,7 +441,7 @@ async def stream_completion(
 
             elif etype in ("response.failed", "response.incomplete"):
                 response = event.response
-                if etype == "response.incomplete":
+                if etype == "response.incomplete":  # noqa: PLR2004
                     result = _result_from_response(response, cost_from_usage)
                     yield StreamEvent(
                         type=EventType.MODEL_CALL_END,

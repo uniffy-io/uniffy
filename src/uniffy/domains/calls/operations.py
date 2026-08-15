@@ -19,6 +19,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calls import (
     Call,
     CallEndReason,
@@ -156,7 +157,7 @@ class CallOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.CALL_STARTED,
-            resource_type="CALL",
+            resource_type=AuditResourceType.CALL,
             resource_id=call.id,
             details={
                 "channel_id": str(channel_id),
@@ -329,7 +330,7 @@ class CallOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.CALL_PARTICIPANT_KICKED,
-            resource_type="CALL",
+            resource_type=AuditResourceType.CALL,
             resource_id=call.id,
             details={
                 "channel_id": str(call.channel_id),
@@ -360,7 +361,7 @@ class CallOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.CALL_PARTICIPANT_MUTED,
-            resource_type="CALL",
+            resource_type=AuditResourceType.CALL,
             resource_id=call.id,
             details=details,
         )
@@ -569,7 +570,7 @@ class CallOperations:
             organization_id=call.organization_id,
             actor_user_id=actor_user_id,
             action=Action.CALL_ENDED,
-            resource_type="CALL",
+            resource_type=AuditResourceType.CALL,
             resource_id=call.id,
             details={
                 "channel_id": str(call.channel_id),
@@ -616,9 +617,7 @@ class CallOperations:
             lookup_ids = participant_ids + ([actor_user_id] if actor_user_id else [])
             profiles = await self.resolve_profiles(lookup_ids)
         except Exception:
-            logger.opt(exception=True).warning(
-                f"Failed to compose call summary for call={call.id}"
-            )
+            logger.opt(exception=True).warning(f"Failed to compose call summary for call={call.id}")
             return
 
         def mention(uid: UUID) -> str:
@@ -698,9 +697,7 @@ class CallOperations:
     async def clear_absence(self, participant: CallParticipant) -> None:
         await self._set_missing_since(participant, None)
 
-    async def _set_missing_since(
-        self, participant: CallParticipant, value: datetime | None
-    ) -> None:
+    async def _set_missing_since(self, participant: CallParticipant, value: datetime | None) -> None:
         await self.session.execute(
             update(CallParticipant)
             .where(CallParticipant.id == participant.id)
@@ -865,9 +862,7 @@ class CallOperations:
             raise ValidationError("call", "Call has ended")
         return call
 
-    async def get_active_participant(
-        self, call_id: UUID, identity: str
-    ) -> CallParticipant | None:
+    async def get_active_participant(self, call_id: UUID, identity: str) -> CallParticipant | None:
         result = await self.session.execute(
             select(CallParticipant).where(
                 CallParticipant.call_id == call_id,
@@ -943,15 +938,11 @@ class CallOperations:
                 "call_policy", "Only organization admins can manage call policy"
             )
 
-    async def get_org_policy_view(
-        self, user_id: UUID, organization_id: UUID
-    ) -> ResolvedCallPolicy:
+    async def get_org_policy_view(self, user_id: UUID, organization_id: UUID) -> ResolvedCallPolicy:
         """Org call policy for the admin surface, materialized to defaults when unset."""
         await self._require_org_admin(user_id, organization_id)
         policy = await self.get_org_policy(organization_id)
-        return policy if policy is not None else ResolvedCallPolicy(
-            organization_id=organization_id
-        )
+        return policy if policy is not None else ResolvedCallPolicy(organization_id=organization_id)
 
     async def update_org_policy(
         self,
@@ -1024,9 +1015,7 @@ async def end_active_call_for_channel(
     return True
 
 
-async def kick_user_from_active_call(
-    session: AsyncSession, channel_id: UUID, user_id: UUID
-) -> None:
+async def kick_user_from_active_call(session: AsyncSession, channel_id: UUID, user_id: UUID) -> None:
     """Chat-side hook (member removed / left): drop every device of the user
     from the channel's active call, SFU first, then DB state."""
     result = await session.execute(

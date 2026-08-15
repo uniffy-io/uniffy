@@ -84,10 +84,14 @@ async def _resolve_effective_policy(
     """Return the agent's effective ``(access_mode, baseline_role)`` for proto emission."""
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
-        organization_id, ContentType.AGENT,
+        organization_id,
+        ContentType.AGENT,
     )
     return resolve_effective_policy(
-        agent.access_mode, agent.baseline_role, default_mode, default_baseline,
+        agent.access_mode,
+        agent.baseline_role,
+        default_mode,
+        default_baseline,
     )
 
 
@@ -120,9 +124,7 @@ async def _hydrate_agent_tags(
     """
     if not agent_ids:
         return {}
-    urn_to_id = {
-        build_content_urn(ContentType.AGENT, aid): aid for aid in agent_ids
-    }
+    urn_to_id = {build_content_urn(ContentType.AGENT, aid): aid for aid in agent_ids}
     tag_ops = TagOperations(session)
     bulk = await tag_ops.get_for_urns(
         organization_id=organization_id,
@@ -177,9 +179,7 @@ class AgentsHandlers:
         soul_prompt = request.soul_prompt if request.HasField("soul_prompt") else ""
         # Empty when omitted so a name-only agent inherits the org default model
         # at run time; a hardcoded fallback here would shadow that default.
-        primary_model = (
-            request.primary_model if request.HasField("primary_model") else ""
-        )
+        primary_model = request.primary_model if request.HasField("primary_model") else ""
         avatar_emoji = request.avatar_emoji if request.HasField("avatar_emoji") else ""
         theme_color = request.theme_color if request.HasField("theme_color") else ""
         is_default = request.is_default if request.HasField("is_default") else False
@@ -254,7 +254,9 @@ class AgentsHandlers:
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, agent,
+                    session,
+                    org_id,
+                    agent,
                 )
                 return CreateAgentResponse(
                     agent=agent_to_proto(
@@ -287,7 +289,9 @@ class AgentsHandlers:
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, agent,
+                    session,
+                    org_id,
+                    agent,
                 )
                 return GetAgentResponse(
                     agent=agent_to_proto(
@@ -342,17 +346,19 @@ class AgentsHandlers:
                 )
                 total_pages = (total + page_size - 1) // page_size if page_size else 1
                 roles = [await ops.resolve_role(user_id, org_id, a) for a in agents]
-                tags_by_id = await _hydrate_agent_tags(
-                    session, org_id, [a.id for a in agents]
-                )
+                tags_by_id = await _hydrate_agent_tags(session, org_id, [a.id for a in agents])
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
-                    org_id, ContentType.AGENT,
+                    org_id,
+                    ContentType.AGENT,
                 )
                 proto_agents = []
                 for a, r in zip(agents, roles, strict=True):
                     eff_mode, eff_baseline = resolve_effective_policy(
-                        a.access_mode, a.baseline_role, default_mode, default_baseline,
+                        a.access_mode,
+                        a.baseline_role,
+                        default_mode,
+                        default_baseline,
                     )
                     proto_agents.append(
                         agent_to_proto(
@@ -390,12 +396,8 @@ class AgentsHandlers:
             async with open_session() as session:
                 await require_agents_builder(session, user_id, org_id)
 
-                names = [
-                    name for t in AGENT_TEMPLATES for name in t.bundled_skill_names
-                ]
-                id_by_name = await SkillOperations(session).resolve_bundled_skill_id_map(
-                    names
-                )
+                names = [name for t in AGENT_TEMPLATES for name in t.bundled_skill_names]
+                id_by_name = await SkillOperations(session).resolve_bundled_skill_id_map(names)
                 return ListAgentTemplatesResponse(
                     templates=[
                         agent_template_to_proto(
@@ -535,7 +537,9 @@ class AgentsHandlers:
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, agent,
+                    session,
+                    org_id,
+                    agent,
                 )
                 return UpdateAgentResponse(
                     agent=agent_to_proto(
@@ -596,7 +600,9 @@ class AgentsHandlers:
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, agent,
+                    session,
+                    org_id,
+                    agent,
                 )
                 return RestoreAgentResponse(
                     agent=agent_to_proto(
@@ -641,7 +647,9 @@ class AgentsHandlers:
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, agent,
+                    session,
+                    org_id,
+                    agent,
                 )
                 return UploadAgentAvatarResponse(
                     agent=agent_to_proto(
@@ -680,7 +688,9 @@ class AgentsHandlers:
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, agent,
+                    session,
+                    org_id,
+                    agent,
                 )
                 return DeleteAgentAvatarResponse(
                     agent=agent_to_proto(
@@ -743,9 +753,7 @@ class AgentsHandlers:
                 # Preview shows the run's initial state: no groups loaded yet.
                 registry = get_tool_registry()
                 schemas = registry.get_anthropic_schemas(agent.enabled_tools or [])
-                schemas = await filter_integration_tool_schemas(
-                    session, org_id, schemas
-                )
+                schemas = await filter_integration_tool_schemas(session, org_id, schemas)
                 plan = plan_tool_advertisement(registry, schemas, [])
 
                 system_prompt = build_system_prompt(
@@ -778,13 +786,11 @@ class AgentsHandlers:
             refs_with_labels = (
                 (
                     MemoryScopeRef.org(),
-                    "Organization memory (curated by agent managers; "
-                    "visible to all members)",
+                    "Organization memory (curated by agent managers; visible to all members)",
                 ),
                 (
                     MemoryScopeRef.org(agent_id),
-                    "Organization memory kept for you specifically "
-                    "(curated by agent managers)",
+                    "Organization memory kept for you specifically (curated by agent managers)",
                 ),
                 (
                     MemoryScopeRef.user(user_id),
@@ -811,4 +817,3 @@ class AgentsHandlers:
         except Exception:
             logger.opt(exception=True).warning("Failed to fetch memory context for preview")
             return None
-

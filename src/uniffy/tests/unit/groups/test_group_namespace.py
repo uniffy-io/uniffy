@@ -45,9 +45,7 @@ def _as_admin():
     row = OrganizationMember(
         user_id=ACTOR, organization_id=ORG, role=OrganizationRole.ADMIN, is_active=True
     )
-    return patch.object(
-        OrganizationOperations, "get_membership", AsyncMock(return_value=row)
-    )
+    return patch.object(OrganizationOperations, "get_membership", AsyncMock(return_value=row))
 
 
 def _group(**overrides) -> Group:
@@ -87,9 +85,7 @@ class TestEnsureNameAvailable:
 
 class TestResolveSlug:
     async def test_suffixes_until_free(self) -> None:
-        session = _session(
-            [_result(scalar=generate_id()), _result(scalar=generate_id()), _result()]
-        )
+        session = _session([_result(scalar=generate_id()), _result(scalar=generate_id()), _result()])
         assert await resolve_slug(session, ORG, "Engineering") == "engineering-3"
 
 
@@ -121,9 +117,11 @@ class TestCreate:
 class TestUpdate:
     async def test_rename_collision_rejected(self) -> None:
         ops = GroupOperations(_session([_result(scalar=generate_id())]))
-        with _as_admin(), patch.object(
-            GroupOperations, "_fetch", AsyncMock(return_value=_group())
-        ), pytest.raises(ValidationError) as exc:
+        with (
+            _as_admin(),
+            patch.object(GroupOperations, "_fetch", AsyncMock(return_value=_group())),
+            pytest.raises(ValidationError) as exc,
+        ):
             await ops.update(
                 group_id=generate_id(),
                 organization_id=ORG,
@@ -135,9 +133,11 @@ class TestUpdate:
     async def test_managed_name_rejected(self) -> None:
         group = _group(managed_fields=["name", "kind"])
         ops = GroupOperations(_session())
-        with _as_admin(), patch.object(
-            GroupOperations, "_fetch", AsyncMock(return_value=group)
-        ), pytest.raises(ValidationError) as exc:
+        with (
+            _as_admin(),
+            patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+            pytest.raises(ValidationError) as exc,
+        ):
             await ops.update(
                 group_id=group.id, organization_id=ORG, actor_user_id=ACTOR, name="Other"
             )
@@ -146,9 +146,11 @@ class TestUpdate:
     async def test_managed_kind_rejected(self) -> None:
         group = _group(managed_fields=["name", "kind"])
         ops = GroupOperations(_session())
-        with _as_admin(), patch.object(
-            GroupOperations, "_fetch", AsyncMock(return_value=group)
-        ), pytest.raises(ValidationError) as exc:
+        with (
+            _as_admin(),
+            patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+            pytest.raises(ValidationError) as exc,
+        ):
             await ops.update(
                 group_id=group.id,
                 organization_id=ORG,
@@ -160,9 +162,7 @@ class TestUpdate:
     async def test_managed_same_name_is_a_noop_not_an_error(self) -> None:
         group = _group(managed_fields=["name", "kind"])
         ops = GroupOperations(_session())
-        with _as_admin(), patch.object(
-            GroupOperations, "_fetch", AsyncMock(return_value=group)
-        ):
+        with _as_admin(), patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)):
             result = await ops.update(
                 group_id=group.id,
                 organization_id=ORG,

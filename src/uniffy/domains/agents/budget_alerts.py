@@ -22,7 +22,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.agents.budget import AgentBudget
-from uniffy.core.models.agents.budget_alert import AgentBudgetAlert
+from uniffy.core.models.agents.budget_alert import (
+    AgentBudgetAlert,
+    AgentBudgetAlertKind,
+    AgentBudgetAlertScope,
+)
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
@@ -112,9 +116,7 @@ async def _resolve_recipients(
         select(OrganizationMember.user_id).where(
             OrganizationMember.organization_id == organization_id,
             OrganizationMember.is_active.is_(True),
-            OrganizationMember.role.in_(
-                (OrganizationRole.ADMIN, OrganizationRole.OWNER)
-            ),
+            OrganizationMember.role.in_((OrganizationRole.ADMIN, OrganizationRole.OWNER)),
         )
     )
     recipients: set[UUID] = set(members.scalars().all())
@@ -139,12 +141,12 @@ async def _resolve_recipients(
 async def _try_claim_alert(
     session: AsyncSession,
     *,
-    scope: str,
+    scope: AgentBudgetAlertScope,
     organization_id: UUID,
     user_id: UUID | None,
     period_start: datetime,
     threshold: int,
-    kind: str,
+    kind: AgentBudgetAlertKind,
 ) -> bool:
     """Insert a dedupe row and return True when we were first.
 
@@ -173,16 +175,16 @@ async def _try_claim_alert(
 
 def _render_alert(
     *,
-    scope: str,
-    kind: str,
+    scope: AgentBudgetAlertScope,
+    kind: AgentBudgetAlertKind,
     threshold: int,
     current: str,
     limit: str,
     period_start: datetime,
 ) -> tuple[str, str]:
     """Build (title, body) for a budget alert notification."""
-    scope_label = "Organization" if scope == "org" else "User"
-    if kind == "spend":
+    scope_label = "Organization" if scope is AgentBudgetAlertScope.ORGANIZATION else "User"
+    if kind is AgentBudgetAlertKind.SPEND:
         unit = "USD"
         title = f"{scope_label} spend at {threshold}% of budget"
     else:
@@ -261,11 +263,7 @@ async def check_and_fire_alerts(
 
         thresholds = sorted(set((budget.alert_thresholds or []) + [100]))
 
-        if (
-            budget.monthly_limit is not None
-            and budget.monthly_limit > 0
-            and run_cost > 0
-        ):
+        if budget.monthly_limit is not None and budget.monthly_limit > 0 and run_cost > 0:
             curr_total = await _sum_cost(
                 session,
                 organization_id=organization_id,
@@ -274,23 +272,21 @@ async def check_and_fire_alerts(
             )
             prev_total = curr_total - run_cost
             cap = Decimal(budget.monthly_limit)
-            for threshold in _compute_crossings(
-                prev_total, curr_total, cap, thresholds
-            ):
+            for threshold in _compute_crossings(prev_total, curr_total, cap, thresholds):
                 claimed = await _try_claim_alert(
                     session,
-                    scope="org",
+                    scope=AgentBudgetAlertScope.ORGANIZATION,
                     organization_id=organization_id,
                     user_id=None,
                     period_start=period_start,
                     threshold=threshold,
-                    kind="spend",
+                    kind=AgentBudgetAlertKind.SPEND,
                 )
                 if not claimed:
                     continue
                 title, body = _render_alert(
-                    scope="org",
-                    kind="spend",
+                    scope=AgentBudgetAlertScope.ORGANIZATION,
+                    kind=AgentBudgetAlertKind.SPEND,
                     threshold=threshold,
                     current=str(curr_total),
                     limit=str(cap),
@@ -332,18 +328,18 @@ async def check_and_fire_alerts(
             ):
                 claimed = await _try_claim_alert(
                     session,
-                    scope="org",
+                    scope=AgentBudgetAlertScope.ORGANIZATION,
                     organization_id=organization_id,
                     user_id=None,
                     period_start=period_start,
                     threshold=threshold,
-                    kind="image_count",
+                    kind=AgentBudgetAlertKind.IMAGE_COUNT,
                 )
                 if not claimed:
                     continue
                 title, body = _render_alert(
-                    scope="org",
-                    kind="image_count",
+                    scope=AgentBudgetAlertScope.ORGANIZATION,
+                    kind=AgentBudgetAlertKind.IMAGE_COUNT,
                     threshold=threshold,
                     current=str(curr_count),
                     limit=str(int(cap)),

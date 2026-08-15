@@ -30,6 +30,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThreadStats
 from uniffy.core.valkey.streams import (
@@ -111,13 +112,11 @@ class ChatStreamPublisher:
         match event.type:
             case EventType.TEXT_BLOCK_DELTA:
                 await self._publish_text_delta(event)
-            case (
-                EventType.THINKING_BLOCK_DELTA | EventType.THINKING_BLOCK_END
-            ):
+            case EventType.THINKING_BLOCK_DELTA | EventType.THINKING_BLOCK_END:
                 await self._publish_thinking(event)
             case EventType.MESSAGE_STORED:
                 envelope = event.message
-                if envelope.role == "assistant" and envelope.id is not None:
+                if envelope.role == AgentMessageRole.ASSISTANT and envelope.id is not None:
                     self._announced_placeholders.add(envelope.id)
                     await self._publish_message_created(envelope.id)
             case EventType.TOOL_RESULT_START:
@@ -156,9 +155,7 @@ class ChatStreamPublisher:
             case EventType.CONFIRMATION_REQUIRED:
                 if event.message_id is not None:
                     await self._publish_message_created(event.message_id)
-                expires_at = datetime.now(UTC) + timedelta(
-                    seconds=APPROVAL_TTL_SECONDS
-                )
+                expires_at = datetime.now(UTC) + timedelta(seconds=APPROVAL_TTL_SECONDS)
                 request_id = event.request_id or event.message_id or self._agent_id
                 await publish_channel_event_to_members(
                     self._member_ids,
@@ -190,9 +187,7 @@ class ChatStreamPublisher:
                             ),
                             channel_id=self._channel_id,
                         )
-                        await self._publish_message_event(
-                            msg_id, chat_evt.MESSAGE_UPDATED
-                        )
+                        await self._publish_message_event(msg_id, chat_evt.MESSAGE_UPDATED)
                     else:
                         await self._publish_message_created(msg_id)
             case EventType.SKILL_DRAFT:
@@ -466,7 +461,7 @@ class ChatStreamPublisher:
                 ChatMessage.sender_type == SenderType.AGENT,
                 ChatMessage.sender_id == self._agent_id,
                 ChatMessage.reply_to_id == self._trigger_message_id,
-                ChatMessage.message_metadata["streaming"].astext == "true",
+                ChatMessage.message_metadata["streaming"].astext == "true",  # noqa: PLR2004
             )
         )
         for row in result.scalars().all():
@@ -655,5 +650,5 @@ def _truncate_json(payload: dict | None, limit: int = 200) -> str:
             json.dumps(payload, default=str, separators=(",", ":")),
             limit,
         )
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return _truncate(str(payload), limit)

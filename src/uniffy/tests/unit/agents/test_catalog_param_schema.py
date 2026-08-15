@@ -67,12 +67,15 @@ def test_non_reasoner_has_no_effort_knob() -> None:
 
 def test_openrouter_fusion_has_no_static_sampling_knobs() -> None:
     assert get_parameter_schema("openrouter", "openrouter/fusion") == {}
-    assert resolve_request_params(
-        {"temperature": 0.7, "top_p": 0.9, "max_tokens": 4096},
-        None,
-        "openrouter",
-        "openrouter/fusion",
-    ) == {}
+    assert (
+        resolve_request_params(
+            {"temperature": 0.7, "top_p": 0.9, "max_tokens": 4096},
+            None,
+            "openrouter",
+            "openrouter/fusion",
+        )
+        == {}
+    )
 
 
 def test_openrouter_latest_openai_alias_exposes_explicit_no_reasoning() -> None:
@@ -184,7 +187,8 @@ def test_enum_spec_requires_values() -> None:
 
 def _dropped_count(param: str, provider: str = "anthropic") -> float:
     return AGENT_MODEL_PARAM_DROPPED_TOTAL.labels(
-        provider=provider, param=param,
+        provider=provider,
+        param=param,
     )._value.get()
 
 

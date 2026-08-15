@@ -64,7 +64,7 @@ async def realtime(
 
     try:
         payload = decode_access_token(token)
-        if payload.get("type") != "access":
+        if payload.get("type") != "access":  # noqa: PLR2004
             REALTIME_AUTH_FAILURES_TOTAL.labels(reason="wrong_token_type").inc()
             logger.warning(
                 f"realtime upgrade rejected: wrong token type={payload.get('type')!r}",
@@ -81,7 +81,7 @@ async def realtime(
         sid_raw = payload.get("sid")
         try:
             session_id = UUID(sid_raw) if sid_raw else None
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             session_id = None
     except Exception as exc:
         REALTIME_AUTH_FAILURES_TOTAL.labels(reason="decode_error").inc()
@@ -126,8 +126,7 @@ async def realtime(
     if not await is_active_member(user_id, org_id):
         REALTIME_AUTH_FAILURES_TOTAL.labels(reason="membership_revoked").inc()
         logger.warning(
-            f"realtime upgrade rejected: not an active member "
-            f"(user={user_id}, org={org_id})",
+            f"realtime upgrade rejected: not an active member (user={user_id}, org={org_id})",
             component=LOGGER_COMPONENT,
         )
         await ws.close(code=WS_CLOSE_FORBIDDEN, reason="not a member")

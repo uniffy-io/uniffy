@@ -33,7 +33,7 @@ def escape_loguru_markup(s: str) -> str:
 
     Fast-paths the common case where the message contains none of those characters.
     """
-    if not ("{" in s or "}" in s or "<" in s or ">" in s or "[" in s or "]" in s):
+    if not ("{" in s or "}" in s or "<" in s or ">" in s or "[" in s or "]" in s):  # noqa: PLR2004
         return s
 
     return (
@@ -129,7 +129,7 @@ def format_extra(record: dict, color: str) -> str:
         safe_key = escape_loguru_markup(str(key))
         safe_value = escape_loguru_markup(str(value))
 
-        if isinstance(value, str) and " " in safe_value:
+        if isinstance(value, str) and " " in safe_value:  # noqa: PLR2004
             formatted_pairs.append(f'{color}{safe_key}{RESET}="{safe_value}"')
         else:
             formatted_pairs.append(f"{color}{safe_key}{RESET}={safe_value}")
@@ -314,7 +314,7 @@ def configure_loguru(config: ObservabilityConfig) -> None:
     ]
     for logger_name in loggers_to_intercept:
         level = logging_level
-        if "sql" in logger_name:
+        if "sql" in logger_name:  # noqa: PLR2004
             level = log_level_table[config.sqlalchemy_level]
 
         mod_logger = logging.getLogger(logger_name)
@@ -333,7 +333,7 @@ def configure_loguru(config: ObservabilityConfig) -> None:
         http_logger.handlers = []
         http_logger.propagate = False
 
-    if config.console_log_type == "json":
+    if config.console_log_type == "json":  # noqa: PLR2004
         # The custom `sink` already serializes via `serialize()`, so loguru's own
         # `serialize=True` is redundant. `diagnose=True` is intentionally off: it
         # injects local variable values into tracebacks, which leaks data in prod.
@@ -350,7 +350,7 @@ def configure_loguru(config: ObservabilityConfig) -> None:
                 {
                     "sink": sys.stdout,
                     "format": format_info_log,
-                    "filter": lambda record: record["level"].name == "INFO",
+                    "filter": lambda record: record["level"].name == "INFO",  # noqa: PLR2004
                     "level": "INFO",
                     "colorize": False,
                     "diagnose": True,
@@ -358,7 +358,7 @@ def configure_loguru(config: ObservabilityConfig) -> None:
                 {
                     "sink": sys.stdout,
                     "format": format_warning_log,
-                    "filter": lambda record: record["level"].name == "WARNING",
+                    "filter": lambda record: record["level"].name == "WARNING",  # noqa: PLR2004
                     "level": "WARNING",
                     "colorize": False,
                     "diagnose": True,
@@ -383,7 +383,7 @@ def configure_loguru(config: ObservabilityConfig) -> None:
             logger.add(
                 sys.stdout,
                 level="DEBUG",
-                filter=lambda record: record["level"].name == "DEBUG",
+                filter=lambda record: record["level"].name == "DEBUG",  # noqa: PLR2004
                 diagnose=True,
                 colorize=False,
                 format=format_debug_log,
