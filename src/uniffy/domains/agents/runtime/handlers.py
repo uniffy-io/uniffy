@@ -50,9 +50,10 @@ from uniffy.core.errors import (
     RateLimitExceededError,
     ValidationError,
 )
+from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
-from uniffy.core.valkey.queue import get_queue
+from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_agent_message_limits
 from uniffy.core.valkey.streams import (
     get_run_state,
@@ -90,6 +91,7 @@ from uniffy.observability.metrics import (
     AGENT_RUN_RECONNECT_TOTAL,
     AGENT_RUN_SUBSCRIBE_TIMEOUT_TOTAL,
 )
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="agents.runtime.handlers")
 
@@ -117,9 +119,9 @@ async def _enqueue_run(
     invoked_skill_id: UUID | None = None,
 ) -> None:
     """Enqueue ``run_agent_session`` on the egress fleet."""
-    queue = get_queue("egress")
+    queue = get_queue(QueueName.EGRESS)
     await queue.enqueue_job(
-        "run_agent_session",
+        JobName.RUN_AGENT_SESSION,
         str(run_id),
         str(user_id),
         str(organization_id),
@@ -283,7 +285,7 @@ class RuntimeHandlers:
                 runtime_settings.send_deadline_seconds + SUBSCRIBE_TRANSPORT_GRACE_SECONDS,
             ):
                 if event.type is EventType.MESSAGE_STORED:
-                    if user_message is None and event.message.role == "user":
+                    if user_message is None and event.message.role == AgentMessageRole.USER:
                         user_message = event.message
                     continue
 
@@ -413,7 +415,7 @@ class RuntimeHandlers:
                     organization_id=org_id,
                     message_id=message_id,
                 )
-                if msg.role != "user":
+                if msg.role != AgentMessageRole.USER:
                     raise ConnectError(
                         Code.INVALID_ARGUMENT,
                         "rerun is only supported on user messages",

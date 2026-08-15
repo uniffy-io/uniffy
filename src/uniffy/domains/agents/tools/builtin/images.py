@@ -11,10 +11,13 @@ from loguru import logger
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.content.references import sanitize_mention_label
+from uniffy.core.models.audit.event import AuditActorKind, AuditResourceType
+from uniffy.core.models.chat.message import ChatMessageMetadataKind
 from uniffy.domains.agents.providers.catalog import (
     get_image_parameter_schema,
     resolve_image_params,
 )
+from uniffy.domains.agents.providers.catalog.schema import ParamAudience
 from uniffy.domains.agents.tools.builtin.content_space import (
     creation_space_schema,
     parse_creation_space,
@@ -305,10 +308,10 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             organization_id=ctx.organization_id,
             actor_user_id=ctx.user_id,
             action=Action.AGENT_IMAGE_GENERATION,
-            resource_type="FILE",
+            resource_type=AuditResourceType.FILE,
             resource_id=file_id,
             details={
-                "actor_kind": "agent",
+                "actor_kind": AuditActorKind.AGENT,
                 "agent_id": str(ctx.agent_id),
                 "model_id": image_model,
                 "prompt_hash": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
@@ -343,12 +346,12 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     # This runs inside the EGRESS worker, which only initialises its own pool, so
     # it has to reach the core queue through the lazy-reconnect accessor; the
     # raising one would leave every generated image without a thumbnail.
-    from uniffy.core.valkey import get_queue_safe
+    from uniffy.core.valkey import QueueName, get_queue_safe
     from uniffy.workers.utils.mime import get_jobs_for_mime_type
 
     jobs = get_jobs_for_mime_type(mime_type)
     if jobs:
-        queue = await get_queue_safe("core")
+        queue = await get_queue_safe(QueueName.CORE)
         if queue is None:
             logger.warning(
                 "Core queue unavailable; generated image has no thumbnail",
@@ -387,7 +390,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             f"Use this exact mention to reference the image: {mention}"
         ),
         metadata={
-            "kind": "image_generation",
+            "kind": ChatMessageMetadataKind.IMAGE_GENERATION,
             "prompt": prompt,
             "space": created_space,
             "params": params,
@@ -421,7 +424,7 @@ def build_image_tool_schema(provider: str, model_id: str) -> dict:
         "required": ["prompt"],
     }
     for knob, spec in (get_image_parameter_schema(provider, model_id) or {}).items():
-        if spec.get("audience") == "builder" or spec.get("type") != "enum":
+        if spec.get("audience") == ParamAudience.BUILDER or spec.get("type") != "enum":  # noqa: PLR2004
             continue
         entry: dict = {"type": "string", "enum": list(spec["enum"])}
         default = spec.get("default")

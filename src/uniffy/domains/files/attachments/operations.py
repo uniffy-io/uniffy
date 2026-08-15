@@ -149,10 +149,14 @@ class AttachmentOperations:
 
         checker = PermissionChecker(self._session)
         default_mode, default_baseline = await checker.get_org_defaults(
-            organization_id, content_type,
+            organization_id,
+            content_type,
         )
         return resolve_effective_policy(
-            raw_access_mode, raw_baseline_role, default_mode, default_baseline,
+            raw_access_mode,
+            raw_baseline_role,
+            default_mode,
+            default_baseline,
         )
 
     async def get_attachments_folder_id(
@@ -188,11 +192,14 @@ class AttachmentOperations:
 
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
-        _, parent_mode_raw, parent_baseline_raw, parent_type, _ = (
-            await self._load_parent_policy(organization_id, content_type, content_id)
+        _, parent_mode_raw, parent_baseline_raw, parent_type, _ = await self._load_parent_policy(
+            organization_id, content_type, content_id
         )
         parent_mode, parent_baseline = await self._resolve_parent_effective(
-            organization_id, parent_type, parent_mode_raw, parent_baseline_raw,
+            organization_id,
+            parent_type,
+            parent_mode_raw,
+            parent_baseline_raw,
         )
 
         # Org-wide parent -> org Attachments folder + OPEN_TO_ORG/EDITOR file.
@@ -410,7 +417,7 @@ class AttachmentOperations:
                     channel = await checker.get_channel(channel_id, organization_id)
                     await checker.check_access(user_id, organization_id, channel)
                     accessible_ids.extend(message_ids)
-                except (NotFoundError, PermissionDeniedError):
+                except NotFoundError, PermissionDeniedError:
                     continue
         else:
             for cid in content_ids:
@@ -441,9 +448,7 @@ class AttachmentOperations:
         grouped: dict[UUID, list[tuple[Attachment, File, User | None]]] = {}
         for row in result.all():
             attachment = row[0]
-            grouped.setdefault(attachment.content_id, []).append(
-                (attachment, row[1], row[2])
-            )
+            grouped.setdefault(attachment.content_id, []).append((attachment, row[1], row[2]))
         return grouped
 
     async def can_access_attachment(
@@ -499,7 +504,7 @@ class AttachmentOperations:
         try:
             await self._verify_content_access(user_id, organization_id, row[0], row[1])
             return True
-        except (PermissionDeniedError, NotFoundError):
+        except PermissionDeniedError, NotFoundError:
             return False
 
     async def _get_accessible_file(
@@ -665,14 +670,14 @@ class AttachmentOperations:
         return new_file
 
     async def _enqueue_processing_jobs(self, file: File) -> None:
-        from uniffy.core.valkey import get_queue
+        from uniffy.core.valkey import QueueName, get_queue
 
         jobs = get_jobs_for_mime_type(file.mime_type or "")
         if not jobs:
             return
 
         try:
-            queue = get_queue("core")
+            queue = get_queue(QueueName.CORE)
             for job_name in jobs:
                 await queue.enqueue_job(
                     job_name,

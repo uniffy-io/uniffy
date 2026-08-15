@@ -24,6 +24,7 @@ from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.domain_admin import get_user_domain_admins
 from uniffy.core.errors import NotFoundError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
@@ -32,7 +33,7 @@ from uniffy.core.models.login.organization_member import (
 )
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
-from uniffy.core.valkey.queue import get_queue
+from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.invitations.errors import (
     InvitationAlreadyUsedError,
@@ -41,6 +42,7 @@ from uniffy.domains.invitations.errors import (
     InvitationNotFoundError,
     InvitationRevokedError,
 )
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="mail")
 
@@ -142,7 +144,7 @@ class InvitationOperations:
     ) -> InviteResult:
         """Invite ``email``; auto-promote if user exists, else create a pending row."""
         normalized = email.strip().lower()
-        if not normalized or "@" not in normalized:
+        if not normalized or "@" not in normalized:  # noqa: PLR2004
             raise ValueError("Invalid email address")
 
         org_ops = _get_org_ops_cls()(self._session)
@@ -167,7 +169,7 @@ class InvitationOperations:
                 organization_id=org_id,
                 actor_user_id=inviter_id,
                 action=Action.ORGANIZATION_MEMBER_ADDED_VIA_INVITE,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=existing.id,
                 details={"email": normalized, "role": role.value},
             )
@@ -209,7 +211,7 @@ class InvitationOperations:
             organization_id=org_id,
             actor_user_id=inviter_id,
             action=Action.ORGANIZATION_MEMBER_INVITED,
-            resource_type="INVITATION",
+            resource_type=AuditResourceType.INVITATION,
             resource_id=invitation.id,
             details={
                 "email": normalized,
@@ -261,7 +263,7 @@ class InvitationOperations:
                 organization_id=invitation.organization_id,
                 actor_user_id=actor_id,
                 action=Action.ORGANIZATION_INVITATION_REVOKED,
-                resource_type="INVITATION",
+                resource_type=AuditResourceType.INVITATION,
                 resource_id=invitation.id,
                 details={"email": invitation.email},
             )
@@ -294,7 +296,7 @@ class InvitationOperations:
             organization_id=invitation.organization_id,
             actor_user_id=actor_id,
             action=Action.ORGANIZATION_INVITATION_RESENT,
-            resource_type="INVITATION",
+            resource_type=AuditResourceType.INVITATION,
             resource_id=invitation.id,
             details={
                 "email": invitation.email,
@@ -345,9 +347,7 @@ class InvitationOperations:
         if not org:
             raise InvitationNotFoundError("Invitation organization is missing")
         inviter = (
-            await self._session.execute(
-                select(User).where(User.id == invitation.invited_by_user_id)
-            )
+            await self._session.execute(select(User).where(User.id == invitation.invited_by_user_id))
         ).scalar_one_or_none()
         return InvitationPreview(
             invitation=invitation,
@@ -396,18 +396,12 @@ class InvitationOperations:
         validate_password(password)
 
         existing_email = (
-            await self._session.execute(
-                select(User).where(User.email == invitation.email)
-            )
+            await self._session.execute(select(User).where(User.email == invitation.email))
         ).scalar_one_or_none()
         if existing_email is not None:
-            raise InvitationEmailConflictError(
-                "An account with this email already exists"
-            )
+            raise InvitationEmailConflictError("An account with this email already exists")
         existing_username = (
-            await self._session.execute(
-                select(User).where(User.username == normalized_username)
-            )
+            await self._session.execute(select(User).where(User.username == normalized_username))
         ).scalar_one_or_none()
         if existing_username is not None:
             raise ValueError("Username already taken")
@@ -449,9 +443,7 @@ class InvitationOperations:
         )
         from uniffy.domains.auth.types import MfaEnrollmentRequired
 
-        requirement = await evaluate_mfa_requirement(
-            self._session, user=user, user_mfa=None
-        )
+        requirement = await evaluate_mfa_requirement(self._session, user=user, user_mfa=None)
         if requirement.requirement == MfaRequirement.HARD_REQUIRED:
             enrollment_token = create_enrollment_only_token(
                 user.id,
@@ -463,7 +455,7 @@ class InvitationOperations:
                 organization_id=invitation.organization_id,
                 actor_user_id=user.id,
                 action=Action.AUTH_INVITATION_ACCEPTED,
-                resource_type="INVITATION",
+                resource_type=AuditResourceType.INVITATION,
                 resource_id=invitation.id,
                 details={
                     "email": invitation.email,
@@ -503,7 +495,7 @@ class InvitationOperations:
             organization_id=invitation.organization_id,
             actor_user_id=user.id,
             action=Action.AUTH_INVITATION_ACCEPTED,
-            resource_type="INVITATION",
+            resource_type=AuditResourceType.INVITATION,
             resource_id=invitation.id,
             details={
                 "email": invitation.email,
@@ -519,9 +511,7 @@ class InvitationOperations:
         )
         org = (
             await self._session.execute(
-                select(Organization).where(
-                    Organization.id == invitation.organization_id
-                )
+                select(Organization).where(Organization.id == invitation.organization_id)
             )
         ).scalar_one_or_none()
         return AuthResult(
@@ -620,7 +610,7 @@ class InvitationOperations:
         }
         idempotency = f"invite/{org.id}/{recipient}/{raw_token[:8]}"
         await self._enqueue(
-            "send_email",
+            JobName.SEND_EMAIL,
             recipient,
             _TEMPLATE_INVITATION,
             context,
@@ -646,7 +636,7 @@ class InvitationOperations:
         }
         idempotency = f"added/{org.id}/{user.id}"
         await self._enqueue(
-            "send_email",
+            JobName.SEND_EMAIL,
             recipient,
             _TEMPLATE_ADDED,
             context,
@@ -657,7 +647,7 @@ class InvitationOperations:
 
     async def _enqueue(
         self,
-        job_name: str,
+        job_name: JobName,
         recipient: str,
         template: str,
         context: dict[str, Any],
@@ -667,7 +657,7 @@ class InvitationOperations:
         user_id: UUID | None = None,
     ) -> None:
         try:
-            queue = get_queue("core")
+            queue = get_queue(QueueName.CORE)
         except RuntimeError:
             logger.warning(
                 "invitation email enqueue skipped: core queue not initialised",

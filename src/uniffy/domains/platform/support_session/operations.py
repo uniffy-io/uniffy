@@ -24,6 +24,7 @@ from uniffy.core.errors import (
 )
 from uniffy.core.events.bus import emit_notification
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
@@ -36,7 +37,7 @@ from uniffy.core.models.platform.support_session import (
     SupportSessionState,
 )
 from uniffy.core.types import NotificationType
-from uniffy.core.valkey.queue import get_queue
+from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.platform.support_session.cache import (
     CACHE_MISS,
@@ -54,6 +55,7 @@ from uniffy.domains.platform.support_session.policy import (
     effective_consent_mode,
 )
 from uniffy.domains.users.operations import UserOperations
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="support_session")
 
@@ -107,13 +109,11 @@ class ConsentModeView(NamedTuple):
     locked_by_deployment: bool
 
 
-_TERMINAL_STATES: frozenset[SupportSessionState] = frozenset(
-    {
-        SupportSessionState.EXPIRED,
-        SupportSessionState.REVOKED,
-        SupportSessionState.REJECTED,
-    }
-)
+_TERMINAL_STATES: frozenset[SupportSessionState] = frozenset({
+    SupportSessionState.EXPIRED,
+    SupportSessionState.REVOKED,
+    SupportSessionState.REJECTED,
+})
 
 
 def _clamp_page_size(page_size: int) -> int:
@@ -134,9 +134,7 @@ def _serialize_for_cache(session: SupportSession) -> dict:
         "scope": session.scope.value,
         "state": session.state.value,
         "expires_at": session.expires_at.isoformat(),
-        "granted_at": (
-            session.granted_at.isoformat() if session.granted_at else None
-        ),
+        "granted_at": (session.granted_at.isoformat() if session.granted_at else None),
     }
 
 
@@ -177,7 +175,7 @@ def _from_cache_payload(
         if granted_raw:
             row.granted_at = datetime.fromisoformat(granted_raw)
         return row
-    except (KeyError, ValueError, TypeError):
+    except KeyError, ValueError, TypeError:
         return None
 
 
@@ -216,9 +214,7 @@ class SupportSessionOperations:
 
         org = await self._require_org(organization_id)
         if org.deleted_at is not None:
-            raise ValidationError(
-                "organization", "Cannot open a session for a deleted organization"
-            )
+            raise ValidationError("organization", "Cannot open a session for a deleted organization")
 
         duration = _clamp_duration(duration_minutes)
         now = datetime.now(UTC)
@@ -227,9 +223,7 @@ class SupportSessionOperations:
         mode = await effective_consent_mode(self._session, org.id)
         requires_approval = mode == ConsentMode.OWNER_APPROVED
         initial_state = (
-            SupportSessionState.PENDING
-            if requires_approval
-            else SupportSessionState.ACTIVE
+            SupportSessionState.PENDING if requires_approval else SupportSessionState.ACTIVE
         )
         granted_at = None if requires_approval else now
 
@@ -252,7 +246,7 @@ class SupportSessionOperations:
             organization_id=org.id,
             actor_user_id=actor_user_id,
             action=Action.SUPPORT_SESSION_REQUESTED,
-            resource_type="support_session",
+            resource_type=AuditResourceType.SUPPORT_SESSION,
             resource_id=row.id,
             details={
                 "reason": reason,
@@ -267,7 +261,7 @@ class SupportSessionOperations:
                 organization_id=org.id,
                 actor_user_id=actor_user_id,
                 action=Action.SUPPORT_SESSION_STARTED,
-                resource_type="support_session",
+                resource_type=AuditResourceType.SUPPORT_SESSION,
                 resource_id=row.id,
                 details={"scope": scope.value},
             )
@@ -282,16 +276,12 @@ class SupportSessionOperations:
                 row.expires_at,
             )
 
-        lifecycle_event = (
-            "requested" if initial_state == SupportSessionState.PENDING else "started"
-        )
+        lifecycle_event = "requested" if initial_state == SupportSessionState.PENDING else "started"
         await self._fanout_lifecycle(row, lifecycle_event)
 
         return await self._build_view(row)
 
-    async def approve_session(
-        self, *, actor_user_id: UUID, session_id: UUID
-    ) -> SupportSessionView:
+    async def approve_session(self, *, actor_user_id: UUID, session_id: UUID) -> SupportSessionView:
         """Platform sysadmins cannot approve here; consent must come from an actual org admin."""
         row = await self._require_session(session_id)
         await self._require_actual_org_admin(actor_user_id, row.organization_id)
@@ -308,7 +298,7 @@ class SupportSessionOperations:
                 organization_id=row.organization_id,
                 actor_user_id=actor_user_id,
                 action=Action.SUPPORT_SESSION_EXPIRED,
-                resource_type="support_session",
+                resource_type=AuditResourceType.SUPPORT_SESSION,
                 resource_id=row.id,
                 details={"reason": "expired_before_approval"},
             )
@@ -325,7 +315,7 @@ class SupportSessionOperations:
             organization_id=row.organization_id,
             actor_user_id=actor_user_id,
             action=Action.SUPPORT_SESSION_APPROVED,
-            resource_type="support_session",
+            resource_type=AuditResourceType.SUPPORT_SESSION,
             resource_id=row.id,
             details={"scope": row.scope.value},
         )
@@ -334,7 +324,7 @@ class SupportSessionOperations:
             organization_id=row.organization_id,
             actor_user_id=actor_user_id,
             action=Action.SUPPORT_SESSION_STARTED,
-            resource_type="support_session",
+            resource_type=AuditResourceType.SUPPORT_SESSION,
             resource_id=row.id,
             details={"scope": row.scope.value},
         )
@@ -372,7 +362,7 @@ class SupportSessionOperations:
             organization_id=row.organization_id,
             actor_user_id=actor_user_id,
             action=Action.SUPPORT_SESSION_REJECTED,
-            resource_type="support_session",
+            resource_type=AuditResourceType.SUPPORT_SESSION,
             resource_id=row.id,
             details={"reason": reason.strip()},
         )
@@ -398,14 +388,10 @@ class SupportSessionOperations:
         is_sysadmin = False
         if not is_support_user:
             try:
-                await self._require_actual_org_admin(
-                    actor_user_id, row.organization_id
-                )
+                await self._require_actual_org_admin(actor_user_id, row.organization_id)
             except PermissionDeniedError:
                 actor = (
-                    await self._session.execute(
-                        select(User).where(User.id == actor_user_id)
-                    )
+                    await self._session.execute(select(User).where(User.id == actor_user_id))
                 ).scalar_one_or_none()
                 if actor is None or not actor.is_system_admin:
                     raise
@@ -428,16 +414,14 @@ class SupportSessionOperations:
         self._session.add(row)
 
         revoked_by_kind = (
-            "support"
-            if is_support_user
-            else ("sysadmin" if is_sysadmin else "org_admin")
+            "support" if is_support_user else ("sysadmin" if is_sysadmin else "org_admin")
         )
         await write_audit_event(
             self._session,
             organization_id=row.organization_id,
             actor_user_id=actor_user_id,
             action=Action.SUPPORT_SESSION_REVOKED,
-            resource_type="support_session",
+            resource_type=AuditResourceType.SUPPORT_SESSION,
             resource_id=row.id,
             details={
                 "reason": reason,
@@ -452,9 +436,7 @@ class SupportSessionOperations:
         # otherwise outlive the revoke up to _ROLE_TTL.
         await invalidate_user_perm_cache(row.support_user_id)
 
-        await self._fanout_lifecycle(
-            row, "revoked", extra={"revoke_reason": reason}
-        )
+        await self._fanout_lifecycle(row, "revoked", extra={"revoke_reason": reason})
 
         return await self._build_view(row)
 
@@ -511,20 +493,28 @@ class SupportSessionOperations:
         if normalized:
             pattern = f"%{normalized}%"
             org_ids = (
-                await self._session.execute(
-                    select(Organization.id).where(
-                        or_(
-                            func.lower(Organization.name).like(pattern),
-                            func.lower(Organization.slug).like(pattern),
+                (
+                    await self._session.execute(
+                        select(Organization.id).where(
+                            or_(
+                                func.lower(Organization.name).like(pattern),
+                                func.lower(Organization.slug).like(pattern),
+                            )
                         )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             user_ids = (
-                await self._session.execute(
-                    select(User.id).where(func.lower(User.email).like(pattern))
+                (
+                    await self._session.execute(
+                        select(User.id).where(func.lower(User.email).like(pattern))
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             if not org_ids and not user_ids:
                 return SupportSessionPage(
                     sessions=[],
@@ -593,9 +583,7 @@ class SupportSessionOperations:
         from uniffy.core.models.login.user import User
 
         user = (
-            await self._session.execute(
-                select(User).where(User.id == actor_user_id)
-            )
+            await self._session.execute(select(User).where(User.id == actor_user_id))
         ).scalar_one_or_none()
         if user is None:
             raise PermissionDeniedError("Caller is not authenticated")
@@ -610,9 +598,7 @@ class SupportSessionOperations:
 
         deployment = deployment_consent_mode()
         override = await org_override(self._session, organization_id)
-        effective = await effective_consent_mode(
-            self._session, organization_id
-        )
+        effective = await effective_consent_mode(self._session, organization_id)
         return ConsentModeView(
             deployment=deployment,
             override=override,
@@ -649,7 +635,7 @@ class SupportSessionOperations:
             organization_id=organization_id,
             actor_user_id=actor_user_id,
             action=Action.SUPPORT_SESSION_CONSENT_MODE_CHANGED,
-            resource_type="organization",
+            resource_type=AuditResourceType.ORGANIZATION,
             resource_id=organization_id,
             details={"mode": mode.value if mode else None},
         )
@@ -665,23 +651,27 @@ class SupportSessionOperations:
         while True:
             now = datetime.now(UTC)
             rows = (
-                await self._session.execute(
-                    select(SupportSession)
-                    .where(
-                        or_(
-                            and_(
-                                SupportSession.state == SupportSessionState.ACTIVE,
-                                SupportSession.expires_at <= now,
-                            ),
-                            and_(
-                                SupportSession.state == SupportSessionState.PENDING,
-                                SupportSession.expires_at <= now,
-                            ),
+                (
+                    await self._session.execute(
+                        select(SupportSession)
+                        .where(
+                            or_(
+                                and_(
+                                    SupportSession.state == SupportSessionState.ACTIVE,
+                                    SupportSession.expires_at <= now,
+                                ),
+                                and_(
+                                    SupportSession.state == SupportSessionState.PENDING,
+                                    SupportSession.expires_at <= now,
+                                ),
+                            )
                         )
+                        .limit(batch_size)
                     )
-                    .limit(batch_size)
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
             if not rows:
                 break
@@ -694,16 +684,14 @@ class SupportSessionOperations:
                     organization_id=row.organization_id,
                     actor_user_id=None,
                     action=Action.SUPPORT_SESSION_EXPIRED,
-                    resource_type="support_session",
+                    resource_type=AuditResourceType.SUPPORT_SESSION,
                     resource_id=row.id,
                     details={"reason": "deadline"},
                 )
             await self._session.commit()
 
             for row in rows:
-                await invalidate_active_session(
-                    row.support_user_id, row.organization_id
-                )
+                await invalidate_active_session(row.support_user_id, row.organization_id)
                 await invalidate_user_perm_cache(row.support_user_id)
                 await self._fanout_lifecycle(row, "expired")
 
@@ -747,14 +735,10 @@ class SupportSessionOperations:
         if membership is None or not membership.is_active:
             raise PermissionDeniedError("Not a member of the target organization")
         if membership.role not in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
-            raise PermissionDeniedError(
-                "Only org OWNER or ADMIN can perform this action"
-            )
+            raise PermissionDeniedError("Only org OWNER or ADMIN can perform this action")
         return membership
 
-    async def _require_org_admin(
-        self, user_id: UUID, organization_id: UUID
-    ) -> OrganizationMember:
+    async def _require_org_admin(self, user_id: UUID, organization_id: UUID) -> OrganizationMember:
         """OWNER/ADMIN or platform sysadmin; reserved for actions where
         sysadmin bypass is intentional.
         """
@@ -792,9 +776,7 @@ class SupportSessionOperations:
         if membership is None or not membership.is_active:
             raise PermissionDeniedError("Not a member of the target organization")
         if membership.role not in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
-            raise PermissionDeniedError(
-                "Only org OWNER or ADMIN can manage support sessions"
-            )
+            raise PermissionDeniedError("Only org OWNER or ADMIN can manage support sessions")
         return membership
 
     async def _list_paged(
@@ -811,12 +793,10 @@ class SupportSessionOperations:
         conditions = list(extra_where)
         if not include_inactive:
             conditions.append(
-                SupportSession.state.in_(
-                    [
-                        SupportSessionState.PENDING,
-                        SupportSessionState.ACTIVE,
-                    ]
-                )
+                SupportSession.state.in_([
+                    SupportSessionState.PENDING,
+                    SupportSessionState.ACTIVE,
+                ])
             )
         where_clause = and_(*conditions) if conditions else None
 
@@ -859,23 +839,17 @@ class SupportSessionOperations:
             user_ids.add(row.revoked_by_user_id)
         users = (
             await self._session.execute(
-                select(User.id, User.email, User.full_name).where(
-                    User.id.in_(user_ids)
-                )
+                select(User.id, User.email, User.full_name).where(User.id.in_(user_ids))
             )
         ).all()
         emails = {uid: (email, full_name) for uid, email, full_name in users}
 
         support_email, support_full = emails.get(row.support_user_id, ("", None))
         granted_email = (
-            emails.get(row.granted_by_user_id, (None, None))[0]
-            if row.granted_by_user_id
-            else None
+            emails.get(row.granted_by_user_id, (None, None))[0] if row.granted_by_user_id else None
         )
         revoked_email = (
-            emails.get(row.revoked_by_user_id, (None, None))[0]
-            if row.revoked_by_user_id
-            else None
+            emails.get(row.revoked_by_user_id, (None, None))[0] if row.revoked_by_user_id else None
         )
 
         return SupportSessionView(
@@ -915,13 +889,8 @@ class SupportSessionOperations:
             return
 
         operator_email = (
-            (
-                await self._session.execute(
-                    select(User.email).where(User.id == row.support_user_id)
-                )
-            ).scalar_one_or_none()
-            or ""
-        )
+            await self._session.execute(select(User.email).where(User.id == row.support_user_id))
+        ).scalar_one_or_none() or ""
         org_row = (
             await self._session.execute(
                 select(Organization.name).where(Organization.id == row.organization_id)
@@ -929,20 +898,14 @@ class SupportSessionOperations:
         ).scalar_one_or_none()
         org_name = org_row or "your workspace"
 
-        await self._fire_in_app_notification(
-            row, event, owners, operator_email, org_name
-        )
-        await self._fire_emails(
-            row, event, owners, operator_email, org_name, extra or {}
-        )
+        await self._fire_in_app_notification(row, event, owners, operator_email, org_name)
+        await self._fire_emails(row, event, owners, operator_email, org_name, extra or {})
 
     async def _fetch_org_owners(self, org_id) -> list[tuple]:
         rows = (
             await self._session.execute(
                 select(User.id, User.email, User.full_name)
-                .join(
-                    OrganizationMember, OrganizationMember.user_id == User.id
-                )
+                .join(OrganizationMember, OrganizationMember.user_id == User.id)
                 .where(OrganizationMember.organization_id == org_id)
                 .where(OrganizationMember.role == OrganizationRole.OWNER)
                 .where(OrganizationMember.is_active.is_(True))
@@ -983,10 +946,7 @@ class SupportSessionOperations:
                 f"{operator_email} now has read-only access to {org_name}. "
                 "You can revoke at any time from the in-app banner."
             ),
-            "revoked": (
-                f"The support session by {operator_email} for {org_name} "
-                "has ended."
-            ),
+            "revoked": (f"The support session by {operator_email} for {org_name} has ended."),
             "expired": (
                 f"The support session by {operator_email} for {org_name} "
                 "reached its deadline and was closed automatically."
@@ -1060,7 +1020,7 @@ class SupportSessionOperations:
         }
 
         try:
-            queue = get_queue("core")
+            queue = get_queue(QueueName.CORE)
         except RuntimeError:
             logger.warning(
                 "support_session fanout: core queue not initialised",
@@ -1070,12 +1030,10 @@ class SupportSessionOperations:
             return
 
         for user_id, email, _ in owners:
-            idempotency_key = (
-                f"support_session/{row.id}/{event}/{user_id}"
-            )
+            idempotency_key = f"support_session/{row.id}/{event}/{user_id}"
             try:
                 await queue.enqueue_job(
-                    "send_email",
+                    JobName.SEND_EMAIL,
                     email,
                     template,
                     json.dumps(context),

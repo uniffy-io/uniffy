@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from uniffy.core.valkey import ValkeyConfig
+from uniffy.core.valkey import QueueName, ValkeyConfig
 from uniffy.observability import ObservabilityConfig, setup_observability
 
 _environment = os.getenv("ENVIRONMENT", "development")
@@ -29,7 +29,7 @@ setup_observability(
     )
 )
 from uniffy.vendor.arq.cron import cron
-from uniffy.workers.tasks import (
+from uniffy.workers.tasks.registered import (
     CORE_TASKS,
     EGRESS_TASKS,
     auto_unmute_channels,
@@ -43,6 +43,7 @@ from uniffy.workers.tasks import (
     execute_agent_cron_tasks,
     expire_support_sessions,
     flush_chat_read_cursors,
+    flush_chat_search_acl_refreshes,
     flush_search_removals,
     notify_pending_org_purges,
     on_job_end,
@@ -66,12 +67,13 @@ class CoreWorkerSettings:
 
     # Hour-pinned crons must not follow the host zone (DST double-fire/skip).
     timezone = UTC
-    queue_name = "uniffy:queue:core"
+    queue_name = QueueName.CORE.valkey_name
     functions = list(CORE_TASKS)
     cron_jobs = [
         cron(check_calendar_reminders, minute=None),
         cron(check_task_due_dates, minute=None),
         cron(flush_chat_read_cursors, second={0, 30}),
+        cron(flush_chat_search_acl_refreshes, minute=None, second={15}),
         cron(auto_unmute_channels, minute=None, second={0}),
         cron(recalculate_all_storage_usage, hour=3, minute=0),
         cron(reap_expired_multipart_uploads, minute={0}),
@@ -99,7 +101,7 @@ class EgressWorkerSettings:
     """Egress worker fleet: outbound LLM + slow IO jobs."""
 
     timezone = UTC
-    queue_name = "uniffy:queue:egress"
+    queue_name = QueueName.EGRESS.valkey_name
     functions = list(EGRESS_TASKS)
     cron_jobs = [
         cron(execute_agent_cron_tasks, minute=None),

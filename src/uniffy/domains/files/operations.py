@@ -25,6 +25,7 @@ from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.files.file import ExtractionStatus, File, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
@@ -37,6 +38,8 @@ from uniffy.core.types import (
     AccessMode,
     ContentRole,
     ContentType,
+    ParentSelection,
+    SortOrder,
     SubjectType,
     generate_id,
 )
@@ -120,9 +123,7 @@ class FileOperations(BaseContentOperations[File]):
         from uniffy.domains.files.attachments.operations import AttachmentOperations
 
         attachment_ops = AttachmentOperations(self.session)
-        if await attachment_ops.can_view_file_via_attachment(
-            user_id, organization_id, content.id
-        ):
+        if await attachment_ops.can_view_file_via_attachment(user_id, organization_id, content.id):
             return ContentRole.VIEWER
         return role
 
@@ -339,9 +340,7 @@ class FileOperations(BaseContentOperations[File]):
         with ``version_of_file_id``, into a new version of that existing file.
         """
         upload_row = await self.session.execute(
-            select(MultipartUpload)
-            .where(MultipartUpload.id == upload_id)
-            .with_for_update()
+            select(MultipartUpload).where(MultipartUpload.id == upload_id).with_for_update()
         )
         upload = upload_row.scalar_one_or_none()
         if not upload:
@@ -405,10 +404,7 @@ class FileOperations(BaseContentOperations[File]):
         await self.s3.complete_multipart_upload(
             key=upload.storage_key,
             upload_id=upload.s3_upload_id,
-            parts=[
-                {"PartNumber": row.part_number, "ETag": row.etag}
-                for row in part_rows
-            ],
+            parts=[{"PartNumber": row.part_number, "ETag": row.etag} for row in part_rows],
         )
 
         if version_of_file_id is not None:
@@ -420,9 +416,7 @@ class FileOperations(BaseContentOperations[File]):
             )
 
         extraction_status = self._get_initial_extraction_status(upload.mime_type)
-        transcode_status = self._get_initial_transcode_status(
-            upload.mime_type, upload.filename
-        )
+        transcode_status = self._get_initial_transcode_status(upload.mime_type, upload.filename)
 
         file = File(
             organization_id=upload.organization_id,
@@ -480,7 +474,7 @@ class FileOperations(BaseContentOperations[File]):
                 organization_id=upload.organization_id,
                 actor_user_id=user_id,
                 action=Action.FILE_UPLOADED,
-                resource_type=ContentType.FILE.value,
+                resource_type=AuditResourceType.FILE,
                 resource_id=file.id,
                 details={
                     "filename": file.filename,
@@ -511,8 +505,7 @@ class FileOperations(BaseContentOperations[File]):
             )
         except Exception:
             logger.opt(exception=True).warning(
-                "Failed to increment storage usage",
-                file_id=str(file.id)
+                "Failed to increment storage usage", file_id=str(file.id)
             )
 
         await self._index_for_search(
@@ -579,9 +572,7 @@ class FileOperations(BaseContentOperations[File]):
         file.current_version_id = version.id
         file.version = new_version_number
         file.extraction_status = self._get_initial_extraction_status(file.mime_type)
-        file.transcode_status = self._get_initial_transcode_status(
-            file.mime_type, file.filename
-        )
+        file.transcode_status = self._get_initial_transcode_status(file.mime_type, file.filename)
         file.updated_at = datetime.now(UTC)
 
         upload.status = UploadStatus.COMPLETED
@@ -593,7 +584,7 @@ class FileOperations(BaseContentOperations[File]):
                 organization_id=upload.organization_id,
                 actor_user_id=user_id,
                 action=Action.FILE_UPLOADED,
-                resource_type=ContentType.FILE.value,
+                resource_type=AuditResourceType.FILE,
                 resource_id=file.id,
                 details={
                     "filename": file.filename,
@@ -616,8 +607,7 @@ class FileOperations(BaseContentOperations[File]):
             )
         except Exception:
             logger.opt(exception=True).warning(
-                "Failed to increment storage usage",
-                file_id=str(file.id)
+                "Failed to increment storage usage", file_id=str(file.id)
             )
 
         await self._index_for_search(model=file, skip_member_lookup=False)
@@ -656,9 +646,7 @@ class FileOperations(BaseContentOperations[File]):
         await self._require_edit(user_id, organization_id, file)
 
         version_row = await self.session.execute(
-            select(FileVersion).where(
-                FileVersion.id == version_id, FileVersion.file_id == file_id
-            )
+            select(FileVersion).where(FileVersion.id == version_id, FileVersion.file_id == file_id)
         )
         source = version_row.scalar_one_or_none()
         if source is None:
@@ -676,9 +664,7 @@ class FileOperations(BaseContentOperations[File]):
         source_size = source.size_bytes
         source_number = source.version_number
 
-        new_storage_key = (
-            f"{organization_id}/{file.owner_id}/{generate_id()}/{file.filename}"
-        )
+        new_storage_key = f"{organization_id}/{file.owner_id}/{generate_id()}/{file.filename}"
         await self.s3.copy_object(
             source_key=source.storage_key,
             destination_key=new_storage_key,
@@ -703,9 +689,7 @@ class FileOperations(BaseContentOperations[File]):
         file.current_version_id = version.id
         file.version = new_version_number
         file.extraction_status = self._get_initial_extraction_status(file.mime_type)
-        file.transcode_status = self._get_initial_transcode_status(
-            file.mime_type, file.filename
-        )
+        file.transcode_status = self._get_initial_transcode_status(file.mime_type, file.filename)
         file.updated_at = datetime.now(UTC)
 
         await write_audit_event(
@@ -713,7 +697,7 @@ class FileOperations(BaseContentOperations[File]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.FILE_VERSION_RESTORED,
-            resource_type=ContentType.FILE.value,
+            resource_type=AuditResourceType.FILE,
             resource_id=file.id,
             details={
                 "filename": file.filename,
@@ -736,8 +720,7 @@ class FileOperations(BaseContentOperations[File]):
             )
         except Exception:
             logger.opt(exception=True).warning(
-                "Failed to increment storage usage",
-                file_id=str(file.id)
+                "Failed to increment storage usage", file_id=str(file.id)
             )
 
         await self._index_for_search(model=file, skip_member_lookup=False)
@@ -783,8 +766,7 @@ class FileOperations(BaseContentOperations[File]):
                 await self.s3.delete_objects(pruned_keys)
             except Exception:
                 logger.opt(exception=True).warning(
-                    "Failed to delete pruned version objects",
-                    file_id=str(file.id)
+                    "Failed to delete pruned version objects", file_id=str(file.id)
                 )
 
             quota_ops = QuotaOperations(self.session)
@@ -798,13 +780,11 @@ class FileOperations(BaseContentOperations[File]):
                     )
                 except Exception:
                     logger.opt(exception=True).warning(
-                        "Failed to decrement storage usage after prune",
-                        file_id=str(file.id)
+                        "Failed to decrement storage usage after prune", file_id=str(file.id)
                     )
         except Exception:
             logger.opt(exception=True).warning(
-                "Version retention prune failed",
-                file_id=str(file.id)
+                "Version retention prune failed", file_id=str(file.id)
             )
 
     async def _enqueue_processing_jobs(self, file: File) -> None:
@@ -812,9 +792,9 @@ class FileOperations(BaseContentOperations[File]):
         from loguru import logger
 
         try:
-            from uniffy.core.valkey import get_queue
+            from uniffy.core.valkey import QueueName, get_queue
 
-            queue = get_queue("core")
+            queue = get_queue(QueueName.CORE)
             jobs = get_jobs_for_mime_type(file.mime_type)
 
             for job_name in jobs:
@@ -850,14 +830,9 @@ class FileOperations(BaseContentOperations[File]):
         await self.session.commit()
         return True
 
-    def _get_initial_transcode_status(
-        self, mime_type: str, filename: str
-    ) -> TranscodeStatus:
+    def _get_initial_transcode_status(self, mime_type: str, filename: str) -> TranscodeStatus:
         # video/webm with .mp4 filename = screen recording; transcode required.
-        if (
-            mime_type == "video/webm"
-            and filename.lower().endswith(".mp4")
-        ):
+        if mime_type == "video/webm" and filename.lower().endswith(".mp4"):  # noqa: PLR2004
             return TranscodeStatus.PENDING
         return TranscodeStatus.NOT_NEEDED
 
@@ -924,8 +899,7 @@ class FileOperations(BaseContentOperations[File]):
                 await self.session.commit()
             except Exception:
                 logger.opt(exception=True).warning(
-                    "Failed to propagate file rename to mentions",
-                    file_id=str(file_id)
+                    "Failed to propagate file rename to mentions", file_id=str(file_id)
                 )
 
         return file
@@ -974,7 +948,7 @@ class FileOperations(BaseContentOperations[File]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.FILE_MOVED,
-            resource_type=ContentType.FILE.value,
+            resource_type=AuditResourceType.FILE,
             resource_id=file_id,
             details={
                 "previous_folder_id": str(previous_folder_id) if previous_folder_id else None,
@@ -994,9 +968,7 @@ class FileOperations(BaseContentOperations[File]):
                 changes={"parent_label": folder_name},
             )
         except Exception:
-            logger.opt(exception=True).warning(
-                f"Failed to publish parent_label for file {file.id}"
-            )
+            logger.opt(exception=True).warning(f"Failed to publish parent_label for file {file.id}")
 
         if refresh_stats:
             folder_ops = FolderOperations(self.session)
@@ -1060,8 +1032,7 @@ class FileOperations(BaseContentOperations[File]):
                 )
             except Exception:
                 logger.opt(exception=True).warning(
-                    "Failed to decrement storage usage on permanent delete",
-                    file_id=str(file_id)
+                    "Failed to decrement storage usage on permanent delete", file_id=str(file_id)
                 )
 
         if permanent:
@@ -1079,10 +1050,8 @@ class FileOperations(BaseContentOperations[File]):
             self.session,
             organization_id=organization_id,
             actor_user_id=user_id,
-            action=(
-                Action.FILE_PERMANENTLY_DELETED if permanent else Action.FILE_DELETED
-            ),
-            resource_type=ContentType.FILE.value,
+            action=(Action.FILE_PERMANENTLY_DELETED if permanent else Action.FILE_DELETED),
+            resource_type=AuditResourceType.FILE,
             resource_id=file_id,
             details={
                 "filename": file.filename if not permanent else None,
@@ -1091,9 +1060,7 @@ class FileOperations(BaseContentOperations[File]):
         )
         await self.session.commit()
 
-        await FolderOperations(self.session).refresh_folder_stats(
-            parent_folder_id, organization_id
-        )
+        await FolderOperations(self.session).refresh_folder_stats(parent_folder_id, organization_id)
 
         return True
 
@@ -1119,7 +1086,7 @@ class FileOperations(BaseContentOperations[File]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.FILE_RESTORED,
-            resource_type=ContentType.FILE.value,
+            resource_type=AuditResourceType.FILE,
             resource_id=file_id,
             details={"filename": file.filename},
         )
@@ -1130,9 +1097,7 @@ class FileOperations(BaseContentOperations[File]):
         await self._index_for_search(model=file)
         await self.session.commit()
 
-        await FolderOperations(self.session).refresh_folder_stats(
-            file.folder_id, organization_id
-        )
+        await FolderOperations(self.session).refresh_folder_stats(file.folder_id, organization_id)
 
         return file
 
@@ -1166,7 +1131,7 @@ class FileOperations(BaseContentOperations[File]):
         self,
         user_id: UUID,
         organization_id: UUID,
-        folder_id: UUID | None | str = None,
+        folder_id: UUID | ParentSelection | None = None,
         access_mode: AccessMode | None = None,
         group_id: UUID | None = None,
         personal_only: bool = False,
@@ -1176,7 +1141,7 @@ class FileOperations(BaseContentOperations[File]):
         page: int = 1,
         page_size: int = 50,
         sort_by: str = "updated_at",
-        sort_order: str = "desc",
+        sort_order: SortOrder = SortOrder.DESCENDING,
     ) -> tuple[list[File], int]:
         """List files with filters; folder_id 'all' means cross-folder; tag_ids AND-joined."""
         query = select(File).where(File.organization_id == organization_id)
@@ -1243,7 +1208,7 @@ class FileOperations(BaseContentOperations[File]):
         # Folder filter with parent access check
         if folder_id is None:
             query = query.where(File.folder_id.is_(None))
-        elif folder_id != "all":
+        elif folder_id != ParentSelection.ALL:
             query = query.where(File.folder_id == folder_id)
         else:
             folder_access_filter = await self.access_query.build_accessible_filter(
@@ -1279,7 +1244,7 @@ class FileOperations(BaseContentOperations[File]):
         total = (await self.session.execute(count_query)).scalar() or 0
 
         sort_col = getattr(File, sort_by, File.updated_at)
-        if sort_order == "asc":
+        if sort_order == SortOrder.ASCENDING:
             query = query.order_by(sort_col.asc())
         else:
             query = query.order_by(sort_col.desc())
@@ -1409,8 +1374,7 @@ class FileOperations(BaseContentOperations[File]):
                 )
             except Exception:
                 logger.opt(exception=True).warning(
-                    "Failed to decrement storage usage on empty trash",
-                    user_id=str(user_id)
+                    "Failed to decrement storage usage on empty trash", user_id=str(user_id)
                 )
 
         return len(files), len(folders)
@@ -1590,9 +1554,7 @@ class FolderOperations:
                 restricted=effective_policy[0] != AccessMode.OPEN_TO_ORG,
             )
         except Exception:
-            logger.opt(exception=True).warning(
-                f"Failed to refresh folder stats for {folder_id}"
-            )
+            logger.opt(exception=True).warning(f"Failed to refresh folder stats for {folder_id}")
 
     async def _remove_from_search(self, folder_id: UUID) -> None:
         from uniffy.core.search.indexer import SearchIndexer
@@ -1811,9 +1773,7 @@ class FolderOperations:
                     changes={"parent_label": parent_label},
                 )
             except Exception:
-                logger.opt(exception=True).warning(
-                    f"Failed to publish parent_label for file {f.id}"
-                )
+                logger.opt(exception=True).warning(f"Failed to publish parent_label for file {f.id}")
 
         child_folder_ids = list(
             (
@@ -1886,9 +1846,7 @@ class FolderOperations:
                 restricted=effective_mode != AccessMode.OPEN_TO_ORG,
             )
         except Exception:
-            logger.opt(exception=True).warning(
-                f"Failed to publish folder tombstone for {folder_id}"
-            )
+            logger.opt(exception=True).warning(f"Failed to publish folder tombstone for {folder_id}")
         await self.refresh_folder_stats(parent_id, organization_id)
 
         return files_deleted, folders_deleted + 1
@@ -2184,9 +2142,7 @@ class FolderOperations:
             try:
                 await self._index_for_search(folder)
             except Exception:
-                logger.opt(exception=True).warning(
-                    f"Search index failed for folder {folder.id}"
-                )
+                logger.opt(exception=True).warning(f"Search index failed for folder {folder.id}")
 
         # The dropped tree changes the destination folder's subfolder count.
         await self.refresh_folder_stats(parent_id, organization_id)
@@ -2243,9 +2199,7 @@ class FolderOperations:
             )
             .on_conflict_do_nothing(
                 index_elements=["owner_id", "organization_id", "name"],
-                index_where=text(
-                    "parent_id IS NULL AND is_deleted = false AND is_system = true"
-                ),
+                index_where=text("parent_id IS NULL AND is_deleted = false AND is_system = true"),
             )
         )
         await self.session.execute(stmt)

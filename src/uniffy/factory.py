@@ -88,6 +88,7 @@ from uniffy.core.storage.s3_client import close_s3, init_s3
 from uniffy.core.streaming.middleware import StreamRevokeWatchMiddleware
 from uniffy.core.streaming.revoke_coordinator import coordinator as stream_revoke_coordinator
 from uniffy.core.valkey import (
+    QueueName,
     close_ops_client,
     close_pubsub,
     close_queue,
@@ -192,7 +193,7 @@ class HttpVersionMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http":
+        if scope["type"] == "http":  # noqa: PLR2004
             http_version_var.set(scope.get("http_version", "unknown"))
         await self.app(scope, receive, send)
 
@@ -215,12 +216,12 @@ class SecurityHeadersMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] != "http":  # noqa: PLR2004
             await self.app(scope, receive, send)
             return
 
         async def send_wrapper(message: dict) -> None:
-            if message["type"] == "http.response.start":
+            if message["type"] == "http.response.start":  # noqa: PLR2004
                 headers = list(message.get("headers", []))
                 existing = {name.lower() for name, _ in headers}
                 for name, value in self._STATIC_HEADERS:
@@ -269,7 +270,7 @@ class ConnectRPCDispatcher:
             await self.fallback(fallback_scope, receive, send)
             return
 
-        if scope["type"] == "http":
+        if scope["type"] == "http":  # noqa: PLR2004
             await send({"type": "http.response.start", "status": 404, "headers": []})
             await send({"type": "http.response.body", "body": b"Not Found"})
 
@@ -301,14 +302,14 @@ def _get_cors_origins() -> list[str]:
     raw = os.getenv("CORS_ORIGINS", "")
     environment = os.getenv("ENVIRONMENT", "development").lower()
     if not raw:
-        if environment == "development":
+        if environment == "development":  # noqa: PLR2004
             return ["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"]
         raise RuntimeError(
             "CORS_ORIGINS must be set to an explicit comma-separated list "
             "outside development (e.g. https://app.example.com)"
         )
-    if raw.strip() == "*":
-        if environment == "development":
+    if raw.strip() == "*":  # noqa: PLR2004
+        if environment == "development":  # noqa: PLR2004
             return ["*"]
         raise RuntimeError(
             "CORS_ORIGINS='*' is not permitted with allow_credentials=True; "
@@ -343,13 +344,13 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
-        await init_queue("core")
+        await init_queue(QueueName.CORE)
         logger.info("Core job queue initialized successfully")
     except Exception as e:
         logger.warning(f"Core job queue not available: {e}")
 
     try:
-        await init_queue("egress")
+        await init_queue(QueueName.EGRESS)
         logger.info("Egress job queue initialized successfully")
     except Exception as e:
         logger.warning(f"Egress job queue not available: {e}")
@@ -450,8 +451,8 @@ async def lifespan(app: FastAPI):
     await close_streams_client()
     await close_ops_client()
     await close_pubsub()
-    await close_queue("core")
-    await close_queue("egress")
+    await close_queue(QueueName.CORE)
+    await close_queue(QueueName.EGRESS)
     await close_s3()
     await close_meilisearch()
     await close_db()
@@ -603,9 +604,7 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/support.v1.SupportConsentService",
-        SupportConsentServiceASGIApplication(
-            SupportConsentServiceImpl(), interceptors=interceptors
-        ),
+        SupportConsentServiceASGIApplication(SupportConsentServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemMailService",

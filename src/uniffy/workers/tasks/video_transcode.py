@@ -26,6 +26,7 @@ from uniffy.core.types import ContentType, generate_id
 from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.db.session import open_session
 from uniffy.domains.files.operations import FileOperations
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="tasks.video_transcode")
 
@@ -50,9 +51,7 @@ async def _acquire_lock(file_id: UUID) -> bool:
             )
         )
     except Exception:
-        logger.warning(
-            f"transcode_video_to_mp4: SET NX failed for file {file_id}"
-        )
+        logger.warning(f"transcode_video_to_mp4: SET NX failed for file {file_id}")
         return False
 
 
@@ -63,9 +62,7 @@ async def _release_lock(file_id: UUID) -> None:
     try:
         await client.delete(_LOCK_KEY_TEMPLATE.format(file_id=file_id))
     except Exception:
-        logger.warning(
-            f"transcode_video_to_mp4: DEL failed for file {file_id}"
-        )
+        logger.warning(f"transcode_video_to_mp4: DEL failed for file {file_id}")
 
 
 def _ffmpeg_video_codec_args() -> list[str]:
@@ -105,9 +102,7 @@ async def _run_ffmpeg(input_path: Path, output_path: Path) -> None:
         stderr=asyncio.subprocess.PIPE,
     )
     try:
-        _, stderr = await asyncio.wait_for(
-            proc.communicate(), timeout=_FFMPEG_TIMEOUT_SECONDS
-        )
+        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=_FFMPEG_TIMEOUT_SECONDS)
     except TimeoutError:
         proc.kill()
         await proc.wait()
@@ -159,9 +154,7 @@ async def transcode_video_to_mp4(
             owner_id = file.owner_id
             current_version = file.version
 
-            new_storage_key = (
-                f"{org_uuid}/{owner_id}/{generate_id()}/{file.filename}"
-            )
+            new_storage_key = f"{org_uuid}/{owner_id}/{generate_id()}/{file.filename}"
 
         with tempfile.TemporaryDirectory(prefix="uniffy-transcode-") as tmpdir:
             tmp_path = Path(tmpdir)
@@ -190,9 +183,7 @@ async def transcode_video_to_mp4(
             del mp4_bytes
 
         async with open_session() as session:
-            row = await session.execute(
-                select(File).where(File.id == file_uuid).with_for_update()
-            )
+            row = await session.execute(select(File).where(File.id == file_uuid).with_for_update())
             file = row.scalar_one_or_none()
             if file is None:
                 log.warning("File disappeared during swap")
@@ -240,7 +231,7 @@ async def transcode_video_to_mp4(
         if valkey is not None and old_storage_key:
             try:
                 await valkey.enqueue_job(
-                    "delete_s3_object",
+                    JobName.DELETE_S3_OBJECT,
                     old_storage_key,
                     _defer_by=_DELAYED_DELETE_SECONDS,
                 )

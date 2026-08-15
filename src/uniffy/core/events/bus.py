@@ -6,7 +6,8 @@ from typing import Any
 from loguru import logger
 
 from uniffy.core.events.types import NotificationEvent
-from uniffy.core.valkey import get_queue
+from uniffy.core.valkey import QueueName, get_queue
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="events.bus")
 
@@ -42,15 +43,15 @@ def event_from_json(json_str: str) -> NotificationEvent:
     data = json.loads(json_str)
 
     target_user_ids = None
-    if "target_user_ids" in data:
+    if "target_user_ids" in data:  # noqa: PLR2004
         target_user_ids = [UUID(uid) for uid in data["target_user_ids"]]
 
     content_type = None
-    if "content_type" in data:
+    if "content_type" in data:  # noqa: PLR2004
         content_type = ContentType(data["content_type"])
 
     content_id = None
-    if "content_id" in data:
+    if "content_id" in data:  # noqa: PLR2004
         content_id = UUID(data["content_id"])
 
     return NotificationEvent(
@@ -70,9 +71,9 @@ def event_from_json(json_str: str) -> NotificationEvent:
 async def emit_notification(event: NotificationEvent) -> None:
     """Enqueue an ARQ job; never raises."""
     try:
-        queue = get_queue("core")
+        queue = get_queue(QueueName.CORE)
         event_json = _event_to_json(event)
-        await queue.enqueue_job("process_notification_event", event_json)
+        await queue.enqueue_job(JobName.PROCESS_NOTIFICATION_EVENT, event_json)
     except RuntimeError:
         logger.warning("Notification queue unavailable, skipping event")
     except Exception:

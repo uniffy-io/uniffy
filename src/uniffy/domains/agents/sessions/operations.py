@@ -10,23 +10,21 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
-from uniffy.core.models.agents.session import AgentSession
+from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
+from uniffy.core.models.agents.message_feedback import AgentFeedbackRating, AgentMessageFeedback
+from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import generate_id
-from uniffy.core.valkey.queue import get_queue_safe
+from uniffy.core.valkey.queue import QueueName, get_queue_safe
 from uniffy.core.valkey.streams import session_has_active_run
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.runtime.compactor import summarise_conversation
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.workers.tasks import JobName, SkillAnalysisDestination
 
 logger = logger.bind(component="agents.sessions.operations")
-
-VALID_SESSION_KINDS = {"direct", "group", "global", "cron"}
-VALID_MESSAGE_ROLES = {"user", "assistant", "tool", "system", "summary"}
 
 # Maximum age (in seconds) at which a user message remains editable.
 # After the window expires, the user must use "retry" or send a new
@@ -43,7 +41,9 @@ EDIT_WINDOW_SECONDS = 600
 SKILL_ANALYSIS_DEBOUNCE_SECONDS = 90
 
 
-def _skill_analysis_job_id(destination_kind: str, destination_id: UUID, salt: str) -> str:
+def _skill_analysis_job_id(
+    destination_kind: SkillAnalysisDestination, destination_id: UUID, salt: str
+) -> str:
     return f"analyze_skills:{destination_kind}:{destination_id}:{salt}"
 
 
@@ -73,7 +73,7 @@ def apply_emergency_truncation(
         active_count = sum(1 for m in keep if m is not None)
         if active_count <= EMERGENCY_TRUNCATION_KEEP_ROWS:
             break
-        if msg.role != "tool":
+        if msg.role != AgentMessageRole.TOOL:
             continue
         keep[idx] = None
 
@@ -129,17 +129,17 @@ def _build_compaction_units(messages: list[AgentMessage]) -> list[_CompactionUni
     while i < len(messages):
         msg = messages[i]
 
-        if msg.role == "assistant" and msg.tool_call_id:
+        if msg.role == AgentMessageRole.ASSISTANT and msg.tool_call_id:
             chain = [msg]
             i += 1
             while i < len(messages):
                 next_msg = messages[i]
-                if next_msg.role == "tool" or (
-                    next_msg.role == "assistant" and next_msg.tool_call_id
+                if next_msg.role == AgentMessageRole.TOOL or (
+                    next_msg.role == AgentMessageRole.ASSISTANT and next_msg.tool_call_id
                 ):
                     chain.append(next_msg)
                     i += 1
-                elif next_msg.role == "assistant" and not next_msg.tool_call_id:
+                elif next_msg.role == AgentMessageRole.ASSISTANT and not next_msg.tool_call_id:
                     chain.append(next_msg)
                     i += 1
                     break
@@ -166,7 +166,7 @@ class SessionOperations:
         user_id: UUID,
         organization_id: UUID,
         agent_id: UUID,
-        kind: str,
+        kind: AgentSessionKind | str,
         display_name: str | None = None,
         model_override: str | None = None,
         is_test: bool = False,
@@ -174,8 +174,11 @@ class SessionOperations:
         """Create a new conversation session."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
-        if kind not in VALID_SESSION_KINDS:
-            raise ValidationError("kind", f"Must be one of: {', '.join(VALID_SESSION_KINDS)}")
+        try:
+            kind = AgentSessionKind(kind)
+        except ValueError as exc:
+            valid = ", ".join(member.value for member in AgentSessionKind)
+            raise ValidationError("kind", f"Must be one of: {valid}") from exc
 
         await AgentOperations(self._session).get_by_id(user_id, organization_id, agent_id)
 
@@ -222,7 +225,7 @@ class SessionOperations:
         user_id: UUID,
         organization_id: UUID,
         session_id: UUID,
-        role: str,
+        role: AgentMessageRole | str,
         content: str | None = None,
         input_tokens: int = 0,
         output_tokens: int = 0,
@@ -241,8 +244,11 @@ class SessionOperations:
         """Add a message and update session aggregates (tokens, count, model)."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
-        if role not in VALID_MESSAGE_ROLES:
-            raise ValidationError("role", f"Must be one of: {', '.join(VALID_MESSAGE_ROLES)}")
+        try:
+            role = AgentMessageRole(role)
+        except ValueError as exc:
+            valid = ", ".join(member.value for member in AgentMessageRole)
+            raise ValidationError("role", f"Must be one of: {valid}") from exc
 
         result = await self._session.execute(
             select(AgentSession).where(
@@ -304,7 +310,7 @@ class SessionOperations:
 
         message = AgentMessage(
             session_id=session_id,
-            role="assistant",
+            role=AgentMessageRole.ASSISTANT,
             content="",
             input_tokens=0,
             output_tokens=0,
@@ -376,7 +382,7 @@ class SessionOperations:
             )
             .where(
                 AgentMessage.session_id == session_id,
-                AgentMessage.role == "assistant",
+                AgentMessage.role == AgentMessageRole.ASSISTANT,
                 AgentMessage.is_compacted == False,  # noqa: E712
             )
             .order_by(AgentMessage.created_at.desc())
@@ -436,7 +442,7 @@ class SessionOperations:
             select(AgentMessage)
             .where(
                 AgentMessage.session_id == session_id,
-                AgentMessage.role == "summary",
+                AgentMessage.role == AgentMessageRole.SUMMARY,
                 AgentMessage.is_compacted == False,  # noqa: E712
                 AgentMessage.is_invalidated == False,  # noqa: E712
             )
@@ -451,7 +457,7 @@ class SessionOperations:
                 AgentMessage.session_id == session_id,
                 AgentMessage.is_compacted == False,  # noqa: E712
                 AgentMessage.is_invalidated == False,  # noqa: E712
-                AgentMessage.role != "summary",
+                AgentMessage.role != AgentMessageRole.SUMMARY,
             )
             .order_by(AgentMessage.created_at.desc())
             .limit(MAX_CONTEXT_RECENT_MESSAGES)
@@ -466,7 +472,7 @@ class SessionOperations:
         user_id: UUID,
     ) -> None:
         """Owner or global session only."""
-        if agent_session.user_id != user_id and agent_session.kind != "global":
+        if agent_session.user_id != user_id and agent_session.kind != AgentSessionKind.GLOBAL:
             raise PermissionDeniedError("access", "AgentSession")
 
     async def edit_message(
@@ -496,7 +502,7 @@ class SessionOperations:
         )
         if agent_session.user_id != user_id:
             raise PermissionDeniedError("edit", "AgentMessage")
-        if msg.role != "user":
+        if msg.role != AgentMessageRole.USER:
             raise ValidationError("role", "edit is only supported on user messages")
         if msg.is_invalidated:
             raise ValidationError("message", "cannot edit an invalidated message")
@@ -544,12 +550,12 @@ class SessionOperations:
             raise PermissionDeniedError("retry", "AgentMessage")
 
         anchor: AgentMessage = msg
-        if msg.role == "assistant":
+        if msg.role == AgentMessageRole.ASSISTANT:
             preceding_stmt = (
                 select(AgentMessage)
                 .where(
                     AgentMessage.session_id == agent_session.id,
-                    AgentMessage.role == "user",
+                    AgentMessage.role == AgentMessageRole.USER,
                     AgentMessage.is_invalidated == False,  # noqa: E712
                     AgentMessage.created_at < msg.created_at,
                 )
@@ -564,7 +570,7 @@ class SessionOperations:
                     "no preceding user message to retry from",
                 )
             anchor = anchor_row
-        elif msg.role != "user":
+        elif msg.role != AgentMessageRole.USER:
             raise ValidationError(
                 "role",
                 "retry is only supported on user or assistant messages",
@@ -678,7 +684,7 @@ class SessionOperations:
         if active_tokens <= token_budget:
             return False
 
-        queue = await get_queue_safe("egress")
+        queue = await get_queue_safe(QueueName.EGRESS)
         if queue is None:
             logger.warning(
                 "Compaction queue unavailable; session over budget but no enqueue",
@@ -689,7 +695,7 @@ class SessionOperations:
             return False
 
         try:
-            await queue.enqueue_job("compact_session", str(session_id))
+            await queue.enqueue_job(JobName.COMPACT_SESSION, str(session_id))
         except Exception:
             logger.opt(exception=True).warning(
                 "compact_session enqueue failed", session_id=str(session_id)
@@ -700,7 +706,7 @@ class SessionOperations:
     async def enqueue_skill_analysis(
         self,
         *,
-        destination_kind: str,
+        destination_kind: SkillAnalysisDestination,
         destination_id: UUID,
         user_id: UUID,
         agent_id: UUID,
@@ -712,7 +718,7 @@ class SessionOperations:
         daily budget before any LLM work, so enqueuing is safe even when
         evolution is disabled.
         """
-        queue = await get_queue_safe("egress")
+        queue = await get_queue_safe(QueueName.EGRESS)
         if queue is None:
             return False
         # A fresh salt per trigger gives each turn its own job id. ARQ never
@@ -723,7 +729,7 @@ class SessionOperations:
         job_id = _skill_analysis_job_id(destination_kind, destination_id, uuid4().hex)
         try:
             await queue.enqueue_job(
-                "analyze_session_for_skills",
+                JobName.ANALYZE_SESSION_FOR_SKILLS,
                 destination_kind,
                 str(destination_id),
                 str(user_id),
@@ -764,7 +770,7 @@ class SessionOperations:
             organization_id=organization_id,
             message_id=message_id,
         )
-        if msg.role != "assistant":
+        if msg.role != AgentMessageRole.ASSISTANT:
             raise ValidationError("role", "feedback is only supported on agent messages")
 
         feedback = await self._upsert_feedback(
@@ -775,9 +781,9 @@ class SessionOperations:
             comment=comment,
         )
 
-        if clean == "down":
+        if clean == AgentFeedbackRating.DOWN:
             await self.enqueue_skill_analysis(
-                destination_kind="session",
+                destination_kind=SkillAnalysisDestination.SESSION,
                 destination_id=agent_session.id,
                 user_id=user_id,
                 agent_id=agent_session.agent_id,
@@ -832,9 +838,9 @@ class SessionOperations:
             comment=comment,
         )
 
-        if clean == "down":
+        if clean == AgentFeedbackRating.DOWN:
             await self.enqueue_skill_analysis(
-                destination_kind="channel",
+                destination_kind=SkillAnalysisDestination.CHANNEL,
                 destination_id=msg.channel_id,
                 user_id=user_id,
                 agent_id=msg.sender_id,
@@ -949,7 +955,7 @@ class SessionOperations:
             .where(
                 AgentMessage.session_id == session_id,
                 AgentMessage.is_compacted == False,  # noqa: E712
-                AgentMessage.role != "summary",
+                AgentMessage.role != AgentMessageRole.SUMMARY,
             )
             .order_by(AgentMessage.created_at)
         )
@@ -990,7 +996,7 @@ class SessionOperations:
 
         summary_message = AgentMessage(
             session_id=session_id,
-            role="summary",
+            role=AgentMessageRole.SUMMARY,
             content=summary_result.content,
             input_tokens=summary_result.input_tokens,
             output_tokens=summary_result.output_tokens,
@@ -1029,7 +1035,7 @@ class SessionOperations:
             select(AgentMessage)
             .where(
                 AgentMessage.session_id == session_id,
-                AgentMessage.role == "summary",
+                AgentMessage.role == AgentMessageRole.SUMMARY,
                 AgentMessage.is_compacted == False,  # noqa: E712
             )
             .order_by(AgentMessage.created_at)

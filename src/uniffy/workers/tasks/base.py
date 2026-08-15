@@ -91,7 +91,7 @@ async def _on_startup_shared(ctx: dict[str, Any], queue_name: QueueName) -> None
 
 async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
     """Close every shared resource opened on startup, in reverse order."""
-    queue_name: QueueName = ctx.get("queue", "core")
+    queue_name: QueueName = ctx.get("queue", QueueName.CORE)
     logger.info(f"Worker shutting down (queue={queue_name})...")
 
     try:
@@ -117,7 +117,7 @@ async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
 
 async def core_on_startup(ctx: dict[str, Any]) -> None:
     """Startup hook for the core fleet (shared stack + VAPID for push)."""
-    await _on_startup_shared(ctx, "core")
+    await _on_startup_shared(ctx, QueueName.CORE)
 
     try:
         from uniffy.core.config.push import load_vapid_config
@@ -152,7 +152,7 @@ async def core_on_shutdown(ctx: dict[str, Any]) -> None:
 
 async def egress_on_startup(ctx: dict[str, Any]) -> None:
     """Startup hook for the egress fleet (shared stack + provider-key invalidation)."""
-    await _on_startup_shared(ctx, "egress")
+    await _on_startup_shared(ctx, QueueName.EGRESS)
 
     try:
         await init_provider_invalidation_subscriber()
@@ -203,8 +203,6 @@ async def on_job_end(ctx: dict[str, Any]) -> None:
         WORKER_JOB_DURATION.labels(queue=queue_name, job_name=job_name).observe(duration)
 
     status = "success" if ctx.get("result") is not None else "error"
-    WORKER_JOBS_COMPLETED_TOTAL.labels(
-        queue=queue_name, job_name=job_name, status=status
-    ).inc()
+    WORKER_JOBS_COMPLETED_TOTAL.labels(queue=queue_name, job_name=job_name, status=status).inc()
 
     logger.info(f"Completed job {ctx.get('job_id', 'unknown')} (queue: {queue_name})")

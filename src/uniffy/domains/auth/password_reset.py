@@ -37,14 +37,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.password_reset_token import PasswordResetToken
 from uniffy.core.models.login.user import User
-from uniffy.core.valkey.queue import get_queue
+from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.auth.passwords import hash_password
 from uniffy.domains.security.operations import SecurityOperations
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="auth")
 
@@ -127,7 +129,7 @@ class PasswordResetOperations:
         or to enumerate addresses by response timing.
         """
         normalized = email.strip().lower()
-        if not normalized or "@" not in normalized:
+        if not normalized or "@" not in normalized:  # noqa: PLR2004
             return
 
         await check_rate_limit(
@@ -171,7 +173,7 @@ class PasswordResetOperations:
                     organization_id=primary_org_id,
                     actor_user_id=user.id,
                     action=Action.AUTH_PASSWORD_RESET_BLOCKED,
-                    resource_type="USER",
+                    resource_type=AuditResourceType.USER,
                     resource_id=user.id,
                     details={"email": normalized, "reason": "disabled_for_org"},
                 )
@@ -194,7 +196,7 @@ class PasswordResetOperations:
             organization_id=primary_org_id,
             actor_user_id=user.id,
             action=Action.AUTH_PASSWORD_RESET_REQUESTED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=user.id,
             details={
                 "email": normalized,
@@ -274,7 +276,7 @@ class PasswordResetOperations:
             organization_id=primary_org_id,
             actor_user_id=user.id,
             action=Action.AUTH_PASSWORD_RESET_COMPLETED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=user.id,
             details={
                 "token_id": str(token_record.id),
@@ -349,7 +351,7 @@ class PasswordResetOperations:
             "expires_in_minutes": int(_TOKEN_TTL.total_seconds() // 60),
         }
         try:
-            queue = get_queue("core")
+            queue = get_queue(QueueName.CORE)
         except RuntimeError:
             logger.warning(
                 "password reset email enqueue skipped: core queue not initialised",
@@ -358,7 +360,7 @@ class PasswordResetOperations:
             )
             return
         await queue.enqueue_job(
-            "send_email",
+            JobName.SEND_EMAIL,
             user.email,
             _TEMPLATE,
             json.dumps(context),
