@@ -25,14 +25,10 @@ class Tag(SQLModel, table=True):
     """A single tag in an organization's tag namespace."""
 
     __tablename__ = "tags"
-    __table_args__ = (
-        UniqueConstraint("organization_id", "slug", name="uq_tags_org_slug"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "slug", name="uq_tags_org_slug"),)
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     name: str = Field(max_length=120, nullable=False)
     slug: str = Field(max_length=64, nullable=False)
     color: str | None = Field(default=None, max_length=24)
@@ -85,9 +81,7 @@ class TagAssignment(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(ARRAY(String(16)), nullable=False, server_default="{}"),
     )
-    assigned_by: UUID | None = Field(
-        default=None, foreign_key="login_users.id", nullable=True
-    )
+    assigned_by: UUID | None = Field(default=None, foreign_key="login_users.id", nullable=True)
     assigned_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

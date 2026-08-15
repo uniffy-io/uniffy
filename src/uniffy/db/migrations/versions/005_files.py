@@ -61,9 +61,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"),
         sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("parent_id", sa.Uuid(), nullable=True),
@@ -103,9 +101,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"),
         sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("filename", sa.String(500), nullable=False),
         sa.Column("original_filename", sa.String(500), nullable=False),
@@ -187,9 +183,7 @@ def upgrade() -> None:
         sa.Column("total_chunks", sa.Integer(), nullable=False),
         sa.Column("chunk_size", sa.Integer(), nullable=False),
         sa.Column("folder_id", sa.Uuid(), nullable=True),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"),
         sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("status", _upload_status_enum, nullable=False, server_default="ACTIVE"),
         sa.Column("parts_completed", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -206,12 +200,8 @@ def upgrade() -> None:
         "files_multipart_uploads",
         ["organization_id"],
     )
-    op.create_index(
-        "ix_files_multipart_uploads_user_id", "files_multipart_uploads", ["user_id"]
-    )
-    op.create_index(
-        "ix_files_multipart_uploads_status", "files_multipart_uploads", ["status"]
-    )
+    op.create_index("ix_files_multipart_uploads_user_id", "files_multipart_uploads", ["user_id"])
+    op.create_index("ix_files_multipart_uploads_status", "files_multipart_uploads", ["status"])
 
     op.create_table(
         "files_saved_filters",
@@ -319,9 +309,7 @@ def downgrade() -> None:
     op.drop_table("files_saved_filters")
     op.drop_table("files_multipart_uploads")
     op.drop_table("files_media_info")
-    op.drop_constraint(
-        "fk_files_file_versions_file_id", "files_file_versions", type_="foreignkey"
-    )
+    op.drop_constraint("fk_files_file_versions_file_id", "files_file_versions", type_="foreignkey")
     op.drop_table("files_files")
     op.drop_table("files_file_versions")
     op.drop_table("files_folders")

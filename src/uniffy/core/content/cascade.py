@@ -157,9 +157,7 @@ async def cascade_member_grant(
                     skipped.append((ref_type.value, str(ref_id), "already_member"))
         except Exception:
             logger.opt(exception=True).warning(
-                "Failed to cascade grant for reference",
-                ref_type=ref_type.value,
-                ref_id=str(ref_id)
+                "Failed to cascade grant for reference", ref_type=ref_type.value, ref_id=str(ref_id)
             )
 
     logger.info(
@@ -466,7 +464,7 @@ async def _sync_search_sharing_batch(
             logger.opt(exception=True).warning(
                 "Failed to sync search sharing for cascaded content",
                 content_type=ct.value,
-                content_id=str(cid)
+                content_id=str(cid),
             )
 
 
@@ -600,9 +598,7 @@ async def _reindex_renamed_content(
             for note in notes:
                 await ops._index_for_search(note)
         except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to re-index notes after rename propagation"
-            )
+            logger.opt(exception=True).warning("Failed to re-index notes after rename propagation")
 
     if events:
         try:
@@ -624,6 +620,4 @@ async def _reindex_renamed_content(
             for task in tasks:
                 await ops._index_for_search(task)
         except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to re-index tasks after rename propagation"
-            )
+            logger.opt(exception=True).warning("Failed to re-index tasks after rename propagation")

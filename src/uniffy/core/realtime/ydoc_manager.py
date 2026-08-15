@@ -235,9 +235,9 @@ class YDocManager:
                     component=LOGGER_COMPONENT,
                 )
 
-        REALTIME_HYDRATION_DURATION.labels(
-            content_type=content_type.value, source=source
-        ).observe(time.perf_counter() - started)
+        REALTIME_HYDRATION_DURATION.labels(content_type=content_type.value, source=source).observe(
+            time.perf_counter() - started
+        )
         return YDocSession(key=key, ydoc=ydoc, organization_id=organization_id)
 
     async def _evict_after_idle(self, key: DocKey) -> None:
@@ -279,9 +279,7 @@ class YDocManager:
             component=LOGGER_COMPONENT,
         )
 
-    async def _apply_remote_pubsub_update(
-        self, session: YDocSession, update_bytes: bytes
-    ) -> None:
+    async def _apply_remote_pubsub_update(self, session: YDocSession, update_bytes: bytes) -> None:
         """Apply a peer-replica update and fan out to local clients without re-publishing."""
         content_type_label = session.key[0].value
         REALTIME_UPDATE_MESSAGES_TOTAL.labels(
@@ -320,9 +318,7 @@ class YDocManager:
 
         await snapshot_writer.schedule(session)
 
-    async def _enforce_role_change(
-        self, handle: ClientHandle, new_role: object
-    ) -> None:
+    async def _enforce_role_change(self, handle: ClientHandle, new_role: object) -> None:
         if new_role in _ROLES_REQUIRING_CLOSE:
             if handle.doc_key is not None:
                 REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
@@ -387,9 +383,7 @@ class YDocManager:
         for handle in affected:
             await self._close_handle(handle, WS_CLOSE_TOKEN_REVOKED, "token revoked")
 
-    async def _close_user_session_by_sid(
-        self, user_id: UUID, session_id: UUID
-    ) -> None:
+    async def _close_user_session_by_sid(self, user_id: UUID, session_id: UUID) -> None:
         """Close handles bound to a single revoked session.
 
         Used for per-session logout / "revoke this device" where the
@@ -410,9 +404,7 @@ class YDocManager:
         for handle in affected:
             await self._close_handle(handle, WS_CLOSE_TOKEN_REVOKED, "session revoked")
 
-    async def _close_handle(
-        self, handle: ClientHandle, code: int, reason: str
-    ) -> None:
+    async def _close_handle(self, handle: ClientHandle, code: int, reason: str) -> None:
         if handle.closed:
             return
         handle.closed = True

@@ -59,17 +59,13 @@ def upgrade() -> None:
         sa.Column("location", sa.String(500), nullable=False, server_default=""),
         sa.Column("amenities", postgresql.JSONB(), nullable=True),
         sa.Column("image_file_id", sa.Uuid(), nullable=True),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=False, server_default="OPEN_TO_ORG"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=False, server_default="OPEN_TO_ORG"),
         sa.Column("baseline_role", _content_role_enum, nullable=True, server_default="VIEWER"),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["owner_id"], ["login_users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -87,24 +83,18 @@ def upgrade() -> None:
         sa.Column("title", sa.String(500), nullable=False, server_default=""),
         sa.Column("start_time", sa.DateTime(timezone=True), nullable=False),
         sa.Column("end_time", sa.DateTime(timezone=True), nullable=False),
-        sa.Column(
-            "status", _booking_status_enum, nullable=False, server_default="CONFIRMED"
-        ),
+        sa.Column("status", _booking_status_enum, nullable=False, server_default="CONFIRMED"),
         sa.Column("notes", sa.Text(), nullable=False, server_default=""),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["room_id"], ["rooms_rooms.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["login_users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["event_id"], ["calendar_events.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_rooms_bookings_room_id", "rooms_bookings", ["room_id"])
-    op.create_index(
-        "ix_rooms_bookings_organization_id", "rooms_bookings", ["organization_id"]
-    )
+    op.create_index("ix_rooms_bookings_organization_id", "rooms_bookings", ["organization_id"])
     op.create_index("ix_rooms_bookings_user_id", "rooms_bookings", ["user_id"])
     op.create_index("ix_rooms_bookings_event_id", "rooms_bookings", ["event_id"])
     op.create_index("ix_rooms_bookings_start_time", "rooms_bookings", ["start_time"])

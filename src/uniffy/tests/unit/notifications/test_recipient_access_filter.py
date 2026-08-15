@@ -80,9 +80,7 @@ async def test_a_blocked_recipient_is_dropped() -> None:
     session = MagicMock()
     event = _event(target_user_ids=[KEPT, DROPPED])
 
-    with _loader(_note_row()), _roles(
-        {KEPT: ContentRole.VIEWER, DROPPED: ContentRole.BLOCKED}
-    ):
+    with _loader(_note_row()), _roles({KEPT: ContentRole.VIEWER, DROPPED: ContentRole.BLOCKED}):
         out = await task._resolve_recipients(session, event)
 
     assert out == [KEPT]

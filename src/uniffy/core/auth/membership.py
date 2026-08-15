@@ -24,16 +24,12 @@ def _membership_cache_key(user_id: UUID, organization_id: UUID) -> str:
     return f"auth:membership:{user_id}:{organization_id}"
 
 
-async def _load_active(
-    session: AsyncSession, user_id: UUID, organization_id: UUID
-) -> bool:
+async def _load_active(session: AsyncSession, user_id: UUID, organization_id: UUID) -> bool:
     from uniffy.core.models.login.organization import Organization
     from uniffy.core.models.login.organization_member import OrganizationMember
 
     org = (
-        await session.execute(
-            select(Organization).where(Organization.id == organization_id)
-        )
+        await session.execute(select(Organization).where(Organization.id == organization_id))
     ).scalar_one_or_none()
     if not org or org.deleted_at is not None or org.is_suspended:
         return False

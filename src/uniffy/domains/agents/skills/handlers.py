@@ -213,8 +213,7 @@ class SkillsHandlers:
                 total_pages = (total + page_size - 1) // page_size if total > 0 else 0
                 return ListSkillsResponse(
                     skills=[
-                        skill_to_proto(s, active_version_number=active_numbers[s.id])
-                        for s in skills
+                        skill_to_proto(s, active_version_number=active_numbers[s.id]) for s in skills
                     ],
                     pagination=PaginationResponse(
                         page=page,

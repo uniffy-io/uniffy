@@ -75,9 +75,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["owner_id"], ["login_users.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "ix_projects_projects_organization_id", "projects_projects", ["organization_id"]
-    )
+    op.create_index("ix_projects_projects_organization_id", "projects_projects", ["organization_id"])
     op.create_index("ix_projects_projects_owner_id", "projects_projects", ["owner_id"])
     op.create_index("ix_projects_projects_access_mode", "projects_projects", ["access_mode"])
     op.execute(
@@ -106,9 +104,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_projects_sprints_project_id", "projects_sprints", ["project_id"])
-    op.create_index(
-        "ix_projects_sprints_organization_id", "projects_sprints", ["organization_id"]
-    )
+    op.create_index("ix_projects_sprints_organization_id", "projects_sprints", ["organization_id"])
     op.execute(
         "CREATE UNIQUE INDEX uq_one_active_sprint_per_project "
         "ON projects_sprints (project_id) WHERE status = 'active'"
@@ -150,9 +146,7 @@ def upgrade() -> None:
         sa.Column("due_date", sa.String(20), nullable=True),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("parent_id", sa.Uuid(), nullable=True),
-        sa.Column(
-            "blocked_by_task_ids", postgresql.JSONB(astext_type=sa.Text()), nullable=True
-        ),
+        sa.Column("blocked_by_task_ids", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("is_milestone", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("recurrence_rule", sa.String(500), nullable=True),
         sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
@@ -162,9 +156,7 @@ def upgrade() -> None:
         sa.Column("estimated_minutes", sa.Integer(), nullable=True),
         sa.Column("time_spent_minutes", sa.Integer(), nullable=True),
         sa.Column("field_values", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column(
-            "outgoing_references", postgresql.JSONB(astext_type=sa.Text()), nullable=True
-        ),
+        sa.Column("outgoing_references", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -183,9 +175,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("project_id", "number", name="uq_tasks_number_per_project"),
     )
-    op.create_index(
-        "ix_projects_tasks_organization_id", "projects_tasks", ["organization_id"]
-    )
+    op.create_index("ix_projects_tasks_organization_id", "projects_tasks", ["organization_id"])
     op.create_index("ix_projects_tasks_owner_id", "projects_tasks", ["owner_id"])
     op.create_index("ix_projects_tasks_parent_id", "projects_tasks", ["parent_id"])
     op.create_index("ix_projects_tasks_project_id", "projects_tasks", ["project_id"])
@@ -200,19 +190,13 @@ def upgrade() -> None:
         sa.Column("task_id", sa.Uuid(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["login_users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["task_id"], ["projects_tasks.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id", "task_id", name="uq_task_watchers_user_task"),
     )
-    op.create_index(
-        "ix_projects_task_watchers_user_id", "projects_task_watchers", ["user_id"]
-    )
-    op.create_index(
-        "ix_projects_task_watchers_task_id", "projects_task_watchers", ["task_id"]
-    )
+    op.create_index("ix_projects_task_watchers_user_id", "projects_task_watchers", ["user_id"])
+    op.create_index("ix_projects_task_watchers_task_id", "projects_task_watchers", ["task_id"])
     op.create_index(
         "ix_projects_task_watchers_organization_id",
         "projects_task_watchers",

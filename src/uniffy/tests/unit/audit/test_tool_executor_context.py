@@ -40,9 +40,7 @@ def _audit_rows(session: MagicMock) -> list:
 async def test_gather_fan_out_inherits_audit_ip_and_user_agent() -> None:
     session = MagicMock()
     session.add = MagicMock()
-    session.execute = AsyncMock(
-        return_value=MagicMock(scalar_one_or_none=lambda: None)
-    )
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
     session.commit = AsyncMock()
 
     tool = ToolDefinition(

@@ -92,9 +92,7 @@ async def evaluate_mfa_requirement(
     try:
         required = await _is_required(session, user=user)
     except Exception:
-        logger.exception(
-            "mfa.enforcement: policy lookup failed; refusing to skip MFA"
-        )
+        logger.exception("mfa.enforcement: policy lookup failed; refusing to skip MFA")
         raise
 
     if not required:

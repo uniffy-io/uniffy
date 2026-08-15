@@ -99,17 +99,13 @@ def _patch_checker(
             if access_error is not None:
                 raise access_error
 
-    monkeypatch.setattr(
-        "uniffy.domains.chat.access.ChatAccessChecker", _FakeChecker, raising=True
-    )
+    monkeypatch.setattr("uniffy.domains.chat.access.ChatAccessChecker", _FakeChecker, raising=True)
 
 
 class TestChannelBindingConverter:
     def test_converter_passes_channel_binding(self) -> None:
         cid = generate_id()
-        proto = event_to_proto(
-            _make_event(channel_id=cid, channel_auto_created=True)
-        )
+        proto = event_to_proto(_make_event(channel_id=cid, channel_auto_created=True))
         assert proto.HasField("channel_id")
         assert proto.channel_id == str(cid)
         assert proto.channel_auto_created is True
@@ -127,17 +123,13 @@ class TestValidateChannelBinding:
         # No raise means the organizer may bind to the channel.
         await ops._validate_channel_binding(generate_id(), generate_id(), generate_id())
 
-    async def test_archived_channel_rejected(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_archived_channel_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _patch_checker(monkeypatch, channel=_make_channel(is_archived=True))
         ops = _make_ops()
         with pytest.raises(ValidationError):
             await ops._validate_channel_binding(generate_id(), generate_id(), generate_id())
 
-    async def test_no_access_propagates(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_no_access_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _patch_checker(
             monkeypatch,
             channel=_make_channel(),
@@ -152,9 +144,7 @@ class TestValidateChannelBinding:
     ) -> None:
         # get_channel already scopes by org and filters deleted rows, so a
         # cross-org or deleted channel surfaces as NotFound here.
-        _patch_checker(
-            monkeypatch, get_error=NotFoundError("channel", generate_id())
-        )
+        _patch_checker(monkeypatch, get_error=NotFoundError("channel", generate_id()))
         ops = _make_ops()
         with pytest.raises(NotFoundError):
             await ops._validate_channel_binding(generate_id(), generate_id(), generate_id())
@@ -220,9 +210,7 @@ class TestApplyChannelBindingUpdate:
         ops._validate_channel_binding = AsyncMock()
         cid = generate_id()
         event = _make_event(channel_id=cid, channel_auto_created=True)
-        await ops._apply_channel_binding_update(
-            generate_id(), generate_id(), event, str(cid), False
-        )
+        await ops._apply_channel_binding_update(generate_id(), generate_id(), event, str(cid), False)
         assert event.channel_id == cid
         # Re-binding the same channel must not clear an auto-created flag.
         assert event.channel_auto_created is True
@@ -281,22 +269,16 @@ def _patch_chat_ops(
         def __init__(self, session) -> None:
             self.session = session
 
-        async def add_members(
-            self, user_id, organization_id, channel_id, member_user_ids
-        ):
+        async def add_members(self, user_id, organization_id, channel_id, member_user_ids):
             if add_error is not None:
                 raise add_error
-            calls["add"].append(
-                (user_id, organization_id, channel_id, list(member_user_ids))
-            )
+            calls["add"].append((user_id, organization_id, channel_id, list(member_user_ids)))
             return []
 
         async def remove_members(
             self, user_id, organization_id, channel_id, member_user_ids
         ) -> None:
-            calls["remove"].append(
-                (user_id, organization_id, channel_id, list(member_user_ids))
-            )
+            calls["remove"].append((user_id, organization_id, channel_id, list(member_user_ids)))
 
     monkeypatch.setattr(
         "uniffy.domains.chat.channels.operations.ChatChannelOperations",
@@ -329,12 +311,8 @@ class TestAutoCreatedRoomSync:
         event = _make_event(channel_id=cid, channel_auto_created=True)
         u_add, u_rm = generate_id(), generate_id()
         await ops._sync_auto_created_room_members(event, added=[u_add], removed=[u_rm])
-        assert calls["add"] == [
-            (event.organizer_id, event.organization_id, cid, [u_add])
-        ]
-        assert calls["remove"] == [
-            (event.organizer_id, event.organization_id, cid, [u_rm])
-        ]
+        assert calls["add"] == [(event.organizer_id, event.organization_id, cid, [u_add])]
+        assert calls["remove"] == [(event.organizer_id, event.organization_id, cid, [u_rm])]
 
     async def test_excludes_organizer(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls = _patch_chat_ops(monkeypatch)
@@ -347,9 +325,7 @@ class TestAutoCreatedRoomSync:
         assert calls["add"] == []
         assert calls["remove"] == []
 
-    async def test_best_effort_swallows_chat_failure(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_best_effort_swallows_chat_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _patch_chat_ops(monkeypatch, add_error=RuntimeError("chat down"))
         ops = _make_ops()
         event = _make_event(channel_id=generate_id(), channel_auto_created=True)

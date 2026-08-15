@@ -25,9 +25,7 @@ def mint_turn_credentials(user_id: UUID, config: TurnConfig) -> TurnCredentials:
     """
     expiry_unix = int(time.time()) + config.credential_ttl_seconds
     username = f"{expiry_unix}:{user_id}"
-    digest = hmac.new(
-        config.shared_secret.encode(), username.encode(), hashlib.sha1
-    ).digest()
+    digest = hmac.new(config.shared_secret.encode(), username.encode(), hashlib.sha1).digest()
     return TurnCredentials(
         urls=config.server_urls,
         username=username,

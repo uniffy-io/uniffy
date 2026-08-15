@@ -360,9 +360,7 @@ class TestSnapshotWriterDebounce:
             await writer.schedule(session)
             assert flush_calls == []
 
-            writer._first_scheduled[session.key] = time.monotonic() - (
-                SNAPSHOT_MAX_DELAY + 1
-            )
+            writer._first_scheduled[session.key] = time.monotonic() - (SNAPSHOT_MAX_DELAY + 1)
             await writer.schedule(session)
             assert flush_calls == [False]
 
@@ -447,9 +445,9 @@ class TestCanvasRender:
         from uniffy.domains.notes.realtime_adapter import _render_canvas_content
 
         ydoc = pycrdt.Doc()
-        ydoc["nodes"] = pycrdt.Map(
-            {"n1": pycrdt.Map({"id": "n1", "type": "text", "x": 10, "y": 20})}
-        )
+        ydoc["nodes"] = pycrdt.Map({
+            "n1": pycrdt.Map({"id": "n1", "type": "text", "x": 10, "y": 20})
+        })
         ydoc["edges"] = pycrdt.Map({})
         ydoc["order"] = pycrdt.Array(["n1"])
 
@@ -671,10 +669,7 @@ class TestOutboundBackpressure:
         enqueue_for_handle(handle, b"overflow", kind="update")
 
         assert ws_session.outbound.qsize() == ws_session.outbound.maxsize
-        drained = [
-            ws_session.outbound.get_nowait()
-            for _ in range(ws_session.outbound.qsize())
-        ]
+        drained = [ws_session.outbound.get_nowait() for _ in range(ws_session.outbound.qsize())]
         assert all(b"overflow" not in f for f in drained)
 
 
@@ -731,9 +726,7 @@ class TestQueryAwarenessRelay:
         async def go() -> None:
             ydoc_manager._sessions[doc_key] = session
             try:
-                await _dispatch_doc_frame(
-                    AsyncMock(), asker_ws, asker, doc_name, query_frame
-                )
+                await _dispatch_doc_frame(AsyncMock(), asker_ws, asker, doc_name, query_frame)
             finally:
                 ydoc_manager._sessions.pop(doc_key, None)
 
@@ -1272,12 +1265,8 @@ def _revocation_patches(
     import uniffy.core.realtime.reauth as reauth_mod
 
     return (
-        patch.object(
-            reauth_mod, "is_access_token_revoked", AsyncMock(return_value=token_revoked)
-        ),
-        patch.object(
-            reauth_mod, "is_session_revoked", AsyncMock(return_value=session_revoked)
-        ),
+        patch.object(reauth_mod, "is_access_token_revoked", AsyncMock(return_value=token_revoked)),
+        patch.object(reauth_mod, "is_session_revoked", AsyncMock(return_value=session_revoked)),
         patch.object(reauth_mod, "is_active_member", AsyncMock(return_value=active_member)),
     )
 
@@ -1314,9 +1303,7 @@ class TestConnectionReauth:
         assert denial.metric_reason == "session_revoked"
 
     async def test_revoked_token_version_closes_a_live_socket(self) -> None:
-        denial = await self._denial(
-            _ws_session(expires_at=time.time() + 600), token_revoked=True
-        )
+        denial = await self._denial(_ws_session(expires_at=time.time() + 600), token_revoked=True)
         assert denial is not None
         assert denial.metric_reason == "token_revoked"
 
@@ -1324,9 +1311,7 @@ class TestConnectionReauth:
         from uniffy.core.realtime.auth import WS_CLOSE_FORBIDDEN
 
         # Removing a member publishes no realtime signal of its own.
-        denial = await self._denial(
-            _ws_session(expires_at=time.time() + 600), active_member=False
-        )
+        denial = await self._denial(_ws_session(expires_at=time.time() + 600), active_member=False)
         assert denial is not None
         assert denial.code == WS_CLOSE_FORBIDDEN
         assert denial.metric_reason == "membership_revoked"
@@ -1362,9 +1347,7 @@ class TestConnectionReauth:
 
         async def go():
             with token, sid, member:
-                return await _attach_doc(
-                    ws, ws_session, (ContentType.NOTE, generate_id()), "NOTE:x"
-                )
+                return await _attach_doc(ws, ws_session, (ContentType.NOTE, generate_id()), "NOTE:x")
 
         assert await go() is None
         ws.close.assert_awaited_once()
@@ -1406,9 +1389,7 @@ class TestUpgradeChecksRevokedSession:
             patch.object(ws_routes, "origin_is_allowed", lambda *_a, **_k: True),
             patch.object(ws_routes, "decode_access_token", lambda _t: payload),
             patch.object(ws_routes, "is_access_token_revoked", AsyncMock(return_value=False)),
-            patch.object(
-                ws_routes, "is_session_revoked", AsyncMock(return_value=session_revoked)
-            ),
+            patch.object(ws_routes, "is_session_revoked", AsyncMock(return_value=session_revoked)),
             patch.object(ws_routes, "is_active_member", AsyncMock(return_value=True)),
             patch.object(ws_routes, "run_multiplexed_session", AsyncMock()),
         ):

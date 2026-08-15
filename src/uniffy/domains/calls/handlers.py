@@ -158,9 +158,7 @@ class CallHandlers:
             **ice_fields,
         )
 
-    async def leave_call(
-        self, request: LeaveCallRequest, ctx: RequestContext
-    ) -> LeaveCallResponse:
+    async def leave_call(self, request: LeaveCallRequest, ctx: RequestContext) -> LeaveCallResponse:
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         call_id = _parse_uuid(request.call_id, "call_id")
@@ -293,9 +291,7 @@ class CallHandlers:
 
         async with open_session() as session:
             try:
-                policy = await CallOperations(session).get_org_policy_view(
-                    user_id, organization_id
-                )
+                policy = await CallOperations(session).get_org_policy_view(user_id, organization_id)
             except Exception as exc:
                 raise _map_domain_error("get_org_call_policy", exc) from exc
         return GetOrgCallPolicyResponse(policy=org_policy_to_proto(policy))

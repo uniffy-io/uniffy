@@ -46,9 +46,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"),
         sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("node_type", _node_type_enum, nullable=False, server_default="NOTE"),
         sa.Column("title", sa.String(500), nullable=False),
@@ -61,9 +59,7 @@ def upgrade() -> None:
         sa.Column("tags", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("inline_tags", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("note_metadata", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column(
-            "outgoing_references", postgresql.JSONB(astext_type=sa.Text()), nullable=True
-        ),
+        sa.Column("outgoing_references", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column(
             "content_search",
             postgresql.TSVECTOR(),

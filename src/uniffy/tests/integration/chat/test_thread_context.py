@@ -92,9 +92,7 @@ class TestThreadReplyCounters:
             )
         ).scalar_one()
 
-    async def test_agent_reply_counts_and_joins_as_an_agent_subject(
-        self, session, threads
-    ) -> None:
+    async def test_agent_reply_counts_and_joins_as_an_agent_subject(self, session, threads) -> None:
         await record_thread_reply(
             session,
             root_message_id=threads.root_a_id,
@@ -134,9 +132,7 @@ class TestThreadReplyCounters:
         )
         assert follows == []
 
-    async def test_repeat_replies_count_once_per_reply_and_join_once(
-        self, session, threads
-    ) -> None:
+    async def test_repeat_replies_count_once_per_reply_and_join_once(self, session, threads) -> None:
         for _ in range(2):
             await record_thread_reply(
                 session,

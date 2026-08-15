@@ -142,9 +142,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Drop the table + the two enum types."""
-    op.execute(
-        "DROP INDEX IF EXISTS ix_platform_support_sessions_active_user_org"
-    )
+    op.execute("DROP INDEX IF EXISTS ix_platform_support_sessions_active_user_org")
     op.drop_index(
         "ix_platform_support_sessions_expires_at",
         table_name="platform_support_sessions",

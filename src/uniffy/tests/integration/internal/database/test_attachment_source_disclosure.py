@@ -27,9 +27,7 @@ def _file(env, access_mode: AccessMode, owner_id) -> File:
         # Materialised like the real create path: this suite's org carries no
         # permissions_org_defaults row, and OPEN_TO_ORG with a NULL baseline
         # everywhere grants nobody anything.
-        baseline_role=(
-            ContentRole.VIEWER if access_mode == AccessMode.OPEN_TO_ORG else None
-        ),
+        baseline_role=(ContentRole.VIEWER if access_mode == AccessMode.OPEN_TO_ORG else None),
     )
 
 
@@ -93,9 +91,7 @@ async def test_source_file_id_is_withheld_from_readers_without_access(session, e
 
     finally:
         await session.rollback()
-        await session.execute(
-            delete(Attachment).where(Attachment.organization_id == env.org_id)
-        )
+        await session.execute(delete(Attachment).where(Attachment.organization_id == env.org_id))
         await session.execute(delete(File).where(File.organization_id == env.org_id))
         await session.commit()
 

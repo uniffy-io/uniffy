@@ -103,9 +103,7 @@ class TestBucketIsolation:
 
         async def run() -> None:
             with (
-                patch(
-                    "uniffy.core.valkey.rate_limit._get_client", return_value=client
-                ),
+                patch("uniffy.core.valkey.rate_limit._get_client", return_value=client),
                 patch(
                     "uniffy.core.valkey.rate_limit.load_org_overrides",
                     AsyncMock(return_value={}),
@@ -132,9 +130,7 @@ class TestBucketIsolation:
 
         async def run() -> None:
             with (
-                patch(
-                    "uniffy.core.valkey.rate_limit._get_client", return_value=client
-                ),
+                patch("uniffy.core.valkey.rate_limit._get_client", return_value=client),
                 patch(
                     "uniffy.core.valkey.rate_limit.load_org_overrides",
                     AsyncMock(return_value={}),
@@ -168,9 +164,7 @@ class TestOverrideApplied:
 
         async def run() -> None:
             with (
-                patch(
-                    "uniffy.core.valkey.rate_limit._get_client", return_value=client
-                ),
+                patch("uniffy.core.valkey.rate_limit._get_client", return_value=client),
                 patch(
                     "uniffy.core.valkey.rate_limit.load_org_overrides",
                     AsyncMock(return_value=override),
@@ -204,9 +198,7 @@ class TestRetryAfter:
         client = _counting_client({}, ttl_seconds=42)
 
         async def run() -> None:
-            with patch(
-                "uniffy.core.valkey.rate_limit._get_client", return_value=client
-            ):
+            with patch("uniffy.core.valkey.rate_limit._get_client", return_value=client):
                 await check_rate_limit(
                     key="rl:retry_test",
                     limit=1,

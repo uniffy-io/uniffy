@@ -104,9 +104,7 @@ class TestCheckImageQuotaNoRows:
                 patch.object(
                     mod,
                     "_count_images_today_for_user",
-                    AsyncMock(
-                        return_value=DEFAULT_DAILY_IMAGE_LIMIT_PER_USER + 1
-                    ),
+                    AsyncMock(return_value=DEFAULT_DAILY_IMAGE_LIMIT_PER_USER + 1),
                 ),
                 patch.object(
                     mod,
@@ -136,9 +134,7 @@ class TestCheckImageQuotaNoRows:
                 patch.object(
                     mod,
                     "_count_images_this_month_for_org",
-                    AsyncMock(
-                        return_value=DEFAULT_MONTHLY_IMAGE_LIMIT_PER_ORG + 10
-                    ),
+                    AsyncMock(return_value=DEFAULT_MONTHLY_IMAGE_LIMIT_PER_ORG + 10),
                 ),
             ):
                 await check_image_quota(
@@ -308,9 +304,7 @@ class TestCheckImageQuotaSoftRows:
                 patch.object(
                     mod,
                     "_count_images_today_for_user",
-                    AsyncMock(
-                        return_value=DEFAULT_DAILY_IMAGE_LIMIT_PER_USER + 100
-                    ),
+                    AsyncMock(return_value=DEFAULT_DAILY_IMAGE_LIMIT_PER_USER + 100),
                 ),
                 patch.object(
                     mod,

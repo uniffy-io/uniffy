@@ -111,13 +111,15 @@ def _patch_queue():
     queue = AsyncMock()
     queue.enqueue_job = AsyncMock()
     return patch(
-        "uniffy.domains.invitations.operations.get_queue", return_value=queue,
+        "uniffy.domains.invitations.operations.get_queue",
+        return_value=queue,
     ), queue
 
 
 def _patch_audit():
     return patch(
-        "uniffy.domains.invitations.operations.write_audit_event", new=AsyncMock(),
+        "uniffy.domains.invitations.operations.write_audit_event",
+        new=AsyncMock(),
     )
 
 
@@ -143,12 +145,11 @@ class TestInviteExistingUser:
         membership = SimpleNamespace(id=generate_id(), role=OrganizationRole.MEMBER)
 
         # Order: lookup inviter, lookup existing user-by-email.
-        session = _make_session(
-            [_result(scalar=inviter), _result(scalar=existing)]
-        )
+        session = _make_session([_result(scalar=inviter), _result(scalar=existing)])
         queue_patch, queue = _patch_queue()
         org_ops_patch, org_ops = _patch_org_ops(
-            get_by_id_returns=org, add_member_returns=membership,
+            get_by_id_returns=org,
+            add_member_returns=membership,
         )
 
         with _patch_audit(), queue_patch, org_ops_patch:
@@ -177,13 +178,11 @@ class TestInviteNewEmail:
 
         # Order: lookup inviter, lookup existing-by-email (None), select pending (none).
         pending = []
-        session = _make_session(
-            [
-                _result(scalar=inviter),
-                _result(scalar=None),
-                _result(scalars=pending),
-            ]
-        )
+        session = _make_session([
+            _result(scalar=inviter),
+            _result(scalar=None),
+            _result(scalars=pending),
+        ])
         queue_patch, queue = _patch_queue()
         org_ops_patch, _org = _patch_org_ops(get_by_id_returns=org)
 

@@ -73,9 +73,7 @@ class BudgetExceededError(UNIFFYError):
         self.limit_kind = limit_kind
         self.current = current
         self.limit = limit
-        super().__init__(
-            f"Budget exceeded ({scope}/{limit_kind}): {current} >= {limit}"
-        )
+        super().__init__(f"Budget exceeded ({scope}/{limit_kind}): {current} >= {limit}")
 
 
 class RuntimeDeadlineExceededError(UNIFFYError):
@@ -87,9 +85,7 @@ class RuntimeDeadlineExceededError(UNIFFYError):
     def __init__(self, deadline_seconds: int, elapsed_seconds: float) -> None:
         self.deadline_seconds = deadline_seconds
         self.elapsed_seconds = elapsed_seconds
-        super().__init__(
-            f"Runtime deadline exceeded: {elapsed_seconds:.1f}s >= {deadline_seconds}s"
-        )
+        super().__init__(f"Runtime deadline exceeded: {elapsed_seconds:.1f}s >= {deadline_seconds}s")
 
 
 class RateLimitExceededError(UNIFFYError):

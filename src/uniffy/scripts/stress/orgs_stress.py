@@ -22,23 +22,88 @@ from uniffy.domains.organizations.operations import OrganizationOperations
 
 _PLANS = ["free", "pro", "team", "business", "enterprise"]
 _FIRST_NAMES = [
-    "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry",
-    "Ivy", "Jack", "Kara", "Liam", "Maya", "Nora", "Owen", "Piper",
-    "Quinn", "Riley", "Sage", "Tara", "Uma", "Vince", "Willa", "Xan",
-    "Yuna", "Zane",
+    "Alice",
+    "Bob",
+    "Charlie",
+    "Diana",
+    "Eve",
+    "Frank",
+    "Grace",
+    "Henry",
+    "Ivy",
+    "Jack",
+    "Kara",
+    "Liam",
+    "Maya",
+    "Nora",
+    "Owen",
+    "Piper",
+    "Quinn",
+    "Riley",
+    "Sage",
+    "Tara",
+    "Uma",
+    "Vince",
+    "Willa",
+    "Xan",
+    "Yuna",
+    "Zane",
 ]
 _LAST_NAMES = [
-    "Adams", "Brown", "Clark", "Davis", "Evans", "Foster", "Garcia",
-    "Hughes", "Iyer", "Jensen", "Khan", "Lopez", "Miller", "Nguyen",
-    "Olsen", "Patel", "Quinn", "Reyes", "Smith", "Tanaka", "Ueda",
-    "Vargas", "Wong", "Xu", "Young", "Zhao",
+    "Adams",
+    "Brown",
+    "Clark",
+    "Davis",
+    "Evans",
+    "Foster",
+    "Garcia",
+    "Hughes",
+    "Iyer",
+    "Jensen",
+    "Khan",
+    "Lopez",
+    "Miller",
+    "Nguyen",
+    "Olsen",
+    "Patel",
+    "Quinn",
+    "Reyes",
+    "Smith",
+    "Tanaka",
+    "Ueda",
+    "Vargas",
+    "Wong",
+    "Xu",
+    "Young",
+    "Zhao",
 ]
 _ORG_WORDS = [
-    "Acme", "Globex", "Initech", "Umbrella", "Soylent", "Tyrell",
-    "Wonka", "Stark", "Wayne", "Cyberdyne", "Hooli", "Pied-Piper",
-    "Massive-Dynamic", "Aperture", "Black-Mesa", "Vandelay", "Bluth",
-    "Dunder", "Sterling", "Pinnacle", "Vector", "Helios", "Orion",
-    "Nimbus", "Aurora", "Beacon",
+    "Acme",
+    "Globex",
+    "Initech",
+    "Umbrella",
+    "Soylent",
+    "Tyrell",
+    "Wonka",
+    "Stark",
+    "Wayne",
+    "Cyberdyne",
+    "Hooli",
+    "Pied-Piper",
+    "Massive-Dynamic",
+    "Aperture",
+    "Black-Mesa",
+    "Vandelay",
+    "Bluth",
+    "Dunder",
+    "Sterling",
+    "Pinnacle",
+    "Vector",
+    "Helios",
+    "Orion",
+    "Nimbus",
+    "Aurora",
+    "Beacon",
 ]
 
 
@@ -63,9 +128,7 @@ def _user_identity(
 async def _get_or_create_user(
     session, email: str, username: str, full_name: str, password_hash: str
 ) -> User:
-    existing = (
-        await session.execute(select(User).where(User.email == email))
-    ).scalar_one_or_none()
+    existing = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if existing:
         return existing
     user = User(
@@ -99,9 +162,7 @@ async def _provision_org(
         if existing_org:
             return existing_org.id, slug, 0
 
-        owner_email, owner_username, owner_full_name = _user_identity(
-            org_idx, 0, rng, prefix
-        )
+        owner_email, owner_username, owner_full_name = _user_identity(org_idx, 0, rng, prefix)
         owner = await _get_or_create_user(
             session, owner_email, owner_username, owner_full_name, password_hash
         )
@@ -116,9 +177,7 @@ async def _provision_org(
 
         added = 1
         for user_idx in range(1, users_per_org):
-            email, username, full_name = _user_identity(
-                org_idx, user_idx, rng, prefix
-            )
+            email, username, full_name = _user_identity(org_idx, user_idx, rng, prefix)
             member_user = await _get_or_create_user(
                 session, email, username, full_name, password_hash
             )
@@ -172,9 +231,7 @@ async def stress_seed(
                 created_orgs += 1
                 total_members += added
                 elapsed = time.monotonic() - t0
-                logger.info(
-                    f"[{i}/{orgs}] {slug} +{added} members in {elapsed:.1f}s"
-                )
+                logger.info(f"[{i}/{orgs}] {slug} +{added} members in {elapsed:.1f}s")
     finally:
         await close_db()
 

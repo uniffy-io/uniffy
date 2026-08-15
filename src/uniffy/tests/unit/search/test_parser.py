@@ -34,9 +34,7 @@ from uniffy.domains.search.parser import has_active_filters, parse_search_query
         ("note: file: shared plan", ["note", "file"], "shared plan"),
     ],
 )
-def test_type_keywords_keep_following_text(
-    query: str, type_filters: list[str], text: str
-) -> None:
+def test_type_keywords_keep_following_text(query: str, type_filters: list[str], text: str) -> None:
     parsed = parse_search_query(query)
     assert parsed.type_filters == type_filters
     assert parsed.text == text

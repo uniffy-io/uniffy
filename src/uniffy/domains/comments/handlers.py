@@ -547,7 +547,7 @@ class CommentsHandlers:
                 ct = content_type_from_proto(ref.content_type)
                 cid = UUID(ref.content_id)
                 content_refs.append((ct, cid))
-            except (ValueError, KeyError):
+            except ValueError, KeyError:
                 continue
 
         try:

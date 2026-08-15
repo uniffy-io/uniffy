@@ -55,14 +55,10 @@ class IntegrationProvider(ABC):
     descriptor: ClassVar[IntegrationDescriptor]
 
     @abstractmethod
-    def build_http_client(
-        self, credential: str, base_url: str | None
-    ) -> IntegrationHttpClient: ...
+    def build_http_client(self, credential: str, base_url: str | None) -> IntegrationHttpClient: ...
 
     @abstractmethod
-    async def validate(
-        self, credential: str, base_url: str | None
-    ) -> IntegrationProbeResult: ...
+    async def validate(self, credential: str, base_url: str | None) -> IntegrationProbeResult: ...
 
     @abstractmethod
     def tools(self) -> list[ToolDefinition]: ...

@@ -2,7 +2,6 @@
 a typo/partial match never rides its type above a full match.
 """
 
-
 from uniffy.core.types import generate_id
 from uniffy.domains.search.queries import SearchResult, apply_type_priority
 

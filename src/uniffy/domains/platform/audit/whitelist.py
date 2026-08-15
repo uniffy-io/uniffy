@@ -6,21 +6,19 @@ from __future__ import annotations
 
 from uniffy.core.audit.actions import Action, tool_call_action  # noqa: F401
 
-PLATFORM_ACTION_PREFIXES: frozenset[str] = frozenset(
-    {
-        "auth.",
-        "user.",
-        "organization.",
-        "support_session.",
-        "system.",
-        "deployment.",
-        # Per-org mail.sent/send_failed belong to tenant audit; only system
-        # + force-clear are platform-initiated.
-        "mail.system_config_",
-        "mail.config_force_cleared",
-        "mail.suppression_removed",
-    }
-)
+PLATFORM_ACTION_PREFIXES: frozenset[str] = frozenset({
+    "auth.",
+    "user.",
+    "organization.",
+    "support_session.",
+    "system.",
+    "deployment.",
+    # Per-org mail.sent/send_failed belong to tenant audit; only system
+    # + force-clear are platform-initiated.
+    "mail.system_config_",
+    "mail.config_force_cleared",
+    "mail.suppression_removed",
+})
 
 
 def is_platform_action(action: str) -> bool:

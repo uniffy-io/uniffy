@@ -73,9 +73,7 @@ class SenderResolver:
                 missing_agents.append(sender_id)
 
         if missing_users:
-            cached_users, missing_users = await get_cached_user_profiles(
-                missing_users
-            )
+            cached_users, missing_users = await get_cached_user_profiles(missing_users)
             for uid, payload in cached_users.items():
                 self._cache[(SenderType.USER, uid)] = SenderInfo(
                     id=uid,
@@ -85,9 +83,7 @@ class SenderResolver:
                 )
 
         if missing_agents:
-            cached_agents, missing_agents = await get_cached_agent_profiles(
-                missing_agents
-            )
+            cached_agents, missing_agents = await get_cached_agent_profiles(missing_agents)
             for aid, payload in cached_agents.items():
                 self._cache[(SenderType.AGENT, aid)] = SenderInfo(
                     id=aid,

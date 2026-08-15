@@ -73,14 +73,10 @@ def _serialize_agent(agent: Agent) -> dict[str, Any]:
         "image_params": dict(agent.image_params or {}),
         "image_style_prompt": agent.image_style_prompt,
         "primary_provider_key_id": (
-            str(agent.primary_provider_key_id)
-            if agent.primary_provider_key_id
-            else None
+            str(agent.primary_provider_key_id) if agent.primary_provider_key_id else None
         ),
         "image_provider_key_id": (
-            str(agent.image_provider_key_id)
-            if agent.image_provider_key_id
-            else None
+            str(agent.image_provider_key_id) if agent.image_provider_key_id else None
         ),
         "enabled_tools": list(agent.enabled_tools or []),
         "enabled_skills": list(agent.enabled_skills or []),
@@ -89,22 +85,12 @@ def _serialize_agent(agent: Agent) -> dict[str, Any]:
         "avatar_key": agent.avatar_key,
         "theme_color": agent.theme_color,
         "is_default": agent.is_default,
-        "access_mode": (
-            agent.access_mode.value if agent.access_mode is not None else None
-        ),
-        "baseline_role": (
-            agent.baseline_role.value if agent.baseline_role is not None else None
-        ),
+        "access_mode": (agent.access_mode.value if agent.access_mode is not None else None),
+        "baseline_role": (agent.baseline_role.value if agent.baseline_role is not None else None),
         "is_deleted": agent.is_deleted,
-        "deleted_at": (
-            agent.deleted_at.isoformat() if agent.deleted_at else None
-        ),
-        "created_at": (
-            agent.created_at.isoformat() if agent.created_at else None
-        ),
-        "updated_at": (
-            agent.updated_at.isoformat() if agent.updated_at else None
-        ),
+        "deleted_at": (agent.deleted_at.isoformat() if agent.deleted_at else None),
+        "created_at": (agent.created_at.isoformat() if agent.created_at else None),
+        "updated_at": (agent.updated_at.isoformat() if agent.updated_at else None),
     }
 
 
@@ -128,9 +114,7 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
             else None
         ),
         image_provider_key_id=(
-            UUID(payload["image_provider_key_id"])
-            if payload.get("image_provider_key_id")
-            else None
+            UUID(payload["image_provider_key_id"]) if payload.get("image_provider_key_id") else None
         ),
         enabled_tools=payload.get("enabled_tools") or [],
         enabled_skills=payload.get("enabled_skills") or [],
@@ -140,9 +124,7 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
         theme_color=payload.get("theme_color", ""),
         is_default=payload.get("is_default", False),
         access_mode=(
-            AccessMode(payload["access_mode"])
-            if payload.get("access_mode") is not None
-            else None
+            AccessMode(payload["access_mode"]) if payload.get("access_mode") is not None else None
         ),
         baseline_role=(
             ContentRole(payload["baseline_role"])
@@ -151,19 +133,13 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
         ),
         is_deleted=payload.get("is_deleted", False),
         deleted_at=(
-            datetime.fromisoformat(payload["deleted_at"])
-            if payload.get("deleted_at")
-            else None
+            datetime.fromisoformat(payload["deleted_at"]) if payload.get("deleted_at") else None
         ),
         created_at=(
-            datetime.fromisoformat(payload["created_at"])
-            if payload.get("created_at")
-            else None
+            datetime.fromisoformat(payload["created_at"]) if payload.get("created_at") else None
         ),
         updated_at=(
-            datetime.fromisoformat(payload["updated_at"])
-            if payload.get("updated_at")
-            else None
+            datetime.fromisoformat(payload["updated_at"]) if payload.get("updated_at") else None
         ),
     )
 
@@ -296,9 +272,7 @@ async def _set_add(set_key: str, member: str, ttl: int) -> None:
         pipe.expire(set_key, ttl)
         await pipe.execute()
     except Exception:
-        logger.warning(
-            f"Cache reverse-index SADD failed for {set_key}", component="cache"
-        )
+        logger.warning(f"Cache reverse-index SADD failed for {set_key}", component="cache")
 
 
 async def _set_remove(set_key: str, member: str) -> None:
@@ -308,9 +282,7 @@ async def _set_remove(set_key: str, member: str) -> None:
     try:
         await client.srem(set_key, member)
     except Exception:
-        logger.warning(
-            f"Cache reverse-index SREM failed for {set_key}", component="cache"
-        )
+        logger.warning(f"Cache reverse-index SREM failed for {set_key}", component="cache")
 
 
 async def _set_members(set_key: str) -> list[str]:
@@ -344,9 +316,7 @@ async def track_agent_skill_refs(
     """
     if added_skill_ids:
         for sid in added_skill_ids:
-            await _set_add(
-                _skill_tag_key(sid), str(agent_id), _SKILLS_TTL_SECONDS
-            )
+            await _set_add(_skill_tag_key(sid), str(agent_id), _SKILLS_TTL_SECONDS)
     if removed_skill_ids:
         for sid in removed_skill_ids:
             await _set_remove(_skill_tag_key(sid), str(agent_id))
@@ -364,9 +334,7 @@ async def invalidate_agents_using_skill(
     set_key = _skill_tag_key(skill_id)
     members = await _set_members(set_key)
     if members:
-        keys = [
-            _agent_skills_key(UUID(aid)) for aid in members if _is_uuid(aid)
-        ]
+        keys = [_agent_skills_key(UUID(aid)) for aid in members if _is_uuid(aid)]
         if keys:
             await cache_invalidate_many(*keys)
     if drop_tag_set:
@@ -393,7 +361,7 @@ async def invalidate_org_always_active_skills(organization_id: UUID) -> None:
 def _is_uuid(value: str) -> bool:
     try:
         UUID(value)
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return False
     return True
 
@@ -431,37 +399,25 @@ async def fetch_memory_index(
         filters = scope_filters(organization_id, scope_ref)
         pinned_rows = (
             await session.execute(
-                select(
-                    AgentMemory.key, AgentMemory.category, AgentMemory.content
-                )
+                select(AgentMemory.key, AgentMemory.category, AgentMemory.content)
                 .where(*filters, AgentMemory.pinned.is_(True))  # type: ignore[union-attr]
                 .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
             )
         ).all()
         index_rows = (
             await session.execute(
-                select(
-                    AgentMemory.key, AgentMemory.category, AgentMemory.description
-                )
+                select(AgentMemory.key, AgentMemory.category, AgentMemory.description)
                 .where(*filters, AgentMemory.pinned.is_(False))  # type: ignore[union-attr]
                 .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
                 .limit(MEMORY_INDEX_LIMIT)
             )
         ).all()
         total = (
-            await session.execute(
-                select(func.count()).select_from(AgentMemory).where(*filters)
-            )
+            await session.execute(select(func.count()).select_from(AgentMemory).where(*filters))
         ).scalar() or 0
         return {
-            "pinned": [
-                {"key": k, "category": c, "content": body}
-                for k, c, body in pinned_rows
-            ],
-            "index": [
-                {"key": k, "category": c, "description": d}
-                for k, c, d in index_rows
-            ],
+            "pinned": [{"key": k, "category": c, "content": body} for k, c, body in pinned_rows],
+            "index": [{"key": k, "category": c, "description": d} for k, c, d in index_rows],
             "total": int(total),
         }
 

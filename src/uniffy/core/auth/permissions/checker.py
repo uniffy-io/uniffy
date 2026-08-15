@@ -92,12 +92,8 @@ class PermissionChecker:
             # operations, not in this content-access decision. Chat keeps its
             # own moderation model in ChatAccessChecker.
             if await self._is_system_admin(user_id):
-                if not await self._is_user_in_organization(
-                    user_id, organization_id
-                ):
-                    return await self._support_session_role(
-                        user_id, organization_id
-                    )
+                if not await self._is_user_in_organization(user_id, organization_id):
+                    return await self._support_session_role(user_id, organization_id)
 
             # Active org membership is a precondition for every tenant-content
             # decision, ownership included. Removed members keep ContentMember
@@ -110,7 +106,10 @@ class PermissionChecker:
                 return ContentRole.OWNER
 
             effective_mode, effective_baseline = await self._resolve_effective(
-                organization_id, content_type, access_mode, baseline_role,
+                organization_id,
+                content_type,
+                access_mode,
+                baseline_role,
             )
 
             member_role = await self._get_member_role(
@@ -163,13 +162,20 @@ class PermissionChecker:
             raw_access_mode != AccessMode.OPEN_TO_ORG or raw_baseline_role is not None
         ):
             return resolve_effective_policy(
-                raw_access_mode, raw_baseline_role, None, None,
+                raw_access_mode,
+                raw_baseline_role,
+                None,
+                None,
             )
         default_mode, default_baseline = await self.get_org_defaults(
-            organization_id, content_type,
+            organization_id,
+            content_type,
         )
         return resolve_effective_policy(
-            raw_access_mode, raw_baseline_role, default_mode, default_baseline,
+            raw_access_mode,
+            raw_baseline_role,
+            default_mode,
+            default_baseline,
         )
 
     async def is_blocked(
@@ -185,9 +191,7 @@ class PermissionChecker:
         (e.g. calendar attendees): a ``None`` role is ambiguous between "no
         access" and "explicitly blocked", and BLOCKED must beat the domain grant.
         """
-        member_role = await self._get_member_role(
-            organization_id, content_type, content_id, user_id
-        )
+        member_role = await self._get_member_role(organization_id, content_type, content_id, user_id)
         return member_role == ContentRole.BLOCKED
 
     async def is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
@@ -327,9 +331,7 @@ class PermissionChecker:
 
         is_admin = bool(
             (
-                await self.session.execute(
-                    select(User.is_system_admin).where(User.id == user_id)
-                )
+                await self.session.execute(select(User.is_system_admin).where(User.id == user_id))
             ).scalar_one_or_none()
         )
         self._is_system_admin_cache[user_id] = is_admin
@@ -365,9 +367,7 @@ class PermissionChecker:
             return
 
         ops = SupportSessionOperations(self.session)
-        session = await ops.active_session_for(
-            user_id=user_id, organization_id=organization_id
-        )
+        session = await ops.active_session_for(user_id=user_id, organization_id=organization_id)
         if session is None:
             return
 
@@ -403,9 +403,7 @@ class PermissionChecker:
             return None
 
         ops = SupportSessionOperations(self.session)
-        session = await ops.active_session_for(
-            user_id=user_id, organization_id=organization_id
-        )
+        session = await ops.active_session_for(user_id=user_id, organization_id=organization_id)
         if session is None:
             return None
 

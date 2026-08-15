@@ -63,9 +63,7 @@ from uniffy.domains.chat.sender_resolver import SenderInfo, SenderResolver
 from uniffy.domains.chat.subjects import ChatSubject
 
 
-def _fake_user_row(
-    uid: UUID, name: str, avatar: str | None = None, username: str = ""
-):
+def _fake_user_row(uid: UUID, name: str, avatar: str | None = None, username: str = ""):
     return (uid, name, avatar, username)
 
 
@@ -577,9 +575,7 @@ class TestParseIds:
 
 class TestFormatConversationLines:
     def test_skips_empty_content(self) -> None:
-        out = format_conversation_lines(
-            [("USER", "hi"), ("ASSISTANT", ""), ("TOOL", "ok")]
-        )
+        out = format_conversation_lines([("USER", "hi"), ("ASSISTANT", ""), ("TOOL", "ok")])
         assert out == "USER: hi\nTOOL: ok"
 
     def test_returns_empty_string_when_all_empty(self) -> None:
@@ -887,9 +883,7 @@ def _install_config_handler_env(
         "get_user_id_from_context",
         lambda _ctx: user_id or generate_id(),
     )
-    monkeypatch.setattr(
-        context_handlers_mod, "ChatAgentContextOperations", lambda _session: ops
-    )
+    monkeypatch.setattr(context_handlers_mod, "ChatAgentContextOperations", lambda _session: ops)
     return ops
 
 
@@ -913,14 +907,10 @@ class TestChannelAgentConfigHandlers:
             GetChannelAgentConfigRequest(**self._request_ids()), MagicMock()
         )
         assert response.config.model_override == "claude-sonnet-5"
-        assert json.loads(response.config.model_params_override) == {
-            "reasoning_effort": "max"
-        }
+        assert json.loads(response.config.model_params_override) == {"reasoning_effort": "max"}
         assert len(fake_ops.get_calls) == 1
 
-    async def test_get_config_empty_binding_serialises_empty_strings(
-        self, monkeypatch
-    ) -> None:
+    async def test_get_config_empty_binding_serialises_empty_strings(self, monkeypatch) -> None:
         fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
         handlers = context_handlers_mod.ChannelAgentContextHandlers()
 
@@ -1011,9 +1001,7 @@ class TestChannelAgentConfigHandlers:
         assert fake_ops.update_calls == []
 
     async def test_flag_off_raises_failed_precondition(self, monkeypatch) -> None:
-        fake_ops = _install_config_handler_env(
-            monkeypatch, binding=_binding_row(), enabled=False
-        )
+        fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row(), enabled=False)
         handlers = context_handlers_mod.ChannelAgentContextHandlers()
 
         with pytest.raises(ConnectError) as exc:
@@ -1070,9 +1058,7 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
         get_by_id=AsyncMock(return_value=SimpleNamespace(name="Org")),
     )
     ops._user_ops = SimpleNamespace(
-        get_by_id=AsyncMock(
-            return_value=SimpleNamespace(full_name="Alice", username="alice")
-        )
+        get_by_id=AsyncMock(return_value=SimpleNamespace(full_name="Alice", username="alice"))
     )
     ops._agent_ops = SimpleNamespace(get_for_runtime=AsyncMock(return_value=agent))
     provider = SimpleNamespace(name="anthropic")
@@ -1084,9 +1070,7 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
 
     ops._provider_ops = SimpleNamespace(
         get_provider_for_key=AsyncMock(return_value=(provider, provider_key)),
-        get_key_and_provider_for_model=AsyncMock(
-            side_effect=fake_key_and_provider_for_model
-        ),
+        get_key_and_provider_for_model=AsyncMock(side_effect=fake_key_and_provider_for_model),
     )
     ops._session_ops = MagicMock()
     ops._skill_ops = MagicMock()
@@ -1118,19 +1102,11 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
         raise _StopFlow()
 
     monkeypatch.setattr(runtime_ops_mod, "fetch_agent_skills", fake_fetch_skills)
-    monkeypatch.setattr(
-        runtime_ops_mod, "record_skill_injections", fake_record_injections
-    )
-    monkeypatch.setattr(
-        runtime_ops_mod, "build_system_prompt", lambda **_kwargs: "sys"
-    )
-    monkeypatch.setattr(
-        runtime_ops_mod, "get_tool_registry", lambda: MagicMock()
-    )
+    monkeypatch.setattr(runtime_ops_mod, "record_skill_injections", fake_record_injections)
+    monkeypatch.setattr(runtime_ops_mod, "build_system_prompt", lambda **_kwargs: "sys")
+    monkeypatch.setattr(runtime_ops_mod, "get_tool_registry", lambda: MagicMock())
     monkeypatch.setattr(model_resolver_mod, "resolve_model", fake_resolve_model)
-    monkeypatch.setattr(
-        runtime_ops_mod, "resolve_request_params", fake_resolve_request_params
-    )
+    monkeypatch.setattr(runtime_ops_mod, "resolve_request_params", fake_resolve_request_params)
     return ops, session, captured
 
 
@@ -1159,9 +1135,7 @@ class TestChatStreamBindingOverrides:
             model_params_override={"temperature": 0.1},
         )
         agent = _stream_agent(primary_provider_key_id=generate_id())
-        ops, session, captured = _stream_runtime_ops(
-            monkeypatch, binding_row=binding, agent=agent
-        )
+        ops, session, captured = _stream_runtime_ops(monkeypatch, binding_row=binding, agent=agent)
 
         await _run_chat_stream_until_params(ops)
 
@@ -1188,9 +1162,7 @@ class TestChatStreamBindingOverrides:
     ) -> None:
         binding = _binding_row(model_override="channel-model")
         agent = _stream_agent(primary_provider_key_id=None)
-        ops, _session, captured = _stream_runtime_ops(
-            monkeypatch, binding_row=binding, agent=agent
-        )
+        ops, _session, captured = _stream_runtime_ops(monkeypatch, binding_row=binding, agent=agent)
 
         await _run_chat_stream_until_params(ops)
 
@@ -1199,9 +1171,7 @@ class TestChatStreamBindingOverrides:
 
     async def test_missing_binding_row_means_no_overrides(self, monkeypatch) -> None:
         agent = _stream_agent(primary_provider_key_id=generate_id())
-        ops, _session, captured = _stream_runtime_ops(
-            monkeypatch, binding_row=None, agent=agent
-        )
+        ops, _session, captured = _stream_runtime_ops(monkeypatch, binding_row=None, agent=agent)
 
         await _run_chat_stream_until_params(ops)
 

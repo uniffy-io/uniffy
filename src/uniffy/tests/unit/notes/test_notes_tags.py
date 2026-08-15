@@ -159,9 +159,7 @@ class TestReplaceManualTags:
         ops._invalidate_counts = AsyncMock()
         ops._reindex_tag_docs = AsyncMock(return_value={})
 
-        with patch(
-            "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
-        ) as publish_mock:
+        with patch("uniffy.domains.tags.operations.publish_tag_event", AsyncMock()) as publish_mock:
             await ops.replace_manual_tags(
                 actor_id=actor_id,
                 organization_id=org_id,
@@ -206,9 +204,7 @@ class TestReplaceManualTags:
         ops._invalidate_counts = AsyncMock()
         ops._reindex_tag_docs = AsyncMock(return_value={})
 
-        with patch(
-            "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
-        ) as publish_mock:
+        with patch("uniffy.domains.tags.operations.publish_tag_event", AsyncMock()) as publish_mock:
             await ops.replace_manual_tags(
                 actor_id=actor_id,
                 organization_id=org_id,
@@ -252,9 +248,7 @@ class TestReplaceManualTags:
         ops._invalidate_counts = AsyncMock()
         ops._reindex_tag_docs = AsyncMock(return_value={})
 
-        with patch(
-            "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
-        ) as publish_mock:
+        with patch("uniffy.domains.tags.operations.publish_tag_event", AsyncMock()) as publish_mock:
             await ops.replace_manual_tags(
                 actor_id=actor_id,
                 organization_id=org_id,

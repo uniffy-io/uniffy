@@ -32,8 +32,7 @@ async def recalculate_all_storage_usage(ctx: dict[str, Any]) -> dict[str, Any]:
                     total_users += len(usage_records)
                 except Exception:
                     logger.opt(exception=True).warning(
-                        "Failed to recalculate usage for organization",
-                        organization_id=str(org_id)
+                        "Failed to recalculate usage for organization", organization_id=str(org_id)
                     )
 
     except Exception:

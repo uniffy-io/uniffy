@@ -13,9 +13,7 @@ from uniffy.domains.people.directory.types import DirectoryUser
 
 
 def _source() -> IdentitySource:
-    return IdentitySource(
-        organization_id=generate_id(), kind=IdentitySourceKind.OIDC, name="SSO"
-    )
+    return IdentitySource(organization_id=generate_id(), kind=IdentitySourceKind.OIDC, name="SSO")
 
 
 def _record(**overrides) -> DirectoryUser:
@@ -62,9 +60,7 @@ class TestProvisionFromLogin:
         load_result.scalar_one = MagicMock(return_value=user)
         session = _session([load_result])
         with (
-            patch.object(
-                reconcile, "upsert_user", AsyncMock(return_value=user.id)
-            ) as upsert,
+            patch.object(reconcile, "upsert_user", AsyncMock(return_value=user.id)) as upsert,
             patch.object(reconcile, "invalidate_person", AsyncMock()) as invalidate,
             patch.object(reconcile, "sync_people_search", AsyncMock()) as search,
         ):

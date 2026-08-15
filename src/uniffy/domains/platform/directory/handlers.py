@@ -156,9 +156,7 @@ class SystemOrganizationsHandlers:
                     slug=request.slug if request.HasField("slug") else None,
                     domain=request.domain if request.HasField("domain") else None,
                     plan=request.plan if request.HasField("plan") else None,
-                    max_members=request.max_members
-                    if request.HasField("max_members")
-                    else None,
+                    max_members=request.max_members if request.HasField("max_members") else None,
                 )
         except ConnectError:
             raise
@@ -191,9 +189,7 @@ class SystemOrganizationsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(
-                    session
-                ).unsuspend_organization(
+                detail = await PlatformDirectoryOperations(session).unsuspend_organization(
                     user_id=user_id,
                     organization_id=org_id,
                     reason=request.reason,
@@ -230,9 +226,7 @@ class SystemOrganizationsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(
-                    session
-                ).restore_organization(
+                detail = await PlatformDirectoryOperations(session).restore_organization(
                     user_id=user_id,
                     organization_id=org_id,
                     reason=request.reason,
@@ -245,9 +239,7 @@ class SystemOrganizationsHandlers:
 
 
 class SystemUsersHandlers:
-    async def list_users(
-        self, request: ListUsersRequest, ctx: RequestContext
-    ) -> ListUsersResponse:
+    async def list_users(self, request: ListUsersRequest, ctx: RequestContext) -> ListUsersResponse:
         user_id = get_user_id_from_context(ctx)
         try:
             async with open_session() as session:
@@ -270,9 +262,7 @@ class SystemUsersHandlers:
             page_size=page.page_size,
         )
 
-    async def get_user(
-        self, request: GetUserRequest, ctx: RequestContext
-    ) -> GetUserResponse:
+    async def get_user(self, request: GetUserRequest, ctx: RequestContext) -> GetUserResponse:
         user_id = get_user_id_from_context(ctx)
         target_id = _parse_uuid(request.user_id, "user_id")
         try:
@@ -327,21 +317,13 @@ class SystemUsersHandlers:
                     target_user_id=target_id,
                     reason=request.reason,
                     email=request.email if request.HasField("email") else None,
-                    username=request.username
-                    if request.HasField("username")
-                    else None,
-                    full_name=request.full_name
-                    if request.HasField("full_name")
-                    else None,
-                    is_active=request.is_active
-                    if request.HasField("is_active")
-                    else None,
+                    username=request.username if request.HasField("username") else None,
+                    full_name=request.full_name if request.HasField("full_name") else None,
+                    is_active=request.is_active if request.HasField("is_active") else None,
                     email_verified=request.email_verified
                     if request.HasField("email_verified")
                     else None,
-                    password=request.password
-                    if request.HasField("password")
-                    else None,
+                    password=request.password if request.HasField("password") else None,
                 )
         except ConnectError:
             raise

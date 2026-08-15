@@ -41,9 +41,7 @@ async def _acquire_lock(session_id: UUID) -> bool:
             )
         )
     except Exception:
-        logger.warning(
-            f"compact_session: lock SET NX failed for session {session_id}"
-        )
+        logger.warning(f"compact_session: lock SET NX failed for session {session_id}")
         return False
 
 
@@ -54,9 +52,7 @@ async def _release_lock(session_id: UUID) -> None:
     try:
         await client.delete(_LOCK_KEY_TEMPLATE.format(session_id=session_id))
     except Exception:
-        logger.warning(
-            f"compact_session: lock DEL failed for session {session_id}"
-        )
+        logger.warning(f"compact_session: lock DEL failed for session {session_id}")
 
 
 async def compact_session(
@@ -78,9 +74,7 @@ async def compact_session(
             provider_ops = ProviderOperations(session)
 
             agent_session = (
-                await session.execute(
-                    select(AgentSession).where(AgentSession.id == sid)
-                )
+                await session.execute(select(AgentSession).where(AgentSession.id == sid))
             ).scalar_one_or_none()
             if agent_session is None:
                 return {
@@ -90,9 +84,7 @@ async def compact_session(
                 }
 
             agent = (
-                await session.execute(
-                    select(Agent).where(Agent.id == agent_session.agent_id)
-                )
+                await session.execute(select(Agent).where(Agent.id == agent_session.agent_id))
             ).scalar_one_or_none()
             if agent is None:
                 return {

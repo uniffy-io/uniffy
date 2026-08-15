@@ -112,9 +112,7 @@ async def test_update_org_policy_rejects_non_admin() -> None:
 
 async def test_update_org_policy_admin_upserts_per_type_caps_when_absent() -> None:
     ops = _build_ops()
-    with _patch_admin(True), patch.object(
-        type(ops), "get_org_policy", AsyncMock(return_value=None)
-    ):
+    with _patch_admin(True), patch.object(type(ops), "get_org_policy", AsyncMock(return_value=None)):
         policy = await _update(ops, calls_enabled=False)
     assert policy.calls_enabled is False
     assert policy.max_participants == 25
@@ -133,9 +131,7 @@ async def test_update_org_policy_validates_bounds() -> None:
 async def test_get_org_policy_view_returns_defaults_when_absent() -> None:
     ops = _build_ops()
     org_id = generate_id()
-    with _patch_admin(True), patch.object(
-        type(ops), "get_org_policy", AsyncMock(return_value=None)
-    ):
+    with _patch_admin(True), patch.object(type(ops), "get_org_policy", AsyncMock(return_value=None)):
         policy = await ops.get_org_policy_view(generate_id(), org_id)
     assert policy.organization_id == org_id
     assert policy.calls_enabled is True

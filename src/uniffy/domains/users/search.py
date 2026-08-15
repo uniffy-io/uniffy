@@ -86,9 +86,7 @@ class UserSearchIndexer:
             },
         )
 
-    async def _load_profile(
-        self, organization_id: UUID, user_id: UUID
-    ) -> PeopleProfile | None:
+    async def _load_profile(self, organization_id: UUID, user_id: UUID) -> PeopleProfile | None:
         result = await self._session.execute(
             select(PeopleProfile).where(
                 PeopleProfile.organization_id == organization_id,

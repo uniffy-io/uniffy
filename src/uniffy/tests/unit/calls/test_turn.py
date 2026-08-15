@@ -54,9 +54,7 @@ def test_hmac_vector_pins_wire_format(monkeypatch):
     # "1700000000:8f4d7c3a-2b1e-4f6a-9c8d-5e7f01234567")). A refactor that
     # changes the derivation breaks live TURN auth, so it must fail here first.
     monkeypatch.setattr(time, "time", lambda: 1700000000 - 600)
-    creds = mint_turn_credentials(
-        UUID("8f4d7c3a-2b1e-4f6a-9c8d-5e7f01234567"), _config(ttl=600)
-    )
+    creds = mint_turn_credentials(UUID("8f4d7c3a-2b1e-4f6a-9c8d-5e7f01234567"), _config(ttl=600))
     assert creds.username == "1700000000:8f4d7c3a-2b1e-4f6a-9c8d-5e7f01234567"
     assert creds.credential == "oyjjZ1FqhmBDnoehwGn4I07UeLM="
 

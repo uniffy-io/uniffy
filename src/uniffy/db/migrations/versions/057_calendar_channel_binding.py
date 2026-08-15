@@ -50,9 +50,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "fk_calendar_events_channel_id", "calendar_events", type_="foreignkey"
-    )
+    op.drop_constraint("fk_calendar_events_channel_id", "calendar_events", type_="foreignkey")
     op.drop_index("ix_calendar_events_channel_id", table_name="calendar_events")
     op.drop_column("calendar_events", "channel_auto_created")
     op.drop_column("calendar_events", "channel_id")

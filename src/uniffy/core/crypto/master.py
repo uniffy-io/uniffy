@@ -25,9 +25,7 @@ def get_master_cipher() -> Fernet:
     try:
         return Fernet(raw.encode("ascii"))
     except (ValueError, TypeError) as exc:
-        raise MasterKeyMissingError(
-            f"APP_MASTER_KEY is not a valid Fernet key: {exc}"
-        ) from exc
+        raise MasterKeyMissingError(f"APP_MASTER_KEY is not a valid Fernet key: {exc}") from exc
 
 
 def reset_master_cipher_cache() -> None:

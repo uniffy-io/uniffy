@@ -139,9 +139,7 @@ async def seed_welcome_canvas(
         access_mode=canvas_note.access_mode.value,
         baseline_role=canvas_note.baseline_role.value,
         owner_id=admin_user.id,
-        keywords=" ".join(
-            [canvas_note.title, "canvas", "overview", "workspace"]
-        ),
+        keywords=" ".join([canvas_note.title, "canvas", "overview", "workspace"]),
         description=(
             "Visual tour of Uniffy - notes, files, chat, calendar, "
             "projects, and agents connected on one canvas."

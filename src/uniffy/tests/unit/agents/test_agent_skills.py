@@ -848,9 +848,7 @@ class TestSaveCreateDraftNameCollision:
         existing = self._existing()
         ops, draft = self._setup(monkeypatch, collision=existing)
 
-        skill, version = await self._save(
-            ops, draft, existing.organization_id, allow_replace=True
-        )
+        skill, version = await self._save(ops, draft, existing.organization_id, allow_replace=True)
 
         assert skill is existing
         assert existing.content == "MEMBER BODY"
@@ -1559,11 +1557,7 @@ class TestApplyProposals:
         analyzer, skill_ops = _analyzer(monkeypatch, propose=_propose)
         agent_id = generate_id()
         drafts = await analyzer.apply_proposals(
-            [
-                SkillProposal(
-                    action="create", name="new_skill", display_name="New", content="body"
-                )
-            ],
+            [SkillProposal(action="create", name="new_skill", display_name="New", content="body")],
             organization_id=generate_id(),
             user_id=generate_id(),
             agent_id=agent_id,
@@ -1592,11 +1586,7 @@ class TestApplyProposals:
             skill_id=target_id, name="reporter", display_name="Reporter", when_to_use="", viewed=True
         )
         await analyzer.apply_proposals(
-            [
-                SkillProposal(
-                    action="create", name="reporter", display_name="Reporter", content="c"
-                )
-            ],
+            [SkillProposal(action="create", name="reporter", display_name="Reporter", content="c")],
             organization_id=generate_id(),
             user_id=generate_id(),
             agent_id=generate_id(),

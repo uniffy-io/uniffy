@@ -16,7 +16,7 @@ def clamp_int(value: object, default: int, minimum: int, maximum: int) -> int:
     """Coerce a tool argument to an int inside [minimum, maximum]."""
     try:
         parsed = int(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return default
     return max(minimum, min(parsed, maximum))
 

@@ -1,6 +1,5 @@
 """Pure-Jinja tests for template rendering."""
 
-
 import pytest
 
 from uniffy.core.mail import RenderedMail, TemplateNotFoundError, render_template

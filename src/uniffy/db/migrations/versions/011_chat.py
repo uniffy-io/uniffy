@@ -93,9 +93,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"]),
         sa.ForeignKeyConstraint(["created_by"], ["login_users.id"]),
-        sa.UniqueConstraint(
-            "organization_id", "name", name="uq_chat_categories_org_name"
-        ),
+        sa.UniqueConstraint("organization_id", "name", name="uq_chat_categories_org_name"),
     )
     op.create_index(
         "ix_chat_channel_categories_org",
@@ -160,9 +158,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("channel_id", sa.Uuid(), nullable=False),
         sa.Column("sender_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "sender_type", _sender_type_enum, nullable=False, server_default="USER"
-        ),
+        sa.Column("sender_type", _sender_type_enum, nullable=False, server_default="USER"),
         sa.Column("content", sa.Text(), nullable=False, server_default=""),
         sa.Column("root_id", sa.Uuid(), nullable=True),
         sa.Column("reply_to_id", sa.Uuid(), nullable=True),
@@ -170,9 +166,7 @@ def upgrade() -> None:
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=_false),
         sa.Column("is_pinned", sa.Boolean(), nullable=False, server_default=_false),
         sa.Column("metadata", postgresql.JSONB(), nullable=True),
-        sa.Column(
-            "mentioned_agent_ids", postgresql.ARRAY(sa.Uuid()), nullable=True
-        ),
+        sa.Column("mentioned_agent_ids", postgresql.ARRAY(sa.Uuid()), nullable=True),
         sa.Column("mentioned_urns", postgresql.ARRAY(sa.Text()), nullable=True),
         sa.Column("created_at", _tz, nullable=False, server_default=_now),
         sa.Column("updated_at", _tz, nullable=False, server_default=_now),
@@ -239,9 +233,7 @@ def upgrade() -> None:
         sa.Column("channel_id", sa.Uuid(), nullable=False),
         sa.Column("created_at", _tz, nullable=False, server_default=_now),
         sa.PrimaryKeyConstraint("root_message_id"),
-        sa.ForeignKeyConstraint(
-            ["root_message_id"], ["chat_messages.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["root_message_id"], ["chat_messages.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["channel_id"], ["chat_channels.id"], ondelete="CASCADE"),
     )
 
@@ -293,9 +285,7 @@ def upgrade() -> None:
         sa.Column("subject_type", _subject_type_enum, nullable=False),
         sa.Column("subject_id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=True),
-        sa.Column(
-            "role", _channel_role_enum, nullable=False, server_default="MEMBER"
-        ),
+        sa.Column("role", _channel_role_enum, nullable=False, server_default="MEMBER"),
         sa.Column(
             "notification_level",
             _notification_level_enum,
@@ -307,16 +297,10 @@ def upgrade() -> None:
         sa.Column("joined_at", _tz, nullable=False, server_default=_now),
         sa.Column("desktop_enabled", sa.Boolean(), nullable=True),
         sa.Column("mobile_enabled", sa.Boolean(), nullable=True),
-        sa.Column(
-            "badge_all_messages", sa.Boolean(), nullable=False, server_default=_false
-        ),
-        sa.Column(
-            "follow_all_threads", sa.Boolean(), nullable=False, server_default=_false
-        ),
+        sa.Column("badge_all_messages", sa.Boolean(), nullable=False, server_default=_false),
+        sa.Column("follow_all_threads", sa.Boolean(), nullable=False, server_default=_false),
         sa.PrimaryKeyConstraint("channel_id", "subject_type", "subject_id"),
-        sa.ForeignKeyConstraint(
-            ["channel_id"], ["chat_channels.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["channel_id"], ["chat_channels.id"], ondelete="CASCADE"),
     )
     op.execute(
         sa.text(
@@ -333,9 +317,7 @@ def upgrade() -> None:
         sa.Column("last_read_message_id", sa.Uuid(), nullable=True),
         sa.Column("last_read_at", _tz, nullable=True),
         sa.PrimaryKeyConstraint("channel_id", "user_id"),
-        sa.ForeignKeyConstraint(
-            ["channel_id"], ["chat_channels.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["channel_id"], ["chat_channels.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["login_users.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_chat_read_cursors_user", "chat_read_cursors", ["user_id"])
@@ -360,9 +342,7 @@ def upgrade() -> None:
         sa.Column("emoji", sa.String(64), nullable=False),
         sa.Column("created_at", _tz, nullable=False, server_default=_now),
         sa.PrimaryKeyConstraint("message_id", "user_id", "emoji"),
-        sa.ForeignKeyConstraint(
-            ["message_id"], ["chat_messages.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["message_id"], ["chat_messages.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["login_users.id"]),
     )
     op.create_index("ix_chat_reactions_message", "chat_reactions", ["message_id", "emoji"])
@@ -378,9 +358,7 @@ def upgrade() -> None:
         sa.Column("mention_count", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("first_mentioned_by", sa.Uuid(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(
-            ["channel_id"], ["chat_channels.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["channel_id"], ["chat_channels.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["first_mentioned_by"], ["login_users.id"]),
         sa.UniqueConstraint("channel_id", "urn", name="uq_chat_resources_channel_urn"),
     )

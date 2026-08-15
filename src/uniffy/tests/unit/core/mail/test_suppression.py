@@ -28,4 +28,3 @@ class TestRepoIsSuppressed:
 
         repo = SuppressionRepository(session)
         assert await repo.is_suppressed("user@x.com") is False
-

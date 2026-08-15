@@ -142,7 +142,8 @@ class BaseContentOperations[TModel](ABC):
     ) -> tuple[AccessMode, ContentRole | None]:
         """Materialise NULL access-policy columns against the org's defaults."""
         default_mode, default_baseline = await self.permission_checker.get_org_defaults(
-            organization_id, self.content_type,
+            organization_id,
+            self.content_type,
         )
         return resolve_effective_policy(
             content.access_mode,
@@ -283,7 +284,8 @@ class BaseContentOperations[TModel](ABC):
         # Live policy resolution keeps Meili filters in sync; inheriting rows
         # would otherwise carry a stale create-time snapshot.
         effective_mode, effective_baseline = await self._effective_policy(
-            model.organization_id, model,
+            model.organization_id,
+            model,
         )
 
         metadata = await self._get_search_metadata_async(model)

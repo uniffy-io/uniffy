@@ -39,13 +39,11 @@ TOKEN_TYPE_ENROLLMENT_ONLY = "enrollment_only"
 MFA_CHALLENGE_EXPIRE_MINUTES = 5
 ENROLLMENT_ONLY_EXPIRE_MINUTES = 30
 
-ENROLLMENT_ALLOWED_RPCS: frozenset[str] = frozenset(
-    {
-        "BeginEnrollment",
-        "ConfirmEnrollment",
-        "GetMfaStatus",
-    }
-)
+ENROLLMENT_ALLOWED_RPCS: frozenset[str] = frozenset({
+    "BeginEnrollment",
+    "ConfirmEnrollment",
+    "GetMfaStatus",
+})
 
 
 def create_mfa_challenge_token(

@@ -87,14 +87,10 @@ class SystemUsersServiceImpl:
     def __init__(self) -> None:
         self._handlers = SystemUsersHandlers()
 
-    async def list_users(
-        self, request: ListUsersRequest, ctx: RequestContext
-    ) -> ListUsersResponse:
+    async def list_users(self, request: ListUsersRequest, ctx: RequestContext) -> ListUsersResponse:
         return await self._handlers.list_users(request, ctx)
 
-    async def get_user(
-        self, request: GetUserRequest, ctx: RequestContext
-    ) -> GetUserResponse:
+    async def get_user(self, request: GetUserRequest, ctx: RequestContext) -> GetUserResponse:
         return await self._handlers.get_user(request, ctx)
 
     async def create_user(

@@ -41,9 +41,7 @@ def _build_session_for_grant(existing: DomainAdmin | None) -> MagicMock:
     user_lookup = MagicMock()
     user_lookup.scalar_one.return_value = user
 
-    session.execute = AsyncMock(
-        side_effect=[domain_lookup, role_lookup, user_lookup]
-    )
+    session.execute = AsyncMock(side_effect=[domain_lookup, role_lookup, user_lookup])
     session.add = MagicMock()
     session.delete = AsyncMock()
     session.commit = AsyncMock()

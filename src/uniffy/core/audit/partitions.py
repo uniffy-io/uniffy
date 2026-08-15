@@ -40,9 +40,7 @@ def partition_name(starts: date) -> str:
     return f"{PARENT_TABLE}_{starts.year:04d}_{starts.month:02d}"
 
 
-def required_bounds(
-    today: date, months_ahead: int = MONTHS_AHEAD
-) -> list[tuple[date, date]]:
+def required_bounds(today: date, months_ahead: int = MONTHS_AHEAD) -> list[tuple[date, date]]:
     """``[(from_inclusive, to_exclusive), ...]`` for this month and the next ``months_ahead``."""
     starts = month_floor(today)
     bounds: list[tuple[date, date]] = []
@@ -89,9 +87,7 @@ async def _existing_partitions(session: AsyncSession) -> set[str]:
     return set(result.scalars().all())
 
 
-async def _create_partition(
-    session: AsyncSession, name: str, starts: date, ends: date
-) -> None:
+async def _create_partition(session: AsyncSession, name: str, starts: date, ends: date) -> None:
     """Attach a partition for ``[starts, ends)``, moving any rows the default caught.
 
     ``CREATE TABLE ... PARTITION OF`` fails outright when the default partition
@@ -135,14 +131,10 @@ async def _create_partition(
             f"FOR VALUES FROM ('{starts.isoformat()}') TO ('{ends.isoformat()}')"
         )
     )
-    logger.warning(
-        f"Drained {moved.rowcount} audit row(s) from {DEFAULT_PARTITION} into {name}"
-    )
+    logger.warning(f"Drained {moved.rowcount} audit row(s) from {DEFAULT_PARTITION} into {name}")
 
 
-async def _default_holds_rows(
-    session: AsyncSession, starts: date, ends: date
-) -> bool:
+async def _default_holds_rows(session: AsyncSession, starts: date, ends: date) -> bool:
     exists = await session.execute(
         text("SELECT to_regclass(:name) IS NOT NULL"), {"name": DEFAULT_PARTITION}
     )

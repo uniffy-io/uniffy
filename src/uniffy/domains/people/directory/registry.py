@@ -72,9 +72,7 @@ def parse_source_config(kind: IdentitySourceKind, raw: dict) -> SourceConfig:
         raise ValidationError("config", str(e)) from e
 
 
-async def build_provider(
-    session: AsyncSession, source: IdentitySource
-) -> DirectorySyncProvider:
+async def build_provider(session: AsyncSession, source: IdentitySource) -> DirectorySyncProvider:
     """Parse config, load the decrypted secret, construct the provider."""
     provider_cls = PROVIDERS.get(source.kind)
     if provider_cls is None:

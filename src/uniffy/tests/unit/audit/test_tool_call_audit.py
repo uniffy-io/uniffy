@@ -42,9 +42,7 @@ def _context(
 def _stub_session() -> MagicMock:
     session = MagicMock()
     session.add = MagicMock()
-    session.execute = AsyncMock(
-        return_value=MagicMock(scalar_one_or_none=lambda: None)
-    )
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
     session.commit = AsyncMock()
     return session
 

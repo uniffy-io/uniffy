@@ -50,8 +50,7 @@ def validate_password(password: str) -> None:
     if length >= MIN_LENGTH:
         return
     classes = sum(
-        bool(rx.search(password))
-        for rx in (_HAS_UPPER, _HAS_LOWER, _HAS_DIGIT, _HAS_SYMBOL)
+        bool(rx.search(password)) for rx in (_HAS_UPPER, _HAS_LOWER, _HAS_DIGIT, _HAS_SYMBOL)
     )
     if classes < 3:
         raise ValidationError(

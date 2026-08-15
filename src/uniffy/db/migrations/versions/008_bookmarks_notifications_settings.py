@@ -34,9 +34,7 @@ def upgrade() -> None:
         sa.Column("urn", sa.String(500), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["login_users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id", "urn", name="uq_bookmarks_user_urn"),
     )
@@ -72,9 +70,7 @@ def upgrade() -> None:
         "notifications",
         ["user_id", "organization_id", "is_read", "created_at"],
     )
-    op.create_index(
-        "ix_notifications_user_unread_count", "notifications", ["user_id", "is_read"]
-    )
+    op.create_index("ix_notifications_user_unread_count", "notifications", ["user_id", "is_read"])
 
     op.create_table(
         "push_subscriptions",
@@ -115,9 +111,7 @@ def upgrade() -> None:
         "application_settings",
         sa.Column("key", sa.String(255), primary_key=True),
         sa.Column("value", sa.Text(), nullable=False),
-        sa.Column(
-            "is_encrypted", sa.Boolean(), nullable=False, server_default=sa.text("false")
-        ),
+        sa.Column("is_encrypted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("description", sa.String(500), nullable=False, server_default=""),
         sa.Column(
             "created_at",

@@ -117,9 +117,7 @@ class TestOpenRouterEndpoints:
     def test_usage_cost_parser_accepts_only_non_negative_finite_values(self) -> None:
         provider = OpenRouterProvider(OPENROUTER_KEY)
 
-        assert provider._provider_cost_usd(SimpleNamespace(cost="0.001234")) == Decimal(
-            "0.001234"
-        )
+        assert provider._provider_cost_usd(SimpleNamespace(cost="0.001234")) == Decimal("0.001234")
         assert provider._provider_cost_usd(SimpleNamespace(cost=0)) == Decimal(0)
         assert provider._provider_cost_usd(SimpleNamespace(cost=-1)) is None
         assert provider._provider_cost_usd(SimpleNamespace(cost="NaN")) is None
@@ -160,9 +158,7 @@ class TestOpenRouterEndpoints:
 
 class TestDescriptors:
     def _descriptor(self, name: str) -> ProviderDescriptor:
-        return next(
-            d for d in get_provider_registry().list_providers() if d.name == name
-        )
+        return next(d for d in get_provider_registry().list_providers() if d.name == name)
 
     def test_openrouter_descriptor(self) -> None:
         descriptor = self._descriptor("openrouter")

@@ -139,20 +139,18 @@ async def get_task_rollups_for_projects(
         select(
             Task.project_id,
             func.count(case((top_level, 1))).label("total"),
+            func.count(case((and_(top_level, Task.completed_at.is_not(None)), 1))).label(
+                "completed"
+            ),
             func.count(
-                case((and_(top_level, Task.completed_at.is_not(None)), 1))
-            ).label("completed"),
-            func.count(
-                case(
-                    (
-                        and_(
-                            Task.completed_at.is_(None),
-                            Task.due_date.is_not(None),
-                            Task.due_date < today,
-                        ),
-                        1,
-                    )
-                )
+                case((
+                    and_(
+                        Task.completed_at.is_(None),
+                        Task.due_date.is_not(None),
+                        Task.due_date < today,
+                    ),
+                    1,
+                ))
             ).label("overdue"),
             func.coalesce(func.sum(Task.estimated_minutes), 0).label("estimated"),
             func.coalesce(func.sum(Task.time_spent_minutes), 0).label("spent"),

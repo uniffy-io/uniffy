@@ -19,7 +19,10 @@ class TestResolveEffectivePolicy:
 
     def test_null_row_uses_org_default(self) -> None:
         mode, baseline = resolve_effective_policy(
-            None, None, AccessMode.OPEN_TO_ORG, ContentRole.EDITOR,
+            None,
+            None,
+            AccessMode.OPEN_TO_ORG,
+            ContentRole.EDITOR,
         )
         assert mode == AccessMode.OPEN_TO_ORG
         assert baseline == ContentRole.EDITOR
@@ -31,28 +34,40 @@ class TestResolveEffectivePolicy:
 
     def test_explicit_override_wins_over_default(self) -> None:
         mode, baseline = resolve_effective_policy(
-            AccessMode.OWNER_ONLY, None, AccessMode.OPEN_TO_ORG, ContentRole.EDITOR,
+            AccessMode.OWNER_ONLY,
+            None,
+            AccessMode.OPEN_TO_ORG,
+            ContentRole.EDITOR,
         )
         assert mode == AccessMode.OWNER_ONLY
         assert baseline is None
 
     def test_explicit_open_to_org_with_explicit_baseline(self) -> None:
         mode, baseline = resolve_effective_policy(
-            AccessMode.OPEN_TO_ORG, ContentRole.EDITOR, AccessMode.OWNER_ONLY, None,
+            AccessMode.OPEN_TO_ORG,
+            ContentRole.EDITOR,
+            AccessMode.OWNER_ONLY,
+            None,
         )
         assert mode == AccessMode.OPEN_TO_ORG
         assert baseline == ContentRole.EDITOR
 
     def test_explicit_open_to_org_with_null_baseline_inherits_org_default(self) -> None:
         mode, baseline = resolve_effective_policy(
-            AccessMode.OPEN_TO_ORG, None, None, ContentRole.VIEWER,
+            AccessMode.OPEN_TO_ORG,
+            None,
+            None,
+            ContentRole.VIEWER,
         )
         assert mode == AccessMode.OPEN_TO_ORG
         assert baseline == ContentRole.VIEWER
 
     def test_explicit_open_to_org_with_null_baseline_no_default_falls_back_to_viewer(self) -> None:
         mode, baseline = resolve_effective_policy(
-            AccessMode.OPEN_TO_ORG, None, None, None,
+            AccessMode.OPEN_TO_ORG,
+            None,
+            None,
+            None,
         )
         assert mode == AccessMode.OPEN_TO_ORG
         assert baseline == ContentRole.VIEWER
@@ -105,5 +120,6 @@ class TestValidateAccessMode:
     def test_explicit_members_with_baseline_is_rejected(self) -> None:
         with pytest.raises(ValidationError):
             self._ops()._validate_access_mode(
-                AccessMode.EXPLICIT_MEMBERS, ContentRole.VIEWER,
+                AccessMode.EXPLICIT_MEMBERS,
+                ContentRole.VIEWER,
             )

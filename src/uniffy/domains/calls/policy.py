@@ -41,15 +41,11 @@ def _from_blob(organization_id: UUID, blob: dict) -> ResolvedCallPolicy:
         organization_id=organization_id,
         calls_enabled=bool(blob.get("calls_enabled", DEFAULT_CALLS_ENABLED)),
         max_participants=int(blob.get("max_participants", DEFAULT_MAX_PARTICIPANTS)),
-        max_duration_minutes=int(
-            blob.get("max_duration_minutes", DEFAULT_MAX_DURATION_MINUTES)
-        ),
+        max_duration_minutes=int(blob.get("max_duration_minutes", DEFAULT_MAX_DURATION_MINUTES)),
         max_screen_share_quality_direct=int(
             blob.get("max_screen_share_quality_direct", _UNSPECIFIED)
         ),
-        max_screen_share_quality_group=int(
-            blob.get("max_screen_share_quality_group", _UNSPECIFIED)
-        ),
+        max_screen_share_quality_group=int(blob.get("max_screen_share_quality_group", _UNSPECIFIED)),
         max_screen_share_quality_channel=int(
             blob.get("max_screen_share_quality_channel", _UNSPECIFIED)
         ),
@@ -60,9 +56,7 @@ async def load_call_policy(
     session: AsyncSession, organization_id: UUID
 ) -> ResolvedCallPolicy | None:
     """The org's stored policy, or ``None`` when no row exists."""
-    rows = await OrgSettingsOperations(session).get_namespace(
-        organization_id, CALLS_NAMESPACE
-    )
+    rows = await OrgSettingsOperations(session).get_namespace(organization_id, CALLS_NAMESPACE)
     row = rows.get(POLICY_KEY)
     if row is None or not isinstance(row.value, dict):
         return None

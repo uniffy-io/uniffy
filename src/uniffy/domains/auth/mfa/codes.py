@@ -41,10 +41,7 @@ _HASHER = PasswordHasher(
 def generate_recovery_code() -> str:
     """Return one ``xxxx-xxxx-xxxx`` recovery code."""
     groups = [
-        "".join(
-            secrets.choice(RECOVERY_CODE_ALPHABET)
-            for _ in range(RECOVERY_CODE_GROUP_LEN)
-        )
+        "".join(secrets.choice(RECOVERY_CODE_ALPHABET) for _ in range(RECOVERY_CODE_GROUP_LEN))
         for _ in range(RECOVERY_CODE_GROUPS)
     ]
     return "-".join(groups)
@@ -64,7 +61,7 @@ def verify_recovery_code(code: str, code_hash: str) -> bool:
     """Constant-time check of a submitted code against one stored hash."""
     try:
         return _HASHER.verify(code_hash, _normalise(code))
-    except (VerifyMismatchError, InvalidHashError):
+    except VerifyMismatchError, InvalidHashError:
         return False
 
 
@@ -83,9 +80,7 @@ async def replace_recovery_codes(
 
     Used by enrollment confirmation and regenerate. The caller commits.
     """
-    await session.execute(
-        delete(UserRecoveryCode).where(UserRecoveryCode.user_id == user_id)
-    )
+    await session.execute(delete(UserRecoveryCode).where(UserRecoveryCode.user_id == user_id))
     for code in codes:
         session.add(
             UserRecoveryCode(

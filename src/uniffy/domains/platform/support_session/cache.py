@@ -35,9 +35,7 @@ def _ttl_until(expires_at: datetime) -> int:
     return max(1, min(_MAX_TTL_SECONDS, int(delta)))
 
 
-async def get_active_session(
-    user_id: UUID, org_id: UUID
-) -> dict[str, Any] | None | object:
+async def get_active_session(user_id: UUID, org_id: UUID) -> dict[str, Any] | None | object:
     """Return cached payload, ``None`` for explicit-none, or CACHE_MISS."""
     return await cache_get(_key(user_id, org_id))
 

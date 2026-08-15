@@ -125,9 +125,7 @@ async def _policy_for(
         access_mode=content.access_mode,
         baseline_role=content.baseline_role,
     )
-    default_mode, default_baseline = await checker.get_org_defaults(
-        organization_id, content_type
-    )
+    default_mode, default_baseline = await checker.get_org_defaults(organization_id, content_type)
     effective_mode, _ = resolve_effective_policy(
         content.access_mode, content.baseline_role, default_mode, default_baseline
     )

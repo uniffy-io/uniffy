@@ -20,9 +20,7 @@ depends_on: str | Sequence[str] | None = None
 _source_kind_enum = postgresql.ENUM(
     "LOCAL", "SCIM", "LDAP", "OIDC", name="identitysourcekind", create_type=False
 )
-_group_kind_enum = postgresql.ENUM(
-    "TEAM", "ACCESS", name="groupkind", create_type=False
-)
+_group_kind_enum = postgresql.ENUM("TEAM", "ACCESS", name="groupkind", create_type=False)
 _subject_type_enum = postgresql.ENUM(
     "USER", "GROUP", "ORGANIZATION", "AGENT", name="subjecttype", create_type=False
 )
@@ -36,9 +34,7 @@ def upgrade() -> None:
     postgresql.ENUM("LOCAL", "SCIM", "LDAP", "OIDC", name="identitysourcekind").create(
         op.get_bind(), checkfirst=True
     )
-    postgresql.ENUM("TEAM", "ACCESS", name="groupkind").create(
-        op.get_bind(), checkfirst=True
-    )
+    postgresql.ENUM("TEAM", "ACCESS", name="groupkind").create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         "people_profiles",
@@ -59,16 +55,12 @@ def upgrade() -> None:
         sa.Column("managed_fields", JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["login_users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["manager_user_id"], ["login_users.id"], ondelete="SET NULL"),
         sa.UniqueConstraint("organization_id", "user_id", name="uq_people_profiles_org_user"),
     )
-    op.create_index(
-        "ix_people_profiles_organization_id", "people_profiles", ["organization_id"]
-    )
+    op.create_index("ix_people_profiles_organization_id", "people_profiles", ["organization_id"])
     op.create_index("ix_people_profiles_user_id", "people_profiles", ["user_id"])
     op.create_index(
         "ix_people_profiles_org_manager", "people_profiles", ["organization_id", "manager_user_id"]
@@ -90,9 +82,7 @@ def upgrade() -> None:
         sa.Column("last_sync_error", sa.String(length=2000), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
     )
     op.create_index(
         "ix_people_identity_sources_organization_id",
@@ -111,12 +101,8 @@ def upgrade() -> None:
         sa.Column("external_dn", sa.String(length=1024), nullable=True),
         sa.Column("raw", JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")),
         sa.Column("synced_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["source_id"], ["people_identity_sources.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["source_id"], ["people_identity_sources.id"], ondelete="CASCADE"),
         sa.UniqueConstraint(
             "source_id", "subject_type", "external_id", name="uq_people_identity_links_external"
         ),
@@ -192,9 +178,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_column("login_users", "pronouns")
-    op.drop_constraint(
-        "uq_login_group_members_group_user", "login_group_members", type_="unique"
-    )
+    op.drop_constraint("uq_login_group_members_group_user", "login_group_members", type_="unique")
     op.drop_constraint("fk_login_groups_lead_user_id", "login_groups", type_="foreignkey")
     op.drop_constraint("fk_login_groups_parent_group_id", "login_groups", type_="foreignkey")
     op.drop_column("login_groups", "managed_fields")
@@ -205,9 +189,7 @@ def downgrade() -> None:
     op.drop_index("ix_people_identity_links_source_id", table_name="people_identity_links")
     op.drop_index("ix_people_identity_links_organization_id", table_name="people_identity_links")
     op.drop_table("people_identity_links")
-    op.drop_index(
-        "ix_people_identity_sources_organization_id", table_name="people_identity_sources"
-    )
+    op.drop_index("ix_people_identity_sources_organization_id", table_name="people_identity_sources")
     op.drop_table("people_identity_sources")
     op.drop_index("ix_people_profiles_org_department", table_name="people_profiles")
     op.drop_index("ix_people_profiles_org_manager", table_name="people_profiles")

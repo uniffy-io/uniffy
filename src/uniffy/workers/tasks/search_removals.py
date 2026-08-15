@@ -119,9 +119,7 @@ async def flush_search_removals(ctx: dict[str, Any]) -> dict[str, Any]:
                 "Meilisearch has been rejecting them - investigate"
             )
         if flushed or failed or dropped:
-            logger.info(
-                f"search removal flush: flushed={flushed} failed={failed} dropped={dropped}"
-            )
+            logger.info(f"search removal flush: flushed={flushed} failed={failed} dropped={dropped}")
         return {
             "status": "completed",
             "flushed": flushed,

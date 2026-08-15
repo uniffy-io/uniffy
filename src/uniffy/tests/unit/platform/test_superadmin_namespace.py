@@ -144,9 +144,7 @@ class TestNamespaceIsTheSurface:
         tmp_ops.write_text("async def do_thing():\n    return 1\n")
         assert _ungated_rpcs(proto, tmp_handlers, tmp_ops) == ["DoThing"]
 
-    def test_an_is_system_admin_field_does_not_count_as_a_gate(
-        self, tmp_path: Path
-    ) -> None:
+    def test_an_is_system_admin_field_does_not_count_as_a_gate(self, tmp_path: Path) -> None:
         """``SetSystemAdmin`` and ``CreateUser`` pass ``is_system_admin`` through
         as a request field; naming it must not satisfy the scan.
         """

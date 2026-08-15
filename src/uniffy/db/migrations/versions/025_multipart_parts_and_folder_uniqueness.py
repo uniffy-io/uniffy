@@ -93,9 +93,7 @@ def upgrade() -> None:
         "files_folders",
         ["owner_id", "organization_id", "name"],
         unique=True,
-        postgresql_where=sa.text(
-            "parent_id IS NULL AND is_deleted = false AND is_system = true"
-        ),
+        postgresql_where=sa.text("parent_id IS NULL AND is_deleted = false AND is_system = true"),
     )
 
 

@@ -84,9 +84,7 @@ class SystemMailHandlers:
         user_id = get_user_id_from_context(ctx)
         try:
             async with open_session() as session:
-                summary = await SystemMailOperations(session).get_system_config(
-                    user_id=user_id
-                )
+                summary = await SystemMailOperations(session).get_system_config(user_id=user_id)
         except ConnectError:
             raise
         except Exception as exc:

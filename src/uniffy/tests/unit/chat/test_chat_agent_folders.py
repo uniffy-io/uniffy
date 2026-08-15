@@ -40,9 +40,7 @@ def _build_ops(execute_results):
 
 
 def _folder(user_id, org_id, name="Work", position=0):
-    return ChatAgentFolder(
-        organization_id=org_id, user_id=user_id, name=name, position=position
-    )
+    return ChatAgentFolder(organization_id=org_id, user_id=user_id, name=name, position=position)
 
 
 def _agent_dm(org_id):
@@ -138,9 +136,11 @@ class TestSetChatFolder:
             "uniffy.domains.chat.agent_folders.operations.invalidate_cached_member_ids",
             invalidate,
         )
-        ops, session = _build_ops(
-            [_scalar_result(channel), _scalar_result(folder), _rowcount_result(1)]
-        )
+        ops, session = _build_ops([
+            _scalar_result(channel),
+            _scalar_result(folder),
+            _rowcount_result(1),
+        ])
         await ops.set_chat_folder(user_id, org_id, channel.id, folder.id)
         session.commit.assert_awaited()
         invalidate.assert_awaited_once_with(channel.id)
@@ -167,13 +167,11 @@ class TestDelete:
             "uniffy.domains.chat.agent_folders.operations.invalidate_cached_member_ids",
             invalidate,
         )
-        ops, session = _build_ops(
-            [
-                _scalar_result(folder),
-                _scalars_result([cid_a, cid_b]),
-                _rowcount_result(2),
-            ]
-        )
+        ops, session = _build_ops([
+            _scalar_result(folder),
+            _scalars_result([cid_a, cid_b]),
+            _rowcount_result(2),
+        ])
         await ops.delete(user_id, org_id, folder.id)
         session.delete.assert_awaited_once_with(folder)
         session.commit.assert_awaited()

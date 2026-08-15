@@ -38,28 +38,26 @@ async def test_folder_stats_exclude_narrower_children(session, env) -> None:
     )
     session.add(folder)
     await session.flush()
-    session.add_all(
-        [
-            _file(env, folder.id, 100, AccessMode.OPEN_TO_ORG),
-            _file(env, folder.id, 900, AccessMode.OWNER_ONLY),
-            # NULL inherits the org default for FILE (OPEN_TO_ORG), so it counts.
-            _file(env, folder.id, 10, None),
-            Folder(
-                organization_id=env.org_id,
-                owner_id=env.admin_id,
-                name="itdb-open-child",
-                parent_id=folder.id,
-                access_mode=AccessMode.OPEN_TO_ORG,
-            ),
-            # NULL inherits the org default for FOLDER (OWNER_ONLY), so it stays out.
-            Folder(
-                organization_id=env.org_id,
-                owner_id=env.admin_id,
-                name="itdb-private-child",
-                parent_id=folder.id,
-            ),
-        ]
-    )
+    session.add_all([
+        _file(env, folder.id, 100, AccessMode.OPEN_TO_ORG),
+        _file(env, folder.id, 900, AccessMode.OWNER_ONLY),
+        # NULL inherits the org default for FILE (OPEN_TO_ORG), so it counts.
+        _file(env, folder.id, 10, None),
+        Folder(
+            organization_id=env.org_id,
+            owner_id=env.admin_id,
+            name="itdb-open-child",
+            parent_id=folder.id,
+            access_mode=AccessMode.OPEN_TO_ORG,
+        ),
+        # NULL inherits the org default for FOLDER (OWNER_ONLY), so it stays out.
+        Folder(
+            organization_id=env.org_id,
+            owner_id=env.admin_id,
+            name="itdb-private-child",
+            parent_id=folder.id,
+        ),
+    ])
     await session.commit()
 
     folder_ops = FolderOperations(session)
@@ -92,13 +90,11 @@ async def test_note_folder_child_count_is_visible_notes_only(session, env) -> No
     folder_note = note("itdb-folder", NodeType.FOLDER, AccessMode.OPEN_TO_ORG)
     session.add(folder_note)
     await session.flush()
-    session.add_all(
-        [
-            note("itdb-open", NodeType.NOTE, AccessMode.OPEN_TO_ORG, folder_note.id),
-            note("itdb-hidden", NodeType.NOTE, AccessMode.OWNER_ONLY, folder_note.id),
-            note("itdb-subfolder", NodeType.FOLDER, AccessMode.OPEN_TO_ORG, folder_note.id),
-        ]
-    )
+    session.add_all([
+        note("itdb-open", NodeType.NOTE, AccessMode.OPEN_TO_ORG, folder_note.id),
+        note("itdb-hidden", NodeType.NOTE, AccessMode.OWNER_ONLY, folder_note.id),
+        note("itdb-subfolder", NodeType.FOLDER, AccessMode.OPEN_TO_ORG, folder_note.id),
+    ])
     await session.commit()
 
     try:
@@ -108,9 +104,7 @@ async def test_note_folder_child_count_is_visible_notes_only(session, env) -> No
     finally:
         await session.rollback()
         await session.execute(
-            delete(Note).where(
-                Note.organization_id == env.org_id, Note.parent_id.is_not(None)
-            )
+            delete(Note).where(Note.organization_id == env.org_id, Note.parent_id.is_not(None))
         )
         await session.execute(delete(Note).where(Note.organization_id == env.org_id))
         await session.commit()

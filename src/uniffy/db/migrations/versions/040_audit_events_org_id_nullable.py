@@ -29,6 +29,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Restore NOT NULL. Any existing NULL rows must be cleared first."""
-    op.execute(
-        "ALTER TABLE audit_events ALTER COLUMN organization_id SET NOT NULL"
-    )
+    op.execute("ALTER TABLE audit_events ALTER COLUMN organization_id SET NOT NULL")

@@ -37,9 +37,7 @@ def _from_blob(organization_id: UUID, blob: dict) -> ResolvedProfilePolicy:
     )
 
 
-async def load_profile_policy(
-    session: AsyncSession, organization_id: UUID
-) -> ResolvedProfilePolicy:
+async def load_profile_policy(session: AsyncSession, organization_id: UUID) -> ResolvedProfilePolicy:
     """The org's effective policy; a missing row resolves to defaults."""
     rows = await OrgSettingsOperations(session).get_namespace(organization_id, PEOPLE_NAMESPACE)
     row = rows.get(POLICY_KEY)

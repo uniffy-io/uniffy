@@ -45,9 +45,7 @@ class SystemEncryptionHandlers:
         user_id = get_user_id_from_context(ctx)
         try:
             async with open_session() as session:
-                status = await SystemEncryptionOperations(session).get_status(
-                    user_id=user_id
-                )
+                status = await SystemEncryptionOperations(session).get_status(user_id=user_id)
         except ConnectError:
             raise
         except Exception as exc:

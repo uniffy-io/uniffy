@@ -27,17 +27,13 @@ def _no_support_session():
     class-level patches.
     """
     with (
-        patch.object(
-            PermissionChecker, "_support_session_role", AsyncMock(return_value=None)
-        ),
+        patch.object(PermissionChecker, "_support_session_role", AsyncMock(return_value=None)),
         patch.object(
             PermissionChecker,
             "_ensure_support_session_context",
             AsyncMock(return_value=None),
         ),
-        patch.object(
-            PermissionChecker, "_is_system_admin", AsyncMock(return_value=False)
-        ),
+        patch.object(PermissionChecker, "_is_system_admin", AsyncMock(return_value=False)),
         patch.object(
             PermissionChecker,
             "_is_user_in_organization",
@@ -83,7 +79,9 @@ class TestNoAdminBypass:
             patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
         ):
             role = await _call(
-                checker, owner_id=generate_id(), user_id=generate_id(),
+                checker,
+                owner_id=generate_id(),
+                user_id=generate_id(),
                 access_mode=AccessMode.OWNER_ONLY,
             )
         assert role is None
@@ -96,7 +94,9 @@ class TestNoAdminBypass:
             patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
         ):
             role = await _call(
-                checker, owner_id=user_id, user_id=user_id,
+                checker,
+                owner_id=user_id,
+                user_id=user_id,
                 access_mode=AccessMode.OWNER_ONLY,
             )
         assert role == ContentRole.OWNER
@@ -131,7 +131,9 @@ class TestNoAdminBypass:
             patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
         ):
             role = await _call(
-                checker, owner_id=generate_id(), user_id=generate_id(),
+                checker,
+                owner_id=generate_id(),
+                user_id=generate_id(),
                 access_mode=AccessMode.OWNER_ONLY,
             )
         assert role is None
@@ -144,12 +146,8 @@ class TestMembershipGate:
     async def test_non_member_with_explicit_grant_denied(self) -> None:
         checker = _make_checker()
         with (
-            patch.object(
-                checker, "_is_user_in_organization", AsyncMock(return_value=False)
-            ),
-            patch.object(
-                checker, "_get_member_role", AsyncMock(return_value=ContentRole.EDITOR)
-            ),
+            patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=False)),
+            patch.object(checker, "_get_member_role", AsyncMock(return_value=ContentRole.EDITOR)),
         ):
             role = await _call(checker, access_mode=AccessMode.EXPLICIT_MEMBERS)
         assert role is None
@@ -157,11 +155,11 @@ class TestMembershipGate:
     async def test_non_member_owner_denied(self) -> None:
         user_id = generate_id()
         checker = _make_checker()
-        with patch.object(
-            checker, "_is_user_in_organization", AsyncMock(return_value=False)
-        ):
+        with patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=False)):
             role = await _call(
-                checker, owner_id=user_id, user_id=user_id,
+                checker,
+                owner_id=user_id,
+                user_id=user_id,
                 access_mode=AccessMode.OWNER_ONLY,
             )
         assert role is None
@@ -170,9 +168,7 @@ class TestMembershipGate:
         checker = _make_checker()
         with (
             patch.object(checker, "_is_system_admin", AsyncMock(return_value=True)),
-            patch.object(
-                checker, "_is_user_in_organization", AsyncMock(return_value=False)
-            ),
+            patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=False)),
             patch.object(
                 checker,
                 "_support_session_role",
@@ -186,15 +182,12 @@ class TestMembershipGate:
         checker = _make_checker()
         with (
             patch.object(checker, "_is_system_admin", AsyncMock(return_value=True)),
-            patch.object(
-                checker, "_is_user_in_organization", AsyncMock(return_value=False)
-            ),
-            patch.object(
-                checker, "_support_session_role", AsyncMock(return_value=None)
-            ),
+            patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=False)),
+            patch.object(checker, "_support_session_role", AsyncMock(return_value=None)),
         ):
             role = await _call(
-                checker, access_mode=AccessMode.OPEN_TO_ORG,
+                checker,
+                access_mode=AccessMode.OPEN_TO_ORG,
                 baseline_role=ContentRole.VIEWER,
             )
         assert role is None

@@ -70,9 +70,7 @@ class TestPublicRegistrationFlag:
         deployment_ops.get_namespace = AsyncMock(return_value={"public_registration": row})
         session = MagicMock()
         with (
-            patch.dict(
-                os.environ, {"ALLOW_PUBLIC_REGISTRATION": "false"}, clear=False
-            ),
+            patch.dict(os.environ, {"ALLOW_PUBLIC_REGISTRATION": "false"}, clear=False),
             patch(
                 "uniffy.domains.system_config.operations.DeploymentSettingsOperations",
                 return_value=deployment_ops,
@@ -123,15 +121,9 @@ class TestRegisterGate:
                 "uniffy.domains.system_config.operations.DeploymentSettingsOperations",
                 return_value=_empty_namespace_mock(),
             ),
-            patch.object(
-                ops, "_get_user_by_email", new=AsyncMock(return_value=object())
-            ),
-            patch.object(
-                ops, "_get_user_by_username", new=AsyncMock(return_value=None)
-            ),
-            pytest.raises(
-                RegistrationError, match="Could not create account"
-            ),
+            patch.object(ops, "_get_user_by_email", new=AsyncMock(return_value=object())),
+            patch.object(ops, "_get_user_by_username", new=AsyncMock(return_value=None)),
+            pytest.raises(RegistrationError, match="Could not create account"),
         ):
             await ops.register(
                 email="dup@y.com",

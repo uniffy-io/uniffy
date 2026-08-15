@@ -128,9 +128,7 @@ class TestListMembers:
 
     async def test_empty_result_is_not_an_error(self) -> None:
         reader = MagicMock()
-        reader.list_people = AsyncMock(
-            return_value=PeoplePage(people=[], total=0, is_admin=False)
-        )
+        reader.list_people = AsyncMock(return_value=PeoplePage(people=[], total=0, is_admin=False))
         with patch("uniffy.domains.people.reader.PeopleReader", return_value=reader):
             result = await _execute_list_members(_ctx(), {"query": "nobody"})
         assert result.success is True

@@ -138,9 +138,7 @@ def test_bearer_still_authenticates_an_asset_route() -> None:
     user_id = generate_id()
     client = _asset_route_client()
 
-    resp = client.get(
-        "/me", headers={"Authorization": f"Bearer {create_access_token(user_id)}"}
-    )
+    resp = client.get("/me", headers={"Authorization": f"Bearer {create_access_token(user_id)}"})
     assert resp.status_code == 200
     assert resp.json()["user_id"] == str(user_id)
 

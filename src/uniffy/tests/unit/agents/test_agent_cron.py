@@ -119,9 +119,7 @@ class TestCronGetRunsTool:
             agent_id=generate_id(),
         )
         ops = MagicMock()
-        ops.get_run_logs = AsyncMock(
-            return_value=(logs, total if total is not None else len(logs))
-        )
+        ops.get_run_logs = AsyncMock(return_value=(logs, total if total is not None else len(logs)))
         with patch(
             "uniffy.domains.agents.cron.operations.CronTaskOperations",
             return_value=ops,

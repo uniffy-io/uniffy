@@ -43,9 +43,7 @@ async def build_tag_visibility_predicate(
     """Returns ``None`` for org admins, ``FALSE`` for none-visible, else
     ``Tag.id.in_(visible_ids)``.
     """
-    visible = await get_visible_tag_ids(
-        session, user_id=user_id, organization_id=organization_id
-    )
+    visible = await get_visible_tag_ids(session, user_id=user_id, organization_id=organization_id)
     if visible is None:
         return None
     if not visible:

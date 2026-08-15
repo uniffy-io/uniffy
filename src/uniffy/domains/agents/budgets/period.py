@@ -24,9 +24,7 @@ def month_window(reset_day: int, now: datetime) -> tuple[datetime, datetime]:
     rollover for year boundaries is handled explicitly.
     """
     day_of_month = min(reset_day, last_day_of_month(now.year, now.month))
-    candidate_start = now.replace(
-        day=day_of_month, hour=0, minute=0, second=0, microsecond=0
-    )
+    candidate_start = now.replace(day=day_of_month, hour=0, minute=0, second=0, microsecond=0)
     if now >= candidate_start:
         start = candidate_start
     else:
@@ -37,9 +35,7 @@ def month_window(reset_day: int, now: datetime) -> tuple[datetime, datetime]:
             prev_year = now.year
             prev_month = now.month - 1
         prev_day = min(reset_day, last_day_of_month(prev_year, prev_month))
-        start = datetime(
-            prev_year, prev_month, prev_day, tzinfo=now.tzinfo or UTC
-        )
+        start = datetime(prev_year, prev_month, prev_day, tzinfo=now.tzinfo or UTC)
 
     if start.month == 12:
         next_year = start.year + 1

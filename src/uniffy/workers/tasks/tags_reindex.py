@@ -41,12 +41,9 @@ async def reindex_tag_urns(
 
         for start in range(0, len(content_urns), _BATCH_SIZE):
             batch = content_urns[start : start + _BATCH_SIZE]
-            tags_by_urn = await ops.get_for_urns(
-                organization_id=org_id, content_urns=batch
-            )
+            tags_by_urn = await ops.get_for_urns(organization_id=org_id, content_urns=batch)
             items: list[tuple[str, list[str]]] = [
-                (urn, [t.slug for t in (tags_by_urn.get(urn) or [])])
-                for urn in batch
+                (urn, [t.slug for t in (tags_by_urn.get(urn) or [])]) for urn in batch
             ]
             try:
                 await indexer.update_tags_bulk(organization_id=org_id, items=items)

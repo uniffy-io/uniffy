@@ -65,9 +65,7 @@ class TurnConfig:
             return None
         shared_secret = os.getenv("TURN_SHARED_SECRET", "")
         if not shared_secret:
-            raise LiveKitConfigError(
-                "TURN_SHARED_SECRET is required when TURN_SERVER_URLS is set"
-            )
+            raise LiveKitConfigError("TURN_SHARED_SECRET is required when TURN_SERVER_URLS is set")
         try:
             ttl = int(os.getenv("TURN_CREDENTIAL_TTL_SECONDS", "28800"))
         except ValueError as exc:

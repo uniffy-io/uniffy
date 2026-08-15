@@ -243,7 +243,7 @@ class SettingsOperations:
                 name="Default",
                 is_default=True,
             )
-        except (IntegrityError, ValidationError):
+        except IntegrityError, ValidationError:
             await self.session.rollback()
             profile = await self.get_default_profile(user_id)
             if profile:

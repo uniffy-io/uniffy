@@ -40,7 +40,7 @@ async def _validate(payload: dict[str, Any]) -> UUID:
     if sid_raw:
         try:
             session_id: UUID | None = UUID(sid_raw)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             session_id = None
         if session_id is not None and await is_session_revoked(session_id):
             raise _UNAUTHORIZED

@@ -72,9 +72,7 @@ async def get_busy_intervals(
     if not user_ids:
         return {}
     if len(user_ids) > MAX_FREE_BUSY_USERS:
-        raise ValidationError(
-            "user_ids", f"At most {MAX_FREE_BUSY_USERS} users per free/busy query"
-        )
+        raise ValidationError("user_ids", f"At most {MAX_FREE_BUSY_USERS} users per free/busy query")
     if range_end <= range_start:
         raise ValidationError("range", "range_end must be after range_start")
     if range_end - range_start > timedelta(days=MAX_WINDOW_DAYS):

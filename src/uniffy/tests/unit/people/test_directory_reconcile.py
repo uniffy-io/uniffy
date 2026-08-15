@@ -109,14 +109,12 @@ class TestUpsertUser:
     async def test_creates_passwordless_user(self) -> None:
         source = _source()
         report = ReconcileReport()
-        session = _session(
-            [
-                _result(scalar=None),  # no link
-                _result(scalar=None),  # no email match
-                _result(scalar=None),  # username free
-                _result(),  # profile upsert
-            ]
-        )
+        session = _session([
+            _result(scalar=None),  # no link
+            _result(scalar=None),  # no email match
+            _result(scalar=None),  # username free
+            _result(),  # profile upsert
+        ])
         org_ops = MagicMock()
         org_ops.get_membership = AsyncMock(return_value=None)
         org_ops.add_member = AsyncMock()
@@ -167,9 +165,7 @@ class TestUpsertUser:
         source = _source()
         report = ReconcileReport()
         session = _session([_result(scalar=None)])
-        user_id = await reconcile.upsert_user(
-            session, source, _record(email=None), report=report
-        )
+        user_id = await reconcile.upsert_user(session, source, _record(email=None), report=report)
         assert user_id is None
         assert report.users_skipped == 1
 
@@ -177,9 +173,7 @@ class TestUpsertUser:
         source = _source()
         report = ReconcileReport()
         session = _session([_result(scalar=None), _result(scalar=None)])
-        user_id = await reconcile.upsert_user(
-            session, source, _record(active=False), report=report
-        )
+        user_id = await reconcile.upsert_user(session, source, _record(active=False), report=report)
         assert user_id is None
         assert report.users_skipped == 1
 
@@ -226,17 +220,13 @@ class TestDeprovision:
             patch.object(reconcile, "UserSearchIndexer", return_value=indexer),
             patch.object(reconcile, "publish_mention_state", AsyncMock()) as publish,
         ):
-            done = await reconcile.deprovision_user(
-                session, source, user_id, active_owner_ids=set()
-            )
+            done = await reconcile.deprovision_user(session, source, user_id, active_owner_ids=set())
 
         assert done is True
         assert membership.is_active is False
         drop_cache.assert_awaited_once_with(user_id)
         drop_member.assert_awaited_once()
-        indexer.remove_from_organization.assert_awaited_once_with(
-            user_id, source.organization_id
-        )
+        indexer.remove_from_organization.assert_awaited_once_with(user_id, source.organization_id)
         publish.assert_awaited_once()
         assert publish.await_args.args[2] == {"urn_status": "DELETED"}
 
@@ -256,9 +246,7 @@ class TestDeprovision:
         report = ReconcileReport()
         keep_id, drop_id = generate_id(), generate_id()
         links = [("ext-keep", keep_id), ("ext-drop", drop_id)]
-        session = _session(
-            [_result(rows=links), _result(scalar=20), _result(rows=[])]
-        )
+        session = _session([_result(rows=links), _result(scalar=20), _result(rows=[])])
         with patch.object(
             reconcile, "deprovision_user", AsyncMock(return_value=True)
         ) as deprovision:

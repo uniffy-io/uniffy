@@ -19,9 +19,7 @@ async def test_room_update_publishes_cleared_fields(session, env, monkeypatch) -
     async def capture(organization_id, urn, changes, restricted=False):
         published.append((urn, dict(changes), restricted))
 
-    monkeypatch.setattr(
-        "uniffy.domains.rooms.operations.publish_mention_state", capture
-    )
+    monkeypatch.setattr("uniffy.domains.rooms.operations.publish_mention_state", capture)
 
     room_ops = RoomOperations(session)
     try:

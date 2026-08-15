@@ -1,6 +1,5 @@
 """Tests for file version retention selection and policy resolution."""
 
-
 import pytest
 
 from uniffy.core.models.files.file_version import FileVersion

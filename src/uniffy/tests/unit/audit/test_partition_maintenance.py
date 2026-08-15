@@ -59,9 +59,7 @@ async def test_ensure_creates_only_the_missing_months(monkeypatch) -> None:
     )
 
     session = _RecordingSession()
-    created = await ensure_audit_partitions(
-        session, today=date(2026, 8, 2), months_ahead=3
-    )
+    created = await ensure_audit_partitions(session, today=date(2026, 8, 2), months_ahead=3)
 
     assert created == ["audit_events_2026_10", "audit_events_2026_11"]
     assert len(session.statements) == 2
@@ -72,9 +70,7 @@ async def test_ensure_creates_only_the_missing_months(monkeypatch) -> None:
 async def test_ensure_drains_the_default_partition_when_it_holds_rows(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(
-        partitions, "_existing_partitions", lambda session: _async(set())
-    )
+    monkeypatch.setattr(partitions, "_existing_partitions", lambda session: _async(set()))
     monkeypatch.setattr(
         partitions,
         "_default_holds_rows",
@@ -82,9 +78,7 @@ async def test_ensure_drains_the_default_partition_when_it_holds_rows(
     )
 
     session = _RecordingSession()
-    created = await ensure_audit_partitions(
-        session, today=date(2026, 8, 2), months_ahead=1
-    )
+    created = await ensure_audit_partitions(session, today=date(2026, 8, 2), months_ahead=1)
 
     assert created == ["audit_events_2026_08", "audit_events_2026_09"]
     august = session.statements[:4]

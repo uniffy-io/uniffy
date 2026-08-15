@@ -70,9 +70,7 @@ class QuotaHandlersMixin:
 
         try:
             async with open_session() as session:
-                await OrganizationOperations(session).require_org_member(
-                    user_id, organization_id
-                )
+                await OrganizationOperations(session).require_org_member(user_id, organization_id)
                 ops = QuotaOperations(session)
                 quota = await ops.get_org_quota(organization_id)
                 total_used, total_count = await ops.get_org_usage(organization_id)
@@ -502,9 +500,7 @@ class QuotaHandlersMixin:
 
         try:
             async with open_session() as session:
-                policy = await get_org_version_policy_view(
-                    session, user_id, organization_id
-                )
+                policy = await get_org_version_policy_view(session, user_id, organization_id)
                 return GetOrgFileVersionPolicyResponse(
                     policy=OrgFileVersionPolicy(
                         organization_id=str(policy.organization_id),

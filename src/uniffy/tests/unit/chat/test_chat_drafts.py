@@ -265,17 +265,15 @@ def test_draft_changed_is_user_level_event():
     assert evt.DRAFT_CHANGED not in _CHANNEL_EVENT_TYPES
 
     now = datetime.now(UTC)
-    decoded = _payload_to_user_event(
-        {
-            "_type": evt.DRAFT_CHANGED,
-            "channel_id": "chan",
-            "root_message_id": "root",
-            "content": "hello",
-            "deleted": False,
-            "updated_at": now.isoformat(),
-            "client_session_id": "sess",
-        }
-    )
+    decoded = _payload_to_user_event({
+        "_type": evt.DRAFT_CHANGED,
+        "channel_id": "chan",
+        "root_message_id": "root",
+        "content": "hello",
+        "deleted": False,
+        "updated_at": now.isoformat(),
+        "client_session_id": "sess",
+    })
     assert decoded is not None
     assert decoded.draft_changed.channel_id == "chan"
     assert decoded.draft_changed.root_message_id == "root"

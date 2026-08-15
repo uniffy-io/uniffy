@@ -180,9 +180,7 @@ async def _execute_list_teams(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(success=False, data="", error=error)
     limit = clamp_int(args.get("limit"), 10, 1, MAX_PEOPLE_RESULTS)
 
-    await OrganizationOperations(ctx.session).require_org_member(
-        ctx.user_id, ctx.organization_id
-    )
+    await OrganizationOperations(ctx.session).require_org_member(ctx.user_id, ctx.organization_id)
     teams, total = await search_team_nodes(
         ctx.session,
         ctx.organization_id,

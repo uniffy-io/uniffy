@@ -153,18 +153,24 @@ async def _seed_threads(db_session: AsyncSession) -> NS:
 
 async def _teardown_threads(db_session: AsyncSession, env: NS) -> None:
     await db_session.rollback()
-    await db_session.execute(delete(ChatThreadFollow).where(ChatThreadFollow.root_message_id.in_(
-        [env.root_a_id, env.root_b_id]
-    )))
-    await db_session.execute(delete(ChatThreadParticipant).where(
-        ChatThreadParticipant.root_message_id.in_([env.root_a_id, env.root_b_id])
-    ))
-    await db_session.execute(delete(ChatThreadStats).where(
-        ChatThreadStats.root_message_id.in_([env.root_a_id, env.root_b_id])
-    ))
-    await db_session.execute(delete(ChatThread).where(
-        ChatThread.root_message_id.in_([env.root_a_id, env.root_b_id])
-    ))
+    await db_session.execute(
+        delete(ChatThreadFollow).where(
+            ChatThreadFollow.root_message_id.in_([env.root_a_id, env.root_b_id])
+        )
+    )
+    await db_session.execute(
+        delete(ChatThreadParticipant).where(
+            ChatThreadParticipant.root_message_id.in_([env.root_a_id, env.root_b_id])
+        )
+    )
+    await db_session.execute(
+        delete(ChatThreadStats).where(
+            ChatThreadStats.root_message_id.in_([env.root_a_id, env.root_b_id])
+        )
+    )
+    await db_session.execute(
+        delete(ChatThread).where(ChatThread.root_message_id.in_([env.root_a_id, env.root_b_id]))
+    )
     await db_session.execute(delete(ChatMessage).where(ChatMessage.channel_id == env.channel_id))
     await db_session.execute(
         delete(ChatChannelMember).where(ChatChannelMember.channel_id == env.channel_id)

@@ -36,7 +36,7 @@ def parse_doc_name(doc_name: str) -> DocKey | None:
         return None
     try:
         return (ContentType[parts[0]], UUID(parts[1]))
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         return None
 
 

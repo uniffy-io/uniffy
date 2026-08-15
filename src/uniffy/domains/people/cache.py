@@ -40,9 +40,7 @@ async def get_cached_person(organization_id: UUID, user_id: UUID) -> dict[str, A
     return cached
 
 
-async def set_cached_person(
-    organization_id: UUID, user_id: UUID, payload: dict[str, Any]
-) -> None:
+async def set_cached_person(organization_id: UUID, user_id: UUID, payload: dict[str, Any]) -> None:
     await cache_set(
         _profile_key(organization_id, user_id),
         payload,

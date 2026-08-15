@@ -197,9 +197,7 @@ class ThreadHandlers:
                     (row.sender_type, row.sender_id) for row in rows
                 ])
 
-                items = [
-                    self._build_inbox_item(row, inbox_sender_map) for row in rows
-                ]
+                items = [self._build_inbox_item(row, inbox_sender_map) for row in rows]
 
                 return GetThreadsInboxResponse(
                     threads=items,

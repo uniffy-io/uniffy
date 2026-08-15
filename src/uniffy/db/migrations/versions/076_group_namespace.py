@@ -91,9 +91,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.add_column(
         "login_groups",
-        sa.Column(
-            "is_default", sa.Boolean(), nullable=False, server_default=sa.false()
-        ),
+        sa.Column("is_default", sa.Boolean(), nullable=False, server_default=sa.false()),
     )
     op.drop_constraint("uq_login_groups_org_slug", "login_groups", type_="unique")
     op.drop_index("uq_login_groups_org_name_lower", table_name="login_groups")

@@ -58,9 +58,7 @@ def clamp_duration(requested_minutes: int) -> int:
     return max(floor, min(requested_minutes, ceiling))
 
 
-async def org_override(
-    session: AsyncSession, organization_id: UUID
-) -> ConsentMode | None:
+async def org_override(session: AsyncSession, organization_id: UUID) -> ConsentMode | None:
     row = (
         await session.execute(
             select(OrgSetting).where(
@@ -80,9 +78,7 @@ async def org_override(
     return None
 
 
-async def effective_consent_mode(
-    session: AsyncSession, organization_id: UUID
-) -> ConsentMode:
+async def effective_consent_mode(session: AsyncSession, organization_id: UUID) -> ConsentMode:
     """Org override can tighten but never loosen the deployment default."""
     deployment = deployment_consent_mode()
     override = await org_override(session, organization_id)

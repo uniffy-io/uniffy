@@ -10,9 +10,7 @@ from sqlmodel import Field, SQLModel
 class AgentMemoryBridgeOptIn(SQLModel, table=True):
     __tablename__ = "agents_memory_bridge_optins"
 
-    user_id: UUID = Field(
-        foreign_key="login_users.id", primary_key=True, nullable=False
-    )
+    user_id: UUID = Field(foreign_key="login_users.id", primary_key=True, nullable=False)
     organization_id: UUID = Field(
         foreign_key="login_organizations.id", primary_key=True, nullable=False
     )

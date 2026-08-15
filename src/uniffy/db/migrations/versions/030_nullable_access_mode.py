@@ -49,8 +49,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     for table in _TABLES:
         op.execute(
-            sa.text(
-                f"UPDATE {table} SET access_mode = 'OWNER_ONLY' WHERE access_mode IS NULL"
-            )
+            sa.text(f"UPDATE {table} SET access_mode = 'OWNER_ONLY' WHERE access_mode IS NULL")
         )
         op.alter_column(table, "access_mode", nullable=False)

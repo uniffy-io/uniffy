@@ -287,7 +287,7 @@ class ChatReadStateOperations:
                         try:
                             cursor_map[rid] = datetime.fromisoformat(str(raw))
                             continue
-                        except (ValueError, TypeError):
+                        except ValueError, TypeError:
                             pass
                     valkey_miss_ids.append(rid)
             except Exception:

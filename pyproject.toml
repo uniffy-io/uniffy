@@ -79,8 +79,8 @@ dev = [
   "pytest>=8.0.0",
   "pytest-asyncio>=1.4.0",
   "pytest-benchmark>=5.0.0",
-  "ruff>=0.14.13",
-  "ty>=0.0.10",
+  "ruff>=0.16.3",
+  "ty>=0.0.72",
   # Worker hot reload
   "watchfiles>=1.0.0",
 ]

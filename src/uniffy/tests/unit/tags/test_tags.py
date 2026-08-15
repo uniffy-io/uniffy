@@ -221,9 +221,7 @@ def test_default_presets_shape() -> None:
         assert preset["sort_by"] in {"count", "alpha", "updated"}
         assert preset["sort_order"] in {"asc", "desc"}
 
-    untagged = next(
-        p for p in DEFAULT_TAG_FILTER_PRESETS if p["name"] == "Untagged content"
-    )
+    untagged = next(p for p in DEFAULT_TAG_FILTER_PRESETS if p["name"] == "Untagged content")
     assert untagged["criteria"] == {"untagged_only": True}
 
     auto = next(p for p in DEFAULT_TAG_FILTER_PRESETS if p["name"] == "Auto-tagged")
@@ -234,9 +232,7 @@ def test_default_presets_shape() -> None:
 
 
 def test_my_recent_tags_uses_recent_window() -> None:
-    recent = next(
-        p for p in DEFAULT_TAG_FILTER_PRESETS if p["name"] == "My recent tags"
-    )
+    recent = next(p for p in DEFAULT_TAG_FILTER_PRESETS if p["name"] == "My recent tags")
     after = recent["criteria"]["created_after"]
     parsed = datetime.fromisoformat(after)
     delta = datetime.now(UTC) - parsed
