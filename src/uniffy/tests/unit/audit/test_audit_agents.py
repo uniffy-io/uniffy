@@ -116,9 +116,7 @@ async def test_image_generation_audit_payload_has_required_keys() -> None:
     session = MagicMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
-    session.execute = AsyncMock(
-        return_value=MagicMock(scalar_one_or_none=lambda: None)
-    )
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
     org_id = generate_id()
     user_id = generate_id()
@@ -159,8 +157,6 @@ async def test_image_generation_audit_payload_has_required_keys() -> None:
     assert row.details["agent_id"] == str(agent_id)
     assert row.details["model_id"] == "gpt-image-1"
     assert "prompt" not in row.details  # only the hash leaves the table
-    assert row.details["prompt_hash"] == hashlib.sha256(
-        prompt.encode("utf-8")
-    ).hexdigest()
+    assert row.details["prompt_hash"] == hashlib.sha256(prompt.encode("utf-8")).hexdigest()
     assert row.details["output_file_urn"] == file_urn
     assert row.details["cost"] == 0.0

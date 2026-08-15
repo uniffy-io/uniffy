@@ -163,12 +163,15 @@ class TestGetRoomExecutor:
             "event_title": "Quick Sync",
             "booker_name": "Alice",
         }
-        with patch(
-            "uniffy.domains.rooms.operations.RoomOperations.get_by_id",
-            new=AsyncMock(return_value=room),
-        ), patch(
-            "uniffy.domains.rooms.operations.BookingOperations.check_availability",
-            new=AsyncMock(return_value=[slot]),
+        with (
+            patch(
+                "uniffy.domains.rooms.operations.RoomOperations.get_by_id",
+                new=AsyncMock(return_value=room),
+            ),
+            patch(
+                "uniffy.domains.rooms.operations.BookingOperations.check_availability",
+                new=AsyncMock(return_value=[slot]),
+            ),
         ):
             result = await _execute_get_room(ctx, {"room_id": str(room.id)})
 
@@ -291,9 +294,7 @@ class TestBookRoomExecutor:
         with patch(
             "uniffy.domains.rooms.operations.BookingOperations.create_booking",
             new=AsyncMock(
-                side_effect=ValidationError(
-                    "room", "Room is already booked for this time slot."
-                )
+                side_effect=ValidationError("room", "Room is already booked for this time slot.")
             ),
         ):
             result = await _execute_book_room(
@@ -349,12 +350,15 @@ class TestCalendarRoomAtomicityPrecheck:
         start = datetime.now(UTC)
         end = start + timedelta(hours=1)
 
-        with patch(
-            "uniffy.domains.rooms.operations.RoomOperations.get_by_id",
-            new=AsyncMock(return_value=room),
-        ), patch(
-            "uniffy.domains.rooms.queries.check_booking_conflict",
-            new=AsyncMock(return_value=True),
+        with (
+            patch(
+                "uniffy.domains.rooms.operations.RoomOperations.get_by_id",
+                new=AsyncMock(return_value=room),
+            ),
+            patch(
+                "uniffy.domains.rooms.queries.check_booking_conflict",
+                new=AsyncMock(return_value=True),
+            ),
         ):
             raised = None
             try:
@@ -374,9 +378,7 @@ class TestCalendarRoomAtomicityPrecheck:
         assert "already booked" in str(raised)
         # No CalendarEvent was added to the session.
         added_types = [
-            call.args[0].__class__.__name__
-            for call in session.add.call_args_list
-            if call.args
+            call.args[0].__class__.__name__ for call in session.add.call_args_list if call.args
         ]
         assert "CalendarEvent" not in added_types
 
@@ -415,8 +417,6 @@ class TestCalendarRoomAtomicityPrecheck:
         assert raised is not None
         assert "MAINTENANCE" in str(raised)
         added_types = [
-            call.args[0].__class__.__name__
-            for call in session.add.call_args_list
-            if call.args
+            call.args[0].__class__.__name__ for call in session.add.call_args_list if call.args
         ]
         assert "CalendarEvent" not in added_types

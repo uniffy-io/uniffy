@@ -35,9 +35,7 @@ async def init_ops_client() -> None:
             return
         except Exception:
             with contextlib.suppress(BaseException):
-                await asyncio.wait_for(
-                    _ops_client.aclose(), timeout=_CLOSE_TIMEOUT_SECONDS
-                )
+                await asyncio.wait_for(_ops_client.aclose(), timeout=_CLOSE_TIMEOUT_SECONDS)
             _ops_client = None
 
     config = ValkeyConfig.from_env()
@@ -65,7 +63,7 @@ async def close_ops_client() -> None:
     _ops_client = None
     try:
         await asyncio.wait_for(client.aclose(), timeout=_CLOSE_TIMEOUT_SECONDS)
-    except (TimeoutError, BaseException):
+    except TimeoutError, BaseException:
         logger.warning("Ops client close timed out", component=LOGGER_COMPONENT)
     logger.info("Ops client closed", component=LOGGER_COMPONENT)
 

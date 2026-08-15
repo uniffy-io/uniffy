@@ -190,7 +190,6 @@ message ChatChannel {
   string slug = 5;
   string description = 6;
   ChannelType channel_type = 7;
-  bool is_encrypted = 8;
   bool is_archived = 9;
   bool is_default = 10;
   string icon = 11;

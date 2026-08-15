@@ -13,9 +13,7 @@ from typing import Final
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 audit_ip_var: ContextVar[str | None] = ContextVar("audit_ip", default=None)
-audit_user_agent_var: ContextVar[str | None] = ContextVar(
-    "audit_user_agent", default=None
-)
+audit_user_agent_var: ContextVar[str | None] = ContextVar("audit_user_agent", default=None)
 
 _MAX_UA_LENGTH: Final[int] = 512
 
@@ -112,7 +110,7 @@ class RequestContextMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] != "http":  # noqa: PLR2004
             await self.app(scope, receive, send)
             return
 

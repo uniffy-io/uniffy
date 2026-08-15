@@ -1,13 +1,62 @@
 """AuditEvent model: central append-only audit log for the whole product."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, Enum, String
 from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class AuditResourceType(StrEnum):
+    AGENT = "AGENT"
+    AGENT_CHAT = "AGENT_CHAT"
+    AGENT_CRON_TASK = "AGENT_CRON_TASK"
+    AGENT_FOLDER = "AGENT_FOLDER"
+    AGENT_RUNTIME_SETTINGS = "AGENT_RUNTIME_SETTINGS"
+    BUDGET = "BUDGET"
+    CALL = "CALL"
+    CALENDAR_EVENT = "CALENDAR_EVENT"
+    CHAT = "CHAT"
+    CHAT_MESSAGE = "CHAT_MESSAGE"
+    CONTENT_TYPE = "CONTENT_TYPE"
+    CURRENCY_RATE = "CURRENCY_RATE"
+    DEPLOYMENT = "DEPLOYMENT"
+    DEPLOYMENT_ENCRYPTION_KEY = "DEPLOYMENT_ENCRYPTION_KEY"
+    EMAIL = "EMAIL"
+    FILE = "FILE"
+    FOLDER = "FOLDER"
+    GROUP = "GROUP"
+    IDENTITY_SOURCE = "IDENTITY_SOURCE"
+    INTEGRATION_CONNECTION = "INTEGRATION_CONNECTION"
+    INVITATION = "INVITATION"
+    MAIL_CONFIG = "MAIL_CONFIG"
+    MAIL_SUPPRESSION = "MAIL_SUPPRESSION"
+    NOTE = "NOTE"
+    ORGANIZATION = "ORGANIZATION"
+    PROJECT = "PROJECT"
+    PROVIDER_KEY = "PROVIDER_KEY"
+    RATE_LIMIT = "RATE_LIMIT"
+    ROOM = "ROOM"
+    RUNTIME_SETTINGS = "RUNTIME_SETTINGS"
+    SKILL = "SKILL"
+    SUPPORT_SESSION = "SUPPORT_SESSION"
+    SYSTEM_FLAG = "SYSTEM_FLAG"
+    SYSTEM_MAIL_CONFIG = "SYSTEM_MAIL_CONFIG"
+    TAG = "TAG"
+    TASK = "TASK"
+    TEAM = "TEAM"
+    USER = "USER"
+    USER_QUOTA = "USER_QUOTA"
+    USER_SESSION = "USER_SESSION"
+
+
+class AuditActorKind(StrEnum):
+    AGENT = "agent"
+    SUPPORT = "support"
 
 
 class AuditEvent(SQLModel, table=True):
@@ -28,9 +77,17 @@ class AuditEvent(SQLModel, table=True):
     action: str = Field(
         sa_column=Column(String(64), nullable=False),
     )
-    resource_type: str | None = Field(
+    resource_type: AuditResourceType | None = Field(
         default=None,
-        sa_column=Column(String(32), nullable=True),
+        sa_column=Column(
+            Enum(
+                AuditResourceType,
+                native_enum=False,
+                length=32,
+                validate_strings=True,
+            ),
+            nullable=True,
+        ),
     )
     resource_id: UUID | None = Field(default=None)
     details: dict = Field(

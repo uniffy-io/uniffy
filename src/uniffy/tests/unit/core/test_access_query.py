@@ -19,9 +19,7 @@ from uniffy.core.types import ContentType, generate_id
 def _session(*, member_active: bool = True):
     async def execute(stmt):
         res = MagicMock()
-        res.scalar_one_or_none = MagicMock(
-            return_value="MEMBER" if member_active else None
-        )
+        res.scalar_one_or_none = MagicMock(return_value="MEMBER" if member_active else None)
         return res
 
     session = MagicMock()

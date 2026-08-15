@@ -51,7 +51,7 @@ class MentionRegistry:
         self._urns[f"{kind}:{key}"] = build_content_urn(content_type, content_id)
 
     def resolve(self, target: str) -> str | None:
-        key = target if ":" in target else f"{NOTE}:{target}"
+        key = target if ":" in target else f"{NOTE}:{target}"  # noqa: PLR2004
         return self._urns.get(key)
 
     def rewrite(self, text: str, *, source: str) -> str:

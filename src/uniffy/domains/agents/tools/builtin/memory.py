@@ -1,11 +1,11 @@
 """Built-in memory tools: audience-scoped save/read/forget."""
 
+from enum import StrEnum
+
 from sqlalchemy import or_, select, update
 
-from uniffy.core.models.agents.memory import AgentMemory, MemoryScope
+from uniffy.core.models.agents.memory import AgentMemory, MemoryCategory, MemoryScope
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
-
-VALID_CATEGORIES = {"preferences", "facts", "context", "instructions"}
 
 TEST_SESSION_WRITE_ERROR = (
     "Memory writes are disabled in test sessions; nothing was saved. "
@@ -47,10 +47,13 @@ def _read_filters(ctx: ToolContext, surface_ref) -> list:
     return [or_(*groups)]
 
 
-VALID_AUDIENCES = {"space", "personal", "organization"}
+class MemoryAudience(StrEnum):
+    SPACE = "space"
+    PERSONAL = "personal"
+    ORGANIZATION = "organization"
 
 
-async def _resolve_save_ref(ctx: ToolContext, surface_ref, audience: str):
+async def _resolve_save_ref(ctx: ToolContext, surface_ref, audience: MemoryAudience):
     """Map the requested audience onto a writable bucket, or explain why not.
 
     The surface stays the default; an explicit audience either matches a
@@ -61,10 +64,8 @@ async def _resolve_save_ref(ctx: ToolContext, surface_ref, audience: str):
     from uniffy.domains.agents.access import is_agents_builder
     from uniffy.domains.agents.memories.scope import MemoryScopeRef
 
-    if audience == "organization":
-        if not await is_agents_builder(
-            ctx.session, ctx.user_id, ctx.organization_id
-        ):
+    if audience is MemoryAudience.ORGANIZATION:
+        if not await is_agents_builder(ctx.session, ctx.user_id, ctx.organization_id):
             return None, ToolResult(
                 success=False,
                 data="",
@@ -77,7 +78,7 @@ async def _resolve_save_ref(ctx: ToolContext, surface_ref, audience: str):
                 ),
             )
         return MemoryScopeRef.org(), None
-    if audience == "personal" and ctx.memory_scope.scope is not MemoryScope.USER:
+    if audience is MemoryAudience.PERSONAL and ctx.memory_scope.scope is not MemoryScope.USER:
         return None, ToolResult(
             success=False,
             data="",
@@ -102,23 +103,27 @@ async def _execute_memory_save(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return err
 
-    audience = str(args.get("audience") or "space").strip().lower()
-    if audience not in VALID_AUDIENCES:
+    raw_audience = str(args.get("audience") or MemoryAudience.SPACE).strip().lower()
+    try:
+        audience = MemoryAudience(raw_audience)
+    except ValueError:
         return ToolResult(
             success=False,
             data="",
-            error=f"Invalid audience. Must be one of: {', '.join(sorted(VALID_AUDIENCES))}",
+            error=f"Invalid audience. Must be one of: {', '.join(MemoryAudience)}",
         )
     ref, err = await _resolve_save_ref(ctx, ref, audience)
     if err:
         return err
 
-    category = args.get("category", "facts").strip().lower()
-    if category not in VALID_CATEGORIES:
+    raw_category = args.get("category", MemoryCategory.FACTS).strip().lower()
+    try:
+        category = MemoryCategory(raw_category)
+    except ValueError:
         return ToolResult(
             success=False,
             data="",
-            error=f"Invalid category. Must be one of: {', '.join(sorted(VALID_CATEGORIES))}",
+            error=f"Invalid category. Must be one of: {', '.join(MemoryCategory)}",
         )
     importance = args.get("importance", 0.5)
     if not isinstance(importance, (int, float)) or importance < 0 or importance > 1:
@@ -143,8 +148,7 @@ async def _execute_memory_save(ctx: ToolContext, args: dict) -> ToolResult:
     verb = "saved" if created else "updated"
     return ToolResult(
         success=True,
-        data=f'Memory {verb}: "{memory.key}" ({memory.category}). '
-        f"This memory is {_audience(ref)}.",
+        data=f'Memory {verb}: "{memory.key}" ({memory.category}). This memory is {_audience(ref)}.',
     )
 
 
@@ -169,9 +173,7 @@ async def _execute_memory_read(ctx: ToolContext, args: dict) -> ToolResult:
         )
         memories = [m for m in (result.scalars().first(),) if m is not None]
         if not memories:
-            return ToolResult(
-                success=False, data="", error=f"No memory found with key: {key}"
-            )
+            return ToolResult(success=False, data="", error=f"No memory found with key: {key}")
     else:
         from uniffy.domains.agents.memories.sanitize import escape_like
 
@@ -197,9 +199,7 @@ async def _execute_memory_read(ctx: ToolContext, args: dict) -> ToolResult:
             AGENT_MEMORY_READ_AFTER_NO_RECALL_TOTAL,
         )
 
-        AGENT_MEMORY_READ_AFTER_NO_RECALL_TOTAL.labels(
-            script=script_class(query or key)
-        ).inc()
+        AGENT_MEMORY_READ_AFTER_NO_RECALL_TOTAL.labels(script=script_class(query or key)).inc()
 
     # Own-session access counter bump: the sanctioned read_only exception.
     await ctx.session.execute(
@@ -214,9 +214,7 @@ async def _execute_memory_read(ctx: ToolContext, args: dict) -> ToolResult:
     if key:
         memory = memories[0]
         audience = _audience(scope_ref_for_memory(memory))
-        saved = (
-            memory.updated_at.strftime("%Y-%m-%d") if memory.updated_at else "unknown"
-        )
+        saved = memory.updated_at.strftime("%Y-%m-%d") if memory.updated_at else "unknown"
         return ToolResult(
             success=True,
             data=(
@@ -365,8 +363,7 @@ memory_read = ToolDefinition(
             "query": {
                 "type": "string",
                 "description": (
-                    "Search query to find relevant memories when the exact "
-                    "key is unknown."
+                    "Search query to find relevant memories when the exact key is unknown."
                 ),
             },
             "limit": {

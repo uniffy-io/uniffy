@@ -1,5 +1,6 @@
 """Organization CRUD, membership, and permission defaults."""
 
+import asyncio
 import copy
 from datetime import UTC, datetime
 from typing import Any
@@ -13,17 +14,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.cache import invalidate_domain_admin, invalidate_org_defaults
+from uniffy.core.auth.membership import invalidate_membership_cache
 from uniffy.core.auth.permissions import invalidate_visible_sets_for_user
 from uniffy.core.auth.permissions.visible_sets import invalidate_visible_sets_for_org
 from uniffy.core.crypto import OrgCipher
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
 from uniffy.core.valkey.cache import cache_invalidate_by_tag
+from uniffy.core.valkey.queue import QueueName, get_queue
+from uniffy.domains.calls.operations import kick_user_from_active_call
+from uniffy.domains.chat.cache import (
+    invalidate_cached_dm_peers,
+    invalidate_cached_member_ids,
+)
+from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
+from uniffy.domains.chat.search_acl import enqueue_chat_search_acl_refresh
 from uniffy.domains.organizations.defaults import DEFAULT_ORG_SETTINGS
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="org-ops")
 
@@ -117,9 +129,7 @@ class OrganizationOperations:
             create_default_tag_filter_presets,
         )
 
-        await create_default_tag_filter_presets(
-            self._session, org.id, owner_user_id
-        )
+        await create_default_tag_filter_presets(self._session, org.id, owner_user_id)
         await self._session.commit()
 
         from uniffy.core.models.chat.channel import ChannelType
@@ -198,16 +208,14 @@ class OrganizationOperations:
                 )
                 await self._session.commit()
             else:
-                logger.warning(
-                    "Starter docs skipped: docs tree not present in this deployment"
-                )
+                logger.warning("Starter docs skipped: docs tree not present in this deployment")
 
         await write_audit_event(
             self._session,
             organization_id=org.id,
             actor_user_id=actor_user_id or owner_user_id,
             action=Action.ORGANIZATION_CREATED,
-            resource_type="ORGANIZATION",
+            resource_type=AuditResourceType.ORGANIZATION,
             resource_id=org.id,
             details={"name": name, "slug": slug, "plan": plan},
         )
@@ -250,7 +258,7 @@ class OrganizationOperations:
                 organization_id=org_id,
                 actor_user_id=actor_user_id,
                 action=Action.ORGANIZATION_SETTINGS_CHANGED,
-                resource_type="ORGANIZATION",
+                resource_type=AuditResourceType.ORGANIZATION,
                 resource_id=org_id,
                 details={"changed_keys": changed_keys},
             )
@@ -335,11 +343,7 @@ class OrganizationOperations:
         single accountable person.
         """
         membership = await self.get_membership(user_id, org_id)
-        if (
-            not membership
-            or not membership.is_active
-            or membership.role != OrganizationRole.OWNER
-        ):
+        if not membership or not membership.is_active or membership.role != OrganizationRole.OWNER:
             raise PermissionDeniedError("Requires organization owner privileges")
         return membership
 
@@ -438,7 +442,7 @@ class OrganizationOperations:
                 organization_id=org_id,
                 actor_user_id=actor_user_id,
                 action=Action.ORGANIZATION_MEMBER_ADDED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=user_id,
                 details={"role": role.value},
             )
@@ -486,7 +490,7 @@ class OrganizationOperations:
             organization_id=org_id,
             actor_user_id=actor_user_id,
             action=Action.ORGANIZATION_MEMBER_ADDED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=user_id,
             details={"role": role.value},
         )
@@ -534,7 +538,7 @@ class OrganizationOperations:
             organization_id=org_id,
             actor_user_id=admin_user_id,
             action=Action.ORGANIZATION_MEMBER_ROLE_CHANGED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target_user_id,
             details={
                 "previous_role": previous_role.value,
@@ -546,8 +550,6 @@ class OrganizationOperations:
         await self._session.refresh(member)
 
         await _drop_user_perm_cache(target_user_id)
-        from uniffy.core.auth.membership import invalidate_membership_cache
-
         await invalidate_membership_cache(target_user_id, org_id)
 
         return (member, user)
@@ -575,6 +577,11 @@ class OrganizationOperations:
         )
 
         previous_role = membership.role
+        chat_cleanup = await cleanup_chat_membership_for_organization(
+            self._session,
+            organization_id=org_id,
+            user_id=target_user_id,
+        )
         await self._session.delete(membership)
 
         await write_audit_event(
@@ -582,7 +589,7 @@ class OrganizationOperations:
             organization_id=org_id,
             actor_user_id=admin_user_id,
             action=Action.ORGANIZATION_MEMBER_REMOVED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target_user_id,
             details={"previous_role": previous_role.value},
         )
@@ -593,9 +600,28 @@ class OrganizationOperations:
         await self._session.commit()
 
         await _drop_user_perm_cache(target_user_id)
-        from uniffy.core.auth.membership import invalidate_membership_cache
-
         await invalidate_membership_cache(target_user_id, org_id)
+        await invalidate_visible_sets_for_user(org_id, target_user_id)
+
+        if chat_cleanup.channel_ids:
+            private_channel_ids = set(chat_cleanup.private_channel_ids)
+            for offset in range(0, len(chat_cleanup.channel_ids), 50):
+                channel_batch = chat_cleanup.channel_ids[offset : offset + 50]
+                await asyncio.gather(
+                    *(invalidate_cached_member_ids(channel_id) for channel_id in channel_batch),
+                    *(invalidate_cached_dm_peers(channel_id) for channel_id in channel_batch),
+                    *(
+                        enqueue_chat_search_acl_refresh(channel_id)
+                        for channel_id in channel_batch
+                        if channel_id in private_channel_ids
+                    ),
+                )
+            for channel_id in chat_cleanup.channel_ids:
+                await kick_user_from_active_call(
+                    self._session,
+                    channel_id,
+                    target_user_id,
+                )
 
         return True
 
@@ -668,13 +694,11 @@ class OrganizationOperations:
             organization_id=org_id,
             actor_user_id=user_id,
             action=Action.ORGANIZATION_PERMISSION_DEFAULTS_CHANGED,
-            resource_type="CONTENT_TYPE",
+            resource_type=AuditResourceType.CONTENT_TYPE,
             resource_id=None,
             details={
                 "content_type": content_type.value,
-                "previous_access_mode": previous_access_mode.value
-                if previous_access_mode
-                else None,
+                "previous_access_mode": previous_access_mode.value if previous_access_mode else None,
                 "new_access_mode": defaults.default_access_mode.value,
                 "previous_baseline_role": previous_baseline_role.value
                 if previous_baseline_role
@@ -692,11 +716,9 @@ class OrganizationOperations:
 
         # Search docs bake the resolved policy at index time; job-id dedup coalesces burst toggles.
         try:
-            from uniffy.core.queue import get_queue
-
-            queue = get_queue()
+            queue = get_queue(QueueName.CORE)
             await queue.enqueue_job(
-                "reindex_org_content_for_defaults",
+                JobName.REINDEX_ORG_CONTENT_FOR_DEFAULTS,
                 str(org_id),
                 content_type.value,
                 _job_id=f"reindex_defaults:{org_id}:{content_type.value}",
@@ -711,9 +733,7 @@ class OrganizationOperations:
 
             await publish_defaults_changed(org_id, content_type)
         except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to publish realtime defaults_changed event"
-            )
+            logger.opt(exception=True).warning("Failed to publish realtime defaults_changed event")
 
         return defaults
 
@@ -748,7 +768,7 @@ class OrganizationOperations:
                 organization_id=org_id,
                 actor_user_id=user_id,
                 action=Action.ORGANIZATION_SETTINGS_CHANGED,
-                resource_type="ORGANIZATION",
+                resource_type=AuditResourceType.ORGANIZATION,
                 resource_id=org_id,
                 details={"changed_keys": changed_keys},
             )
@@ -794,7 +814,7 @@ class OrganizationOperations:
             organization_id=org_id,
             actor_user_id=admin_user_id,
             action=Action.DOMAIN_ADMIN_GRANTED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target_user_id,
             details={"domain": domain.value},
         )
@@ -805,9 +825,12 @@ class OrganizationOperations:
         await invalidate_domain_admin(org_id, target_user_id, domain)
         await invalidate_visible_sets_for_user(org_id, target_user_id)
 
-        from uniffy.core.valkey.pubsub import publish_notification
+        from uniffy.core.valkey.pubsub import NotificationPayloadType, publish_notification
 
-        await publish_notification(target_user_id, {"_type": "permissions_changed"})
+        await publish_notification(
+            target_user_id,
+            {"_type": NotificationPayloadType.PERMISSIONS_CHANGED},
+        )
 
         user_result = await self._session.execute(select(User).where(User.id == target_user_id))
         user = user_result.scalar_one()
@@ -845,7 +868,7 @@ class OrganizationOperations:
             organization_id=org_id,
             actor_user_id=admin_user_id,
             action=Action.DOMAIN_ADMIN_REVOKED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target_user_id,
             details={"domain": domain.value, "previous_state": previous_state},
         )
@@ -857,9 +880,12 @@ class OrganizationOperations:
         await invalidate_domain_admin(org_id, target_user_id, domain)
         await invalidate_visible_sets_for_user(org_id, target_user_id)
 
-        from uniffy.core.valkey.pubsub import publish_notification
+        from uniffy.core.valkey.pubsub import NotificationPayloadType, publish_notification
 
-        await publish_notification(target_user_id, {"_type": "permissions_changed"})
+        await publish_notification(
+            target_user_id,
+            {"_type": NotificationPayloadType.PERMISSIONS_CHANGED},
+        )
 
         return True
 
@@ -916,7 +942,7 @@ class OrganizationOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.ORGANIZATION_ENCRYPTION_KEY_ROTATED,
-            resource_type="organization",
+            resource_type=AuditResourceType.ORGANIZATION,
             resource_id=organization_id,
             details={
                 "previous_version": new_version - 1,

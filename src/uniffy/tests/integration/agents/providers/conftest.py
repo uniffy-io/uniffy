@@ -38,7 +38,5 @@ def live_provider(request):
     if not credential:
         pytest.skip(f"{env_key} not set")
     provider = get_provider_registry().create_provider(name, credential)
-    model = os.environ.get(
-        f"UNIFFY_ITEST_MODEL_{name.upper()}", DEFAULT_MODELS[name]
-    )
+    model = os.environ.get(f"UNIFFY_ITEST_MODEL_{name.upper()}", DEFAULT_MODELS[name])
     return name, provider, model

@@ -39,17 +39,13 @@ depends_on: str | Sequence[str] | None = None
 
 
 _FILLFACTOR_AND_AUTOVAC = (
-    "fillfactor = 80, "
-    "autovacuum_vacuum_scale_factor = 0.05, "
-    "autovacuum_analyze_scale_factor = 0.02"
+    "fillfactor = 80, autovacuum_vacuum_scale_factor = 0.05, autovacuum_analyze_scale_factor = 0.02"
 )
 
 
 def upgrade() -> None:
     """Apply FILLFACTOR=80 + tight autovac to agents_sessions."""
-    op.execute(
-        sa.text(f"ALTER TABLE agents_sessions SET ({_FILLFACTOR_AND_AUTOVAC})")
-    )
+    op.execute(sa.text(f"ALTER TABLE agents_sessions SET ({_FILLFACTOR_AND_AUTOVAC})"))
 
 
 def downgrade() -> None:

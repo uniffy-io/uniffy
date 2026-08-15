@@ -74,18 +74,14 @@ class TestSelfService:
         assert rows[0].actor_user_id == people.ic_id
 
     async def test_a_timezone_edit_refreshes_the_search_doc(self, session, people) -> None:
-        with patch(
-            "uniffy.domains.people.operations.sync_people_search", AsyncMock()
-        ) as fanout:
+        with patch("uniffy.domains.people.operations.sync_people_search", AsyncMock()) as fanout:
             await PeopleOperations(session).update_my_profile(
                 people.org_id, people.ic_id, {"timezone": "Asia/Tokyo"}
             )
         fanout.assert_awaited_once()
 
     async def test_a_bio_edit_leaves_the_search_doc_alone(self, session, people) -> None:
-        with patch(
-            "uniffy.domains.people.operations.sync_people_search", AsyncMock()
-        ) as fanout:
+        with patch("uniffy.domains.people.operations.sync_people_search", AsyncMock()) as fanout:
             await PeopleOperations(session).update_my_profile(
                 people.org_id, people.ic_id, {"bio": "Fanout-free."}
             )

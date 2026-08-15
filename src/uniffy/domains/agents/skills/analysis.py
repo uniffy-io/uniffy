@@ -14,11 +14,16 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import and_, or_, select
 
-from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
+from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
+from uniffy.core.models.agents.message_feedback import AgentFeedbackRating, AgentMessageFeedback
 from uniffy.core.models.agents.skill import AgentSkill
-from uniffy.core.models.agents.skill_draft import AgentSkillDraft
+from uniffy.core.models.agents.skill_draft import (
+    AgentSkillDraft,
+    AgentSkillDraftKind,
+    AgentSkillDraftStatus,
+)
 from uniffy.core.models.agents.skill_usage import AgentSkillUsage
+from uniffy.core.models.chat.message import ChatMessageMetadataKind, ChatMessageVisibility
 from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.skills.validation import (
@@ -56,7 +61,7 @@ _RECENTLY_RESOLVED_DAYS = 14
 class SkillProposal:
     """One analyzer suggestion before it becomes a draft row."""
 
-    action: str  # create | edit | evolve
+    action: AgentSkillDraftKind
     name: str
     display_name: str
     content: str
@@ -97,13 +102,11 @@ async def is_skill_evolution_enabled(session, organization_id: UUID) -> bool:
     """
     from uniffy.domains.org_settings.operations import OrgSettingsOperations
 
-    settings = await OrgSettingsOperations(session).get_namespace(
-        organization_id, _OPT_IN_NAMESPACE
-    )
+    settings = await OrgSettingsOperations(session).get_namespace(organization_id, _OPT_IN_NAMESPACE)
     row = settings.get(_OPT_IN_KEY)
     if row is not None and row.value is not None:
         return bool(row.value)
-    return os.getenv("AGENT_SKILL_EVOLUTION_ENABLED", "false").strip().lower() == "true"
+    return os.getenv("AGENT_SKILL_EVOLUTION_ENABLED", "false").strip().lower() == "true"  # noqa: PLR2004
 
 
 async def consume_analysis_budget(organization_id: UUID) -> bool:
@@ -137,18 +140,18 @@ def _is_tool_error(tool_result: str | None) -> bool:
         return False
     if tool_result.startswith(_TOOL_ERROR_PREFIXES):
         return True
-    if '"success": false' in tool_result or '"success":false' in tool_result:
+    if '"success": false' in tool_result or '"success":false' in tool_result:  # noqa: PLR2004
         return True
-    return "exceeded" in tool_result and "timeout" in tool_result
+    return "exceeded" in tool_result and "timeout" in tool_result  # noqa: PLR2004
 
 
 def _format_turn(msg: AgentMessage) -> str | None:
     role = msg.role
-    if role == "user":
+    if role == AgentMessageRole.USER:
         return f"User: {(msg.content or '').strip()}" if msg.content else None
-    if role == "assistant":
+    if role == AgentMessageRole.ASSISTANT:
         return f"Assistant: {(msg.content or '').strip()}" if msg.content else None
-    if role == "tool":
+    if role == AgentMessageRole.TOOL:
         status = "error" if _is_tool_error(msg.tool_result) else "ok"
         return f"[tool {msg.tool_name or '?'} -> {status}]"
     return None
@@ -164,18 +167,22 @@ class SkillEvolutionAnalyzer:
         self, *, session_id: UUID, organization_id: UUID
     ) -> SessionSignals | None:
         rows = (
-            await self._session.execute(
-                select(AgentMessage)
-                .where(
-                    AgentMessage.session_id == session_id,
-                    AgentMessage.is_invalidated == False,  # noqa: E712
-                    AgentMessage.is_compacted == False,  # noqa: E712
-                    AgentMessage.role != "summary",
+            (
+                await self._session.execute(
+                    select(AgentMessage)
+                    .where(
+                        AgentMessage.session_id == session_id,
+                        AgentMessage.is_invalidated == False,  # noqa: E712
+                        AgentMessage.is_compacted == False,  # noqa: E712
+                        AgentMessage.role != AgentMessageRole.SUMMARY,
+                    )
+                    .order_by(AgentMessage.created_at.desc())
+                    .limit(_TRANSCRIPT_MESSAGE_CAP)
                 )
-                .order_by(AgentMessage.created_at.desc())
-                .limit(_TRANSCRIPT_MESSAGE_CAP)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         messages = list(reversed(rows))
         transcript = self._build_transcript(messages)
         if not transcript:
@@ -183,7 +190,7 @@ class SkillEvolutionAnalyzer:
 
         tool_errors: dict[str, int] = {}
         for msg in messages:
-            if msg.role == "tool" and _is_tool_error(msg.tool_result):
+            if msg.role == AgentMessageRole.TOOL and _is_tool_error(msg.tool_result):
                 name = msg.tool_name or "unknown"
                 tool_errors[name] = tool_errors.get(name, 0) + 1
 
@@ -193,7 +200,7 @@ class SkillEvolutionAnalyzer:
                 .join(AgentMessage, AgentMessage.id == AgentMessageFeedback.agents_message_id)
                 .where(
                     AgentMessage.session_id == session_id,
-                    AgentMessageFeedback.rating == "down",
+                    AgentMessageFeedback.rating == AgentFeedbackRating.DOWN,
                 )
             )
         ).all()
@@ -213,17 +220,21 @@ class SkillEvolutionAnalyzer:
         from uniffy.core.models.chat.message import ChatMessage, SenderType
 
         rows = (
-            await self._session.execute(
-                select(ChatMessage)
-                .where(
-                    ChatMessage.channel_id == channel_id,
-                    ChatMessage.is_deleted == False,  # noqa: E712
-                    ChatMessage.sender_type.in_([SenderType.USER, SenderType.AGENT]),
+            (
+                await self._session.execute(
+                    select(ChatMessage)
+                    .where(
+                        ChatMessage.channel_id == channel_id,
+                        ChatMessage.is_deleted == False,  # noqa: E712
+                        ChatMessage.sender_type.in_([SenderType.USER, SenderType.AGENT]),
+                    )
+                    .order_by(ChatMessage.created_at.desc())
+                    .limit(_TRANSCRIPT_MESSAGE_CAP)
                 )
-                .order_by(ChatMessage.created_at.desc())
-                .limit(_TRANSCRIPT_MESSAGE_CAP)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         lines: list[str] = []
         for msg in reversed(rows):
@@ -233,7 +244,9 @@ class SkillEvolutionAnalyzer:
             # and the user rows (which carry no kind) while dropping internal
             # visibility and non-final agent rows (tool_call/tool_result/summary/...).
             kind = meta.get("kind")
-            if meta.get("visibility") == "agent_internal" or (kind and kind != "final"):
+            if meta.get("visibility") == ChatMessageVisibility.AGENT_INTERNAL or (
+                kind and kind != ChatMessageMetadataKind.FINAL
+            ):
                 continue
             body = (msg.content or "").strip()
             if not body:
@@ -321,12 +334,13 @@ class SkillEvolutionAnalyzer:
 
     def _prepare(
         self, proposal: SkillProposal, name_index: dict[str, UUID]
-    ) -> tuple[str, UUID | None, str, str] | None:
+    ) -> tuple[AgentSkillDraftKind, UUID | None, str, str] | None:
         name = (proposal.name or "").strip()
         content = (proposal.content or "").strip()
         if not name or not content or len(name) > SKILL_NAME_MAX:
             return None
         display_name = ((proposal.display_name or "").strip() or name)[:SKILL_DISPLAY_NAME_MAX]
+        action = AgentSkillDraftKind(proposal.action)
 
         target_id: UUID | None = None
         target_ref = (proposal.target_skill_name or "").strip().lower()
@@ -334,18 +348,20 @@ class SkillEvolutionAnalyzer:
             target_id = name_index.get(target_ref)
         # Bias toward improving an injected skill: a "create" that collides with
         # an active skill name becomes an edit of that skill.
-        if target_id is None and proposal.action == "create":
+        if target_id is None and action is AgentSkillDraftKind.CREATE:
             target_id = name_index.get(name.lower())
 
         if target_id is not None:
-            kind = "evolve" if proposal.action == "evolve" else "edit"
+            kind = (
+                AgentSkillDraftKind.EVOLVE
+                if action is AgentSkillDraftKind.EVOLVE
+                else AgentSkillDraftKind.EDIT
+            )
         else:
-            kind = "create"
+            kind = AgentSkillDraftKind.CREATE
         return kind, target_id, name, display_name
 
-    async def _suppressed_draft_keys(
-        self, *, organization_id: UUID
-    ) -> set[tuple[str, str, str]]:
+    async def _suppressed_draft_keys(self, *, organization_id: UUID) -> set[tuple[str, str, str]]:
         """Keys to skip: still-open pending drafts plus recently-discarded ones.
 
         Org-wide, matching the builder review inbox: a draft anyone already
@@ -362,19 +378,16 @@ class SkillEvolutionAnalyzer:
                     AgentSkillDraft.organization_id == organization_id,
                     AgentSkillDraft.is_deleted == False,  # noqa: E712
                     or_(
-                        AgentSkillDraft.status == "pending",
+                        AgentSkillDraft.status == AgentSkillDraftStatus.PENDING,
                         and_(
-                            AgentSkillDraft.status == "discarded",
+                            AgentSkillDraft.status == AgentSkillDraftStatus.DISCARDED,
                             AgentSkillDraft.updated_at >= cutoff,
                         ),
                     ),
                 )
             )
         ).all()
-        return {
-            (kind, str(tid) if tid else "", (name or "").lower())
-            for kind, tid, name in rows
-        }
+        return {(kind, str(tid) if tid else "", (name or "").lower()) for kind, tid, name in rows}
 
     async def _load_active_skills(self, session_id: UUID) -> list[ActiveSkill]:
         usage_rows = (
@@ -397,10 +410,14 @@ class SkillEvolutionAnalyzer:
         if not viewed_by_skill:
             return []
         skills = (
-            await self._session.execute(
-                select(AgentSkill).where(AgentSkill.id.in_(viewed_by_skill.keys()))
+            (
+                await self._session.execute(
+                    select(AgentSkill).where(AgentSkill.id.in_(viewed_by_skill.keys()))
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [
             ActiveSkill(
                 skill_id=s.id,
@@ -468,9 +485,7 @@ def build_analysis_messages(signals: SessionSignals) -> tuple[str, str]:
     not_viewed = signals.advertised_not_viewed
     if not_viewed:
         names = ", ".join(s.display_name for s in not_viewed)
-        parts.append(
-            f"These skills were advertised but never opened by the agent: {names}."
-        )
+        parts.append(f"These skills were advertised but never opened by the agent: {names}.")
     return _ANALYSIS_SYSTEM_PROMPT, "\n".join(parts).strip()
 
 
@@ -489,7 +504,7 @@ def parse_proposals(text: str) -> list[SkillProposal]:
         return []
     try:
         data = json.loads(raw[start : end + 1])
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         logger.debug("skill analysis: could not parse LLM output as JSON")
         return []
 
@@ -501,9 +516,12 @@ def parse_proposals(text: str) -> list[SkillProposal]:
     for item in items:
         if not isinstance(item, dict):
             continue
-        action = str(item.get("action", "create")).strip().lower()
-        if action not in ("create", "edit", "evolve"):
-            action = "create"
+        try:
+            action = AgentSkillDraftKind(
+                str(item.get("action", AgentSkillDraftKind.CREATE)).strip().lower()
+            )
+        except ValueError:
+            action = AgentSkillDraftKind.CREATE
         proposals.append(
             SkillProposal(
                 action=action,

@@ -70,25 +70,25 @@ def criteria_to_proto(criteria: dict[str, Any]) -> ProtoFilterCriteria:
         tag_ids=criteria.get("tag_ids", []),
     )
 
-    if "access_mode" in criteria and criteria["access_mode"]:
+    if "access_mode" in criteria and criteria["access_mode"]:  # noqa: PLR2004
         try:
             mode = AccessMode(criteria["access_mode"])
             proto.access_mode = access_mode_to_proto(mode)
         except ValueError:
             pass
 
-    if "size_min_bytes" in criteria and criteria["size_min_bytes"] is not None:
+    if "size_min_bytes" in criteria and criteria["size_min_bytes"] is not None:  # noqa: PLR2004
         proto.size_min_bytes = criteria["size_min_bytes"]
 
-    if "size_max_bytes" in criteria and criteria["size_max_bytes"] is not None:
+    if "size_max_bytes" in criteria and criteria["size_max_bytes"] is not None:  # noqa: PLR2004
         proto.size_max_bytes = criteria["size_max_bytes"]
 
-    if "created_after" in criteria and criteria["created_after"]:
+    if "created_after" in criteria and criteria["created_after"]:  # noqa: PLR2004
         ts = timestamp_to_datetime(criteria["created_after"])
         if ts:
             proto.created_after.CopyFrom(datetime_to_timestamp(ts))
 
-    if "created_before" in criteria and criteria["created_before"]:
+    if "created_before" in criteria and criteria["created_before"]:  # noqa: PLR2004
         ts = timestamp_to_datetime(criteria["created_before"])
         if ts:
             proto.created_before.CopyFrom(datetime_to_timestamp(ts))

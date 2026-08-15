@@ -65,9 +65,7 @@ def _content_key(
     user_id: UUID,
     content_type: ContentType,
 ) -> str:
-    return (
-        f"{_CONTENT_KEY_PREFIX}:{organization_id}:{user_id}:{content_type.value}"
-    )
+    return f"{_CONTENT_KEY_PREFIX}:{organization_id}:{user_id}:{content_type.value}"
 
 
 def _content_columns(content_type: ContentType) -> tuple:
@@ -184,9 +182,7 @@ async def compute_visible_tag_ids(
     branches.append(_chat_branch(user_id, organization_id, chat_moderator))
 
     union_q = union_all(*branches).subquery()
-    rows = (
-        await session.execute(select(union_q.c.tag_id).distinct())
-    ).scalars().all()
+    rows = (await session.execute(select(union_q.c.tag_id).distinct())).scalars().all()
     return {row for row in rows if row is not None}
 
 
@@ -203,9 +199,7 @@ async def compute_visible_content_ids_by_type(
     if content_type == ContentType.CHAT:
         # Chat moderation is retained: org admins and chat domain admins see
         # every channel. Everyone else gets PUBLIC channels plus memberships.
-        if await checker.is_org_admin(
-            user_id, organization_id
-        ) or await checker.is_domain_admin(
+        if await checker.is_org_admin(user_id, organization_id) or await checker.is_domain_admin(
             user_id, organization_id, ContentType.CHAT
         ):
             return None
@@ -228,10 +222,10 @@ async def compute_visible_content_ids_by_type(
         baseline_role_column=baseline_col,
     )
     rows = (
-        await session.execute(
-            select(id_col).where(org_col == organization_id, access_filter)
-        )
-    ).scalars().all()
+        (await session.execute(select(id_col).where(org_col == organization_id, access_filter)))
+        .scalars()
+        .all()
+    )
     return {row for row in rows if row is not None}
 
 
@@ -272,9 +266,7 @@ async def invalidate_visible_sets_for_user(
     user_id: UUID,
 ) -> None:
     keys = [_tags_key(organization_id, user_id)]
-    keys.extend(
-        _content_key(organization_id, user_id, ct) for ct in _ALL_TAGGABLE_TYPES
-    )
+    keys.extend(_content_key(organization_id, user_id, ct) for ct in _ALL_TAGGABLE_TYPES)
     await cache_invalidate_many(*keys)
 
 
@@ -448,21 +440,25 @@ async def _accessible_task_ids(
     )
     if project_ids is None:
         rows = (
-            await session.execute(
-                select(Task.id).where(Task.organization_id == organization_id)
-            )
-        ).scalars().all()
+            (await session.execute(select(Task.id).where(Task.organization_id == organization_id)))
+            .scalars()
+            .all()
+        )
         return {row for row in rows if row is not None}
     if not project_ids:
         return set()
     rows = (
-        await session.execute(
-            select(Task.id).where(
-                Task.organization_id == organization_id,
-                Task.project_id.in_(project_ids),
+        (
+            await session.execute(
+                select(Task.id).where(
+                    Task.organization_id == organization_id,
+                    Task.project_id.in_(project_ids),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return {row for row in rows if row is not None}
 
 
@@ -481,15 +477,19 @@ async def _accessible_channel_ids(
         ChatChannelMember.user_id == user_id,
     )
     rows = (
-        await session.execute(
-            select(ChatChannel.id).where(
-                ChatChannel.organization_id == organization_id,
-                ChatChannel.is_deleted == False,  # noqa: E712
-                or_(
-                    ChatChannel.channel_type == ChannelType.PUBLIC,
-                    ChatChannel.id.in_(member_subq),
-                ),
+        (
+            await session.execute(
+                select(ChatChannel.id).where(
+                    ChatChannel.organization_id == organization_id,
+                    ChatChannel.is_deleted == False,  # noqa: E712
+                    or_(
+                        ChatChannel.channel_type == ChannelType.PUBLIC,
+                        ChatChannel.id.in_(member_subq),
+                    ),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return {row for row in rows if row is not None}

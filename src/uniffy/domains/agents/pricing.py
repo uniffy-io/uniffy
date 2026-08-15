@@ -12,6 +12,7 @@ from decimal import Decimal
 from loguru import logger
 
 from uniffy.domains.agents.providers.catalog import get_model
+from uniffy.domains.agents.providers.catalog.image_params import ImageQuality
 from uniffy.domains.agents.providers.catalog.loader import (
     cache_read_rate,
     cache_write_rate,
@@ -116,7 +117,7 @@ def image_price_estimates(provider: str, model_id: str) -> dict[str, str]:
 
     ratios = schema.get("aspect_ratio", {}).get("enum") or [""]
     resolutions = schema.get("resolution", {}).get("enum") or [""]
-    qualities = schema.get("quality", {}).get("enum") or ["auto"]
+    qualities = schema.get("quality", {}).get("enum") or [ImageQuality.AUTO]
 
     estimates: dict[str, str] = {}
     for ratio in ratios:
@@ -160,7 +161,9 @@ def _image_unit_price(pricing: Model, *, size: str, quality: str) -> Decimal | N
 
     tiers = pricing.image_prices.get(size)
     if isinstance(tiers, dict):
-        raw_price = tiers.get(quality) or (tiers.get("medium") if quality == "auto" else None)
+        raw_price = tiers.get(quality) or (
+            tiers.get(ImageQuality.MEDIUM) if quality == ImageQuality.AUTO else None
+        )
         if raw_price is not None:
             return Decimal(str(raw_price))
 
@@ -178,7 +181,9 @@ def _image_unit_price(pricing: Model, *, size: str, quality: str) -> Decimal | N
     for priced_size, tiers in pricing.image_prices.items():
         if not isinstance(tiers, dict):
             continue
-        raw_price = tiers.get(quality) or (tiers.get("medium") if quality == "auto" else None)
+        raw_price = tiers.get(quality) or (
+            tiers.get(ImageQuality.MEDIUM) if quality == ImageQuality.AUTO else None
+        )
         priced_pixels = _pixels(priced_size)
         if raw_price is None or not priced_pixels:
             continue

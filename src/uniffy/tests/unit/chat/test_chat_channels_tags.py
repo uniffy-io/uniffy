@@ -42,9 +42,7 @@ class TestSyncChannelTags:
         channel = _make_channel(ChannelType.PUBLIC)
         # ``tag_ids=None`` means "leave manual assignments untouched";
         # we should never instantiate TagOperations.
-        await ops._sync_channel_tags(
-            actor_id=generate_id(), channel=channel, tag_ids=None
-        )
+        await ops._sync_channel_tags(actor_id=generate_id(), channel=channel, tag_ids=None)
         ops.session.execute.assert_not_called()
 
     async def test_dm_channels_are_skipped(self) -> None:
@@ -61,9 +59,7 @@ class TestSyncChannelTags:
     async def test_group_dm_channels_are_skipped(self) -> None:
         ops = _make_ops()
         channel = _make_channel(ChannelType.GROUP_DM)
-        await ops._sync_channel_tags(
-            actor_id=generate_id(), channel=channel, tag_ids=[]
-        )
+        await ops._sync_channel_tags(actor_id=generate_id(), channel=channel, tag_ids=[])
         ops.session.execute.assert_not_called()
 
     async def test_public_channel_routes_through_replace_manual_tags(
@@ -98,17 +94,12 @@ class TestSyncChannelTags:
             raising=True,
         )
 
-        await ops._sync_channel_tags(
-            actor_id=actor_id, channel=channel, tag_ids=replacement
-        )
+        await ops._sync_channel_tags(actor_id=actor_id, channel=channel, tag_ids=replacement)
 
         assert captured["actor_id"] == actor_id
         assert captured["organization_id"] == channel.organization_id
         assert captured["tag_ids"] == replacement
-        assert (
-            captured["content_urn"]
-            == f"urn:uniffy:content:CHAT:{channel.id}"
-        )
+        assert captured["content_urn"] == f"urn:uniffy:content:CHAT:{channel.id}"
 
 
 class TestHydrateHelper:

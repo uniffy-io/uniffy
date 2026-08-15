@@ -13,7 +13,7 @@ from uniffy.core.config.push import get_vapid_config
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.domains.notifications.converters import notification_type_to_proto
-from uniffy.domains.notifications.delivery.base import DeliveryAdapter
+from uniffy.domains.notifications.delivery.base import DeliveryAdapter, NotificationChannel
 
 logger = logger.bind(component="notifications.delivery.push")
 
@@ -22,8 +22,8 @@ class PushAdapter(DeliveryAdapter):
     """Web Push delivery via VAPID; 410 endpoints are pruned on send."""
 
     @property
-    def channel_name(self) -> str:
-        return "browser"
+    def channel_name(self) -> NotificationChannel:
+        return NotificationChannel.BROWSER
 
     async def deliver(
         self,

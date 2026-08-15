@@ -81,9 +81,7 @@ def upgrade() -> None:
         ")"
     )
 
-    op.execute(
-        "CREATE TYPE roomtype AS ENUM ('MEETING_ROOM', 'CONFERENCE_ROOM', 'OFFICE', 'OTHER')"
-    )
+    op.execute("CREATE TYPE roomtype AS ENUM ('MEETING_ROOM', 'CONFERENCE_ROOM', 'OFFICE', 'OTHER')")
     op.execute("CREATE TYPE roomstatus AS ENUM ('ACTIVE', 'MAINTENANCE', 'RETIRED')")
     op.execute("CREATE TYPE bookingstatus AS ENUM ('CONFIRMED', 'CANCELLED')")
 

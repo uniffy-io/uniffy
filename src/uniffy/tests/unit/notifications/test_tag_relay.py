@@ -39,17 +39,15 @@ class TestProjection:
     async def test_assignment_changed_skips_when_content_not_viewable(self) -> None:
         relay = _make_relay()
         relay._can_view_content = AsyncMock(return_value=False)
-        result = await relay.project(
-            {
-                "_type": "tag.assignment.changed",
-                "payload": {
-                    "content_urn": f"urn:uniffy:content:NOTE:{generate_id()}",
-                    "content_type": ContentType.NOTE.value,
-                    "added": [str(generate_id())],
-                    "removed": [],
-                },
-            }
-        )
+        result = await relay.project({
+            "_type": "tag.assignment.changed",
+            "payload": {
+                "content_urn": f"urn:uniffy:content:NOTE:{generate_id()}",
+                "content_type": ContentType.NOTE.value,
+                "added": [str(generate_id())],
+                "removed": [],
+            },
+        })
         assert result == []
         relay._can_view_content.assert_awaited_once()
 
@@ -58,17 +56,15 @@ class TestProjection:
         added = [str(generate_id()), str(generate_id())]
         removed = [str(generate_id())]
         content_urn = f"urn:uniffy:content:NOTE:{generate_id()}"
-        result = await relay.project(
-            {
-                "_type": "tag.assignment.changed",
-                "payload": {
-                    "content_urn": content_urn,
-                    "content_type": ContentType.NOTE.value,
-                    "added": added,
-                    "removed": removed,
-                },
-            }
-        )
+        result = await relay.project({
+            "_type": "tag.assignment.changed",
+            "payload": {
+                "content_urn": content_urn,
+                "content_type": ContentType.NOTE.value,
+                "added": added,
+                "removed": removed,
+            },
+        })
         assert len(result) == 1
         assert result[0]["urn"] == content_urn
         assert result[0]["tag_assignments_added"] == ",".join(added)
@@ -76,28 +72,24 @@ class TestProjection:
 
     async def test_assignment_changed_skips_when_no_delta(self) -> None:
         relay = _make_relay()
-        result = await relay.project(
-            {
-                "_type": "tag.assignment.changed",
-                "payload": {
-                    "content_urn": f"urn:uniffy:content:NOTE:{generate_id()}",
-                    "content_type": ContentType.NOTE.value,
-                    "added": [],
-                    "removed": [],
-                },
-            }
-        )
+        result = await relay.project({
+            "_type": "tag.assignment.changed",
+            "payload": {
+                "content_urn": f"urn:uniffy:content:NOTE:{generate_id()}",
+                "content_type": ContentType.NOTE.value,
+                "added": [],
+                "removed": [],
+            },
+        })
         assert result == []
 
     async def test_tag_deleted_emits_tombstone_for_all(self) -> None:
         relay = _make_relay()
         tag_id = generate_id()
-        result = await relay.project(
-            {
-                "_type": "tag.deleted",
-                "payload": {"tag_id": str(tag_id)},
-            }
-        )
+        result = await relay.project({
+            "_type": "tag.deleted",
+            "payload": {"tag_id": str(tag_id)},
+        })
         assert len(result) == 1
         assert result[0]["urn_status"] == "DELETED"
         assert result[0]["urn"] == f"urn:uniffy:content:TAG:{tag_id}"
@@ -106,18 +98,16 @@ class TestProjection:
         relay = _make_relay()
         relay._tag_visible = AsyncMock(return_value=False)
         tag_id = generate_id()
-        result = await relay.project(
-            {
-                "_type": "tag.updated",
-                "payload": {
-                    "tag": {
-                        "id": str(tag_id),
-                        "urn": f"urn:uniffy:content:TAG:{tag_id}",
-                        "name": "secret",
-                    }
-                },
-            }
-        )
+        result = await relay.project({
+            "_type": "tag.updated",
+            "payload": {
+                "tag": {
+                    "id": str(tag_id),
+                    "urn": f"urn:uniffy:content:TAG:{tag_id}",
+                    "name": "secret",
+                }
+            },
+        })
         assert result == []
 
 

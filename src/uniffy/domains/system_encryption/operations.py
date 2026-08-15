@@ -12,6 +12,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.crypto import DeploymentCipher, DeploymentEncryptionStatus
 from uniffy.core.errors import ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.users.operations import UserOperations
 
 
@@ -42,7 +43,7 @@ class SystemEncryptionOperations:
             organization_id=None,
             actor_user_id=user_id,
             action=Action.DEPLOYMENT_ENCRYPTION_ROTATED,
-            resource_type="deployment_encryption_key",
+            resource_type=AuditResourceType.DEPLOYMENT_ENCRYPTION_KEY,
             resource_id=None,
             details={
                 "previous_version": previous_status.active_version,

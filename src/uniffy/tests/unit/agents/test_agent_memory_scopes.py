@@ -177,18 +177,14 @@ ORG_ID = generate_id()
 
 class TestPromptInjectionShape:
     def test_pinned_full_content_index_description_only(self):
-        block = build_memory_block(
-            [
-                MemoryScopeBlock(
-                    label="Channel memory (shared)",
-                    pinned=[{"key": "pk", "category": "facts", "content": "PINNED_BODY"}],
-                    index=[
-                        {"key": "ik", "category": "context", "description": "IDX_DESC"}
-                    ],
-                    total=60,
-                )
-            ]
-        )
+        block = build_memory_block([
+            MemoryScopeBlock(
+                label="Channel memory (shared)",
+                pinned=[{"key": "pk", "category": "facts", "content": "PINNED_BODY"}],
+                index=[{"key": "ik", "category": "context", "description": "IDX_DESC"}],
+                total=60,
+            )
+        ])
         assert "PINNED_BODY" in block
         assert "IDX_DESC" in block
         assert "58 more entries" in block
@@ -196,25 +192,20 @@ class TestPromptInjectionShape:
         assert "never override" in block
 
     def test_unpinned_content_never_renders(self):
-        block = build_memory_block(
-            [
-                MemoryScopeBlock(
-                    label="Personal memory",
-                    pinned=[],
-                    index=[{"key": "k", "category": "facts", "description": "desc"}],
-                    total=1,
-                )
-            ]
-        )
+        block = build_memory_block([
+            MemoryScopeBlock(
+                label="Personal memory",
+                pinned=[],
+                index=[{"key": "k", "category": "facts", "description": "desc"}],
+                total=1,
+            )
+        ])
         assert "SECRET_CONTENT" not in (block or "")
 
     def test_empty_scopes_render_nothing(self):
         assert build_memory_block([]) is None
         assert (
-            build_memory_block(
-                [MemoryScopeBlock(label="x", pinned=[], index=[], total=0)]
-            )
-            is None
+            build_memory_block([MemoryScopeBlock(label="x", pinned=[], index=[], total=0)]) is None
         )
 
     def test_system_prompt_has_no_memory_section_without_context(self):
@@ -224,16 +215,14 @@ class TestPromptInjectionShape:
         assert "## Memory" not in prompt
 
     def test_system_prompt_embeds_block_verbatim(self):
-        block = build_memory_block(
-            [
-                MemoryScopeBlock(
-                    label="Personal memory",
-                    pinned=[],
-                    index=[{"key": "k", "category": "facts", "description": "d"}],
-                    total=1,
-                )
-            ]
-        )
+        block = build_memory_block([
+            MemoryScopeBlock(
+                label="Personal memory",
+                pinned=[],
+                index=[{"key": "k", "category": "facts", "description": "d"}],
+                total=1,
+            )
+        ])
         prompt = build_system_prompt(
             agent_name="A", soul_prompt="", org_name="Org", memory_context=block
         )
@@ -372,9 +361,9 @@ class TestTools:
 
     def test_read_set_spans_surface_and_both_org_tiers(self):
         ctx = self._ctx(memory_scope=MemoryScopeRef.user(USER_ID))
-        clause = str(_read_filters(ctx, ctx.memory_scope)[0].compile(
-            compile_kwargs={"literal_binds": True}
-        ))
+        clause = str(
+            _read_filters(ctx, ctx.memory_scope)[0].compile(compile_kwargs={"literal_binds": True})
+        )
         assert ctx.agent_id.hex in clause
         assert clause.count("agents_memories.scope = 'org'") == 2
 
@@ -472,9 +461,7 @@ class TestSaveAudience:
 
 class TestValidation:
     def test_field_validation(self):
-        ok = dict(
-            key="k", description="d", content="c", category="facts", importance=0.5
-        )
+        ok = dict(key="k", description="d", content="c", category="facts", importance=0.5)
         assert _validate_entry_fields(**ok) == ("k", "d", "c")
         for bad in [
             {**ok, "key": " "},
@@ -518,9 +505,7 @@ class TestPermissionGates:
         ops, _ = self._ops()
         memory = _memory(MemoryScope.USER, user_id=generate_id())
         with pytest.raises(PermissionDeniedError):
-            await ops._require_mutate(
-                user_id=USER_ID, organization_id=ORG_ID, memory=memory
-            )
+            await ops._require_mutate(user_id=USER_ID, organization_id=ORG_ID, memory=memory)
 
     async def test_channel_mutate_allows_creator_member(self):
         ops, _ = self._ops()
@@ -539,9 +524,7 @@ class TestPermissionGates:
         memory = _memory(MemoryScope.CHANNEL, created_by_user_id=generate_id())
         ops._chat_checker.require_elevated = AsyncMock(return_value=False)
         with pytest.raises(PermissionDeniedError):
-            await ops._require_mutate(
-                user_id=USER_ID, organization_id=ORG_ID, memory=memory
-            )
+            await ops._require_mutate(user_id=USER_ID, organization_id=ORG_ID, memory=memory)
 
     async def test_channel_pin_requires_moderator(self):
         ops, _ = self._ops()
@@ -553,13 +536,9 @@ class TestPermissionGates:
     async def test_org_scope_gates_via_agent_manage(self):
         ops, _ = self._ops()
         memory = _memory(MemoryScope.ORG)
-        ops._require_agent_manage = AsyncMock(
-            side_effect=PermissionDeniedError("manage", "agent")
-        )
+        ops._require_agent_manage = AsyncMock(side_effect=PermissionDeniedError("manage", "agent"))
         with pytest.raises(PermissionDeniedError):
-            await ops._require_mutate(
-                user_id=USER_ID, organization_id=ORG_ID, memory=memory
-            )
+            await ops._require_mutate(user_id=USER_ID, organization_id=ORG_ID, memory=memory)
         with pytest.raises(PermissionDeniedError):
             await ops._require_pin(user_id=USER_ID, organization_id=ORG_ID, memory=memory)
 
@@ -569,12 +548,8 @@ class TestPinCaps:
         session = MagicMock()
         memory = _memory(MemoryScope.USER, user_id=USER_ID)
         pinned_rows = MagicMock()
-        pinned_rows.all.return_value = [
-            (generate_id(), "x") for _ in range(MAX_PINNED_ENTRIES)
-        ]
-        session.execute = AsyncMock(
-            side_effect=[_scalar_result(memory), pinned_rows]
-        )
+        pinned_rows.all.return_value = [(generate_id(), "x") for _ in range(MAX_PINNED_ENTRIES)]
+        session.execute = AsyncMock(side_effect=[_scalar_result(memory), pinned_rows])
         session.commit = AsyncMock()
         session.refresh = AsyncMock()
         ops = MemoryOperations(session)
@@ -591,9 +566,7 @@ class TestPinCaps:
         memory = _memory(MemoryScope.USER, user_id=USER_ID, content="y" * 500)
         pinned_rows = MagicMock()
         pinned_rows.all.return_value = [(generate_id(), "x" * 1800)]
-        session.execute = AsyncMock(
-            side_effect=[_scalar_result(memory), pinned_rows]
-        )
+        session.execute = AsyncMock(side_effect=[_scalar_result(memory), pinned_rows])
         session.commit = AsyncMock()
         session.refresh = AsyncMock()
         ops = MemoryOperations(session)
@@ -667,9 +640,7 @@ class TestMemoryBridge:
         original = memory_ops_mod.MemoryOperations
         memory_ops_mod.MemoryOperations = FakeOps
         try:
-            await _execute_memory_save(
-                ctx, {"key": "k", "description": "d", "content": "c"}
-            )
+            await _execute_memory_save(ctx, {"key": "k", "description": "d", "content": "c"})
         finally:
             memory_ops_mod.MemoryOperations = original
         assert captured["ref"] == channel_ref

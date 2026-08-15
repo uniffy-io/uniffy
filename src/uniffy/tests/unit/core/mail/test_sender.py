@@ -146,9 +146,7 @@ class TestSenderAudit:
     async def test_success_writes_mail_sent_event(self) -> None:
         from uniffy.core.audit.actions import Action
 
-        backend_patch, _ = _patch_backend(
-            MailResult(success=True, provider_message_id="mid-1")
-        )
+        backend_patch, _ = _patch_backend(MailResult(success=True, provider_message_id="mid-1"))
         audit_patch = _patch_audit()
         with (
             _patch_resolver(CONFIG),

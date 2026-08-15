@@ -9,10 +9,13 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from connectrpc.errors import ConnectError
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
+from uniffy.domains.audit.handlers import _parse_resource_type
 from uniffy.domains.audit.operations import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -151,6 +154,15 @@ def test_filter_default_order_is_time_desc() -> None:
 def test_filter_accepts_time_asc_order() -> None:
     f = ListEventsFilter(organization_id=generate_id(), order=SortOrder.TIME_ASC)
     assert f.order is SortOrder.TIME_ASC
+
+
+def test_resource_type_filter_normalizes_legacy_casing() -> None:
+    assert _parse_resource_type("organization") is AuditResourceType.ORGANIZATION
+
+
+def test_resource_type_filter_rejects_unknown_values() -> None:
+    with pytest.raises(ConnectError):
+        _parse_resource_type("not-a-resource")
 
 
 def test_page_size_caps_at_max() -> None:

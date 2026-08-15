@@ -403,7 +403,7 @@ async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
             access_mode,
             parent_owner_id=parent.owner_id,
             current_user_id=ctx.user_id,
-            space_was_explicit="space" in args,
+            space_was_explicit="space" in args,  # noqa: PLR2004
         )
         if err:
             return ToolResult(success=False, data="", error=err)
@@ -457,7 +457,7 @@ async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
             access_mode,
             parent_owner_id=parent.owner_id,
             current_user_id=ctx.user_id,
-            space_was_explicit="space" in args,
+            space_was_explicit="space" in args,  # noqa: PLR2004
         )
         if err:
             return ToolResult(success=False, data="", error=err)

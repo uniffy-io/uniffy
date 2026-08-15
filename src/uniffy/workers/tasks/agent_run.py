@@ -36,6 +36,7 @@ from uniffy.observability.metrics import (
     AGENT_RUN_DURATION,
     AGENT_RUN_QUEUE_LAG,
 )
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="tasks.agent_run")
 
@@ -217,7 +218,7 @@ async def run_agent_session(
         if (done_seen or cancelled) and valkey is not None:
             try:
                 await valkey.enqueue_job(
-                    "delete_run_stream",
+                    JobName.DELETE_RUN_STREAM,
                     run_id,
                     _defer_by=_DELETE_DEFER_SECONDS,
                 )

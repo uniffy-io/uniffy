@@ -52,9 +52,7 @@ def _permitted(group: Group | None = None) -> ExitStack:
         )
     )
     if group is not None:
-        stack.enter_context(
-            patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group))
-        )
+        stack.enter_context(patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)))
     return stack
 
 
@@ -183,9 +181,7 @@ async def test_update_member_role_emits_role_changed() -> None:
     group = _make_group()
     membership = MagicMock(role=GroupRole.MEMBER)
     session = MagicMock()
-    session.execute = AsyncMock(
-        return_value=MagicMock(scalar_one_or_none=lambda: membership)
-    )
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: membership))
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
@@ -216,9 +212,7 @@ async def test_remove_member_emits_group_member_removed() -> None:
     group = _make_group()
     membership = MagicMock(role=GroupRole.MEMBER)
     session = MagicMock()
-    session.execute = AsyncMock(
-        return_value=MagicMock(scalar_one_or_none=lambda: membership)
-    )
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: membership))
     session.add = MagicMock()
     session.delete = AsyncMock()
     session.commit = AsyncMock()

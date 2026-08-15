@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import Integer, func, literal_column, select
@@ -10,17 +11,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.models.agents.provider_key import ProviderKey
-from uniffy.core.models.agents.run_log import AgentRunLog
+from uniffy.core.models.agents.run_log import AgentRunLog, AgentRunStatus
 from uniffy.domains.agents.currency import get_display_currency
 
-VALID_INTERVALS = {"30m", "1h", "2h", "4h", "1d"}
 
-INTERVAL_TO_SECONDS: dict[str, int] = {
-    "30m": 1800,
-    "1h": 3600,
-    "2h": 7200,
-    "4h": 14400,
-    "1d": 86400,
+class UsageInterval(StrEnum):
+    THIRTY_MINUTES = "30m"
+    ONE_HOUR = "1h"
+    TWO_HOURS = "2h"
+    FOUR_HOURS = "4h"
+    ONE_DAY = "1d"
+
+
+INTERVAL_TO_SECONDS: dict[UsageInterval, int] = {
+    UsageInterval.THIRTY_MINUTES: 1800,
+    UsageInterval.ONE_HOUR: 3600,
+    UsageInterval.TWO_HOURS: 7200,
+    UsageInterval.FOUR_HOURS: 14400,
+    UsageInterval.ONE_DAY: 86400,
 }
 
 
@@ -42,7 +50,7 @@ class UsageOperations:
         self,
         organization_id: UUID,
         days: int = 30,
-        interval: str = "1d",
+        interval: str = UsageInterval.ONE_DAY,
         user_id: UUID | None = None,
     ) -> dict:
         """Aggregate usage for an organization.
@@ -52,8 +60,10 @@ class UsageOperations:
         (admin view).
         """
         days = max(1, min(days, 365))
-        if interval not in VALID_INTERVALS:
-            interval = "1d"
+        try:
+            resolved_interval = UsageInterval(interval)
+        except ValueError:
+            resolved_interval = UsageInterval.ONE_DAY
         since = datetime.now(UTC) - timedelta(days=days)
 
         base_filter = [
@@ -64,7 +74,7 @@ class UsageOperations:
             base_filter.append(AgentRunLog.user_id == user_id)
 
         totals = await self._get_totals(base_filter)
-        time_series = await self._get_time_series_usage(base_filter, interval)
+        time_series = await self._get_time_series_usage(base_filter, resolved_interval)
         model_usage = await self._get_model_usage(base_filter)
         agent_usage = await self._get_agent_usage(base_filter, organization_id)
         tool_usage = await self._get_tool_usage(base_filter)
@@ -131,13 +141,13 @@ class UsageOperations:
     async def _get_time_series_usage(
         self,
         base_filter: list,
-        interval: str,
+        interval: UsageInterval,
     ) -> list[dict]:
-        if interval == "1d":
+        if interval is UsageInterval.ONE_DAY:
             # timezone('UTC', timestamptz) yields a naive-UTC timestamp, so the
             # bucket boundary no longer follows the session TimeZone.
             bucket = func.date(func.timezone("UTC", AgentRunLog.created_at))
-        elif interval == "1h":
+        elif interval is UsageInterval.ONE_HOUR:
             # Inner timezone() pins the truncation boundary to UTC; the outer
             # one restores timestamptz so the row comes back aware.
             bucket = func.timezone(
@@ -174,7 +184,7 @@ class UsageOperations:
             .order_by(bucket)
         )
 
-        if interval == "1d":
+        if interval is UsageInterval.ONE_DAY:
             return [
                 {
                     "date": str(row.bucket),
@@ -359,9 +369,12 @@ class UsageOperations:
                 func.count(AgentRunLog.id).label("total_runs"),
                 func
                 .count(AgentRunLog.id)
-                .filter(AgentRunLog.status == "success")
+                .filter(AgentRunLog.status == AgentRunStatus.SUCCESS)
                 .label("successes"),
-                func.count(AgentRunLog.id).filter(AgentRunLog.status == "error").label("failures"),
+                func
+                .count(AgentRunLog.id)
+                .filter(AgentRunLog.status == AgentRunStatus.ERROR)
+                .label("failures"),
                 func.coalesce(func.sum(_full_input_tokens()), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
                 func.coalesce(func.sum(AgentRunLog.cache_read_input_tokens), 0).label(
@@ -389,9 +402,12 @@ class UsageOperations:
                 func.count(AgentRunLog.id).label("total_runs"),
                 func
                 .count(AgentRunLog.id)
-                .filter(AgentRunLog.status == "success")
+                .filter(AgentRunLog.status == AgentRunStatus.SUCCESS)
                 .label("successes"),
-                func.count(AgentRunLog.id).filter(AgentRunLog.status == "error").label("failures"),
+                func
+                .count(AgentRunLog.id)
+                .filter(AgentRunLog.status == AgentRunStatus.ERROR)
+                .label("failures"),
                 func.coalesce(func.sum(_full_input_tokens()), 0).label("input_tokens"),
                 func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
                 func.coalesce(func.sum(AgentRunLog.cache_read_input_tokens), 0).label(

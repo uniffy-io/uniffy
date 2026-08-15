@@ -72,7 +72,6 @@ interface MessageItemProps {
   isGrouped: boolean;
   isFirstInGroup: boolean;
   isHighlighted?: boolean;
-  isSelected?: boolean;
   /** A folded run of consecutive agent tool calls rendered as one activity pane. */
   toolRun?: ChatMessage[];
 }
@@ -96,7 +95,6 @@ function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps
   if (prev.isGrouped !== next.isGrouped) return false;
   if (prev.isFirstInGroup !== next.isFirstInGroup) return false;
   if ((prev.isHighlighted ?? false) !== (next.isHighlighted ?? false)) return false;
-  if ((prev.isSelected ?? false) !== (next.isSelected ?? false)) return false;
   // A growing tool run keeps the same representative message, so compare the run
   // membership and its last member; the pane reads result/typing state itself.
   const prevRun = prev.toolRun;
@@ -114,7 +112,6 @@ function MessageItemInner({
   isGrouped,
   isFirstInGroup,
   isHighlighted = false,
-  isSelected = false,
   toolRun,
 }: MessageItemProps) {
   const dispatch = useAppDispatch();
@@ -376,7 +373,6 @@ function MessageItemInner({
         "group relative px-4",
         isGrouped ? "py-0.5" : "py-1.5",
         "hover:bg-muted/15 transition-colors",
-        isSelected && "bg-primary/5 border-l-2 border-primary",
         isHighlighted && "bg-primary/10 border-l-2 border-primary",
         message.isPinned && !isHighlighted && "border-l-2 border-primary/50 bg-primary/5",
       )}

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.audit.writer import write_audit_event
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -38,7 +39,7 @@ async def record_member_added(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
         action=Action.PERMISSIONS_MEMBER_ADDED,
-        resource_type=content_type.value,
+        resource_type=AuditResourceType(content_type.value),
         resource_id=content_id,
         details={
             "subject_type": subject_type.value,
@@ -67,7 +68,7 @@ async def record_member_role_changed(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
         action=Action.PERMISSIONS_MEMBER_ROLE_CHANGED,
-        resource_type=content_type.value,
+        resource_type=AuditResourceType(content_type.value),
         resource_id=content_id,
         details={
             "subject_type": subject_type.value,
@@ -96,7 +97,7 @@ async def record_member_removed(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
         action=Action.PERMISSIONS_MEMBER_REMOVED,
-        resource_type=content_type.value,
+        resource_type=AuditResourceType(content_type.value),
         resource_id=content_id,
         details={
             "subject_type": subject_type.value,
@@ -123,15 +124,11 @@ async def record_access_mode_changed(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
         action=Action.PERMISSIONS_ACCESS_MODE_CHANGED,
-        resource_type=content_type.value,
+        resource_type=AuditResourceType(content_type.value),
         resource_id=content_id,
         details={
-            "previous_access_mode": (
-                previous_access_mode.value if previous_access_mode else None
-            ),
-            "new_access_mode": (
-                new_access_mode.value if new_access_mode else None
-            ),
+            "previous_access_mode": (previous_access_mode.value if previous_access_mode else None),
+            "new_access_mode": (new_access_mode.value if new_access_mode else None),
             "note": note,
         },
     )
@@ -153,15 +150,13 @@ async def record_baseline_role_changed(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
         action=Action.PERMISSIONS_BASELINE_ROLE_CHANGED,
-        resource_type=content_type.value,
+        resource_type=AuditResourceType(content_type.value),
         resource_id=content_id,
         details={
             "previous_baseline_role": (
                 previous_baseline_role.value if previous_baseline_role else None
             ),
-            "new_baseline_role": (
-                new_baseline_role.value if new_baseline_role else None
-            ),
+            "new_baseline_role": (new_baseline_role.value if new_baseline_role else None),
             "note": note,
         },
     )
@@ -184,7 +179,7 @@ async def record_ownership_transferred(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
         action=Action.PERMISSIONS_OWNERSHIP_TRANSFERRED,
-        resource_type=content_type.value,
+        resource_type=AuditResourceType(content_type.value),
         resource_id=content_id,
         details={
             "subject_type": SubjectType.USER.value,

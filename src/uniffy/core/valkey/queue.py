@@ -5,7 +5,7 @@ right fleet. ``get_queue_safe`` rebuilds a dropped pool once; ``get_queue`` rais
 """
 
 import asyncio
-from typing import Literal
+from enum import StrEnum
 
 from loguru import logger
 
@@ -15,18 +15,18 @@ from uniffy.vendor.arq.connections import ArqValkey
 
 logger = logger.bind(component="valkey.queue")
 
-QueueName = Literal["core", "egress"]
 
-_QUEUE_NAMES: dict[QueueName, str] = {
-    "core": "uniffy:queue:core",
-    "egress": "uniffy:queue:egress",
-}
+class QueueName(StrEnum):
+    CORE = "core"
+    EGRESS = "egress"
 
-_pools: dict[QueueName, ArqValkey | None] = {"core": None, "egress": None}
-_reinit_locks: dict[QueueName, asyncio.Lock] = {
-    "core": asyncio.Lock(),
-    "egress": asyncio.Lock(),
-}
+    @property
+    def valkey_name(self) -> str:
+        return f"uniffy:queue:{self.value}"
+
+
+_pools: dict[QueueName, ArqValkey | None] = {name: None for name in QueueName}
+_reinit_locks: dict[QueueName, asyncio.Lock] = {name: asyncio.Lock() for name in QueueName}
 
 
 async def init_queue(name: QueueName) -> ArqValkey:
@@ -34,11 +34,11 @@ async def init_queue(name: QueueName) -> ArqValkey:
     config = ValkeyConfig.from_env()
     pool = await create_pool(
         config.to_arq_valkey_settings(),
-        default_queue_name=_QUEUE_NAMES[name],
+        default_queue_name=name.valkey_name,
     )
     _pools[name] = pool
     logger.info(
-        f"Queue pool initialized: name={name} queue={_QUEUE_NAMES[name]} "
+        f"Queue pool initialized: name={name} queue={name.valkey_name} "
         f"host={config.host}:{config.port}"
     )
     return pool

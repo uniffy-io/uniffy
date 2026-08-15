@@ -57,9 +57,7 @@ def get_user_id_from_enrollment_context(ctx: RequestContext) -> UUID:
         return UUID(payload["sub"])
     except Exception as e:
         logger.debug(f"Enrollment token decode error: {e}")
-        raise ConnectError(
-            Code.UNAUTHENTICATED, "Invalid or expired enrollment token"
-        )
+        raise ConnectError(Code.UNAUTHENTICATED, "Invalid or expired enrollment token")
 
 
 def get_organization_id_from_enrollment_context(
@@ -215,7 +213,7 @@ def parse_device_label(user_agent: str) -> str:
             os_name = name
             break
 
-    if browser == "Unknown browser" and os_name == "Unknown OS":
+    if browser == "Unknown browser" and os_name == "Unknown OS":  # noqa: PLR2004
         return "Unknown device"
 
     return f"{browser} on {os_name}"

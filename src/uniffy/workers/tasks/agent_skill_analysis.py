@@ -29,6 +29,7 @@ from uniffy.domains.agents.skills.analysis import (
     consume_analysis_budget,
     is_skill_evolution_enabled,
 )
+from uniffy.workers.tasks import SkillAnalysisDestination
 
 logger = logger.bind(component="tasks.agent_skill_analysis")
 
@@ -36,7 +37,7 @@ _LOCK_TTL_SECONDS = 300
 _LOCK_KEY_TEMPLATE = "analyze_skills_lock:{kind}:{destination_id}"
 
 
-async def _acquire_lock(kind: str, destination_id: UUID) -> bool:
+async def _acquire_lock(kind: SkillAnalysisDestination, destination_id: UUID) -> bool:
     client = _get_ops_client()
     if client is None:
         return False
@@ -53,7 +54,7 @@ async def _acquire_lock(kind: str, destination_id: UUID) -> bool:
         return False
 
 
-async def _release_lock(kind: str, destination_id: UUID) -> None:
+async def _release_lock(kind: SkillAnalysisDestination, destination_id: UUID) -> None:
     client = _get_ops_client()
     if client is None:
         return
@@ -62,9 +63,9 @@ async def _release_lock(kind: str, destination_id: UUID) -> None:
 
 
 async def _latest_activity_at(
-    session: AsyncSession, destination_kind: str, destination_id: UUID
+    session: AsyncSession, destination_kind: SkillAnalysisDestination, destination_id: UUID
 ) -> datetime | None:
-    if destination_kind == "session":
+    if destination_kind is SkillAnalysisDestination.SESSION:
         stmt = select(func.max(AgentMessage.created_at)).where(
             AgentMessage.session_id == destination_id
         )
@@ -98,7 +99,9 @@ async def analyze_session_for_skills(
     agent_id: str,
     organization_id: str,
 ) -> dict[str, Any]:
-    if destination_kind not in ("session", "channel"):
+    try:
+        resolved_kind = SkillAnalysisDestination(destination_kind)
+    except ValueError:
         return {"status": "error", "error": "bad_destination_kind"}
     try:
         dest = UUID(destination_id)
@@ -108,12 +111,12 @@ async def analyze_session_for_skills(
     except ValueError:
         return {"status": "error", "error": "invalid_uuid"}
 
-    if not await _acquire_lock(destination_kind, dest):
+    if not await _acquire_lock(resolved_kind, dest):
         return {"status": "skipped", "reason": "lock_held"}
 
     try:
         async with open_session() as session:
-            latest_activity = await _latest_activity_at(session, destination_kind, dest)
+            latest_activity = await _latest_activity_at(session, resolved_kind, dest)
             if not _conversation_is_quiet(
                 latest_activity, datetime.now(UTC), SKILL_ANALYSIS_DEBOUNCE_SECONDS
             ):
@@ -123,7 +126,7 @@ async def analyze_session_for_skills(
                 return {"status": "skipped", "reason": "disabled"}
 
             analyzer = SkillEvolutionAnalyzer(session)
-            if destination_kind == "session":
+            if resolved_kind is SkillAnalysisDestination.SESSION:
                 signals = await analyzer.gather_session_signals(
                     session_id=dest, organization_id=org_id
                 )
@@ -154,16 +157,14 @@ async def analyze_session_for_skills(
                 logger.opt(exception=True).warning("skill analysis: no usable provider")
                 return {"status": "skipped", "reason": "no_provider"}
 
-            proposals = await analyzer.run_analysis(
-                signals=signals, provider=provider, model=model
-            )
+            proposals = await analyzer.run_analysis(signals=signals, provider=provider, model=model)
             drafts = await analyzer.apply_proposals(
                 proposals,
                 organization_id=org_id,
                 user_id=uid,
                 agent_id=aid,
-                session_id=dest if destination_kind == "session" else None,
-                channel_id=dest if destination_kind == "channel" else None,
+                session_id=(dest if resolved_kind is SkillAnalysisDestination.SESSION else None),
+                channel_id=(dest if resolved_kind is SkillAnalysisDestination.CHANNEL else None),
                 active_skills=signals.active_skills,
             )
             return {
@@ -175,4 +176,4 @@ async def analyze_session_for_skills(
         logger.exception(f"analyze_session_for_skills failed: {exc}")
         return {"status": "error", "error": str(exc)[:500]}
     finally:
-        await _release_lock(destination_kind, dest)
+        await _release_lock(resolved_kind, dest)

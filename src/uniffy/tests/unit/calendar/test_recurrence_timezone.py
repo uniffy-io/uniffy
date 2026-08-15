@@ -16,9 +16,7 @@ def test_occurrence_start_preserves_local_wall_clock_across_dst() -> None:
     # Winter series: 10:00 EET (+2) == 08:00Z.
     winter_start = datetime(2026, 1, 15, 8, 0, tzinfo=UTC)
 
-    summer_occ = occurrence_start_for_date(
-        winter_start, "Europe/Sofia", date(2026, 7, 16)
-    )
+    summer_occ = occurrence_start_for_date(winter_start, "Europe/Sofia", date(2026, 7, 16))
 
     assert summer_occ.astimezone(SOFIA).hour == 10
     assert summer_occ == datetime(2026, 7, 16, 7, 0, tzinfo=UTC)
@@ -68,9 +66,7 @@ def test_boundary_occurrence_on_neighbouring_local_date_is_returned() -> None:
         timezone="America/Los_Angeles",
     )
 
-    assert [o.start_time for o in occurrences] == [
-        datetime(2026, 7, 9, 3, 0, tzinfo=UTC)
-    ]
+    assert [o.start_time for o in occurrences] == [datetime(2026, 7, 9, 3, 0, tzinfo=UTC)]
     assert occurrences[0].occurrence_date == date(2026, 7, 8)
 
 

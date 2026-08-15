@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from decimal import Decimal
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import (
@@ -19,6 +20,18 @@ from sqlalchemy.types import JSON
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class AgentRunKind(StrEnum):
+    CHAT = "chat"
+    IMAGE = "image"
+    CRON = "cron"
+
+
+class AgentRunStatus(StrEnum):
+    PENDING = "pending"
+    SUCCESS = "success"
+    ERROR = "error"
 
 
 class AgentRunLog(SQLModel, table=True):
@@ -66,8 +79,9 @@ class AgentRunLog(SQLModel, table=True):
             nullable=True,
         ),
     )
-    kind: str = Field(
-        sa_column=Column(String(16), nullable=False, default="chat"),
+    kind: AgentRunKind = Field(
+        default=AgentRunKind.CHAT,
+        sa_column=Column(String(16), nullable=False, default=AgentRunKind.CHAT),
     )
     # Set on rows produced by a scheduled/on-demand cron execution; SET NULL on
     # task delete so token and cost history survives.
@@ -102,8 +116,9 @@ class AgentRunLog(SQLModel, table=True):
     )
     tool_iterations: int = Field(default=0, nullable=False)
     duration_ms: int = Field(default=0, nullable=False)
-    status: str = Field(
-        sa_column=Column(String(20), nullable=False, default="success"),
+    status: AgentRunStatus = Field(
+        default=AgentRunStatus.SUCCESS,
+        sa_column=Column(String(20), nullable=False, default=AgentRunStatus.SUCCESS),
     )
     error: str | None = Field(
         default=None,

@@ -177,9 +177,7 @@ def upgrade() -> None:
         sa.Column("default_baseline_role", _content_role_enum, nullable=True),
         sa.Column("updated_by_user_id", sa.Uuid(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["updated_by_user_id"], ["login_users.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("organization_id", "content_type", name="uq_org_content_type"),
@@ -199,9 +197,7 @@ def upgrade() -> None:
         sa.Column("granted_by", sa.Uuid(), nullable=False),
         sa.Column("granted_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["login_users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["granted_by"], ["login_users.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(

@@ -78,7 +78,7 @@ class ChatSubject(_message.Message):
     def __init__(self, type: _Optional[_Union[_common_pb2.SubjectType, str]] = ..., id: _Optional[str] = ...) -> None: ...
 
 class ChatChannel(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "slug", "description", "channel_type", "is_encrypted", "is_archived", "is_default", "icon", "category_id", "created_at", "updated_at", "message_count", "root_message_count", "member_count", "last_message_at", "last_root_message_at", "current_user_role", "is_member", "dm_member_ids", "is_agent_dm", "custom_name", "agent_id", "tags", "agent_folder_id", "agent_is_retired")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "slug", "description", "channel_type", "is_archived", "is_default", "icon", "category_id", "created_at", "updated_at", "message_count", "root_message_count", "member_count", "last_message_at", "last_root_message_at", "current_user_role", "is_member", "dm_member_ids", "is_agent_dm", "custom_name", "agent_id", "tags", "agent_folder_id", "agent_is_retired")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -86,7 +86,6 @@ class ChatChannel(_message.Message):
     SLUG_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_TYPE_FIELD_NUMBER: _ClassVar[int]
-    IS_ENCRYPTED_FIELD_NUMBER: _ClassVar[int]
     IS_ARCHIVED_FIELD_NUMBER: _ClassVar[int]
     IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
     ICON_FIELD_NUMBER: _ClassVar[int]
@@ -114,7 +113,6 @@ class ChatChannel(_message.Message):
     slug: str
     description: str
     channel_type: ChannelType
-    is_encrypted: bool
     is_archived: bool
     is_default: bool
     icon: str
@@ -135,7 +133,7 @@ class ChatChannel(_message.Message):
     tags: _containers.RepeatedCompositeFieldContainer[_tags_pb2.Tag]
     agent_folder_id: str
     agent_is_retired: bool
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., is_encrypted: _Optional[bool] = ..., is_archived: _Optional[bool] = ..., is_default: _Optional[bool] = ..., icon: _Optional[str] = ..., category_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., message_count: _Optional[int] = ..., root_message_count: _Optional[int] = ..., member_count: _Optional[int] = ..., last_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_root_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., current_user_role: _Optional[_Union[ChannelRole, str]] = ..., is_member: _Optional[bool] = ..., dm_member_ids: _Optional[_Iterable[str]] = ..., is_agent_dm: _Optional[bool] = ..., custom_name: _Optional[str] = ..., agent_id: _Optional[str] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ..., agent_folder_id: _Optional[str] = ..., agent_is_retired: _Optional[bool] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., is_archived: _Optional[bool] = ..., is_default: _Optional[bool] = ..., icon: _Optional[str] = ..., category_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., message_count: _Optional[int] = ..., root_message_count: _Optional[int] = ..., member_count: _Optional[int] = ..., last_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_root_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., current_user_role: _Optional[_Union[ChannelRole, str]] = ..., is_member: _Optional[bool] = ..., dm_member_ids: _Optional[_Iterable[str]] = ..., is_agent_dm: _Optional[bool] = ..., custom_name: _Optional[str] = ..., agent_id: _Optional[str] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ..., agent_folder_id: _Optional[str] = ..., agent_is_retired: _Optional[bool] = ...) -> None: ...
 
 class ThreadInfo(_message.Message):
     __slots__ = ("reply_count", "last_reply_at", "participant_ids", "has_unread")

@@ -14,40 +14,29 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 
 from uniffy.core.errors import PermissionDeniedError
-from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.types import generate_id
 from uniffy.domains.chat.categories.operations import ChatCategoryOperations
-from uniffy.domains.organizations.operations import OrganizationOperations
 
 ORG = generate_id()
 ACTOR = generate_id()
 
 
-def _membership(role: OrganizationRole, is_active: bool = True) -> OrganizationMember:
-    return OrganizationMember(
-        user_id=ACTOR, organization_id=ORG, role=role, is_active=is_active
-    )
-
-
-def _as(role: OrganizationRole | None, is_active: bool = True):
-    row = None if role is None else _membership(role, is_active)
-    return patch.object(
-        OrganizationOperations, "get_membership", AsyncMock(return_value=row)
-    )
-
-
 @pytest.mark.parametrize(
-    "role,active",
-    [(None, True), (OrganizationRole.MEMBER, False)],
+    "_membership_state",
+    ["non-member", "deactivated"],
     ids=["non-member", "deactivated"],
 )
-async def test_list_categories_requires_active_membership(role, active) -> None:
+async def test_list_categories_requires_active_membership(_membership_state) -> None:
     """Reachable with no credentials at all before the fix."""
     session = MagicMock()
     session.execute = AsyncMock()
-    ops = ChatCategoryOperations(session, access=MagicMock())
+    access = MagicMock()
+    access.require_org_member = AsyncMock(
+        side_effect=PermissionDeniedError("access", "organization")
+    )
+    ops = ChatCategoryOperations(session, access=access)
 
-    with _as(role, active), pytest.raises(PermissionDeniedError):
+    with pytest.raises(PermissionDeniedError):
         await ops.list_categories(ACTOR, ORG)
 
     session.execute.assert_not_awaited()
@@ -55,13 +44,12 @@ async def test_list_categories_requires_active_membership(role, active) -> None:
 
 async def test_list_categories_allows_a_plain_member() -> None:
     session = MagicMock()
-    session.execute = AsyncMock(
-        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: []))
-    )
-    ops = ChatCategoryOperations(session, access=MagicMock())
+    session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [])))
+    access = MagicMock()
+    access.require_org_member = AsyncMock()
+    ops = ChatCategoryOperations(session, access=access)
 
-    with _as(OrganizationRole.MEMBER):
-        assert await ops.list_categories(ACTOR, ORG) == []
+    assert await ops.list_categories(ACTOR, ORG) == []
 
 
 def _upload_status_ctx(session):
@@ -99,9 +87,12 @@ async def test_get_upload_status_hides_another_users_upload() -> None:
     ops.list_completed_part_numbers = AsyncMock(return_value=[1])
 
     patch_user, patch_session = _upload_status_ctx(session)
-    with patch_user, patch_session, patch(
-        "uniffy.domains.files.handlers.FileOperations", MagicMock(return_value=ops)
-    ), pytest.raises(ConnectError) as exc_info:
+    with (
+        patch_user,
+        patch_session,
+        patch("uniffy.domains.files.handlers.FileOperations", MagicMock(return_value=ops)),
+        pytest.raises(ConnectError) as exc_info,
+    ):
         await FilesHandlers().get_upload_status(
             GetUploadStatusRequest(upload_id=str(upload_id)), MagicMock()
         )

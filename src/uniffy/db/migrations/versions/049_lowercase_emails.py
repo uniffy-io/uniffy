@@ -23,10 +23,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.execute("UPDATE login_users SET email = LOWER(email) WHERE email <> LOWER(email)")
-    op.execute(
-        "UPDATE login_invitations SET email = LOWER(email) "
-        "WHERE email <> LOWER(email)"
-    )
+    op.execute("UPDATE login_invitations SET email = LOWER(email) WHERE email <> LOWER(email)")
     op.create_check_constraint(
         "ck_login_users_email_lower",
         "login_users",
@@ -40,9 +37,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "ck_login_invitations_email_lower", "login_invitations", type_="check"
-    )
-    op.drop_constraint(
-        "ck_login_users_email_lower", "login_users", type_="check"
-    )
+    op.drop_constraint("ck_login_invitations_email_lower", "login_invitations", type_="check")
+    op.drop_constraint("ck_login_users_email_lower", "login_users", type_="check")

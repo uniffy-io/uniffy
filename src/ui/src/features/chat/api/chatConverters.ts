@@ -69,7 +69,6 @@ export function channelToPlain(proto: ProtoChatChannel): ChatChannel {
     description: proto.description,
     channelType: CHANNEL_TYPE_MAP[proto.channelType] ?? "PUBLIC",
     categoryId: proto.categoryId ?? null,
-    isEncrypted: proto.isEncrypted,
     isArchived: proto.isArchived,
     isDefault: proto.isDefault,
     isDeleted: false,

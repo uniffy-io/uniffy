@@ -121,14 +121,10 @@ class ChatResourceOperations:
         """Channel resources with optional type filter; head served from Valkey when eligible."""
         head_eligible = offset == 0 and limit <= RESOURCES_HEAD_LIMIT
         if head_eligible:
-            cached = await get_cached_channel_resources_head(
-                channel_id, content_type_filter
-            )
+            cached = await get_cached_channel_resources_head(channel_id, content_type_filter)
             if cached is not None:
                 head_payloads, total = cached
-                resources = [
-                    _resource_from_payload(channel_id, p) for p in head_payloads
-                ]
+                resources = [_resource_from_payload(channel_id, p) for p in head_payloads]
                 return resources[:limit], total
 
         total_col = func.count().over().label("_total")
@@ -145,16 +141,15 @@ class ChatResourceOperations:
 
         if head_eligible:
             head_query = (
-                query.order_by(ChatChannelResource.last_mentioned_at.desc())
+                query
+                .order_by(ChatChannelResource.last_mentioned_at.desc())
                 .offset(0)
                 .limit(RESOURCES_HEAD_LIMIT)
             )
             head_result = await self.session.execute(head_query)
             head_rows = head_result.all()
             if not head_rows:
-                await set_cached_channel_resources_head(
-                    channel_id, content_type_filter, [], 0
-                )
+                await set_cached_channel_resources_head(channel_id, content_type_filter, [], 0)
                 return [], 0
 
             head_resources = [row[0] for row in head_rows]
@@ -168,9 +163,7 @@ class ChatResourceOperations:
             return head_resources[:limit], total
 
         query = (
-            query.order_by(ChatChannelResource.last_mentioned_at.desc())
-            .offset(offset)
-            .limit(limit)
+            query.order_by(ChatChannelResource.last_mentioned_at.desc()).offset(offset).limit(limit)
         )
 
         result = await self.session.execute(query)
@@ -193,13 +186,9 @@ def _resource_to_payload(row: ChatChannelResource) -> dict:
         "first_mentioned_at": (
             row.first_mentioned_at.isoformat() if row.first_mentioned_at else None
         ),
-        "last_mentioned_at": (
-            row.last_mentioned_at.isoformat() if row.last_mentioned_at else None
-        ),
+        "last_mentioned_at": (row.last_mentioned_at.isoformat() if row.last_mentioned_at else None),
         "mention_count": row.mention_count,
-        "first_mentioned_by": (
-            str(row.first_mentioned_by) if row.first_mentioned_by else None
-        ),
+        "first_mentioned_by": (str(row.first_mentioned_by) if row.first_mentioned_by else None),
     }
 
 
@@ -224,8 +213,6 @@ def _resource_from_payload(
         ),
         mention_count=payload.get("mention_count", 0),
         first_mentioned_by=(
-            UUID(payload["first_mentioned_by"])
-            if payload.get("first_mentioned_by")
-            else None
+            UUID(payload["first_mentioned_by"]) if payload.get("first_mentioned_by") else None
         ),
     )

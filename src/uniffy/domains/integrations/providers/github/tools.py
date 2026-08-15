@@ -77,7 +77,7 @@ def _repo_tail(url: str) -> str:
 def _int_arg(args: dict, key: str) -> int | None:
     try:
         return int(args[key])
-    except (KeyError, TypeError, ValueError):
+    except KeyError, TypeError, ValueError:
         return None
 
 
@@ -420,7 +420,7 @@ async def _execute_get_file(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(success=True, data="\n".join(lines))
 
     entry_type = payload.get("type")
-    if entry_type != "file":
+    if entry_type != "file":  # noqa: PLR2004
         kind = scrub_external_text(entry_type, TITLE_CAP) or "unknown"
         return ToolResult(
             success=True,
@@ -545,13 +545,10 @@ async def _execute_get_commit(ctx: ToolContext, args: dict) -> ToolResult:
         lines.extend(["", message])
     stats = payload.get("stats") or {}
     files = payload.get("files") or []
-    lines.extend(
-        [
-            "",
-            f"Stats: +{stats.get('additions', 0)}/-{stats.get('deletions', 0)},"
-            f" {len(files)} files",
-        ]
-    )
+    lines.extend([
+        "",
+        f"Stats: +{stats.get('additions', 0)}/-{stats.get('deletions', 0)}, {len(files)} files",
+    ])
     lines.extend(_file_change_line(entry) for entry in files[:_COMMIT_FILES_CAP])
     if len(files) > _COMMIT_FILES_CAP:
         lines.append(f"[showing first {_COMMIT_FILES_CAP} of {len(files)} changed files]")
@@ -633,9 +630,7 @@ async def _execute_list_pr_reviews(ctx: ToolContext, args: dict) -> ToolResult:
             body = scrub_external_text(comment.get("body"), BODY_CAP)
             lines.append(f"@{_login(comment)} on {location}: {body}")
         if len(comments) > _REVIEW_COMMENT_CAP:
-            lines.append(
-                f"[showing first {_REVIEW_COMMENT_CAP} of {len(comments)} inline comments]"
-            )
+            lines.append(f"[showing first {_REVIEW_COMMENT_CAP} of {len(comments)} inline comments]")
     return ToolResult(success=True, data="\n".join(lines))
 
 

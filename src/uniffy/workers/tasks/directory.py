@@ -56,9 +56,7 @@ async def _mark_failed(source_id: UUID, error: str) -> None:
     try:
         async with open_session() as session:
             source = (
-                await session.execute(
-                    select(IdentitySource).where(IdentitySource.id == source_id)
-                )
+                await session.execute(select(IdentitySource).where(IdentitySource.id == source_id))
             ).scalar_one_or_none()
             if source is not None:
                 source.last_sync_status = "failed"
@@ -81,9 +79,7 @@ async def sync_identity_source(ctx: dict[str, Any], source_id: str) -> dict[str,
     try:
         async with open_session() as session:
             source = (
-                await session.execute(
-                    select(IdentitySource).where(IdentitySource.id == sid)
-                )
+                await session.execute(select(IdentitySource).where(IdentitySource.id == sid))
             ).scalar_one_or_none()
             if source is None:
                 return {"status": "not_found", "source_id": source_id}

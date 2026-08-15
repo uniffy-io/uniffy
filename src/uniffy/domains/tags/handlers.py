@@ -41,7 +41,7 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.types import ContentType
-from uniffy.core.valkey.queue import get_queue_safe
+from uniffy.core.valkey.queue import QueueName, get_queue_safe
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
     get_user_id_from_context,
@@ -62,6 +62,7 @@ from uniffy.domains.tags.operations import (
     TagOperations,
     TagSlugCollisionError,
 )
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="tags.handlers")
 
@@ -146,11 +147,7 @@ class TagsHandlers:
                     tag_id=tag_id,
                     name=request.name if request.HasField("name") else None,
                     color=request.color if request.HasField("color") else None,
-                    description=(
-                        request.description
-                        if request.HasField("description")
-                        else None
-                    ),
+                    description=(request.description if request.HasField("description") else None),
                 )
                 affected_urns: list[str] = []
                 if slug_changed:
@@ -158,11 +155,11 @@ class TagsHandlers:
                 count = await ops._get_usage_count(organization_id, tag.id)
 
             if affected_urns:
-                queue = await get_queue_safe("core")
+                queue = await get_queue_safe(QueueName.CORE)
                 if queue is not None:
                     try:
                         await queue.enqueue_job(
-                            "reindex_tag_urns",
+                            JobName.REINDEX_TAG_URNS,
                             str(organization_id),
                             affected_urns,
                         )
@@ -196,11 +193,11 @@ class TagsHandlers:
                     tag_id=tag_id,
                 )
             if affected_urns:
-                queue = await get_queue_safe("core")
+                queue = await get_queue_safe(QueueName.CORE)
                 if queue is not None:
                     try:
                         await queue.enqueue_job(
-                            "reindex_tag_urns",
+                            JobName.REINDEX_TAG_URNS,
                             str(organization_id),
                             affected_urns,
                         )
@@ -290,9 +287,7 @@ class TagsHandlers:
                     limit=request.limit or 10,
                     actor_id=actor_id,
                 )
-                counts = await ops._get_usage_counts(
-                    organization_id, [t.id for t in tags]
-                )
+                counts = await ops._get_usage_counts(organization_id, [t.id for t in tags])
             return SuggestTagsResponse(tags=tags_to_proto_list(tags, counts))
         except ConnectError:
             raise
@@ -324,9 +319,7 @@ class TagsHandlers:
                     tag_ids=tag_ids,
                     source=source,
                 )
-            return AssignTagsResponse(
-                assignments=[assignment_to_proto(a) for a in assignments]
-            )
+            return AssignTagsResponse(assignments=[assignment_to_proto(a) for a in assignments])
         except ConnectError:
             raise
         except Exception as exc:
@@ -345,9 +338,7 @@ class TagsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "content_urn is required")
 
         tag_ids = (
-            [_parse_uuid(tid, "tag_id") for tid in request.tag_ids]
-            if request.tag_ids
-            else None
+            [_parse_uuid(tid, "tag_id") for tid in request.tag_ids] if request.tag_ids else None
         )
         source = source_from_proto(request.source)
 
@@ -431,7 +422,7 @@ class TagsHandlers:
         for raw in criteria_dict.get("tag_ids") or []:
             try:
                 additional_ids.append(UUID(raw))
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 continue
         sources = criteria_dict.get("sources") or None
 
@@ -482,11 +473,11 @@ class TagsHandlers:
                 count = await ops._get_usage_count(organization_id, target.id)
 
             if affected:
-                queue = await get_queue_safe("core")
+                queue = await get_queue_safe(QueueName.CORE)
                 if queue is not None:
                     try:
                         await queue.enqueue_job(
-                            "reindex_tag_urns",
+                            JobName.REINDEX_TAG_URNS,
                             str(organization_id),
                             affected,
                         )

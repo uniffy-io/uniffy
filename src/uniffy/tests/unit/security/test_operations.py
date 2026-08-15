@@ -65,9 +65,7 @@ class TestGet:
         )
         session = _session()
         patcher, settings = _patch_settings_ops()
-        settings.get_namespace = AsyncMock(
-            return_value={"password_reset_enabled": row}
-        )
+        settings.get_namespace = AsyncMock(return_value={"password_reset_enabled": row})
         with patcher:
             out = await SecurityOperations(session).get(generate_id())
         assert out.password_reset_enabled is False
@@ -81,11 +79,14 @@ class TestSet:
         patcher, settings = _patch_settings_ops()
         settings.get_namespace = AsyncMock(return_value={})  # default is True
         settings.set = AsyncMock()
-        with patcher, patch(
-            "uniffy.domains.security.operations.write_audit_event", new=AsyncMock()
-        ) as audit:
+        with (
+            patcher,
+            patch("uniffy.domains.security.operations.write_audit_event", new=AsyncMock()) as audit,
+        ):
             await SecurityOperations(session).set_password_reset_enabled(
-                organization_id=org_id, enabled=False, actor_user_id=actor,
+                organization_id=org_id,
+                enabled=False,
+                actor_user_id=actor,
             )
         settings.set.assert_awaited_once()
         audit.assert_awaited_once()
@@ -106,15 +107,16 @@ class TestSet:
         )
         session = _session()
         patcher, settings = _patch_settings_ops()
-        settings.get_namespace = AsyncMock(
-            return_value={"password_reset_enabled": existing}
-        )
+        settings.get_namespace = AsyncMock(return_value={"password_reset_enabled": existing})
         settings.set = AsyncMock()
-        with patcher, patch(
-            "uniffy.domains.security.operations.write_audit_event", new=AsyncMock()
-        ) as audit:
+        with (
+            patcher,
+            patch("uniffy.domains.security.operations.write_audit_event", new=AsyncMock()) as audit,
+        ):
             await SecurityOperations(session).set_password_reset_enabled(
-                organization_id=generate_id(), enabled=True, actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                enabled=True,
+                actor_user_id=generate_id(),
             )
         settings.set.assert_not_awaited()
         audit.assert_not_awaited()

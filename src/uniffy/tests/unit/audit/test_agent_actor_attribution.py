@@ -35,9 +35,7 @@ def _audit_rows(session: MagicMock) -> list:
 async def test_tool_call_attributes_to_human_with_agent_kind_detail() -> None:
     session = MagicMock()
     session.add = MagicMock()
-    session.execute = AsyncMock(
-        return_value=MagicMock(scalar_one_or_none=lambda: None)
-    )
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
     session.commit = AsyncMock()
 
     human_id = generate_id()

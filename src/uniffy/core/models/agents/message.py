@@ -1,6 +1,7 @@
 """Agent message model for conversation message storage."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import Column, DateTime, Index, String, Text
@@ -9,6 +10,14 @@ from sqlalchemy.types import JSON
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class AgentMessageRole(StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
+    TOOL = "tool"
+    SYSTEM = "system"
+    SUMMARY = "summary"
 
 
 class AgentMessage(SQLModel, table=True):
@@ -25,7 +34,7 @@ class AgentMessage(SQLModel, table=True):
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     session_id: UUID = Field(foreign_key="agents_sessions.id", nullable=False)
-    role: str = Field(
+    role: AgentMessageRole = Field(
         sa_column=Column(String(20), nullable=False),
     )
     content: str | None = Field(

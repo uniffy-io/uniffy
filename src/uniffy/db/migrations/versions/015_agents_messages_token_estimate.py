@@ -39,7 +39,7 @@ def _estimate_tokens(content: str | None, tool_args, tool_result: str | None) ->
     if tool_args is not None:
         try:
             chars += len(json.dumps(tool_args))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             chars += 100
     if tool_result:
         chars += len(tool_result)
@@ -83,9 +83,7 @@ def upgrade() -> None:
         if not rows:
             break
 
-        update_stmt = sa.text(
-            "UPDATE agents_messages SET token_estimate = :te WHERE id = :id"
-        )
+        update_stmt = sa.text("UPDATE agents_messages SET token_estimate = :te WHERE id = :id")
         for row in rows:
             estimate = _estimate_tokens(row.content, row.tool_args, row.tool_result)
             bind.execute(update_stmt, {"te": estimate, "id": row.id})

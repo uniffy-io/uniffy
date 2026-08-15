@@ -102,7 +102,7 @@ async def is_access_token_revoked(user_id: UUID, token_version: int | None) -> b
         return False
     try:
         min_tkv = int(raw)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return False
     if token_version is None:
         return True

@@ -147,9 +147,7 @@ class GroupsHandlers:
                     name=request.name if request.HasField("name") else None,
                     description=request.description if request.HasField("description") else None,
                     is_private=request.is_private if request.HasField("is_private") else None,
-                    kind=(
-                        group_kind_from_proto(request.kind) if request.HasField("kind") else None
-                    ),
+                    kind=(group_kind_from_proto(request.kind) if request.HasField("kind") else None),
                     parent_group_id=parent_group_id,
                     lead_user_id=lead_user_id,
                 )
@@ -263,9 +261,7 @@ class GroupsHandlers:
             )
             _, user = await ops.get_member(group_id, org_id, target_user_id, user_id)
 
-        return pb.UpdateGroupMemberResponse(
-            member=group_member_info_to_proto(user, membership)
-        )
+        return pb.UpdateGroupMemberResponse(member=group_member_info_to_proto(user, membership))
 
     async def remove_group_member(
         self,
@@ -279,9 +275,7 @@ class GroupsHandlers:
 
         async with open_session() as session:
             ops = GroupOperations(session)
-            await ops.remove_member(
-                group_id, org_id, target_user_id, actor_user_id=user_id
-            )
+            await ops.remove_member(group_id, org_id, target_user_id, actor_user_id=user_id)
 
         return pb.RemoveGroupMemberResponse(success=True)
 

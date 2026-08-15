@@ -145,10 +145,9 @@ class TestBeginEnrollmentRefuseWhenEnabled:
         async def _fake_decrypt(_session, ciphertext):
             return "REUSED-SECRET-B32"
 
-        with patch.object(
-            mfa_ops, "decrypt_totp_secret", AsyncMock(side_effect=_fake_decrypt)
-        ), patch.object(
-            mfa_ops, "write_audit_event", AsyncMock(return_value=None)
+        with (
+            patch.object(mfa_ops, "decrypt_totp_secret", AsyncMock(side_effect=_fake_decrypt)),
+            patch.object(mfa_ops, "write_audit_event", AsyncMock(return_value=None)),
         ):
             challenge = await ops.begin_enrollment(user_id)
 
@@ -199,12 +198,10 @@ class TestBeginEnrollmentIdempotent:
         async def _fake_decrypt(_session, ciphertext):
             return "FRESH-SECRET-B32"
 
-        with patch.object(
-            mfa_ops, "encrypt_totp_secret", AsyncMock(side_effect=_fake_encrypt)
-        ), patch.object(
-            mfa_ops, "decrypt_totp_secret", AsyncMock(side_effect=_fake_decrypt)
-        ), patch.object(
-            mfa_ops, "write_audit_event", AsyncMock(return_value=None)
+        with (
+            patch.object(mfa_ops, "encrypt_totp_secret", AsyncMock(side_effect=_fake_encrypt)),
+            patch.object(mfa_ops, "decrypt_totp_secret", AsyncMock(side_effect=_fake_decrypt)),
+            patch.object(mfa_ops, "write_audit_event", AsyncMock(return_value=None)),
         ):
             challenge = await ops.begin_enrollment(user_id)
 
@@ -237,16 +234,16 @@ class TestVerifyMfaTokenBinding:
         session = _session([_result(scalar=user)])
         ops = MfaOperations(session)
 
-        with patch.object(
-            mfa_ops, "decode_mfa_challenge_token", return_value=payload
-        ), patch.object(
-            mfa_ops,
-            "is_verify_locked",
-            AsyncMock(return_value=VerifyLockStatus(False, False)),
-        ), pytest.raises(AuthenticationError):
-            await ops.verify_mfa(
-                challenge_token="opaque", code="123456", method="totp"
-            )
+        with (
+            patch.object(mfa_ops, "decode_mfa_challenge_token", return_value=payload),
+            patch.object(
+                mfa_ops,
+                "is_verify_locked",
+                AsyncMock(return_value=VerifyLockStatus(False, False)),
+            ),
+            pytest.raises(AuthenticationError),
+        ):
+            await ops.verify_mfa(challenge_token="opaque", code="123456", method="totp")
 
     async def test_rejects_when_token_version_advanced(self) -> None:
         """tkv claim is N, but user.token_version is N+1: revoked."""
@@ -256,16 +253,16 @@ class TestVerifyMfaTokenBinding:
         session = _session([_result(scalar=user)])
         ops = MfaOperations(session)
 
-        with patch.object(
-            mfa_ops, "decode_mfa_challenge_token", return_value=payload
-        ), patch.object(
-            mfa_ops,
-            "is_verify_locked",
-            AsyncMock(return_value=VerifyLockStatus(False, False)),
-        ), pytest.raises(TokenError):
-            await ops.verify_mfa(
-                challenge_token="opaque", code="123456", method="totp"
-            )
+        with (
+            patch.object(mfa_ops, "decode_mfa_challenge_token", return_value=payload),
+            patch.object(
+                mfa_ops,
+                "is_verify_locked",
+                AsyncMock(return_value=VerifyLockStatus(False, False)),
+            ),
+            pytest.raises(TokenError),
+        ):
+            await ops.verify_mfa(challenge_token="opaque", code="123456", method="totp")
 
     async def test_rejects_when_tkv_claim_missing(self) -> None:
         """A challenge token without a tkv claim is treated as revoked."""
@@ -275,16 +272,16 @@ class TestVerifyMfaTokenBinding:
         session = _session([_result(scalar=user)])
         ops = MfaOperations(session)
 
-        with patch.object(
-            mfa_ops, "decode_mfa_challenge_token", return_value=payload
-        ), patch.object(
-            mfa_ops,
-            "is_verify_locked",
-            AsyncMock(return_value=VerifyLockStatus(False, False)),
-        ), pytest.raises(TokenError):
-            await ops.verify_mfa(
-                challenge_token="opaque", code="123456", method="totp"
-            )
+        with (
+            patch.object(mfa_ops, "decode_mfa_challenge_token", return_value=payload),
+            patch.object(
+                mfa_ops,
+                "is_verify_locked",
+                AsyncMock(return_value=VerifyLockStatus(False, False)),
+            ),
+            pytest.raises(TokenError),
+        ):
+            await ops.verify_mfa(challenge_token="opaque", code="123456", method="totp")
 
     async def test_rate_limit_short_circuits_before_user_load(self) -> None:
         """A locked user is rejected without touching the DB."""
@@ -293,16 +290,16 @@ class TestVerifyMfaTokenBinding:
         session = _session([])
         ops = MfaOperations(session)
 
-        with patch.object(
-            mfa_ops, "decode_mfa_challenge_token", return_value=payload
-        ), patch.object(
-            mfa_ops,
-            "is_verify_locked",
-            AsyncMock(return_value=VerifyLockStatus(user_locked=True, ip_locked=False)),
-        ), pytest.raises(MfaRateLimitedError):
-            await ops.verify_mfa(
-                challenge_token="opaque", code="123456", method="totp"
-            )
+        with (
+            patch.object(mfa_ops, "decode_mfa_challenge_token", return_value=payload),
+            patch.object(
+                mfa_ops,
+                "is_verify_locked",
+                AsyncMock(return_value=VerifyLockStatus(user_locked=True, ip_locked=False)),
+            ),
+            pytest.raises(MfaRateLimitedError),
+        ):
+            await ops.verify_mfa(challenge_token="opaque", code="123456", method="totp")
 
 
 class TestTotpCounterDetection:
@@ -409,14 +406,10 @@ class TestAuditFanOutToOrgs:
 
         writer = AsyncMock(return_value=None)
         with patch.object(mfa_ops, "write_audit_event", writer):
-            await ops._audit_mfa_self_event(
-                user_id=user_id, action="auth.mfa_enrolled"
-            )
+            await ops._audit_mfa_self_event(user_id=user_id, action="auth.mfa_enrolled")
 
         assert writer.await_count == 2
-        org_ids_written = {
-            call.kwargs["organization_id"] for call in writer.await_args_list
-        }
+        org_ids_written = {call.kwargs["organization_id"] for call in writer.await_args_list}
         assert org_ids_written == {org_a, org_b}
         for call in writer.await_args_list:
             assert call.kwargs["actor_user_id"] == user_id
@@ -434,9 +427,7 @@ class TestAuditFanOutToOrgs:
 
         writer = AsyncMock(return_value=None)
         with patch.object(mfa_ops, "write_audit_event", writer):
-            await ops._audit_mfa_self_event(
-                user_id=user_id, action="auth.mfa_disabled"
-            )
+            await ops._audit_mfa_self_event(user_id=user_id, action="auth.mfa_disabled")
 
         writer.assert_awaited_once()
         assert writer.await_args.kwargs["organization_id"] is None
@@ -460,9 +451,7 @@ class TestRecoveryCodeConditionalUpdate:
         # SELECT returns one matching row; the conditional UPDATE
         # afterwards reports rowcount=0 (another tx already stamped
         # used_at under us).
-        row = UserRecoveryCode(
-            id=generate_id(), user_id=user_id, code_hash="abcd"
-        )
+        row = UserRecoveryCode(id=generate_id(), user_id=user_id, code_hash="abcd")
 
         scalars = MagicMock()
         scalars.__iter__ = lambda self: iter([row])
@@ -485,9 +474,7 @@ class TestRecoveryCodeConditionalUpdate:
         from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
 
         user_id = generate_id()
-        row = UserRecoveryCode(
-            id=generate_id(), user_id=user_id, code_hash="abcd"
-        )
+        row = UserRecoveryCode(id=generate_id(), user_id=user_id, code_hash="abcd")
 
         scalars = MagicMock()
         scalars.__iter__ = lambda self: iter([row])
@@ -510,9 +497,7 @@ class TestRecoveryCodeConditionalUpdate:
         from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
 
         user_id = generate_id()
-        row = UserRecoveryCode(
-            id=generate_id(), user_id=user_id, code_hash="abcd"
-        )
+        row = UserRecoveryCode(id=generate_id(), user_id=user_id, code_hash="abcd")
         scalars = MagicMock()
         scalars.__iter__ = lambda self: iter([row])
         select_result = MagicMock()

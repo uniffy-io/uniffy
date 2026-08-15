@@ -151,7 +151,7 @@ def _build_metadata_dict(note: Note) -> dict[str, str]:
 
     out: dict[str, str] = {}
     for key, val in note.note_metadata.items():
-        if key == "icon":
+        if key == "icon":  # noqa: PLR2004
             continue
         out[key] = val if isinstance(val, str) else json.dumps(val)
     return out

@@ -76,9 +76,7 @@ def _patched_gate(monkeypatch):
     monkeypatch.setattr(
         tool_gate,
         "get_tool_registry",
-        lambda: _ToolRegistryStub(
-            {"github.search_issues": True, "github.create_issue": False}
-        ),
+        lambda: _ToolRegistryStub({"github.search_issues": True, "github.create_issue": False}),
     )
 
 
@@ -157,9 +155,7 @@ async def test_client_lru_round_trips_credential_and_client() -> None:
 
 async def test_client_lru_expires_entries_after_the_ttl(monkeypatch) -> None:
     clock = SimpleNamespace(now=1_000.0)
-    monkeypatch.setattr(
-        client_cache_mod, "time", SimpleNamespace(time=lambda: clock.now)
-    )
+    monkeypatch.setattr(client_cache_mod, "time", SimpleNamespace(time=lambda: clock.now))
 
     async def scenario():
         lru = IntegrationClientLRU()

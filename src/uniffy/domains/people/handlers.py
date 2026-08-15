@@ -16,9 +16,10 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
-from uniffy.core.valkey.queue import get_queue
+from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.org_settings.operations import OrgSettingsOperations
@@ -54,6 +55,7 @@ from uniffy.domains.people.policy import (
     save_profile_policy,
 )
 from uniffy.domains.people.reader import PeopleReader, load_person_payload
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="people.handlers")
 
@@ -95,9 +97,7 @@ def _profile_changes(
     if with_start_date and request.HasField("start_date"):
         changes["start_date"] = timestamp_to_datetime(request.start_date).date()
     if with_links and request.HasField("links"):
-        changes["links"] = [
-            {"label": link.label, "url": link.url} for link in request.links.links
-        ]
+        changes["links"] = [{"label": link.label, "url": link.url} for link in request.links.links]
     return changes
 
 
@@ -598,9 +598,7 @@ class PeopleHandlers:
                 await OrganizationOperations(session).require_org_admin(user_id, org_id)
                 await _require_single_active_source(session, org_id)
 
-                source = IdentitySource(
-                    organization_id=org_id, kind=kind, name=name, config=config
-                )
+                source = IdentitySource(organization_id=org_id, kind=kind, name=name, config=config)
                 session.add(source)
                 await session.flush()
 
@@ -619,7 +617,7 @@ class PeopleHandlers:
                     organization_id=org_id,
                     actor_user_id=user_id,
                     action=Action.IDENTITY_SOURCE_CREATED,
-                    resource_type="IDENTITY_SOURCE",
+                    resource_type=AuditResourceType.IDENTITY_SOURCE,
                     resource_id=source.id,
                     details={"kind": kind.value, "name": name},
                 )
@@ -661,13 +659,9 @@ class PeopleHandlers:
                     changed.append("config")
                 if request.HasField("is_active"):
                     if source.kind is IdentitySourceKind.LOCAL and not request.is_active:
-                        raise ValidationError(
-                            "is_active", "the LOCAL source cannot be deactivated"
-                        )
+                        raise ValidationError("is_active", "the LOCAL source cannot be deactivated")
                     if request.is_active and source.kind is not IdentitySourceKind.LOCAL:
-                        await _require_single_active_source(
-                            session, org_id, exclude_id=source.id
-                        )
+                        await _require_single_active_source(session, org_id, exclude_id=source.id)
                     source.is_active = request.is_active
                     changed.append("is_active")
                 if request.HasField("secret") and request.secret:
@@ -687,7 +681,7 @@ class PeopleHandlers:
                         organization_id=org_id,
                         actor_user_id=user_id,
                         action=Action.IDENTITY_SOURCE_UPDATED,
-                        resource_type="IDENTITY_SOURCE",
+                        resource_type=AuditResourceType.IDENTITY_SOURCE,
                         resource_id=source.id,
                         details={"changed_keys": changed},
                     )
@@ -733,7 +727,7 @@ class PeopleHandlers:
                     organization_id=org_id,
                     actor_user_id=user_id,
                     action=Action.IDENTITY_SOURCE_DELETED,
-                    resource_type="IDENTITY_SOURCE",
+                    resource_type=AuditResourceType.IDENTITY_SOURCE,
                     resource_id=source.id,
                     details={"kind": source.kind.value, "name": source.name},
                 )
@@ -777,8 +771,8 @@ class PeopleHandlers:
                 source_id = source.id
 
             # Enqueue and return; a sync never runs on the request thread.
-            queue = get_queue("egress")
-            await queue.enqueue_job("sync_identity_source", str(source_id))
+            queue = get_queue(QueueName.EGRESS)
+            await queue.enqueue_job(JobName.SYNC_IDENTITY_SOURCE, str(source_id))
             return pb.TriggerDirectorySyncResponse(enqueued=True)
         except ConnectError:
             raise

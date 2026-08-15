@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
 
 MFA_NAMESPACE = "mfa"
@@ -91,7 +92,7 @@ class MfaPolicyOperations:
             organization_id=None,
             actor_user_id=actor_user_id,
             action=Action.AUTH_MFA_POLICY_CHANGED,
-            resource_type="DEPLOYMENT",
+            resource_type=AuditResourceType.DEPLOYMENT,
             resource_id=None,
             details={
                 "scope": "deployment",

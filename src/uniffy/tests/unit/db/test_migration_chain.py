@@ -55,9 +55,7 @@ def test_every_parent_resolves(script_directory: ScriptDirectory) -> None:
 def test_the_chain_reaches_base_from_head(script_directory: ScriptDirectory) -> None:
     """Walking back from head must visit every revision on disk, once."""
     walked = [script.revision for script in script_directory.walk_revisions()]
-    on_disk = {
-        m.group(1) for name in VERSIONS_DIR.iterdir() if (m := _FILENAME_RE.match(name.name))
-    }
+    on_disk = {m.group(1) for name in VERSIONS_DIR.iterdir() if (m := _FILENAME_RE.match(name.name))}
     assert set(walked) == on_disk, (
         "revisions on disk and revisions reachable from head disagree; "
         f"unreachable: {sorted(on_disk - set(walked))}, "

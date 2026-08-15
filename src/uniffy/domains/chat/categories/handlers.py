@@ -118,9 +118,7 @@ class CategoryHandlers:
             async with open_session() as session:
                 ops = ChatCategoryOperations(session)
                 cats = await ops.list_categories(user_id, org_id)
-                return ListCategoriesResponse(
-                    categories=[category_to_proto(c) for c in cats]
-                )
+                return ListCategoriesResponse(categories=[category_to_proto(c) for c in cats])
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 

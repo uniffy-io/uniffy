@@ -231,9 +231,7 @@ class SupportConsentHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                view = await SupportSessionOperations(
-                    session
-                ).get_org_consent_mode(
+                view = await SupportSessionOperations(session).get_org_consent_mode(
                     actor_user_id=actor_id, organization_id=org_id
                 )
         except ConnectError:
@@ -250,9 +248,7 @@ class SupportConsentHandlers:
         mode = consent_mode_from_proto(request.mode)
         try:
             async with open_session() as session:
-                view = await SupportSessionOperations(
-                    session
-                ).set_org_consent_mode(
+                view = await SupportSessionOperations(session).set_org_consent_mode(
                     actor_user_id=actor_id,
                     organization_id=org_id,
                     mode=mode,

@@ -46,15 +46,10 @@ def build_memory_block(blocks: list[MemoryScopeBlock]) -> str | None:
         lines = [f"### {block.label}"]
         if block.pinned:
             lines.append("Pinned entries (full content):")
-            lines.extend(
-                f"- {p['key']} [{p['category']}]: {p['content']}" for p in block.pinned
-            )
+            lines.extend(f"- {p['key']} [{p['category']}]: {p['content']}" for p in block.pinned)
         if block.index:
             lines.append("Entries (load full content with memory.read):")
-            lines.extend(
-                f"- {e['key']} [{e['category']}]: {e['description']}"
-                for e in block.index
-            )
+            lines.extend(f"- {e['key']} [{e['category']}]: {e['description']}" for e in block.index)
         more = block.total - len(block.pinned) - len(block.index)
         if more > 0:
             lines.append(f"({more} more entries not listed; search with memory.read.)")
@@ -257,7 +252,7 @@ def build_chat_context_section(
         lines.append(f"Channel description: {channel_description}")
 
     other_users = [n for n in participant_users if n and n != trigger_user_name]
-    other_agents = [n for n in participant_agents if n and n != "self"]
+    other_agents = [n for n in participant_agents if n and n != "self"]  # noqa: PLR2004
     roster_parts: list[str] = []
     if other_users:
         roster_parts.append("users: " + ", ".join(other_users))
@@ -351,7 +346,7 @@ def _build_skill_section(skills: list[SkillPromptEntry]) -> str | None:
             when = s.when_to_use.strip()
             if when:
                 # Avoid "use when when ..." when the guidance already leads with "when".
-                lead = "" if when[:5].lower() == "when " else "use when "
+                lead = "" if when[:5].lower() == "when " else "use when "  # noqa: PLR2004
                 entry += f" -- {lead}{when}"
             lines.append(entry)
         parts.append("\n".join(lines))

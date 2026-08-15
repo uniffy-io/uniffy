@@ -82,7 +82,5 @@ class ChatChannelMember(SQLModel, table=True):
     # Per-user sidebar folder for agent DM chats; NULL = unfiled.
     agent_folder_id: UUID | None = Field(
         default=None,
-        sa_column=Column(
-            ForeignKey("chat_agent_folders.id", ondelete="SET NULL"), nullable=True
-        ),
+        sa_column=Column(ForeignKey("chat_agent_folders.id", ondelete="SET NULL"), nullable=True),
     )

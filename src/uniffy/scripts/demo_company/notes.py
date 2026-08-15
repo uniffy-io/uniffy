@@ -117,8 +117,10 @@ async def _ensure_folder(
         Note.title == name,
         Note.is_deleted == False,  # noqa: E712
     )
-    query = query.where(Note.parent_id == parent_id) if parent_id else query.where(
-        Note.parent_id.is_(None)
+    query = (
+        query.where(Note.parent_id == parent_id)
+        if parent_id
+        else query.where(Note.parent_id.is_(None))
     )
 
     existing = (await ctx.session.execute(query)).scalars().first()
@@ -146,11 +148,15 @@ async def _ensure_folder(
 
 async def _find_note(ctx: DemoContext, slug: str) -> Note | None:
     return (
-        await ctx.session.execute(
-            select(Note).where(
-                Note.organization_id == ctx.organization_id,
-                Note.slug == slug,
-                Note.is_deleted == False,  # noqa: E712
+        (
+            await ctx.session.execute(
+                select(Note).where(
+                    Note.organization_id == ctx.organization_id,
+                    Note.slug == slug,
+                    Note.is_deleted == False,  # noqa: E712
+                )
             )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )

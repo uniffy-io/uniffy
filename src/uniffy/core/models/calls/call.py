@@ -44,9 +44,7 @@ class Call(SQLModel, table=True):
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     channel_id: UUID = Field(
         sa_column=Column(
             ForeignKey("chat_channels.id", ondelete="CASCADE"), nullable=False, index=True
@@ -118,9 +116,7 @@ class CallParticipant(SQLModel, table=True):
             ForeignKey("calls_calls.id", ondelete="CASCADE"), nullable=False, index=True
         ),
     )
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     device_id: str = Field(max_length=64, nullable=False)
     # LiveKit identity "{user_id}:{device_id}" - webhook events key on this.
@@ -140,9 +136,7 @@ class CallParticipant(SQLModel, table=True):
     # First reconcile pass that saw this row absent from the SFU. A ghost is
     # retired only after a second consecutive absent pass, so an SFU restart
     # mid-window records absence instead of mass-evicting a live call.
-    missing_since: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
+    missing_since: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     mic_enabled: bool = Field(default=True, nullable=False)
     camera_enabled: bool = Field(default=False, nullable=False)
     screen_sharing: bool = Field(default=False, nullable=False)

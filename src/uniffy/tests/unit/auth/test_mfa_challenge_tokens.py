@@ -74,9 +74,10 @@ class TestEnrollmentTokenRoundtrip:
         # Three -- ``BeginEnrollment``, ``ConfirmEnrollment``,
         # ``GetMfaStatus``. Anything else means somebody widened the
         # blast radius without updating the doc.
-        assert frozenset(
-            {"BeginEnrollment", "ConfirmEnrollment", "GetMfaStatus"}
-        ) == ENROLLMENT_ALLOWED_RPCS
+        assert (
+            frozenset({"BeginEnrollment", "ConfirmEnrollment", "GetMfaStatus"})
+            == ENROLLMENT_ALLOWED_RPCS
+        )
 
 
 class TestTypeEnforcement:
@@ -102,16 +103,12 @@ class TestTypeEnforcement:
 class TestExpiry:
     def test_challenge_token_expires(self) -> None:
         # 0 minutes = already expired the instant pyjwt validates.
-        token = create_mfa_challenge_token(
-            generate_id(), expires_delta=timedelta(seconds=-1)
-        )
+        token = create_mfa_challenge_token(generate_id(), expires_delta=timedelta(seconds=-1))
         with pytest.raises(jwt.ExpiredSignatureError):
             decode_mfa_challenge_token(token)
 
     def test_enrollment_token_expires(self) -> None:
-        token = create_enrollment_only_token(
-            generate_id(), expires_delta=timedelta(seconds=-1)
-        )
+        token = create_enrollment_only_token(generate_id(), expires_delta=timedelta(seconds=-1))
         with pytest.raises(jwt.ExpiredSignatureError):
             decode_enrollment_only_token(token)
 

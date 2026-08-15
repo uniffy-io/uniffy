@@ -1,5 +1,4 @@
-"""Job-id salting and worker-side quietness debounce for skill analysis.
-"""
+"""Job-id salting and worker-side quietness debounce for skill analysis."""
 
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -43,28 +42,23 @@ class TestConversationIsQuiet:
     def test_recent_message_is_not_quiet(self) -> None:
         now = datetime.now(UTC)
         recent = now - timedelta(seconds=SKILL_ANALYSIS_DEBOUNCE_SECONDS - 5)
-        assert task_mod._conversation_is_quiet(
-            recent, now, SKILL_ANALYSIS_DEBOUNCE_SECONDS
-        ) is False
+        assert task_mod._conversation_is_quiet(recent, now, SKILL_ANALYSIS_DEBOUNCE_SECONDS) is False
 
     def test_old_message_is_quiet(self) -> None:
         now = datetime.now(UTC)
         old = now - timedelta(seconds=SKILL_ANALYSIS_DEBOUNCE_SECONDS + 5)
-        assert task_mod._conversation_is_quiet(
-            old, now, SKILL_ANALYSIS_DEBOUNCE_SECONDS
-        ) is True
+        assert task_mod._conversation_is_quiet(old, now, SKILL_ANALYSIS_DEBOUNCE_SECONDS) is True
 
     def test_boundary_is_quiet(self) -> None:
         now = datetime.now(UTC)
         edge = now - timedelta(seconds=SKILL_ANALYSIS_DEBOUNCE_SECONDS)
-        assert task_mod._conversation_is_quiet(
-            edge, now, SKILL_ANALYSIS_DEBOUNCE_SECONDS
-        ) is True
+        assert task_mod._conversation_is_quiet(edge, now, SKILL_ANALYSIS_DEBOUNCE_SECONDS) is True
 
     def test_no_activity_is_quiet(self) -> None:
-        assert task_mod._conversation_is_quiet(
-            None, datetime.now(UTC), SKILL_ANALYSIS_DEBOUNCE_SECONDS
-        ) is True
+        assert (
+            task_mod._conversation_is_quiet(None, datetime.now(UTC), SKILL_ANALYSIS_DEBOUNCE_SECONDS)
+            is True
+        )
 
 
 class _FakeResult:
@@ -170,9 +164,7 @@ class TestTaskQuietnessGate:
     async def test_quiet_conversation_proceeds_past_the_gate(self, monkeypatch) -> None:
         _install_ops_client(monkeypatch)
         _install_open_session(monkeypatch)
-        quiet_ts = datetime.now(UTC) - timedelta(
-            seconds=SKILL_ANALYSIS_DEBOUNCE_SECONDS + 30
-        )
+        quiet_ts = datetime.now(UTC) - timedelta(seconds=SKILL_ANALYSIS_DEBOUNCE_SECONDS + 30)
         _install_latest_activity(monkeypatch, quiet_ts)
         enabled_calls = _install_enabled_probe(monkeypatch)
 

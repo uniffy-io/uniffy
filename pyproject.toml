@@ -79,8 +79,8 @@ dev = [
   "pytest>=8.0.0",
   "pytest-asyncio>=1.4.0",
   "pytest-benchmark>=5.0.0",
-  "ruff>=0.14.13",
-  "ty>=0.0.10",
+  "ruff>=0.16.3",
+  "ty>=0.0.72",
   # Worker hot reload
   "watchfiles>=1.0.0",
 ]
@@ -128,11 +128,12 @@ exclude = [
   "node_modules",
   "venv",
   "tests/",
+  "src/uniffy/tests",
   "src/gen",
 ]
-# Vendored third-party code (kept as a clean re-diff against upstream); not held to our style.
-# extend-exclude survives the CLI --exclude that manage.py passes, unlike exclude.
-extend-exclude = ["src/uniffy/vendor"]
+# Third-party code and historical migrations stay unchanged; extend-exclude survives
+# the CLI --exclude that manage.py passes, unlike exclude.
+extend-exclude = ["src/uniffy/db/migrations", "src/uniffy/tests", "src/uniffy/vendor"]
 
 [tool.ruff.lint]
 ignore = ["UP007", "SIM102", "UP042", "E402", "B904"]
@@ -151,7 +152,12 @@ select = [
   "DTZ",
   # isort
   "I",
+  # Product-owned comparison values use enums or named constants.
+  "PLR2004",
 ]
+
+[tool.ruff.lint.pylint]
+allow-magic-value-types = ["int", "float", "bytes"]
 
 [tool.ruff.format]
 # Like Black, use double quotes for strings.

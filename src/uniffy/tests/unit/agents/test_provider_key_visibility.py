@@ -139,6 +139,4 @@ def test_long_credentials_keep_the_provider_prefix(credential: str) -> None:
 
 
 def test_hint_ignores_surrounding_whitespace() -> None:
-    assert build_key_hint("  sk-ant-api03-0123456x  ") == build_key_hint(
-        "sk-ant-api03-0123456x"
-    )
+    assert build_key_hint("  sk-ant-api03-0123456x  ") == build_key_hint("sk-ant-api03-0123456x")

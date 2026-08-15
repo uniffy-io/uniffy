@@ -176,9 +176,7 @@ class ContentMembersOperations:
         cheaply.
         """
         if subject_type == SubjectType.USER and role != ContentRole.BLOCKED:
-            await invalidate_perm_role(
-                organization_id, subject_id, content_type, content_id
-            )
+            await invalidate_perm_role(organization_id, subject_id, content_type, content_id)
             await invalidate_visible_sets_for_user(organization_id, subject_id)
         else:
             await invalidate_perm_content(content_type, content_id)
@@ -246,7 +244,9 @@ class ContentMembersOperations:
             )
 
         effective_mode = await self._resolve_effective_mode(
-            organization_id, content_type, content.access_mode,
+            organization_id,
+            content_type,
+            content.access_mode,
         )
         if effective_mode == AccessMode.OWNER_ONLY:
             raise ValidationError(
@@ -584,7 +584,9 @@ class ContentMembersOperations:
         previous_access_mode = content.access_mode
         previous_baseline_role = content.baseline_role
         previous_effective_mode = await self._resolve_effective_mode(
-            organization_id, content_type, previous_access_mode,
+            organization_id,
+            content_type,
+            previous_access_mode,
         )
 
         content.access_mode = new_access_mode
@@ -596,7 +598,9 @@ class ContentMembersOperations:
             content.baseline_role = None
 
         new_effective_mode = await self._resolve_effective_mode(
-            organization_id, content_type, content.access_mode,
+            organization_id,
+            content_type,
+            content.access_mode,
         )
 
         if previous_access_mode != new_access_mode:
@@ -703,9 +707,7 @@ class ContentMembersOperations:
 
         attachments_ops = AttachmentOperations(self.session)
         if new_effective_mode == AccessMode.OPEN_TO_ORG:
-            org_folder = await attachments_ops.get_or_create_org_attachments_folder(
-                organization_id
-            )
+            org_folder = await attachments_ops.get_or_create_org_attachments_folder(organization_id)
             target_folder_id = org_folder.id
             target_mode = AccessMode.OPEN_TO_ORG
             target_baseline = new_effective_baseline or ContentRole.EDITOR
@@ -744,7 +746,8 @@ class ContentMembersOperations:
                         file_row.baseline_role = target_baseline
                 else:
                     user_folder = await attachments_ops.get_or_create_attachments_folder(
-                        att.attached_by_user_id or owner_id, organization_id,
+                        att.attached_by_user_id or owner_id,
+                        organization_id,
                     )
                     if file_row.folder_id != user_folder.id:
                         file_row.folder_id = user_folder.id
@@ -831,19 +834,13 @@ class ContentMembersOperations:
 
         transfer_hook = _ownership_transfer_hooks.get(content_type)
         if transfer_hook is not None:
-            await transfer_hook(
-                self.session, organization_id, content_id, new_owner_user_id
-            )
+            await transfer_hook(self.session, organization_id, content_id, new_owner_user_id)
 
         await self.session.commit()
         await self.session.refresh(content)
 
-        await invalidate_perm_role(
-            organization_id, previous_owner_id, content_type, content_id
-        )
-        await invalidate_perm_role(
-            organization_id, new_owner_user_id, content_type, content_id
-        )
+        await invalidate_perm_role(organization_id, previous_owner_id, content_type, content_id)
+        await invalidate_perm_role(organization_id, new_owner_user_id, content_type, content_id)
         await invalidate_visible_sets_for_user(organization_id, previous_owner_id)
         await invalidate_visible_sets_for_user(organization_id, new_owner_user_id)
 
@@ -1072,9 +1069,7 @@ class ContentMembersOperations:
                 )
             )
         except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to emit PERMISSION_GRANTED notification"
-            )
+            logger.opt(exception=True).warning("Failed to emit PERMISSION_GRANTED notification")
 
     async def _emit_revoked_notification(
         self,
@@ -1101,9 +1096,7 @@ class ContentMembersOperations:
                 )
             )
         except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to emit PERMISSION_REVOKED notification"
-            )
+            logger.opt(exception=True).warning("Failed to emit PERMISSION_REVOKED notification")
 
     async def _publish_access_change(
         self,
@@ -1168,9 +1161,7 @@ class ContentMembersOperations:
                 OrganizationMember.user_id == actor_user_id,
                 OrganizationMember.organization_id == organization_id,
                 OrganizationMember.is_active == True,  # noqa: E712
-                OrganizationMember.role.in_(
-                    [OrganizationRole.OWNER, OrganizationRole.ADMIN]
-                ),
+                OrganizationMember.role.in_([OrganizationRole.OWNER, OrganizationRole.ADMIN]),
             )
         )
         if admin.scalar_one_or_none() is not None:
@@ -1250,9 +1241,7 @@ class ContentMembersOperations:
                 blocked_group_ids=blocked_groups,
             )
         except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to sync search sharing metadata"
-            )
+            logger.opt(exception=True).warning("Failed to sync search sharing metadata")
 
     async def _sync_search_access_policy(
         self,
@@ -1267,21 +1256,22 @@ class ContentMembersOperations:
         """Index must carry the effective values since the Meili filter matches literals."""
         try:
             default_mode, default_baseline = await resolve_content_defaults(
-                self.session, organization_id, content_type,
+                self.session,
+                organization_id,
+                content_type,
             )
             effective_mode, effective_baseline = resolve_effective_policy(
-                access_mode, baseline_role, default_mode, default_baseline,
+                access_mode,
+                baseline_role,
+                default_mode,
+                default_baseline,
             )
             await self.search_indexer.update_access_policy(
                 urn=build_content_urn(content_type, content_id),
                 organization_id=organization_id,
                 access_mode=effective_mode.value,
-                baseline_role=(
-                    effective_baseline.value if effective_baseline is not None else None
-                ),
+                baseline_role=(effective_baseline.value if effective_baseline is not None else None),
                 owner_id=owner_id,
             )
         except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to sync search access policy"
-            )
+            logger.opt(exception=True).warning("Failed to sync search access policy")

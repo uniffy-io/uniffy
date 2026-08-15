@@ -1,9 +1,16 @@
 """Base delivery adapter for notification channels."""
 
 from abc import ABC, abstractmethod
+from enum import StrEnum
 from uuid import UUID
 
 from uniffy.core.events.types import NotificationEvent
+
+
+class NotificationChannel(StrEnum):
+    IN_APP = "in_app"
+    BROWSER = "browser"
+    EMAIL = "email"
 
 
 class DeliveryAdapter(ABC):
@@ -11,7 +18,7 @@ class DeliveryAdapter(ABC):
 
     @property
     @abstractmethod
-    def channel_name(self) -> str:
+    def channel_name(self) -> NotificationChannel:
         """Channel key matching ``DEFAULT_NOTIFICATION_CHANNELS`` / ``channel_overrides``."""
 
     @abstractmethod

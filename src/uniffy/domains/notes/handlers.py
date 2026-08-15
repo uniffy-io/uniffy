@@ -42,7 +42,7 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.models.notes.note import Note
-from uniffy.core.types import ContentRole, ContentType, NodeType
+from uniffy.core.types import ContentRole, ContentType, NodeType, ParentSelection, SortOrder
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.notes.converters import (
@@ -84,10 +84,14 @@ async def _resolve_effective_policy(
 ):
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
-        organization_id, ContentType.NOTE,
+        organization_id,
+        ContentType.NOTE,
     )
     return resolve_effective_policy(
-        note.access_mode, note.baseline_role, default_mode, default_baseline,
+        note.access_mode,
+        note.baseline_role,
+        default_mode,
+        default_baseline,
     )
 
 
@@ -108,7 +112,7 @@ def _parse_canvas_content(content: str | None) -> dict | None:
         return None
     try:
         parsed = json.loads(content)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
     return parsed if isinstance(parsed, dict) else None
 
@@ -188,7 +192,9 @@ class NotesHandlers:
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, organization_id, note,
+                    session,
+                    organization_id,
+                    note,
                 )
                 return CreateNoteResponse(
                     note=note_to_proto(
@@ -224,7 +230,9 @@ class NotesHandlers:
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, organization_id, note,
+                    session,
+                    organization_id,
+                    note,
                 )
                 return GetNoteResponse(
                     note=note_to_proto(
@@ -293,7 +301,9 @@ class NotesHandlers:
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, organization_id, note,
+                    session,
+                    organization_id,
+                    note,
                 )
                 return UpdateNoteResponse(
                     note=note_to_proto(
@@ -353,7 +363,9 @@ class NotesHandlers:
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, organization_id, note,
+                    session,
+                    organization_id,
+                    note,
                 )
                 return RestoreNoteResponse(
                     note=note_to_proto(
@@ -381,10 +393,12 @@ class NotesHandlers:
             _parse_uuid(request.group_id, "group_id") if request.HasField("group_id") else None
         )
 
-        parent_id: UUID | str | None = None
+        parent_id: UUID | ParentSelection | None = None
         if request.HasField("parent_id"):
             parent_id = (
-                "root" if request.parent_id == "" else _parse_uuid(request.parent_id, "parent_id")
+                ParentSelection.ROOT
+                if request.parent_id == ""
+                else _parse_uuid(request.parent_id, "parent_id")
             )
 
         access_mode_filter = (
@@ -410,7 +424,7 @@ class NotesHandlers:
                     page=page,
                     page_size=page_size,
                     sort_by=request.sort_by or "updated_at",
-                    sort_order=request.sort_order or "desc",
+                    sort_order=SortOrder(request.sort_order or SortOrder.DESCENDING),
                 )
 
                 sharing = await ops.get_notes_sharing_info(notes, user_id)
@@ -423,7 +437,8 @@ class NotesHandlers:
                 # Share one checker so org-role / domain-admin caches hit once per page.
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.NOTE,
+                    organization_id,
+                    ContentType.NOTE,
                 )
                 proto_notes = []
                 for n in notes:
@@ -432,7 +447,10 @@ class NotesHandlers:
                         session, user_id, organization_id, n, checker=checker
                     )
                     eff_mode, eff_baseline = resolve_effective_policy(
-                        n.access_mode, n.baseline_role, default_mode, default_baseline,
+                        n.access_mode,
+                        n.baseline_role,
+                        default_mode,
+                        default_baseline,
                     )
                     proto_notes.append(
                         note_to_proto(
@@ -539,7 +557,9 @@ class NotesHandlers:
                 )
                 user_role = await _resolve_user_role(session, user_id, organization_id, note)
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, organization_id, note,
+                    session,
+                    organization_id,
+                    note,
                 )
                 return MoveNoteResponse(
                     note=note_to_proto(

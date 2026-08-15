@@ -91,10 +91,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Drop the invalidation index and columns."""
     with op.get_context().autocommit_block():
-        op.execute(
-            "DROP INDEX CONCURRENTLY IF EXISTS "
-            "ix_agents_messages_session_not_invalidated"
-        )
+        op.execute("DROP INDEX CONCURRENTLY IF EXISTS ix_agents_messages_session_not_invalidated")
     op.drop_column("agents_messages", "previous_content")
     op.drop_column("agents_messages", "edited_at")
     op.drop_column("agents_messages", "invalidated_by")

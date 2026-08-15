@@ -177,19 +177,13 @@ def test_initial_transcode_status_only_when_filename_is_mp4() -> None:
 
     ops = FileOperations.__new__(FileOperations)
 
-    pending = ops._get_initial_transcode_status(
-        "video/webm", "Screen Recording 2026-05-09.mp4"
-    )
+    pending = ops._get_initial_transcode_status("video/webm", "Screen Recording 2026-05-09.mp4")
     assert pending == TranscodeStatus.PENDING
 
-    skipped_extension = ops._get_initial_transcode_status(
-        "video/webm", "lecture.webm"
-    )
+    skipped_extension = ops._get_initial_transcode_status("video/webm", "lecture.webm")
     assert skipped_extension == TranscodeStatus.NOT_NEEDED
 
-    skipped_mime = ops._get_initial_transcode_status(
-        "video/mp4", "Screen Recording 2026-05-09.mp4"
-    )
+    skipped_mime = ops._get_initial_transcode_status("video/mp4", "Screen Recording 2026-05-09.mp4")
     assert skipped_mime == TranscodeStatus.NOT_NEEDED
 
 
@@ -259,9 +253,7 @@ async def test_worker_skips_terminal_states(monkeypatch, lock_acquired, status) 
     org_id = generate_id()
     file = _File(status, org_id)
 
-    monkeypatch.setattr(
-        transcode_mod, "open_session", lambda: _CtxMgr(file)
-    )
+    monkeypatch.setattr(transcode_mod, "open_session", lambda: _CtxMgr(file))
 
     result = await transcode_mod.transcode_video_to_mp4(
         ctx={},

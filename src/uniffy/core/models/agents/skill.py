@@ -1,6 +1,7 @@
 """Agent skill model for agent instruction sets."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, Text, Uuid, text
@@ -8,6 +9,21 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class AgentSkillSource(StrEnum):
+    BUNDLED = "bundled"
+    ORGANIZATION = "organization"
+
+
+class AgentSkillStatus(StrEnum):
+    ACTIVE = "active"
+    RETIRED = "retired"
+
+
+class AgentSkillOrigin(StrEnum):
+    USER = "user"
+    AGENT_PROPOSED = "agent_proposed"
 
 
 class AgentSkill(SQLModel, table=True):
@@ -51,7 +67,7 @@ class AgentSkill(SQLModel, table=True):
         default="",
         sa_column=Column(Text(), nullable=False, server_default=text("''")),
     )
-    source: str = Field(
+    source: AgentSkillSource = Field(
         sa_column=Column(String(20), nullable=False),
     )
     always_active: bool = Field(default=False, nullable=False)
@@ -67,12 +83,12 @@ class AgentSkill(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
     )
-    status: str = Field(
-        default="active",
+    status: AgentSkillStatus = Field(
+        default=AgentSkillStatus.ACTIVE,
         sa_column=Column(String(16), nullable=False, server_default=text("'active'")),
     )
-    origin: str = Field(
-        default="user",
+    origin: AgentSkillOrigin = Field(
+        default=AgentSkillOrigin.USER,
         sa_column=Column(String(20), nullable=False, server_default=text("'user'")),
     )
     created_by_agent_id: UUID | None = Field(

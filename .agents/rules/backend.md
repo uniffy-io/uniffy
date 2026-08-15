@@ -42,6 +42,8 @@ Adding a new domain:
 - **Content we ship is a file, not a literal.** Prompts, templates, catalogs and the like go in `src/uniffy/data/` (see "Shipped content"), never in a triple-quoted string or a hand-written python catalog.
 - **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.
 - **Type hints** on all functions; docstring discipline per `comment-discipline.md`.
+- **Internal and domain vocabularies use enums or typed constants colocated with their owner.** States, actions, event kinds, selectors, and job or queue names must not be passed or compared as raw strings.
+- **Raw string comparisons are boundary-only:** external protocol values, parser tokens, MIME/schema metadata, and CLI or environment inputs. Mark an intentional comparison with a narrow `# noqa: PLR2004` and a short reason; never suppress the whole file.
 
 ## Migrations
 

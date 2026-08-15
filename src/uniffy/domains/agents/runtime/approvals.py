@@ -25,6 +25,7 @@ from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.models.agents.approval_audit import AgentApprovalStatus
 from uniffy.core.valkey.cache import cache_delete, cache_get, cache_set
 from uniffy.observability.metrics import (
     APPROVAL_STORE_PENDING_SIZE,
@@ -112,7 +113,7 @@ class ApprovalStore:
         APPROVAL_STORE_PENDING_SIZE.set(len(self._pending))
 
         payload: dict[str, Any] = {
-            "status": "pending",
+            "status": AgentApprovalStatus.PENDING,
             "requested_at": datetime.now(UTC).isoformat(),
         }
         if actor_user_id is not None:
@@ -195,9 +196,9 @@ class ApprovalStore:
             return None
         if isinstance(valkey_entry, dict):
             status = valkey_entry.get("status")
-            if status == "approved":
+            if status == AgentApprovalStatus.APPROVED:
                 return True
-            if status == "denied":
+            if status == AgentApprovalStatus.DENIED:
                 return False
         return None
 
@@ -230,7 +231,7 @@ class ApprovalStore:
             row: dict[str, Any] = {}
             if isinstance(existing, dict):
                 row.update(existing)
-            row["status"] = "approved" if approved else "denied"
+            row["status"] = AgentApprovalStatus.APPROVED if approved else AgentApprovalStatus.DENIED
             row["decided_at"] = datetime.now(UTC).isoformat()
             if decided_by is not None:
                 row["decided_by"] = str(decided_by)
@@ -290,7 +291,7 @@ class ApprovalStore:
                 entry = await cache_get(key)
                 if not isinstance(entry, dict):
                     continue
-                if entry.get("status") != "pending":
+                if entry.get("status") != AgentApprovalStatus.PENDING:
                     continue
                 request_id = key[len(prefix) :] if key.startswith(prefix) else ""
                 row = dict(entry)

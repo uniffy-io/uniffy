@@ -43,7 +43,7 @@ def encode_segment(value: str | int) -> str:
         raise ValidationError("path", "Path segment cannot be empty")
     if value.startswith("/"):
         raise ValidationError("path", "Path segment cannot start with '/'")
-    if ".." in value:
+    if ".." in value:  # noqa: PLR2004
         raise ValidationError("path", "Path segment cannot contain '..'")
     if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
         raise ValidationError("path", "Path segment contains control characters")
@@ -134,15 +134,15 @@ class IntegrationHttpClient:
         start = time.perf_counter()
 
         try:
-            if method == "GET":
+            if method == "GET":  # noqa: PLR2004
                 call = self._http.get(url, self._headers, params=params)
-            elif method == "POST":
+            elif method == "POST":  # noqa: PLR2004
                 call = self._http.post(url, self._headers, content=json_body, params=params)
-            elif method == "PUT":
+            elif method == "PUT":  # noqa: PLR2004
                 call = self._http.put(url, self._headers, content=json_body, params=params)
-            elif method == "PATCH":
+            elif method == "PATCH":  # noqa: PLR2004
                 call = self._http.patch(url, self._headers, content=json_body, params=params)
-            elif method == "DELETE":
+            elif method == "DELETE":  # noqa: PLR2004
                 call = self._http.delete(url, self._headers, params=params)
             else:
                 raise ValidationError("method", f"Unsupported HTTP method: {method}")
@@ -160,9 +160,7 @@ class IntegrationHttpClient:
 
         return self._handle_response(method, path, response, start)
 
-    def _handle_response(
-        self, method: str, path: str, response: FullResponse, start: float
-    ) -> Any:
+    def _handle_response(self, method: str, path: str, response: FullResponse, start: float) -> Any:
         status = response.status
 
         if status >= 500:
@@ -176,9 +174,7 @@ class IntegrationHttpClient:
             self._breaker.record_success()
             self._observe("4xx", start)
             if status == 401:
-                raise IntegrationAuthError(
-                    f"{self.provider_id} rejected the credential (HTTP 401)"
-                )
+                raise IntegrationAuthError(f"{self.provider_id} rejected the credential (HTTP 401)")
             if status in (403, 429):
                 retry_after = self._rate_limit_retry_after(response, status)
                 if retry_after is not None:
@@ -226,7 +222,7 @@ class IntegrationHttpClient:
             return int(retry_header)
 
         remaining = _first_header(response, "x-ratelimit-remaining")
-        if remaining == "0":
+        if remaining == "0":  # noqa: PLR2004
             reset = _first_header(response, "x-ratelimit-reset")
             if reset and reset.isdigit():
                 return max(0, int(int(reset) - time.time()))

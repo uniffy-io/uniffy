@@ -70,9 +70,7 @@ def _patch_security(settings_by_org):
 def _patch_policy(required_for_system_admins):
     instance = MagicMock()
     instance.get = AsyncMock(
-        return_value=MagicMock(
-            required_for_system_admins=required_for_system_admins
-        )
+        return_value=MagicMock(required_for_system_admins=required_for_system_admins)
     )
     return patch.object(enf, "MfaPolicyOperations", return_value=instance)
 
@@ -86,9 +84,12 @@ class TestEnforcementScansAllMemberships:
         org_x = generate_id()
         session = _membership_rows([(org_x, OrganizationRole.ADMIN)])
 
-        with _patch_policy(False), _patch_security({
-            org_x: _Settings(mfa_required_for_admins=True),
-        }):
+        with (
+            _patch_policy(False),
+            _patch_security({
+                org_x: _Settings(mfa_required_for_admins=True),
+            }),
+        ):
             result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.HARD_REQUIRED
@@ -98,9 +99,12 @@ class TestEnforcementScansAllMemberships:
         org_y = generate_id()
         session = _membership_rows([(org_y, OrganizationRole.MEMBER)])
 
-        with _patch_policy(False), _patch_security({
-            org_y: _Settings(mfa_required_for_members=True),
-        }):
+        with (
+            _patch_policy(False),
+            _patch_security({
+                org_y: _Settings(mfa_required_for_members=True),
+            }),
+        ):
             result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.HARD_REQUIRED
@@ -111,9 +115,12 @@ class TestEnforcementScansAllMemberships:
         org_y = generate_id()
         session = _membership_rows([(org_y, OrganizationRole.MEMBER)])
 
-        with _patch_policy(False), _patch_security({
-            org_y: _Settings(mfa_required_for_admins=True),
-        }):
+        with (
+            _patch_policy(False),
+            _patch_security({
+                org_y: _Settings(mfa_required_for_admins=True),
+            }),
+        ):
             result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.NOT_REQUIRED
@@ -128,10 +135,13 @@ class TestEnforcementScansAllMemberships:
             (org_b, OrganizationRole.OWNER),
         ])
 
-        with _patch_policy(False), _patch_security({
-            org_a: _Settings(),  # no requirement
-            org_b: _Settings(mfa_required_for_admins=True),
-        }):
+        with (
+            _patch_policy(False),
+            _patch_security({
+                org_a: _Settings(),  # no requirement
+                org_b: _Settings(mfa_required_for_admins=True),
+            }),
+        ):
             result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.HARD_REQUIRED

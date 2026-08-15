@@ -49,7 +49,7 @@ def parse_room_call_id(room_name: str) -> UUID | None:
     if idx < 0:
         return None
     try:
-        return UUID(room_name[idx + len(marker):])
+        return UUID(room_name[idx + len(marker) :])
     except ValueError:
         return None
 

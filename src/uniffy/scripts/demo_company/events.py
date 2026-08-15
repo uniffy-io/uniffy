@@ -10,7 +10,6 @@ from sqlalchemy import select
 
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.types import RecurrencePattern
 from uniffy.domains.calendar import queries as calendar_queries
 from uniffy.domains.calendar.operations import CalendarEventOperations
 from uniffy.scripts.demo_company.context import (
@@ -80,10 +79,8 @@ async def seed_events(
             is_all_day=spec.is_all_day,
             timezone=ctx.timezone,
             location=spec.location,
-            attendee_ids=await resolve_member_ids(
-                ctx.session, ctx.organization_id, spec.attendees
-            ),
-            recurrence_pattern=RecurrencePattern(spec.recurrence_pattern),
+            attendee_ids=await resolve_member_ids(ctx.session, ctx.organization_id, spec.attendees),
+            recurrence_pattern=spec.recurrence_pattern,
             recurrence_config=spec.recurrence_config,
             tag_ids=tag_ids_for(tag_ids, spec.tags),
             room_id=room_id,
@@ -143,12 +140,16 @@ async def _room_ids(ctx: DemoContext) -> dict[str, UUID]:
 
 async def _find_event_id(ctx: DemoContext, title: str, start: datetime) -> UUID | None:
     return (
-        await ctx.session.execute(
-            select(CalendarEvent.id).where(
-                CalendarEvent.organization_id == ctx.organization_id,
-                CalendarEvent.title == title,
-                CalendarEvent.start_time == start,
-                CalendarEvent.is_deleted == False,  # noqa: E712
+        (
+            await ctx.session.execute(
+                select(CalendarEvent.id).where(
+                    CalendarEvent.organization_id == ctx.organization_id,
+                    CalendarEvent.title == title,
+                    CalendarEvent.start_time == start,
+                    CalendarEvent.is_deleted == False,  # noqa: E712
+                )
             )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )

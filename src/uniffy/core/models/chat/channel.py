@@ -37,7 +37,6 @@ class ChatChannel(SQLModel, table=True):
             index=True,
         ),
     )
-    is_encrypted: bool = Field(default=False, nullable=False)
     is_archived: bool = Field(default=False, nullable=False)
     is_default: bool = Field(default=False, nullable=False)
     is_deleted: bool = Field(default=False, nullable=False)

@@ -148,7 +148,7 @@ class ChatCategoryOperations:
             )
 
         await self.session.commit()
-        return await self.list_categories(organization_id)
+        return await self.list_categories(user_id, organization_id)
 
     async def move_channel_to_category(
         self,
@@ -158,6 +158,27 @@ class ChatCategoryOperations:
         category_id: UUID | None,
     ) -> None:
         """Move a channel to a category, or uncategorized when category_id is None."""
+        await self._require_org_admin(user_id, organization_id)
+        if category_id is not None:
+            category = await self.session.execute(
+                select(ChatChannelCategory.id).where(
+                    ChatChannelCategory.id == category_id,
+                    ChatChannelCategory.organization_id == organization_id,
+                )
+            )
+            if category.scalar_one_or_none() is None:
+                raise NotFoundError("category", category_id)
+
+        channel = await self.session.execute(
+            select(ChatChannel.id).where(
+                ChatChannel.id == channel_id,
+                ChatChannel.organization_id == organization_id,
+                ChatChannel.is_deleted.is_(False),
+            )
+        )
+        if channel.scalar_one_or_none() is None:
+            raise NotFoundError("channel", channel_id)
+
         await self.session.execute(
             update(ChatChannel)
             .where(
@@ -172,9 +193,7 @@ class ChatCategoryOperations:
         await self._refresh_channels_by_id([channel_id])
 
     async def _require_org_member(self, user_id: UUID, organization_id: UUID) -> None:
-        from uniffy.domains.organizations.operations import OrganizationOperations
-
-        await OrganizationOperations(self.session).require_org_member(user_id, organization_id)
+        await self.access.require_org_member(user_id, organization_id)
 
     async def _require_org_admin(self, user_id: UUID, organization_id: UUID) -> None:
         if await self.access.is_org_admin(user_id, organization_id):

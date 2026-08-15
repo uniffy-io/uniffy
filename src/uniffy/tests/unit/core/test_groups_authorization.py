@@ -67,22 +67,16 @@ def _session() -> MagicMock:
 def _as(role: OrganizationRole | None, is_active: bool = True):
     """Patch membership resolution so the gates see the given org role."""
     row = None if role is None else _membership(role, is_active)
-    return patch.object(
-        OrganizationOperations, "get_membership", AsyncMock(return_value=row)
-    )
+    return patch.object(OrganizationOperations, "get_membership", AsyncMock(return_value=row))
 
 
 _MUTATIONS = [
     pytest.param(
-        lambda ops, g: ops.create(
-            organization_id=ORG, name="X", created_by_user_id=ACTOR
-        ),
+        lambda ops, g: ops.create(organization_id=ORG, name="X", created_by_user_id=ACTOR),
         id="create",
     ),
     pytest.param(
-        lambda ops, g: ops.update(
-            group_id=g.id, organization_id=ORG, actor_user_id=ACTOR, name="X"
-        ),
+        lambda ops, g: ops.update(group_id=g.id, organization_id=ORG, actor_user_id=ACTOR, name="X"),
         id="update",
     ),
     pytest.param(
@@ -123,9 +117,7 @@ _READS = [
         id="list_in_organization",
     ),
     pytest.param(
-        lambda ops, g: ops.list_members(
-            group_id=g.id, organization_id=ORG, actor_user_id=ACTOR
-        ),
+        lambda ops, g: ops.list_members(group_id=g.id, organization_id=ORG, actor_user_id=ACTOR),
         id="list_members",
     ),
     pytest.param(
@@ -145,9 +137,11 @@ _READS = [
 async def test_mutations_require_org_admin(call) -> None:
     ops = GroupOperations(_session())
     group = _group()
-    with _as(OrganizationRole.MEMBER), patch.object(
-        GroupOperations, "_fetch", AsyncMock(return_value=group)
-    ), pytest.raises(PermissionDeniedError):
+    with (
+        _as(OrganizationRole.MEMBER),
+        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        pytest.raises(PermissionDeniedError),
+    ):
         await call(ops, group)
 
 
@@ -155,9 +149,11 @@ async def test_mutations_require_org_admin(call) -> None:
 async def test_mutations_reject_non_members(call) -> None:
     ops = GroupOperations(_session())
     group = _group()
-    with _as(None), patch.object(
-        GroupOperations, "_fetch", AsyncMock(return_value=group)
-    ), pytest.raises(PermissionDeniedError):
+    with (
+        _as(None),
+        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        pytest.raises(PermissionDeniedError),
+    ):
         await call(ops, group)
 
 
@@ -165,9 +161,11 @@ async def test_mutations_reject_non_members(call) -> None:
 async def test_mutations_reject_deactivated_admins(call) -> None:
     ops = GroupOperations(_session())
     group = _group()
-    with _as(OrganizationRole.ADMIN, is_active=False), patch.object(
-        GroupOperations, "_fetch", AsyncMock(return_value=group)
-    ), pytest.raises(PermissionDeniedError):
+    with (
+        _as(OrganizationRole.ADMIN, is_active=False),
+        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        pytest.raises(PermissionDeniedError),
+    ):
         await call(ops, group)
 
 
@@ -175,9 +173,11 @@ async def test_mutations_reject_deactivated_admins(call) -> None:
 async def test_reads_reject_non_members(call) -> None:
     ops = GroupOperations(_session())
     group = _group()
-    with _as(None), patch.object(
-        GroupOperations, "_fetch", AsyncMock(return_value=group)
-    ), pytest.raises(PermissionDeniedError):
+    with (
+        _as(None),
+        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        pytest.raises(PermissionDeniedError),
+    ):
         await call(ops, group)
 
 
@@ -185,9 +185,11 @@ async def test_reads_reject_non_members(call) -> None:
 async def test_reads_reject_deactivated_members(call) -> None:
     ops = GroupOperations(_session())
     group = _group()
-    with _as(OrganizationRole.MEMBER, is_active=False), patch.object(
-        GroupOperations, "_fetch", AsyncMock(return_value=group)
-    ), pytest.raises(PermissionDeniedError):
+    with (
+        _as(OrganizationRole.MEMBER, is_active=False),
+        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        pytest.raises(PermissionDeniedError),
+    ):
         await call(ops, group)
 
 
@@ -215,11 +217,13 @@ async def test_add_member_rejects_target_outside_the_org() -> None:
     async def membership_for(user_id, org_id):
         return _membership(OrganizationRole.ADMIN) if user_id == ACTOR else None
 
-    with patch.object(
-        OrganizationOperations, "get_membership", AsyncMock(side_effect=membership_for)
-    ), patch.object(
-        GroupOperations, "_fetch", AsyncMock(return_value=group)
-    ), pytest.raises(PermissionDeniedError):
+    with (
+        patch.object(
+            OrganizationOperations, "get_membership", AsyncMock(side_effect=membership_for)
+        ),
+        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        pytest.raises(PermissionDeniedError),
+    ):
         await ops.add_member(
             group_id=group.id,
             organization_id=ORG,
@@ -237,4 +241,3 @@ async def test_fetch_scopes_by_organization() -> None:
 
     with _as(OrganizationRole.ADMIN), pytest.raises(NotFoundError):
         await ops.get_by_id(generate_id(), ORG, ACTOR)
-

@@ -59,15 +59,11 @@ class TestComputeVisibleTagIds:
         org_id = generate_id()
         user_id = generate_id()
 
-        with patch(
-            "uniffy.core.auth.permissions.visible_sets.PermissionChecker"
-        ) as checker_cls:
+        with patch("uniffy.core.auth.permissions.visible_sets.PermissionChecker") as checker_cls:
             checker = checker_cls.return_value
             checker.is_org_admin = AsyncMock(return_value=True)
             checker.is_domain_admin = AsyncMock(return_value=False)
-            result = await compute_visible_tag_ids(
-                session, user_id=user_id, organization_id=org_id
-            )
+            result = await compute_visible_tag_ids(session, user_id=user_id, organization_id=org_id)
 
         assert result == set()
         session.execute.assert_awaited()
@@ -86,9 +82,7 @@ class TestGetVisibleTagIdsCacheWiring:
             "uniffy.core.auth.permissions.visible_sets.cache_get_or_set_locked",
             new=AsyncMock(side_effect=fake_cache),
         ):
-            result = await get_visible_tag_ids(
-                session, user_id=user_id, organization_id=org_id
-            )
+            result = await get_visible_tag_ids(session, user_id=user_id, organization_id=org_id)
 
         assert result is None
 
@@ -105,9 +99,7 @@ class TestGetVisibleTagIdsCacheWiring:
             "uniffy.core.auth.permissions.visible_sets.cache_get_or_set_locked",
             new=AsyncMock(side_effect=fake_cache),
         ):
-            result = await get_visible_tag_ids(
-                session, user_id=user_id, organization_id=org_id
-            )
+            result = await get_visible_tag_ids(session, user_id=user_id, organization_id=org_id)
 
         assert result == {tag_id}
 

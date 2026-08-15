@@ -8,11 +8,11 @@ row by its `created_at`. Mocks cannot observe either.
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import delete, text, update
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.exc import DBAPIError
 
 from uniffy.core.audit.partitions import ensure_audit_partitions, partition_name
-from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -47,15 +47,31 @@ async def test_row_lands_in_the_partition_for_its_month(session, env) -> None:
     )
 
 
+async def test_resource_type_round_trips_as_model_enum(session, env) -> None:
+    event = AuditEvent(
+        organization_id=env.org_id,
+        actor_user_id=env.admin_id,
+        action="test.resource_type_roundtrip",
+        resource_type=AuditResourceType.ORGANIZATION,
+    )
+    session.add(event)
+    await session.commit()
+    session.expunge(event)
+
+    loaded = (
+        await session.execute(select(AuditEvent).where(AuditEvent.id == event.id))
+    ).scalar_one()
+
+    assert loaded.resource_type is AuditResourceType.ORGANIZATION
+
+
 async def test_update_is_rejected(session, env) -> None:
     event = await _insert(session, env, created_at=datetime.now(UTC))
 
     with pytest.raises(DBAPIError):
         async with session.begin_nested():
             await session.execute(
-                update(AuditEvent)
-                .where(AuditEvent.id == event.id)
-                .values(action="tampered")
+                update(AuditEvent).where(AuditEvent.id == event.id).values(action="tampered")
             )
 
     await session.refresh(event)
@@ -77,9 +93,7 @@ async def test_delete_against_the_partition_directly_is_rejected(session, env) -
 
     with pytest.raises(DBAPIError):
         async with session.begin_nested():
-            await session.execute(
-                text(f"DELETE FROM {child} WHERE id = :id"), {"id": event.id}
-            )
+            await session.execute(text(f"DELETE FROM {child} WHERE id = :id"), {"id": event.id})
 
 
 async def test_maintenance_opt_out_allows_a_delete(session, env) -> None:

@@ -93,9 +93,7 @@ async def test_child_stats_ignore_rows_from_other_orgs(session, env, second_env)
     await session.commit()
 
     try:
-        stats = await FolderOperations(session)._child_stats(
-            folder, AccessMode.OPEN_TO_ORG
-        )
+        stats = await FolderOperations(session)._child_stats(folder, AccessMode.OPEN_TO_ORG)
         assert stats == {"file_count": "0", "folder_count": "0", "total_size": "0"}
     finally:
         await _cleanup(session, [env.org_id, second_env.org_id])

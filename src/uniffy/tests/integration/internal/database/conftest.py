@@ -67,16 +67,10 @@ async def seed_env(db_session: AsyncSession) -> NS:
     org = Organization(name=f"itdb {suffix}", slug=f"itdb-{suffix}")
     db_session.add_all([admin, member, org])
     await db_session.flush()
-    db_session.add_all(
-        [
-            OrganizationMember(
-                user_id=admin.id, organization_id=org.id, role=OrganizationRole.ADMIN
-            ),
-            OrganizationMember(
-                user_id=member.id, organization_id=org.id, role=OrganizationRole.MEMBER
-            ),
-        ]
-    )
+    db_session.add_all([
+        OrganizationMember(user_id=admin.id, organization_id=org.id, role=OrganizationRole.ADMIN),
+        OrganizationMember(user_id=member.id, organization_id=org.id, role=OrganizationRole.MEMBER),
+    ])
     await OrgCipher(db_session).provision(org.id, admin.id)
     await db_session.commit()
     return NS(org_id=org.id, admin_id=admin.id, member_id=member.id)
@@ -86,9 +80,7 @@ async def teardown_env(db_session: AsyncSession, env: NS) -> None:
     await db_session.rollback()
     await db_session.execute(delete(Agent).where(Agent.organization_id == env.org_id))
     await db_session.execute(
-        delete(IntegrationConnection).where(
-            IntegrationConnection.organization_id == env.org_id
-        )
+        delete(IntegrationConnection).where(IntegrationConnection.organization_id == env.org_id)
     )
     # audit_events is append-only; teardown is maintenance, so it opts out.
     await db_session.execute(text("SET LOCAL uniffy.audit_maintenance = 'on'"))

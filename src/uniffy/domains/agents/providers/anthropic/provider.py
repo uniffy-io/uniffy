@@ -2,12 +2,14 @@
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from enum import StrEnum
 from uuid import uuid4
 
 import anthropic
 from loguru import logger
 
 from uniffy.domains.agents.providers.base import (
+    CanonicalContentBlockType,
     CompletionResult,
     EventType,
     LLMProvider,
@@ -16,6 +18,7 @@ from uniffy.domains.agents.providers.base import (
     ToolCall,
 )
 from uniffy.domains.agents.providers.catalog import (
+    ReasoningControl,
     model_info_for,
     model_infos_for_provider,
 )
@@ -26,6 +29,11 @@ logger = logger.bind(component="agents.providers.anthropic.provider")
 # (catalog ``can_reason`` without ``reasoning_levels``).
 _THINKING_BUDGET_TOKENS = 4096
 _DEFAULT_MAX_TOKENS = 8192
+
+
+class AnthropicThinkingType(StrEnum):
+    ADAPTIVE = "adaptive"
+    ENABLED = "enabled"
 
 
 def _thinking_config(model: str, effort: str) -> dict | None:
@@ -39,14 +47,14 @@ def _thinking_config(model: str, effort: str) -> dict | None:
     not ask for thinking; models that always think (Fable tier) still
     run their native default.
     """
-    if effort == "off":
+    if effort == ReasoningControl.OFF:
         return None
     info = model_info_for("anthropic", model)
     if info is None or not info.supports_thinking:
         return None
     if info.reasoning_levels:
-        return {"type": "adaptive", "display": "summarized"}
-    return {"type": "enabled", "budget_tokens": _THINKING_BUDGET_TOKENS}
+        return {"type": AnthropicThinkingType.ADAPTIVE, "display": "summarized"}
+    return {"type": AnthropicThinkingType.ENABLED, "budget_tokens": _THINKING_BUDGET_TOKENS}
 
 
 @dataclass
@@ -179,7 +187,7 @@ class AnthropicProvider(LLMProvider):
         thinking = _thinking_config(model, effort)
         if thinking is not None:
             kwargs["thinking"] = thinking
-            if thinking["type"] == "adaptive":
+            if thinking["type"] == AnthropicThinkingType.ADAPTIVE:
                 kwargs["output_config"] = {"effort": effort}
             else:
                 # budget_tokens must stay below max_tokens; keep the
@@ -228,10 +236,10 @@ class AnthropicProvider(LLMProvider):
                         new_content.append(block)
                         continue
                     btype = block.get("type")
-                    if btype == "tool_result":
-                        block = {k: v for k, v in block.items() if k != "tool_name"}
+                    if btype == CanonicalContentBlockType.TOOL_RESULT:
+                        block = {k: v for k, v in block.items() if k != "tool_name"}  # noqa: PLR2004
                         new_content.append(block)
-                    elif btype == "image" and "data" in block:
+                    elif btype == CanonicalContentBlockType.IMAGE and "data" in block:  # noqa: PLR2004
                         new_content.append({
                             "type": "image",
                             "source": {
@@ -240,7 +248,7 @@ class AnthropicProvider(LLMProvider):
                                 "data": block["data"],
                             },
                         })
-                    elif btype == "document" and "data" in block:
+                    elif btype == CanonicalContentBlockType.DOCUMENT and "data" in block:  # noqa: PLR2004
                         new_content.append({
                             "type": "document",
                             "source": {
@@ -277,15 +285,15 @@ class AnthropicProvider(LLMProvider):
         thinking_blocks: list[dict] = []
 
         for block in response.content:
-            if block.type == "text":
+            if block.type == "text":  # noqa: PLR2004
                 content += block.text
-            elif block.type == "thinking":
+            elif block.type == "thinking":  # noqa: PLR2004
                 thinking_blocks.append({
                     "type": "thinking",
                     "thinking": block.thinking,
                     "signature": getattr(block, "signature", "") or "",
                 })
-            elif block.type == "tool_use":
+            elif block.type == "tool_use":  # noqa: PLR2004
                 tool_calls.append(
                     ToolCall(
                         id=block.id,
@@ -386,7 +394,7 @@ class AnthropicProvider(LLMProvider):
         if kind not in ("text", "thinking", "tool_use"):
             return None
         opened = _OpenBlock(kind=kind, block_id=uuid4().hex[:12])
-        if kind == "tool_use":
+        if kind == "tool_use":  # noqa: PLR2004
             opened.tool_call_id = content_block.id
             opened.tool_name = content_block.name
         return opened

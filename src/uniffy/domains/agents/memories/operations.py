@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.membership import is_active_member
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.memory import AgentMemory, MemoryScope, MemorySource
-from uniffy.core.models.agents.session import AgentSession
+from uniffy.core.models.agents.memory import AgentMemory, MemoryCategory, MemoryScope, MemorySource
+from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
 from uniffy.domains.agents.cache import invalidate_memory_index
 from uniffy.domains.agents.memories.sanitize import escape_like, strip_control_chars
 from uniffy.domains.agents.memories.scope import (
@@ -21,8 +21,6 @@ from uniffy.domains.agents.memories.scope import (
     scope_subject_columns,
 )
 from uniffy.domains.chat.access import ChatAccessChecker
-
-VALID_CATEGORIES: set[str] = {"preferences", "facts", "context", "instructions"}
 
 MAX_MEMORIES_PER_SCOPE = 300
 MAX_CONTENT_CHARS = 4000
@@ -52,14 +50,12 @@ def _validate_entry_fields(
     if not content:
         raise ValidationError("content", "Content is required")
     if len(content) > MAX_CONTENT_CHARS:
-        raise ValidationError(
-            "content", f"Content must be {MAX_CONTENT_CHARS} characters or fewer"
-        )
-    if category not in VALID_CATEGORIES:
-        valid = ", ".join(sorted(VALID_CATEGORIES))
-        raise ValidationError(
-            "category", f"Invalid category '{category}'. Must be one of: {valid}"
-        )
+        raise ValidationError("content", f"Content must be {MAX_CONTENT_CHARS} characters or fewer")
+    try:
+        MemoryCategory(category)
+    except ValueError:
+        valid = ", ".join(category.value for category in MemoryCategory)
+        raise ValidationError("category", f"Invalid category '{category}'. Must be one of: {valid}")
     if importance < 0.0 or importance > 1.0:
         raise ValidationError("importance", "Importance must be between 0.0 and 1.0")
     return key, description, content
@@ -85,9 +81,7 @@ class MemoryOperations:
             raise NotFoundError("Agent", str(agent_id))
         return agent
 
-    async def _get_session_row(
-        self, session_id: UUID, organization_id: UUID
-    ) -> AgentSession:
+    async def _get_session_row(self, session_id: UUID, organization_id: UUID) -> AgentSession:
         result = await self._session.execute(
             select(AgentSession).where(
                 AgentSession.id == session_id,
@@ -131,7 +125,7 @@ class MemoryOperations:
             row = await self._get_session_row(ref.subject_id, organization_id)
             if row.user_id == user_id:
                 return
-            if row.kind == "global" and await is_active_member(
+            if row.kind == AgentSessionKind.GLOBAL and await is_active_member(
                 user_id, organization_id, session=self._session
             ):
                 return
@@ -171,9 +165,7 @@ class MemoryOperations:
             return
         if scope is MemoryScope.CHANNEL:
             if memory.created_by_user_id == user_id:
-                member = await self._chat_checker.get_membership(
-                    memory.channel_id, user_id
-                )
+                member = await self._chat_checker.get_membership(memory.channel_id, user_id)
                 if member is not None:
                     return
             if await self._chat_checker.require_elevated(
@@ -229,9 +221,7 @@ class MemoryOperations:
             )
 
     async def _invalidate(self, memory: AgentMemory) -> None:
-        await invalidate_memory_index(
-            memory.organization_id, scope_ref_for_memory(memory)
-        )
+        await invalidate_memory_index(memory.organization_id, scope_ref_for_memory(memory))
 
     async def _get_memory(self, memory_id: UUID, organization_id: UUID) -> AgentMemory:
         result = await self._session.execute(
@@ -280,9 +270,7 @@ class MemoryOperations:
             )
         ).scalar_one_or_none()
         if existing:
-            raise ValidationError(
-                "key", f"A memory with key '{key}' already exists in this scope"
-            )
+            raise ValidationError("key", f"A memory with key '{key}' already exists in this scope")
         await self._check_quota(organization_id, ref)
 
         memory = AgentMemory(
@@ -441,36 +429,29 @@ class MemoryOperations:
         importance: float | None = None,
     ) -> AgentMemory:
         memory = await self._get_memory(memory_id, organization_id)
-        await self._require_mutate(
-            user_id=user_id, organization_id=organization_id, memory=memory
-        )
+        await self._require_mutate(user_id=user_id, organization_id=organization_id, memory=memory)
 
         if description is not None:
             description = strip_control_chars(description).strip()
             if not description or len(description) > 255:
-                raise ValidationError(
-                    "description", "Description must be 1-255 characters"
-                )
+                raise ValidationError("description", "Description must be 1-255 characters")
             memory.description = description
         if content is not None:
             content = strip_control_chars(content, keep_newlines=True).strip()
             if not content or len(content) > MAX_CONTENT_CHARS:
-                raise ValidationError(
-                    "content", f"Content must be 1-{MAX_CONTENT_CHARS} characters"
-                )
+                raise ValidationError("content", f"Content must be 1-{MAX_CONTENT_CHARS} characters")
             memory.content = content
         if category is not None:
-            if category not in VALID_CATEGORIES:
-                valid = ", ".join(sorted(VALID_CATEGORIES))
+            try:
+                memory.category = MemoryCategory(category)
+            except ValueError:
+                valid = ", ".join(member.value for member in MemoryCategory)
                 raise ValidationError(
                     "category", f"Invalid category '{category}'. Must be one of: {valid}"
-                )
-            memory.category = category
+                ) from None
         if importance is not None:
             if importance < 0.0 or importance > 1.0:
-                raise ValidationError(
-                    "importance", "Importance must be between 0.0 and 1.0"
-                )
+                raise ValidationError("importance", "Importance must be between 0.0 and 1.0")
             memory.importance = importance
 
         memory.updated_at = datetime.now(UTC)
@@ -487,9 +468,7 @@ class MemoryOperations:
         memory_id: UUID,
     ) -> None:
         memory = await self._get_memory(memory_id, organization_id)
-        await self._require_mutate(
-            user_id=user_id, organization_id=organization_id, memory=memory
-        )
+        await self._require_mutate(user_id=user_id, organization_id=organization_id, memory=memory)
         await self._invalidate(memory)
         await self._session.delete(memory)
         await self._session.commit()
@@ -503,9 +482,7 @@ class MemoryOperations:
         pinned: bool,
     ) -> AgentMemory:
         memory = await self._get_memory(memory_id, organization_id)
-        await self._require_pin(
-            user_id=user_id, organization_id=organization_id, memory=memory
-        )
+        await self._require_pin(user_id=user_id, organization_id=organization_id, memory=memory)
 
         if pinned and not memory.pinned:
             ref = scope_ref_for_memory(memory)

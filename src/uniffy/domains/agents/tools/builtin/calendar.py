@@ -4,8 +4,10 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from uniffy.core.types import RecurrencePattern
 from uniffy.domains.agents.tools.builtin.args import parse_uuid, parse_uuid_list
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
+from uniffy.domains.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
 from uniffy.domains.tags import TagOperations
 
 _RECURRENCE_VALUES = ("NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "YEARLY")
@@ -42,7 +44,7 @@ def _parse_datetime(value: str, user_timezone: str | None = None) -> datetime | 
     # Interpret as user's local time, then convert to UTC
     try:
         local_tz = ZoneInfo(user_timezone)
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         # Invalid timezone name, fall back to UTC
         return dt.replace(tzinfo=UTC)
 
@@ -70,7 +72,7 @@ async def _format_event_result(
     if event.is_all_day:
         time_parts.append("All day")
     time_parts.append(f"{start} to {end}")
-    if event.timezone and event.timezone != "UTC":
+    if event.timezone and event.timezone != "UTC":  # noqa: PLR2004
         time_parts.append(event.timezone)
     lines.append(" | ".join(time_parts))
 
@@ -83,13 +85,13 @@ async def _format_event_result(
         fields.append(f"Meeting channel: {event.channel_id}")
     if event.is_focus_time:
         fields.append("Focus time: yes")
-    if event.recurrence_pattern and event.recurrence_pattern.value != "NONE":
+    if event.recurrence_pattern and event.recurrence_pattern != RecurrencePattern.NONE:
         fields.append(f"Recurrence: {event.recurrence_pattern.value}")
     if ctx is not None:
         master_id = event.id
         raw = str(master_id)
-        if "__occurrence__" in raw:
-            master_id = UUID(raw.split("__occurrence__")[0])
+        if OCCURRENCE_ID_SEPARATOR in raw:
+            master_id = UUID(raw.split(OCCURRENCE_ID_SEPARATOR)[0])
         urn = f"urn:uniffy:content:CALENDAR_EVENT:{master_id}"
         tag_ops = TagOperations(ctx.session)
         tags_by_urn = await tag_ops.get_for_urns(
@@ -179,7 +181,7 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
             parts.append(f"@ {ev.location}")
         if ev.is_focus_time:
             parts.append("[focus]")
-        if ev.recurrence_pattern and ev.recurrence_pattern.value != "NONE":
+        if ev.recurrence_pattern and ev.recurrence_pattern != RecurrencePattern.NONE:
             parts.append(f"[{ev.recurrence_pattern.value.lower()}]")
 
         lines.append(" ".join(parts))
@@ -290,18 +292,18 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     kwargs["is_all_day"] = is_all_day
     kwargs["timezone"] = args.get("timezone") or ctx.user_timezone or "UTC"
-    if "location" in args:
+    if "location" in args:  # noqa: PLR2004
         kwargs["location"] = args["location"]
-    if "meeting_url" in args:
+    if "meeting_url" in args:  # noqa: PLR2004
         kwargs["meeting_url"] = args["meeting_url"]
-    if "is_focus_time" in args:
+    if "is_focus_time" in args:  # noqa: PLR2004
         kwargs["is_focus_time"] = bool(args["is_focus_time"])
-    if "tag_ids" in args and isinstance(args["tag_ids"], list):
+    if "tag_ids" in args and isinstance(args["tag_ids"], list):  # noqa: PLR2004
         tag_ids, tag_err = parse_uuid_list(args["tag_ids"], "tag_ids")
         if tag_err:
             return ToolResult(success=False, data="", error=tag_err)
         kwargs["tag_ids"] = tag_ids
-    if "reminders" in args and isinstance(args["reminders"], list):
+    if "reminders" in args and isinstance(args["reminders"], list):  # noqa: PLR2004
         kwargs["reminders"] = [int(m) for m in args["reminders"]]
 
     raw_room = args.get("room_id")
@@ -410,14 +412,14 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
             kwargs[field] = bool(args[field])
 
     # Tags - replacement set of unified-tag ids (UUID strings).
-    if "tag_ids" in args and isinstance(args["tag_ids"], list):
+    if "tag_ids" in args and isinstance(args["tag_ids"], list):  # noqa: PLR2004
         tag_ids, tag_err = parse_uuid_list(args["tag_ids"], "tag_ids")
         if tag_err:
             return ToolResult(success=False, data="", error=tag_err)
         kwargs["tag_ids"] = tag_ids
 
     # Reminders
-    if "reminders" in args and isinstance(args["reminders"], list):
+    if "reminders" in args and isinstance(args["reminders"], list):  # noqa: PLR2004
         kwargs["reminders"] = [int(m) for m in args["reminders"]]
 
     # Category
@@ -1033,13 +1035,11 @@ async def _execute_get_free_busy(ctx: ToolContext, args: dict) -> ToolResult:
     if end is None:
         end = start + timedelta(days=7)
 
-    busy = await get_busy_intervals(
-        ctx.session, ctx.organization_id, user_ids, start, end
-    )
+    busy = await get_busy_intervals(ctx.session, ctx.organization_id, user_ids, start, end)
     names = await _member_display_names(ctx, user_ids)
     try:
         tz = ZoneInfo(tz_name)
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         tz = ZoneInfo("UTC")
 
     lines = [f"Busy times {_fmt_local(start, tz)} to {_fmt_local(end, tz)} ({tz.key}):"]
@@ -1066,9 +1066,7 @@ async def _execute_find_time(ctx: ToolContext, args: dict) -> ToolResult:
 
     duration_minutes = int(args.get("duration_minutes") or 30)
     if not 5 <= duration_minutes <= 480:
-        return ToolResult(
-            success=False, data="", error="duration_minutes must be between 5 and 480"
-        )
+        return ToolResult(success=False, data="", error="duration_minutes must be between 5 and 480")
 
     tz_name = ctx.user_timezone or "UTC"
     now = datetime.now(UTC)
@@ -1099,7 +1097,7 @@ async def _execute_find_time(ctx: ToolContext, args: dict) -> ToolResult:
 
     try:
         tz = ZoneInfo(tz_name)
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         tz = ZoneInfo("UTC")
         tz_name = "UTC"
 
@@ -1216,8 +1214,7 @@ find_time = ToolDefinition(
             "window_end": {
                 "type": "string",
                 "description": (
-                    "Latest acceptable time. Defaults to window_start + 7 days. "
-                    f"{_DATETIME_DESC}"
+                    f"Latest acceptable time. Defaults to window_start + 7 days. {_DATETIME_DESC}"
                 ),
             },
             "earliest_hour": {

@@ -280,45 +280,41 @@ def upgrade() -> None:
 
     rows: list[dict] = []
     for entry in TEXT_PRICING_SEED:
-        rows.append(
-            {
-                "id": uuid4(),
-                "provider": entry["provider"],
-                "model": entry["model"],
-                "kind": "text",
-                "input_per_1m": entry.get("input_per_1m"),
-                "output_per_1m": entry.get("output_per_1m"),
-                "cached_input_per_1m": entry.get("cached_input_per_1m"),
-                "thinking_per_1m": entry.get("thinking_per_1m"),
-                "image_prices": None,
-                "effective_from": now,
-                "effective_to": None,
-                "created_at": now,
-                "updated_at": now,
-            }
-        )
+        rows.append({
+            "id": uuid4(),
+            "provider": entry["provider"],
+            "model": entry["model"],
+            "kind": "text",
+            "input_per_1m": entry.get("input_per_1m"),
+            "output_per_1m": entry.get("output_per_1m"),
+            "cached_input_per_1m": entry.get("cached_input_per_1m"),
+            "thinking_per_1m": entry.get("thinking_per_1m"),
+            "image_prices": None,
+            "effective_from": now,
+            "effective_to": None,
+            "created_at": now,
+            "updated_at": now,
+        })
     for img in IMAGE_PRICING_SEED:
         prices = {
             size: {quality: str(price) for quality, price in qualities.items()}
             for size, qualities in img["image_prices"].items()
         }
-        rows.append(
-            {
-                "id": uuid4(),
-                "provider": img["provider"],
-                "model": img["model"],
-                "kind": "image",
-                "input_per_1m": None,
-                "output_per_1m": None,
-                "cached_input_per_1m": None,
-                "thinking_per_1m": None,
-                "image_prices": prices,
-                "effective_from": now,
-                "effective_to": None,
-                "created_at": now,
-                "updated_at": now,
-            }
-        )
+        rows.append({
+            "id": uuid4(),
+            "provider": img["provider"],
+            "model": img["model"],
+            "kind": "image",
+            "input_per_1m": None,
+            "output_per_1m": None,
+            "cached_input_per_1m": None,
+            "thinking_per_1m": None,
+            "image_prices": prices,
+            "effective_from": now,
+            "effective_to": None,
+            "created_at": now,
+            "updated_at": now,
+        })
 
     if rows:
         bind.execute(table.insert(), rows)
@@ -327,10 +323,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Reverse the upgrade in dependency order."""
     with op.get_context().autocommit_block():
-        op.execute(
-            "DROP INDEX CONCURRENTLY IF EXISTS "
-            "ix_agents_run_logs_org_created_kind"
-        )
+        op.execute("DROP INDEX CONCURRENTLY IF EXISTS ix_agents_run_logs_org_created_kind")
     op.drop_column("agents_run_logs", "thinking_tokens")
     op.drop_column("agents_run_logs", "cost_usd")
     op.drop_column("agents_run_logs", "image_count")

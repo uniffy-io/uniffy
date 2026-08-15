@@ -473,9 +473,7 @@ def _build_call_proto(call: dict) -> ProtoCall:
         ),
         initiator_user_id=call.get("initiator_user_id", ""),
         host_user_id=call.get("host_user_id", ""),
-        participants=[
-            _build_call_participant_proto(p) for p in call.get("participants", [])
-        ],
+        participants=[_build_call_participant_proto(p) for p in call.get("participants", [])],
     )
     if call.get("started_at"):
         ts = Timestamp()
@@ -624,7 +622,6 @@ _CHANNEL_EVENT_TYPES = {
     evt.REACTION_ADDED,
     evt.REACTION_REMOVED,
     evt.TYPING_STARTED,
-    evt.TYPING_STOPPED,
     evt.MEMBER_JOINED,
     evt.MEMBER_LEFT,
     evt.MEMBER_UPDATED,

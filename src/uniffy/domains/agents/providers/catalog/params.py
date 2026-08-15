@@ -23,7 +23,7 @@ def validate_model_params(provider: str, model_id: str, params: dict) -> None:
         raise ValueError(f"model {model_id!r} has no parameter schema")
 
     for knob, value in params.items():
-        if knob == "provider_options":
+        if knob == "provider_options":  # noqa: PLR2004
             if not isinstance(value, dict):
                 raise ValueError("provider_options must be an object")
             for opt_key, opt_value in value.items():
@@ -37,9 +37,7 @@ def validate_model_params(provider: str, model_id: str, params: dict) -> None:
         if knob == REASONING_KNOB:
             if not model.can_reason:
                 raise ValueError(f"model {model_id!r} does not support reasoning")
-            levels = (
-                ["off", *model.reasoning_levels] if model.reasoning_levels else ["off", "on"]
-            )
+            levels = ["off", *model.reasoning_levels] if model.reasoning_levels else ["off", "on"]
             if value not in levels:
                 raise ValueError(f"{REASONING_KNOB} {value!r} not in {levels}")
             continue
@@ -49,7 +47,7 @@ def validate_model_params(provider: str, model_id: str, params: dict) -> None:
         if knob in model.unsupported_params:
             raise ValueError(f"model {model_id!r} does not accept {knob!r}")
         spec.check_value(knob, value)
-        if knob == "max_tokens":
+        if knob == "max_tokens":  # noqa: PLR2004
             ceiling = model.default_max_tokens or model.context_window
             if isinstance(value, int) and value > ceiling:
                 raise ValueError(f"max_tokens {value} above model ceiling {ceiling}")
@@ -82,16 +80,19 @@ def resolve_request_params(
 
     kept: dict = {}
     for knob, value in merged.items():
-        if knob == "provider_options":
+        if knob == "provider_options":  # noqa: PLR2004
             kept_nested = {}
             for opt_key, opt_value in value.items():
                 try:
                     validate_model_params(
-                        provider, model_id, {"provider_options": {opt_key: opt_value}},
+                        provider,
+                        model_id,
+                        {"provider_options": {opt_key: opt_value}},
                     )
                 except ValueError as exc:
                     AGENT_MODEL_PARAM_DROPPED_TOTAL.labels(
-                        provider=provider, param=opt_key,
+                        provider=provider,
+                        param=opt_key,
                     ).inc()
                     logger.warning(
                         "Dropped provider option not valid for the target model",

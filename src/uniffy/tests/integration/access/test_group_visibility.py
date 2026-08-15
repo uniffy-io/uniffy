@@ -40,15 +40,11 @@ class TestPrivateGroupVisibility:
             assert access.access_group_id in listed
             assert access.team_id in listed
 
-    async def test_include_private_shows_the_full_set_to_an_admin(
-        self, session, access
-    ) -> None:
+    async def test_include_private_shows_the_full_set_to_an_admin(self, session, access) -> None:
         listed = await _listed(session, access, access.admin_id, include_private=True)
         assert access.private_group_id in listed
 
-    async def test_include_private_is_refused_for_an_ordinary_member(
-        self, session, access
-    ) -> None:
+    async def test_include_private_is_refused_for_an_ordinary_member(self, session, access) -> None:
         with pytest.raises(PermissionDeniedError):
             await _listed(session, access, access.peer_id, include_private=True)
 
@@ -69,9 +65,7 @@ class TestPrivateGroupVisibility:
 
 class TestNameNamespace:
     async def _name_of(self, session, group_id) -> str:
-        return (
-            await session.execute(select(Group.name).where(Group.id == group_id))
-        ).scalar_one()
+        return (await session.execute(select(Group.name).where(Group.id == group_id))).scalar_one()
 
     async def test_an_existing_name_is_rejected(self, session, access) -> None:
         taken = await self._name_of(session, access.team_id)
@@ -84,9 +78,7 @@ class TestNameNamespace:
         with pytest.raises(ValidationError):
             await ensure_name_available(session, access.org_id, taken.upper())
 
-    async def test_teams_and_access_groups_share_one_namespace(
-        self, session, access
-    ) -> None:
+    async def test_teams_and_access_groups_share_one_namespace(self, session, access) -> None:
         access_group_name = await self._name_of(session, access.access_group_id)
         with pytest.raises(ValidationError):
             await ensure_name_available(session, access.org_id, access_group_name)

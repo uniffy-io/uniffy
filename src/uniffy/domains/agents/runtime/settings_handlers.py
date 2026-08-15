@@ -34,9 +34,7 @@ def _to_proto(resolved: ResolvedRuntimeSettings) -> RuntimeSettings:
         circuit_breaker_recovery_seconds=resolved.circuit_breaker_recovery_seconds,
         personal_memory_bridge_enabled=resolved.personal_memory_bridge_enabled,
         default_provider_key_id=(
-            str(resolved.default_provider_key_id)
-            if resolved.default_provider_key_id
-            else ""
+            str(resolved.default_provider_key_id) if resolved.default_provider_key_id else ""
         ),
         default_chat_model=resolved.default_chat_model or "",
         image_max_resolution=resolved.image_max_resolution or "",
@@ -61,9 +59,7 @@ class RuntimeSettingsHandlers:
         try:
             async with open_session() as session:
                 ops = RuntimeSettingsOperations(session)
-                resolved, configured = await ops.get(
-                    user_id=user_id, organization_id=org_id
-                )
+                resolved, configured = await ops.get(user_id=user_id, organization_id=org_id)
                 return GetRuntimeSettingsResponse(
                     settings=_to_proto(resolved), configured=configured
                 )

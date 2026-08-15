@@ -108,7 +108,6 @@ def channel_to_proto(
         channel_type=CHANNEL_TYPE_TO_PROTO.get(
             channel.channel_type, ProtoChannelType.CHANNEL_TYPE_PUBLIC
         ),
-        is_encrypted=channel.is_encrypted,
         is_archived=channel.is_archived,
         is_default=channel.is_default,
         icon=channel.icon or "",

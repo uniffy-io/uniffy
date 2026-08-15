@@ -18,6 +18,7 @@ from uniffy.domains.agents.providers.base import (
     ToolCall,
 )
 from uniffy.domains.agents.providers.catalog import (
+    ReasoningControl,
     model_info_for,
     model_infos_for_provider,
 )
@@ -69,9 +70,9 @@ class GoogleProvider(LLMProvider):
             return True, None
         except Exception as e:
             error_str = str(e).lower()
-            if "api key" in error_str or "unauthorized" in error_str or "403" in error_str:
+            if "api key" in error_str or "unauthorized" in error_str or "403" in error_str:  # noqa: PLR2004
                 return False, f"Authentication failed: {e}"
-            if "429" in error_str or "rate" in error_str:
+            if "429" in error_str or "rate" in error_str:  # noqa: PLR2004
                 logger.warning(f"Rate limited during validation: {e}")
                 return True, None
             return False, f"Validation error: {e}"
@@ -281,7 +282,7 @@ class GoogleProvider(LLMProvider):
         config entirely - 2.5 Pro cannot disable thinking, so a hard
         budget of 0 would 400 there.
         """
-        if effort == "off":
+        if effort == ReasoningControl.OFF:
             return None
         info = model_info_for("google", model)
         if info is None or not info.supports_thinking:
@@ -550,7 +551,7 @@ def _google_stop_reason(
     if blocked:
         return "refusal"
     candidates = getattr(response, "candidates", None) or []
-    if candidates and _enum_token(getattr(candidates[0], "finish_reason", None)) == "MAX_TOKENS":
+    if candidates and _enum_token(getattr(candidates[0], "finish_reason", None)) == "MAX_TOKENS":  # noqa: PLR2004
         return "max_tokens"
     return "end_turn"
 

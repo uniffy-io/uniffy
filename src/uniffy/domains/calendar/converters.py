@@ -61,6 +61,7 @@ from uniffy.core.types import (
     AttendeeRole,
     AttendeeStatus,
     ContentRole,
+    RecurrenceEditScope,
     RecurrencePattern,
     ResourceType,
 )
@@ -151,10 +152,12 @@ ACTIVITY_ACTION_TO_PROTO = {
 }
 
 RECURRENCE_EDIT_SCOPE_FROM_PROTO = {
-    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_UNSPECIFIED: "all_events",
-    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_THIS_EVENT: "this_event",
-    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_ALL_EVENTS: "all_events",
-    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING: "this_and_following",
+    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_UNSPECIFIED: RecurrenceEditScope.ALL_EVENTS,
+    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_THIS_EVENT: RecurrenceEditScope.THIS_EVENT,
+    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_ALL_EVENTS: RecurrenceEditScope.ALL_EVENTS,
+    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING: (
+        RecurrenceEditScope.THIS_AND_FOLLOWING
+    ),
 }
 
 
@@ -173,9 +176,11 @@ def attendee_role_from_proto(proto_role: ProtoAttendeeRole) -> AttendeeRole:
     return ATTENDEE_ROLE_FROM_PROTO.get(proto_role, AttendeeRole.REQUIRED)
 
 
-def recurrence_edit_scope_from_proto(proto_scope: ProtoRecurrenceEditScope.ValueType) -> str:
-    """Convert proto RecurrenceEditScope to a string code."""
-    return RECURRENCE_EDIT_SCOPE_FROM_PROTO.get(proto_scope, "all_events")
+def recurrence_edit_scope_from_proto(
+    proto_scope: ProtoRecurrenceEditScope.ValueType,
+) -> RecurrenceEditScope:
+    """Convert proto RecurrenceEditScope to its domain value."""
+    return RECURRENCE_EDIT_SCOPE_FROM_PROTO.get(proto_scope, RecurrenceEditScope.ALL_EVENTS)
 
 
 def activity_to_proto(activity: EventActivity) -> ProtoEventActivity:

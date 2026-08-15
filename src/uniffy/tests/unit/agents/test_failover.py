@@ -50,9 +50,7 @@ class TestCircuitBreaker:
         breaker.record_success(key)
         assert breaker.is_open(key) is False
 
-    def test_recovery_after_cooldown(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_recovery_after_cooldown(self, monkeypatch: pytest.MonkeyPatch) -> None:
         breaker = CircuitBreaker()
         key = generate_id()
         base = time.monotonic()
@@ -221,9 +219,7 @@ class TestCandidateIterator:
     async def test_caps_at_max_attempts(self) -> None:
         org_id = generate_id()
         primary_key = _make_key(provider="anthropic")
-        siblings = [primary_key] + [
-            _make_key(provider="anthropic") for _ in range(5)
-        ]
+        siblings = [primary_key] + [_make_key(provider="anthropic") for _ in range(5)]
         ops = _make_provider_ops(siblings=siblings)
 
         async def collect() -> list:

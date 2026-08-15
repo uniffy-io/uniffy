@@ -51,9 +51,7 @@ async def init_streams_client() -> None:
             return
         except Exception:
             with contextlib.suppress(BaseException):
-                await asyncio.wait_for(
-                    _streams_client.aclose(), timeout=_CLOSE_TIMEOUT_SECONDS
-                )
+                await asyncio.wait_for(_streams_client.aclose(), timeout=_CLOSE_TIMEOUT_SECONDS)
             _streams_client = None
 
     config = ValkeyConfig.from_env()
@@ -81,7 +79,7 @@ async def close_streams_client() -> None:
     _streams_client = None
     try:
         await asyncio.wait_for(client.aclose(), timeout=_CLOSE_TIMEOUT_SECONDS)
-    except (TimeoutError, BaseException):
+    except TimeoutError, BaseException:
         logger.warning("Streams client close timed out", component=LOGGER_COMPONENT)
     logger.info("Streams client closed", component=LOGGER_COMPONENT)
 
@@ -169,7 +167,7 @@ async def stream_xread(
                 continue
             try:
                 entries.append((message_id, json.loads(raw)))
-            except (json.JSONDecodeError, TypeError):
+            except json.JSONDecodeError, TypeError:
                 logger.warning(
                     f"Stream payload decode failed (stream={stream_key}, id={message_id})",
                     component=LOGGER_COMPONENT,
@@ -224,7 +222,7 @@ async def stream_get_state(state_key: str) -> dict[str, Any] | None:
     for key, value in raw.items():
         try:
             decoded[key] = json.loads(value)
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             decoded[key] = value
     return decoded
 
@@ -431,7 +429,7 @@ async def get_chat_active_run(channel_id: UUID, agent_id: UUID) -> UUID | None:
     try:
         async with ops_call(STREAMS_NAMESPACE, "get_chat_active_run"):
             raw = await client.get(chat_active_run_key(channel_id, agent_id))
-    except (TimeoutError, Exception):
+    except TimeoutError, Exception:
         return None
     if not raw:
         return None

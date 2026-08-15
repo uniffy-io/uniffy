@@ -36,14 +36,18 @@ async def seed_projects(
 
     for spec in projects:
         existing = (
-            await ctx.session.execute(
-                select(Project.id).where(
-                    Project.organization_id == ctx.organization_id,
-                    Project.slug == spec.slug,
-                    Project.is_deleted == False,  # noqa: E712
+            (
+                await ctx.session.execute(
+                    select(Project.id).where(
+                        Project.organization_id == ctx.organization_id,
+                        Project.slug == spec.slug,
+                        Project.is_deleted == False,  # noqa: E712
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if existing is not None:
             # Tasks ride their project: an existing project skips wholesale.
             result.skipped += 1
@@ -70,9 +74,7 @@ async def seed_projects(
         logger.info(f"Created project {spec.name!r}")
 
         for task in spec.tasks:
-            assignee_ids = await resolve_member_ids(
-                ctx.session, ctx.organization_id, task.assignees
-            )
+            assignee_ids = await resolve_member_ids(ctx.session, ctx.organization_id, task.assignees)
             due_date = None
             if task.due_in_days is not None and task.due_in_days >= 0:
                 due_date = (ctx.now + timedelta(days=task.due_in_days)).strftime("%Y-%m-%d")

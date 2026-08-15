@@ -41,10 +41,7 @@ def _role_key(
     content_type: ContentType,
     content_id: UUID,
 ) -> str:
-    return (
-        f"perm:role:{organization_id}:{user_id}"
-        f":{content_type.value}:{content_id}"
-    )
+    return f"perm:role:{organization_id}:{user_id}:{content_type.value}:{content_id}"
 
 
 def _user_tag(user_id: UUID) -> str:

@@ -76,14 +76,14 @@ async def test_update_room_status_to_retired_emits_archived() -> None:
     ops = RoomOperations(session)
     ops._index_for_search = AsyncMock()
 
-    with patch.object(
-        RoomOperations, "get_by_id", AsyncMock(return_value=room)
-    ), patch.object(
-        RoomOperations, "_require_edit", AsyncMock(return_value=None)
-    ), patch.object(
-        RoomOperations,
-        "_effective_policy",
-        AsyncMock(return_value=(AccessMode.OPEN_TO_ORG, None)),
+    with (
+        patch.object(RoomOperations, "get_by_id", AsyncMock(return_value=room)),
+        patch.object(RoomOperations, "_require_edit", AsyncMock(return_value=None)),
+        patch.object(
+            RoomOperations,
+            "_effective_policy",
+            AsyncMock(return_value=(AccessMode.OPEN_TO_ORG, None)),
+        ),
     ):
         await ops.update_room(
             user_id=generate_id(),
@@ -110,10 +110,9 @@ async def test_delete_room_emits_room_deleted() -> None:
     ops = RoomOperations(session)
     ops.search_indexer = MagicMock(remove=AsyncMock())
 
-    with patch.object(
-        RoomOperations, "get_by_id", AsyncMock(return_value=room)
-    ), patch.object(
-        RoomOperations, "_require_delete", AsyncMock(return_value=None)
+    with (
+        patch.object(RoomOperations, "get_by_id", AsyncMock(return_value=room)),
+        patch.object(RoomOperations, "_require_delete", AsyncMock(return_value=None)),
     ):
         await ops.delete_room(
             user_id=generate_id(),

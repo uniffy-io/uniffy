@@ -47,16 +47,12 @@ class TestRequireGroupSubject:
         await ops._require_group_subject(ACTOR, ORG, GROUP)
 
     async def test_private_group_passes_for_org_admin(self) -> None:
-        ops = _ops(
-            [_result(one=(True,)), _result(scalar=None), _result(scalar=generate_id())]
-        )
+        ops = _ops([_result(one=(True,)), _result(scalar=None), _result(scalar=generate_id())])
         await ops._require_group_subject(ACTOR, ORG, GROUP)
 
     async def test_private_group_reports_missing_to_outsiders(self) -> None:
-        """"Not found", never "private" - existence is the leak."""
-        ops = _ops(
-            [_result(one=(True,)), _result(scalar=None), _result(scalar=None)]
-        )
+        """ "Not found", never "private" - existence is the leak."""
+        ops = _ops([_result(one=(True,)), _result(scalar=None), _result(scalar=None)])
         with pytest.raises(NotFoundError):
             await ops._require_group_subject(ACTOR, ORG, GROUP)
 
@@ -71,9 +67,7 @@ class TestAddMemberRoutesGroupsThroughTheGate:
         ops._load_content = AsyncMock(return_value=content)
         ops._require_manage = AsyncMock(return_value=ContentRole.ADMIN)
         ops._resolve_effective_mode = AsyncMock(return_value=AccessMode.EXPLICIT_MEMBERS)
-        ops._require_group_subject = AsyncMock(
-            side_effect=NotFoundError("Group", str(GROUP))
-        )
+        ops._require_group_subject = AsyncMock(side_effect=NotFoundError("Group", str(GROUP)))
 
         with pytest.raises(NotFoundError):
             await ops.add_member(
@@ -92,9 +86,7 @@ class TestNotificationTargets:
     async def test_user_subject_passes_through(self) -> None:
         ops = _ops([])
         target = generate_id()
-        assert await ops._resolve_notification_targets(
-            ORG, SubjectType.USER, target
-        ) == [target]
+        assert await ops._resolve_notification_targets(ORG, SubjectType.USER, target) == [target]
 
     async def test_group_fanout_returns_the_resolved_members(self) -> None:
         a = generate_id()

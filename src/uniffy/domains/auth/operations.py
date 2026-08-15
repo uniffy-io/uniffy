@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import RateLimitExceededError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
@@ -153,7 +154,7 @@ class AuthOperations:
                     organization_id=organization_id,
                     actor_user_id=user.id,
                     action=Action.AUTH_LOGIN_SUCCESS,
-                    resource_type="USER",
+                    resource_type=AuditResourceType.USER,
                     resource_id=user.id,
                     details={
                         "email": user.email,
@@ -161,9 +162,7 @@ class AuthOperations:
                     },
                 )
                 await self._session.commit()
-                AUTH_ATTEMPTS_TOTAL.labels(
-                    operation="authenticate", outcome="mfa_challenge"
-                ).inc()
+                AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="mfa_challenge").inc()
                 return MfaChallengeRequired(
                     challenge_token=challenge,
                     methods=("totp", "recovery_code"),
@@ -185,7 +184,7 @@ class AuthOperations:
                     organization_id=organization_id,
                     actor_user_id=user.id,
                     action=Action.AUTH_LOGIN_SUCCESS,
-                    resource_type="USER",
+                    resource_type=AuditResourceType.USER,
                     resource_id=user.id,
                     details={
                         "email": user.email,
@@ -225,7 +224,7 @@ class AuthOperations:
                 organization_id=organization_id,
                 actor_user_id=user.id,
                 action=Action.AUTH_LOGIN_SUCCESS,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=user.id,
                 details={
                     "email": user.email,
@@ -248,9 +247,7 @@ class AuthOperations:
                 domain_admin_domains=domain_admin_domains,
             )
         except RateLimitExceededError as exc:
-            AUTH_ATTEMPTS_TOTAL.labels(
-                operation="authenticate", outcome="rate_limited"
-            ).inc()
+            AUTH_ATTEMPTS_TOTAL.labels(operation="authenticate", outcome="rate_limited").inc()
             await write_audit_event(
                 self._session,
                 organization_id=None,
@@ -273,7 +270,7 @@ class AuthOperations:
                 organization_id=organization_id,
                 actor_user_id=user.id if user else None,
                 action=Action.AUTH_LOGIN_FAILURE,
-                resource_type="USER" if user else None,
+                resource_type=AuditResourceType.USER if user else None,
                 resource_id=user.id if user else None,
                 details={
                     "email_attempted": email,
@@ -305,9 +302,7 @@ class AuthOperations:
                 await self._audit_register_rejected(
                     email=email, reason="public_registration_disabled"
                 )
-                raise RegistrationError(
-                    "Public registration is disabled. You must be invited."
-                )
+                raise RegistrationError("Public registration is disabled. You must be invited.")
 
             existing_user = await self._get_user_by_email(email)
             existing_username = await self._get_user_by_username(username)
@@ -316,16 +311,10 @@ class AuthOperations:
                 # stays generic so the API does not leak which field hit.
                 await self._audit_register_rejected(
                     email=email,
-                    reason=(
-                        "email_taken"
-                        if existing_user
-                        else "username_taken"
-                    ),
+                    reason=("email_taken" if existing_user else "username_taken"),
                     username=username,
                 )
-                raise RegistrationError(
-                    "Could not create account with these credentials"
-                )
+                raise RegistrationError("Could not create account with these credentials")
 
             try:
                 validate_password(password)
@@ -372,7 +361,7 @@ class AuthOperations:
                 organization_id=None,
                 actor_user_id=user.id,
                 action=Action.AUTH_REGISTER_SUCCESS,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=user.id,
                 details={
                     "email": user.email,
@@ -435,9 +424,7 @@ class AuthOperations:
             session_record: UserSession | None = None
             if session_id_str:
                 session_id = UUID(session_id_str)
-                session_record = await self._validate_and_touch_session(
-                    session_id, user_id
-                )
+                session_record = await self._validate_and_touch_session(session_id, user_id)
                 await self._enforce_refresh_rotation(
                     user=user,
                     session_record=session_record,
@@ -458,10 +445,7 @@ class AuthOperations:
                     organization_role,
                     domain_admin_domains,
                 ) = await self._verify_org_membership_by_id(user_id, session_org_id)
-                if (
-                    organization_slug
-                    and organization_slug != organization_slug_resolved
-                ):
+                if organization_slug and organization_slug != organization_slug_resolved:
                     raise TokenError(
                         "Refresh is bound to a different organization; "
                         "call SwitchOrganization to change tenant context"
@@ -492,13 +476,9 @@ class AuthOperations:
 
             if session_record is not None:
                 now = datetime.now(UTC)
-                session_record.previous_refresh_token_hash = (
-                    session_record.refresh_token_hash
-                )
+                session_record.previous_refresh_token_hash = session_record.refresh_token_hash
                 session_record.previous_refresh_rotated_at = now
-                session_record.refresh_token_hash = _hash_refresh_token(
-                    new_refresh_token
-                )
+                session_record.refresh_token_hash = _hash_refresh_token(new_refresh_token)
 
             AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="success").inc()
 
@@ -507,7 +487,7 @@ class AuthOperations:
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.AUTH_TOKEN_REFRESHED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=user_id,
                 details={"session_id": str(session_id) if session_id else None},
                 dedupe_key=str(user_id),
@@ -557,17 +537,12 @@ class AuthOperations:
                 raise TokenError("User not found")
             if not user.is_active:
                 raise TokenError("User account is deactivated")
-            if (
-                token_version_in_jwt is not None
-                and token_version_in_jwt != user.token_version
-            ):
+            if token_version_in_jwt is not None and token_version_in_jwt != user.token_version:
                 raise TokenError("Token has been revoked")
 
             if session_id_str:
                 old_session_id = UUID(session_id_str)
-                old_session = await self._validate_and_touch_session(
-                    old_session_id, user_id
-                )
+                old_session = await self._validate_and_touch_session(old_session_id, user_id)
                 await self._enforce_refresh_rotation(
                     user=user,
                     session_record=old_session,
@@ -612,13 +587,11 @@ class AuthOperations:
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.AUTH_TOKEN_REFRESHED,
-                resource_type="USER_SESSION",
+                resource_type=AuditResourceType.USER_SESSION,
                 resource_id=new_session.id,
                 details={
                     "event": "org_switch",
-                    "previous_session_id": str(old_session_id)
-                    if old_session_id
-                    else None,
+                    "previous_session_id": str(old_session_id) if old_session_id else None,
                     "target_org_id": str(organization_id),
                 },
             )
@@ -695,9 +668,7 @@ class AuthOperations:
             .values(is_revoked=True, revoked_at=now)
         )
         all_active = (
-            await self._session.execute(
-                select(UserSession.id).where(UserSession.user_id == user.id)
-            )
+            await self._session.execute(select(UserSession.id).where(UserSession.user_id == user.id))
         ).all()
         revoked_ids = [row[0] for row in all_active]
 
@@ -717,7 +688,7 @@ class AuthOperations:
             organization_id=None,
             actor_user_id=user.id,
             action=Action.AUTH_REFRESH_REUSE_DETECTED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=user.id,
             details={
                 "trigger_session_id": str(session_record.id),
@@ -779,7 +750,7 @@ class AuthOperations:
             organization_id=None,
             actor_user_id=user_id,
             action=Action.AUTH_SESSION_TERMINATED,
-            resource_type="USER_SESSION",
+            resource_type=AuditResourceType.USER_SESSION,
             resource_id=session_id,
             details={"initiator": "self"},
         )
@@ -833,7 +804,7 @@ class AuthOperations:
             organization_id=None,
             actor_user_id=user_id,
             action=Action.AUTH_TOKEN_REVOKED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=user_id,
             details={
                 "actor": "self",
@@ -896,7 +867,7 @@ class AuthOperations:
                 organization_id=None,
                 actor_user_id=user_id,
                 action=Action.AUTH_SESSION_TERMINATED,
-                resource_type="USER_SESSION",
+                resource_type=AuditResourceType.USER_SESSION,
                 resource_id=session_id,
                 details={"initiator": "logout"},
             )
@@ -966,7 +937,7 @@ class AuthOperations:
                 organization_id=None,
                 actor_user_id=user_id,
                 action=Action.AUTH_TOKEN_REVOKED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=user_id,
                 details={
                     "actor": "system",
@@ -1035,9 +1006,7 @@ class AuthOperations:
 
     async def _load_user_mfa(self, user_id: UUID) -> UserMfa | None:
         """Return the user's MFA row or ``None`` when they never enrolled."""
-        result = await self._session.execute(
-            select(UserMfa).where(UserMfa.user_id == user_id)
-        )
+        result = await self._session.execute(select(UserMfa).where(UserMfa.user_id == user_id))
         return result.scalar_one_or_none()
 
     async def _enforce_login_rate_limit(self, email: str) -> None:

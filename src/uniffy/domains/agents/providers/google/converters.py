@@ -8,6 +8,9 @@ import base64
 
 from google.genai import types
 
+from uniffy.core.models.agents.message import AgentMessageRole
+from uniffy.domains.agents.providers.base import CanonicalContentBlockType
+
 
 def convert_tools_to_google(tools: list[dict]) -> list[types.Tool]:
     """Convert tool schemas from Anthropic format to Google function declarations.
@@ -67,7 +70,7 @@ def convert_messages_to_google(
         content = msg.get("content", "")
 
         # Map Anthropic roles to Google roles
-        google_role = "model" if role == "assistant" else "user"
+        google_role = "model" if role == AgentMessageRole.ASSISTANT else "user"
 
         # Simple text message
         if isinstance(content, str):
@@ -111,10 +114,10 @@ def _convert_content_blocks_to_parts(
     for block in content_blocks:
         block_type = block.get("type", "")
 
-        if block_type == "text":
+        if block_type == CanonicalContentBlockType.TEXT:
             parts.append(types.Part.from_text(text=block["text"]))
 
-        elif block_type == "tool_use":
+        elif block_type == CanonicalContentBlockType.TOOL_USE:
             fc_part = types.Part(
                 function_call=types.FunctionCall(
                     name=block["name"],
@@ -122,13 +125,13 @@ def _convert_content_blocks_to_parts(
                 ),
             )
             metadata = block.get("metadata", {})
-            if "thought_signature" in metadata:
+            if "thought_signature" in metadata:  # noqa: PLR2004
                 fc_part.thought_signature = metadata["thought_signature"]
             parts.append(fc_part)
 
-        elif block_type == "image":
+        elif block_type == CanonicalContentBlockType.IMAGE:
             # Handle canonical format (data on block) and legacy (source dict)
-            if "data" in block:
+            if "data" in block:  # noqa: PLR2004
                 image_bytes = base64.b64decode(block["data"])
                 mime = block.get("media_type", "image/png")
             else:
@@ -137,9 +140,9 @@ def _convert_content_blocks_to_parts(
                 mime = source.get("media_type", "image/png")
             parts.append(types.Part.from_bytes(data=image_bytes, mime_type=mime))
 
-        elif block_type == "document":
+        elif block_type == CanonicalContentBlockType.DOCUMENT:
             # Gemini supports native PDF via inline_data
-            if "data" in block:
+            if "data" in block:  # noqa: PLR2004
                 doc_bytes = base64.b64decode(block["data"])
                 mime = block.get("media_type", "application/pdf")
             else:
@@ -148,10 +151,14 @@ def _convert_content_blocks_to_parts(
                 mime = source.get("media_type", "application/pdf")
             parts.append(types.Part.from_bytes(data=doc_bytes, mime_type=mime))
 
-        elif block_type == "tool_result":
+        elif block_type == CanonicalContentBlockType.TOOL_RESULT:
             result_content = block.get("content", "")
             if isinstance(result_content, list):
-                text_parts = [b.get("text", "") for b in result_content if b.get("type") == "text"]
+                text_parts = [
+                    b.get("text", "")
+                    for b in result_content
+                    if b.get("type") == CanonicalContentBlockType.TEXT
+                ]
                 result_content = "\n".join(text_parts)
             # Use tool_name (function name) for Google API; fall back to
             # tool_use_id for backwards compatibility with stored messages.

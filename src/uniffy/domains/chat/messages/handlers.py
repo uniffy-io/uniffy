@@ -351,12 +351,9 @@ class MessageHandlers:
         # Polymorphic USER | AGENT resolution with the cached resolver; the
         # tuple carries (display_name, avatar URL) ready for the proto.
         resolver = SenderResolver(session)
-        sender_infos = await resolver.resolve_many(
-            [(m.sender_type, m.sender_id) for m in messages]
-        )
+        sender_infos = await resolver.resolve_many([(m.sender_type, m.sender_id) for m in messages])
         sender_map: dict[UUID, tuple[str, str | None]] = {
-            sid: (info.display_name, info.avatar_url or None)
-            for sid, info in sender_infos.items()
+            sid: (info.display_name, info.avatar_url or None) for sid, info in sender_infos.items()
         }
 
         reply_to_ids = [m.reply_to_id for m in messages if m.reply_to_id]
@@ -373,9 +370,9 @@ class MessageHandlers:
                 ).where(ChatMessageModel.id.in_(reply_to_ids))
             )
             rto_data = {row[0]: (row[1], row[2], row[3]) for row in rto_result.all()}
-            rto_infos = await resolver.resolve_many(
-                [(stype, sid) for sid, stype, _ in rto_data.values()]
-            )
+            rto_infos = await resolver.resolve_many([
+                (stype, sid) for sid, stype, _ in rto_data.values()
+            ])
             for rid, (sid, _stype, content) in rto_data.items():
                 s_name = rto_infos[sid].display_name if sid in rto_infos else "Unknown"
                 reply_context_map[rid] = (str(rid), s_name, content[:150])
@@ -392,9 +389,7 @@ class MessageHandlers:
         agent_message_ids = [m.id for m in messages if m.sender_type == SenderType.AGENT]
         if agent_message_ids:
             fb_result = await session.execute(
-                select(
-                    AgentMessageFeedback.chat_message_id, AgentMessageFeedback.rating
-                ).where(
+                select(AgentMessageFeedback.chat_message_id, AgentMessageFeedback.rating).where(
                     AgentMessageFeedback.user_id == user_id,
                     AgentMessageFeedback.chat_message_id.in_(agent_message_ids),
                 )

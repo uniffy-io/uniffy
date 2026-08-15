@@ -31,6 +31,7 @@ from uniffy.core.mail.rendering import render_template
 from uniffy.core.mail.resolver import MailConfigResolver
 from uniffy.core.mail.suppression import SuppressionRepository, _normalize
 from uniffy.core.mail.templates import get_template
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.db.session import open_session
 
 logger = logger.bind(component="mail")
@@ -198,7 +199,7 @@ class MailSender:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=action,
-            resource_type="email",
+            resource_type=AuditResourceType.EMAIL,
             details=details,
         )
 

@@ -94,9 +94,7 @@ def _admin_session(*, count: int, batches: list[list[AuditEvent]]):
 
 async def _collect_csv(ops: ExportOperations, filter_: ListEventsFilter) -> bytes:
     payload = bytearray()
-    async for chunk in ops.stream_export(
-        generate_id(), ExportFilter(filter=filter_, format="csv")
-    ):
+    async for chunk in ops.stream_export(generate_id(), ExportFilter(filter=filter_, format="csv")):
         payload.extend(chunk)
     return bytes(payload)
 

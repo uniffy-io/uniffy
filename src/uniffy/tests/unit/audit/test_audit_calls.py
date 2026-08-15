@@ -78,15 +78,12 @@ async def test_end_call_internal_emits_call_ended_with_reason_and_actor() -> Non
     session = _build_session()
     ops = _build_ops(session)
 
-    with patch.object(
-        type(ops), "list_active_participants", AsyncMock(return_value=[])
-    ), patch.object(
-        type(ops), "member_user_ids", AsyncMock(return_value=[])
-    ), patch(
-        "uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()
-    ), patch(
-        "uniffy.domains.calls.operations.get_livekit_admin_client"
-    ) as client_factory:
+    with (
+        patch.object(type(ops), "list_active_participants", AsyncMock(return_value=[])),
+        patch.object(type(ops), "member_user_ids", AsyncMock(return_value=[])),
+        patch("uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()),
+        patch("uniffy.domains.calls.operations.get_livekit_admin_client") as client_factory,
+    ):
         client_factory.return_value.delete_room = AsyncMock()
         await ops.end_call_internal(call, CallEndReason.HOST_ENDED, actor_user_id=host_id)
 
@@ -105,15 +102,12 @@ async def test_system_end_emits_call_ended_without_actor() -> None:
     session = _build_session()
     ops = _build_ops(session)
 
-    with patch.object(
-        type(ops), "list_active_participants", AsyncMock(return_value=[])
-    ), patch.object(
-        type(ops), "member_user_ids", AsyncMock(return_value=[])
-    ), patch(
-        "uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()
-    ), patch(
-        "uniffy.domains.calls.operations.get_livekit_admin_client"
-    ) as client_factory:
+    with (
+        patch.object(type(ops), "list_active_participants", AsyncMock(return_value=[])),
+        patch.object(type(ops), "member_user_ids", AsyncMock(return_value=[])),
+        patch("uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()),
+        patch("uniffy.domains.calls.operations.get_livekit_admin_client") as client_factory,
+    ):
         client_factory.return_value.delete_room = AsyncMock()
         await ops.end_call_internal(call, CallEndReason.MAX_DURATION)
 
@@ -135,15 +129,12 @@ async def test_kick_emits_participant_kicked_with_target() -> None:
     session = _build_session()
     ops = _build_ops(session)
 
-    with patch.object(
-        type(ops), "_get_call", AsyncMock(return_value=call)
-    ), patch.object(
-        type(ops), "get_active_participant", AsyncMock(return_value=participant)
-    ), patch.object(
-        type(ops), "mark_participant_left", AsyncMock()
-    ), patch(
-        "uniffy.domains.calls.operations.get_livekit_admin_client"
-    ) as client_factory:
+    with (
+        patch.object(type(ops), "_get_call", AsyncMock(return_value=call)),
+        patch.object(type(ops), "get_active_participant", AsyncMock(return_value=participant)),
+        patch.object(type(ops), "mark_participant_left", AsyncMock()),
+        patch("uniffy.domains.calls.operations.get_livekit_admin_client") as client_factory,
+    ):
         client_factory.return_value.remove_participant = AsyncMock()
         await ops.kick_participant(host_id, org_id, call.id, participant.identity)
 
@@ -167,15 +158,12 @@ async def test_mute_emits_participant_muted() -> None:
     session = _build_session()
     ops = _build_ops(session)
 
-    with patch.object(
-        type(ops), "_get_call", AsyncMock(return_value=call)
-    ), patch.object(
-        type(ops), "get_active_participant", AsyncMock(return_value=participant)
-    ), patch.object(
-        type(ops), "publish_participant_state", AsyncMock()
-    ), patch(
-        "uniffy.domains.calls.operations.get_livekit_admin_client"
-    ) as client_factory:
+    with (
+        patch.object(type(ops), "_get_call", AsyncMock(return_value=call)),
+        patch.object(type(ops), "get_active_participant", AsyncMock(return_value=participant)),
+        patch.object(type(ops), "publish_participant_state", AsyncMock()),
+        patch("uniffy.domains.calls.operations.get_livekit_admin_client") as client_factory,
+    ):
         client_factory.return_value.mute_participant_microphone = AsyncMock(return_value=True)
         await ops.mute_participant(host_id, org_id, call.id, participant.identity)
 
@@ -193,16 +181,12 @@ async def test_join_and_leave_do_not_audit() -> None:
     session = _build_session()
     ops = _build_ops(session)
 
-    with patch.object(
-        type(ops), "list_active_participants", AsyncMock(return_value=[participant])
-    ), patch.object(
-        type(ops), "member_user_ids", AsyncMock(return_value=[])
-    ), patch.object(
-        type(ops), "resolve_profiles", AsyncMock(return_value={})
-    ), patch.object(
-        type(ops), "reassign_host_if_absent", AsyncMock()
-    ), patch(
-        "uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()
+    with (
+        patch.object(type(ops), "list_active_participants", AsyncMock(return_value=[participant])),
+        patch.object(type(ops), "member_user_ids", AsyncMock(return_value=[])),
+        patch.object(type(ops), "resolve_profiles", AsyncMock(return_value={})),
+        patch.object(type(ops), "reassign_host_if_absent", AsyncMock()),
+        patch("uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()),
     ):
         await ops.mark_participant_left(call, participant)
 

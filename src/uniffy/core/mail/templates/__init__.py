@@ -29,8 +29,7 @@ TEMPLATES: dict[str, MailTemplate] = {
     "auth/password_reset": MailTemplate(
         name="auth/password_reset",
         description=(
-            "Single-use password reset link dispatched from the "
-            "user's primary-org SMTP config."
+            "Single-use password reset link dispatched from the user's primary-org SMTP config."
         ),
     ),
     "auth/mfa_reset": MailTemplate(

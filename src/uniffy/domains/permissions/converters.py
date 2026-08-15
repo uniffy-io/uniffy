@@ -131,23 +131,17 @@ def audit_event_to_content_member_event_proto(
 
     previous_access_mode_raw = details.get("previous_access_mode")
     if previous_access_mode_raw:
-        proto.previous_access_mode = access_mode_to_proto(
-            AccessMode(previous_access_mode_raw)
-        )
+        proto.previous_access_mode = access_mode_to_proto(AccessMode(previous_access_mode_raw))
     new_access_mode_raw = details.get("new_access_mode")
     if new_access_mode_raw:
         proto.new_access_mode = access_mode_to_proto(AccessMode(new_access_mode_raw))
 
     previous_baseline_role_raw = details.get("previous_baseline_role")
     if previous_baseline_role_raw:
-        proto.previous_baseline_role = content_role_to_proto(
-            ContentRole(previous_baseline_role_raw)
-        )
+        proto.previous_baseline_role = content_role_to_proto(ContentRole(previous_baseline_role_raw))
     new_baseline_role_raw = details.get("new_baseline_role")
     if new_baseline_role_raw:
-        proto.new_baseline_role = content_role_to_proto(
-            ContentRole(new_baseline_role_raw)
-        )
+        proto.new_baseline_role = content_role_to_proto(ContentRole(new_baseline_role_raw))
 
     previous_owner_id_raw = details.get("previous_owner_id")
     if previous_owner_id_raw:

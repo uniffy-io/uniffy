@@ -113,8 +113,7 @@ class IntegrationsHandlers:
                 diagnostics = await is_org_admin(session, user_id, org_id)
                 return ListConnectionsResponse(
                     connections=[
-                        connection_to_proto(c, include_diagnostics=diagnostics)
-                        for c in connections
+                        connection_to_proto(c, include_diagnostics=diagnostics) for c in connections
                     ],
                 )
         except ConnectError:

@@ -18,6 +18,7 @@ An invalid catalog is a hard startup error - see ``loader.load_catalog``.
 from __future__ import annotations
 
 from decimal import Decimal
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -25,6 +26,16 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 # The reasoning knob is derived per model from ``can_reason`` +
 # ``reasoning_levels`` by the loader; providers must not declare it.
 REASONING_KNOB = "reasoning_effort"
+
+
+class ParamAudience(StrEnum):
+    USER = "user"
+    BUILDER = "builder"
+
+
+class ReasoningControl(StrEnum):
+    OFF = "off"
+    ON = "on"
 
 
 def _to_decimal(value: object) -> Decimal | None:
@@ -50,13 +61,13 @@ class ParamSpec(BaseModel):
     # from the tool schema the model sees and rejected on the per-conversation
     # override path, so neither a member nor the LLM can loosen a moderation
     # or output-format decision the builder made.
-    audience: Literal["user", "builder"] = "user"
+    audience: ParamAudience = ParamAudience.USER
 
     @model_validator(mode="after")
     def _check(self) -> ParamSpec:
-        if self.type == "enum" and not self.enum:
+        if self.type == "enum" and not self.enum:  # noqa: PLR2004
             raise ValueError("enum spec requires non-empty enum values")
-        if self.type != "enum" and self.enum:
+        if self.type != "enum" and self.enum:  # noqa: PLR2004
             raise ValueError(f"{self.type} spec must not carry enum values")
         if self.default is not None:
             self.check_value("default", self.default)
@@ -216,8 +227,7 @@ class ProviderCatalog(BaseModel):
         for name in model.unsupported_params:
             if name not in self.params_base:
                 raise ValueError(
-                    f"model {model.id!r}: unsupported_params entry {name!r} "
-                    "is not a declared knob",
+                    f"model {model.id!r}: unsupported_params entry {name!r} is not a declared knob",
                 )
             if name in model.options:
                 raise ValueError(f"model {model.id!r}: option {name!r} is unsupported")
@@ -233,7 +243,7 @@ class ProviderCatalog(BaseModel):
                     f"model {model.id!r}: provider option {name!r} is unsupported",
                 )
         for key, value in model.options.items():
-            if key == "provider_options":
+            if key == "provider_options":  # noqa: PLR2004
                 if not isinstance(value, dict):
                     raise ValueError(f"model {model.id!r}: provider_options must be an object")
                 for opt_key, opt_value in value.items():
@@ -276,7 +286,7 @@ class ProviderCatalog(BaseModel):
             spec = self.image_params_base.get(key)
             if spec is None:
                 raise ValueError(f"model {model.id!r}: undeclared image enum {key!r}")
-            if spec.type != "enum":
+            if spec.type != "enum":  # noqa: PLR2004
                 raise ValueError(f"model {model.id!r}: image knob {key!r} is not an enum")
             if not members:
                 raise ValueError(f"model {model.id!r}: image enum {key!r} is empty")

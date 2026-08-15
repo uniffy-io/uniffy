@@ -20,6 +20,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.membership import invalidate_membership_cache
 from uniffy.core.errors import ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
@@ -323,17 +324,13 @@ async def upsert_group(
         await session.flush()
         report.groups_created += 1
     else:
-        desired = await dedupe_name(
-            session, org_id, record.display_name, exclude_group_id=group.id
-        )
+        desired = await dedupe_name(session, org_id, record.display_name, exclude_group_id=group.id)
         if desired != group.name or group.kind != record.kind:
             if desired != group.name:
                 if desired != record.display_name:
                     report.groups_renamed += 1
                 group.name = desired
-                group.slug = await resolve_slug(
-                    session, org_id, desired, exclude_group_id=group.id
-                )
+                group.slug = await resolve_slug(session, org_id, desired, exclude_group_id=group.id)
             group.kind = record.kind
             group.is_private = False
             report.groups_updated += 1
@@ -543,9 +540,11 @@ async def run_full_sync(
             if record.active:
                 seen_active.add(record.external_id)
             if record.manager_external_id or record.manager_external_dn:
-                manager_refs.append(
-                    (user_id, record.manager_external_id, record.manager_external_dn)
-                )
+                manager_refs.append((
+                    user_id,
+                    record.manager_external_id,
+                    record.manager_external_dn,
+                ))
         processed += 1
         if processed % CHUNK_SIZE == 0:
             await session.commit()
@@ -569,9 +568,7 @@ async def run_full_sync(
 
         for group_record in group_records:
             group_id = group_ids[group_record.external_id]
-            group = (
-                await session.execute(select(Group).where(Group.id == group_id))
-            ).scalar_one()
+            group = (await session.execute(select(Group).where(Group.id == group_id))).scalar_one()
             if group_record.parent_external_id:
                 parent_id = group_ids.get(group_record.parent_external_id)
                 if parent_id and parent_id != group_id:
@@ -614,7 +611,7 @@ async def run_full_sync(
         organization_id=org_id,
         actor_user_id=None,
         action=Action.IDENTITY_SYNC_COMPLETED,
-        resource_type="IDENTITY_SOURCE",
+        resource_type=AuditResourceType.IDENTITY_SOURCE,
         resource_id=source.id,
         details=report.as_dict(),
     )

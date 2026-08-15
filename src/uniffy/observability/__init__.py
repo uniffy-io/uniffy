@@ -27,7 +27,7 @@ def setup_observability(config: ObservabilityConfig):
             traces_enabled=config.otel_traces_enabled,
         )
         if config.otel_logging_enabled:
-            if config.otel_protocol == "grpc":
+            if config.otel_protocol == "grpc":  # noqa: PLR2004
                 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 
                 otlp_log_exporter = OTLPLogExporter(

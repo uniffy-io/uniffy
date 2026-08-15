@@ -108,6 +108,7 @@ class OrgCipher:
         """
         from uniffy.core.audit import write_audit_event
         from uniffy.core.audit.actions import Action
+        from uniffy.core.models.audit.event import AuditResourceType
         from uniffy.db import open_session
 
         try:
@@ -117,7 +118,7 @@ class OrgCipher:
                     organization_id=organization_id,
                     actor_user_id=active.support_user_id,
                     action=Action.SUPPORT_SESSION_CIPHER_BRIDGE_ATTEMPT,
-                    resource_type="support_session",
+                    resource_type=AuditResourceType.SUPPORT_SESSION,
                     resource_id=active.session_id,
                     details={
                         "allowed": allowed,
@@ -244,9 +245,7 @@ class OrgCipher:
         try:
             version = int(version_str)
         except ValueError as exc:
-            raise CiphertextFormatError(
-                f"Non-numeric version segment: {version_str!r}"
-            ) from exc
+            raise CiphertextFormatError(f"Non-numeric version segment: {version_str!r}") from exc
         return version, payload
 
     async def _load_active(
@@ -280,9 +279,7 @@ class OrgCipher:
     ) -> tuple[Fernet, int]:
         row = await self._load_active(organization_id)
         if row is None:
-            raise OrgDekNotFoundError(
-                f"Organization {organization_id} has no active DEK"
-            )
+            raise OrgDekNotFoundError(f"Organization {organization_id} has no active DEK")
         fernet = await self._fernet_for(organization_id, row.version, row=row)
         return fernet, row.version
 

@@ -19,8 +19,12 @@ from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.models.chat.channel import ChannelType, ChatChannel
+from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_member import ChatChannelMember
+from uniffy.core.models.chat.message import ChatMessage
+from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
+from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant
+from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
@@ -35,6 +39,7 @@ from uniffy.core.types import (
 from uniffy.domains.agents.access import is_agents_builder, require_agents_builder
 from uniffy.domains.calendar.operations import CalendarEventOperations
 from uniffy.domains.chat.access import ChatAccessChecker
+from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -331,12 +336,7 @@ class TestChatModerationGate:
         with pytest.raises(PermissionDeniedError):
             await ChatAccessChecker(session).check_access(access.admin_id, access.org_id, channel)
 
-    async def test_a_deactivated_member_with_a_channel_row_still_reaches_it(
-        self, session, access
-    ) -> None:
-        """Chat membership is its own model: deactivating the org membership
-        drops the moderator bypass, not the channel row itself.
-        """
+    async def test_a_deactivated_member_with_a_channel_row_is_denied(self, session, access) -> None:
         channel = await _channel(session, access)
         session.add(
             ChatChannelMember(
@@ -348,7 +348,130 @@ class TestChatModerationGate:
         )
         await session.commit()
 
-        await ChatAccessChecker(session).check_access(access.ghost_id, access.org_id, channel)
+        checker = ChatAccessChecker(session)
+        with pytest.raises(PermissionDeniedError):
+            await checker.check_access(access.ghost_id, access.org_id, channel)
+        with pytest.raises(PermissionDeniedError):
+            await checker.require_send(access.ghost_id, channel)
+        with pytest.raises(PermissionDeniedError):
+            await checker.require_elevated(access.ghost_id, access.org_id, channel.id)
+
+
+class TestChatMembershipCleanup:
+    async def test_cleanup_is_scoped_to_one_organization(self, session, access) -> None:
+        first = await _channel(session, access)
+        second = ChatChannel(
+            organization_id=access.other_org_id,
+            owner_id=access.member_id,
+            name=f"other-{generate_id().hex[:8]}",
+            slug=f"other-{generate_id().hex[:8]}",
+            channel_type=ChannelType.PRIVATE,
+        )
+        session.add(second)
+        await session.flush()
+        session.add_all([
+            ChatChannelStats(channel_id=first.id, member_count=2),
+            ChatChannelStats(channel_id=second.id, member_count=1),
+            ChatChannelMember(
+                channel_id=first.id,
+                subject_type=SubjectType.USER,
+                subject_id=access.peer_id,
+                user_id=access.peer_id,
+            ),
+            ChatChannelMember(
+                channel_id=second.id,
+                subject_type=SubjectType.USER,
+                subject_id=access.peer_id,
+                user_id=access.peer_id,
+            ),
+        ])
+        first_root = ChatMessage(
+            channel_id=first.id,
+            sender_id=access.member_id,
+            content="first",
+        )
+        second_root = ChatMessage(
+            channel_id=second.id,
+            sender_id=access.member_id,
+            content="second",
+        )
+        session.add_all([first_root, second_root])
+        await session.flush()
+        session.add_all([
+            ChatThread(root_message_id=first_root.id, channel_id=first.id),
+            ChatThread(root_message_id=second_root.id, channel_id=second.id),
+        ])
+        await session.flush()
+        for root_id in (first_root.id, second_root.id):
+            session.add(
+                ChatThreadParticipant(
+                    root_message_id=root_id,
+                    subject_type=SubjectType.USER,
+                    subject_id=access.peer_id,
+                    user_id=access.peer_id,
+                )
+            )
+            session.add(
+                ChatThreadFollow(
+                    root_message_id=root_id,
+                    subject_type=SubjectType.USER,
+                    subject_id=access.peer_id,
+                    user_id=access.peer_id,
+                )
+            )
+        await session.commit()
+
+        cleanup = await cleanup_chat_membership_for_organization(
+            session,
+            organization_id=access.org_id,
+            user_id=access.peer_id,
+        )
+        await session.commit()
+
+        assert cleanup.channel_ids == (first.id,)
+        assert cleanup.private_channel_ids == (first.id,)
+        first_member = await session.get(
+            ChatChannelMember,
+            (first.id, SubjectType.USER, access.peer_id),
+        )
+        second_member = await session.get(
+            ChatChannelMember,
+            (second.id, SubjectType.USER, access.peer_id),
+        )
+        assert first_member is None
+        assert second_member is not None
+        assert (await session.get(ChatChannelStats, first.id)).member_count == 1
+        assert (await session.get(ChatChannelStats, second.id)).member_count == 1
+        assert (
+            await session.get(
+                ChatThreadParticipant,
+                (first_root.id, SubjectType.USER, access.peer_id),
+            )
+            is None
+        )
+        assert (
+            await session.get(
+                ChatThreadParticipant,
+                (second_root.id, SubjectType.USER, access.peer_id),
+            )
+            is not None
+        )
+        assert (
+            await session.get(
+                ChatThreadFollow,
+                (first_root.id, SubjectType.USER, access.peer_id),
+            )
+            is None
+        )
+        assert (
+            await session.get(
+                ChatThreadFollow,
+                (second_root.id, SubjectType.USER, access.peer_id),
+            )
+            is not None
+        )
+        assert await session.get(ChatSearchAclRefresh, first.id) is not None
+        assert await session.get(ChatSearchAclRefresh, second.id) is None
 
 
 class TestCalendarAttendeeFloor:

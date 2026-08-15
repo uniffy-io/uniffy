@@ -1,6 +1,7 @@
 """Agent cron task model for scheduled recurring agent executions."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, String, Text, text
@@ -8,6 +9,12 @@ from sqlmodel import Field, SQLModel
 
 from uniffy.core.content.model_mixins import deleted_at_field, is_deleted_field
 from uniffy.core.types import AccessMode, ContentRole, generate_id
+
+
+class AgentCronRunStatus(StrEnum):
+    PENDING = "pending"
+    SUCCESS = "success"
+    ERROR = "error"
 
 
 class AgentCronTask(SQLModel, table=True):
@@ -67,7 +74,7 @@ class AgentCronTask(SQLModel, table=True):
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
     )
-    last_run_status: str | None = Field(
+    last_run_status: AgentCronRunStatus | None = Field(
         default=None,
         sa_column=Column(String(20), nullable=True),
     )

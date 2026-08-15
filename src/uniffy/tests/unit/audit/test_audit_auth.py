@@ -60,23 +60,24 @@ async def test_login_success_emits_login_success() -> None:
     session = _session_for_login(user, OrganizationRole.MEMBER)
     ops = AuthOperations(session)
 
-    with patch(
-        "uniffy.domains.auth.operations.verify_password", return_value=True
-    ), patch.object(
-        AuthOperations,
-        "_load_user_mfa",
-        AsyncMock(return_value=None),
-    ), patch(
-        "uniffy.domains.auth.operations.evaluate_mfa_requirement",
-        AsyncMock(return_value=MfaRequirementResult(MfaRequirement.NOT_REQUIRED)),
-    ), patch.object(
-        AuthOperations,
-        "_create_session",
-        AsyncMock(return_value=MagicMock(id=generate_id())),
-    ), patch(
-        "uniffy.domains.auth.operations.create_access_token", return_value="atk"
-    ), patch(
-        "uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"
+    with (
+        patch("uniffy.domains.auth.operations.verify_password", return_value=True),
+        patch.object(
+            AuthOperations,
+            "_load_user_mfa",
+            AsyncMock(return_value=None),
+        ),
+        patch(
+            "uniffy.domains.auth.operations.evaluate_mfa_requirement",
+            AsyncMock(return_value=MfaRequirementResult(MfaRequirement.NOT_REQUIRED)),
+        ),
+        patch.object(
+            AuthOperations,
+            "_create_session",
+            AsyncMock(return_value=MagicMock(id=generate_id())),
+        ),
+        patch("uniffy.domains.auth.operations.create_access_token", return_value="atk"),
+        patch("uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"),
     ):
         await ops.authenticate(user.email, "pw")
 
@@ -110,9 +111,10 @@ async def test_login_failure_bad_password_carries_user_attribution() -> None:
     session = _session_for_login(user)
     ops = AuthOperations(session)
 
-    with patch(
-        "uniffy.domains.auth.operations.verify_password", return_value=False
-    ), pytest.raises(AuthenticationError):
+    with (
+        patch("uniffy.domains.auth.operations.verify_password", return_value=False),
+        pytest.raises(AuthenticationError),
+    ):
         await ops.authenticate(user.email, "wrong")
 
     rows = _audit_rows(session)
@@ -136,20 +138,19 @@ async def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
     valkey = MagicMock()
     valkey.set = AsyncMock(return_value=True)
 
-    with patch(
-        "uniffy.domains.auth.operations.decode_refresh_token",
-        return_value={
-            "type": "refresh",
-            "sub": str(user.id),
-            "tkv": 0,
-            "sid": None,
-        },
-    ), patch(
-        "uniffy.domains.auth.operations.create_access_token", return_value="atk"
-    ), patch(
-        "uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"
-    ), patch(
-        "uniffy.core.audit.writer._get_ops_client", return_value=valkey
+    with (
+        patch(
+            "uniffy.domains.auth.operations.decode_refresh_token",
+            return_value={
+                "type": "refresh",
+                "sub": str(user.id),
+                "tkv": 0,
+                "sid": None,
+            },
+        ),
+        patch("uniffy.domains.auth.operations.create_access_token", return_value="atk"),
+        patch("uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"),
+        patch("uniffy.core.audit.writer._get_ops_client", return_value=valkey),
     ):
         await ops.refresh_token("doesnt-matter")
 
@@ -165,9 +166,7 @@ async def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
 async def test_refresh_token_dedupe_suppresses_rapid_writes() -> None:
     user = _make_user()
     session = MagicMock()
-    session.execute = AsyncMock(
-        side_effect=[_scalar(user), _scalar(OrganizationRole.MEMBER)]
-    )
+    session.execute = AsyncMock(side_effect=[_scalar(user), _scalar(OrganizationRole.MEMBER)])
     session.add = MagicMock()
     session.commit = AsyncMock()
     ops = AuthOperations(session)
@@ -175,20 +174,19 @@ async def test_refresh_token_dedupe_suppresses_rapid_writes() -> None:
     valkey = MagicMock()
     valkey.set = AsyncMock(return_value=False)  # lock already held
 
-    with patch(
-        "uniffy.domains.auth.operations.decode_refresh_token",
-        return_value={
-            "type": "refresh",
-            "sub": str(user.id),
-            "tkv": 0,
-            "sid": None,
-        },
-    ), patch(
-        "uniffy.domains.auth.operations.create_access_token", return_value="atk"
-    ), patch(
-        "uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"
-    ), patch(
-        "uniffy.core.audit.writer._get_ops_client", return_value=valkey
+    with (
+        patch(
+            "uniffy.domains.auth.operations.decode_refresh_token",
+            return_value={
+                "type": "refresh",
+                "sub": str(user.id),
+                "tkv": 0,
+                "sid": None,
+            },
+        ),
+        patch("uniffy.domains.auth.operations.create_access_token", return_value="atk"),
+        patch("uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"),
+        patch("uniffy.core.audit.writer._get_ops_client", return_value=valkey),
     ):
         await ops.refresh_token("doesnt-matter")
 
@@ -248,10 +246,13 @@ async def test_token_error_does_not_emit_audit_row() -> None:
     session.commit = AsyncMock()
     ops = AuthOperations(session)
 
-    with patch(
-        "uniffy.domains.auth.operations.decode_refresh_token",
-        side_effect=Exception("bad token"),
-    ), pytest.raises(TokenError):
+    with (
+        patch(
+            "uniffy.domains.auth.operations.decode_refresh_token",
+            side_effect=Exception("bad token"),
+        ),
+        pytest.raises(TokenError),
+    ):
         await ops.refresh_token("garbage")
 
     assert _audit_rows(session) == []

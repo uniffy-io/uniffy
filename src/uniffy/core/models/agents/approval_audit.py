@@ -1,6 +1,7 @@
 """Agent approval audit model for destructive tool confirmation history."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import (
@@ -14,6 +15,12 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlmodel import Field, SQLModel
+
+
+class AgentApprovalStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    DENIED = "denied"
 
 
 class AgentApprovalAudit(SQLModel, table=True):
@@ -53,7 +60,7 @@ class AgentApprovalAudit(SQLModel, table=True):
         default_factory=dict,
         sa_column=Column(PG_JSONB, nullable=False),
     )
-    status: str = Field(
+    status: AgentApprovalStatus = Field(
         sa_column=Column(Text(), nullable=False),
     )
     decided_by: UUID | None = Field(

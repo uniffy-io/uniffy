@@ -101,26 +101,22 @@ async def build_org_chart_payload(session: AsyncSession, organization_id: UUID) 
             order.append(node)
             stack.extend(placed_children[node])
         for node in reversed(order):
-            descendants[node] = sum(
-                1 + descendants.get(child, 0) for child in placed_children[node]
-            )
+            descendants[node] = sum(1 + descendants.get(child, 0) for child in placed_children[node])
 
     teams = await teams_for_users(session, organization_id, list(users))
 
     nodes = []
     for _, user, profile in rows:
-        nodes.append(
-            {
-                "user_id": str(user.id),
-                "display_name": user.full_name or user.username,
-                "avatar_url": get_avatar_url(user.id, user.avatar_key) or None,
-                "job_title": profile.job_title if profile else None,
-                "department": profile.department if profile else None,
-                "manager_user_id": str(manager[user.id]) if manager[user.id] else None,
-                "teams": teams.get(user.id, []),
-                "descendant_count": descendants.get(user.id, 0),
-            }
-        )
+        nodes.append({
+            "user_id": str(user.id),
+            "display_name": user.full_name or user.username,
+            "avatar_url": get_avatar_url(user.id, user.avatar_key) or None,
+            "job_title": profile.job_title if profile else None,
+            "department": profile.department if profile else None,
+            "manager_user_id": str(manager[user.id]) if manager[user.id] else None,
+            "teams": teams.get(user.id, []),
+            "descendant_count": descendants.get(user.id, 0),
+        })
 
     return {
         "nodes": nodes,

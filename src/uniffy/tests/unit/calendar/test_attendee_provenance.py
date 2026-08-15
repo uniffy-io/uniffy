@@ -31,13 +31,11 @@ def _ops(execute_results) -> CalendarEventOperations:
 async def test_user_in_two_invited_groups_keeps_the_first() -> None:
     g1, g2 = generate_id(), generate_id()
     shared, only_g2 = generate_id(), generate_id()
-    ops = _ops(
-        [
-            _result(rows=[(g1, False), (g2, False)]),
-            _result(rows=[(g1, shared), (g2, shared), (g2, only_g2)]),
-            _result(rows=[(shared,), (only_g2,)]),
-        ]
-    )
+    ops = _ops([
+        _result(rows=[(g1, False), (g2, False)]),
+        _result(rows=[(g1, shared), (g2, shared), (g2, only_g2)]),
+        _result(rows=[(shared,), (only_g2,)]),
+    ])
     resolved, invited_via = await ops._expand_group_attendees(ACTOR, ORG, [g1, g2])
     assert resolved == [shared, only_g2]
     assert invited_via == {shared: g1, only_g2: g2}
@@ -46,14 +44,12 @@ async def test_user_in_two_invited_groups_keeps_the_first() -> None:
 async def test_first_wins_follows_request_order_not_row_order() -> None:
     g1, g2 = generate_id(), generate_id()
     shared = generate_id()
-    ops = _ops(
-        [
-            _result(rows=[(g1, False), (g2, False)]),
-            # Roster rows arrive g2-first; the g2-before-g1 request order rules.
-            _result(rows=[(g2, shared), (g1, shared)]),
-            _result(rows=[(shared,)]),
-        ]
-    )
+    ops = _ops([
+        _result(rows=[(g1, False), (g2, False)]),
+        # Roster rows arrive g2-first; the g2-before-g1 request order rules.
+        _result(rows=[(g2, shared), (g1, shared)]),
+        _result(rows=[(shared,)]),
+    ])
     _, invited_via = await ops._expand_group_attendees(ACTOR, ORG, [g2, g1])
     assert invited_via == {shared: g2}
 
@@ -61,16 +57,12 @@ async def test_first_wins_follows_request_order_not_row_order() -> None:
 async def test_direct_invite_beats_group_provenance() -> None:
     group_id = generate_id()
     user = generate_id()
-    ops = _ops(
-        [
-            _result(rows=[(group_id, False)]),
-            _result(rows=[(group_id, user)]),
-            _result(rows=[(user,)]),
-        ]
-    )
-    resolved, invited_via = await ops._expand_group_attendees(
-        ACTOR, ORG, [user, group_id]
-    )
+    ops = _ops([
+        _result(rows=[(group_id, False)]),
+        _result(rows=[(group_id, user)]),
+        _result(rows=[(user,)]),
+    ])
+    resolved, invited_via = await ops._expand_group_attendees(ACTOR, ORG, [user, group_id])
     assert resolved == [user]
     assert invited_via == {}
 
@@ -87,9 +79,7 @@ async def test_add_attendees_stamps_new_rows_with_source_group() -> None:
     )
     ops = _ops([_result(rows=[])])  # no existing attendee rows
     with (
-        patch.object(
-            CalendarEventOperations, "_fetch_by_id", AsyncMock(return_value=event)
-        ),
+        patch.object(CalendarEventOperations, "_fetch_by_id", AsyncMock(return_value=event)),
         patch.object(CalendarEventOperations, "_require_edit", AsyncMock()),
         patch.object(
             CalendarEventOperations,
@@ -97,12 +87,8 @@ async def test_add_attendees_stamps_new_rows_with_source_group() -> None:
             AsyncMock(return_value=([user], {user: group_id})),
         ),
         patch.object(CalendarEventOperations, "_log_activity", AsyncMock()),
-        patch.object(
-            CalendarEventOperations, "_refresh_search_attendees", AsyncMock()
-        ),
-        patch.object(
-            CalendarEventOperations, "_sync_auto_created_room_members", AsyncMock()
-        ),
+        patch.object(CalendarEventOperations, "_refresh_search_attendees", AsyncMock()),
+        patch.object(CalendarEventOperations, "_sync_auto_created_room_members", AsyncMock()),
         patch("uniffy.domains.calendar.operations.emit_notification", AsyncMock()),
     ):
         await ops.add_attendees(ACTOR, ORG, event.id, [group_id])

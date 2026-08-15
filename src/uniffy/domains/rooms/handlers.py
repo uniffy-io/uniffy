@@ -66,10 +66,14 @@ async def _resolve_room_effective_policy(
 ):
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
-        organization_id, ContentType.ROOM,
+        organization_id,
+        ContentType.ROOM,
     )
     return resolve_effective_policy(
-        room.access_mode, room.baseline_role, default_mode, default_baseline,
+        room.access_mode,
+        room.baseline_role,
+        default_mode,
+        default_baseline,
     )
 
 
@@ -143,7 +147,9 @@ class RoomHandlers:
                 ops = RoomOperations(session)
                 room = await ops.create_room(**kwargs)
                 eff_mode, eff_baseline = await _resolve_room_effective_policy(
-                    session, organization_id, room,
+                    session,
+                    organization_id,
+                    room,
                 )
                 return CreateRoomResponse(
                     room=room_to_proto(
@@ -171,7 +177,9 @@ class RoomHandlers:
                 ops = RoomOperations(session)
                 room = await ops.get_by_id(user_id, organization_id, room_id)
                 eff_mode, eff_baseline = await _resolve_room_effective_policy(
-                    session, organization_id, room,
+                    session,
+                    organization_id,
+                    room,
                 )
                 return GetRoomResponse(
                     room=room_to_proto(
@@ -226,7 +234,9 @@ class RoomHandlers:
                     **kwargs,
                 )
                 eff_mode, eff_baseline = await _resolve_room_effective_policy(
-                    session, organization_id, room,
+                    session,
+                    organization_id,
+                    room,
                 )
                 return UpdateRoomResponse(
                     room=room_to_proto(
@@ -308,12 +318,16 @@ class RoomHandlers:
 
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.ROOM,
+                    organization_id,
+                    ContentType.ROOM,
                 )
                 proto_rooms = []
                 for r in rooms:
                     eff_mode, eff_baseline = resolve_effective_policy(
-                        r.access_mode, r.baseline_role, default_mode, default_baseline,
+                        r.access_mode,
+                        r.baseline_role,
+                        default_mode,
+                        default_baseline,
                     )
                     proto_rooms.append(
                         room_to_proto(
@@ -549,12 +563,16 @@ class BookingHandlers:
 
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.ROOM,
+                    organization_id,
+                    ContentType.ROOM,
                 )
                 proto_rooms = []
                 for r in rooms:
                     eff_mode, eff_baseline = resolve_effective_policy(
-                        r.access_mode, r.baseline_role, default_mode, default_baseline,
+                        r.access_mode,
+                        r.baseline_role,
+                        default_mode,
+                        default_baseline,
                     )
                     proto_rooms.append(
                         room_to_proto(

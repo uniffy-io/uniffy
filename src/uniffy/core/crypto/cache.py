@@ -62,9 +62,7 @@ class OrgDekLRU:
     async def invalidate(self, organization_id: UUID) -> int:
         """Drop every cached version for the org; returns the count removed."""
         async with self._lock:
-            to_drop = [
-                key for key in self._entries if key[0] == organization_id
-            ]
+            to_drop = [key for key in self._entries if key[0] == organization_id]
             for key in to_drop:
                 self._entries.pop(key, None)
             return len(to_drop)

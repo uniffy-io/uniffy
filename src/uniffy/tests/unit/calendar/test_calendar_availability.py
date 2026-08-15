@@ -1,5 +1,4 @@
-"""Unit tests for free/busy computation and meeting-slot suggestions.
-"""
+"""Unit tests for free/busy computation and meeting-slot suggestions."""
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
@@ -31,13 +30,11 @@ class TestMergeIntervals:
         assert merge_intervals([b, a]) == [a, b]
 
     def test_overlap_and_touching_merge(self) -> None:
-        merged = merge_intervals(
-            [
-                (_dt(3, 9), _dt(3, 10)),
-                (_dt(3, 9, 30), _dt(3, 11)),
-                (_dt(3, 11), _dt(3, 12)),
-            ]
-        )
+        merged = merge_intervals([
+            (_dt(3, 9), _dt(3, 10)),
+            (_dt(3, 9, 30), _dt(3, 11)),
+            (_dt(3, 11), _dt(3, 12)),
+        ])
         assert merged == [(_dt(3, 9), _dt(3, 12))]
 
 
@@ -104,9 +101,7 @@ class TestComputeFreeSlots:
         # 2026-08-08 is a Saturday.
         window = (_dt(8, 0), _dt(9, 23))
         assert compute_free_slots([], *window, timedelta(minutes=30), "UTC") == []
-        slots = compute_free_slots(
-            [], *window, timedelta(minutes=30), "UTC", include_weekends=True
-        )
+        slots = compute_free_slots([], *window, timedelta(minutes=30), "UTC", include_weekends=True)
         assert slots[0] == (_dt(8, 9), _dt(8, 9, 30))
 
     def test_working_hours_follow_timezone(self) -> None:
@@ -210,11 +205,7 @@ class TestGetBusyIntervals:
             side_effect=[
                 MagicMock(all=MagicMock(return_value=[(user,)])),
                 MagicMock(all=MagicMock(return_value=[(master, user)])),
-                MagicMock(
-                    scalars=MagicMock(
-                        return_value=MagicMock(all=MagicMock(return_value=[]))
-                    )
-                ),
+                MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))),
             ]
         )
 

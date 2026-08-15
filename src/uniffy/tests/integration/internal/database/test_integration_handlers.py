@@ -149,15 +149,11 @@ def _mutation_call(handlers: IntegrationsHandlers, rpc: str, org_id: str):
         )
     if rpc == "validate":
         return handlers.validate_connection(
-            ValidateConnectionRequest(
-                organization_id=org_id, connection_id=connection_id
-            ),
+            ValidateConnectionRequest(organization_id=org_id, connection_id=connection_id),
             MagicMock(),
         )
     return handlers.toggle_connection(
-        ToggleConnectionRequest(
-            organization_id=org_id, connection_id=connection_id, enabled=False
-        ),
+        ToggleConnectionRequest(organization_id=org_id, connection_id=connection_id, enabled=False),
         MagicMock(),
     )
 

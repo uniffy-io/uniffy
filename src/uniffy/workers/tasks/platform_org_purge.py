@@ -21,6 +21,7 @@ from sqlalchemy import select
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
@@ -28,8 +29,9 @@ from uniffy.core.models.login.organization_member import (
 )
 from uniffy.core.models.login.user import User
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.core.valkey.queue import get_queue
+from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.db.session import open_session
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="mail")
 
@@ -67,7 +69,7 @@ async def _enqueue_warning(
     user_id: UUID,
 ) -> None:
     try:
-        queue = get_queue("core")
+        queue = get_queue(QueueName.CORE)
     except RuntimeError:
         logger.warning(
             "platform_org_purge_warning: core queue not initialised",
@@ -82,7 +84,7 @@ async def _enqueue_warning(
     }
     idempotency_key = f"platform_purge_warning/{org.id}/{user_id}"
     await queue.enqueue_job(
-        "send_email",
+        JobName.SEND_EMAIL,
         recipient,
         _TEMPLATE,
         json.dumps(context),
@@ -106,13 +108,17 @@ async def notify_pending_org_purges(ctx: dict[str, Any]) -> dict[str, Any]:
 
         async with open_session() as session:
             eligible = (
-                await session.execute(
-                    select(Organization)
-                    .where(Organization.deleted_at.is_not(None))
-                    .where(Organization.deleted_at <= warn_cutoff)
-                    .where(Organization.purge_warning_sent_at.is_(None))
+                (
+                    await session.execute(
+                        select(Organization)
+                        .where(Organization.deleted_at.is_not(None))
+                        .where(Organization.deleted_at <= warn_cutoff)
+                        .where(Organization.purge_warning_sent_at.is_(None))
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             for org in eligible:
                 purge_at = org.deleted_at + timedelta(days=PURGE_GRACE_DAYS)
                 owners = (
@@ -138,7 +144,7 @@ async def notify_pending_org_purges(ctx: dict[str, Any]) -> dict[str, Any]:
                     organization_id=org.id,
                     actor_user_id=None,
                     action=Action.ORGANIZATION_PURGE_WARNING_SENT,
-                    resource_type="organization",
+                    resource_type=AuditResourceType.ORGANIZATION,
                     resource_id=org.id,
                     details={
                         "purge_at": purge_at.isoformat(),

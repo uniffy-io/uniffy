@@ -235,13 +235,11 @@ async def test_query_params_reach_pyqwest_as_strings() -> None:
 
     async def app(scope, receive, send):
         captured["query"] = scope.get("query_string")
-        await send(
-            {
-                "type": "http.response.start",
-                "status": 200,
-                "headers": [(b"content-type", b"application/json")],
-            }
-        )
+        await send({
+            "type": "http.response.start",
+            "status": 200,
+            "headers": [(b"content-type", b"application/json")],
+        })
         await send({"type": "http.response.body", "body": b"{}"})
 
     async def _call() -> None:

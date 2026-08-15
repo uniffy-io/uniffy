@@ -1,5 +1,4 @@
-"""Unit tests for the agents <-> tags wiring.
-"""
+"""Unit tests for the agents <-> tags wiring."""
 
 from unittest.mock import AsyncMock, MagicMock
 
@@ -68,9 +67,7 @@ class TestSyncAgentTags:
             raising=True,
         )
 
-        await ops._sync_agent_tags(
-            actor_id=actor_id, agent=agent, tag_ids=replacement
-        )
+        await ops._sync_agent_tags(actor_id=actor_id, agent=agent, tag_ids=replacement)
 
         assert captured["actor_id"] == actor_id
         assert captured["organization_id"] == agent.organization_id

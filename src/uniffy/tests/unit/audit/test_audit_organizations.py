@@ -45,9 +45,7 @@ async def test_update_emits_settings_changed_with_diff() -> None:
     session.refresh = AsyncMock()
 
     ops = OrganizationOperations(session)
-    with patch.object(
-        OrganizationOperations, "get_by_id", AsyncMock(return_value=org)
-    ):
+    with patch.object(OrganizationOperations, "get_by_id", AsyncMock(return_value=org)):
         await ops.update(
             org_id=org.id,
             name="New",
@@ -70,9 +68,7 @@ async def test_update_with_no_changes_skips_audit() -> None:
     session.refresh = AsyncMock()
 
     ops = OrganizationOperations(session)
-    with patch.object(
-        OrganizationOperations, "get_by_id", AsyncMock(return_value=org)
-    ):
+    with patch.object(OrganizationOperations, "get_by_id", AsyncMock(return_value=org)):
         await ops.update(org_id=org.id, actor_user_id=generate_id())
 
     assert _audit_rows(session) == []
@@ -95,30 +91,29 @@ async def test_add_member_emits_member_added() -> None:
     actor = generate_id()
 
     attachment_ops_instance = MagicMock()
-    attachment_ops_instance.get_or_create_attachments_folder = AsyncMock(
-        return_value=MagicMock()
-    )
+    attachment_ops_instance.get_or_create_attachments_folder = AsyncMock(return_value=MagicMock())
     attachment_factory = MagicMock(return_value=attachment_ops_instance)
 
     chat_ops_instance = MagicMock()
     chat_ops_instance.join_default_channels = AsyncMock(return_value=None)
     chat_factory = MagicMock(return_value=chat_ops_instance)
 
-    with patch.object(
-        OrganizationOperations, "get_membership", AsyncMock(return_value=None)
-    ), patch(
-        "uniffy.domains.files.attachments.operations.AttachmentOperations",
-        attachment_factory,
-    ), patch(
-        "uniffy.domains.chat.channels.operations.ChatChannelOperations",
-        chat_factory,
-    ), patch(
-        "uniffy.domains.organizations.operations._drop_user_perm_cache",
-        AsyncMock(return_value=None),
+    with (
+        patch.object(OrganizationOperations, "get_membership", AsyncMock(return_value=None)),
+        patch(
+            "uniffy.domains.files.attachments.operations.AttachmentOperations",
+            attachment_factory,
+        ),
+        patch(
+            "uniffy.domains.chat.channels.operations.ChatChannelOperations",
+            chat_factory,
+        ),
+        patch(
+            "uniffy.domains.organizations.operations._drop_user_perm_cache",
+            AsyncMock(return_value=None),
+        ),
     ):
-        await ops.add_member(
-            target, org_id, OrganizationRole.ADMIN, actor_user_id=actor
-        )
+        await ops.add_member(target, org_id, OrganizationRole.ADMIN, actor_user_id=actor)
 
     rows = _audit_rows(session)
     added = [r for r in rows if r.action == Action.ORGANIZATION_MEMBER_ADDED]
@@ -150,15 +145,17 @@ async def test_update_member_role_emits_role_changed_with_previous_role() -> Non
     ops = OrganizationOperations(session)
 
     admin_membership = MagicMock(role=OrganizationRole.OWNER)
-    with patch.object(
-        OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)
-    ), patch.object(
-        OrganizationOperations,
-        "get_membership",
-        AsyncMock(return_value=admin_membership),
-    ), patch(
-        "uniffy.domains.organizations.operations._drop_user_perm_cache",
-        AsyncMock(return_value=None),
+    with (
+        patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)),
+        patch.object(
+            OrganizationOperations,
+            "get_membership",
+            AsyncMock(return_value=admin_membership),
+        ),
+        patch(
+            "uniffy.domains.organizations.operations._drop_user_perm_cache",
+            AsyncMock(return_value=None),
+        ),
     ):
         await ops.update_member_role(admin, org_id, target, OrganizationRole.ADMIN)
 
@@ -191,15 +188,17 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
     ops = OrganizationOperations(session)
     ops._user_indexer = indexer
 
-    with patch.object(
-        OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)
-    ), patch.object(
-        OrganizationOperations,
-        "get_membership",
-        AsyncMock(return_value=membership),
-    ), patch(
-        "uniffy.domains.organizations.operations._drop_user_perm_cache",
-        AsyncMock(return_value=None),
+    with (
+        patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)),
+        patch.object(
+            OrganizationOperations,
+            "get_membership",
+            AsyncMock(return_value=membership),
+        ),
+        patch(
+            "uniffy.domains.organizations.operations._drop_user_perm_cache",
+            AsyncMock(return_value=None),
+        ),
     ):
         await ops.remove_member(admin, org_id, target)
 
@@ -220,10 +219,9 @@ async def test_update_organization_settings_emits_changed_keys() -> None:
 
     ops = OrganizationOperations(session)
 
-    with patch.object(
-        OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)
-    ), patch.object(
-        OrganizationOperations, "get_by_id", AsyncMock(return_value=org)
+    with (
+        patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)),
+        patch.object(OrganizationOperations, "get_by_id", AsyncMock(return_value=org)),
     ):
         await ops.update_organization_settings(generate_id(), org.id, chat_agents_enabled=True)
 

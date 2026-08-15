@@ -23,6 +23,7 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.db import open_session
 from uniffy.domains.agents.sessions.converters import (
     message_feedback_to_proto,
@@ -199,13 +200,12 @@ class SessionsHandlers:
                 )
                 ratings = await ops.get_user_feedback_for_messages(
                     user_id=user_id,
-                    message_ids=[m.id for m in messages if m.role == "assistant"],
+                    message_ids=[m.id for m in messages if m.role == AgentMessageRole.ASSISTANT],
                 )
                 total_pages = (total + page_size - 1) // page_size if total > 0 else 0
                 return ListMessagesResponse(
                     messages=[
-                        message_to_proto(m, feedback_rating=ratings.get(m.id, ""))
-                        for m in messages
+                        message_to_proto(m, feedback_rating=ratings.get(m.id, "")) for m in messages
                     ],
                     pagination=PaginationResponse(
                         page=page,
@@ -311,9 +311,7 @@ class SessionsHandlers:
         try:
             org_id = UUID(request.organization_id)
             message_id = UUID(request.message_id) if request.message_id else None
-            chat_message_id = (
-                UUID(request.chat_message_id) if request.chat_message_id else None
-            )
+            chat_message_id = UUID(request.chat_message_id) if request.chat_message_id else None
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 

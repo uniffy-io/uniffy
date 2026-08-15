@@ -36,13 +36,16 @@ def _team_urn(team_id) -> str:
 async def _notify(note, actor, old_refs, expansions, writer_id=None):
     emitted: list = []
     ops = _ops()
-    with patch(
-        "uniffy.domains.notes.operations.emit_notification",
-        AsyncMock(side_effect=lambda event: emitted.append(event)),
-    ), patch(
-        "uniffy.domains.notes.operations.expand_team_mentions",
-        AsyncMock(return_value=expansions),
-    ) as expander:
+    with (
+        patch(
+            "uniffy.domains.notes.operations.emit_notification",
+            AsyncMock(side_effect=lambda event: emitted.append(event)),
+        ),
+        patch(
+            "uniffy.domains.notes.operations.expand_team_mentions",
+            AsyncMock(return_value=expansions),
+        ) as expander,
+    ):
         await ops._notify_new_mentions(actor, ORG, note, old_refs, writer_id)
     return emitted, expander
 

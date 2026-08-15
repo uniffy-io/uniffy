@@ -54,10 +54,14 @@ async def _resolve_effective_policy(
     """Return the cron task's effective ``(access_mode, baseline_role)`` for proto emission."""
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
-        organization_id, ContentType.AGENT_CRON_TASK,
+        organization_id,
+        ContentType.AGENT_CRON_TASK,
     )
     return resolve_effective_policy(
-        task.access_mode, task.baseline_role, default_mode, default_baseline,
+        task.access_mode,
+        task.baseline_role,
+        default_mode,
+        default_baseline,
     )
 
 
@@ -117,7 +121,9 @@ class CronHandlers:
                     description=description,
                 )
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, task,
+                    session,
+                    org_id,
+                    task,
                 )
                 return CreateCronTaskResponse(
                     task=cron_task_to_proto(
@@ -146,7 +152,9 @@ class CronHandlers:
                 ops = CronTaskOperations(session)
                 task = await ops.get_by_id(user_id, org_id, task_id)
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, task,
+                    session,
+                    org_id,
+                    task,
                 )
                 return GetCronTaskResponse(
                     task=cron_task_to_proto(
@@ -192,12 +200,16 @@ class CronHandlers:
                 total_pages = (total + page_size - 1) // page_size if total > 0 else 0
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
-                    org_id, ContentType.AGENT_CRON_TASK,
+                    org_id,
+                    ContentType.AGENT_CRON_TASK,
                 )
                 proto_tasks = []
                 for t in tasks:
                     eff_mode, eff_baseline = resolve_effective_policy(
-                        t.access_mode, t.baseline_role, default_mode, default_baseline,
+                        t.access_mode,
+                        t.baseline_role,
+                        default_mode,
+                        default_baseline,
                     )
                     proto_tasks.append(
                         cron_task_to_proto(
@@ -257,7 +269,9 @@ class CronHandlers:
                     **kwargs,
                 )
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, task,
+                    session,
+                    org_id,
+                    task,
                 )
                 return UpdateCronTaskResponse(
                     task=cron_task_to_proto(
@@ -355,7 +369,9 @@ class CronHandlers:
                     task_id=task_id,
                 )
                 eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, task,
+                    session,
+                    org_id,
+                    task,
                 )
                 return TriggerCronTaskResponse(
                     run_log=cron_run_log_to_proto(run_log),

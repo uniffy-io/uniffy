@@ -76,10 +76,7 @@ def test_ownership_transferred_projection() -> None:
 
     proto = audit_event_to_content_member_event_proto(event)
 
-    assert (
-        proto.action
-        == ProtoContentMemberAction.CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED
-    )
+    assert proto.action == ProtoContentMemberAction.CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED
     assert proto.previous_owner_id == previous_owner
     assert proto.new_owner_id == new_owner
     assert proto.subject_id == new_owner

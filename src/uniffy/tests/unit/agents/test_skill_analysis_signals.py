@@ -1,5 +1,4 @@
-"""Unit tests for channel-transcript gathering in the skill-evolution analyzer.
-"""
+"""Unit tests for channel-transcript gathering in the skill-evolution analyzer."""
 
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock

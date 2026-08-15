@@ -69,9 +69,7 @@ def _ctx_as(user_id, org_id, session):
 
 
 def test_base_url_trailing_slash_is_stripped() -> None:
-    assert (
-        _normalize_base_url("https://ghe.example.com/api/v3/") == "https://ghe.example.com/api/v3"
-    )
+    assert _normalize_base_url("https://ghe.example.com/api/v3/") == "https://ghe.example.com/api/v3"
 
 
 def test_base_url_empty_string_means_provider_default() -> None:
@@ -137,9 +135,7 @@ async def test_malformed_connection_id_is_an_invalid_argument(rpc: str) -> None:
         "update": UpdateConnectionRequest(
             organization_id=str(org_id), connection_id="not-a-uuid", name="x"
         ),
-        "remove": RemoveConnectionRequest(
-            organization_id=str(org_id), connection_id="not-a-uuid"
-        ),
+        "remove": RemoveConnectionRequest(organization_id=str(org_id), connection_id="not-a-uuid"),
         "validate": ValidateConnectionRequest(
             organization_id=str(org_id), connection_id="not-a-uuid"
         ),

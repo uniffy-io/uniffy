@@ -145,8 +145,7 @@ class SavedTagFilterOperations:
             stmt = select(SavedTagFilter).where(
                 and_(
                     SavedTagFilter.organization_id == organization_id,
-                    (SavedTagFilter.user_id == user_id)
-                    | (SavedTagFilter.is_preset == True),  # noqa: E712
+                    (SavedTagFilter.user_id == user_id) | (SavedTagFilter.is_preset == True),  # noqa: E712
                 )
             )
         else:

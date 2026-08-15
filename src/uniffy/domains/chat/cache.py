@@ -66,7 +66,6 @@ def _serialize_channel(channel: ChatChannel) -> dict[str, Any]:
         "slug": channel.slug,
         "description": channel.description,
         "channel_type": channel.channel_type.value,
-        "is_encrypted": channel.is_encrypted,
         "is_archived": channel.is_archived,
         "is_default": channel.is_default,
         "is_deleted": channel.is_deleted,
@@ -91,33 +90,22 @@ def _deserialize_channel(payload: dict[str, Any]) -> ChatChannel:
         slug=payload["slug"],
         description=payload["description"],
         channel_type=ChannelType(payload["channel_type"]),
-        is_encrypted=payload["is_encrypted"],
         is_archived=payload["is_archived"],
         is_default=payload["is_default"],
         is_deleted=payload["is_deleted"],
         icon=payload["icon"],
-        category_id=(
-            UUID(payload["category_id"]) if payload.get("category_id") else None
-        ),
+        category_id=(UUID(payload["category_id"]) if payload.get("category_id") else None),
         is_agent_dm=payload.get("is_agent_dm", False),
         custom_name=payload.get("custom_name"),
-        agent_id=(
-            UUID(payload["agent_id"]) if payload.get("agent_id") else None
-        ),
+        agent_id=(UUID(payload["agent_id"]) if payload.get("agent_id") else None),
         created_at=(
-            datetime.fromisoformat(payload["created_at"])
-            if payload.get("created_at")
-            else None
+            datetime.fromisoformat(payload["created_at"]) if payload.get("created_at") else None
         ),
         updated_at=(
-            datetime.fromisoformat(payload["updated_at"])
-            if payload.get("updated_at")
-            else None
+            datetime.fromisoformat(payload["updated_at"]) if payload.get("updated_at") else None
         ),
         deleted_at=(
-            datetime.fromisoformat(payload["deleted_at"])
-            if payload.get("deleted_at")
-            else None
+            datetime.fromisoformat(payload["deleted_at"]) if payload.get("deleted_at") else None
         ),
     )
 
@@ -253,7 +241,7 @@ async def get_cached_pinned_message_ids(
     for raw in ids:
         try:
             out.append(UUID(str(raw)))
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             continue
     return out
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 
 from loguru import logger
@@ -34,7 +35,19 @@ from uniffy.scripts.demo_company.rooms import seed_rooms
 
 logger = logger.bind(component="scripts.demo_company.seeder")
 
-DOMAINS = ("users", "agents", "notes", "files", "rooms", "events", "projects", "chat")
+
+class DemoDomain(StrEnum):
+    USERS = "users"
+    AGENTS = "agents"
+    NOTES = "notes"
+    FILES = "files"
+    ROOMS = "rooms"
+    EVENTS = "events"
+    PROJECTS = "projects"
+    CHAT = "chat"
+
+
+DOMAINS = tuple(DemoDomain)
 
 
 async def seed_demo_company(
@@ -43,7 +56,7 @@ async def seed_demo_company(
     org_slug: str | None = None,
     actor_email: str | None = None,
     anchor_date: datetime | None = None,
-    only: tuple[str, ...] = DOMAINS,
+    only: tuple[DemoDomain, ...] = DOMAINS,
     dry_run: bool = False,
     password: str | None = None,
 ) -> SeedReport:
@@ -80,7 +93,7 @@ async def _run_domains(
     ctx: DemoContext,
     content: DemoContent,
     tag_ids: dict,
-    only: tuple[str, ...],
+    only: tuple[DemoDomain, ...],
     report: SeedReport,
 ) -> None:
     root_folder = content.manifest.root_folder
@@ -92,29 +105,29 @@ async def _run_domains(
     demo_user_id = await ensure_demo_user(ctx, content.manifest.demo_user, persona)
     report.results["persona"] = persona
 
-    if "users" in only:
+    if DemoDomain.USERS in only:
         await seed_people(ctx, content.people, report)
 
     await register_user_mentions(ctx, registry)
 
-    if "agents" in only:
+    if DemoDomain.AGENTS in only:
         report.results["agents"] = await seed_agents(ctx, content.agents)
 
-    if "notes" in only:
+    if DemoDomain.NOTES in only:
         report.results["notes"] = await seed_notes(
             ctx, content.notes, root_folder, tag_ids, registry
         )
 
-    if "files" in only:
+    if DemoDomain.FILES in only:
         report.results["files"] = await seed_files(
             ctx, content.files, root_folder, tag_ids, registry
         )
 
     # Rooms come before events: an event that books a room needs the row.
-    if "rooms" in only:
+    if DemoDomain.ROOMS in only:
         report.results["rooms"] = await seed_rooms(ctx, content.rooms, registry)
 
-    if "events" in only:
+    if DemoDomain.EVENTS in only:
         report.results["events"] = await seed_events(
             ctx,
             content.events,
@@ -123,21 +136,21 @@ async def _run_domains(
             known_rooms=frozenset(room.name for room in content.rooms),
         )
 
-    if "projects" in only:
+    if DemoDomain.PROJECTS in only:
         report.results["projects"] = await seed_projects(ctx, content.projects, tag_ids)
 
     # Mentions resolve once every id exists: a note can point at a room, file or
     # event created in this same run. Ahead of chat, which is the long stretch -
     # a failure there must not cost the relationships.
     mentions = DomainResult()
-    if "notes" in only:
+    if DemoDomain.NOTES in only:
         mentions.created += await apply_note_mentions(ctx, content.notes, registry)
-    if "events" in only:
+    if DemoDomain.EVENTS in only:
         mentions.created += await apply_event_mentions(ctx, content.events, registry)
     report.results["mentions"] = mentions
 
     # Chat last: a message can mention anything above, resolved as it is sent.
-    if "chat" in only:
+    if DemoDomain.CHAT in only:
         report.results["chat"] = await seed_chat(
             ctx, content.chat, registry, demo_user_id=demo_user_id
         )

@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import email_hash, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.mail.config import MAIL_NAMESPACE, MailConfig
-from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.mail.config import MAIL_FROM_ADDRESS_KEY, MAIL_NAMESPACE, MailConfig
+from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
@@ -32,13 +32,14 @@ from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.realtime.publisher import publish_token_revoke
 from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
-from uniffy.core.valkey.queue import get_queue
+from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.auth.password_policy import validate_password
 from uniffy.domains.auth.passwords import hash_password, normalize_email
 from uniffy.domains.auth.revocation import mark_token_version_revoked
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
+from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="platform.directory.operations")
 
@@ -151,9 +152,7 @@ class PlatformUserPage(NamedTuple):
 
 
 _PLAN_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,49}$")
-_DOMAIN_RE = re.compile(
-    r"^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$"
-)
+_DOMAIN_RE = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$")
 
 
 def normalize_org_name(name: str) -> str:
@@ -289,9 +288,7 @@ class PlatformDirectoryOperations:
         orgs = (await self._session.execute(page_query)).scalars().all()
 
         if not orgs:
-            return PlatformOrgPage(
-                rows=[], total_count=int(total), page=page, page_size=page_size
-            )
+            return PlatformOrgPage(rows=[], total_count=int(total), page=page, page_size=page_size)
 
         org_ids = [org.id for org in orgs]
         member_counts = await self._fetch_member_counts(org_ids)
@@ -327,23 +324,17 @@ class PlatformDirectoryOperations:
             page_size=page_size,
         )
 
-    async def get_organization(
-        self, *, user_id: UUID, organization_id: UUID
-    ) -> PlatformOrgDetail:
+    async def get_organization(self, *, user_id: UUID, organization_id: UUID) -> PlatformOrgDetail:
         await self._user_ops.require_system_admin(user_id)
         org = await self._require_org(organization_id)
 
         member_count = (await self._fetch_member_counts([org.id])).get(org.id, 0)
         mail_source = (await self._fetch_mail_sources([org.id])).get(org.id, "none")
-        encryption_version = (
-            await self._fetch_encryption_versions([org.id])
-        ).get(org.id, 0)
-        last_activity = (
-            await self._fetch_audit_max([org.id], action=None)
-        ).get(org.id)
-        last_login = (
-            await self._fetch_audit_max([org.id], action=Action.AUTH_LOGIN_SUCCESS)
-        ).get(org.id)
+        encryption_version = (await self._fetch_encryption_versions([org.id])).get(org.id, 0)
+        last_activity = (await self._fetch_audit_max([org.id], action=None)).get(org.id)
+        last_login = (await self._fetch_audit_max([org.id], action=Action.AUTH_LOGIN_SUCCESS)).get(
+            org.id
+        )
 
         owners = await self._fetch_owners(org.id)
 
@@ -404,14 +395,10 @@ class PlatformDirectoryOperations:
             await self._session.execute(select(User).where(User.email == email))
         ).scalar_one_or_none()
         if owner is None or not owner.is_active:
-            raise ValidationError(
-                "owner_email", "No active user account matches this email"
-            )
+            raise ValidationError("owner_email", "No active user account matches this email")
 
         existing = (
-            await self._session.execute(
-                select(Organization.id).where(Organization.slug == slug)
-            )
+            await self._session.execute(select(Organization.id).where(Organization.slug == slug))
         ).scalar_one_or_none()
         if existing is not None:
             raise ValidationError("slug", "Slug is already in use")
@@ -424,9 +411,7 @@ class PlatformDirectoryOperations:
             plan=plan,
             actor_user_id=user_id,
         )
-        return await self.get_organization(
-            user_id=user_id, organization_id=org.id
-        )
+        return await self.get_organization(user_id=user_id, organization_id=org.id)
 
     async def update_organization(
         self,
@@ -456,9 +441,7 @@ class PlatformDirectoryOperations:
 
         org = await self._require_org(organization_id)
         if org.deleted_at is not None:
-            raise ValidationError(
-                "organization", "Cannot edit a deleted organization"
-            )
+            raise ValidationError("organization", "Cannot edit a deleted organization")
 
         changed_keys: list[str] = []
         if name is not None:
@@ -492,9 +475,7 @@ class PlatformDirectoryOperations:
                 changed_keys.append("plan")
         if max_members is not None:
             if max_members < 0:
-                raise ValidationError(
-                    "max_members", "max_members cannot be negative"
-                )
+                raise ValidationError("max_members", "max_members cannot be negative")
             cap = max_members if max_members > 0 else None
             if cap != org.max_members:
                 org.max_members = cap
@@ -507,15 +488,13 @@ class PlatformDirectoryOperations:
                 organization_id=org.id,
                 actor_user_id=user_id,
                 action=Action.ORGANIZATION_SETTINGS_CHANGED,
-                resource_type="organization",
+                resource_type=AuditResourceType.ORGANIZATION,
                 resource_id=org.id,
                 details={"reason": reason, "changed_keys": changed_keys},
             )
             await self._session.commit()
 
-        return await self.get_organization(
-            user_id=user_id, organization_id=organization_id
-        )
+        return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
     async def suspend_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
@@ -534,13 +513,9 @@ class PlatformDirectoryOperations:
 
         org = await self._require_org(organization_id)
         if org.deleted_at is not None:
-            raise ValidationError(
-                "organization", "Cannot suspend a deleted organization"
-            )
+            raise ValidationError("organization", "Cannot suspend a deleted organization")
         if org.is_suspended:
-            return await self.get_organization(
-                user_id=user_id, organization_id=organization_id
-            )
+            return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
         org.is_suspended = True
         org.suspended_at = datetime.now(UTC)
@@ -555,7 +530,7 @@ class PlatformDirectoryOperations:
             organization_id=org.id,
             actor_user_id=user_id,
             action=Action.ORGANIZATION_SUSPENDED,
-            resource_type="organization",
+            resource_type=AuditResourceType.ORGANIZATION,
             resource_id=org.id,
             details={"reason": reason, "member_token_versions_bumped": bumped_user_ids},
         )
@@ -566,9 +541,7 @@ class PlatformDirectoryOperations:
 
         await self._publish_member_token_revokes(bumped_user_ids)
 
-        return await self.get_organization(
-            user_id=user_id, organization_id=organization_id
-        )
+        return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
     async def unsuspend_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
@@ -581,9 +554,7 @@ class PlatformDirectoryOperations:
 
         org = await self._require_org(organization_id)
         if not org.is_suspended:
-            return await self.get_organization(
-                user_id=user_id, organization_id=organization_id
-            )
+            return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
         org.is_suspended = False
         org.suspended_at = None
@@ -596,15 +567,13 @@ class PlatformDirectoryOperations:
             organization_id=org.id,
             actor_user_id=user_id,
             action=Action.ORGANIZATION_UNSUSPENDED,
-            resource_type="organization",
+            resource_type=AuditResourceType.ORGANIZATION,
             resource_id=org.id,
             details={"reason": reason},
         )
         await self._session.commit()
 
-        return await self.get_organization(
-            user_id=user_id, organization_id=organization_id
-        )
+        return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
     async def delete_organization(
         self,
@@ -633,9 +602,7 @@ class PlatformDirectoryOperations:
                 "Confirmation slug does not match",
             )
         if org.deleted_at is not None:
-            return await self.get_organization(
-                user_id=user_id, organization_id=organization_id
-            )
+            return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
         org.deleted_at = datetime.now(UTC)
         org.deleted_by_user_id = user_id
@@ -650,13 +617,11 @@ class PlatformDirectoryOperations:
             organization_id=org.id,
             actor_user_id=user_id,
             action=Action.ORGANIZATION_DELETED_BY_PLATFORM,
-            resource_type="organization",
+            resource_type=AuditResourceType.ORGANIZATION,
             resource_id=org.id,
             details={
                 "reason": reason,
-                "purge_at": _purge_at_from(org.deleted_at).isoformat()
-                if org.deleted_at
-                else None,
+                "purge_at": _purge_at_from(org.deleted_at).isoformat() if org.deleted_at else None,
                 "member_token_versions_bumped": bumped_user_ids,
             },
         )
@@ -668,9 +633,7 @@ class PlatformDirectoryOperations:
 
         await self._enqueue_org_deleted_emails(org, reason)
 
-        return await self.get_organization(
-            user_id=user_id, organization_id=organization_id
-        )
+        return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
     async def restore_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
@@ -683,9 +646,7 @@ class PlatformDirectoryOperations:
 
         org = await self._require_org(organization_id)
         if org.deleted_at is None:
-            return await self.get_organization(
-                user_id=user_id, organization_id=organization_id
-            )
+            return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
         org.deleted_at = None
         org.deleted_by_user_id = None
@@ -698,15 +659,13 @@ class PlatformDirectoryOperations:
             organization_id=org.id,
             actor_user_id=user_id,
             action=Action.ORGANIZATION_RESTORED,
-            resource_type="organization",
+            resource_type=AuditResourceType.ORGANIZATION,
             resource_id=org.id,
             details={"reason": reason},
         )
         await self._session.commit()
 
-        return await self.get_organization(
-            user_id=user_id, organization_id=organization_id
-        )
+        return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
     async def list_users(
         self,
@@ -753,9 +712,7 @@ class PlatformDirectoryOperations:
         users = (await self._session.execute(page_query)).scalars().all()
 
         if not users:
-            return PlatformUserPage(
-                rows=[], total_count=int(total), page=page, page_size=page_size
-            )
+            return PlatformUserPage(rows=[], total_count=int(total), page=page, page_size=page_size)
 
         user_ids = [u.id for u in users]
         membership_counts = await self._fetch_membership_counts(user_ids)
@@ -779,9 +736,7 @@ class PlatformDirectoryOperations:
                     created_at=u.created_at,
                 )
             )
-        return PlatformUserPage(
-            rows=rows, total_count=int(total), page=page, page_size=page_size
-        )
+        return PlatformUserPage(rows=rows, total_count=int(total), page=page, page_size=page_size)
 
     async def create_user(
         self,
@@ -812,7 +767,7 @@ class PlatformDirectoryOperations:
             raise ValidationError("reason", "reason is required")
 
         email = normalize_email(email)
-        if not email or "@" not in email:
+        if not email or "@" not in email:  # noqa: PLR2004
             raise ValidationError("email", "A valid email address is required")
 
         username = username.strip().lower()
@@ -851,9 +806,7 @@ class PlatformDirectoryOperations:
         for suffix in range(0, 50):
             candidate = base_username if suffix == 0 else f"{base_username}{suffix + 1}"
             taken = (
-                await self._session.execute(
-                    select(User.id).where(User.username == candidate)
-                )
+                await self._session.execute(select(User.id).where(User.username == candidate))
             ).scalar_one_or_none()
             if taken is None:
                 username = candidate
@@ -902,7 +855,7 @@ class PlatformDirectoryOperations:
             organization_id=org.id if org else None,
             actor_user_id=user_id,
             action=Action.USER_CREATED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target_id,
             details={
                 "reason": reason,
@@ -920,7 +873,7 @@ class PlatformDirectoryOperations:
                 organization_id=None,
                 actor_user_id=user_id,
                 action=Action.USER_SYSTEM_ADMIN_GRANTED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=target_id,
                 details={"reason": reason, "granted_at": "account_creation"},
             )
@@ -935,13 +888,9 @@ class PlatformDirectoryOperations:
         try:
             await self._session.rollback()
             await self._session.execute(
-                sql_delete(OrganizationMember).where(
-                    OrganizationMember.user_id == target_user_id
-                )
+                sql_delete(OrganizationMember).where(OrganizationMember.user_id == target_user_id)
             )
-            await self._session.execute(
-                sql_delete(User).where(User.id == target_user_id)
-            )
+            await self._session.execute(sql_delete(User).where(User.id == target_user_id))
             await self._session.commit()
         except Exception:
             logger.exception(
@@ -950,9 +899,7 @@ class PlatformDirectoryOperations:
             )
             await self._session.rollback()
 
-    async def get_user(
-        self, *, user_id: UUID, target_user_id: UUID
-    ) -> PlatformUserDetail:
+    async def get_user(self, *, user_id: UUID, target_user_id: UUID) -> PlatformUserDetail:
         await self._user_ops.require_system_admin(user_id)
         target = await self._require_user(target_user_id)
         memberships = await self._fetch_user_memberships(target.id)
@@ -1016,20 +963,16 @@ class PlatformDirectoryOperations:
 
         if email is not None:
             value = normalize_email(email)
-            if not value or "@" not in value:
+            if not value or "@" not in value:  # noqa: PLR2004
                 raise ValidationError("email", "A valid email address is required")
             if value != target.email:
                 taken = (
                     await self._session.execute(
-                        select(User.id)
-                        .where(User.email == value)
-                        .where(User.id != target.id)
+                        select(User.id).where(User.email == value).where(User.id != target.id)
                     )
                 ).scalar_one_or_none()
                 if taken is not None:
-                    raise ValidationError(
-                        "email", "A user with this email already exists"
-                    )
+                    raise ValidationError("email", "A user with this email already exists")
                 target.email = value
                 # A new address has not been proven to belong to the user.
                 target.email_verified = False
@@ -1041,9 +984,7 @@ class PlatformDirectoryOperations:
             if value != target.username:
                 taken = (
                     await self._session.execute(
-                        select(User.id)
-                        .where(User.username == value)
-                        .where(User.id != target.id)
+                        select(User.id).where(User.username == value).where(User.id != target.id)
                     )
                 ).scalar_one_or_none()
                 if taken is not None:
@@ -1071,16 +1012,12 @@ class PlatformDirectoryOperations:
         if is_active is not None and is_active != target.is_active:
             target.is_active = is_active
             changed_keys.append("is_active")
-            activation_action = (
-                Action.USER_ACTIVATED if is_active else Action.USER_DEACTIVATED
-            )
+            activation_action = Action.USER_ACTIVATED if is_active else Action.USER_DEACTIVATED
             if not is_active:
                 revoke_tokens = True
 
         if not changed_keys:
-            return await self.get_user(
-                user_id=user_id, target_user_id=target_user_id
-            )
+            return await self.get_user(user_id=user_id, target_user_id=target_user_id)
 
         new_version: int | None = None
         if revoke_tokens:
@@ -1093,17 +1030,17 @@ class PlatformDirectoryOperations:
             organization_id=None,
             actor_user_id=user_id,
             action=Action.USER_UPDATED,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target.id,
             details={"reason": reason, "changed_keys": changed_keys},
         )
-        if "email" in changed_keys:
+        if "email" in changed_keys:  # noqa: PLR2004
             await write_audit_event(
                 self._session,
                 organization_id=None,
                 actor_user_id=user_id,
                 action=Action.USER_EMAIL_CHANGED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=target.id,
                 details={
                     "reason": reason,
@@ -1111,13 +1048,13 @@ class PlatformDirectoryOperations:
                     "new_email_hash": email_hash(target.email),
                 },
             )
-        if "password" in changed_keys:
+        if "password" in changed_keys:  # noqa: PLR2004
             await write_audit_event(
                 self._session,
                 organization_id=None,
                 actor_user_id=user_id,
                 action=Action.AUTH_PASSWORD_CHANGED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=target.id,
                 details={"reason": reason, "initiator": "platform_admin"},
             )
@@ -1127,7 +1064,7 @@ class PlatformDirectoryOperations:
                 organization_id=None,
                 actor_user_id=user_id,
                 action=activation_action,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=target.id,
                 details={"reason": reason},
             )
@@ -1151,13 +1088,9 @@ class PlatformDirectoryOperations:
             )
         ).scalar_one()
         if int(remaining) == 0:
-            raise PermissionDeniedError(
-                "Cannot deactivate the last remaining system admin"
-            )
+            raise PermissionDeniedError("Cannot deactivate the last remaining system admin")
 
-    async def force_logout_user(
-        self, *, user_id: UUID, target_user_id: UUID, reason: str
-    ) -> None:
+    async def force_logout_user(self, *, user_id: UUID, target_user_id: UUID, reason: str) -> None:
         """Bumping ``token_version`` kills every existing JWT."""
         await self._user_ops.require_system_admin(user_id)
         await check_rate_limit(
@@ -1180,7 +1113,7 @@ class PlatformDirectoryOperations:
             organization_id=None,
             actor_user_id=user_id,
             action=Action.USER_FORCE_LOGOUT,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target.id,
             details={"reason": reason},
         )
@@ -1211,15 +1144,11 @@ class PlatformDirectoryOperations:
             raise ValidationError("reason", "reason is required")
 
         if not is_system_admin and target_user_id == user_id:
-            raise PermissionDeniedError(
-                "Cannot revoke your own system admin role"
-            )
+            raise PermissionDeniedError("Cannot revoke your own system admin role")
 
         target = await self._require_user(target_user_id)
         if target.is_system_admin == is_system_admin:
-            return await self.get_user(
-                user_id=user_id, target_user_id=target_user_id
-            )
+            return await self.get_user(user_id=user_id, target_user_id=target_user_id)
 
         if not is_system_admin and target.is_system_admin:
             other_admins = (
@@ -1232,9 +1161,7 @@ class PlatformDirectoryOperations:
                 )
             ).scalar_one()
             if int(other_admins) == 0:
-                raise PermissionDeniedError(
-                    "Cannot revoke the last remaining system admin"
-                )
+                raise PermissionDeniedError("Cannot revoke the last remaining system admin")
 
         target.is_system_admin = is_system_admin
         target.token_version += 1
@@ -1242,16 +1169,14 @@ class PlatformDirectoryOperations:
         self._session.add(target)
 
         action = (
-            Action.USER_SYSTEM_ADMIN_GRANTED
-            if is_system_admin
-            else Action.USER_SYSTEM_ADMIN_REVOKED
+            Action.USER_SYSTEM_ADMIN_GRANTED if is_system_admin else Action.USER_SYSTEM_ADMIN_REVOKED
         )
         await write_audit_event(
             self._session,
             organization_id=None,
             actor_user_id=user_id,
             action=action,
-            resource_type="USER",
+            resource_type=AuditResourceType.USER,
             resource_id=target.id,
             details={"reason": reason},
         )
@@ -1261,9 +1186,7 @@ class PlatformDirectoryOperations:
         await invalidate_user_profile(target.id)
         await _safe_publish_token_revoke(target.id, new_version)
 
-        return await self.get_user(
-            user_id=user_id, target_user_id=target_user_id
-        )
+        return await self.get_user(user_id=user_id, target_user_id=target_user_id)
 
     async def _require_org(self, organization_id: UUID) -> Organization:
         org = (
@@ -1338,7 +1261,7 @@ class PlatformDirectoryOperations:
                 select(OrgSetting.organization_id)
                 .where(OrgSetting.organization_id.in_(org_ids))
                 .where(OrgSetting.namespace == MAIL_NAMESPACE)
-                .where(OrgSetting.key == "from_address")
+                .where(OrgSetting.key == MAIL_FROM_ADDRESS_KEY)
                 .where(OrgSetting.is_secret.is_(False))
                 .distinct()
             )
@@ -1346,28 +1269,19 @@ class PlatformDirectoryOperations:
         per_org = {row[0] for row in per_org_rows}
 
         deployment_present = (
-            (
-                await self._session.execute(
-                    select(func.count())
-                    .select_from(DeploymentSetting)
-                    .where(DeploymentSetting.namespace == MAIL_NAMESPACE)
-                    .where(DeploymentSetting.key == "from_address")
-                )
-            ).scalar_one()
-            > 0
-        )
+            await self._session.execute(
+                select(func.count())
+                .select_from(DeploymentSetting)
+                .where(DeploymentSetting.namespace == MAIL_NAMESPACE)
+                .where(DeploymentSetting.key == MAIL_FROM_ADDRESS_KEY)
+            )
+        ).scalar_one() > 0
         env_present = MailConfig.from_env() is not None
 
-        fallback = (
-            "deployment"
-            if deployment_present
-            else ("env" if env_present else "none")
-        )
+        fallback = "deployment" if deployment_present else ("env" if env_present else "none")
         return {oid: ("per_org" if oid in per_org else fallback) for oid in org_ids}
 
-    async def _fetch_encryption_versions(
-        self, org_ids: list[UUID]
-    ) -> dict[UUID, int]:
+    async def _fetch_encryption_versions(self, org_ids: list[UUID]) -> dict[UUID, int]:
         if not org_ids:
             return {}
         rows = (
@@ -1397,9 +1311,7 @@ class PlatformDirectoryOperations:
         rows = (await self._session.execute(query)).all()
         return {oid: ts for oid, ts in rows}
 
-    async def _fetch_user_last_logins(
-        self, user_ids: list[UUID]
-    ) -> dict[UUID, datetime]:
+    async def _fetch_user_last_logins(self, user_ids: list[UUID]) -> dict[UUID, datetime]:
         if not user_ids:
             return {}
         rows = (
@@ -1441,9 +1353,7 @@ class PlatformDirectoryOperations:
             for uid, joined_at, email, full_name in rows
         ]
 
-    async def _fetch_user_memberships(
-        self, user_id: UUID
-    ) -> list[PlatformUserMembership]:
+    async def _fetch_user_memberships(self, user_id: UUID) -> list[PlatformUserMembership]:
         rows = (
             await self._session.execute(
                 select(
@@ -1488,8 +1398,8 @@ class PlatformDirectoryOperations:
         if not user_ids:
             return []
         users = (
-            await self._session.execute(select(User).where(User.id.in_(user_ids)))
-        ).scalars().all()
+            (await self._session.execute(select(User).where(User.id.in_(user_ids)))).scalars().all()
+        )
         for u in users:
             u.token_version += 1
             self._session.add(u)
@@ -1507,9 +1417,7 @@ class PlatformDirectoryOperations:
             await mark_token_version_revoked(uid, int(version))
             await _safe_publish_token_revoke(uid, int(version))
 
-    async def _enqueue_org_deleted_emails(
-        self, org: Organization, reason: str
-    ) -> None:
+    async def _enqueue_org_deleted_emails(self, org: Organization, reason: str) -> None:
         if org.deleted_at is None:
             return
         purge_at = _purge_at_from(org.deleted_at)
@@ -1529,7 +1437,7 @@ class PlatformDirectoryOperations:
         if not owners:
             return
         try:
-            queue = get_queue("core")
+            queue = get_queue(QueueName.CORE)
         except RuntimeError:
             logger.warning(
                 "platform org_deleted email enqueue skipped: core queue not initialised",
@@ -1539,16 +1447,14 @@ class PlatformDirectoryOperations:
         context: dict[str, Any] = {
             "org_name": org.name,
             "deleted_at": org.deleted_at.strftime("%B %d, %Y at %H:%M UTC"),
-            "purge_at": (
-                purge_at.strftime("%B %d, %Y at %H:%M UTC") if purge_at else ""
-            ),
+            "purge_at": (purge_at.strftime("%B %d, %Y at %H:%M UTC") if purge_at else ""),
             "grace_days": PURGE_GRACE_DAYS,
             "reason": reason,
         }
         for owner_id, email in owners:
             idempotency_key = f"platform_org_deleted/{org.id}/{owner_id}"
             await queue.enqueue_job(
-                "send_email",
+                JobName.SEND_EMAIL,
                 email,
                 "platform/org_deleted",
                 json.dumps(context),

@@ -225,9 +225,7 @@ class TestResponsesStream:
             [_event("response.completed", response=response)],
         )
 
-        events = await _collect(
-            provider.chat_completion(MESSAGES, "openrouter/fusion", stream=True)
-        )
+        events = await _collect(provider.chat_completion(MESSAGES, "openrouter/fusion", stream=True))
 
         assert events[-1].result.provider_cost_usd == Decimal("0.019876")
 

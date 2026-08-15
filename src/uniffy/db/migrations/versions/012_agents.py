@@ -72,9 +72,7 @@ def upgrade() -> None:
         sa.Column("key_hint", sa.String(20), nullable=False),
         sa.Column("is_valid", sa.Boolean(), nullable=False, server_default=_true),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default=_true),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"),
         sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("last_validated_at", _tz, nullable=True),
         sa.Column("last_used_at", _tz, nullable=True),
@@ -92,9 +90,7 @@ def upgrade() -> None:
             name="uq_agents_provider_keys_org_provider_label",
         ),
     )
-    op.create_index(
-        "ix_agents_provider_keys_org_id", "agents_provider_keys", ["organization_id"]
-    )
+    op.create_index("ix_agents_provider_keys_org_id", "agents_provider_keys", ["organization_id"])
     op.create_index(
         "ix_agents_provider_keys_org_valid_enabled",
         "agents_provider_keys",
@@ -111,9 +107,7 @@ def upgrade() -> None:
         sa.Column("content", sa.Text(), nullable=False, server_default=""),
         sa.Column("source", sa.String(20), nullable=False),
         sa.Column("owner_id", sa.Uuid(), nullable=True),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=False, server_default="OPEN_TO_ORG"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=False, server_default="OPEN_TO_ORG"),
         sa.Column("baseline_role", _content_role_enum, nullable=True, server_default="VIEWER"),
         sa.Column("created_by", sa.Uuid(), nullable=True),
         sa.Column("created_at", _tz, nullable=False),
@@ -121,9 +115,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"]),
     )
-    op.create_index(
-        "ix_agents_prompts_organization_id", "agents_prompts", ["organization_id"]
-    )
+    op.create_index("ix_agents_prompts_organization_id", "agents_prompts", ["organization_id"])
     op.create_index("ix_agents_prompts_access_mode", "agents_prompts", ["access_mode"])
     op.create_index(
         "uq_agents_prompts_org_name",
@@ -179,9 +171,7 @@ def upgrade() -> None:
         sa.Column("avatar_key", sa.String(255), nullable=True),
         sa.Column("theme_color", sa.String(50), nullable=False, server_default=""),
         sa.Column("is_default", sa.Boolean(), nullable=False, server_default=_false),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=False, server_default="OPEN_TO_ORG"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=False, server_default="OPEN_TO_ORG"),
         sa.Column("baseline_role", _content_role_enum, nullable=True, server_default="VIEWER"),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=_false),
         sa.Column("deleted_at", _tz, nullable=True),
@@ -298,9 +288,7 @@ def upgrade() -> None:
         sa.Column("updated_at", _tz, nullable=False, server_default=_now),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"]),
-        sa.ForeignKeyConstraint(
-            ["owner_id"], ["login_users.id"], name="fk_agents_skills_owner_id"
-        ),
+        sa.ForeignKeyConstraint(["owner_id"], ["login_users.id"], name="fk_agents_skills_owner_id"),
     )
     op.create_index("ix_agents_skills_org_id", "agents_skills", ["organization_id"])
     op.create_index("ix_agents_skills_owner_id", "agents_skills", ["owner_id"])
@@ -338,15 +326,11 @@ def upgrade() -> None:
         sa.Column("last_run_status", sa.String(20), nullable=True),
         sa.Column("last_run_error", sa.Text(), nullable=True),
         sa.Column("run_count", sa.Integer(), nullable=False, server_default=_zero),
-        sa.Column(
-            "consecutive_failures", sa.Integer(), nullable=False, server_default=_zero
-        ),
+        sa.Column("consecutive_failures", sa.Integer(), nullable=False, server_default=_zero),
         sa.Column(
             "max_consecutive_failures", sa.Integer(), nullable=False, server_default=sa.text("3")
         ),
-        sa.Column(
-            "access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"
-        ),
+        sa.Column("access_mode", _access_mode_enum, nullable=False, server_default="OWNER_ONLY"),
         sa.Column("baseline_role", _content_role_enum, nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=_false),
         sa.Column("deleted_at", _tz, nullable=True),
@@ -357,9 +341,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["owner_id"], ["login_users.id"]),
         sa.ForeignKeyConstraint(["agent_id"], ["agents_agents.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["execution_user_id"], ["login_users.id"]),
-        sa.ForeignKeyConstraint(
-            ["session_id"], ["agents_sessions.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["session_id"], ["agents_sessions.id"], ondelete="SET NULL"),
     )
     op.create_index("ix_agents_cron_tasks_org_id", "agents_cron_tasks", ["organization_id"])
     op.create_index("ix_agents_cron_tasks_owner_id", "agents_cron_tasks", ["owner_id"])
@@ -369,9 +351,7 @@ def upgrade() -> None:
         "agents_cron_tasks",
         ["execution_user_id"],
     )
-    op.create_index(
-        "ix_agents_cron_tasks_access_mode", "agents_cron_tasks", ["access_mode"]
-    )
+    op.create_index("ix_agents_cron_tasks_access_mode", "agents_cron_tasks", ["access_mode"])
     op.execute(
         sa.text(
             "CREATE INDEX ix_agents_cron_tasks_due "
@@ -444,19 +424,11 @@ def upgrade() -> None:
         sa.Column("input_tokens", sa.Integer(), nullable=False, server_default=_zero),
         sa.Column("output_tokens", sa.Integer(), nullable=False, server_default=_zero),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(
-            ["cron_task_id"], ["agents_cron_tasks.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["agent_run_log_id"], ["agents_run_logs.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["cron_task_id"], ["agents_cron_tasks.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["agent_run_log_id"], ["agents_run_logs.id"], ondelete="SET NULL"),
     )
-    op.create_index(
-        "ix_agents_cron_run_logs_task_id", "agents_cron_run_logs", ["cron_task_id"]
-    )
-    op.create_index(
-        "ix_agents_cron_run_logs_org_id", "agents_cron_run_logs", ["organization_id"]
-    )
+    op.create_index("ix_agents_cron_run_logs_task_id", "agents_cron_run_logs", ["cron_task_id"])
+    op.create_index("ix_agents_cron_run_logs_org_id", "agents_cron_run_logs", ["organization_id"])
     op.create_index(
         "ix_agents_cron_run_logs_task_started",
         "agents_cron_run_logs",
@@ -478,9 +450,7 @@ def upgrade() -> None:
         sa.Column("created_at", _tz, nullable=False, server_default=_now),
         sa.Column("updated_at", _tz, nullable=False, server_default=_now),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(
-            ["channel_id"], ["chat_channels.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["channel_id"], ["chat_channels.id"], ondelete="CASCADE"),
         sa.CheckConstraint(
             "user_id IS NOT NULL OR channel_id IS NOT NULL",
             name="agents_memories_scope_present",
@@ -602,9 +572,7 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("'{}'::uuid[]"),
         ),
-        sa.Column(
-            "last_active_token_estimate", sa.Integer(), nullable=False, server_default=_zero
-        ),
+        sa.Column("last_active_token_estimate", sa.Integer(), nullable=False, server_default=_zero),
         sa.Column("manual_reset_at", _tz, nullable=True),
         sa.Column(
             "created_by_user_id",

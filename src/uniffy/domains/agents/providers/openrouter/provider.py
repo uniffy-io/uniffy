@@ -9,7 +9,11 @@ from loguru import logger
 from pyqwest import Client
 
 from uniffy.domains.agents.providers.base import ModelInfo
-from uniffy.domains.agents.providers.catalog import get_model, model_infos_for_provider
+from uniffy.domains.agents.providers.catalog import (
+    ReasoningControl,
+    get_model,
+    model_infos_for_provider,
+)
 from uniffy.domains.agents.providers.openai.provider import OpenAIProvider
 
 logger = logger.bind(component="agents.providers.openrouter")
@@ -72,7 +76,7 @@ class OpenRouterProvider(OpenAIProvider):
             return None
         try:
             cost = Decimal(str(raw_cost))
-        except (InvalidOperation, TypeError, ValueError):
+        except InvalidOperation, TypeError, ValueError:
             logger.warning(f"Ignoring invalid OpenRouter usage cost: {raw_cost!r}")
             return None
         if not cost.is_finite() or cost < 0:
@@ -86,7 +90,7 @@ class OpenRouterProvider(OpenAIProvider):
         Effort levels pass through; "on" (models that expose reasoning
         without effort control) maps to a bare enable.
         """
-        if effort == "off":
+        if effort == ReasoningControl.OFF:
             return
-        reasoning = {"enabled": True} if effort == "on" else {"effort": effort}
+        reasoning = {"enabled": True} if effort == ReasoningControl.ON else {"effort": effort}
         kwargs["extra_body"] = {**kwargs.get("extra_body", {}), "reasoning": reasoning}

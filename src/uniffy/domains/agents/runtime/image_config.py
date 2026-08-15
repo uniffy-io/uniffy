@@ -80,8 +80,6 @@ def apply_image_tool_schema(
         return schemas
     for schema in schemas:
         if schema.get("name") == IMAGE_TOOL:
-            schema["input_schema"] = build_image_tool_schema(
-                config.provider, config.model
-            )
+            schema["input_schema"] = build_image_tool_schema(config.provider, config.model)
             break
     return schemas

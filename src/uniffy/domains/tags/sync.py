@@ -70,14 +70,16 @@ async def sync_inline_tags(
     desired_tag_ids = {tag.id for tag in tags_for_slugs}
 
     existing = (
-        await session.execute(
-            select(TagAssignment).where(TagAssignment.content_urn == content_urn)
+        (
+            await session.execute(
+                select(TagAssignment).where(TagAssignment.content_urn == content_urn)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
-    existing_inline_tag_ids = {
-        row.tag_id for row in existing if SOURCE_INLINE in row.sources
-    }
+    existing_inline_tag_ids = {row.tag_id for row in existing if SOURCE_INLINE in row.sources}
     existing_by_tag = {row.tag_id: row for row in existing}
 
     added_tag_ids: list[UUID] = []
@@ -115,9 +117,7 @@ async def sync_inline_tags(
 
     if tags_for_slugs:
         await session.execute(
-            update(Tag)
-            .where(Tag.id.in_([t.id for t in tags_for_slugs]))
-            .values(last_used_at=now)
+            update(Tag).where(Tag.id.in_([t.id for t in tags_for_slugs])).values(last_used_at=now)
         )
 
     await session.commit()
@@ -150,13 +150,17 @@ async def _ensure_tags(
         return []
 
     existing_rows = (
-        await session.execute(
-            select(Tag).where(
-                Tag.organization_id == organization_id,
-                Tag.slug.in_(list(slugs.keys())),
+        (
+            await session.execute(
+                select(Tag).where(
+                    Tag.organization_id == organization_id,
+                    Tag.slug.in_(list(slugs.keys())),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     by_slug = {tag.slug: tag for tag in existing_rows}
 

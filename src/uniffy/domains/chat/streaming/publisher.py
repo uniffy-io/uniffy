@@ -39,7 +39,7 @@ async def publish_channel_event_to_members(
         return
 
     data: dict[str, Any] = {"_type": event_type, **payload}
-    if channel_id and "channel_id" not in data:
+    if channel_id and "channel_id" not in data:  # noqa: PLR2004
         data["channel_id"] = str(channel_id)
     message = json.dumps(data, default=str)
 

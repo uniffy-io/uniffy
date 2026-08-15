@@ -12,7 +12,7 @@ from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.errors import NotFoundError, ValidationError
-from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKind, SenderType
 from uniffy.core.models.files.file import File
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
@@ -59,7 +59,7 @@ async def regenerate_image(
 
         meta = source.message_metadata or {}
         tool_meta = meta.get("tool_meta") or {}
-        if tool_meta.get("kind") != "image_generation":
+        if tool_meta.get("kind") != ChatMessageMetadataKind.IMAGE_GENERATION:
             raise ValidationError("message_id", "That message is not a generated image")
 
         prompt = (tool_meta.get("prompt") or "").strip()
@@ -150,7 +150,7 @@ async def regenerate_image(
             content=result.data,
             tool_name=IMAGE_TOOL,
             tool_call_id=f"regen-{message_id}",
-            tool_args={k: v for k, v in args.items() if k != "prompt"},
+            tool_args={k: v for k, v in args.items() if k != "prompt"},  # noqa: PLR2004
             tool_result=result.data,
             tool_metadata=result.metadata,
         )

@@ -56,7 +56,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column(
-        "agents_channel_bindings", "last_cache_read_token_estimate"
-    )
+    op.drop_column("agents_channel_bindings", "last_cache_read_token_estimate")
     op.drop_column("agents_messages", "cache_read_input_tokens")

@@ -19,8 +19,8 @@ from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.memory import MemoryScope
-from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.run_log import AgentRunLog
+from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
+from uniffy.core.models.agents.run_log import AgentRunLog, AgentRunStatus
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage
@@ -46,7 +46,9 @@ from uniffy.domains.agents.memories.recall import (
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.pricing import PRICING_CURRENCY
 from uniffy.domains.agents.providers.base import (
+    CanonicalContentBlockType,
     CompletionResult,
+    CompletionStopReason,
     EventType,
     StreamEvent,
 )
@@ -115,6 +117,7 @@ from uniffy.domains.integrations.tool_gate import (
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
+from uniffy.workers.tasks import SkillAnalysisDestination
 
 logger = logger.bind(component="agents.runtime.operations")
 
@@ -333,7 +336,7 @@ def _file_context_to_content_block(
     if media_type.startswith("image/"):
         if not supports_vision:
             return {
-                "type": "text",
+                "type": CanonicalContentBlockType.TEXT,
                 "text": (
                     f"[Attached image: {f.filename} ({media_type}) - the current model "
                     f"does not support image input. The user attached this image but "
@@ -343,14 +346,14 @@ def _file_context_to_content_block(
                 ),
             }
         return {
-            "type": "image",
+            "type": CanonicalContentBlockType.IMAGE,
             "media_type": media_type,
             "storage_key": f.storage_key,
         }
 
-    if media_type == "application/pdf":
+    if media_type == "application/pdf":  # noqa: PLR2004
         return {
-            "type": "document",
+            "type": CanonicalContentBlockType.DOCUMENT,
             "media_type": media_type,
             "storage_key": f.storage_key,
             "filename": f.filename,
@@ -358,7 +361,7 @@ def _file_context_to_content_block(
 
     if f.extracted_text:
         return {
-            "type": "text",
+            "type": CanonicalContentBlockType.TEXT,
             "text": (f"--- File: {f.filename} ---\n{f.extracted_text}\n--- End of {f.filename} ---"),
         }
 
@@ -366,14 +369,14 @@ def _file_context_to_content_block(
 
     if can_extract(media_type):
         return {
-            "type": "text_pending_extraction",
+            "type": CanonicalContentBlockType.TEXT_PENDING_EXTRACTION,
             "media_type": media_type,
             "storage_key": f.storage_key,
             "filename": f.filename,
         }
 
     return {
-        "type": "text",
+        "type": CanonicalContentBlockType.TEXT,
         "text": f"[Attached file: {f.filename} ({media_type}) - content not extractable]",
     }
 
@@ -450,26 +453,26 @@ async def _resolve_pending_content_blocks(messages: list[dict]) -> None:
         for block in content:
             block_type = block.get("type", "")
 
-            if block_type == "image" and "storage_key" in block:
+            if block_type == CanonicalContentBlockType.IMAGE and "storage_key" in block:  # noqa: PLR2004
                 data = await s3.download_bytes(block["storage_key"])
                 b64 = base64.b64encode(data).decode("ascii")
                 resolved.append({
-                    "type": "image",
+                    "type": CanonicalContentBlockType.IMAGE,
                     "media_type": block["media_type"],
                     "data": b64,
                 })
 
-            elif block_type == "document" and "storage_key" in block:
+            elif block_type == CanonicalContentBlockType.DOCUMENT and "storage_key" in block:  # noqa: PLR2004
                 data = await s3.download_bytes(block["storage_key"])
                 b64 = base64.b64encode(data).decode("ascii")
                 resolved.append({
-                    "type": "document",
+                    "type": CanonicalContentBlockType.DOCUMENT,
                     "media_type": block["media_type"],
                     "data": b64,
                     "filename": block.get("filename", ""),
                 })
 
-            elif block_type == "text_pending_extraction":
+            elif block_type == CanonicalContentBlockType.TEXT_PENDING_EXTRACTION:
                 from uniffy.core.extraction import (
                     UnsupportedFormatError,
                     extract_text,
@@ -483,7 +486,7 @@ async def _resolve_pending_content_blocks(messages: list[dict]) -> None:
                         block["media_type"],
                     )
                     resolved.append({
-                        "type": "text",
+                        "type": CanonicalContentBlockType.TEXT,
                         "text": (
                             f"--- File: {filename} ---\n{result.text}\n--- End of {filename} ---"
                         ),
@@ -666,7 +669,7 @@ class RuntimeOperations:
         # 8d. Queue a debounced skill-evolution analysis (worker gates on the
         # per-org opt-in and budget before doing any LLM work).
         await self._session_ops.enqueue_skill_analysis(
-            destination_kind="session",
+            destination_kind=SkillAnalysisDestination.SESSION,
             destination_id=session_id,
             user_id=user_id,
             agent_id=agent.id,
@@ -758,7 +761,7 @@ class RuntimeOperations:
             user_id=user_id,
         )
         tool_iterations = 0
-        run_status = "success"
+        run_status = AgentRunStatus.SUCCESS
         run_error: str | None = None
 
         try:
@@ -777,7 +780,11 @@ class RuntimeOperations:
             )
 
             # 13. Agentic tool loop
-            if tool_schemas and result.stop_reason == "tool_use" and result.tool_calls:
+            if (
+                tool_schemas
+                and result.stop_reason == CompletionStopReason.TOOL_USE
+                and result.tool_calls
+            ):
                 tool_ctx = ToolContext(
                     session=self._session,
                     user_id=user_id,
@@ -1061,7 +1068,7 @@ class RuntimeOperations:
             )
 
             # If the LLM is done (no more tool calls), exit the loop
-            if result.stop_reason != "tool_use" or not result.tool_calls:
+            if result.stop_reason != CompletionStopReason.TOOL_USE or not result.tool_calls:
                 return result
 
         raise ValidationError(
@@ -1113,14 +1120,14 @@ class RuntimeOperations:
         while i < len(context_messages):
             msg = context_messages[i]
 
-            if msg.role == "summary":
+            if msg.role == AgentMessageRole.SUMMARY:
                 messages.append({
                     "role": "user",
                     "content": f"[Previous conversation summary]\n{msg.content}",
                 })
                 i += 1
 
-            elif msg.role == "assistant" and msg.tool_call_id:
+            elif msg.role == AgentMessageRole.ASSISTANT and msg.tool_call_id:
                 # Collect consecutive assistant messages with tool calls
                 # into a single assistant message with content blocks
                 content_blocks: list[dict] = []
@@ -1128,7 +1135,7 @@ class RuntimeOperations:
 
                 while (
                     i < len(context_messages)
-                    and context_messages[i].role == "assistant"
+                    and context_messages[i].role == AgentMessageRole.ASSISTANT
                     and context_messages[i].tool_call_id
                 ):
                     tc_msg = context_messages[i]
@@ -1154,7 +1161,7 @@ class RuntimeOperations:
                 matched_ids: set[str] = set()
                 while (
                     i < len(context_messages)
-                    and context_messages[i].role == "tool"
+                    and context_messages[i].role == AgentMessageRole.TOOL
                     and context_messages[i].tool_call_id in tool_call_ids
                 ):
                     tr_msg = context_messages[i]
@@ -1240,7 +1247,7 @@ class RuntimeOperations:
             organization_id=organization_id,
             message_id=message_id,
         )
-        if msg.role != "user":
+        if msg.role != AgentMessageRole.USER:
             raise ValidationError("role", "rerun is only supported on user messages")
         if msg.is_invalidated:
             raise ValidationError("message", "cannot rerun an invalidated message")
@@ -1491,7 +1498,7 @@ class RuntimeOperations:
         # the worker gates on the per-org opt-in and budget before any LLM call.
         if session_id is not None:
             await self._session_ops.enqueue_skill_analysis(
-                destination_kind="session",
+                destination_kind=SkillAnalysisDestination.SESSION,
                 destination_id=session_id,
                 user_id=user_id,
                 agent_id=agent.id,
@@ -1499,7 +1506,7 @@ class RuntimeOperations:
             )
         elif channel_id is not None:
             await self._session_ops.enqueue_skill_analysis(
-                destination_kind="channel",
+                destination_kind=SkillAnalysisDestination.CHANNEL,
                 destination_id=channel_id,
                 user_id=user_id,
                 agent_id=agent.id,
@@ -1673,7 +1680,9 @@ class RuntimeOperations:
 
         # 13. Streaming tool loop
         has_tool_use = (
-            tool_schemas and completion.stop_reason == "tool_use" and completion.tool_calls
+            tool_schemas
+            and completion.stop_reason == CompletionStopReason.TOOL_USE
+            and completion.tool_calls
         )
         if has_tool_use:
             # Stream produced tool_use; the placeholder we reserved (if
@@ -2111,7 +2120,7 @@ class RuntimeOperations:
 
             # If the LLM is done (no more tool calls), settle the placeholder
             # (or write a fresh row when no streaming was used) and yield final.
-            if result.stop_reason != "tool_use" or not result.tool_calls:
+            if result.stop_reason != CompletionStopReason.TOOL_USE or not result.tool_calls:
                 if stream_result.placeholder_id is not None:
                     assistant_message = await writer.finalize_assistant_placeholder(
                         message_id=stream_result.placeholder_id,

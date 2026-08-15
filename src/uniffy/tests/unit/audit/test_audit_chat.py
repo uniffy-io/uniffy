@@ -60,30 +60,33 @@ async def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> No
     ops.access = MagicMock()
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
 
-    with patch.object(
-        ChatMessageOperations,
-        "_get_message_by_id",
-        AsyncMock(return_value=message),
-    ), patch.object(
-        ChatMessageOperations,
-        "_require_message_action",
-        AsyncMock(return_value=None),
-    ), patch.object(
-        ChatMessageOperations,
-        "_get_channel_member_ids",
-        AsyncMock(return_value=[]),
-    ), patch.object(
-        ChatMessageOperations,
-        "decrement_resources_from_message",
-        AsyncMock(return_value=None),
-        create=True,
+    with (
+        patch.object(
+            ChatMessageOperations,
+            "_get_message_by_id",
+            AsyncMock(return_value=message),
+        ),
+        patch.object(
+            ChatMessageOperations,
+            "_require_message_action",
+            AsyncMock(return_value=None),
+        ),
+        patch.object(
+            ChatMessageOperations,
+            "_get_channel_member_ids",
+            AsyncMock(return_value=[]),
+        ),
+        patch.object(
+            ChatMessageOperations,
+            "decrement_resources_from_message",
+            AsyncMock(return_value=None),
+            create=True,
+        ),
     ):
         await ops.delete_message(admin_id, org_id, channel_id, message.id)
 
     rows = _audit_rows(session)
-    moderation = [
-        r for r in rows if r.action == Action.CHAT_MESSAGE_DELETED_BY_ADMIN
-    ]
+    moderation = [r for r in rows if r.action == Action.CHAT_MESSAGE_DELETED_BY_ADMIN]
     assert len(moderation) == 1
     assert moderation[0].actor_user_id == admin_id
     assert moderation[0].details["sender_id"] == str(sender_id)
@@ -118,23 +121,28 @@ async def test_self_delete_does_not_audit() -> None:
     ops.access = MagicMock()
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
 
-    with patch.object(
-        ChatMessageOperations,
-        "_get_message_by_id",
-        AsyncMock(return_value=message),
-    ), patch.object(
-        ChatMessageOperations,
-        "_require_message_action",
-        AsyncMock(return_value=None),
-    ), patch.object(
-        ChatMessageOperations,
-        "_get_channel_member_ids",
-        AsyncMock(return_value=[]),
-    ), patch.object(
-        ChatMessageOperations,
-        "decrement_resources_from_message",
-        AsyncMock(return_value=None),
-        create=True,
+    with (
+        patch.object(
+            ChatMessageOperations,
+            "_get_message_by_id",
+            AsyncMock(return_value=message),
+        ),
+        patch.object(
+            ChatMessageOperations,
+            "_require_message_action",
+            AsyncMock(return_value=None),
+        ),
+        patch.object(
+            ChatMessageOperations,
+            "_get_channel_member_ids",
+            AsyncMock(return_value=[]),
+        ),
+        patch.object(
+            ChatMessageOperations,
+            "decrement_resources_from_message",
+            AsyncMock(return_value=None),
+            create=True,
+        ),
     ):
         await ops.delete_message(user_id, org_id, channel_id, message.id)
 

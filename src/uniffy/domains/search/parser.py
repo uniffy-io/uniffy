@@ -83,7 +83,7 @@ _BARE_PREFIXES = sorted([*TYPE_KEYWORD_MAP, "my"], key=len, reverse=True)
 
 # Bare prefixes consume only the `keyword:` token itself.
 BARE_FILTER_PATTERN = re.compile(
-    rf'\b({"|".join(_BARE_PREFIXES)}):',
+    rf"\b({'|'.join(_BARE_PREFIXES)}):",
     re.IGNORECASE,
 )
 
@@ -118,18 +118,18 @@ def parse_search_query(query: str) -> ParsedSearchQuery:
         value = (match.group(2) or match.group(3) or "").strip()
         if not value:
             return " "
-        if keyword == "tag":
+        if keyword == "tag":  # noqa: PLR2004
             if value not in result.tags:
                 result.tags.append(value)
-        elif keyword == "owner":
+        elif keyword == "owner":  # noqa: PLR2004
             result.owner = value
-        elif keyword == "type":
+        elif keyword == "type":  # noqa: PLR2004
             add_type_filter(value.lower())
         return " "
 
     def strip_bare_filters(match: re.Match) -> str:
         keyword = match.group(1).lower()
-        if keyword == "my":
+        if keyword == "my":  # noqa: PLR2004
             result.my_content_only = True
         else:
             add_type_filter(keyword)

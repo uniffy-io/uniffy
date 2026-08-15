@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.org_settings.operations import OrgSettingsOperations
 
 SECURITY_NAMESPACE = "security"
@@ -83,7 +84,7 @@ class SecurityOperations:
             organization_id=organization_id,
             actor_user_id=actor_user_id,
             action=Action.ORGANIZATION_SECURITY_SETTINGS_CHANGED,
-            resource_type="ORGANIZATION",
+            resource_type=AuditResourceType.ORGANIZATION,
             resource_id=organization_id,
             details={
                 "key": _KEY_PASSWORD_RESET_ENABLED,
@@ -150,7 +151,7 @@ class SecurityOperations:
             organization_id=organization_id,
             actor_user_id=actor_user_id,
             action=action,
-            resource_type="ORGANIZATION",
+            resource_type=AuditResourceType.ORGANIZATION,
             resource_id=organization_id,
             details={
                 "key": key,

@@ -41,9 +41,9 @@ async def save_realtime_snapshot(
             base64.b64decode(state_vector_b64),
         )
     finally:
-        REALTIME_SNAPSHOT_TASK_DURATION.labels(
-            content_type=content_type.value
-        ).observe(time.perf_counter() - started)
+        REALTIME_SNAPSHOT_TASK_DURATION.labels(content_type=content_type.value).observe(
+            time.perf_counter() - started
+        )
 
     if not rendered:
         return {"status": "snapshot_only", "content_id": content_id_str}

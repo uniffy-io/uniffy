@@ -52,9 +52,7 @@ async def get_org_connections_meta(
             return connections
 
     result = await session.execute(
-        select(IntegrationConnection).where(
-            IntegrationConnection.organization_id == organization_id
-        )
+        select(IntegrationConnection).where(IntegrationConnection.organization_id == organization_id)
     )
     meta = [_serialize_meta(row) for row in result.scalars().all()]
     await cache_set(
@@ -84,6 +82,4 @@ async def publish_connection_invalidation(connection_id: UUID) -> None:
             json.dumps({"connection_id": str(connection_id)}),
         )
     except Exception:
-        logger.warning(
-            f"Integration connection invalidate publish failed for {connection_id}"
-        )
+        logger.warning(f"Integration connection invalidate publish failed for {connection_id}")

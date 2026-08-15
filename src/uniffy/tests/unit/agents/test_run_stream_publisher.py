@@ -6,7 +6,6 @@ are replaced with in-memory recorders so the test runs without a live
 broker.
 """
 
-
 import pytest
 
 from uniffy.core.types import generate_id
@@ -80,15 +79,9 @@ class TestRunStreamPublisher:
         pub = _make_publisher(flush_ms=1000, buffer_cap=32)
 
         async def run() -> None:
+            await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="a", block_id="b1"))
             await pub.publish(
-                StreamEvent(
-                    type=EventType.TEXT_BLOCK_DELTA, delta="a", block_id="b1"
-                )
-            )
-            await pub.publish(
-                StreamEvent(
-                    type=EventType.THINKING_BLOCK_DELTA, delta="t", block_id="b2"
-                )
+                StreamEvent(type=EventType.THINKING_BLOCK_DELTA, delta="t", block_id="b2")
             )
             await pub.close()
 
@@ -120,7 +113,8 @@ class TestRunStreamPublisher:
         async def run() -> None:
             await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="a"))
             await pub.publish(
-                StreamEvent(type=EventType.DONE, 
+                StreamEvent(
+                    type=EventType.DONE,
                     assistant_message=_make_message_for_done(),
                     model="claude-sonnet-4-6",
                 )

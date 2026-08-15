@@ -95,14 +95,18 @@ async def _ensure_agent(
     result: DomainResult,
 ) -> None:
     existing = (
-        await ctx.session.execute(
-            select(Agent.id).where(
-                Agent.organization_id == ctx.organization_id,
-                Agent.name == spec.name,
-                Agent.is_deleted == False,  # noqa: E712
+        (
+            await ctx.session.execute(
+                select(Agent.id).where(
+                    Agent.organization_id == ctx.organization_id,
+                    Agent.name == spec.name,
+                    Agent.is_deleted == False,  # noqa: E712
+                )
             )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     if existing is not None:
         result.skipped += 1
         return

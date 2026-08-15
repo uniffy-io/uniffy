@@ -73,6 +73,9 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     UpdateViewRequest,
     UpdateViewResponse,
 )
+from uniffy_proto.projects.v1.projects_pb2 import (
+    TagFilterMode as ProtoTagFilterMode,
+)
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
@@ -81,7 +84,7 @@ from uniffy.core.converters.common_proto import (
     content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.projects.field_definition import FieldDefinition
+from uniffy.core.models.projects.field_definition import FieldDefinition, SystemProjectFieldId
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.tags.tag import Tag
@@ -102,10 +105,12 @@ from uniffy.domains.projects.converters import (
 )
 from uniffy.domains.projects.operations import (
     ProjectOperations,
+    ProjectTagFilterMode,
     SprintOperations,
     TaskOperations,
     WatcherOperations,
 )
+from uniffy.domains.projects.statuses import parse_task_status_semantics
 from uniffy.domains.tags import TagOperations
 
 logger = logger.bind(component="projects.handlers")
@@ -195,12 +200,8 @@ async def _load_project_rollups(
     project_ids: list[UUID],
 ) -> _ProjectRollups:
     return _ProjectRollups(
-        tasks=await queries.get_task_rollups_for_projects(
-            session, organization_id, project_ids
-        ),
-        members=await queries.get_member_counts_for_projects(
-            session, organization_id, project_ids
-        ),
+        tasks=await queries.get_task_rollups_for_projects(session, organization_id, project_ids),
+        members=await queries.get_member_counts_for_projects(session, organization_id, project_ids),
     )
 
 
@@ -212,10 +213,14 @@ async def _resolve_project_effective_policy(
 ):
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
-        organization_id, ContentType.PROJECT,
+        organization_id,
+        ContentType.PROJECT,
     )
     return resolve_effective_policy(
-        project.access_mode, project.baseline_role, default_mode, default_baseline,
+        project.access_mode,
+        project.baseline_role,
+        default_mode,
+        default_baseline,
     )
 
 
@@ -267,7 +272,9 @@ class ProjectsHandlers:
                 views = await queries.get_views_for_project(session, project.id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
-                    session, organization_id, project,
+                    session,
+                    organization_id,
+                    project,
                 )
                 return CreateProjectResponse(
                     project=project_to_proto(
@@ -304,7 +311,9 @@ class ProjectsHandlers:
                 views = await queries.get_views_for_project(session, project.id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
-                    session, organization_id, project,
+                    session,
+                    organization_id,
+                    project,
                 )
                 rollups = await _load_project_rollups(session, organization_id, [project.id])
                 counts = rollups.for_project(project.id)
@@ -380,7 +389,9 @@ class ProjectsHandlers:
                 views = await queries.get_views_for_project(session, project.id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
-                    session, organization_id, project,
+                    session,
+                    organization_id,
+                    project,
                 )
                 rollups = await _load_project_rollups(session, organization_id, [project.id])
                 counts = rollups.for_project(project.id)
@@ -466,7 +477,8 @@ class ProjectsHandlers:
 
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.PROJECT,
+                    organization_id,
+                    ContentType.PROJECT,
                 )
                 project_protos = []
                 for project in projects:
@@ -559,7 +571,7 @@ class ProjectsHandlers:
             for key, value in request.field_values.items():
                 try:
                     field_values[key] = json.loads(value)
-                except (json.JSONDecodeError, ValueError):
+                except json.JSONDecodeError, ValueError:
                     field_values[key] = value
             kwargs["field_values"] = field_values
 
@@ -687,7 +699,7 @@ class ProjectsHandlers:
             for key, value in request.field_values.items():
                 try:
                     field_values[key] = json.loads(value)
-                except (json.JSONDecodeError, ValueError):
+                except json.JSONDecodeError, ValueError:
                     field_values[key] = value
             updates["field_values"] = field_values
         if request.HasField("tag_ids"):
@@ -897,7 +909,7 @@ class ProjectsHandlers:
                             user_id, organization_id, task_id, permanent=request.permanent
                         )
                         count += 1
-                    except (NotFoundError, PermissionDeniedError, ValueError):
+                    except NotFoundError, PermissionDeniedError, ValueError:
                         continue
                 return DeleteTasksResponse(success=True, deleted_count=count)
         except ConnectError:
@@ -934,17 +946,16 @@ class ProjectsHandlers:
         backlog_only = request.backlog_only if request.HasField("backlog_only") else False
         tag_ids_filter = _parse_tag_ids(list(request.tag_ids))
 
-        from uniffy_proto.projects.v1.projects_pb2 import TagFilterMode as _TagFilterMode
-
         if request.HasField("tag_filter_mode"):
             mode_value = request.tag_filter_mode
         else:
-            mode_value = _TagFilterMode.TAG_FILTER_MODE_ALL
+            mode_value = ProtoTagFilterMode.TAG_FILTER_MODE_ALL
+
         tag_filter_mode = {
-            _TagFilterMode.TAG_FILTER_MODE_ALL: "all",
-            _TagFilterMode.TAG_FILTER_MODE_ANY: "any",
-            _TagFilterMode.TAG_FILTER_MODE_NONE: "none",
-        }.get(mode_value, "all")
+            ProtoTagFilterMode.TAG_FILTER_MODE_ALL: ProjectTagFilterMode.ALL,
+            ProtoTagFilterMode.TAG_FILTER_MODE_ANY: ProjectTagFilterMode.ANY,
+            ProtoTagFilterMode.TAG_FILTER_MODE_NONE: ProjectTagFilterMode.NONE,
+        }.get(mode_value, ProjectTagFilterMode.ALL)
 
         in_epic_id_filter: UUID | None = None
         if request.HasField("in_epic_id") and request.in_epic_id:
@@ -954,12 +965,8 @@ class ProjectsHandlers:
         has_subtasks_filter: bool | None = (
             request.has_subtasks if request.HasField("has_subtasks") else None
         )
-        min_depth_filter: int | None = (
-            request.min_depth if request.HasField("min_depth") else None
-        )
-        max_depth_filter: int | None = (
-            request.max_depth if request.HasField("max_depth") else None
-        )
+        min_depth_filter: int | None = request.min_depth if request.HasField("min_depth") else None
+        max_depth_filter: int | None = request.max_depth if request.HasField("max_depth") else None
 
         try:
             async with open_session() as session:
@@ -1098,9 +1105,12 @@ class ProjectsHandlers:
                     field.sort_order = request.sort_order
                 if request.HasField("config_json"):
                     try:
-                        field.config = json.loads(request.config_json)
+                        config = json.loads(request.config_json)
                     except json.JSONDecodeError as exc:
                         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
+                    if field.id == SystemProjectFieldId.STATUS:
+                        parse_task_status_semantics(config, require_explicit=True)
+                    field.config = config
                     flag_modified(field, "config")
 
                 field.updated_at = datetime.now(UTC)

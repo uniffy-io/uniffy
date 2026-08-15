@@ -70,9 +70,7 @@ def upgrade() -> None:
         ],
         postgresql_nulls_not_distinct=True,
     )
-    op.create_check_constraint(
-        "agents_memories_agent_binding", "agents_memories", _BINDING_CHECK
-    )
+    op.create_check_constraint("agents_memories_agent_binding", "agents_memories", _BINDING_CHECK)
 
     op.create_index(
         "ix_agents_memories_user",
@@ -102,10 +100,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute(
-        sa.text(
-            "UPDATE agents_memories SET agent_id = created_by_agent_id "
-            "WHERE agent_id IS NULL"
-        )
+        sa.text("UPDATE agents_memories SET agent_id = created_by_agent_id WHERE agent_id IS NULL")
     )
     op.execute(sa.text("DELETE FROM agents_memories WHERE agent_id IS NULL"))
 

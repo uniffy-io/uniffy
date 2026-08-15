@@ -254,38 +254,26 @@ async def seed_workspace_docs(
     plans_note.outgoing_references = extract_urns_from_content(plans_note.content) or None
 
     transparency_content = (DOCS_DIR / "TRANSPARENCY.md").read_text()
-    transparency_note.content = replace_markdown_links_with_urns(
-        transparency_content, slug_to_urn
-    )
+    transparency_note.content = replace_markdown_links_with_urns(transparency_content, slug_to_urn)
     transparency_note.outgoing_references = (
         extract_urns_from_content(transparency_note.content) or None
     )
 
     licenses_content = (DOCS_DIR / "LICENSES.md").read_text()
     licenses_note.content = replace_markdown_links_with_urns(licenses_content, slug_to_urn)
-    licenses_note.outgoing_references = (
-        extract_urns_from_content(licenses_note.content) or None
-    )
+    licenses_note.outgoing_references = extract_urns_from_content(licenses_note.content) or None
 
     searching_content = (DOCS_DIR / "documentation" / "SEARCHING.md").read_text()
     searching_note.content = replace_markdown_links_with_urns(searching_content, slug_to_urn)
-    searching_note.outgoing_references = (
-        extract_urns_from_content(searching_note.content) or None
-    )
+    searching_note.outgoing_references = extract_urns_from_content(searching_note.content) or None
 
     sharing_content = (DOCS_DIR / "documentation" / "SHARING.md").read_text()
     sharing_note.content = replace_markdown_links_with_urns(sharing_content, slug_to_urn)
-    sharing_note.outgoing_references = (
-        extract_urns_from_content(sharing_note.content) or None
-    )
+    sharing_note.outgoing_references = extract_urns_from_content(sharing_note.content) or None
 
     encryption_content = (DOCS_DIR / "documentation" / "ENCRYPTION.md").read_text()
-    encryption_note.content = replace_markdown_links_with_urns(
-        encryption_content, slug_to_urn
-    )
-    encryption_note.outgoing_references = (
-        extract_urns_from_content(encryption_note.content) or None
-    )
+    encryption_note.content = replace_markdown_links_with_urns(encryption_content, slug_to_urn)
+    encryption_note.outgoing_references = extract_urns_from_content(encryption_note.content) or None
 
     await session.flush()
     logger.info("Updated notes with URN-based mentions and outgoing references")
@@ -335,9 +323,7 @@ async def seed_workspace_docs(
         url_path=f"/notes/{uniffy_folder.id}",
         access_mode=uniffy_folder.access_mode.value,
         baseline_role=(
-            uniffy_folder.baseline_role.value
-            if uniffy_folder.baseline_role is not None
-            else None
+            uniffy_folder.baseline_role.value if uniffy_folder.baseline_role is not None else None
         ),
         owner_id=admin_user.id,
         keywords=uniffy_folder.title,
@@ -353,9 +339,7 @@ async def seed_workspace_docs(
         url_path=f"/notes/{docs_folder.id}",
         access_mode=docs_folder.access_mode.value,
         baseline_role=(
-            docs_folder.baseline_role.value
-            if docs_folder.baseline_role is not None
-            else None
+            docs_folder.baseline_role.value if docs_folder.baseline_role is not None else None
         ),
         owner_id=admin_user.id,
         keywords=docs_folder.title,
@@ -371,9 +355,7 @@ async def seed_workspace_docs(
             entity_type=ContentType.NOTE.value,
             url_path=f"/notes/{note.id}",
             access_mode=note.access_mode.value,
-            baseline_role=(
-                note.baseline_role.value if note.baseline_role is not None else None
-            ),
+            baseline_role=(note.baseline_role.value if note.baseline_role is not None else None),
             owner_id=admin_user.id,
             keywords=" ".join([note.title, note.content[:1000]]),
             description=note.content[:200] if note.content else None,

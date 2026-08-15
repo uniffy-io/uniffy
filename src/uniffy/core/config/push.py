@@ -11,6 +11,11 @@ from loguru import logger
 
 logger = logger.bind(component="config.push")
 
+PUSH_SETTINGS_NAMESPACE = "push"
+VAPID_PRIVATE_KEY = "vapid_private_key"
+VAPID_PUBLIC_KEY = "vapid_public_key"
+VAPID_CONTACT_EMAIL_KEY = "vapid_contact_email"
+
 
 @dataclass(frozen=True)
 class VapidConfig:
@@ -44,10 +49,10 @@ async def load_vapid_config() -> None:
 
         async with open_session() as session:
             ops = DeploymentSettingsOperations(session)
-            rows = await ops.get_namespace("push")
-            public_row = rows.get("vapid_public_key")
-            contact_row = rows.get("vapid_contact_email")
-            private_key = await ops.get_secret("push", "vapid_private_key")
+            rows = await ops.get_namespace(PUSH_SETTINGS_NAMESPACE)
+            public_row = rows.get(VAPID_PUBLIC_KEY)
+            contact_row = rows.get(VAPID_CONTACT_EMAIL_KEY)
+            private_key = await ops.get_secret(PUSH_SETTINGS_NAMESPACE, VAPID_PRIVATE_KEY)
 
             if public_row is None or contact_row is None or not private_key:
                 logger.warning(

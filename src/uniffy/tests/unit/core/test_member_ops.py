@@ -347,9 +347,7 @@ class TestTransferOwnershipRejections:
                 patch.object(members_module, "record_ownership_transferred", AsyncMock()),
                 patch.object(members_module, "record_member_added", AsyncMock()),
                 patch.object(members_module, "invalidate_perm_role", AsyncMock()),
-                patch.object(
-                    members_module, "invalidate_visible_sets_for_user", AsyncMock()
-                ),
+                patch.object(members_module, "invalidate_visible_sets_for_user", AsyncMock()),
                 patch.object(members_module, "publish_perm_change", AsyncMock()),
             ):
                 await ops.transfer_ownership(
@@ -508,9 +506,7 @@ class TestManageOverrides:
         content = self._agent_content()
         with (
             patch.object(ops, "_load_content", AsyncMock(return_value=content)),
-            patch.object(
-                ops, "_resolve_effective_mode", AsyncMock(side_effect=_Reached())
-            ),
+            patch.object(ops, "_resolve_effective_mode", AsyncMock(side_effect=_Reached())),
             _cache_passthrough(),
             pytest.raises(_Reached),
         ):
@@ -572,9 +568,7 @@ class TestManageOverrides:
         to the row cannot list its members."""
         from uniffy.core.errors import PermissionDeniedError
 
-        ops = self._make_override_ops(
-            org_role=OrganizationRole.ADMIN, effective_role=None
-        )
+        ops = self._make_override_ops(org_role=OrganizationRole.ADMIN, effective_role=None)
         content = self._agent_content()
         with (
             patch.object(ops, "_load_content", AsyncMock(return_value=content)),

@@ -12,7 +12,7 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.domains.platform.audit.whitelist import (
@@ -35,7 +35,7 @@ class PlatformAuditView(NamedTuple):
     actor_user_id: UUID | None
     actor_email: str | None
     actor_org_role: str | None
-    resource_type: str | None
+    resource_type: AuditResourceType | None
     resource_id: UUID | None
     details_json: str
 
@@ -117,14 +117,18 @@ class PlatformAuditOperations:
         ).scalar_one()
 
         events = (
-            await self._session.execute(
-                select(AuditEvent)
-                .where(where_clause)
-                .order_by(AuditEvent.created_at.desc())
-                .limit(page_size)
-                .offset(page * page_size)
+            (
+                await self._session.execute(
+                    select(AuditEvent)
+                    .where(where_clause)
+                    .order_by(AuditEvent.created_at.desc())
+                    .limit(page_size)
+                    .offset(page * page_size)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         if not events:
             return PlatformAuditPage(
@@ -141,9 +145,7 @@ class PlatformAuditOperations:
         if org_ids:
             rows = (
                 await self._session.execute(
-                    select(Organization.id, Organization.name).where(
-                        Organization.id.in_(org_ids)
-                    )
+                    select(Organization.id, Organization.name).where(Organization.id.in_(org_ids))
                 )
             ).all()
             org_names = {oid: name for oid, name in rows}
@@ -163,13 +165,9 @@ class PlatformAuditOperations:
                 created_at=e.created_at,
                 action=e.action,
                 organization_id=e.organization_id,
-                organization_name=org_names.get(e.organization_id)
-                if e.organization_id
-                else None,
+                organization_name=org_names.get(e.organization_id) if e.organization_id else None,
                 actor_user_id=e.actor_user_id,
-                actor_email=actor_emails.get(e.actor_user_id)
-                if e.actor_user_id
-                else None,
+                actor_email=actor_emails.get(e.actor_user_id) if e.actor_user_id else None,
                 actor_org_role=e.actor_org_role,
                 resource_type=e.resource_type,
                 resource_id=e.resource_id,
@@ -184,8 +182,6 @@ class PlatformAuditOperations:
             page_size=page_size,
         )
 
-    async def list_actions(
-        self, *, actor_user_id: UUID
-    ) -> list[tuple[str, str]]:
+    async def list_actions(self, *, actor_user_id: UUID) -> list[tuple[str, str]]:
         await self._user_ops.require_system_admin(actor_user_id)
         return platform_action_catalog()

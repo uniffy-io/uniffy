@@ -224,8 +224,8 @@ class SettingsHandlers:
         except Exception as e:
             # An FK violation here means the user row vanished mid-request -
             # surface as 401 so the client clears stale tokens.
-            is_fk_error = "ForeignKeyViolationError" in str(type(e).__name__)
-            if is_fk_error or "foreign key" in str(e).lower():
+            is_fk_error = "ForeignKeyViolationError" in str(type(e).__name__)  # noqa: PLR2004
+            if is_fk_error or "foreign key" in str(e).lower():  # noqa: PLR2004
                 raise ConnectError(Code.UNAUTHENTICATED, "User not found. Please log in again.")
             logger.exception(f"Error getting effective settings: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

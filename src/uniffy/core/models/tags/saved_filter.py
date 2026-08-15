@@ -30,14 +30,10 @@ class SavedTagFilter(SQLModel, table=True):
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     name: str = Field(max_length=120, nullable=False)
     description: str = Field(default="", max_length=500, nullable=False)
-    icon: dict[str, str] | None = Field(
-        default=None, sa_column=Column(JSONB, nullable=True)
-    )
+    icon: dict[str, str] | None = Field(default=None, sa_column=Column(JSONB, nullable=True))
     criteria: dict[str, Any] = Field(
         default_factory=dict,
         sa_column=Column(JSONB, nullable=False, server_default="'{}'::jsonb"),

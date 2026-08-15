@@ -48,9 +48,10 @@ def _call(host_id, started_minutes_ago: int = 10) -> Call:
 
 
 async def _run_summary(ops, call, reason, actor_user_id, profiles):
-    with patch.object(
-        type(ops), "resolve_profiles", AsyncMock(return_value=profiles)
-    ), patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
+    with (
+        patch.object(type(ops), "resolve_profiles", AsyncMock(return_value=profiles)),
+        patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls,
+    ):
         msg_ops_cls.return_value.send_message = AsyncMock()
         await ops._post_call_ended_summary(call, reason, actor_user_id, datetime.now(UTC))
         send = msg_ops_cls.return_value.send_message
@@ -136,13 +137,14 @@ async def test_summary_failure_never_raises() -> None:
     session = _build_session()
     ops = _build_ops(session)
 
-    with patch.object(
-        type(ops), "resolve_profiles", AsyncMock(side_effect=RuntimeError("resolver down"))
-    ), patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
+    with (
+        patch.object(
+            type(ops), "resolve_profiles", AsyncMock(side_effect=RuntimeError("resolver down"))
+        ),
+        patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls,
+    ):
         msg_ops_cls.return_value.send_message = AsyncMock()
-        await ops._post_call_ended_summary(
-            call, CallEndReason.ALL_LEFT, None, datetime.now(UTC)
-        )
+        await ops._post_call_ended_summary(call, CallEndReason.ALL_LEFT, None, datetime.now(UTC))
         msg_ops_cls.return_value.send_message.assert_not_called()
 
 

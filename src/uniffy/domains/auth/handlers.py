@@ -160,9 +160,7 @@ def _set_asset_cookie(ctx: RequestContext, result: AuthResult) -> str:
 
 
 def _clear_asset_cookie(ctx: RequestContext) -> None:
-    ctx.response_headers().add(
-        "set-cookie", build_clear_cookie(resolve_asset_cookie_config())
-    )
+    ctx.response_headers().add("set-cookie", build_clear_cookie(resolve_asset_cookie_config()))
 
 
 def _login_outcome_to_proto(
@@ -182,9 +180,7 @@ def _login_outcome_to_proto(
         enrollment_token=outcome.enrollment_token,
     )
     if outcome.grace_expires_at is not None:
-        enrollment.grace_expires_at.CopyFrom(
-            datetime_to_timestamp(outcome.grace_expires_at)
-        )
+        enrollment.grace_expires_at.CopyFrom(datetime_to_timestamp(outcome.grace_expires_at))
     return LoginResponse(enrollment_required=enrollment)
 
 
@@ -583,9 +579,7 @@ class AuthHandlers:
                     raw_token=request.token,
                     username=request.username,
                     password=request.password,
-                    full_name=(
-                        request.full_name if request.HasField("full_name") else None
-                    ),
+                    full_name=(request.full_name if request.HasField("full_name") else None),
                     user_agent=user_agent,
                 )
                 if isinstance(outcome, MfaEnrollmentRequired):

@@ -1,5 +1,4 @@
-"""Agent template catalog and default-agent bootstrap tests.
-"""
+"""Agent template catalog and default-agent bootstrap tests."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
@@ -38,9 +37,7 @@ class TestCatalogIntegrity:
         registry = get_tool_registry()
         for template in AGENT_TEMPLATES:
             for name in template.enabled_tools:
-                assert registry.get(name) is not None, (
-                    f"{template.key}: unknown tool {name}"
-                )
+                assert registry.get(name) is not None, f"{template.key}: unknown tool {name}"
 
     def test_bundled_skill_names_match_shipped_skills(self) -> None:
         seeded = {doc.scalar("name") for doc in load_documents(DATA_DIR / "skills")}
@@ -129,11 +126,7 @@ async def _org_create(skill_rows: list[tuple[UUID, str]]):
     ):
         org = await ops.create(name="Acme", slug="acme", owner_user_id=owner_id)
 
-    agents = [
-        call.args[0]
-        for call in session.add.call_args_list
-        if isinstance(call.args[0], Agent)
-    ]
+    agents = [call.args[0] for call in session.add.call_args_list if isinstance(call.args[0], Agent)]
     return org, owner_id, agents, agent_ops
 
 
@@ -141,9 +134,9 @@ class TestDefaultAgentBootstrap:
     async def test_seeds_one_default_agent_from_default_template(self) -> None:
         template = get_default_template()
         skill_id = generate_id()
-        org, owner_id, agents, agent_ops = await _org_create(
-            [(skill_id, template.bundled_skill_names[0])]
-        )
+        org, owner_id, agents, agent_ops = await _org_create([
+            (skill_id, template.bundled_skill_names[0])
+        ])
 
         assert len(agents) == 1
         agent = agents[0]
@@ -159,9 +152,7 @@ class TestDefaultAgentBootstrap:
         assert agent.enabled_skills == [str(skill_id)]
         assert agent.primary_provider_key_id is None
         assert agent.image_provider_key_id is None
-        agent_ops._index_for_search.assert_awaited_once_with(
-            agent, skip_member_lookup=True
-        )
+        agent_ops._index_for_search.assert_awaited_once_with(agent, skip_member_lookup=True)
 
     async def test_bootstrap_tolerates_missing_bundled_skills(self) -> None:
         _, _, agents, _ = await _org_create([])

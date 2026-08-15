@@ -54,7 +54,7 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
 from uniffy.core.config.push import get_vapid_config
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.models.login.user import User
-from uniffy.core.valkey import subscribe_channels
+from uniffy.core.valkey import NotificationPayloadType, subscribe_channels
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.notifications.converters import (
@@ -575,7 +575,7 @@ class NotificationsHandlers:
                             last_send = now
                         continue
 
-                    if payload.get("_type") == "file_updated":
+                    if payload.get("_type") == NotificationPayloadType.FILE_UPDATED:
                         yield StreamNotificationsResponse(
                             event_type=StreamNotificationsResponse.EVENT_TYPE_FILE_UPDATED,
                             file_update=FileUpdatePayload(
@@ -586,7 +586,7 @@ class NotificationsHandlers:
                         last_send = now
                         continue
 
-                    if payload.get("_type") == "presence_changed":
+                    if payload.get("_type") == NotificationPayloadType.PRESENCE_CHANGED:
                         ts = Timestamp()
                         ts.FromDatetime(datetime.fromisoformat(payload["last_active"]))
                         presence_payload = PresenceChangedPayload(
@@ -609,14 +609,14 @@ class NotificationsHandlers:
                         last_send = now
                         continue
 
-                    if payload.get("_type") == "permissions_changed":
+                    if payload.get("_type") == NotificationPayloadType.PERMISSIONS_CHANGED:
                         yield StreamNotificationsResponse(
                             event_type=StreamNotificationsResponse.EVENT_TYPE_PERMISSIONS_CHANGED,
                         )
                         last_send = now
                         continue
 
-                    if payload.get("_type") == "content_access_changed":
+                    if payload.get("_type") == NotificationPayloadType.CONTENT_ACCESS_CHANGED:
                         yield StreamNotificationsResponse(
                             event_type=StreamNotificationsResponse.EVENT_TYPE_CONTENT_ACCESS_CHANGED,
                             content_access_changed=ContentAccessChangedPayload(
@@ -628,7 +628,7 @@ class NotificationsHandlers:
                         last_send = now
                         continue
 
-                    if payload.get("_type") == "mention_state_changed":
+                    if payload.get("_type") == NotificationPayloadType.MENTION_STATE_CHANGED:
                         # Restricted content broadcasts org-wide but is only
                         # forwarded to recipients who can view it.
                         if payload.get("restricted") and not await relay.allows_mention_state(
@@ -682,7 +682,7 @@ class NotificationsHandlers:
                         metadata=payload.get("metadata") or {},
                     )
 
-                    if "created_at" in payload:
+                    if "created_at" in payload:  # noqa: PLR2004
                         ts = Timestamp()
                         ts.FromDatetime(datetime.fromisoformat(payload["created_at"]))
                         proto_notification.created_at.CopyFrom(ts)
@@ -693,7 +693,7 @@ class NotificationsHandlers:
                     )
                     last_send = now
 
-        except (asyncio.CancelledError, GeneratorExit):
+        except asyncio.CancelledError, GeneratorExit:
             logger.info(
                 f"cancelled for user {user_id} (client disconnect)",
                 component="notifications handler",

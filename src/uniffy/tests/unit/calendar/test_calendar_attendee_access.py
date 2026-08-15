@@ -134,9 +134,7 @@ class TestSearchAttendeeIds:
     async def test_hook_returns_none_when_no_attendees(self) -> None:
         ops = CalendarEventOperations.__new__(CalendarEventOperations)
         ops.session = MagicMock()
-        ops.session.execute = AsyncMock(
-            return_value=MagicMock(all=MagicMock(return_value=[]))
-        )
+        ops.session.execute = AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[])))
         assert await ops._get_search_attendee_user_ids(_make_event()) is None
 
     async def test_index_for_search_passes_attendees(self) -> None:
@@ -171,9 +169,7 @@ class TestSearchAttendeeIds:
     async def test_refresh_is_best_effort(self) -> None:
         ops = CalendarEventOperations.__new__(CalendarEventOperations)
         ops.search_indexer = MagicMock()
-        ops.search_indexer.update_attendees = AsyncMock(
-            side_effect=RuntimeError("meili down")
-        )
+        ops.search_indexer.update_attendees = AsyncMock(side_effect=RuntimeError("meili down"))
         ops._get_search_attendee_user_ids = AsyncMock(return_value=[])
         # A search-side failure must not fail the attendee mutation.
         await ops._refresh_search_attendees(_make_event())
@@ -191,9 +187,7 @@ class TestMeiliPermissionFilter:
     def test_my_content_only_narrows_to_owned(self) -> None:
         client = MeilisearchClient.__new__(MeilisearchClient)
         user_id = generate_id()
-        filter_expr = client._build_permission_filter(
-            generate_id(), user_id, my_content_only=True
-        )
+        filter_expr = client._build_permission_filter(generate_id(), user_id, my_content_only=True)
         # The narrowing is an extra conjunct, so an attendee-only event cannot
         # satisfy it, and the blocked exclusion still applies to owned rows.
         assert filter_expr.endswith(f'AND owner_id = "{user_id}"')
@@ -203,9 +197,7 @@ class TestMeiliPermissionFilter:
         client = MeilisearchClient.__new__(MeilisearchClient)
         user_id = generate_id()
         victim_id = generate_id()
-        filter_expr = client._build_permission_filter(
-            generate_id(), user_id, owner_filter=victim_id
-        )
+        filter_expr = client._build_permission_filter(generate_id(), user_id, owner_filter=victim_id)
         # owner_filter is client-supplied: it narrows what the caller may
         # already reach, it does not replace the permission clause.
         assert filter_expr.endswith(f'AND owner_id = "{victim_id}"')

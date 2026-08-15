@@ -33,34 +33,32 @@ from uniffy.domains.auth.revocation import (
 )
 from uniffy.domains.auth.tokens import decode_token_unsafe
 
-PUBLIC_METHODS: frozenset[str] = frozenset(
-    {
-        # Credential entry points: no session exists yet.
-        "auth.v1.AuthService/Register",
-        "auth.v1.AuthService/Login",
-        "auth.v1.AuthService/RefreshToken",
-        "auth.v1.AuthService/GetAuthConfig",
-        # Carries its own credential in the body rather than the header:
-        # the refresh token, which is not an access token.
-        "auth.v1.AuthService/SwitchOrganization",
-        # Reached from an emailed link before the recipient has an account.
-        "auth.v1.AuthService/GetInvitation",
-        "auth.v1.AuthService/AcceptInvitation",
-        # Password reset: the token in the body is the credential.
-        "auth.v1.AuthService/SendPasswordReset",
-        "auth.v1.AuthService/VerifyPasswordResetToken",
-        "auth.v1.AuthService/ResetPassword",
-        # MFA legs that run mid-login, holding an enrollment-only or
-        # challenge token rather than an access token. The handlers
-        # authenticate those themselves; see ENROLLMENT_ALLOWED_RPCS.
-        "auth.v1.MfaService/BeginEnrollment",
-        "auth.v1.MfaService/ConfirmEnrollment",
-        "auth.v1.MfaService/GetMfaStatus",
-        "auth.v1.MfaService/VerifyMfa",
-        # Static server public key, needed before a push subscription exists.
-        "notifications.v1.NotificationsService/GetVapidPublicKey",
-    }
-)
+PUBLIC_METHODS: frozenset[str] = frozenset({
+    # Credential entry points: no session exists yet.
+    "auth.v1.AuthService/Register",
+    "auth.v1.AuthService/Login",
+    "auth.v1.AuthService/RefreshToken",
+    "auth.v1.AuthService/GetAuthConfig",
+    # Carries its own credential in the body rather than the header:
+    # the refresh token, which is not an access token.
+    "auth.v1.AuthService/SwitchOrganization",
+    # Reached from an emailed link before the recipient has an account.
+    "auth.v1.AuthService/GetInvitation",
+    "auth.v1.AuthService/AcceptInvitation",
+    # Password reset: the token in the body is the credential.
+    "auth.v1.AuthService/SendPasswordReset",
+    "auth.v1.AuthService/VerifyPasswordResetToken",
+    "auth.v1.AuthService/ResetPassword",
+    # MFA legs that run mid-login, holding an enrollment-only or
+    # challenge token rather than an access token. The handlers
+    # authenticate those themselves; see ENROLLMENT_ALLOWED_RPCS.
+    "auth.v1.MfaService/BeginEnrollment",
+    "auth.v1.MfaService/ConfirmEnrollment",
+    "auth.v1.MfaService/GetMfaStatus",
+    "auth.v1.MfaService/VerifyMfa",
+    # Static server public key, needed before a push subscription exists.
+    "notifications.v1.NotificationsService/GetVapidPublicKey",
+})
 
 
 class AuthenticationInterceptor:
@@ -83,9 +81,7 @@ class AuthenticationInterceptor:
         get_user_id_from_context(ctx)
         return None
 
-    async def on_end(
-        self, _token: None, _ctx: RequestContext, _error: Exception | None
-    ) -> None:
+    async def on_end(self, _token: None, _ctx: RequestContext, _error: Exception | None) -> None:
         return None
 
 
@@ -103,9 +99,7 @@ class AuthRevocationInterceptor:
         await self._enforce(ctx)
         return None
 
-    async def on_end(
-        self, _token: None, _ctx: RequestContext, _error: Exception | None
-    ) -> None:
+    async def on_end(self, _token: None, _ctx: RequestContext, _error: Exception | None) -> None:
         return None
 
     @staticmethod
@@ -135,7 +129,7 @@ class AuthRevocationInterceptor:
             return
         try:
             user_id = UUID(sub)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return
         if await is_access_token_revoked(user_id, payload.get("tkv")):
             raise ConnectError(Code.UNAUTHENTICATED, "Token has been revoked")
@@ -143,7 +137,7 @@ class AuthRevocationInterceptor:
         if sid_raw:
             try:
                 session_id = UUID(sid_raw)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 return
             if await is_session_revoked(session_id):
                 raise ConnectError(Code.UNAUTHENTICATED, "Session has been revoked")

@@ -25,9 +25,10 @@ from uniffy_proto.audit.v1.audit_pb2 import (
 
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.db import open_session
 from uniffy.domains.audit.converters import audit_event_to_proto
-from uniffy.domains.audit.export import ExportFilter, ExportOperations
+from uniffy.domains.audit.export import ExportFilter, ExportFormat, ExportOperations
 from uniffy.domains.audit.operations import (
     AuditOperations,
     ListEventsFilter,
@@ -44,6 +45,13 @@ def _parse_uuid(value: str, field: str) -> UUID:
         return UUID(value)
     except ValueError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+
+
+def _parse_resource_type(value: str) -> AuditResourceType:
+    try:
+        return AuditResourceType(value.upper())
+    except ValueError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid resource_type: {value}") from exc
 
 
 def _map_domain_error(exc: Exception) -> ConnectError:
@@ -84,25 +92,21 @@ class AuditHandlers:
             actor_user_id=actor_user_id,
             actions=tuple(request.actions),
             resource_type=(
-                request.resource_type if request.HasField("resource_type") else None
+                _parse_resource_type(request.resource_type)
+                if request.HasField("resource_type")
+                else None
             ),
             resource_id=resource_id,
             from_time=(
-                timestamp_to_datetime(request.from_time)
-                if request.HasField("from_time")
-                else None
+                timestamp_to_datetime(request.from_time) if request.HasField("from_time") else None
             ),
             to_time=(
-                timestamp_to_datetime(request.to_time)
-                if request.HasField("to_time")
-                else None
+                timestamp_to_datetime(request.to_time) if request.HasField("to_time") else None
             ),
             page_size=request.page_size,
             page_token=request.page_token if request.HasField("page_token") else None,
             order=(
-                SortOrder.TIME_ASC
-                if request.order == SORT_ORDER_TIME_ASC
-                else SortOrder.TIME_DESC
+                SortOrder.TIME_ASC if request.order == SORT_ORDER_TIME_ASC else SortOrder.TIME_DESC
             ),
         )
 
@@ -131,9 +135,9 @@ class AuditHandlers:
         filter_msg = request.filter
 
         if request.format == EXPORT_FORMAT_CSV:
-            export_format = "csv"
+            export_format = ExportFormat.CSV
         elif request.format == EXPORT_FORMAT_JSON:
-            export_format = "ndjson"
+            export_format = ExportFormat.NDJSON
         else:
             raise ConnectError(
                 Code.INVALID_ARGUMENT,
@@ -157,7 +161,7 @@ class AuditHandlers:
             actor_user_id=actor_user_id,
             actions=tuple(filter_msg.actions),
             resource_type=(
-                filter_msg.resource_type
+                _parse_resource_type(filter_msg.resource_type)
                 if filter_msg.HasField("resource_type")
                 else None
             ),
@@ -168,9 +172,7 @@ class AuditHandlers:
                 else None
             ),
             to_time=(
-                timestamp_to_datetime(filter_msg.to_time)
-                if filter_msg.HasField("to_time")
-                else None
+                timestamp_to_datetime(filter_msg.to_time) if filter_msg.HasField("to_time") else None
             ),
         )
 

@@ -32,12 +32,13 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.realtime.identity import replica_id
+from uniffy.core.realtime.publisher import RealtimeChannelKind, RealtimeChannelNamespace
 from uniffy.core.valkey.pubsub import subscribe_patterns
 
 LOGGER_COMPONENT = "streaming.revoke"
 
-_REVOKE_PATTERN = "auth:revoke:*"
-_REVOKE_SID_PATTERN = "auth:revoke_sid:*"
+_REVOKE_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE}:*"
+_REVOKE_SID_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE_SESSION}:*"
 _RECONNECT_DELAY_INITIAL = 1.0
 _RECONNECT_DELAY_MAX = 30.0
 
@@ -54,7 +55,11 @@ class StreamRegistration:
 
 def _parse_revoke_channel(channel: str) -> UUID | None:
     parts = channel.split(":")
-    if len(parts) != 3 or parts[0] != "auth" or parts[1] != "revoke":
+    if (
+        len(parts) != 3
+        or parts[0] != RealtimeChannelNamespace.AUTH
+        or parts[1] != RealtimeChannelKind.REVOKE
+    ):
         return None
     try:
         return UUID(parts[2])
@@ -64,7 +69,11 @@ def _parse_revoke_channel(channel: str) -> UUID | None:
 
 def _parse_revoke_sid_channel(channel: str) -> UUID | None:
     parts = channel.split(":")
-    if len(parts) != 3 or parts[0] != "auth" or parts[1] != "revoke_sid":
+    if (
+        len(parts) != 3
+        or parts[0] != RealtimeChannelNamespace.AUTH
+        or parts[1] != RealtimeChannelKind.REVOKE_SESSION
+    ):
         return None
     try:
         return UUID(parts[2])
@@ -98,9 +107,7 @@ class StreamRevokeCoordinator:
                 name="stream-revoke-coordinator-revoke-sid",
             ),
         ]
-        logger.info(
-            "stream revoke coordinator started", component=LOGGER_COMPONENT
-        )
+        logger.info("stream revoke coordinator started", component=LOGGER_COMPONENT)
 
     async def stop(self) -> None:
         if not self._running:
@@ -112,9 +119,7 @@ class StreamRevokeCoordinator:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         self._tasks = []
-        logger.info(
-            "stream revoke coordinator stopped", component=LOGGER_COMPONENT
-        )
+        logger.info("stream revoke coordinator stopped", component=LOGGER_COMPONENT)
 
     async def register(
         self,
@@ -205,9 +210,7 @@ class StreamRevokeCoordinator:
         for reg in targets:
             reg.disconnect.set()
 
-    async def _handle_revoke_sid(
-        self, channel: str, payload: dict[str, object]
-    ) -> None:
+    async def _handle_revoke_sid(self, channel: str, payload: dict[str, object]) -> None:
         user_id = _parse_revoke_sid_channel(channel)
         if user_id is None:
             return
@@ -223,8 +226,7 @@ class StreamRevokeCoordinator:
             targets = [
                 self._streams_by_id[i]
                 for i in ids
-                if i in self._streams_by_id
-                and self._streams_by_id[i].session_id == session_id
+                if i in self._streams_by_id and self._streams_by_id[i].session_id == session_id
             ]
         for reg in targets:
             reg.disconnect.set()

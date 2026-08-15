@@ -16,6 +16,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.agents.memory import AgentMemory
+from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.domains.agents.memories.scope import (
     MemoryScopeRef,
     audience_text,
@@ -25,6 +26,7 @@ from uniffy.domains.agents.memories.scoring import (
     TrigramMemoryScorer,
     script_class,
 )
+from uniffy.domains.agents.providers.base import CanonicalContentBlockType
 from uniffy.observability.metrics import (
     AGENT_MEMORY_RECALL_OVERFLOW_TOTAL,
     AGENT_MEMORY_RECALL_PROMOTED_TOTAL,
@@ -163,7 +165,7 @@ def attach_to_trigger_turn(llm_messages: list[dict], block: str) -> bool:
     Returns False when no attachable turn exists; callers drop the block.
     """
     for msg in reversed(llm_messages):
-        if msg.get("role") != "user":
+        if msg.get("role") != AgentMessageRole.USER:
             continue
         content = msg.get("content")
         if isinstance(content, str):
@@ -171,7 +173,8 @@ def attach_to_trigger_turn(llm_messages: list[dict], block: str) -> bool:
             return True
         if isinstance(content, list):
             if any(
-                isinstance(b, dict) and b.get("type") == "tool_result" for b in content
+                isinstance(b, dict) and b.get("type") == CanonicalContentBlockType.TOOL_RESULT
+                for b in content
             ):
                 continue
             content.append({"type": "text", "text": block})
@@ -192,7 +195,7 @@ def build_recall_query(context_messages: list, new_content: str) -> str:
     for msg in reversed(context_messages):
         if len(parts) >= 3:
             break
-        if getattr(msg, "role", None) != "user" or getattr(msg, "tool_call_id", None):
+        if getattr(msg, "role", None) != AgentMessageRole.USER or getattr(msg, "tool_call_id", None):
             continue
         text = (getattr(msg, "content", None) or "").strip()
         if text:

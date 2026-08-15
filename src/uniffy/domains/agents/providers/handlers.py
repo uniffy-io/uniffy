@@ -111,10 +111,7 @@ class ProvidersHandlers:
                 # One cached role read per RPC, not per key.
                 diagnostics = await is_org_admin(session, user_id, org_id)
                 return ListProviderKeysResponse(
-                    keys=[
-                        provider_key_to_proto(k, include_diagnostics=diagnostics)
-                        for k in keys
-                    ],
+                    keys=[provider_key_to_proto(k, include_diagnostics=diagnostics) for k in keys],
                 )
         except ConnectError:
             raise

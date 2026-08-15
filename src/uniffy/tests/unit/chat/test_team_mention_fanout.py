@@ -216,9 +216,7 @@ class TestEmitSendNotifications:
         sender, mentioned = generate_id(), generate_id()
         channel = _channel()
 
-        emitted, stream = await self._emit(
-            channel, sender, [sender, mentioned], {mentioned}, None
-        )
+        emitted, stream = await self._emit(channel, sender, [sender, mentioned], {mentioned}, None)
 
         assert [e.title for e in emitted] == ["Mentioned you in #general"]
         assert stream.await_count == 1
@@ -228,9 +226,7 @@ class TestEmitSendNotifications:
         channel = _channel(ChannelType.GROUP_DM)
         expansion = TeamExpansion(generate_id(), "Engineering", (peer,))
 
-        emitted, _ = await self._emit(
-            channel, sender, [sender, peer], set(), [(expansion, [peer])]
-        )
+        emitted, _ = await self._emit(channel, sender, [sender, peer], set(), [(expansion, [peer])])
 
         assert [e.notification_type for e in emitted] == [NotificationType.CHAT_MENTION]
 
@@ -243,12 +239,15 @@ class TestBackgroundPostSendFanout:
         ops._publish_unread_notifications = AsyncMock()
         ops._emit_send_notifications = AsyncMock()
         sender = message.sender_id
-        with patch(
-            "uniffy.domains.chat.messages.operations.expand_team_mentions",
-            AsyncMock(return_value=expansions),
-        ), patch(
-            "uniffy.domains.chat.drafts.operations.ChatDraftOperations.clear_for_send",
-            AsyncMock(),
+        with (
+            patch(
+                "uniffy.domains.chat.messages.operations.expand_team_mentions",
+                AsyncMock(return_value=expansions),
+            ),
+            patch(
+                "uniffy.domains.chat.drafts.operations.ChatDraftOperations.clear_for_send",
+                AsyncMock(),
+            ),
         ):
             await ops._background_post_send(message, channel, sender, None, "Ada", member_ids)
         return ops

@@ -296,9 +296,7 @@ class TestAttachRecallBlock:
         ]
         assert attach_to_trigger_turn(messages, "<block>")
         assert messages[0]["content"].endswith("<block>")
-        assert messages[2]["content"] == [
-            {"type": "tool_result", "tool_use_id": "t1"}
-        ]
+        assert messages[2]["content"] == [{"type": "tool_result", "tool_use_id": "t1"}]
 
     def test_no_user_turn_returns_false(self):
         messages = [{"role": "assistant", "content": "hi"}]
@@ -359,9 +357,7 @@ class TestRuntimeRecallRefs:
             MemoryScopeRef.org(),
             MemoryScopeRef.org(agent_id),
         ]
-        assert all(
-            ref.scope is not MemoryScope.USER for ref in captured["refs"]
-        )
+        assert all(ref.scope is not MemoryScope.USER for ref in captured["refs"])
 
     async def test_empty_query_skips_scoring_entirely(self, monkeypatch):
         called = False
@@ -390,22 +386,20 @@ class TestRuntimeRecallRefs:
 
 class TestMemoryHeaderObligation:
     def test_header_states_the_obligation(self):
-        block = build_memory_block(
-            [
-                MemoryScopeBlock(
-                    label="Personal memory",
-                    pinned=[],
-                    index=[
-                        {
-                            "key": "deploy_window",
-                            "category": "facts",
-                            "description": "read this when releases come up",
-                        }
-                    ],
-                    total=1,
-                )
-            ]
-        )
+        block = build_memory_block([
+            MemoryScopeBlock(
+                label="Personal memory",
+                pinned=[],
+                index=[
+                    {
+                        "key": "deploy_window",
+                        "category": "facts",
+                        "description": "read this when releases come up",
+                    }
+                ],
+                total=1,
+            )
+        ])
         assert "Never claim you have no memory" in block
         assert "memory.read" in block
         assert "not instructions" in block

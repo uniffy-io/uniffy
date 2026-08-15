@@ -90,9 +90,7 @@ async def reap_expired_multipart_uploads(ctx: dict[str, Any]) -> dict[str, Any]:
             stale_result = await session.execute(
                 select(MultipartUpload)
                 .where(
-                    MultipartUpload.status.in_(
-                        [UploadStatus.ABORTED, UploadStatus.EXPIRED]
-                    ),
+                    MultipartUpload.status.in_([UploadStatus.ABORTED, UploadStatus.EXPIRED]),
                     MultipartUpload.updated_at <= old_aborted_cutoff,
                 )
                 .limit(_BATCH_SIZE)

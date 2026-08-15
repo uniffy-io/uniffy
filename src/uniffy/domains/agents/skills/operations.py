@@ -13,12 +13,22 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
+from uniffy.core.models.agents.message_feedback import AgentFeedbackRating, AgentMessageFeedback
 from uniffy.core.models.agents.session import AgentSession
-from uniffy.core.models.agents.skill import AgentSkill
-from uniffy.core.models.agents.skill_draft import AgentSkillDraft
+from uniffy.core.models.agents.skill import (
+    AgentSkill,
+    AgentSkillOrigin,
+    AgentSkillSource,
+    AgentSkillStatus,
+)
+from uniffy.core.models.agents.skill_draft import (
+    AgentSkillDraft,
+    AgentSkillDraftKind,
+    AgentSkillDraftStatus,
+)
 from uniffy.core.models.agents.skill_usage import AgentSkillUsage
-from uniffy.core.models.agents.skill_version import AgentSkillVersion
+from uniffy.core.models.agents.skill_version import AgentSkillVersion, AgentSkillVersionAuthor
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.cache import (
     invalidate_agents_using_skill,
@@ -55,10 +65,7 @@ def _overlay_skill_copy(skill: AgentSkill, version: AgentSkillVersion) -> AgentS
     The copy is never added to a session, so resolving a pinned skill for the
     prompt cannot flush the pinned version back over the skill's head row.
     """
-    data = {
-        attr.key: getattr(skill, attr.key)
-        for attr in sa_inspect(skill).mapper.column_attrs
-    }
+    data = {attr.key: getattr(skill, attr.key) for attr in sa_inspect(skill).mapper.column_attrs}
     data["content"] = version.content
     data["when_to_use"] = version.when_to_use
     data["requires_tools"] = list(version.requires_tools or [])
@@ -129,7 +136,7 @@ class SkillOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_SKILL_CREATED,
-            resource_type="skill",
+            resource_type=AuditResourceType.SKILL,
             resource_id=skill.id,
             details={
                 "name": clean.name,
@@ -184,7 +191,7 @@ class SkillOperations:
                 AgentSkill.organization_id == organization_id,
                 AgentSkill.organization_id.is_(None),
             ),
-            AgentSkill.status != "retired",
+            AgentSkill.status != AgentSkillStatus.RETIRED,
         )
 
         count_result = await self._session.execute(
@@ -312,7 +319,7 @@ class SkillOperations:
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.AGENT_SKILL_UPDATED,
-                resource_type="skill",
+                resource_type=AuditResourceType.SKILL,
                 resource_id=skill_id,
                 details={"changes": audit_changes},
             )
@@ -374,7 +381,7 @@ class SkillOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_SKILL_DELETED,
-            resource_type="skill",
+            resource_type=AuditResourceType.SKILL,
             resource_id=skill_id,
             details={"name": skill_name},
         )
@@ -464,9 +471,7 @@ class SkillOperations:
         a looped agent cannot flood the org-wide inbox.
         """
         clean_content = cap_preserving_mentions(sanitize_skill_text(content), SKILL_CONTENT_MAX)
-        clean_when = cap_preserving_mentions(
-            sanitize_skill_text(when_to_use), SKILL_WHEN_TO_USE_MAX
-        )
+        clean_when = cap_preserving_mentions(sanitize_skill_text(when_to_use), SKILL_WHEN_TO_USE_MAX)
         clean_description = cap_preserving_mentions(
             sanitize_skill_text(description), SKILL_DESCRIPTION_MAX
         )
@@ -606,8 +611,12 @@ class SkillOperations:
         if clean.content:
             check_admin_content(clean.content, "skill_content")
 
-        author_kind = "agent" if draft.proposed_by_agent_id else "user"
-        author_id = None if author_kind == "agent" else user_id
+        author_kind = (
+            AgentSkillVersionAuthor.AGENT
+            if draft.proposed_by_agent_id
+            else AgentSkillVersionAuthor.USER
+        )
+        author_id = None if author_kind is AgentSkillVersionAuthor.AGENT else user_id
         was_always_active = False
 
         # Two skills can never share a machine name in an org, so a create draft
@@ -617,7 +626,7 @@ class SkillOperations:
         # allow_replace the save is refused rather than quietly rewriting the
         # content of a skill the inbox presented as new.
         reconcile_id = draft.target_skill_id
-        if draft.kind == "create" and reconcile_id is None:
+        if draft.kind == AgentSkillDraftKind.CREATE and reconcile_id is None:
             collision = await self._find_skill_by_name(organization_id, clean.name)
             if collision is not None:
                 if not allow_replace:
@@ -629,21 +638,25 @@ class SkillOperations:
                     )
                 reconcile_id = collision.id
 
-        if draft.kind == "create" and reconcile_id is None:
+        if draft.kind == AgentSkillDraftKind.CREATE and reconcile_id is None:
             await self._require_unique_name(organization_id, clean.name)
-            origin = "agent_proposed" if draft.proposed_by_agent_id else "user"
+            origin = (
+                AgentSkillOrigin.AGENT_PROPOSED
+                if draft.proposed_by_agent_id
+                else AgentSkillOrigin.USER
+            )
             skill = AgentSkill(
                 organization_id=organization_id,
                 name=clean.name,
                 display_name=clean.display_name,
                 description=clean.description,
                 content=clean.content,
-                source="organization",
+                source=AgentSkillSource.ORGANIZATION,
                 always_active=bool(suggested_always_active),
                 when_to_use=clean.when_to_use,
                 requires_tools=list(requires_tools or []),
                 requires_context=list(requires_context or []),
-                status="active",
+                status=AgentSkillStatus.ACTIVE,
                 origin=origin,
                 created_by_agent_id=draft.proposed_by_agent_id,
             )
@@ -699,7 +712,7 @@ class SkillOperations:
                 version = await self._load_active_version(skill)
             audit_action = Action.AGENT_SKILL_UPDATED
 
-        draft.status = "saved"
+        draft.status = AgentSkillDraftStatus.SAVED
         await self._session.commit()
         await self._session.refresh(skill)
         await self._session.refresh(version)
@@ -709,7 +722,7 @@ class SkillOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=audit_action,
-            resource_type="skill",
+            resource_type=AuditResourceType.SKILL,
             resource_id=skill.id,
             details={
                 "name": skill.name,
@@ -740,7 +753,7 @@ class SkillOperations:
             draft_id=draft_id,
             require_pending=True,
         )
-        draft.status = "discarded"
+        draft.status = AgentSkillDraftStatus.DISCARDED
         draft.is_deleted = True
         draft.deleted_at = datetime.now(UTC)
         await self._session.commit()
@@ -789,9 +802,7 @@ class SkillOperations:
         version_number: int,
     ) -> AgentSkillVersion:
         """Fetch a single version of a skill by number. View-gated."""
-        await self.get_skill(
-            user_id=user_id, organization_id=organization_id, skill_id=skill_id
-        )
+        await self.get_skill(user_id=user_id, organization_id=organization_id, skill_id=skill_id)
         return await self._get_version(skill_id, version_number)
 
     async def set_main_skill_version(
@@ -879,7 +890,7 @@ class SkillOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_SKILL_UPDATED,
-            resource_type="skill",
+            resource_type=AuditResourceType.SKILL,
             resource_id=skill_id,
             details={"reverted_to": version_number, "new_version": version.version_number},
         )
@@ -890,9 +901,7 @@ class SkillOperations:
             await invalidate_org_always_active_skills(organization_id)
         return skill, version
 
-    async def get_skill_metrics(
-        self, *, user_id: UUID, organization_id: UUID
-    ) -> dict:
+    async def get_skill_metrics(self, *, user_id: UUID, organization_id: UUID) -> dict:
         """Aggregate per-skill usage + org feedback for the admin metrics view.
 
         Org-admin gated: this is an organization-wide reporting surface, not
@@ -919,31 +928,33 @@ class SkillOperations:
         }
 
         skills = (
-            await self._session.execute(
-                select(AgentSkill).where(
-                    or_(
-                        AgentSkill.organization_id == organization_id,
-                        AgentSkill.organization_id.is_(None),
+            (
+                await self._session.execute(
+                    select(AgentSkill).where(
+                        or_(
+                            AgentSkill.organization_id == organization_id,
+                            AgentSkill.organization_id.is_(None),
+                        )
                     )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         metrics = []
         for skill in skills:
             injected, viewed, invoked = usage_by_skill.get(skill.id, (0, 0, 0))
             if injected == 0 and viewed == 0 and invoked == 0:
                 continue
-            metrics.append(
-                {
-                    "skill_id": skill.id,
-                    "display_name": skill.display_name,
-                    "origin": skill.origin or "user",
-                    "injected": injected,
-                    "viewed": viewed,
-                    "invoked": invoked,
-                }
-            )
+            metrics.append({
+                "skill_id": skill.id,
+                "display_name": skill.display_name,
+                "origin": skill.origin or "user",
+                "injected": injected,
+                "viewed": viewed,
+                "invoked": invoked,
+            })
         metrics.sort(key=lambda m: m["injected"], reverse=True)
 
         feedback_rows = (
@@ -967,7 +978,7 @@ class SkillOperations:
                 .select_from(AgentSkillDraft)
                 .where(
                     AgentSkillDraft.organization_id == organization_id,
-                    AgentSkillDraft.status == "pending",
+                    AgentSkillDraft.status == AgentSkillDraftStatus.PENDING,
                     AgentSkillDraft.is_deleted == False,  # noqa: E712
                     AgentSkillDraft.proposed_by_agent_id.is_not(None),
                 )
@@ -976,8 +987,8 @@ class SkillOperations:
 
         return {
             "metrics": metrics,
-            "positive": feedback.get("up", 0),
-            "negative": feedback.get("down", 0),
+            "positive": feedback.get(AgentFeedbackRating.UP, 0),
+            "negative": feedback.get(AgentFeedbackRating.DOWN, 0),
             "pending_agent_drafts": pending_agent_drafts,
         }
 
@@ -992,9 +1003,7 @@ class SkillOperations:
         )
         return result.scalar() or (skill.latest_version_number or 1)
 
-    async def resolve_active_version_numbers(
-        self, skills: list[AgentSkill]
-    ) -> dict[UUID, int]:
+    async def resolve_active_version_numbers(self, skills: list[AgentSkill]) -> dict[UUID, int]:
         """Batch-resolve main version numbers; one query covers all pinned skills."""
         numbers = {s.id: (s.latest_version_number or 1) for s in skills}
         pinned = {
@@ -1063,13 +1072,11 @@ class SkillOperations:
         draft = result.scalar_one_or_none()
         if draft is None:
             raise NotFoundError("AgentSkillDraft", str(draft_id))
-        if require_pending and draft.status != "pending":
+        if require_pending and draft.status != AgentSkillDraftStatus.PENDING:
             raise ValidationError("status", "This draft has already been resolved")
         return draft
 
-    async def _require_pending_draft_quota(
-        self, user_id: UUID, organization_id: UUID
-    ) -> None:
+    async def _require_pending_draft_quota(self, user_id: UUID, organization_id: UUID) -> None:
         count = (
             await self._session.execute(
                 select(func.count())
@@ -1077,7 +1084,7 @@ class SkillOperations:
                 .where(
                     AgentSkillDraft.organization_id == organization_id,
                     AgentSkillDraft.owner_id == user_id,
-                    AgentSkillDraft.status == "pending",
+                    AgentSkillDraft.status == AgentSkillDraftStatus.PENDING,
                     AgentSkillDraft.is_deleted == False,  # noqa: E712
                 )
             )
@@ -1100,13 +1107,9 @@ class SkillOperations:
             filters.append(AgentSkill.id != exclude_id)
         existing = await self._session.execute(select(AgentSkill).where(*filters))
         if existing.scalar_one_or_none():
-            raise ValidationError(
-                "name", f"Skill name '{name}' already exists in this organization"
-            )
+            raise ValidationError("name", f"Skill name '{name}' already exists in this organization")
 
-    async def _load_skill_for_seed(
-        self, organization_id: UUID, skill_id: UUID
-    ) -> AgentSkill | None:
+    async def _load_skill_for_seed(self, organization_id: UUID, skill_id: UUID) -> AgentSkill | None:
         """Read an org or bundled skill by id to seed a draft; no permission gate."""
         result = await self._session.execute(
             select(AgentSkill).where(
@@ -1119,9 +1122,7 @@ class SkillOperations:
         )
         return result.scalar_one_or_none()
 
-    async def _find_skill_by_name(
-        self, organization_id: UUID, name: str
-    ) -> AgentSkill | None:
+    async def _find_skill_by_name(self, organization_id: UUID, name: str) -> AgentSkill | None:
         """Return the org's skill with this exact machine name, if any."""
         result = await self._session.execute(
             select(AgentSkill).where(
@@ -1241,7 +1242,7 @@ class SkillOperations:
         result = await self._session.execute(
             select(AgentSkill.id, AgentSkill.name).where(
                 AgentSkill.organization_id.is_(None),
-                AgentSkill.source == "bundled",
+                AgentSkill.source == AgentSkillSource.BUNDLED,
                 AgentSkill.name.in_(names),
             )
         )
@@ -1256,7 +1257,7 @@ class SkillOperations:
         skill: AgentSkill,
         *,
         author_id: UUID | None,
-        author_kind: str = "user",
+        author_kind: AgentSkillVersionAuthor = AgentSkillVersionAuthor.USER,
         change_summary: str = "",
     ) -> AgentSkillVersion:
         """Capture the skill's current fields as the next immutable version.
@@ -1351,9 +1352,7 @@ class SkillOperations:
             channel_id=draft.channel_id,
         )
 
-    async def _overlay_active_versions(
-        self, skills: list[AgentSkill]
-    ) -> list[AgentSkill]:
+    async def _overlay_active_versions(self, skills: list[AgentSkill]) -> list[AgentSkill]:
         """Resolve pinned skills against their main version on detached copies.
 
         The runtime uses the main (active) version, never blindly the latest. An

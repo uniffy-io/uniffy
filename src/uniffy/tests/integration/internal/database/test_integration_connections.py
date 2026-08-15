@@ -325,9 +325,7 @@ async def test_update_credential_rotation_reprobes_and_changes_the_hint(session,
             credential=_ROTATED_CREDENTIAL,
         )
     assert row.credential_hint != old_hint
-    assert row.credential_hint == (
-        _ROTATED_CREDENTIAL[:12] + "..." + _ROTATED_CREDENTIAL[-4:]
-    )
+    assert row.credential_hint == (_ROTATED_CREDENTIAL[:12] + "..." + _ROTATED_CREDENTIAL[-4:])
     assert provider.validate_calls[-1][0] == _ROTATED_CREDENTIAL
     decrypted = await OrgCipher(session).decrypt(env.org_id, row.encrypted_credential)
     assert decrypted == _ROTATED_CREDENTIAL
@@ -385,9 +383,7 @@ async def test_resolve_named_disabled_connection_names_the_reason(session, env) 
             enabled=False,
         )
     with pytest.raises(ValidationError) as exc_info:
-        await ops.resolve_connection(
-            organization_id=env.org_id, provider="github", name="alpha"
-        )
+        await ops.resolve_connection(organization_id=env.org_id, provider="github", name="alpha")
     assert "disabled" in str(exc_info.value)
 
 
@@ -561,9 +557,7 @@ class TestAgentConnectionPins:
             row = await _add(session, env)
             agent = await self._create(session, env, {"github": str(row.id)})
         assert agent.integration_connections == {"github": str(row.id)}
-        fetched = await _agent_ops(session).get_by_id(
-            env.admin_id, env.org_id, agent.id
-        )
+        fetched = await _agent_ops(session).get_by_id(env.admin_id, env.org_id, agent.id)
         assert fetched.integration_connections == {"github": str(row.id)}
 
     async def test_disabled_connection_is_accepted_at_write_time(self, session, env) -> None:

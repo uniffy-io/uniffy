@@ -50,7 +50,7 @@ def _rpc_labels(ctx: RequestContext) -> tuple[str, str]:
     method_info = ctx.method()
     full_method = method_info.name if method_info else "unknown"
 
-    if full_method and full_method != "unknown" and "/" in full_method:
+    if full_method and full_method != "unknown" and "/" in full_method:  # noqa: PLR2004
         parts = full_method.rsplit("/", 1)
         service_name = parts[0] if len(parts) > 0 else "unknown"
         method_name = parts[1] if len(parts) > 1 else "unknown"
@@ -93,6 +93,7 @@ def _sanitized_connect_error(
             return ConnectError(code=code, message=str(e))
     logger.exception(f"Unhandled exception {e} in RPC call {service_name}/{method_name}")
     return ConnectError(code=Code.INTERNAL, message="Internal server error")
+
 
 # `auth.context` is imported lazily inside `intercept_unary` because the auth
 # domain transitively imports the audit writer, which imports this module.
@@ -234,9 +235,7 @@ class LoggingInterceptor:
             raise error from e
         finally:
             duration = time.time() - start_time
-            RPC_REQUESTS_TOTAL.labels(
-                service=service_name, method=method_name, code=code
-            ).inc()
+            RPC_REQUESTS_TOTAL.labels(service=service_name, method=method_name, code=code).inc()
             RPC_REQUEST_DURATION.labels(service=service_name, method=method_name).observe(duration)
             logger.info(
                 f"stream end {service_name}/{method_name}",

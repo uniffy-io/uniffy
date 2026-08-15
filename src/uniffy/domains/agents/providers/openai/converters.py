@@ -7,6 +7,9 @@ runtime and the OpenAI Chat Completions API format.
 import json
 from typing import Any
 
+from uniffy.core.models.agents.message import AgentMessageRole
+from uniffy.domains.agents.providers.base import CanonicalContentBlockType
+
 
 def convert_tools_to_openai(tools: list[dict]) -> list[dict]:
     """Convert tool schemas from Anthropic format to OpenAI function calling format.
@@ -81,12 +84,14 @@ def convert_messages_to_openai(
 
         # Content block array (Anthropic format)
         if isinstance(content, list):
-            if role == "assistant":
+            if role == AgentMessageRole.ASSISTANT:
                 openai_messages.append(
                     _convert_assistant_blocks(content),
                 )
-            elif role == "user":
-                has_tool_results = any(b.get("type") == "tool_result" for b in content)
+            elif role == AgentMessageRole.USER:
+                has_tool_results = any(
+                    b.get("type") == CanonicalContentBlockType.TOOL_RESULT for b in content
+                )
                 if has_tool_results:
                     tool_messages = _convert_tool_result_blocks(content)
                     openai_messages.extend(tool_messages)
@@ -96,7 +101,9 @@ def convert_messages_to_openai(
             else:
                 # Fallback: join text blocks
                 text_parts = [
-                    block.get("text", "") for block in content if block.get("type") == "text"
+                    block.get("text", "")
+                    for block in content
+                    if block.get("type") == CanonicalContentBlockType.TEXT
                 ]
                 openai_messages.append({
                     "role": role,
@@ -123,9 +130,9 @@ def _convert_user_content_blocks(content_blocks: list[dict]) -> list[dict]:
     parts: list[dict] = []
     for block in content_blocks:
         btype = block.get("type", "")
-        if btype == "text":
+        if btype == CanonicalContentBlockType.TEXT:
             parts.append({"type": "text", "text": block["text"]})
-        elif btype == "image":
+        elif btype == CanonicalContentBlockType.IMAGE:
             media_type = block.get("media_type", "image/png")
             data = block.get("data", "")
             parts.append({
@@ -134,7 +141,7 @@ def _convert_user_content_blocks(content_blocks: list[dict]) -> list[dict]:
                     "url": f"data:{media_type};base64,{data}",
                 },
             })
-        elif btype == "document":
+        elif btype == CanonicalContentBlockType.DOCUMENT:
             # OpenAI Chat Completions does not support inline PDFs.
             # Include as text note with filename reference.
             filename = block.get("filename", "document")
@@ -163,9 +170,9 @@ def _convert_assistant_blocks(content_blocks: list[dict]) -> dict:
     tool_calls: list[dict] = []
 
     for block in content_blocks:
-        if block.get("type") == "text":
+        if block.get("type") == CanonicalContentBlockType.TEXT:
             text_parts.append(block["text"])
-        elif block.get("type") == "tool_use":
+        elif block.get("type") == CanonicalContentBlockType.TOOL_USE:
             tool_calls.append({
                 "id": block["id"],
                 "type": "function",
@@ -203,10 +210,14 @@ def _convert_tool_result_blocks(content_blocks: list[dict]) -> list[dict]:
     """
     messages: list[dict] = []
     for block in content_blocks:
-        if block.get("type") == "tool_result":
+        if block.get("type") == CanonicalContentBlockType.TOOL_RESULT:
             content = block.get("content", "")
             if isinstance(content, list):
-                text_parts = [b.get("text", "") for b in content if b.get("type") == "text"]
+                text_parts = [
+                    b.get("text", "")
+                    for b in content
+                    if b.get("type") == CanonicalContentBlockType.TEXT
+                ]
                 content = "\n".join(text_parts)
             messages.append({
                 "role": "tool",

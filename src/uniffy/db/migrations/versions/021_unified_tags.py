@@ -20,9 +20,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "tags",
-        sa.Column(
-            "id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")
-        ),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(120), nullable=False),
         sa.Column("slug", sa.String(64), nullable=False),
@@ -42,12 +40,8 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
         ),
         sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["created_by"], ["login_users.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["created_by"], ["login_users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("organization_id", "slug", name="uq_tags_org_slug"),
     )
@@ -73,9 +67,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
         ),
         sa.ForeignKeyConstraint(["tag_id"], ["tags.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["assigned_by"], ["login_users.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["assigned_by"], ["login_users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("tag_id", "content_urn", name="pk_tag_assignments"),
     )
     op.create_index(
@@ -96,9 +88,7 @@ def upgrade() -> None:
 
     op.create_table(
         "tags_saved_filters",
-        sa.Column(
-            "id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")
-        ),
+        sa.Column("id", sa.Uuid(), nullable=False, server_default=sa.text("uuidv7()")),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("organization_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(120), nullable=False),
@@ -114,15 +104,9 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("'{}'::jsonb"),
         ),
-        sa.Column(
-            "sort_by", sa.String(32), nullable=False, server_default="count"
-        ),
-        sa.Column(
-            "sort_order", sa.String(8), nullable=False, server_default="desc"
-        ),
-        sa.Column(
-            "is_preset", sa.Boolean(), nullable=False, server_default=sa.text("false")
-        ),
+        sa.Column("sort_by", sa.String(32), nullable=False, server_default="count"),
+        sa.Column("sort_order", sa.String(8), nullable=False, server_default="desc"),
+        sa.Column("is_preset", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -135,16 +119,10 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("now()"),
         ),
-        sa.ForeignKeyConstraint(
-            ["user_id"], ["login_users.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["login_organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["user_id"], ["login_users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "user_id", "organization_id", "name", name="uq_tags_saved_filters_name"
-        ),
+        sa.UniqueConstraint("user_id", "organization_id", "name", name="uq_tags_saved_filters_name"),
     )
     op.create_index(
         "ix_tags_saved_filters_user_org",

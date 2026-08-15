@@ -11,6 +11,12 @@ permissions:
   checks: write
   pull-requests: write
 
+# A new push to a pull request cancels that pull request's in-flight run.
+# Pushes to main group per commit, so no run on main is ever cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -28,6 +34,8 @@ jobs:
             backend:
               - 'src/uniffy/**'
               - 'src/gen/python/**'
+              - 'manage.py'
+              - '.github/workflows/test.yml'
               - 'pyproject.toml'
               - 'uv.lock'
             frontend:
@@ -93,9 +101,13 @@ jobs:
         shell: bash
         run: uv sync --all-extras --all-groups --frozen
 
-      - name: Run python linters
+      - name: Run Python linters
         shell: bash
         run: uv run ruff check src/uniffy/ --exclude src/gen
+
+      - name: Check Python formatting
+        shell: bash
+        run: uv run ruff format src/uniffy/ --exclude src/gen --check
 
   lint-frontend:
     needs: changes

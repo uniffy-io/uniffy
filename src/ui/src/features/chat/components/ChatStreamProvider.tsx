@@ -318,17 +318,6 @@ function handleChannelEvent(
       }
       break;
     }
-    case ChatEventType.TYPING_STOPPED: {
-      if (ce.payload.case === "typing" && ce.payload.value) {
-        dispatch(
-          clearTypingUser({
-            channelId: activeChannelId,
-            userId: ce.payload.value.userId,
-          }),
-        );
-      }
-      break;
-    }
     case ChatEventType.REACTION_ADDED: {
       if (ce.payload.case === "reaction" && ce.payload.value) {
         const { messageId, emoji, userId } = ce.payload.value;

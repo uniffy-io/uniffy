@@ -16,6 +16,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.rate_limit_config import AgentRateLimitConfig
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.valkey.rate_limit import (
     ALL_LIMIT_KINDS,
     DEFAULT_LIMITS,
@@ -168,7 +169,7 @@ class RateLimitsOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=action,
-            resource_type="rate_limit",
+            resource_type=AuditResourceType.RATE_LIMIT,
             resource_id=row.id,
             details={
                 "kind": kind,
@@ -221,7 +222,7 @@ class RateLimitsOperations:
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.AGENT_RATE_LIMIT_DELETED,
-            resource_type="rate_limit",
+            resource_type=AuditResourceType.RATE_LIMIT,
             resource_id=row_id,
             details={"kind": kind},
         )

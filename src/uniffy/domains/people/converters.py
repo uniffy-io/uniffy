@@ -137,9 +137,7 @@ def build_person_payload(
         "timezone": profile.timezone if profile else None,
         "pronouns": user.pronouns,
         "bio": profile.bio if profile else None,
-        "start_date": (
-            profile.start_date.isoformat() if profile and profile.start_date else None
-        ),
+        "start_date": (profile.start_date.isoformat() if profile and profile.start_date else None),
         "birthday": profile.birthday if profile else None,
         "links": (profile.links or []) if profile else [],
         "manager_user_id": (

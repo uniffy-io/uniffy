@@ -18,9 +18,7 @@ class ChatAgentFolder(SQLModel, table=True):
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    organization_id: UUID = Field(
-        foreign_key="login_organizations.id", nullable=False, index=True
-    )
+    organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False)
     name: str = Field(max_length=100, nullable=False)
     position: int = Field(default=0, nullable=False)

@@ -69,9 +69,7 @@ class SupportSession(SQLModel, table=True):
         nullable=True,
     )
     reason: str = Field(max_length=2000, nullable=False)
-    scope: SupportSessionScope = Field(
-        default=SupportSessionScope.READ_ONLY, nullable=False
-    )
+    scope: SupportSessionScope = Field(default=SupportSessionScope.READ_ONLY, nullable=False)
     state: SupportSessionState = Field(
         default=SupportSessionState.PENDING, nullable=False, index=True
     )
@@ -96,9 +94,7 @@ class SupportSession(SQLModel, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
-        sa_column=Column(
-            DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)
-        ),
+        sa_column=Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC)),
     )
 
     def __repr__(self) -> str:

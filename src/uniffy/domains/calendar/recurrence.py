@@ -11,6 +11,8 @@ from zoneinfo import ZoneInfo
 
 from uniffy.core.models.shared import DayOfWeek, RecurrencePattern
 
+OCCURRENCE_ID_SEPARATOR = "__occurrence__"
+
 # Map DayOfWeek enum values to Python weekday numbers (Monday=0, Sunday=6)
 _DAY_OF_WEEK_TO_INT: dict[str, int] = {
     DayOfWeek.MONDAY.value: 0,
@@ -36,7 +38,7 @@ def resolve_event_zone(timezone: str) -> ZoneInfo:
     """Invalid stored zones degrade to UTC instead of failing every expansion."""
     try:
         return ZoneInfo(timezone)
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         return ZoneInfo("UTC")
 
 

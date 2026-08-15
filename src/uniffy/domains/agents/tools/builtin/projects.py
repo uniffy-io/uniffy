@@ -24,13 +24,13 @@ async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
     assert access_mode is not None
 
     kwargs: dict = {"access_mode": access_mode}
-    if "description" in args:
+    if "description" in args:  # noqa: PLR2004
         kwargs["description"] = args["description"]
-    if "icon" in args:
+    if "icon" in args:  # noqa: PLR2004
         kwargs["icon"] = args["icon"]
-    if "color" in args:
+    if "color" in args:  # noqa: PLR2004
         kwargs["color"] = args["color"]
-    if "slug" in args:
+    if "slug" in args:  # noqa: PLR2004
         kwargs["slug"] = args["slug"]
 
     ops = ProjectOperations(ctx.session)
@@ -163,7 +163,7 @@ def _apply_task_type(
     kwargs: dict,
 ) -> tuple[dict, str | None]:
     """Validate and apply task_type if present."""
-    if "task_type" not in args:
+    if "task_type" not in args:  # noqa: PLR2004
         return kwargs, None
     task_type = args["task_type"]
     valid = ("task", "bug", "feature", "story", "epic")
@@ -180,7 +180,7 @@ def _apply_assignee_ids(
     allow_clear: bool = False,
 ) -> tuple[dict, str | None]:
     """Parse assignee_ids or assignee_id from args."""
-    if "assignee_ids" in args:
+    if "assignee_ids" in args:  # noqa: PLR2004
         assignee_ids = args["assignee_ids"]
         if isinstance(assignee_ids, str):
             assignee_ids = [assignee_ids]
@@ -192,7 +192,7 @@ def _apply_assignee_ids(
         if err:
             return kwargs, err
         kwargs["assignee_ids"] = parsed
-    elif "assignee_id" in args:
+    elif "assignee_id" in args:  # noqa: PLR2004
         aid = args["assignee_id"]
         if not aid and allow_clear:
             kwargs["assignee_ids"] = None
@@ -209,7 +209,7 @@ def _apply_blocked_by(
     allow_clear: bool = False,
 ) -> tuple[dict, str | None]:
     """Parse blocked_by_task_ids from args."""
-    if "blocked_by_task_ids" not in args:
+    if "blocked_by_task_ids" not in args:  # noqa: PLR2004
         return kwargs, None
     blocked_ids = args["blocked_by_task_ids"]
     if isinstance(blocked_ids, str):
@@ -278,7 +278,7 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(success=False, data="", error=err)
 
     # Boolean fields
-    if "is_milestone" in args:
+    if "is_milestone" in args:  # noqa: PLR2004
         kwargs["is_milestone"] = bool(args["is_milestone"])
 
     # Assignee IDs (list of UUIDs)
@@ -287,7 +287,7 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(success=False, data="", error=err)
 
     # Parent task (subtask)
-    if "parent_id" in args:
+    if "parent_id" in args:  # noqa: PLR2004
         parent_id, err = _parse_uuid(args["parent_id"], "parent_id")
         if err:
             return ToolResult(success=False, data="", error=err)
@@ -299,7 +299,7 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(success=False, data="", error=err)
 
     # Sprint assignment
-    if "sprint_id" in args:
+    if "sprint_id" in args:  # noqa: PLR2004
         sprint_id, err = _parse_uuid(args["sprint_id"], "sprint_id")
         if err:
             return ToolResult(success=False, data="", error=err)
@@ -354,7 +354,7 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(success=False, data="", error=err)
 
     # Boolean fields
-    if "is_milestone" in args:
+    if "is_milestone" in args:  # noqa: PLR2004
         kwargs["is_milestone"] = bool(args["is_milestone"])
 
     # Assignee IDs
@@ -363,7 +363,7 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(success=False, data="", error=err)
 
     # Parent task - can be cleared
-    if "parent_id" in args:
+    if "parent_id" in args:  # noqa: PLR2004
         if not args["parent_id"]:
             kwargs["parent_id"] = None
         else:
@@ -381,7 +381,7 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(success=False, data="", error=err)
 
     # Sprint - can be cleared to move to backlog
-    if "sprint_id" in args:
+    if "sprint_id" in args:  # noqa: PLR2004
         if not args["sprint_id"]:
             kwargs["sprint_id"] = None
         else:
@@ -452,13 +452,13 @@ async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
     # Build filter kwargs
     list_kwargs: dict = {}
 
-    if "parent_id" in args and args["parent_id"]:
+    if "parent_id" in args and args["parent_id"]:  # noqa: PLR2004
         parent_id, err = _parse_uuid(args["parent_id"], "parent_id")
         if err:
             return ToolResult(success=False, data="", error=err)
         list_kwargs["parent_id"] = parent_id
 
-    if "sprint_id" in args:
+    if "sprint_id" in args:  # noqa: PLR2004
         sprint_id, err = _parse_uuid(args["sprint_id"], "sprint_id")
         if err:
             return ToolResult(success=False, data="", error=err)
@@ -467,7 +467,7 @@ async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
     if args.get("backlog_only"):
         list_kwargs["backlog_only"] = True
 
-    if "in_epic_id" in args and args["in_epic_id"]:
+    if "in_epic_id" in args and args["in_epic_id"]:  # noqa: PLR2004
         in_epic_id, err = _parse_uuid(args["in_epic_id"], "in_epic_id")
         if err:
             return ToolResult(success=False, data="", error=err)
@@ -476,13 +476,13 @@ async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
     if args.get("root_only"):
         list_kwargs["root_only"] = True
 
-    if "has_subtasks" in args:
+    if "has_subtasks" in args:  # noqa: PLR2004
         list_kwargs["has_subtasks"] = bool(args["has_subtasks"])
 
-    if "min_depth" in args and args["min_depth"] is not None:
+    if "min_depth" in args and args["min_depth"] is not None:  # noqa: PLR2004
         list_kwargs["min_depth"] = int(args["min_depth"])
 
-    if "max_depth" in args and args["max_depth"] is not None:
+    if "max_depth" in args and args["max_depth"] is not None:  # noqa: PLR2004
         list_kwargs["max_depth"] = int(args["max_depth"])
 
     ops = TaskOperations(ctx.session)

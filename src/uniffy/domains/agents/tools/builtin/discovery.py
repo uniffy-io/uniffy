@@ -22,30 +22,19 @@ async def load_group(ctx: ToolContext, args: dict) -> ToolResult:
 
     requested = str(args.get("group", "")).strip()
     if not requested:
-        return ToolResult(
-            success=False, data="", error="Missing required argument: group"
-        )
+        return ToolResult(success=False, data="", error="Missing required argument: group")
 
     deferred = ctx.deferred_tool_groups or {}
-    match = next(
-        (g for g in deferred if g.casefold() == requested.casefold()), None
-    )
+    match = next((g for g in deferred if g.casefold() == requested.casefold()), None)
     if match is None:
         already = next(
-            (
-                g
-                for g in ctx.loaded_tool_groups or []
-                if g.casefold() == requested.casefold()
-            ),
+            (g for g in ctx.loaded_tool_groups or [] if g.casefold() == requested.casefold()),
             None,
         )
         if already is not None:
             return ToolResult(
                 success=True,
-                data=(
-                    f"Tool group '{already}' is already loaded; "
-                    "call its tools directly."
-                ),
+                data=(f"Tool group '{already}' is already loaded; call its tools directly."),
             )
         available = ", ".join(deferred) or "none"
         return ToolResult(
@@ -87,8 +76,7 @@ load_group_tool = ToolDefinition(
             "group": {
                 "type": "string",
                 "description": (
-                    "Group name exactly as listed in the system prompt "
-                    "(case-insensitive)."
+                    "Group name exactly as listed in the system prompt (case-insensitive)."
                 ),
             },
         },

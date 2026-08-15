@@ -24,6 +24,7 @@ from uniffy.core.content.members import (
     register_content_loader,
 )
 from uniffy.core.content.references import (
+    CanvasNodeType,
     extract_all_outgoing_references,
     extract_all_outgoing_references_from_canvas,
 )
@@ -35,6 +36,7 @@ from uniffy.core.events import (
     extract_mentioned_team_ids,
     extract_mentioned_user_ids,
 )
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
@@ -49,6 +51,8 @@ from uniffy.core.types import (
     ContentType,
     NodeType,
     NotificationType,
+    ParentSelection,
+    SortOrder,
     SubjectType,
 )
 from uniffy.core.valkey.mentions import publish_mention_state
@@ -186,9 +190,7 @@ class NoteOperations(BaseContentOperations[Note]):
         # Adds parent-folder title so mention chips show a breadcrumb.
         meta = dict(self._get_search_metadata(model) or {})
         if model.parent_id:
-            result = await self.session.execute(
-                select(Note.title).where(Note.id == model.parent_id)
-            )
+            result = await self.session.execute(select(Note.title).where(Note.id == model.parent_id))
             title = result.scalar_one_or_none()
             if title:
                 meta["parent_label"] = title
@@ -252,7 +254,7 @@ class NoteOperations(BaseContentOperations[Note]):
         for node in canvas_data.get("nodes", []):
             node_data = node.get("data", {})
             kind = node_data.get("type", "")
-            if kind == "text":
+            if kind == CanvasNodeType.TEXT:
                 content = node_data.get("content", "")
                 if content:
                     texts.append(content)
@@ -334,8 +336,8 @@ class NoteOperations(BaseContentOperations[Note]):
             await self._emit_shared_notification(user_id, organization_id, note)
         await self._broadcast_open_to_org_create(organization_id, note.id, effective_mode)
         await self._notify_new_mentions(
-                user_id, organization_id, note, old_refs=None, writer_id=user_id
-            )
+            user_id, organization_id, note, old_refs=None, writer_id=user_id
+        )
 
         await self._refresh_parent_folder(parent_id, organization_id)
 
@@ -448,15 +450,13 @@ class NoteOperations(BaseContentOperations[Note]):
                         organization_id=organization_id,
                         actor_user_id=user_id,
                         action=Action.NOTE_MOVED,
-                        resource_type=ContentType.NOTE.value,
+                        resource_type=AuditResourceType.NOTE,
                         resource_id=note.id,
                         details={
                             "previous_parent_id": (
                                 str(previous_parent_id) if previous_parent_id else None
                             ),
-                            "new_parent_id": (
-                                None if parent_id == "" else str(parent_id)
-                            ),
+                            "new_parent_id": (None if parent_id == "" else str(parent_id)),
                         },
                     )
                 await self.session.commit()
@@ -533,9 +533,7 @@ class NoteOperations(BaseContentOperations[Note]):
             if current is None:
                 return
             if current == note_id:
-                raise ValidationError(
-                    "parent_id", "Cannot move a folder into its own subtree"
-                )
+                raise ValidationError("parent_id", "Cannot move a folder into its own subtree")
             current = (
                 await self.session.execute(
                     select(Note.parent_id).where(
@@ -587,10 +585,8 @@ class NoteOperations(BaseContentOperations[Note]):
             self.session,
             organization_id=organization_id,
             actor_user_id=user_id,
-            action=(
-                Action.NOTE_PERMANENTLY_DELETED if permanent else Action.NOTE_DELETED
-            ),
-            resource_type=ContentType.NOTE.value,
+            action=(Action.NOTE_PERMANENTLY_DELETED if permanent else Action.NOTE_DELETED),
+            resource_type=AuditResourceType.NOTE,
             resource_id=note_id,
             details={
                 "title": note.title,
@@ -625,7 +621,7 @@ class NoteOperations(BaseContentOperations[Note]):
             organization_id=organization_id,
             actor_user_id=user_id,
             action=Action.NOTE_RESTORED,
-            resource_type=ContentType.NOTE.value,
+            resource_type=AuditResourceType.NOTE,
             resource_id=note_id,
             details={"title": note.title, "node_type": note.node_type.value},
         )
@@ -842,7 +838,7 @@ class NoteOperations(BaseContentOperations[Note]):
                 organization_id=organization_id,
                 actor_user_id=user_id,
                 action=Action.NOTE_PERMANENTLY_DELETED,
-                resource_type=ContentType.NOTE.value,
+                resource_type=AuditResourceType.NOTE,
                 resource_id=nid,
                 details={"source": "empty_trash"},
             )
@@ -854,7 +850,7 @@ class NoteOperations(BaseContentOperations[Note]):
         self,
         user_id: UUID,
         organization_id: UUID,
-        parent_id: UUID | None | str = None,
+        parent_id: UUID | ParentSelection | None = None,
         access_mode: AccessMode | None = None,
         group_id: UUID | None = None,
         personal_only: bool = False,
@@ -864,7 +860,7 @@ class NoteOperations(BaseContentOperations[Note]):
         page: int = 1,
         page_size: int = 50,
         sort_by: str = "updated_at",
-        sort_order: str = "desc",
+        sort_order: SortOrder = SortOrder.DESCENDING,
     ) -> tuple[list[Note], int]:
         """List notes the user can access. Bookmarks go through BookmarksService."""
         query = select(Note).where(Note.organization_id == organization_id)
@@ -876,7 +872,7 @@ class NoteOperations(BaseContentOperations[Note]):
 
         if group_id is not None:
             query = query.where(Note.id.in_(self._group_member_subquery(organization_id, group_id)))
-        if parent_id == "root":
+        if parent_id == ParentSelection.ROOT:
             query = query.where(Note.parent_id.is_(None))
         elif parent_id:
             query = query.where(Note.parent_id == parent_id)
@@ -892,7 +888,9 @@ class NoteOperations(BaseContentOperations[Note]):
         ).scalar() or 0
 
         sort_col = getattr(Note, sort_by, Note.updated_at)
-        query = query.order_by(sort_col.asc() if sort_order == "asc" else sort_col.desc())
+        query = query.order_by(
+            sort_col.asc() if sort_order == SortOrder.ASCENDING else sort_col.desc()
+        )
         query = query.offset((page - 1) * page_size).limit(page_size)
 
         result = await self.session.execute(query)
@@ -1138,8 +1136,7 @@ class NoteOperations(BaseContentOperations[Note]):
             await self.session.commit()
         except Exception:
             logger.opt(exception=True).warning(
-                "Failed to propagate note rename to mentions",
-                note_id=str(note.id)
+                "Failed to propagate note rename to mentions", note_id=str(note.id)
             )
 
     async def _collect_descendant_ids(self, note: Note) -> list[UUID]:
@@ -1338,14 +1335,18 @@ async def _note_attachment_cascade(
     while stack:
         current = stack.pop()
         rows = (
-            await session.execute(
-                select(Note.id).where(
-                    Note.parent_id == current,
-                    Note.organization_id == organization_id,
-                    Note.is_deleted == False,  # noqa: E712
+            (
+                await session.execute(
+                    select(Note.id).where(
+                        Note.parent_id == current,
+                        Note.organization_id == organization_id,
+                        Note.is_deleted == False,  # noqa: E712
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for child_id in rows:
             if child_id in seen:
                 continue

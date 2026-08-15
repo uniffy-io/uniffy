@@ -137,7 +137,7 @@ class LiveKitAdminClient:
             for track in participant.get("tracks", []):
                 source = str(track.get("source", "")).upper()
                 track_type = str(track.get("type", "")).upper()
-                if source == "MICROPHONE" or (not source and track_type == "AUDIO"):
+                if source == "MICROPHONE" or (not source and track_type == "AUDIO"):  # noqa: PLR2004
                     sid = track.get("sid", "")
                     if sid:
                         await self.mute_published_track(room, identity, sid, muted=True)

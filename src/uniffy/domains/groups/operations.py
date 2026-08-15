@@ -11,6 +11,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.cache import invalidate_user as invalidate_perm_user
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.organization_member import OrganizationRole
@@ -123,7 +124,7 @@ class GroupOperations:
             organization_id=organization_id,
             actor_user_id=created_by_user_id,
             action=Action.GROUP_CREATED,
-            resource_type="GROUP",
+            resource_type=AuditResourceType.GROUP,
             resource_id=group.id,
             details={
                 "name": name,
@@ -144,9 +145,7 @@ class GroupOperations:
             raise ValidationError("parent_group_id", "parent must be a TEAM")
         return parent
 
-    async def require_active_member(
-        self, organization_id: UUID, user_id: UUID, field: str
-    ) -> None:
+    async def require_active_member(self, organization_id: UUID, user_id: UUID, field: str) -> None:
         membership = await self._org_ops.get_membership(user_id, organization_id)
         if not membership or not membership.is_active:
             raise ValidationError(field, "must be an active member of the organization")
@@ -183,9 +182,9 @@ class GroupOperations:
         group = await self._fetch(group_id, organization_id)
 
         managed = set(group.managed_fields or [])
-        if "name" in managed and name is not None and name != group.name:
+        if "name" in managed and name is not None and name != group.name:  # noqa: PLR2004
             raise ValidationError("name", "field is managed by the directory")
-        if "kind" in managed and kind is not None and kind is not group.kind:
+        if "kind" in managed and kind is not None and kind is not group.kind:  # noqa: PLR2004
             raise ValidationError("kind", "field is managed by the directory")
 
         was_team = group.kind is GroupKind.TEAM
@@ -257,7 +256,7 @@ class GroupOperations:
                 organization_id=group.organization_id,
                 actor_user_id=actor_user_id,
                 action=Action.GROUP_UPDATED,
-                resource_type="GROUP",
+                resource_type=AuditResourceType.GROUP,
                 resource_id=group_id,
                 details={"changed_keys": changed_keys},
             )
@@ -278,14 +277,14 @@ class GroupOperations:
         if changed_keys and (was_team or group.kind is GroupKind.TEAM):
             await invalidate_org_people(organization_id)
             # Members' search documents and mention chips carry the team name.
-            if "name" in changed_keys or "kind" in changed_keys:
+            if "name" in changed_keys or "kind" in changed_keys:  # noqa: PLR2004
                 member_ids = await self._active_member_ids(group_id)
                 await sync_people_search(self._session, organization_id, member_ids)
 
             if group.kind is GroupKind.TEAM:
                 await team_indexer.index_team(group)
                 # Child team docs denormalize this team's name as parent_label.
-                if "name" in changed_keys:
+                if "name" in changed_keys:  # noqa: PLR2004
                     child_ids = await team_indexer.child_team_ids(group_id)
                     await team_indexer.sync_teams(organization_id, child_ids)
             elif was_team:
@@ -325,7 +324,7 @@ class GroupOperations:
             organization_id=group.organization_id,
             actor_user_id=actor_user_id,
             action=Action.GROUP_DELETED,
-            resource_type="GROUP",
+            resource_type=AuditResourceType.GROUP,
             resource_id=group_id,
             details={"name": group.name, "member_count": len(member_user_ids)},
         )
@@ -337,9 +336,7 @@ class GroupOperations:
         child_team_ids = await team_indexer.child_team_ids(group_id) if was_team else []
         # The membership FK carries no ON DELETE CASCADE; remove the rows
         # explicitly or the group delete fails on any populated group.
-        await self._session.execute(
-            delete(GroupMember).where(GroupMember.group_id == group_id)
-        )
+        await self._session.execute(delete(GroupMember).where(GroupMember.group_id == group_id))
         await self._session.delete(group)
         await self._session.commit()
 
@@ -454,7 +451,7 @@ class GroupOperations:
             organization_id=group.organization_id,
             actor_user_id=actor_user_id,
             action=Action.GROUP_MEMBER_ADDED,
-            resource_type="GROUP",
+            resource_type=AuditResourceType.GROUP,
             resource_id=group_id,
             details={"target_user_id": str(user_id), "role": role.value},
         )
@@ -504,7 +501,7 @@ class GroupOperations:
             organization_id=group.organization_id,
             actor_user_id=actor_user_id,
             action=Action.GROUP_MEMBER_ROLE_CHANGED,
-            resource_type="GROUP",
+            resource_type=AuditResourceType.GROUP,
             resource_id=group_id,
             details={
                 "target_user_id": str(user_id),
@@ -545,7 +542,7 @@ class GroupOperations:
                 organization_id=group.organization_id,
                 actor_user_id=actor_user_id,
                 action=Action.GROUP_MEMBER_REMOVED,
-                resource_type="GROUP",
+                resource_type=AuditResourceType.GROUP,
                 resource_id=group_id,
                 details={
                     "target_user_id": str(user_id),

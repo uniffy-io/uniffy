@@ -170,12 +170,10 @@ class TestConverters:
         )
 
         assert (
-            state_from_proto(StateProto.SUPPORT_SESSION_STATE_ACTIVE)
-            is SupportSessionState.ACTIVE
+            state_from_proto(StateProto.SUPPORT_SESSION_STATE_ACTIVE) is SupportSessionState.ACTIVE
         )
         assert (
-            state_from_proto(StateProto.SUPPORT_SESSION_STATE_PENDING)
-            is SupportSessionState.PENDING
+            state_from_proto(StateProto.SUPPORT_SESSION_STATE_PENDING) is SupportSessionState.PENDING
         )
 
 

@@ -73,9 +73,7 @@ class BudgetsHandlers:
         try:
             async with open_session() as session:
                 ops = BudgetsOperations(session)
-                row = await ops.get_org_budget(
-                    user_id=user_id, organization_id=org_id
-                )
+                row = await ops.get_org_budget(user_id=user_id, organization_id=org_id)
                 resp = GetOrgBudgetResponse()
                 if row is not None:
                     resp.budget.CopyFrom(org_budget_to_proto(row))
@@ -102,15 +100,9 @@ class BudgetsHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
-        monthly = (
-            request.monthly_limit
-            if request.HasField("monthly_limit")
-            else None
-        )
+        monthly = request.monthly_limit if request.HasField("monthly_limit") else None
         image_monthly = (
-            request.image_monthly_limit
-            if request.HasField("image_monthly_limit")
-            else None
+            request.image_monthly_limit if request.HasField("image_monthly_limit") else None
         )
 
         try:
@@ -154,9 +146,7 @@ class BudgetsHandlers:
         try:
             async with open_session() as session:
                 ops = BudgetsOperations(session)
-                await ops.delete_org_budget(
-                    user_id=user_id, organization_id=org_id
-                )
+                await ops.delete_org_budget(user_id=user_id, organization_id=org_id)
                 return DeleteOrgBudgetResponse(success=True)
 
         except NotFoundError:
@@ -218,23 +208,11 @@ class BudgetsHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        daily_dollar = (
-            request.daily_limit if request.HasField("daily_limit") else None
-        )
-        monthly_dollar = (
-            request.monthly_limit
-            if request.HasField("monthly_limit")
-            else None
-        )
-        daily_img = (
-            request.daily_image_limit
-            if request.HasField("daily_image_limit")
-            else None
-        )
+        daily_dollar = request.daily_limit if request.HasField("daily_limit") else None
+        monthly_dollar = request.monthly_limit if request.HasField("monthly_limit") else None
+        daily_img = request.daily_image_limit if request.HasField("daily_image_limit") else None
         monthly_img = (
-            request.monthly_image_limit
-            if request.HasField("monthly_image_limit")
-            else None
+            request.monthly_image_limit if request.HasField("monthly_image_limit") else None
         )
 
         try:
@@ -315,9 +293,7 @@ class BudgetsHandlers:
         if request.HasField("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             page_size = min(
-                request.pagination.page_size
-                if request.pagination.page_size > 0
-                else 50,
+                request.pagination.page_size if request.pagination.page_size > 0 else 50,
                 100,
             )
 
@@ -330,9 +306,7 @@ class BudgetsHandlers:
                     page=page,
                     page_size=page_size,
                 )
-                total_pages = (
-                    (total + page_size - 1) // page_size if total > 0 else 0
-                )
+                total_pages = (total + page_size - 1) // page_size if total > 0 else 0
                 return ListUserQuotasResponse(
                     quotas=[user_quota_to_proto(r) for r in rows],
                     pagination=PaginationResponse(
@@ -406,9 +380,7 @@ class BudgetsHandlers:
         try:
             async with open_session() as session:
                 ops = BudgetsOperations(session)
-                rows = await ops.list_currency_rates(
-                    user_id=user_id, organization_id=org_id
-                )
+                rows = await ops.list_currency_rates(user_id=user_id, organization_id=org_id)
                 return ListCurrencyRatesResponse(
                     rates=[currency_rate_to_proto(r) for r in rows],
                 )

@@ -38,15 +38,19 @@ class TestDeliver:
         session.get = AsyncMock(return_value=user_obj)
 
         queue = AsyncMock()
-        with patch(
-            "uniffy.domains.notifications.delivery.email._resolve_email_frequency",
-            new=AsyncMock(return_value="instant"),
-        ), patch(
-            "uniffy.domains.notifications.delivery.email.open_session",
-            new=lambda: _fake_session(session),
-        ), patch(
-            "uniffy.domains.notifications.delivery.email.get_queue",
-            return_value=queue,
+        with (
+            patch(
+                "uniffy.domains.notifications.delivery.email._resolve_email_frequency",
+                new=AsyncMock(return_value="instant"),
+            ),
+            patch(
+                "uniffy.domains.notifications.delivery.email.open_session",
+                new=lambda: _fake_session(session),
+            ),
+            patch(
+                "uniffy.domains.notifications.delivery.email.get_queue",
+                return_value=queue,
+            ),
         ):
             adapter = EmailAdapter()
             ok = await adapter.deliver(user_id, _event(org_id))
@@ -64,15 +68,19 @@ class TestDeliver:
     async def test_hourly_returns_true_without_enqueue(self) -> None:
         session = AsyncMock()
         queue = AsyncMock()
-        with patch(
-            "uniffy.domains.notifications.delivery.email._resolve_email_frequency",
-            new=AsyncMock(return_value="hourly"),
-        ), patch(
-            "uniffy.domains.notifications.delivery.email.open_session",
-            new=lambda: _fake_session(session),
-        ), patch(
-            "uniffy.domains.notifications.delivery.email.get_queue",
-            return_value=queue,
+        with (
+            patch(
+                "uniffy.domains.notifications.delivery.email._resolve_email_frequency",
+                new=AsyncMock(return_value="hourly"),
+            ),
+            patch(
+                "uniffy.domains.notifications.delivery.email.open_session",
+                new=lambda: _fake_session(session),
+            ),
+            patch(
+                "uniffy.domains.notifications.delivery.email.get_queue",
+                return_value=queue,
+            ),
         ):
             adapter = EmailAdapter()
             ok = await adapter.deliver(generate_id(), _event(generate_id()))
@@ -85,15 +93,19 @@ class TestDeliver:
         user_obj = MagicMock(email="x@y.com", email_verified=False)
         session.get = AsyncMock(return_value=user_obj)
         queue = AsyncMock()
-        with patch(
-            "uniffy.domains.notifications.delivery.email._resolve_email_frequency",
-            new=AsyncMock(return_value="instant"),
-        ), patch(
-            "uniffy.domains.notifications.delivery.email.open_session",
-            new=lambda: _fake_session(session),
-        ), patch(
-            "uniffy.domains.notifications.delivery.email.get_queue",
-            return_value=queue,
+        with (
+            patch(
+                "uniffy.domains.notifications.delivery.email._resolve_email_frequency",
+                new=AsyncMock(return_value="instant"),
+            ),
+            patch(
+                "uniffy.domains.notifications.delivery.email.open_session",
+                new=lambda: _fake_session(session),
+            ),
+            patch(
+                "uniffy.domains.notifications.delivery.email.get_queue",
+                return_value=queue,
+            ),
         ):
             adapter = EmailAdapter()
             ok = await adapter.deliver(generate_id(), _event(generate_id()))

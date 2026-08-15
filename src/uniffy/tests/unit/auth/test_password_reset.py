@@ -86,7 +86,8 @@ def _patch_queue():
     queue = MagicMock()
     queue.enqueue_job = AsyncMock()
     return patch(
-        "uniffy.domains.auth.password_reset.get_queue", return_value=queue,
+        "uniffy.domains.auth.password_reset.get_queue",
+        return_value=queue,
     ), queue
 
 
@@ -110,9 +111,10 @@ class TestRequest:
         # request -> user lookup returns None -> audit + return
         session = _session([_result(scalar=None)])
         queue_patch, queue = _patch_queue()
-        with queue_patch, patch(
-            "uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()
-        ) as audit:
+        with (
+            queue_patch,
+            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+        ):
             await PasswordResetOperations(session).request("ghost@example.com")
         queue.enqueue_job.assert_not_awaited()
         audit.assert_awaited_once()
@@ -131,9 +133,11 @@ class TestRequest:
             _result(first=(membership, org)),
         ])
         queue_patch, queue = _patch_queue()
-        with queue_patch, _patch_security(password_reset_enabled=False), patch(
-            "uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()
-        ) as audit:
+        with (
+            queue_patch,
+            _patch_security(password_reset_enabled=False),
+            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+        ):
             await PasswordResetOperations(session).request("x@y.com")
         queue.enqueue_job.assert_not_awaited()
         actions = [c.kwargs["action"] for c in audit.call_args_list]
@@ -152,9 +156,11 @@ class TestRequest:
             _result(first=(membership, org)),
         ])
         queue_patch, queue = _patch_queue()
-        with queue_patch, _patch_security(password_reset_enabled=True), patch(
-            "uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()
-        ) as audit:
+        with (
+            queue_patch,
+            _patch_security(password_reset_enabled=True),
+            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+        ):
             await PasswordResetOperations(session).request("x@y.com")
         queue.enqueue_job.assert_awaited_once()
         call = queue.enqueue_job.await_args
@@ -170,9 +176,10 @@ class TestRequest:
             _result(first=None),
         ])
         queue_patch, queue = _patch_queue()
-        with queue_patch, patch(
-            "uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()
-        ) as audit:
+        with (
+            queue_patch,
+            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+        ):
             await PasswordResetOperations(session).request("orgless@x.com")
         # Skips the security check (no org), enqueues with organization_id=None
         queue.enqueue_job.assert_awaited_once()
@@ -180,7 +187,8 @@ class TestRequest:
         assert call.kwargs["organization_id"] is None
         # Audit row carries config_source="env"
         request_audits = [
-            c for c in audit.call_args_list
+            c
+            for c in audit.call_args_list
             if c.kwargs["action"] == Action.AUTH_PASSWORD_RESET_REQUESTED
         ]
         assert request_audits, "expected at least one request audit row"
@@ -232,11 +240,12 @@ class TestVerifyAndConsume:
             _result(first=(token, user)),
             _result(first=None),
         ])
-        with patch(
-            "uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()
-        ) as audit, patch(
-            "uniffy.domains.auth.password_reset.hash_password",
-            return_value="new-hash",
+        with (
+            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+            patch(
+                "uniffy.domains.auth.password_reset.hash_password",
+                return_value="new-hash",
+            ),
         ):
             updated = await PasswordResetOperations(session).consume("raw-token", "newpassword1")
         assert updated.hashed_password == "new-hash"

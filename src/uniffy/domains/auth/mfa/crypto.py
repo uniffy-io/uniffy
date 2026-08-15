@@ -53,9 +53,7 @@ async def _list_user_mfa_rows(session: AsyncSession) -> AsyncIterator[UserMfa]:
     Pre-enrollment grace-tracking rows have ``totp_secret_encrypted=None``
     and are skipped by the rotation sweep.
     """
-    result = await session.execute(
-        select(UserMfa).where(UserMfa.totp_secret_encrypted.is_not(None))
-    )
+    result = await session.execute(select(UserMfa).where(UserMfa.totp_secret_encrypted.is_not(None)))
     for row in result.scalars():
         yield row
 

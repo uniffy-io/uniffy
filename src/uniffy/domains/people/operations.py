@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
@@ -30,15 +31,25 @@ MAX_PROFILE_LINKS = 10
 # Self-service covers personal fields only. Org facts (title, department,
 # office, start date) are admin-set; identity (name, email) is not editable
 # in this domain at all; pronouns are global on the User row.
-SELF_EDITABLE_FIELDS = frozenset(
-    {"work_phone", "mobile_phone", "timezone", "bio", "birthday", "links"}
-)
+SELF_EDITABLE_FIELDS = frozenset({
+    "work_phone",
+    "mobile_phone",
+    "timezone",
+    "bio",
+    "birthday",
+    "links",
+})
 
 # An admin edits org facts only; personal fields (bio, birthday, links,
 # timezone) stay self-service. The directory sync is not bound by this.
-ADMIN_EDITABLE_FIELDS = frozenset(
-    {"job_title", "department", "office_location", "work_phone", "mobile_phone", "start_date"}
-)
+ADMIN_EDITABLE_FIELDS = frozenset({
+    "job_title",
+    "department",
+    "office_location",
+    "work_phone",
+    "mobile_phone",
+    "start_date",
+})
 
 # Fields denormalized into the cached org chart payload.
 _CHART_NODE_FIELDS = frozenset({"job_title", "department"})
@@ -67,13 +78,13 @@ def _validate_profile_value(name: str, value: Any) -> None:
     if name in _MAX_LENGTHS:
         if not isinstance(value, str) or len(value) > _MAX_LENGTHS[name]:
             raise ValidationError(name, f"must be a string of at most {_MAX_LENGTHS[name]} chars")
-    elif name == "birthday":
+    elif name == "birthday":  # noqa: PLR2004
         if not isinstance(value, str) or not _BIRTHDAY_RE.match(value):
             raise ValidationError(name, "must be MM-DD")
-    elif name == "start_date":
+    elif name == "start_date":  # noqa: PLR2004
         if not isinstance(value, date):
             raise ValidationError(name, "must be a date")
-    elif name == "links":
+    elif name == "links":  # noqa: PLR2004
         if not isinstance(value, list) or len(value) > MAX_PROFILE_LINKS:
             raise ValidationError(name, f"at most {MAX_PROFILE_LINKS} links")
         for link in value:
@@ -270,7 +281,7 @@ class PeopleOperations:
                 organization_id=organization_id,
                 actor_user_id=actor_id,
                 action=Action.PERSON_PROFILE_UPDATED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=target_id,
                 details={"changed_keys": sorted(changed_keys)},
             )
@@ -309,7 +320,7 @@ class PeopleOperations:
                 organization_id=organization_id,
                 actor_user_id=actor_id,
                 action=Action.PERSON_MANAGER_CHANGED,
-                resource_type="USER",
+                resource_type=AuditResourceType.USER,
                 resource_id=target_id,
                 details={
                     "previous_manager_user_id": str(previous) if previous else None,

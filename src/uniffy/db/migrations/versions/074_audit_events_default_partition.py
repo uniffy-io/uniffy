@@ -23,10 +23,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute(
-        "CREATE TABLE IF NOT EXISTS audit_events_default "
-        "PARTITION OF audit_events DEFAULT"
-    )
+    op.execute("CREATE TABLE IF NOT EXISTS audit_events_default PARTITION OF audit_events DEFAULT")
 
 
 def downgrade() -> None:

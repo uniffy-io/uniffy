@@ -15,9 +15,7 @@ from uniffy.domains.files.operations import FolderOperations
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-async def test_move_items_refreshes_each_affected_folder_once(
-    session, env, monkeypatch
-) -> None:
+async def test_move_items_refreshes_each_affected_folder_once(session, env, monkeypatch) -> None:
     # No Meilisearch in this suite; the assertion is the refresh fan-out.
     monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
     monkeypatch.setattr(SearchIndexer, "remove", AsyncMock())

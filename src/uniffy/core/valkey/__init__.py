@@ -34,6 +34,7 @@ from uniffy.core.valkey.presence import (
     presence_set,
 )
 from uniffy.core.valkey.pubsub import (
+    NotificationPayloadType,
     close_pubsub,
     init_pubsub,
     publish_content_access_changed,
@@ -43,6 +44,7 @@ from uniffy.core.valkey.pubsub import (
     subscribe_user,
 )
 from uniffy.core.valkey.queue import (
+    QueueName,
     close_queue,
     get_queue,
     get_queue_safe,
@@ -70,6 +72,8 @@ __all__ = [
     "CACHE_OP_TIMEOUT_SECONDS",
     "RUN_STATE_TTL_SECONDS",
     "RUN_STREAM_DEFAULT_MAXLEN",
+    "QueueName",
+    "NotificationPayloadType",
     "ValkeyConfig",
     "cache_delete",
     "cache_get",

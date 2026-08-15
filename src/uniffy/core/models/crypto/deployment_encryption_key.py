@@ -24,9 +24,7 @@ class DeploymentEncryptionKey(SQLModel, table=True):
     """Singleton (per-version) wrapped DEK for deployment-scope secrets."""
 
     __tablename__ = "deployment_encryption_keys"
-    __table_args__ = (
-        UniqueConstraint("version", name="uq_deployment_encryption_keys_version"),
-    )
+    __table_args__ = (UniqueConstraint("version", name="uq_deployment_encryption_keys_version"),)
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     version: int = Field(

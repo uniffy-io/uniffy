@@ -212,9 +212,11 @@ class CommentOperations:
         grouped: dict[UUID, list[tuple[Comment, str, list[dict]]]] = {}
         for reply, reply_author_name in result.all():
             reactions = await aggregate_reactions(self._session, reply.id)
-            grouped.setdefault(reply.parent_comment_id, []).append(
-                (reply, reply_author_name or "Unknown", reactions)
-            )
+            grouped.setdefault(reply.parent_comment_id, []).append((
+                reply,
+                reply_author_name or "Unknown",
+                reactions,
+            ))
         return grouped
 
     async def get_comment(

@@ -20,7 +20,12 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
-from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.chat.message import (
+    ChatMessage,
+    ChatMessageMetadataKind,
+    ChatMessageVisibility,
+    SenderType,
+)
 from uniffy.core.types import SubjectType
 from uniffy.domains.agents.cache import fetch_agent_row
 from uniffy.domains.agents.providers.catalog import (
@@ -54,13 +59,13 @@ def _format_chat_entry(
     meta = msg.message_metadata or {}
     kind = meta.get("kind")
     content = msg.content or ""
-    if kind == "tool_call":
+    if kind == ChatMessageMetadataKind.TOOL_CALL:
         tool_name = meta.get("tool_name", "tool")
         return ("ASSISTANT", f"[Tool call: {tool_name}] {content}")
-    if kind == "tool_result":
+    if kind == ChatMessageMetadataKind.TOOL_RESULT:
         tool_name = meta.get("tool_name", "tool")
         return ("TOOL", f"[Tool result: {tool_name}] {content}")
-    if kind == "summary":
+    if kind == ChatMessageMetadataKind.SUMMARY:
         return ("SUMMARY", content)
 
     if msg.sender_type == SenderType.AGENT and msg.sender_id == self_agent_id:
@@ -179,15 +184,12 @@ class ChatAgentContextOperations:
                 if agent is None:
                     continue
                 context_window = await self._resolve_context_window(organization_id, agent)
-                stats = await self._build_stats(
-                    channel_id, agent_id, binding, context_window
-                )
-            except (PermissionDeniedError, NotFoundError):
+                stats = await self._build_stats(channel_id, agent_id, binding, context_window)
+            except PermissionDeniedError, NotFoundError:
                 continue
             except Exception:
                 logger.warning(
-                    f"Skipping agent {agent_id} in batch context stats for "
-                    f"channel {channel_id}",
+                    f"Skipping agent {agent_id} in batch context stats for channel {channel_id}",
                     component="agents.chat_integration.context",
                 )
                 continue
@@ -202,9 +204,7 @@ class ChatAgentContextOperations:
         channel_id: UUID,
         agent_id: UUID,
     ) -> AgentChannelBinding:
-        channel, _agent, binding = await self._load_triple(
-            organization_id, channel_id, agent_id
-        )
+        channel, _agent, binding = await self._load_triple(organization_id, channel_id, agent_id)
         await self._require_read(user_id, organization_id, channel)
         return binding
 
@@ -220,9 +220,7 @@ class ChatAgentContextOperations:
         image_params_override: dict | None = None,
     ) -> AgentChannelBinding:
         """`None` arguments leave the field unchanged; empty values clear it."""
-        channel, agent, binding = await self._load_triple(
-            organization_id, channel_id, agent_id
-        )
+        channel, agent, binding = await self._load_triple(organization_id, channel_id, agent_id)
         await self._require_mutate(user_id, organization_id, channel)
 
         model_changed = False
@@ -279,7 +277,7 @@ class ChatAgentContextOperations:
             provider, target = await self._resolve_provider_and_model(
                 organization_id, agent, binding
             )
-        except (NotFoundError, ValidationError):
+        except NotFoundError, ValidationError:
             # No resolvable target; the send path strips per-request anyway.
             return params or None
         kept: dict = {}
@@ -321,9 +319,7 @@ class ChatAgentContextOperations:
         agent_id: UUID,
     ) -> ResetResult:
         """Drop the agent's view of pre-now history; inserts a divider message."""
-        channel, agent, binding = await self._load_triple(
-            organization_id, channel_id, agent_id
-        )
+        channel, agent, binding = await self._load_triple(organization_id, channel_id, agent_id)
         await self._require_mutate(user_id, organization_id, channel)
 
         now = datetime.now(UTC)
@@ -420,14 +416,10 @@ class ChatAgentContextOperations:
         agent_id: UUID,
     ) -> CompactResult:
         """Force compaction for one (channel, agent) pair."""
-        channel, agent, binding = await self._load_triple(
-            organization_id, channel_id, agent_id
-        )
+        channel, agent, binding = await self._load_triple(organization_id, channel_id, agent_id)
         await self._require_mutate(user_id, organization_id, channel)
 
-        provider, model_id = await self._resolve_provider_and_model(
-            organization_id, agent, binding
-        )
+        provider, model_id = await self._resolve_provider_and_model(organization_id, agent, binding)
         context_window = await self._resolve_window_for_provider(provider, model_id)
 
         active_rows = await self._load_active_messages(channel_id, binding)
@@ -544,9 +536,9 @@ class ChatAgentContextOperations:
             m
             for m in rows
             if m.id not in already_compacted
-            and (m.message_metadata or {}).get("visibility") != "agent_internal"
+            and (m.message_metadata or {}).get("visibility") != ChatMessageVisibility.AGENT_INTERNAL
             and (m.message_metadata or {}).get("streaming") is not True
-            and (m.message_metadata or {}).get("kind") != "context_reset"
+            and (m.message_metadata or {}).get("kind") != ChatMessageMetadataKind.CONTEXT_RESET
         ]
 
     async def _resolve_sender_names(
@@ -721,26 +713,20 @@ class ChatAgentContextOperations:
     ) -> ContextStats:
         manual_reset_at = binding.manual_reset_at
 
-        total_q = (
-            select(func.count(ChatMessage.id))
-            .where(
-                ChatMessage.channel_id == channel_id,
-                ChatMessage.is_deleted == False,  # noqa: E712
-            )
+        total_q = select(func.count(ChatMessage.id)).where(
+            ChatMessage.channel_id == channel_id,
+            ChatMessage.is_deleted == False,  # noqa: E712
         )
         if manual_reset_at is not None:
             total_q = total_q.where(ChatMessage.created_at > manual_reset_at)
         total_messages = (await self._session.execute(total_q)).scalar_one()
 
-        summary_q = (
-            select(func.count(ChatMessage.id))
-            .where(
-                ChatMessage.channel_id == channel_id,
-                ChatMessage.sender_type == SenderType.AGENT,
-                ChatMessage.sender_id == agent_id,
-                ChatMessage.is_deleted == False,  # noqa: E712
-                ChatMessage.message_metadata["kind"].astext == "summary",
-            )
+        summary_q = select(func.count(ChatMessage.id)).where(
+            ChatMessage.channel_id == channel_id,
+            ChatMessage.sender_type == SenderType.AGENT,
+            ChatMessage.sender_id == agent_id,
+            ChatMessage.is_deleted == False,  # noqa: E712
+            ChatMessage.message_metadata["kind"].astext == ChatMessageMetadataKind.SUMMARY,
         )
         if manual_reset_at is not None:
             summary_q = summary_q.where(ChatMessage.created_at > manual_reset_at)

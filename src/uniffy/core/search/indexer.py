@@ -47,9 +47,7 @@ async def _record_pending_removal(
             f"Failed to record search removal, retrying in background: "
             f"urn={urn} filter={filter_expr}"
         )
-        task = asyncio.create_task(
-            _record_removal_with_retry(urn, filter_expr, organization_id)
-        )
+        task = asyncio.create_task(_record_removal_with_retry(urn, filter_expr, organization_id))
         _retry_tasks.add(task)
         task.add_done_callback(_retry_tasks.discard)
         return None
@@ -357,9 +355,7 @@ class SearchIndexer:
             client = get_meilisearch_client()
             await client.delete_documents_by_filter_expr(filter_expr)
         except Exception:
-            logger.warning(
-                f"Inline search filter-removal failed, queued for retry: {filter_expr}"
-            )
+            logger.warning(f"Inline search filter-removal failed, queued for retry: {filter_expr}")
             return
         if row_id is not None:
             await _clear_pending_removal(row_id)

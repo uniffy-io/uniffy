@@ -99,6 +99,17 @@ class TestOwnerFilterNarrowing:
         assert len(narrowed) > len(unfiltered)
 
 
+class TestChatMessagePermissions:
+    def test_sender_ownership_cannot_bypass_channel_membership(self) -> None:
+        client = MeilisearchClient.__new__(MeilisearchClient)
+        caller = generate_id()
+
+        filter_expr = client._build_permission_filter(generate_id(), caller)
+
+        assert f'(entity_type != "chat_message" AND owner_id = "{caller}")' in filter_expr
+        assert f' OR owner_id = "{caller}"' not in filter_expr
+
+
 class TestUrnValidation:
     async def test_malformed_urn_never_reaches_the_filter(self) -> None:
         client, index = _client_capturing_filter()

@@ -113,19 +113,13 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["organization_id"], ["login_organizations.id"]),
-        sa.ForeignKeyConstraint(
-            ["parent_comment_id"], ["comments_comments.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["parent_comment_id"], ["comments_comments.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["author_id"], ["login_users.id"]),
         sa.ForeignKeyConstraint(["resolved_by"], ["login_users.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "ix_comments_comments_organization_id", "comments_comments", ["organization_id"]
-    )
-    op.create_index(
-        "ix_comments_comments_content_type", "comments_comments", ["content_type"]
-    )
+    op.create_index("ix_comments_comments_organization_id", "comments_comments", ["organization_id"])
+    op.create_index("ix_comments_comments_content_type", "comments_comments", ["content_type"])
     op.create_index("ix_comments_comments_content_id", "comments_comments", ["content_id"])
     op.create_index(
         "ix_comments_comments_parent_comment_id",

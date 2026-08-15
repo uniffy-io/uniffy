@@ -127,7 +127,7 @@ async def close_integration_invalidation_subscriber() -> None:
     if _subscriber_task is not None:
         try:
             await asyncio.wait_for(_subscriber_task, timeout=3.0)
-        except (TimeoutError, asyncio.CancelledError):
+        except TimeoutError, asyncio.CancelledError:
             _subscriber_task.cancel()
         except Exception as exc:
             logger.warning(f"Integration invalidation subscriber teardown failed: {exc}")
@@ -155,9 +155,7 @@ async def _run_subscriber() -> None:
             )
             pubsub = client.pubsub()
             await pubsub.psubscribe(_INVALIDATE_PATTERN)
-            logger.info(
-                f"Integration invalidation subscriber listening on {_INVALIDATE_PATTERN}"
-            )
+            logger.info(f"Integration invalidation subscriber listening on {_INVALIDATE_PATTERN}")
 
             while _subscriber_shutdown is None or not _subscriber_shutdown.is_set():
                 msg = await pubsub.get_message(
@@ -166,7 +164,7 @@ async def _run_subscriber() -> None:
                 )
                 if msg is None:
                     continue
-                if msg.get("type") != "pmessage":
+                if msg.get("type") != "pmessage":  # noqa: PLR2004
                     continue
                 await _handle_invalidate_message(msg.get("data"))
 
@@ -213,7 +211,7 @@ async def _handle_invalidate_message(raw: object) -> None:
         return
     try:
         payload = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError, TypeError:
         logger.warning(f"Integration invalidate message decode failed: {raw!r}")
         return
     raw_id = payload.get("connection_id") if isinstance(payload, dict) else None

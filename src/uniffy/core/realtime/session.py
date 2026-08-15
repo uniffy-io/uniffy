@@ -110,8 +110,7 @@ async def _reauth_watchdog(ws: WebSocket, ws_session: WSSession) -> None:
 async def _close_denied(ws: WebSocket, ws_session: WSSession, denial: Denial) -> None:
     REALTIME_REAUTH_CLOSES_TOTAL.labels(reason=denial.metric_reason).inc()
     logger.info(
-        f"closing conn {ws_session.conn_id} for user {ws_session.user_id}: "
-        f"{denial.metric_reason}",
+        f"closing conn {ws_session.conn_id} for user {ws_session.user_id}: {denial.metric_reason}",
         component=LOGGER_COMPONENT,
     )
     with contextlib.suppress(BaseException):
@@ -233,17 +232,11 @@ async def _dispatch_doc_frame(
     if kind == YMessageType.SYNC:
         await _handle_sync_frame(ws, session, handle, doc_name, payload)
     elif kind == YMessageType.AWARENESS:
-        REALTIME_AWARENESS_MESSAGES_TOTAL.labels(
-            content_type=handle.doc_key[0].value
-        ).inc()
-        await ydoc_manager.broadcast_awareness(
-            session, payload, source_conn_id=handle.conn_id
-        )
+        REALTIME_AWARENESS_MESSAGES_TOTAL.labels(content_type=handle.doc_key[0].value).inc()
+        await ydoc_manager.broadcast_awareness(session, payload, source_conn_id=handle.conn_id)
     elif kind == MSG_QUERY_AWARENESS:
         # Relay to peers so each re-announces its awareness to the asker.
-        await ydoc_manager.broadcast_awareness(
-            session, payload, source_conn_id=handle.conn_id
-        )
+        await ydoc_manager.broadcast_awareness(session, payload, source_conn_id=handle.conn_id)
     else:
         logger.debug(
             f"unknown message type {kind} on {doc_name}, dropping",

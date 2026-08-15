@@ -255,9 +255,7 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
         .all()
     )
     if event_ids:
-        await db_session.execute(
-            delete(EventAttendee).where(EventAttendee.event_id.in_(event_ids))
-        )
+        await db_session.execute(delete(EventAttendee).where(EventAttendee.event_id.in_(event_ids)))
         await db_session.execute(delete(CalendarEvent).where(CalendarEvent.id.in_(event_ids)))
     await db_session.execute(delete(Calendar).where(Calendar.organization_id.in_(env.org_ids)))
     await db_session.execute(delete(GroupMember).where(GroupMember.group_id.in_(env.group_ids)))

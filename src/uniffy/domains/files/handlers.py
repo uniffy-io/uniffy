@@ -78,7 +78,7 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_upload import UploadStatus
 from uniffy.core.models.login.user import User
 from uniffy.core.storage import get_s3_client
-from uniffy.core.types import AccessMode, ContentType
+from uniffy.core.types import AccessMode, ContentType, ParentSelection, SortOrder
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.files.converters import (
@@ -135,10 +135,14 @@ async def _resolve_file_effective_policy(
     """Return the file's effective ``(access_mode, baseline_role)`` for proto emission."""
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
-        organization_id, ContentType.FILE,
+        organization_id,
+        ContentType.FILE,
     )
     return resolve_effective_policy(
-        file.access_mode, file.baseline_role, default_mode, default_baseline,
+        file.access_mode,
+        file.baseline_role,
+        default_mode,
+        default_baseline,
     )
 
 
@@ -151,10 +155,14 @@ async def _resolve_folder_effective_policy(
     """Return the folder's effective ``(access_mode, baseline_role)`` for proto emission."""
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
-        organization_id, ContentType.FOLDER,
+        organization_id,
+        ContentType.FOLDER,
     )
     return resolve_effective_policy(
-        folder.access_mode, folder.baseline_role, default_mode, default_baseline,
+        folder.access_mode,
+        folder.baseline_role,
+        default_mode,
+        default_baseline,
     )
 
 
@@ -307,7 +315,9 @@ class FilesHandlers:
 
                 tags_by_urn = await _hydrate_file_tags(session, file.organization_id, [file])
                 eff_mode, eff_baseline = await _resolve_file_effective_policy(
-                    session, file.organization_id, file,
+                    session,
+                    file.organization_id,
+                    file,
                 )
                 return CompleteUploadResponse(
                     file=file_to_proto(
@@ -381,11 +391,11 @@ class FilesHandlers:
                             upload_id=upload_id,
                             user_id=user_id,
                         )
-                        tags_by_urn = await _hydrate_file_tags(
-                            session, file.organization_id, [file]
-                        )
+                        tags_by_urn = await _hydrate_file_tags(session, file.organization_id, [file])
                         eff_mode, eff_baseline = await _resolve_file_effective_policy(
-                            session, file.organization_id, file,
+                            session,
+                            file.organization_id,
+                            file,
                         )
                         return UploadChunksResponse(
                             file=file_to_proto(
@@ -550,7 +560,9 @@ class FilesHandlers:
                 user_role = await ops._resolve_role(user_id, organization_id, file)
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
                 eff_mode, eff_baseline = await _resolve_file_effective_policy(
-                    session, organization_id, file,
+                    session,
+                    organization_id,
+                    file,
                 )
                 return GetFileResponse(
                     file=file_to_proto(
@@ -631,7 +643,9 @@ class FilesHandlers:
 
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
                 eff_mode, eff_baseline = await _resolve_file_effective_policy(
-                    session, organization_id, file,
+                    session,
+                    organization_id,
+                    file,
                 )
                 return UpdateFileResponse(
                     file=file_to_proto(
@@ -715,7 +729,9 @@ class FilesHandlers:
                 )
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
                 eff_mode, eff_baseline = await _resolve_file_effective_policy(
-                    session, organization_id, file,
+                    session,
+                    organization_id,
+                    file,
                 )
                 return RestoreFileResponse(
                     file=file_to_proto(
@@ -751,8 +767,8 @@ class FilesHandlers:
 
         folder_id = None
         if request.HasField("folder_id"):
-            if request.folder_id == "all":
-                folder_id = "all"
+            if request.folder_id == ParentSelection.ALL:
+                folder_id = ParentSelection.ALL
             elif request.folder_id == "":
                 folder_id = None  # Root
             else:
@@ -790,7 +806,7 @@ class FilesHandlers:
                     page=max(1, request.page or 1),
                     page_size=min(100, max(1, request.page_size or 50)),
                     sort_by=request.sort_by or "updated_at",
-                    sort_order=request.sort_order or "desc",
+                    sort_order=SortOrder(request.sort_order or SortOrder.DESCENDING),
                 )
 
                 # Fetch owner info for all files
@@ -813,12 +829,16 @@ class FilesHandlers:
 
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.FILE,
+                    organization_id,
+                    ContentType.FILE,
                 )
                 proto_files = []
                 for f in files:
                     eff_mode, eff_baseline = resolve_effective_policy(
-                        f.access_mode, f.baseline_role, default_mode, default_baseline,
+                        f.access_mode,
+                        f.baseline_role,
+                        default_mode,
+                        default_baseline,
                     )
                     proto_files.append(
                         file_to_proto(
@@ -883,7 +903,9 @@ class FilesHandlers:
                     baseline_role=baseline_role,
                 )
                 eff_mode, eff_baseline = await _resolve_folder_effective_policy(
-                    session, organization_id, folder,
+                    session,
+                    organization_id,
+                    folder,
                 )
                 return CreateFolderResponse(
                     folder=folder_to_proto(
@@ -961,7 +983,9 @@ class FilesHandlers:
                     parent_id=parent_id,
                 )
                 eff_mode, eff_baseline = await _resolve_folder_effective_policy(
-                    session, organization_id, folder,
+                    session,
+                    organization_id,
+                    folder,
                 )
                 return UpdateFolderResponse(
                     folder=folder_to_proto(
@@ -1052,15 +1076,20 @@ class FilesHandlers:
 
                 checker = PermissionChecker(session)
                 file_default_mode, file_default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.FILE,
+                    organization_id,
+                    ContentType.FILE,
                 )
                 folder_default_mode, folder_default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.FOLDER,
+                    organization_id,
+                    ContentType.FOLDER,
                 )
 
                 def _file_eff_mode(f: File) -> AccessMode | None:
                     mode, _ = resolve_effective_policy(
-                        f.access_mode, f.baseline_role, file_default_mode, file_default_baseline,
+                        f.access_mode,
+                        f.baseline_role,
+                        file_default_mode,
+                        file_default_baseline,
                     )
                     return mode
 
@@ -1207,15 +1236,20 @@ class FilesHandlers:
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, files)
                 checker = PermissionChecker(session)
                 file_default_mode, file_default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.FILE,
+                    organization_id,
+                    ContentType.FILE,
                 )
                 folder_default_mode, folder_default_baseline = await checker.get_org_defaults(
-                    organization_id, ContentType.FOLDER,
+                    organization_id,
+                    ContentType.FOLDER,
                 )
                 proto_files = []
                 for f in files:
                     eff_mode, eff_baseline = resolve_effective_policy(
-                        f.access_mode, f.baseline_role, file_default_mode, file_default_baseline,
+                        f.access_mode,
+                        f.baseline_role,
+                        file_default_mode,
+                        file_default_baseline,
                     )
                     proto_files.append(
                         file_to_proto(
@@ -1271,7 +1305,9 @@ class FilesHandlers:
                     folder_id=folder_id,
                 )
                 eff_mode, eff_baseline = await _resolve_folder_effective_policy(
-                    session, organization_id, folder,
+                    session,
+                    organization_id,
+                    folder,
                 )
                 return RestoreFolderResponse(
                     folder=folder_to_proto(
@@ -1422,7 +1458,9 @@ class FilesHandlers:
                     name="Recordings",
                 )
                 eff_mode, eff_baseline = await _resolve_folder_effective_policy(
-                    session, organization_id, folder,
+                    session,
+                    organization_id,
+                    folder,
                 )
                 return EnsureRecordingsFolderResponse(
                     folder=folder_to_proto(
@@ -1643,13 +1681,13 @@ class FilesHandlers:
         try:
             async with open_session() as session:
                 ops = FileOperations(session)
-                file = await ops.restore_file_version(
-                    user_id, organization_id, file_id, version_id
-                )
+                file = await ops.restore_file_version(user_id, organization_id, file_id, version_id)
                 user_role = await ops._resolve_role(user_id, organization_id, file)
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
                 eff_mode, eff_baseline = await _resolve_file_effective_policy(
-                    session, organization_id, file,
+                    session,
+                    organization_id,
+                    file,
                 )
                 return RestoreFileVersionResponse(
                     file=file_to_proto(

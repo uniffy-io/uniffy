@@ -69,14 +69,10 @@ def _config_to_proto(binding: AgentChannelBinding) -> ProtoChannelAgentConfig:
     return ProtoChannelAgentConfig(
         model_override=binding.model_override or "",
         model_params_override=(
-            json.dumps(binding.model_params_override)
-            if binding.model_params_override
-            else ""
+            json.dumps(binding.model_params_override) if binding.model_params_override else ""
         ),
         image_params_override=(
-            json.dumps(binding.image_params_override)
-            if binding.image_params_override
-            else ""
+            json.dumps(binding.image_params_override) if binding.image_params_override else ""
         ),
     )
 
@@ -88,13 +84,9 @@ def _parse_params_json(raw: str, field: str = "model_params_override") -> dict:
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise ConnectError(
-            Code.INVALID_ARGUMENT, f"{field} is not valid JSON"
-        ) from exc
+        raise ConnectError(Code.INVALID_ARGUMENT, f"{field} is not valid JSON") from exc
     if not isinstance(parsed, dict):
-        raise ConnectError(
-            Code.INVALID_ARGUMENT, f"{field} must be a JSON object"
-        )
+        raise ConnectError(Code.INVALID_ARGUMENT, f"{field} must be a JSON object")
     return parsed
 
 
@@ -301,9 +293,7 @@ class ChannelAgentContextHandlers:
             request.organization_id, request.channel_id, request.agent_id
         )
 
-        model_override = (
-            request.model_override if request.HasField("model_override") else None
-        )
+        model_override = request.model_override if request.HasField("model_override") else None
         image_params_override = (
             _parse_params_json(request.image_params_override, "image_params_override")
             if request.HasField("image_params_override")
@@ -332,9 +322,7 @@ class ChannelAgentContextHandlers:
                     model_params_override=model_params_override,
                     image_params_override=image_params_override,
                 )
-                return UpdateChannelAgentConfigResponse(
-                    config=_config_to_proto(binding)
-                )
+                return UpdateChannelAgentConfigResponse(config=_config_to_proto(binding))
         except ConnectError:
             raise
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:

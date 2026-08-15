@@ -33,7 +33,6 @@ export interface ChatChannel {
   description: string;
   channelType: ChannelType;
   categoryId: string | null;
-  isEncrypted: boolean;
   isArchived: boolean;
   isDefault: boolean;
   isDeleted: boolean;

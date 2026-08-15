@@ -15,6 +15,7 @@ from sqlalchemy import select
 
 from uniffy.core.search import init_meilisearch
 from uniffy.core.valkey import (
+    QueueName,
     close_ops_client,
     close_pubsub,
     close_queue,
@@ -25,7 +26,7 @@ from uniffy.core.valkey import (
 from uniffy.db.session import init_db, open_session
 from uniffy.scripts.demo_company.context import ResolutionError
 from uniffy.scripts.demo_company.loader import DEFAULT_PERSON_PASSWORD, ContentError
-from uniffy.scripts.demo_company.seeder import DOMAINS, seed_demo_company
+from uniffy.scripts.demo_company.seeder import DOMAINS, DemoDomain, seed_demo_company
 
 SENTINEL_NAMESPACE = "seed"
 SENTINEL_KEY = "demo_company"
@@ -95,10 +96,11 @@ async def main() -> None:
     environment = os.getenv("ENVIRONMENT", "production").strip().lower()
     _check_environment(environment, args)
 
-    only = tuple(part.strip() for part in args.only.split(",") if part.strip())
-    unknown = sorted(set(only) - set(DOMAINS))
+    requested_domains = tuple(part.strip() for part in args.only.split(",") if part.strip())
+    unknown = sorted(set(requested_domains) - set(DOMAINS))
     if unknown:
         raise SystemExit(f"Unknown --only value(s): {', '.join(unknown)}")
+    only = tuple(DemoDomain(domain) for domain in requested_domains)
 
     anchor = datetime.fromisoformat(args.anchor_date) if args.anchor_date else None
 
@@ -136,7 +138,7 @@ def _check_environment(environment: str, args: argparse.Namespace) -> None:
     out accounts. Production is refused outright and staging asks for both an
     explicit opt-in and a password that is not the one in the repository.
     """
-    if environment == "development":
+    if environment == "development":  # noqa: PLR2004
         return
 
     if environment not in SEEDABLE_ENVIRONMENTS:
@@ -157,9 +159,7 @@ def _check_environment(environment: str, args: argparse.Namespace) -> None:
             f"persona gets {DEFAULT_PERSON_PASSWORD!r} from the content defaults"
         )
 
-    logger.warning(
-        f"Seeding demo content and demo logins into a live {environment} deployment"
-    )
+    logger.warning(f"Seeding demo content and demo logins into a live {environment} deployment")
 
 
 async def _wait_for_bootstrap() -> None:
@@ -171,9 +171,7 @@ async def _wait_for_bootstrap() -> None:
         reason = "no organization yet"
         try:
             async with open_session() as session:
-                row = (
-                    await session.execute(select(Organization.id).limit(1))
-                ).scalars().first()
+                row = (await session.execute(select(Organization.id).limit(1))).scalars().first()
             if row is not None:
                 return
         except Exception as exc:  # noqa: BLE001
@@ -189,9 +187,7 @@ async def _sentinel_present() -> bool:
     from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
 
     async with open_session() as session:
-        namespace = await DeploymentSettingsOperations(session).get_namespace(
-            SENTINEL_NAMESPACE
-        )
+        namespace = await DeploymentSettingsOperations(session).get_namespace(SENTINEL_NAMESPACE)
     return SENTINEL_KEY in namespace
 
 
@@ -213,8 +209,8 @@ async def _init_valkey() -> None:
     job is queued and no notification is published.
     """
     for name, start in (
-        ("core queue", lambda: init_queue("core")),
-        ("egress queue", lambda: init_queue("egress")),
+        ("core queue", lambda: init_queue(QueueName.CORE)),
+        ("egress queue", lambda: init_queue(QueueName.EGRESS)),
         ("pubsub", init_pubsub),
         ("ops client", init_ops_client),
     ):
@@ -226,8 +222,8 @@ async def _init_valkey() -> None:
 
 async def _close_valkey() -> None:
     for close in (
-        lambda: close_queue("core"),
-        lambda: close_queue("egress"),
+        lambda: close_queue(QueueName.CORE),
+        lambda: close_queue(QueueName.EGRESS),
         close_pubsub,
         close_ops_client,
     ):

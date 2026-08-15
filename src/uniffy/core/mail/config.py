@@ -10,13 +10,23 @@ from __future__ import annotations
 
 import os
 from collections.abc import Awaitable, Callable
-from typing import Any, Literal
+from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel
 
 MAIL_NAMESPACE = "mail"
+MAIL_FROM_ADDRESS_KEY = "from_address"
+MAIL_PASSWORD_KEY = "smtp_password"
 
-SECRET_KEYS: frozenset[str] = frozenset({"smtp_password"})
+SECRET_KEYS: frozenset[str] = frozenset({MAIL_PASSWORD_KEY})
+
+
+class MailConfigSource(StrEnum):
+    NONE = "none"
+    ENV = "env"
+    DEPLOYMENT = "deployment"
+    ORGANIZATION = "org"
 
 
 class MailConfig(BaseModel):
@@ -31,7 +41,7 @@ class MailConfig(BaseModel):
     smtp_password: str | None = None
     smtp_use_tls: bool = True
     rate_limit_per_min: int = 100
-    source: Literal["env", "deployment", "org"] = "env"
+    source: MailConfigSource = MailConfigSource.ENV
 
     @classmethod
     def from_env(cls) -> MailConfig | None:
@@ -52,7 +62,7 @@ class MailConfig(BaseModel):
             smtp_password=os.getenv("SMTP_PASSWORD") or None,
             smtp_use_tls=os.getenv("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes"),
             rate_limit_per_min=int(os.getenv("MAIL_RATE_LIMIT_PER_MIN", "100")),
-            source="env",
+            source=MailConfigSource.ENV,
         )
 
     @classmethod
@@ -64,13 +74,13 @@ class MailConfig(BaseModel):
         """Deployment-scope config from ``deployment_settings`` rows;
         decryptor is :class:`DeploymentCipher`.
         """
-        from_address = _plain(settings.get("from_address"))
+        from_address = _plain(settings.get(MAIL_FROM_ADDRESS_KEY))
         smtp_host = _plain(settings.get("smtp_host"))
         if not from_address or not smtp_host:
             return None
 
         password: str | None = None
-        password_row = settings.get("smtp_password")
+        password_row = settings.get(MAIL_PASSWORD_KEY)
         if password_row is not None and password_row.value_encrypted:
             password = await decryptor(password_row.value_encrypted)
 
@@ -84,7 +94,7 @@ class MailConfig(BaseModel):
             smtp_password=password,
             smtp_use_tls=_bool(_plain(settings.get("smtp_use_tls")), default=True),
             rate_limit_per_min=int(_plain(settings.get("rate_limit_per_min")) or 100),
-            source="deployment",
+            source=MailConfigSource.DEPLOYMENT,
         )
 
     @classmethod
@@ -96,13 +106,13 @@ class MailConfig(BaseModel):
         """Per-org config from ``org_settings`` rows; ``decryptor`` is
         typically a closure over ``OrgCipher.decrypt``.
         """
-        from_address = _plain(settings.get("from_address"))
+        from_address = _plain(settings.get(MAIL_FROM_ADDRESS_KEY))
         smtp_host = _plain(settings.get("smtp_host"))
         if not from_address or not smtp_host:
             return None
 
         password: str | None = None
-        password_row = settings.get("smtp_password")
+        password_row = settings.get(MAIL_PASSWORD_KEY)
         if password_row is not None and password_row.value_encrypted:
             password = await decryptor(password_row.value_encrypted)
 
@@ -116,7 +126,7 @@ class MailConfig(BaseModel):
             smtp_password=password,
             smtp_use_tls=_bool(_plain(settings.get("smtp_use_tls")), default=True),
             rate_limit_per_min=int(_plain(settings.get("rate_limit_per_min")) or 100),
-            source="org",
+            source=MailConfigSource.ORGANIZATION,
         )
 
 

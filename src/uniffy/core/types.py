@@ -113,6 +113,22 @@ class RecurrencePattern(str, Enum):
     YEARLY = "YEARLY"
 
 
+class RecurrenceEditScope(str, Enum):
+    ALL_EVENTS = "all_events"
+    THIS_EVENT = "this_event"
+    THIS_AND_FOLLOWING = "this_and_following"
+
+
+class SortOrder(str, Enum):
+    ASCENDING = "asc"
+    DESCENDING = "desc"
+
+
+class ParentSelection(str, Enum):
+    ALL = "all"
+    ROOT = "root"
+
+
 class DayOfWeek(str, Enum):
     """Days of the week for weekly recurrence."""
 
@@ -226,10 +242,13 @@ __all__ = [
     "DomainType",
     "NodeType",
     "NotificationType",
+    "ParentSelection",
     "RecurrencePattern",
+    "RecurrenceEditScope",
     "ResourceType",
     "RoomStatus",
     "RoomType",
+    "SortOrder",
     "SubjectType",
     "generate_id",
     "slugify",

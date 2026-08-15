@@ -104,7 +104,7 @@ def _spec_entry(spec: ParamSpec, override_default: object = None) -> dict:
     if override_default is not None:
         spec.check_value("option override", override_default)
         entry["default"] = override_default
-    if spec.type == "integer":
+    if spec.type == "integer":  # noqa: PLR2004
         for bound in ("minimum", "maximum", "step"):
             if bound in entry:
                 entry[bound] = int(entry[bound])
@@ -135,7 +135,7 @@ def merge_parameter_schema(pc: ProviderCatalog, model: Model) -> dict:
         if knob in model.unsupported_params:
             continue
         entry = _spec_entry(spec, model.options.get(knob))
-        if knob == "max_tokens":
+        if knob == "max_tokens":  # noqa: PLR2004
             ceiling = model.default_max_tokens or model.context_window
             entry["maximum"] = ceiling
             if isinstance(entry.get("default"), int) and entry["default"] > ceiling:

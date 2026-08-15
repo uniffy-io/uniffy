@@ -1,6 +1,7 @@
 """URN and reference parsing utilities for content stored as Markdown."""
 
 import re
+from enum import StrEnum
 from uuid import UUID
 
 from uniffy.core.types import ContentType
@@ -32,9 +33,15 @@ INLINE_FILE_URL_PATTERN = re.compile(
     rf"(?:/api/files|/api/media|/media-stream|/api/thumbnails)/({_UUID_RE})/({_UUID_RE})"
 )
 
-_URN_PREFIX = "urn:uniffy:content:"
+CONTENT_URN_PREFIX = "urn:uniffy:content:"
 
 _URN_TYPE_MAP: dict[str, ContentType] = {ct.value: ct for ct in ContentType}
+
+
+class CanvasNodeType(StrEnum):
+    TEXT = "text"
+    NOTE = "note"
+    MEDIA = "media"
 
 
 def extract_urns_from_content(content: str) -> list[str]:
@@ -99,7 +106,7 @@ def extract_all_outgoing_references(
             urns.add(urn)
 
     for file_id in extract_inline_file_ids(content, organization_id=organization_id):
-        urns.add(f"{_URN_PREFIX}FILE:{file_id}")
+        urns.add(f"{CONTENT_URN_PREFIX}FILE:{file_id}")
 
     return list(urns)
 
@@ -119,7 +126,7 @@ def extract_all_outgoing_references_from_canvas(
 
         try:
             data = _json.loads(canvas_data)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return []
     else:
         data = canvas_data
@@ -131,21 +138,21 @@ def extract_all_outgoing_references_from_canvas(
         node_data = node.get("data", {})
         node_type = node_data.get("type", "")
 
-        if node_type == "text":
+        if node_type == CanvasNodeType.TEXT:
             content = node_data.get("content", "")
             if content:
                 for urn in extract_all_outgoing_references(content, organization_id):
                     urns.add(urn)
 
-        elif node_type == "note":
+        elif node_type == CanvasNodeType.NOTE:
             urn = node_data.get("urn", "")
             if urn and urn.startswith("urn:uniffy:"):
                 urns.add(urn)
 
-        elif node_type == "media":
+        elif node_type == CanvasNodeType.MEDIA:
             file_id = node_data.get("fileId", "")
             if file_id:
-                urns.add(f"{_URN_PREFIX}FILE:{file_id}")
+                urns.add(f"{CONTENT_URN_PREFIX}FILE:{file_id}")
 
     return list(urns)
 
@@ -159,7 +166,7 @@ def extract_urns_with_types(content: str) -> list[tuple[str, ContentType]]:
     seen: set[str] = set()
     for match in MENTION_PATTERN.finditer(content):
         urn = match.group(2)
-        if not urn or not urn.startswith(_URN_PREFIX) or urn in seen:
+        if not urn or not urn.startswith(CONTENT_URN_PREFIX) or urn in seen:
             continue
         seen.add(urn)
         parsed = parse_urn(urn)
@@ -173,7 +180,7 @@ def extract_mentioned_agent_ids_from_content(content: str) -> set[UUID]:
     if not content:
         return set()
 
-    agent_prefix = f"{_URN_PREFIX}AGENT:"
+    agent_prefix = f"{CONTENT_URN_PREFIX}AGENT:"
     result: set[UUID] = set()
     for match in MENTION_PATTERN.finditer(content):
         urn = match.group(2)
@@ -190,7 +197,7 @@ def extract_mentioned_user_ids_from_content(content: str) -> set[UUID]:
     if not content:
         return set()
 
-    user_prefix = f"{_URN_PREFIX}USER:"
+    user_prefix = f"{CONTENT_URN_PREFIX}USER:"
     result: set[UUID] = set()
     for match in MENTION_PATTERN.finditer(content):
         urn = match.group(2)
@@ -211,7 +218,7 @@ def extract_mentioned_team_ids_from_content(content: str) -> list[UUID]:
     if not content:
         return []
 
-    team_prefix = f"{_URN_PREFIX}TEAM:"
+    team_prefix = f"{CONTENT_URN_PREFIX}TEAM:"
     seen: set[UUID] = set()
     result: list[UUID] = []
     for match in MENTION_PATTERN.finditer(content):
@@ -303,7 +310,7 @@ def replace_mention_label_in_canvas(
 
     for i, node in enumerate(nodes):
         node_data = node.get("data", {})
-        if node_data.get("type") != "text":
+        if node_data.get("type") != CanvasNodeType.TEXT:
             continue
         content = node_data.get("content", "")
         if not content:
@@ -320,10 +327,10 @@ def replace_mention_label_in_canvas(
 
 def parse_urn(urn: str) -> tuple[ContentType, UUID] | None:
     """Parse ``urn:uniffy:content:{TYPE}:{uuid}``; ``None`` on malformed / unknown type."""
-    if not urn or not urn.startswith(_URN_PREFIX):
+    if not urn or not urn.startswith(CONTENT_URN_PREFIX):
         return None
 
-    remainder = urn[len(_URN_PREFIX) :]
+    remainder = urn[len(CONTENT_URN_PREFIX) :]
     parts = remainder.split(":", 1)
     if len(parts) != 2:
         return None

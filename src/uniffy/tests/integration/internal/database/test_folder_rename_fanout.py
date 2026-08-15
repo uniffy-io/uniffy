@@ -19,9 +19,7 @@ async def _capture_publishes(monkeypatch) -> list[tuple[str, dict]]:
     async def capture(organization_id, urn, changes, restricted=False):
         published.append((urn, dict(changes)))
 
-    monkeypatch.setattr(
-        "uniffy.domains.files.operations.publish_mention_state", capture
-    )
+    monkeypatch.setattr("uniffy.domains.files.operations.publish_mention_state", capture)
     return published
 
 
@@ -32,9 +30,7 @@ async def _cleanup(session, org_id) -> None:
     await session.commit()
 
 
-async def test_rename_republishes_child_files_and_folders(
-    session, env, monkeypatch
-) -> None:
+async def test_rename_republishes_child_files_and_folders(session, env, monkeypatch) -> None:
     monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
     published = await _capture_publishes(monkeypatch)
 
@@ -59,9 +55,7 @@ async def test_rename_republishes_child_files_and_folders(
         await session.commit()
 
         published.clear()
-        await folder_ops.update(
-            env.admin_id, env.org_id, parent.id, name="itdb-new-name"
-        )
+        await folder_ops.update(env.admin_id, env.org_id, parent.id, name="itdb-new-name")
 
         by_urn = {urn: changes for urn, changes in published}
         file_urn = f"urn:uniffy:content:FILE:{child_file.id}"
@@ -72,9 +66,7 @@ async def test_rename_republishes_child_files_and_folders(
         await _cleanup(session, env.org_id)
 
 
-async def test_create_folder_tree_refreshes_destination(
-    session, env, monkeypatch
-) -> None:
+async def test_create_folder_tree_refreshes_destination(session, env, monkeypatch) -> None:
     monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
     published = await _capture_publishes(monkeypatch)
 

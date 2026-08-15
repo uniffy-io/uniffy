@@ -32,20 +32,18 @@ async def record_skill_injections(
     if not skills:
         return
     try:
-        session.add_all(
-            [
-                AgentSkillUsage(
-                    skill_id=s.id,
-                    skill_version=int(getattr(s, "latest_version_number", 0) or 0),
-                    agent_id=agent_id,
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    session_id=session_id,
-                    injected=True,
-                )
-                for s in skills
-            ]
-        )
+        session.add_all([
+            AgentSkillUsage(
+                skill_id=s.id,
+                skill_version=int(getattr(s, "latest_version_number", 0) or 0),
+                agent_id=agent_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                session_id=session_id,
+                injected=True,
+            )
+            for s in skills
+        ])
     except Exception:
         logger.opt(exception=True).warning("Failed to stage skill injection usage")
 

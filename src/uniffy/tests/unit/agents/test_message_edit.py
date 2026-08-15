@@ -78,6 +78,7 @@ def _make_ops_with_message(
     ops._session.add = MagicMock()
 
     if monkeypatch is not None:
+
         async def fake_active(_session_id):
             return inflight
 
@@ -103,9 +104,7 @@ class TestEditMessage:
                 created_at=msg.created_at + timedelta(seconds=1),
             ),
         ]
-        ops = _make_ops_with_message(
-            msg, sess, downstream=downstream, monkeypatch=monkeypatch
-        )
+        ops = _make_ops_with_message(msg, sess, downstream=downstream, monkeypatch=monkeypatch)
 
         result = await ops.edit_message(
             user_id=user,
@@ -181,15 +180,11 @@ class TestEditMessage:
                 new_content="   ",
             )
 
-    async def test_rejects_when_run_is_inflight(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_rejects_when_run_is_inflight(self, monkeypatch: pytest.MonkeyPatch) -> None:
         user = generate_id()
         msg = _make_user_message()
         sess = _make_session(user_id=user)
-        ops = _make_ops_with_message(
-            msg, sess, inflight=True, monkeypatch=monkeypatch
-        )
+        ops = _make_ops_with_message(msg, sess, inflight=True, monkeypatch=monkeypatch)
 
         with pytest.raises(ValidationError, match="streaming"):
             await ops.edit_message(
@@ -215,9 +210,7 @@ class TestRetryMessage:
             content="b",
             created_at=msg.created_at + timedelta(seconds=1),
         )
-        ops = _make_ops_with_message(
-            msg, sess, downstream=[downstream], monkeypatch=monkeypatch
-        )
+        ops = _make_ops_with_message(msg, sess, downstream=[downstream], monkeypatch=monkeypatch)
 
         content, file_ids = await ops.retry_message(
             user_id=user,

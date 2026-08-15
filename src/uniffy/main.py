@@ -84,9 +84,10 @@ _MODES = {
 def main() -> None:
     load_dotenv()
 
-    if "--mfa-reset" in sys.argv:
-        from uniffy.cli.mfa import run as _run_mfa_reset
+    from uniffy.cli.mfa import MFA_RESET_FLAG
+    from uniffy.cli.mfa import run as _run_mfa_reset
 
+    if MFA_RESET_FLAG in sys.argv:
         _run_mfa_reset()
         return
 

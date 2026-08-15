@@ -579,6 +579,11 @@ def lint(service, stack):
     """Run linters (all = backend + ui + cli, matching pre-commit expectations)."""
     if service in ("backend", "all"):
         workspace_cmd("backend", stack, ["run", "ruff", "check", "src/uniffy/", "--exclude", "src/gen", "--fix"])
+        workspace_cmd(
+            "backend",
+            stack,
+            ["run", "ruff", "format", "src/uniffy/", "--exclude", "src/gen", "--check"],
+        )
     if service in ("ui", "all"):
         workspace_cmd("ui", stack, ["lint"])
     if service == "mobile":

@@ -51,20 +51,24 @@ async def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
     session = _build_session()
     ops = NoteOperations(session)
 
-    with patch.object(
-        NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)
-    ), patch.object(
-        NoteOperations, "_require_delete", AsyncMock(return_value=None)
-    ), patch.object(
-        NoteOperations,
-        "_collect_descendant_ids",
-        AsyncMock(return_value=[note.id, generate_id(), generate_id()]),
-    ), patch(
-        "uniffy.domains.notes.queries.soft_delete_recursive",
-        AsyncMock(return_value=None),
-    ), patch.object(
-        NoteOperations.__base__, "search_indexer", MagicMock(remove=AsyncMock()),
-        create=True,
+    with (
+        patch.object(NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)),
+        patch.object(NoteOperations, "_require_delete", AsyncMock(return_value=None)),
+        patch.object(
+            NoteOperations,
+            "_collect_descendant_ids",
+            AsyncMock(return_value=[note.id, generate_id(), generate_id()]),
+        ),
+        patch(
+            "uniffy.domains.notes.queries.soft_delete_recursive",
+            AsyncMock(return_value=None),
+        ),
+        patch.object(
+            NoteOperations.__base__,
+            "search_indexer",
+            MagicMock(remove=AsyncMock()),
+            create=True,
+        ),
     ):
         ops.search_indexer = MagicMock(remove=AsyncMock())
         await ops.delete(generate_id(), note.organization_id, note.id)
@@ -87,20 +91,22 @@ async def test_permanent_delete_emits_note_permanently_deleted() -> None:
     tag_ops_mock = MagicMock()
     tag_ops_mock.unassign_all_for_urn = AsyncMock()
 
-    with patch.object(
-        NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)
-    ), patch.object(
-        NoteOperations, "_require_delete", AsyncMock(return_value=None)
-    ), patch.object(
-        NoteOperations,
-        "_collect_descendant_ids",
-        AsyncMock(return_value=[note.id]),
-    ), patch(
-        "uniffy.domains.notes.queries.permanent_delete_recursive",
-        AsyncMock(return_value=None),
-    ), patch(
-        "uniffy.domains.notes.operations.TagOperations",
-        MagicMock(return_value=tag_ops_mock),
+    with (
+        patch.object(NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)),
+        patch.object(NoteOperations, "_require_delete", AsyncMock(return_value=None)),
+        patch.object(
+            NoteOperations,
+            "_collect_descendant_ids",
+            AsyncMock(return_value=[note.id]),
+        ),
+        patch(
+            "uniffy.domains.notes.queries.permanent_delete_recursive",
+            AsyncMock(return_value=None),
+        ),
+        patch(
+            "uniffy.domains.notes.operations.TagOperations",
+            MagicMock(return_value=tag_ops_mock),
+        ),
     ):
         await ops.delete(generate_id(), note.organization_id, note.id, permanent=True)
 
@@ -113,12 +119,10 @@ async def test_restore_emits_note_restored() -> None:
     session = _build_session()
     ops = NoteOperations(session)
 
-    with patch.object(
-        NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)
-    ), patch.object(
-        NoteOperations, "_require_edit", AsyncMock(return_value=None)
-    ), patch.object(
-        NoteOperations, "_index_for_search", AsyncMock(return_value=None)
+    with (
+        patch.object(NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)),
+        patch.object(NoteOperations, "_require_edit", AsyncMock(return_value=None)),
+        patch.object(NoteOperations, "_index_for_search", AsyncMock(return_value=None)),
     ):
         await ops.restore(generate_id(), note.organization_id, note.id)
 
@@ -147,9 +151,7 @@ async def test_parent_change_emits_note_moved_with_previous_state() -> None:
             resource_type="NOTE",
             resource_id=note.id,
             details={
-                "previous_parent_id": (
-                    str(previous_parent_id) if previous_parent_id else None
-                ),
+                "previous_parent_id": (str(previous_parent_id) if previous_parent_id else None),
                 "new_parent_id": str(note.parent_id),
             },
         )

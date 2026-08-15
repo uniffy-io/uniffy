@@ -44,14 +44,10 @@ async def _resolve_org_and_users(session) -> tuple[object, list[object]]:
         org_slug = slugify(org_name)
 
     org = (
-        await session.execute(
-            select(Organization).where(Organization.slug == org_slug)
-        )
+        await session.execute(select(Organization).where(Organization.slug == org_slug))
     ).scalar_one_or_none()
     if org is None:
-        raise RuntimeError(
-            f"Organization with slug {org_slug!r} not found. Run dev seed first."
-        )
+        raise RuntimeError(f"Organization with slug {org_slug!r} not found. Run dev seed first.")
 
     user_emails = [
         "admin@uniffy.io",
@@ -62,9 +58,7 @@ async def _resolve_org_and_users(session) -> tuple[object, list[object]]:
         "eve@uniffy.io",
     ]
     users = list(
-        (
-            await session.execute(select(User).where(User.email.in_(user_emails)))
-        ).scalars().all()
+        (await session.execute(select(User).where(User.email.in_(user_emails)))).scalars().all()
     )
     if len(users) < 2:
         raise RuntimeError("Not enough dev users found. Run dev seed first.")
@@ -84,12 +78,12 @@ async def _wipe_seed(session, organization_id: UUID) -> None:
                     Tag.slug.like(f"{SEED_TAG_PREFIX}%"),
                 )
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
     if seed_tag_ids:
-        await session.execute(
-            delete(TagAssignment).where(TagAssignment.tag_id.in_(seed_tag_ids))
-        )
+        await session.execute(delete(TagAssignment).where(TagAssignment.tag_id.in_(seed_tag_ids)))
         await session.execute(delete(Tag).where(Tag.id.in_(seed_tag_ids)))
 
     note_ids = list(
@@ -100,7 +94,9 @@ async def _wipe_seed(session, organization_id: UUID) -> None:
                     Note.title.like(f"{SEED_NOTE_PREFIX}%"),
                 )
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
     if note_ids:
         await session.execute(delete(Note).where(Note.id.in_(note_ids)))
@@ -109,13 +105,9 @@ async def _wipe_seed(session, organization_id: UUID) -> None:
 
     indexer = SearchIndexer()
     for tag_id in seed_tag_ids:
-        await indexer.remove(
-            f"urn:uniffy:content:TAG:{tag_id}", organization_id
-        )
+        await indexer.remove(f"urn:uniffy:content:TAG:{tag_id}", organization_id)
     for note_id in note_ids:
-        await indexer.remove(
-            f"urn:uniffy:content:NOTE:{note_id}", organization_id
-        )
+        await indexer.remove(f"urn:uniffy:content:NOTE:{note_id}", organization_id)
 
 
 async def _seed_existing(session, organization_id: UUID) -> bool:
@@ -344,9 +336,7 @@ def _print_summary(rows: list[dict[str, float]]) -> None:
         )
 
 
-async def _explain_inner_query(
-    org_id: UUID, actor_id: UUID, visible_ids: list[UUID]
-) -> str:
+async def _explain_inner_query(org_id: UUID, actor_id: UUID, visible_ids: list[UUID]) -> str:
     from uniffy.db.session import open_session
 
     if not visible_ids:
@@ -383,8 +373,8 @@ async def run_visibility_stress(config: StressConfig) -> None:
             org, users = await _resolve_org_and_users(session)
             org_id: UUID = org.id
 
-            actor_admin = next(u for u in users if u.email == "admin@uniffy.io")
-            actor_member = next(u for u in users if u.email == "alice@uniffy.io")
+            actor_admin = next(u for u in users if u.email == "admin@uniffy.io")  # noqa: PLR2004
+            actor_member = next(u for u in users if u.email == "alice@uniffy.io")  # noqa: PLR2004
 
             existing = await _seed_existing(session, org_id)
             if existing and config.reseed:
@@ -394,12 +384,9 @@ async def run_visibility_stress(config: StressConfig) -> None:
 
             if not existing and not config.skip_seed:
                 logger.info(f"Seeding {config.note_count} notes (PG + Meili)...")
-                notes = await _seed_notes(
-                    session, org_id, users, config.note_count
-                )
+                notes = await _seed_notes(session, org_id, users, config.note_count)
                 logger.info(
-                    f"Seeding {config.tag_count} tags x "
-                    f"{config.assignments_per_tag} assignments..."
+                    f"Seeding {config.tag_count} tags x {config.assignments_per_tag} assignments..."
                 )
                 await _seed_tags_and_assignments(
                     session,
@@ -484,10 +471,7 @@ async def run_visibility_stress(config: StressConfig) -> None:
 
         print()
         print("Tag visibility cache - bench")
-        print(
-            f"Org: {org.name} ({org_id})  "
-            f"actor (member): alice  actor (admin): admin"
-        )
+        print(f"Org: {org.name} ({org_id})  actor (member): alice  actor (admin): admin")
         print(
             f"Notes: {config.note_count}  Tags: {config.tag_count}  "
             f"Assignments/tag: {config.assignments_per_tag}  "
@@ -505,9 +489,7 @@ async def run_visibility_stress(config: StressConfig) -> None:
             visible = await compute_visible_tag_ids(
                 session, user_id=actor_member.id, organization_id=org_id
             )
-        plan = await _explain_inner_query(
-            org_id, actor_member.id, list(visible or [])
-        )
+        plan = await _explain_inner_query(org_id, actor_member.id, list(visible or []))
         print("EXPLAIN (ANALYZE, BUFFERS) outer page query for member alice:")
         print(plan)
     finally:

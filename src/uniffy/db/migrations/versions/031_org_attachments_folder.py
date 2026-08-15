@@ -139,9 +139,7 @@ def downgrade() -> None:
     op.drop_column("files_folders", "is_org_attachments")
 
 
-def _resolve_effective_mode(
-    bind, content_type: str, content_id, organization_id: str
-) -> str:
+def _resolve_effective_mode(bind, content_type: str, content_id, organization_id: str) -> str:
     """Materialise the effective access mode for one row in raw SQL."""
     table_for_type = {
         "NOTE": ("notes_notes", "id"),
@@ -160,9 +158,7 @@ def _resolve_effective_mode(
 
     table, id_col = entry
     row = bind.execute(
-        sa.text(
-            f"SELECT access_mode FROM {table} WHERE {id_col} = :cid AND organization_id = :org"
-        ),
+        sa.text(f"SELECT access_mode FROM {table} WHERE {id_col} = :cid AND organization_id = :org"),
         {"cid": content_id, "org": organization_id},
     ).first()
     if row is None:

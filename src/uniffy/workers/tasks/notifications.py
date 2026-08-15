@@ -16,7 +16,7 @@ from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
-from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS
+from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS, NotificationChannel
 from uniffy.domains.notifications.delivery.in_app import InAppAdapter
 from uniffy.domains.notifications.delivery.push import PushAdapter
 from uniffy.observability.metrics import (
@@ -77,27 +77,27 @@ async def process_notification_event(
             metadata=event.metadata,
         )
 
-        in_app_adapter = DELIVERY_ADAPTERS.get("in_app")
+        in_app_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.IN_APP)
         pending_notifications: list[Notification] = []
 
         for user_id in recipient_ids:
             channels = await _get_delivery_channels(session, user_id, event.notification_type)
 
-            if "in_app" in channels and isinstance(in_app_adapter, InAppAdapter):
+            if NotificationChannel.IN_APP in channels and isinstance(in_app_adapter, InAppAdapter):
                 notification = await in_app_adapter.deliver_with_session(session, user_id, event)
                 pending_notifications.append(notification)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="in_app").inc()
 
-            if "browser" in channels:
-                push_adapter = DELIVERY_ADAPTERS.get("browser")
+            if NotificationChannel.BROWSER in channels:
+                push_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.BROWSER)
                 if isinstance(push_adapter, PushAdapter):
                     await push_adapter.deliver_with_session(session, user_id, push_event)
                 elif push_adapter:
                     await push_adapter.deliver(user_id, push_event)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="browser").inc()
 
-            if "email" in channels:
-                email_adapter = DELIVERY_ADAPTERS.get("email")
+            if NotificationChannel.EMAIL in channels:
+                email_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.EMAIL)
                 if email_adapter:
                     await email_adapter.deliver(user_id, event)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="email").inc()
@@ -130,7 +130,7 @@ async def deliver_push_notification(
     source_urn: str | None = None,
 ) -> dict[str, Any]:
     """Standalone retryable push delivery to one user's registered subscriptions."""
-    push_adapter = DELIVERY_ADAPTERS.get("browser")
+    push_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.BROWSER)
     if not push_adapter:
         return {"status": "skipped", "reason": "no_push_adapter"}
 
@@ -229,9 +229,7 @@ async def _load_access_policy(
         project_id = getattr(row, "project_id", None)
         if project_id is None:
             return None
-        return await _load_access_policy(
-            session, organization_id, ContentType.PROJECT, project_id
-        )
+        return await _load_access_policy(session, organization_id, ContentType.PROJECT, project_id)
 
     if not hasattr(row, "access_mode"):
         return None
@@ -263,9 +261,7 @@ async def _filter_to_viewers(
         # Chat channels carry their own access model and comments resolve
         # against a parent this worker does not load. Those producers gate
         # their own recipient lists.
-        NOTIFICATION_RECIPIENTS_UNFILTERED_TOTAL.labels(
-            content_type=target[0].value
-        ).inc()
+        NOTIFICATION_RECIPIENTS_UNFILTERED_TOTAL.labels(content_type=target[0].value).inc()
         return recipient_ids
 
     resolved_type, resolved_id, row = policy
@@ -385,6 +381,6 @@ async def _get_delivery_channels(
         overrides = profile.notifications if profile else None
         await set_cached_settings(user_id, overrides)
 
-    channels = get_effective_notification_channels(notification_type.value, overrides)
+    channels = get_effective_notification_channels(notification_type, overrides)
 
     return {ch for ch, enabled in channels.items() if enabled}
