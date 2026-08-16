@@ -13,6 +13,8 @@ const NOTIFICATION_TYPE_ROWS = [
   { type: "CALENDAR_RESPONSE", label: "Calendar Response" },
   { type: "PERMISSION_GRANTED", label: "Permission Granted" },
   { type: "PERMISSION_REVOKED", label: "Permission Revoked" },
+  { type: "ACCESS_REQUESTED", label: "Access Requested" },
+  { type: "ACCESS_REQUEST_DENIED", label: "Access Request Denied" },
   { type: "SYSTEM_ANNOUNCEMENT", label: "System Announcement" },
 ] as const;
 
@@ -25,6 +27,8 @@ const DEFAULT_CHANNELS: Record<string, Record<string, boolean>> = {
   CALENDAR_RESPONSE: { in_app: true, browser: false, email: false },
   PERMISSION_GRANTED: { in_app: true, browser: false, email: true },
   PERMISSION_REVOKED: { in_app: true, browser: false, email: true },
+  ACCESS_REQUESTED: { in_app: true, browser: true, email: true },
+  ACCESS_REQUEST_DENIED: { in_app: true, browser: true, email: false },
   SYSTEM_ANNOUNCEMENT: { in_app: true, browser: true, email: true },
 };
 

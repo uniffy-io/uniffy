@@ -21,6 +21,8 @@ import {
   CaretRight,
   CaretDoubleLeft,
   Funnel,
+  LockKeyOpen,
+  Prohibit,
   Envelope,
   EnvelopeOpen,
   X,
@@ -78,6 +80,16 @@ const TYPE_CATEGORIES: TypeCategory[] = [
     types: [
       { value: NotificationType.PERMISSION_GRANTED, label: "Granted", icon: ShieldCheck },
       { value: NotificationType.PERMISSION_REVOKED, label: "Revoked", icon: ShieldSlash },
+      {
+        value: NotificationType.ACCESS_REQUESTED,
+        label: "Access requested",
+        icon: LockKeyOpen,
+      },
+      {
+        value: NotificationType.ACCESS_REQUEST_DENIED,
+        label: "Request denied",
+        icon: Prohibit,
+      },
     ],
   },
   {

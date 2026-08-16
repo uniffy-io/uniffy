@@ -13,6 +13,10 @@ from uniffy.core.content.members import (
     ContentMembersOperations,
     register_content_loader,
 )
+from uniffy.core.content.reference_state import (
+    model_reference_state_loader,
+    register_reference_state_loader,
+)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationRole
@@ -642,3 +646,4 @@ async def _load_room(
 
 
 register_content_loader(ContentType.ROOM, _load_room)
+register_reference_state_loader(ContentType.ROOM, model_reference_state_loader(Room))

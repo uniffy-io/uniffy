@@ -22,14 +22,20 @@ import type { SerializedNotification } from "@/features/notifications/store/noti
 import { updatePresenceWithCustomStatus } from "@/features/presence/store/presenceSlice";
 import { setDomainAdminDomains } from "@/features/auth/store/authSlice";
 import { adminApi } from "@/features/admin/api/adminApi";
-import { emitMentionStateChange } from "@/components/mention";
+import { emitMentionStateChange, mergeMentionState } from "@/components/mention";
+import { accessRequestStateToLiveState } from "@/components/mention/accessRequestState";
+import { resolveUrnBatched } from "@/components/mention/useBatchedSubjectResolver";
+import { MentionAvailability } from "@/components/mention/types";
 import { StreamNotificationsResponse_EventType } from "@uniffy/proto/notifications/v1/notifications_pb";
+import { AccessRequestState } from "@uniffy/proto/permissions/v1/permissions_pb";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { getState } from "@/app/storeRef";
 import { NotificationToast } from "@/features/notifications/components/NotificationToast";
+import { applyAccessRequestState } from "@/features/permissions";
 
 const MAX_BACKOFF_MS = 30000;
 const INITIAL_BACKOFF_MS = 1000;
+const ACCESS_REFRESH_DELAYS_MS = [0, 400, 1200, 3000, 7000] as const;
 
 let _activeController: AbortController | null = null;
 
@@ -48,7 +54,29 @@ export function useNotificationStream() {
     let backoff = INITIAL_BACKOFF_MS;
     let mounted = true;
     const pendingFileUpdates = new Map<string, ReturnType<typeof setTimeout>>();
+    const pendingAccessRefreshes = new Map<string, ReturnType<typeof setTimeout>>();
     let pendingTreeRefresh: ReturnType<typeof setTimeout> | null = null;
+
+    function scheduleApprovedMentionRefresh(urn: string, attempt = 0): void {
+      const existing = pendingAccessRefreshes.get(urn);
+      if (existing) clearTimeout(existing);
+      const delay = ACCESS_REFRESH_DELAYS_MS[attempt];
+      if (delay === undefined) return;
+
+      const timer = setTimeout(async () => {
+        pendingAccessRefreshes.delete(urn);
+        if (!mounted) return;
+        const resolved = await resolveUrnBatched(urn, organizationId!, { force: true });
+        if (
+          mounted &&
+          resolved?.availability === MentionAvailability.Restricted &&
+          attempt + 1 < ACCESS_REFRESH_DELAYS_MS.length
+        ) {
+          scheduleApprovedMentionRefresh(urn, attempt + 1);
+        }
+      }, delay);
+      pendingAccessRefreshes.set(urn, timer);
+    }
 
     async function connect() {
       while (mounted) {
@@ -190,6 +218,36 @@ export function useNotificationStream() {
               }
             }
 
+            if (
+              event.eventType === StreamNotificationsResponse_EventType.ACCESS_REQUEST_CHANGED &&
+              event.accessRequestChanged
+            ) {
+              const changed = event.accessRequestChanged;
+              if (changed.requestedUrn) {
+                const canRequestAgainAt = changed.canRequestAgainAt
+                  ? timestampDate(changed.canRequestAgainAt).toISOString()
+                  : null;
+                const patch = accessRequestStateToLiveState(
+                  changed.state,
+                  changed.requestId || undefined,
+                  canRequestAgainAt ?? undefined,
+                );
+                mergeMentionState(changed.requestedUrn, patch);
+                dispatch(
+                  applyAccessRequestState({
+                    requestedUrn: changed.requestedUrn,
+                    state: changed.state,
+                    requestId: changed.requestId || null,
+                    canRequestAgainAt,
+                    requesterHasAccess: changed.state === AccessRequestState.APPROVED,
+                  }),
+                );
+                if (changed.state === AccessRequestState.APPROVED) {
+                  scheduleApprovedMentionRefresh(changed.requestedUrn);
+                }
+              }
+            }
+
             // CONTENT_ACCESS_CHANGED: the user's accessible-content set
             // shifted (shared with them, or content became/ceased
             // OPEN_TO_ORG). Notes keeps a global store, so refresh it
@@ -253,6 +311,10 @@ export function useNotificationStream() {
         clearTimeout(timer);
       }
       pendingFileUpdates.clear();
+      for (const timer of pendingAccessRefreshes.values()) {
+        clearTimeout(timer);
+      }
+      pendingAccessRefreshes.clear();
       if (pendingTreeRefresh) clearTimeout(pendingTreeRefresh);
     };
   }, [dispatch, organizationId, userId, isAuthenticated]);

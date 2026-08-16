@@ -31,6 +31,8 @@ const TYPE_LABELS: Record<number, string> = {
   [NotificationType.CALENDAR_RESPONSE]: "Response",
   [NotificationType.PERMISSION_GRANTED]: "Access granted",
   [NotificationType.PERMISSION_REVOKED]: "Access revoked",
+  [NotificationType.ACCESS_REQUESTED]: "Access requested",
+  [NotificationType.ACCESS_REQUEST_DENIED]: "Request denied",
   [NotificationType.SYSTEM_ANNOUNCEMENT]: "System",
   [NotificationType.TASK_ASSIGNED]: "Assigned",
   [NotificationType.TASK_DUE_SOON]: "Due soon",

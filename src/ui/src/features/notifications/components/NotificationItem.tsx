@@ -19,6 +19,8 @@ import {
   UserPlus,
   UserMinus,
   ArrowBendUpLeft,
+  LockKeyOpen,
+  Prohibit,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
@@ -147,6 +149,18 @@ const NOTIFICATION_TYPE_CONFIG: Record<number, NotificationTypeConfig> = {
     color: "text-violet-400",
     bgColor: "bg-violet-500",
   },
+  [NotificationType.ACCESS_REQUESTED]: {
+    icon: LockKeyOpen,
+    label: "Access request",
+    color: "text-primary",
+    bgColor: "bg-primary",
+  },
+  [NotificationType.ACCESS_REQUEST_DENIED]: {
+    icon: Prohibit,
+    label: "Request denied",
+    color: "text-red-400",
+    bgColor: "bg-red-500",
+  },
 };
 
 const MENTION_REGEX = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
@@ -206,6 +220,7 @@ export function NotificationItem({
     isCalendarInvite && notification.sourceUrn ? parseUrn(notification.sourceUrn) : null;
   const canRsvp =
     isCalendarInvite && inviteParsedUrn?.isValid && inviteParsedUrn.type === UrnType.CALENDAR_EVENT;
+  const isAccessRequest = notification.notificationType === NotificationType.ACCESS_REQUESTED;
 
   const handleRsvp = async (status: AttendeeStatus) => {
     if (!inviteParsedUrn?.isValid) return;
@@ -362,6 +377,19 @@ export function NotificationItem({
               </div>
             )}
           </div>
+        )}
+        {isAccessRequest && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClick?.(notification);
+            }}
+            className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-border hover:bg-muted transition-colors"
+          >
+            <LockKeyOpen size={12} weight="duotone" />
+            Review request
+          </button>
         )}
       </div>
 

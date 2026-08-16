@@ -11,6 +11,8 @@ from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_policy,
 )
+from uniffy.core.content.reference_state import ReferenceRowState
+from uniffy.core.content.references import parse_urn
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.files.file import File
@@ -25,9 +27,13 @@ from uniffy.core.types import AccessMode, ContentType
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.search.queries import (
     SearchResult,
+    UrnAvailability,
+    UrnLookupResult,
     apply_type_priority,
     execute_search,
-    get_documents_by_urns,
+    get_authoritative_reference_states,
+    get_permission_filtered_documents_by_urns,
+    get_raw_documents_by_urns,
 )
 from uniffy.domains.tags import TagOperations
 from uniffy.domains.tags.visibility import TagVisibilityFilter
@@ -192,49 +198,80 @@ class SearchOperations:
         organization_id: UUID,
         urns: list[str],
     ) -> dict[str, SearchResult]:
-        """Missing URNs return a tombstone with ``urn_status='DELETED'``;
-        callers always get one entry per input URN.
-
-        Per-URN access decisions live in the Meilisearch filter built by
-        ``_build_permission_filter`` (see ``core/search/meilisearch.py``).
-        That filter mirrors ``PermissionChecker.effective_role`` for the
-        user path: org match, not blocked, ownership OR explicit member
-        OR ``OPEN_TO_ORG`` baseline. A platform sysadmin without a
-        tenant membership cannot resolve tenant URNs through this RPC -
-        the index never granted them ``shared_user_ids`` membership, so
-        the filter excludes them, which is the intended cloud privacy
-        posture. Re-checking each URN against PostgreSQL would regress the
-        no-DB-read contract documented in ``rules/mentions.md``; instead,
-        any new access field must be denormalised into the index at
-        write time. The one DB read is the org-membership precondition,
-        which is per request rather than per URN and which the filter
-        cannot express.
-        """
         if not urns:
             return {}
 
         await self._require_org_member(user_id, organization_id)
 
-        urns = urns[:100]
+        urns = list(dict.fromkeys(urns[:100]))
 
         user_group_ids = await self._get_user_group_ids(user_id)
-        accessible = await get_documents_by_urns(
+        filtered = await get_permission_filtered_documents_by_urns(
             urns,
             organization_id,
             user_id,
             user_group_ids,
         )
+        resolved = filtered.documents
 
-        await self._enrich_live_state(accessible, organization_id, user_id)
+        await self._enrich_live_state(resolved, organization_id, user_id)
+        for item in resolved.values():
+            item.availability = UrnAvailability.AVAILABLE
 
-        for sr in accessible.values():
-            sr.urn_status = "OK"
+        misses = [
+            urn
+            for urn in urns
+            if urn not in resolved and urn not in filtered.failed_urns and parse_urn(urn) is not None
+        ]
+        raw = (
+            await get_raw_documents_by_urns(misses, organization_id)
+            if misses
+            else UrnLookupResult(documents={}, failed_urns=frozenset())
+        )
+
+        authoritative_misses = [
+            urn for urn in misses if urn not in raw.documents and urn not in raw.failed_urns
+        ]
+        reference_states = (
+            await get_authoritative_reference_states(
+                self.session,
+                organization_id,
+                authoritative_misses,
+            )
+            if authoritative_misses
+            else {}
+        )
+
         for urn in urns:
-            if urn in accessible:
+            if urn in resolved:
                 continue
-            accessible[urn] = _build_tombstone(urn, organization_id)
+            if urn in filtered.failed_urns or urn in raw.failed_urns:
+                resolved[urn] = _build_reference_result(
+                    urn,
+                    organization_id,
+                    UrnAvailability.UNAVAILABLE,
+                )
+                continue
 
-        return accessible
+            raw_document = raw.documents.get(urn)
+            if raw_document is not None:
+                resolved[urn] = _build_reference_result(
+                    urn,
+                    organization_id,
+                    UrnAvailability.RESTRICTED,
+                    can_request_access=_is_requestable(raw_document),
+                )
+                continue
+
+            row_state = reference_states.get(urn)
+            availability = (
+                UrnAvailability.DELETED
+                if row_state in (ReferenceRowState.DELETED, ReferenceRowState.MISSING)
+                else UrnAvailability.UNAVAILABLE
+            )
+            resolved[urn] = _build_reference_result(urn, organization_id, availability)
+
+        return resolved
 
     async def _enrich_live_state(
         self,
@@ -753,12 +790,15 @@ class SearchOperations:
             logger.opt(exception=True).warning("Failed to enrich tag live state")
 
 
-def _build_tombstone(urn: str, organization_id: UUID) -> SearchResult:
-    """Missing-from-index is treated uniformly as DELETED; we do not
-    distinguish DELETED/NOT_FOUND/FORBIDDEN.
-    """
-    parts = urn.split(":")
-    entity_type = parts[3].lower() if len(parts) >= 5 else ""
+def _build_reference_result(
+    urn: str,
+    organization_id: UUID,
+    availability: UrnAvailability,
+    *,
+    can_request_access: bool = False,
+) -> SearchResult:
+    parsed = parse_urn(urn)
+    entity_type = parsed[0].value.lower() if parsed is not None else ""
     return SearchResult(
         urn=urn,
         organization_id=organization_id,
@@ -774,5 +814,41 @@ def _build_tombstone(urn: str, organization_id: UUID) -> SearchResult:
         updated_at=None,
         rank_score=0.0,
         search_score=None,
-        urn_status="DELETED",
+        availability=availability,
+        can_request_access=can_request_access,
     )
+
+
+def _is_requestable(raw_document: SearchResult) -> bool:
+    parsed = parse_urn(raw_document.urn)
+    if parsed is None:
+        return False
+    content_type, _ = parsed
+    if content_type in {
+        ContentType.NOTE,
+        ContentType.FILE,
+        ContentType.FOLDER,
+        ContentType.CALENDAR_EVENT,
+        ContentType.PROJECT,
+        ContentType.AGENT,
+        ContentType.ROOM,
+    }:
+        return True
+
+    metadata = raw_document.metadata or {}
+    if content_type == ContentType.TASK:
+        return _metadata_has_uuid(metadata, "project_id")
+    if content_type in {ContentType.CHAT, ContentType.CHAT_MESSAGE}:
+        return (
+            metadata.get("channel_type") == "PRIVATE"  # noqa: PLR2004 -- indexed enum boundary
+            and (content_type == ContentType.CHAT or _metadata_has_uuid(metadata, "channel_id"))
+        )
+    return False
+
+
+def _metadata_has_uuid(metadata: dict[str, str], key: str) -> bool:
+    try:
+        UUID(metadata.get(key, ""))
+    except ValueError:
+        return False
+    return True

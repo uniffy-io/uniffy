@@ -242,7 +242,12 @@ const NOTIFICATION_TYPE_CATEGORIES: Record<string, number[]> = {
     NotificationType.CALENDAR_INVITE,
     NotificationType.CALENDAR_RESPONSE,
   ],
-  permissions: [NotificationType.PERMISSION_GRANTED, NotificationType.PERMISSION_REVOKED],
+  permissions: [
+    NotificationType.PERMISSION_GRANTED,
+    NotificationType.PERMISSION_REVOKED,
+    NotificationType.ACCESS_REQUESTED,
+    NotificationType.ACCESS_REQUEST_DENIED,
+  ],
   tasks: [
     NotificationType.TASK_ASSIGNED,
     NotificationType.TASK_DUE_SOON,

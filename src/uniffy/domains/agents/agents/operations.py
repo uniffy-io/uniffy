@@ -18,6 +18,10 @@ from uniffy.core.content.members import (
     register_content_loader,
     register_manage_override,
 )
+from uniffy.core.content.reference_state import (
+    model_reference_state_loader,
+    register_reference_state_loader,
+)
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronTask
@@ -921,4 +925,5 @@ async def _load_agent(
 
 
 register_content_loader(ContentType.AGENT, _load_agent)
+register_reference_state_loader(ContentType.AGENT, model_reference_state_loader(Agent))
 register_manage_override(ContentType.AGENT, is_agents_builder)

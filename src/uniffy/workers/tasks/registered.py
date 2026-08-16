@@ -37,6 +37,10 @@ from uniffy.workers.tasks.notifications import (
 )
 from uniffy.workers.tasks.permissions_reindex import reindex_org_content_for_defaults
 from uniffy.workers.tasks.platform_org_purge import notify_pending_org_purges
+from uniffy.workers.tasks.project_search_acl import (
+    flush_project_search_acl_refreshes,
+    refresh_project_search_acl,
+)
 from uniffy.workers.tasks.realtime import save_realtime_snapshot
 from uniffy.workers.tasks.reminders import check_calendar_reminders
 from uniffy.workers.tasks.search_removals import flush_search_removals
@@ -74,6 +78,7 @@ CORE_TASKS = (
     save_realtime_snapshot,
     flush_search_removals,
     refresh_chat_search_acl,
+    refresh_project_search_acl,
 )
 
 EGRESS_TASKS = (
@@ -117,6 +122,7 @@ __all__ = [
     "extract_image_metadata",
     "flush_chat_read_cursors",
     "flush_chat_search_acl_refreshes",
+    "flush_project_search_acl_refreshes",
     "flush_search_removals",
     "generate_image_thumbnail",
     "generate_pdf_thumbnail",
@@ -131,6 +137,7 @@ __all__ = [
     "reconcile_calls",
     "reindex_org_content_for_defaults",
     "refresh_chat_search_acl",
+    "refresh_project_search_acl",
     "reindex_tag_doc",
     "reindex_tag_urns",
     "respond_to_chat_message",

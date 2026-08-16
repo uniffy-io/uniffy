@@ -39,7 +39,13 @@ from uniffy.core.converters.common_proto import (
     subject_type_from_proto,
 )
 from uniffy.core.converters.proto import timestamp_to_datetime
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.errors import (
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    RateLimitExceededError,
+    ValidationError,
+)
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -62,7 +68,7 @@ def _parse_uuid(value: str, field: str) -> UUID:
     try:
         return UUID(value)
     except ValueError as exc:
-        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}") from exc
 
 
 def _resolve_content_type(proto_type) -> ContentType:
@@ -93,6 +99,10 @@ def _map_domain_error(exc: Exception) -> ConnectError:
         return ConnectError(Code.NOT_FOUND, str(exc))
     if isinstance(exc, ValidationError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
+    if isinstance(exc, ConflictError):
+        return ConnectError(Code.ABORTED, str(exc))
+    if isinstance(exc, RateLimitExceededError):
+        return ConnectError(Code.RESOURCE_EXHAUSTED, str(exc))
     logger.exception("Unhandled error in MembersService handler")
     return ConnectError(Code.INTERNAL, "Internal server error")
 

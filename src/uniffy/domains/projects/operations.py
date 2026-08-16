@@ -23,7 +23,12 @@ from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import (
     ContentMembersOperations,
     register_attachment_cascade_loader,
+    register_child_acl_refresh_hook,
     register_content_loader,
+)
+from uniffy.core.content.reference_state import (
+    model_reference_state_loader,
+    register_reference_state_loader,
 )
 from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.converters.common_proto import content_type_to_proto
@@ -68,6 +73,10 @@ from uniffy.domains.projects.recurrence import (
     compute_next_occurrence,
     parse_recurrence_config,
     serialize_recurrence_config,
+)
+from uniffy.domains.projects.search_acl import (
+    enqueue_project_search_acl_refresh,
+    record_project_search_acl_refresh,
 )
 from uniffy.domains.projects.statuses import (
     TaskStatusSemantics,
@@ -739,7 +748,7 @@ class TaskOperations(BaseContentOperations[Task]):
             title=self._get_search_title(model),
             entity_type=self.content_type.value,
             url_path=self._get_url_path(model),
-            owner_id=model.owner_id,
+            owner_id=project.owner_id,
             access_mode=effective_mode.value,
             baseline_role=(effective_baseline.value if effective_baseline is not None else None),
             keywords=self._build_search_keywords(model),
@@ -2174,6 +2183,8 @@ async def _load_task(
 
 register_content_loader(ContentType.PROJECT, _load_project)
 register_content_loader(ContentType.TASK, _load_task)
+register_reference_state_loader(ContentType.PROJECT, model_reference_state_loader(Project))
+register_reference_state_loader(ContentType.TASK, model_reference_state_loader(Task))
 
 
 async def _project_attachment_cascade(
@@ -2198,3 +2209,8 @@ async def _project_attachment_cascade(
 
 
 register_attachment_cascade_loader(ContentType.PROJECT, _project_attachment_cascade)
+register_child_acl_refresh_hook(
+    ContentType.PROJECT,
+    record_project_search_acl_refresh,
+    enqueue_project_search_acl_refresh,
+)

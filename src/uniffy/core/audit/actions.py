@@ -76,6 +76,10 @@ class Action:
     PERMISSIONS_ACCESS_MODE_CHANGED = "permissions.access_mode_changed"
     PERMISSIONS_BASELINE_ROLE_CHANGED = "permissions.baseline_role_changed"
     PERMISSIONS_OWNERSHIP_TRANSFERRED = "permissions.ownership_transferred"
+    PERMISSIONS_ACCESS_REQUESTED = "permissions.access_requested"
+    PERMISSIONS_ACCESS_REQUEST_APPROVED = "permissions.access_request_approved"
+    PERMISSIONS_ACCESS_REQUEST_DENIED = "permissions.access_request_denied"
+    PERMISSIONS_ACCESS_REQUEST_CANCELED = "permissions.access_request_canceled"
 
     # Groups
     GROUP_CREATED = "group.created"

@@ -135,6 +135,8 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
     NotificationType.CHAT_CHANNEL_INVITE: {"in_app": True, "browser": False, "email": False},
     NotificationType.CHAT_CHANNEL_REMOVED: {"in_app": True, "browser": False, "email": False},
     NotificationType.CHAT_THREAD_REPLY: {"in_app": True, "browser": False, "email": False},
+    NotificationType.ACCESS_REQUESTED: {"in_app": True, "browser": True, "email": True},
+    NotificationType.ACCESS_REQUEST_DENIED: {"in_app": True, "browser": True, "email": False},
     NotificationType.AGENTS_BUDGET_ALERT: {"in_app": True, "browser": True, "email": True},
     NotificationType.SUPPORT_SESSION_REQUESTED: {
         "in_app": True,

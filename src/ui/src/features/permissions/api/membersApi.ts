@@ -9,6 +9,12 @@ import {
   SetAccessModeRequestSchema,
   TransferOwnershipRequestSchema,
   ListMemberEventsRequestSchema,
+  RequestAccessRequestSchema,
+  GetMyAccessRequestStatusesRequestSchema,
+  GetAccessRequestRequestSchema,
+  ListAccessRequestsRequestSchema,
+  RespondToAccessRequestRequestSchema,
+  CancelAccessRequestRequestSchema,
 } from "@uniffy/proto/permissions/v1/permissions_pb";
 import type {
   ListMembersResponse,
@@ -18,6 +24,12 @@ import type {
   SetAccessModeResponse,
   TransferOwnershipResponse,
   ListMemberEventsResponse,
+  RequestAccessResponse,
+  GetMyAccessRequestStatusesResponse,
+  GetAccessRequestResponse,
+  ListAccessRequestsResponse,
+  RespondToAccessRequestResponse,
+  CancelAccessRequestResponse,
 } from "@uniffy/proto/permissions/v1/permissions_pb";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 
@@ -44,4 +56,22 @@ export const membersApi = {
   listMemberEvents: (
     req: MessageInitShape<typeof ListMemberEventsRequestSchema>,
   ): Promise<ListMemberEventsResponse> => client.listMemberEvents(req),
+  requestAccess: (
+    req: MessageInitShape<typeof RequestAccessRequestSchema>,
+  ): Promise<RequestAccessResponse> => client.requestAccess(req),
+  getMyAccessRequestStatuses: (
+    req: MessageInitShape<typeof GetMyAccessRequestStatusesRequestSchema>,
+  ): Promise<GetMyAccessRequestStatusesResponse> => client.getMyAccessRequestStatuses(req),
+  getAccessRequest: (
+    req: MessageInitShape<typeof GetAccessRequestRequestSchema>,
+  ): Promise<GetAccessRequestResponse> => client.getAccessRequest(req),
+  listAccessRequests: (
+    req: MessageInitShape<typeof ListAccessRequestsRequestSchema>,
+  ): Promise<ListAccessRequestsResponse> => client.listAccessRequests(req),
+  respondToAccessRequest: (
+    req: MessageInitShape<typeof RespondToAccessRequestRequestSchema>,
+  ): Promise<RespondToAccessRequestResponse> => client.respondToAccessRequest(req),
+  cancelAccessRequest: (
+    req: MessageInitShape<typeof CancelAccessRequestRequestSchema>,
+  ): Promise<CancelAccessRequestResponse> => client.cancelAccessRequest(req),
 };

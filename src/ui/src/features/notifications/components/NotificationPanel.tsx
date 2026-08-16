@@ -17,7 +17,7 @@ import type {
   NotificationFilterType,
 } from "@/features/notifications/store/notificationsSlice";
 import { useNavigate } from "react-router-dom";
-import { notificationTargetPath } from "@/features/notifications/utils/notificationTarget";
+import { useNotificationAction } from "@/features/notifications/hooks/useNotificationAction";
 
 interface TimeGroup {
   label: string;
@@ -273,20 +273,7 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
 
   const timeGroups = useMemo(() => groupByTime(filteredNotifications), [filteredNotifications]);
 
-  const handleNotificationClick = useCallback(
-    (notification: SerializedNotification) => {
-      if (!notification.isRead) {
-        markAsRead(notification.id);
-      }
-
-      const path = notificationTargetPath(notification);
-      if (path) {
-        navigate(path);
-        onClose();
-      }
-    },
-    [markAsRead, navigate, onClose],
-  );
+  const handleNotificationClick = useNotificationAction(onClose, markAsRead);
 
   const handleSearchChange = useCallback(
     (query: string) => {

@@ -110,6 +110,55 @@ class TestChatMessagePermissions:
         assert f' OR owner_id = "{caller}"' not in filter_expr
 
 
+class TestTaskSharingRefresh:
+    async def test_updates_existing_task_documents_without_creating_missing_rows(self) -> None:
+        client, index = _client_capturing_filter()
+        organization_id = generate_id()
+        project_id = generate_id()
+        owner_id = generate_id()
+        viewer_id = generate_id()
+        index.get_documents = AsyncMock(
+            side_effect=[
+                MagicMock(results=[{"id": "task-doc"}]),
+                MagicMock(results=[]),
+            ]
+        )
+        index.update_documents = AsyncMock(return_value=MagicMock(task_uid=42))
+        client._client.wait_for_task = AsyncMock(return_value=MagicMock(status="succeeded"))
+
+        updated = await client.update_task_sharing(
+            organization_id=organization_id,
+            project_id=project_id,
+            owner_id=owner_id,
+            access_mode="EXPLICIT_MEMBERS",
+            baseline_role=None,
+            shared_user_ids=[viewer_id],
+            shared_group_ids=[],
+            blocked_user_ids=[],
+            blocked_group_ids=[],
+        )
+
+        assert updated == 1
+        assert f'metadata.project_id = "{project_id}"' in index.get_documents.await_args_list[
+            0
+        ].kwargs["filter"]
+        index.update_documents.assert_awaited_once_with(
+            [
+                {
+                    "id": "task-doc",
+                    "owner_id": str(owner_id),
+                    "access_mode": "EXPLICIT_MEMBERS",
+                    "baseline_role": None,
+                    "shared_user_ids": [str(viewer_id)],
+                    "shared_group_ids": [],
+                    "blocked_user_ids": [],
+                    "blocked_group_ids": [],
+                }
+            ],
+            skip_creation=True,
+        )
+
+
 class TestUrnValidation:
     async def test_malformed_urn_never_reaches_the_filter(self) -> None:
         client, index = _client_capturing_filter()
@@ -135,3 +184,44 @@ class TestUrnValidation:
         emitted = index.get_documents.await_args.kwargs["filter"]
         assert payload not in emitted
         assert f'urn = "{good}"' in emitted
+
+
+class TestBatchLookupFailures:
+    async def test_raw_lookup_preserves_successful_chunks(self) -> None:
+        client, index = _client_capturing_filter()
+        urns = [f"urn:uniffy:content:NOTE:{generate_id()}" for _ in range(51)]
+        index.get_documents.side_effect = [
+            MagicMock(results=[{"urn": urns[0]}]),
+            RuntimeError("transport failed"),
+        ]
+
+        result = await client.get_documents_by_urns(urns, generate_id())
+
+        assert result.documents == {urns[0]: {"urn": urns[0]}}
+        assert result.failed_urns == frozenset({urns[50]})
+        assert result.complete is False
+
+    async def test_permission_lookup_marks_only_failed_chunk(self, monkeypatch) -> None:
+        client, index = _client_capturing_filter()
+        monkeypatch.setattr(queries, "get_meilisearch_client", lambda: client)
+        organization_id = generate_id()
+        urns = [f"urn:uniffy:content:NOTE:{generate_id()}" for _ in range(51)]
+        visible = {
+            "urn": urns[0],
+            "organization_id": str(organization_id),
+            "owner_id": str(generate_id()),
+        }
+        index.get_documents.side_effect = [
+            MagicMock(results=[visible]),
+            RuntimeError("transport failed"),
+        ]
+
+        result = await queries.get_permission_filtered_documents_by_urns(
+            urns,
+            organization_id,
+            generate_id(),
+            [],
+        )
+
+        assert set(result.documents) == {urns[0]}
+        assert result.failed_urns == frozenset({urns[50]})

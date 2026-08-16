@@ -106,6 +106,22 @@ async def test_events_without_content_are_left_alone() -> None:
     assert out == [KEPT, DROPPED]
 
 
+async def test_access_request_denial_metadata_does_not_trigger_source_filter() -> None:
+    event = _event(
+        notification_type=NotificationType.ACCESS_REQUEST_DENIED,
+        source_urn=None,
+        target_user_ids=[KEPT],
+        metadata={
+            "request_id": str(generate_id()),
+            "requested_urn": f"urn:uniffy:content:NOTE:{NOTE_ID}",
+        },
+    )
+
+    out = await task._resolve_recipients(MagicMock(), event)
+
+    assert out == [KEPT]
+
+
 async def test_an_undecidable_content_type_is_left_alone() -> None:
     """Chat channels carry their own access model; dropping those
     notifications would be a functional regression, so the filter abstains

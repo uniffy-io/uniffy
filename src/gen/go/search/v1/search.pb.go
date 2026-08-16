@@ -109,6 +109,61 @@ func (SearchResultType) EnumDescriptor() ([]byte, []int) {
 	return file_search_v1_search_proto_rawDescGZIP(), []int{0}
 }
 
+type UrnAvailability int32
+
+const (
+	UrnAvailability_URN_AVAILABILITY_UNSPECIFIED UrnAvailability = 0
+	UrnAvailability_URN_AVAILABILITY_AVAILABLE   UrnAvailability = 1
+	UrnAvailability_URN_AVAILABILITY_RESTRICTED  UrnAvailability = 2
+	UrnAvailability_URN_AVAILABILITY_DELETED     UrnAvailability = 3
+	UrnAvailability_URN_AVAILABILITY_UNAVAILABLE UrnAvailability = 4
+)
+
+// Enum value maps for UrnAvailability.
+var (
+	UrnAvailability_name = map[int32]string{
+		0: "URN_AVAILABILITY_UNSPECIFIED",
+		1: "URN_AVAILABILITY_AVAILABLE",
+		2: "URN_AVAILABILITY_RESTRICTED",
+		3: "URN_AVAILABILITY_DELETED",
+		4: "URN_AVAILABILITY_UNAVAILABLE",
+	}
+	UrnAvailability_value = map[string]int32{
+		"URN_AVAILABILITY_UNSPECIFIED": 0,
+		"URN_AVAILABILITY_AVAILABLE":   1,
+		"URN_AVAILABILITY_RESTRICTED":  2,
+		"URN_AVAILABILITY_DELETED":     3,
+		"URN_AVAILABILITY_UNAVAILABLE": 4,
+	}
+)
+
+func (x UrnAvailability) Enum() *UrnAvailability {
+	p := new(UrnAvailability)
+	*p = x
+	return p
+}
+
+func (x UrnAvailability) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (UrnAvailability) Descriptor() protoreflect.EnumDescriptor {
+	return file_search_v1_search_proto_enumTypes[1].Descriptor()
+}
+
+func (UrnAvailability) Type() protoreflect.EnumType {
+	return &file_search_v1_search_proto_enumTypes[1]
+}
+
+func (x UrnAvailability) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use UrnAvailability.Descriptor instead.
+func (UrnAvailability) EnumDescriptor() ([]byte, []int) {
+	return file_search_v1_search_proto_rawDescGZIP(), []int{1}
+}
+
 type SearchRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -702,14 +757,15 @@ type UrnMetadata struct {
 	// Shared
 	AssigneeIds []string `protobuf:"bytes,46,rep,name=assignee_ids,json=assigneeIds,proto3" json:"assignee_ids,omitempty"` // user IDs for avatar rendering
 	ContentTags []string `protobuf:"bytes,47,rep,name=content_tags,json=contentTags,proto3" json:"content_tags,omitempty"` // content tags
-	// Tombstone marker for mentions whose target was deleted or is no
-	// longer accessible. Empty/"OK" for live URNs, "DELETED" for missing
-	// ones. ResolveUrns synthesizes this when the search index does not
-	// contain the requested URN, so the frontend can render a tombstone
-	// chip instead of a generic fallback.
-	UrnStatus     string `protobuf:"bytes,48,opt,name=urn_status,json=urnStatus,proto3" json:"urn_status,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Deprecated compatibility projection. "DELETED" is emitted only when
+	// availability is URN_AVAILABILITY_DELETED.
+	UrnStatus string `protobuf:"bytes,48,opt,name=urn_status,json=urnStatus,proto3" json:"urn_status,omitempty"`
+	// Authorization-safe state of the referenced resource. Restricted results
+	// contain no title, description, URL, metadata, or owner information.
+	Availability     UrnAvailability `protobuf:"varint,50,opt,name=availability,proto3,enum=search.v1.UrnAvailability" json:"availability,omitempty"`
+	CanRequestAccess bool            `protobuf:"varint,51,opt,name=can_request_access,json=canRequestAccess,proto3" json:"can_request_access,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *UrnMetadata) Reset() {
@@ -1043,6 +1099,20 @@ func (x *UrnMetadata) GetUrnStatus() string {
 	return ""
 }
 
+func (x *UrnMetadata) GetAvailability() UrnAvailability {
+	if x != nil {
+		return x.Availability
+	}
+	return UrnAvailability_URN_AVAILABILITY_UNSPECIFIED
+}
+
+func (x *UrnMetadata) GetCanRequestAccess() bool {
+	if x != nil {
+		return x.CanRequestAccess
+	}
+	return false
+}
+
 var File_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_search_v1_search_proto_rawDesc = "" +
@@ -1102,7 +1172,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\bresolved\x18\x01 \x03(\v2,.search.v1.ResolveUrnsResponse.ResolvedEntryR\bresolved\x1aS\n" +
 	"\rResolvedEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"\xf1\f\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"\xdf\r\n" +
 	"\vUrnMetadata\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12/\n" +
@@ -1152,7 +1222,9 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\fassignee_ids\x18. \x03(\tR\vassigneeIds\x12!\n" +
 	"\fcontent_tags\x18/ \x03(\tR\vcontentTags\x12\x1d\n" +
 	"\n" +
-	"urn_status\x180 \x01(\tR\turnStatus\x1a;\n" +
+	"urn_status\x180 \x01(\tR\turnStatus\x12>\n" +
+	"\favailability\x182 \x01(\x0e2\x1a.search.v1.UrnAvailabilityR\favailability\x12,\n" +
+	"\x12can_request_access\x183 \x01(\bR\x10canRequestAccess\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x8e\x04\n" +
@@ -1173,7 +1245,13 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x16SEARCH_RESULT_TYPE_TAG\x10\f\x12\x1d\n" +
 	"\x19SEARCH_RESULT_TYPE_FOLDER\x10\r\x12#\n" +
 	"\x1fSEARCH_RESULT_TYPE_AGENT_FOLDER\x10\x0e\x12\x1b\n" +
-	"\x17SEARCH_RESULT_TYPE_TEAM\x10\x0f2\xf6\x01\n" +
+	"\x17SEARCH_RESULT_TYPE_TEAM\x10\x0f*\xb4\x01\n" +
+	"\x0fUrnAvailability\x12 \n" +
+	"\x1cURN_AVAILABILITY_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aURN_AVAILABILITY_AVAILABLE\x10\x01\x12\x1f\n" +
+	"\x1bURN_AVAILABILITY_RESTRICTED\x10\x02\x12\x1c\n" +
+	"\x18URN_AVAILABILITY_DELETED\x10\x03\x12 \n" +
+	"\x1cURN_AVAILABILITY_UNAVAILABLE\x10\x042\xf6\x01\n" +
 	"\rSearchService\x12?\n" +
 	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00\x12T\n" +
 	"\rGetReferences\x12\x1f.search.v1.GetReferencesRequest\x1a .search.v1.GetReferencesResponse\"\x00\x12N\n" +
@@ -1191,47 +1269,49 @@ func file_search_v1_search_proto_rawDescGZIP() []byte {
 	return file_search_v1_search_proto_rawDescData
 }
 
-var file_search_v1_search_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_search_v1_search_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_search_v1_search_proto_goTypes = []any{
 	(SearchResultType)(0),         // 0: search.v1.SearchResultType
-	(*SearchRequest)(nil),         // 1: search.v1.SearchRequest
-	(*SearchResponse)(nil),        // 2: search.v1.SearchResponse
-	(*SearchResultItem)(nil),      // 3: search.v1.SearchResultItem
-	(*GetReferencesRequest)(nil),  // 4: search.v1.GetReferencesRequest
-	(*GetReferencesResponse)(nil), // 5: search.v1.GetReferencesResponse
-	(*ResolveUrnsRequest)(nil),    // 6: search.v1.ResolveUrnsRequest
-	(*ResolveUrnsResponse)(nil),   // 7: search.v1.ResolveUrnsResponse
-	(*UrnMetadata)(nil),           // 8: search.v1.UrnMetadata
-	nil,                           // 9: search.v1.SearchRequest.MetadataFiltersEntry
-	nil,                           // 10: search.v1.SearchResultItem.MetadataEntry
-	nil,                           // 11: search.v1.ResolveUrnsResponse.ResolvedEntry
-	nil,                           // 12: search.v1.UrnMetadata.MetadataEntry
+	(UrnAvailability)(0),          // 1: search.v1.UrnAvailability
+	(*SearchRequest)(nil),         // 2: search.v1.SearchRequest
+	(*SearchResponse)(nil),        // 3: search.v1.SearchResponse
+	(*SearchResultItem)(nil),      // 4: search.v1.SearchResultItem
+	(*GetReferencesRequest)(nil),  // 5: search.v1.GetReferencesRequest
+	(*GetReferencesResponse)(nil), // 6: search.v1.GetReferencesResponse
+	(*ResolveUrnsRequest)(nil),    // 7: search.v1.ResolveUrnsRequest
+	(*ResolveUrnsResponse)(nil),   // 8: search.v1.ResolveUrnsResponse
+	(*UrnMetadata)(nil),           // 9: search.v1.UrnMetadata
+	nil,                           // 10: search.v1.SearchRequest.MetadataFiltersEntry
+	nil,                           // 11: search.v1.SearchResultItem.MetadataEntry
+	nil,                           // 12: search.v1.ResolveUrnsResponse.ResolvedEntry
+	nil,                           // 13: search.v1.UrnMetadata.MetadataEntry
 }
 var file_search_v1_search_proto_depIdxs = []int32{
 	0,  // 0: search.v1.SearchRequest.type_filters:type_name -> search.v1.SearchResultType
-	9,  // 1: search.v1.SearchRequest.metadata_filters:type_name -> search.v1.SearchRequest.MetadataFiltersEntry
+	10, // 1: search.v1.SearchRequest.metadata_filters:type_name -> search.v1.SearchRequest.MetadataFiltersEntry
 	0,  // 2: search.v1.SearchRequest.type_priority:type_name -> search.v1.SearchResultType
-	3,  // 3: search.v1.SearchResponse.items:type_name -> search.v1.SearchResultItem
+	4,  // 3: search.v1.SearchResponse.items:type_name -> search.v1.SearchResultItem
 	0,  // 4: search.v1.SearchResultItem.type:type_name -> search.v1.SearchResultType
-	10, // 5: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
+	11, // 5: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
 	0,  // 6: search.v1.GetReferencesRequest.type_filters:type_name -> search.v1.SearchResultType
-	3,  // 7: search.v1.GetReferencesResponse.items:type_name -> search.v1.SearchResultItem
-	11, // 8: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
+	4,  // 7: search.v1.GetReferencesResponse.items:type_name -> search.v1.SearchResultItem
+	12, // 8: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
 	0,  // 9: search.v1.UrnMetadata.type:type_name -> search.v1.SearchResultType
-	12, // 10: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
-	8,  // 11: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
-	1,  // 12: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
-	4,  // 13: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
-	6,  // 14: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
-	2,  // 15: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
-	5,  // 16: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
-	7,  // 17: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
-	15, // [15:18] is the sub-list for method output_type
-	12, // [12:15] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	13, // 10: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
+	1,  // 11: search.v1.UrnMetadata.availability:type_name -> search.v1.UrnAvailability
+	9,  // 12: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
+	2,  // 13: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
+	5,  // 14: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
+	7,  // 15: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
+	3,  // 16: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
+	6,  // 17: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
+	8,  // 18: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
+	16, // [16:19] is the sub-list for method output_type
+	13, // [13:16] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_search_v1_search_proto_init() }
@@ -1244,7 +1324,7 @@ func file_search_v1_search_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_search_v1_search_proto_rawDesc), len(file_search_v1_search_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,

@@ -13,6 +13,10 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import invalidate_visible_sets_for_org
+from uniffy.core.content.reference_state import (
+    model_reference_state_loader,
+    register_reference_state_loader,
+)
 from uniffy.core.content.references import CONTENT_URN_PREFIX
 from uniffy.core.errors import (
     ConflictError,
@@ -41,6 +45,11 @@ from uniffy.domains.tags.normalize import slugify_tag
 from uniffy.domains.tags.visibility import (
     build_assignment_visibility_predicate,
     build_tag_visibility_predicate,
+)
+
+register_reference_state_loader(
+    ContentType.TAG,
+    model_reference_state_loader(Tag, deleted_attribute=None),
 )
 
 LOGGER_COMPONENT = "tags.ops"

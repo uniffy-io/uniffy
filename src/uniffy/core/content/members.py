@@ -129,12 +129,31 @@ OwnershipTransferHook = Callable[
 
 _ownership_transfer_hooks: dict[ContentType, OwnershipTransferHook] = {}
 
+ChildAclRefreshRecorder = Callable[
+    [AsyncSession, UUID, UUID],
+    Awaitable[None],
+]
+ChildAclRefreshEnqueuer = Callable[[UUID], Awaitable[None]]
+
+_child_acl_refresh_hooks: dict[
+    ContentType,
+    tuple[ChildAclRefreshRecorder, ChildAclRefreshEnqueuer],
+] = {}
+
 
 def register_ownership_transfer_hook(
     content_type: ContentType,
     hook: OwnershipTransferHook,
 ) -> None:
     _ownership_transfer_hooks[content_type] = hook
+
+
+def register_child_acl_refresh_hook(
+    content_type: ContentType,
+    recorder: ChildAclRefreshRecorder,
+    enqueuer: ChildAclRefreshEnqueuer,
+) -> None:
+    _child_acl_refresh_hooks[content_type] = (recorder, enqueuer)
 
 
 def get_content_loader(content_type: ContentType) -> ContentLoader:
@@ -310,7 +329,9 @@ class ContentMembersOperations:
                     note=note,
                 )
 
+        await self._record_child_acl_refresh(organization_id, content_type, content_id)
         await self.session.commit()
+        await self._enqueue_child_acl_refresh(content_type, content_id)
         await self.session.refresh(member)
 
         await self._drop_perm_cache_for_member_change(
@@ -400,7 +421,9 @@ class ContentMembersOperations:
             note=note,
         )
 
+        await self._record_child_acl_refresh(organization_id, content_type, content_id)
         await self.session.commit()
+        await self._enqueue_child_acl_refresh(content_type, content_id)
         await self.session.refresh(existing)
 
         # Toggling in or out of BLOCKED requires dropping both the affected
@@ -484,7 +507,9 @@ class ContentMembersOperations:
             note=note,
         )
 
+        await self._record_child_acl_refresh(organization_id, content_type, content_id)
         await self.session.commit()
+        await self._enqueue_child_acl_refresh(content_type, content_id)
 
         await self._drop_perm_cache_for_member_change(
             organization_id=organization_id,
@@ -627,7 +652,9 @@ class ContentMembersOperations:
                 note=note,
             )
 
+        await self._record_child_acl_refresh(organization_id, content_type, content_id)
         await self.session.commit()
+        await self._enqueue_child_acl_refresh(content_type, content_id)
 
         # Access-mode or baseline-role flip changes the answer for an unbounded
         # user set; wipe by content tag.
@@ -836,7 +863,9 @@ class ContentMembersOperations:
         if transfer_hook is not None:
             await transfer_hook(self.session, organization_id, content_id, new_owner_user_id)
 
+        await self._record_child_acl_refresh(organization_id, content_type, content_id)
         await self.session.commit()
+        await self._enqueue_child_acl_refresh(content_type, content_id)
         await self.session.refresh(content)
 
         await invalidate_perm_role(organization_id, previous_owner_id, content_type, content_id)
@@ -928,6 +957,25 @@ class ContentMembersOperations:
         if content is None:
             raise NotFoundError(content_type.value, content_id)
         return content
+
+    async def _record_child_acl_refresh(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> None:
+        hook = _child_acl_refresh_hooks.get(content_type)
+        if hook is not None:
+            await hook[0](self.session, organization_id, content_id)
+
+    async def _enqueue_child_acl_refresh(
+        self,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> None:
+        hook = _child_acl_refresh_hooks.get(content_type)
+        if hook is not None:
+            await hook[1](content_id)
 
     async def _require_manage(
         self,

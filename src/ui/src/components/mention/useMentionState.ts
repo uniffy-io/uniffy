@@ -50,8 +50,16 @@ export function useMentionState(urn: string): MentionLiveState | null {
     // eslint-disable-next-line react/react-compiler -- one-shot resync to close the initializer-vs-subscribe race
     if (current) setFallbackState(current);
 
-    return onMentionStateChange((changedUrn, changes) => {
+    return onMentionStateChange((changedUrn, changes, operation) => {
       if (changedUrn !== urn) return;
+      if (operation === "invalidate") {
+        setFallbackState(null);
+        return;
+      }
+      if (operation === "replace") {
+        setFallbackState(changes as MentionLiveState);
+        return;
+      }
       setFallbackState((prev) => {
         const patch = streamChangesToLiveState(changes as Record<string, string>);
         if (!prev) {

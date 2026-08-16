@@ -10,12 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.cache import invalidate_user as invalidate_perm_user
+from uniffy.core.content.reference_state import (
+    model_reference_state_loader,
+    register_reference_state_loader,
+)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
+from uniffy.core.types import ContentType
 from uniffy.domains.groups.naming import ensure_name_available, resolve_slug
 from uniffy.domains.groups.search import TeamSearchIndexer
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -25,6 +30,15 @@ from uniffy.domains.people.cache import (
     invalidate_person,
 )
 from uniffy.domains.people.search_sync import sync_people_search
+
+register_reference_state_loader(
+    ContentType.TEAM,
+    model_reference_state_loader(
+        Group,
+        deleted_attribute=None,
+        extra_conditions=(Group.kind == GroupKind.TEAM,),
+    ),
+)
 
 _ADMIN_ROLES = (OrganizationRole.OWNER, OrganizationRole.ADMIN)
 

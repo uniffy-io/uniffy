@@ -39,6 +39,24 @@ class MembersService(Protocol):
     async def list_member_events(self, request: permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def request_access(self, request: permissions_dot_v1_dot_permissions__pb2.RequestAccessRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RequestAccessResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_my_access_request_statuses(self, request: permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_access_request(self, request: permissions_dot_v1_dot_permissions__pb2.GetAccessRequestRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.GetAccessRequestResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_access_requests(self, request: permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def respond_to_access_request(self, request: permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def cancel_access_request(self, request: permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class MembersServiceASGIApplication(ConnectASGIApplication[MembersService]):
     def __init__(self, service: MembersService | AsyncGenerator[MembersService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -114,6 +132,66 @@ class MembersServiceASGIApplication(ConnectASGIApplication[MembersService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_member_events,
+                ),
+                "/permissions.v1.MembersService/RequestAccess": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RequestAccess",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.RequestAccessRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.RequestAccessResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.request_access,
+                ),
+                "/permissions.v1.MembersService/GetMyAccessRequestStatuses": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetMyAccessRequestStatuses",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_my_access_request_statuses,
+                ),
+                "/permissions.v1.MembersService/GetAccessRequest": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetAccessRequest",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.GetAccessRequestRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.GetAccessRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_access_request,
+                ),
+                "/permissions.v1.MembersService/ListAccessRequests": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListAccessRequests",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_access_requests,
+                ),
+                "/permissions.v1.MembersService/RespondToAccessRequest": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RespondToAccessRequest",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.respond_to_access_request,
+                ),
+                "/permissions.v1.MembersService/CancelAccessRequest": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CancelAccessRequest",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.cancel_access_request,
                 ),
             },
             interceptors=interceptors,
@@ -269,6 +347,126 @@ class MembersServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def request_access(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.RequestAccessRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.RequestAccessResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RequestAccess",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.RequestAccessRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.RequestAccessResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_my_access_request_statuses(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetMyAccessRequestStatuses",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_access_request(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.GetAccessRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.GetAccessRequestResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetAccessRequest",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.GetAccessRequestRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.GetAccessRequestResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_access_requests(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAccessRequests",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def respond_to_access_request(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RespondToAccessRequest",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def cancel_access_request(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CancelAccessRequest",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -287,6 +485,18 @@ class MembersServiceSync(Protocol):
     def transfer_ownership(self, request: permissions_dot_v1_dot_permissions__pb2.TransferOwnershipRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.TransferOwnershipResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_member_events(self, request: permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def request_access(self, request: permissions_dot_v1_dot_permissions__pb2.RequestAccessRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RequestAccessResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_my_access_request_statuses(self, request: permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_access_request(self, request: permissions_dot_v1_dot_permissions__pb2.GetAccessRequestRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.GetAccessRequestResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_access_requests(self, request: permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def respond_to_access_request(self, request: permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def cancel_access_request(self, request: permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestRequest, ctx: RequestContext) -> permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -363,6 +573,66 @@ class MembersServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_member_events,
+                ),
+                "/permissions.v1.MembersService/RequestAccess": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RequestAccess",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.RequestAccessRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.RequestAccessResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.request_access,
+                ),
+                "/permissions.v1.MembersService/GetMyAccessRequestStatuses": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetMyAccessRequestStatuses",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_my_access_request_statuses,
+                ),
+                "/permissions.v1.MembersService/GetAccessRequest": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetAccessRequest",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.GetAccessRequestRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.GetAccessRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_access_request,
+                ),
+                "/permissions.v1.MembersService/ListAccessRequests": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListAccessRequests",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_access_requests,
+                ),
+                "/permissions.v1.MembersService/RespondToAccessRequest": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RespondToAccessRequest",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.respond_to_access_request,
+                ),
+                "/permissions.v1.MembersService/CancelAccessRequest": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CancelAccessRequest",
+                        service_name="permissions.v1.MembersService",
+                        input=permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestRequest,
+                        output=permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.cancel_access_request,
                 ),
             },
             interceptors=interceptors,
@@ -512,6 +782,126 @@ class MembersServiceClientSync(ConnectClientSync):
                 service_name="permissions.v1.MembersService",
                 input=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsRequest,
                 output=permissions_dot_v1_dot_permissions__pb2.ListMemberEventsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def request_access(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.RequestAccessRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.RequestAccessResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RequestAccess",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.RequestAccessRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.RequestAccessResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_my_access_request_statuses(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetMyAccessRequestStatuses",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.GetMyAccessRequestStatusesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_access_request(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.GetAccessRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.GetAccessRequestResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetAccessRequest",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.GetAccessRequestRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.GetAccessRequestResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_access_requests(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAccessRequests",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.ListAccessRequestsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def respond_to_access_request(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RespondToAccessRequest",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.RespondToAccessRequestResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def cancel_access_request(
+        self,
+        request: permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CancelAccessRequest",
+                service_name="permissions.v1.MembersService",
+                input=permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestRequest,
+                output=permissions_dot_v1_dot_permissions__pb2.CancelAccessRequestResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

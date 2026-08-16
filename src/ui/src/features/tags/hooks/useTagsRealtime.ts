@@ -1,9 +1,3 @@
-/**
- * Projects `MENTION_STATE_CHANGED` events into the tags slice:
- *  - tag URN, `status === 'deleted'` -> `removeTagLocal`; otherwise `bulkUpsertTags` / `patchTag`.
- *  - content URN with `tagAssignmentsAdded/Removed` -> `applyAssignmentChange`.
- */
-
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { onMentionStateChange } from "@/components/mention/mentionStateEmitter";
@@ -15,7 +9,7 @@ import {
   removeTagLocal,
 } from "@/features/tags/store/tagsSlice";
 import type { SerializedTag } from "@/features/tags/store/tagsThunks";
-import type { MentionLiveState } from "@/components/mention/types";
+import { MentionAvailability, type MentionLiveState } from "@/components/mention/types";
 
 function buildTagFromState(
   urn: string,
@@ -58,7 +52,7 @@ export function useTagsRealtime(): void {
       if (!parsed.isValid) return;
 
       if (parsed.type === UrnType.TAG) {
-        if (changes.status === "deleted") {
+        if (changes.availability === MentionAvailability.Deleted) {
           dispatch(removeTagLocal(parsed.id));
           return;
         }

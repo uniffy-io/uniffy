@@ -23,6 +23,165 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type AccessRequestState int32
+
+const (
+	AccessRequestState_ACCESS_REQUEST_STATE_UNSPECIFIED AccessRequestState = 0
+	AccessRequestState_ACCESS_REQUEST_STATE_PENDING     AccessRequestState = 1
+	AccessRequestState_ACCESS_REQUEST_STATE_APPROVED    AccessRequestState = 2
+	AccessRequestState_ACCESS_REQUEST_STATE_DENIED      AccessRequestState = 3
+	AccessRequestState_ACCESS_REQUEST_STATE_CANCELED    AccessRequestState = 4
+)
+
+// Enum value maps for AccessRequestState.
+var (
+	AccessRequestState_name = map[int32]string{
+		0: "ACCESS_REQUEST_STATE_UNSPECIFIED",
+		1: "ACCESS_REQUEST_STATE_PENDING",
+		2: "ACCESS_REQUEST_STATE_APPROVED",
+		3: "ACCESS_REQUEST_STATE_DENIED",
+		4: "ACCESS_REQUEST_STATE_CANCELED",
+	}
+	AccessRequestState_value = map[string]int32{
+		"ACCESS_REQUEST_STATE_UNSPECIFIED": 0,
+		"ACCESS_REQUEST_STATE_PENDING":     1,
+		"ACCESS_REQUEST_STATE_APPROVED":    2,
+		"ACCESS_REQUEST_STATE_DENIED":      3,
+		"ACCESS_REQUEST_STATE_CANCELED":    4,
+	}
+)
+
+func (x AccessRequestState) Enum() *AccessRequestState {
+	p := new(AccessRequestState)
+	*p = x
+	return p
+}
+
+func (x AccessRequestState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AccessRequestState) Descriptor() protoreflect.EnumDescriptor {
+	return file_permissions_v1_permissions_proto_enumTypes[0].Descriptor()
+}
+
+func (AccessRequestState) Type() protoreflect.EnumType {
+	return &file_permissions_v1_permissions_proto_enumTypes[0]
+}
+
+func (x AccessRequestState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AccessRequestState.Descriptor instead.
+func (AccessRequestState) EnumDescriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{0}
+}
+
+type AccessRequestDecision int32
+
+const (
+	AccessRequestDecision_ACCESS_REQUEST_DECISION_UNSPECIFIED AccessRequestDecision = 0
+	AccessRequestDecision_ACCESS_REQUEST_DECISION_APPROVE     AccessRequestDecision = 1
+	AccessRequestDecision_ACCESS_REQUEST_DECISION_DENY        AccessRequestDecision = 2
+)
+
+// Enum value maps for AccessRequestDecision.
+var (
+	AccessRequestDecision_name = map[int32]string{
+		0: "ACCESS_REQUEST_DECISION_UNSPECIFIED",
+		1: "ACCESS_REQUEST_DECISION_APPROVE",
+		2: "ACCESS_REQUEST_DECISION_DENY",
+	}
+	AccessRequestDecision_value = map[string]int32{
+		"ACCESS_REQUEST_DECISION_UNSPECIFIED": 0,
+		"ACCESS_REQUEST_DECISION_APPROVE":     1,
+		"ACCESS_REQUEST_DECISION_DENY":        2,
+	}
+)
+
+func (x AccessRequestDecision) Enum() *AccessRequestDecision {
+	p := new(AccessRequestDecision)
+	*p = x
+	return p
+}
+
+func (x AccessRequestDecision) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AccessRequestDecision) Descriptor() protoreflect.EnumDescriptor {
+	return file_permissions_v1_permissions_proto_enumTypes[1].Descriptor()
+}
+
+func (AccessRequestDecision) Type() protoreflect.EnumType {
+	return &file_permissions_v1_permissions_proto_enumTypes[1]
+}
+
+func (x AccessRequestDecision) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AccessRequestDecision.Descriptor instead.
+func (AccessRequestDecision) EnumDescriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{1}
+}
+
+type RequestAccessOutcome int32
+
+const (
+	RequestAccessOutcome_REQUEST_ACCESS_OUTCOME_UNSPECIFIED        RequestAccessOutcome = 0
+	RequestAccessOutcome_REQUEST_ACCESS_OUTCOME_CREATED            RequestAccessOutcome = 1
+	RequestAccessOutcome_REQUEST_ACCESS_OUTCOME_ALREADY_PENDING    RequestAccessOutcome = 2
+	RequestAccessOutcome_REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE RequestAccessOutcome = 3
+	RequestAccessOutcome_REQUEST_ACCESS_OUTCOME_COOLDOWN           RequestAccessOutcome = 4
+)
+
+// Enum value maps for RequestAccessOutcome.
+var (
+	RequestAccessOutcome_name = map[int32]string{
+		0: "REQUEST_ACCESS_OUTCOME_UNSPECIFIED",
+		1: "REQUEST_ACCESS_OUTCOME_CREATED",
+		2: "REQUEST_ACCESS_OUTCOME_ALREADY_PENDING",
+		3: "REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE",
+		4: "REQUEST_ACCESS_OUTCOME_COOLDOWN",
+	}
+	RequestAccessOutcome_value = map[string]int32{
+		"REQUEST_ACCESS_OUTCOME_UNSPECIFIED":        0,
+		"REQUEST_ACCESS_OUTCOME_CREATED":            1,
+		"REQUEST_ACCESS_OUTCOME_ALREADY_PENDING":    2,
+		"REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE": 3,
+		"REQUEST_ACCESS_OUTCOME_COOLDOWN":           4,
+	}
+)
+
+func (x RequestAccessOutcome) Enum() *RequestAccessOutcome {
+	p := new(RequestAccessOutcome)
+	*p = x
+	return p
+}
+
+func (x RequestAccessOutcome) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RequestAccessOutcome) Descriptor() protoreflect.EnumDescriptor {
+	return file_permissions_v1_permissions_proto_enumTypes[2].Descriptor()
+}
+
+func (RequestAccessOutcome) Type() protoreflect.EnumType {
+	return &file_permissions_v1_permissions_proto_enumTypes[2]
+}
+
+func (x RequestAccessOutcome) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RequestAccessOutcome.Descriptor instead.
+func (RequestAccessOutcome) EnumDescriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{2}
+}
+
 // A single member row on a piece of content.
 type ContentMember struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -380,6 +539,270 @@ func (x *ContentMemberEvent) GetOccurredAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type ContentAccessRequest struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrganizationId       string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	RequestedUrn         string                 `protobuf:"bytes,3,opt,name=requested_urn,json=requestedUrn,proto3" json:"requested_urn,omitempty"`
+	OriginalContentType  v1.ContentType         `protobuf:"varint,4,opt,name=original_content_type,json=originalContentType,proto3,enum=common.v1.ContentType" json:"original_content_type,omitempty"`
+	OriginalContentId    string                 `protobuf:"bytes,5,opt,name=original_content_id,json=originalContentId,proto3" json:"original_content_id,omitempty"`
+	CanonicalContentType v1.ContentType         `protobuf:"varint,6,opt,name=canonical_content_type,json=canonicalContentType,proto3,enum=common.v1.ContentType" json:"canonical_content_type,omitempty"`
+	CanonicalContentId   string                 `protobuf:"bytes,7,opt,name=canonical_content_id,json=canonicalContentId,proto3" json:"canonical_content_id,omitempty"`
+	RequesterId          string                 `protobuf:"bytes,8,opt,name=requester_id,json=requesterId,proto3" json:"requester_id,omitempty"`
+	RequesterDisplayName string                 `protobuf:"bytes,9,opt,name=requester_display_name,json=requesterDisplayName,proto3" json:"requester_display_name,omitempty"`
+	State                AccessRequestState     `protobuf:"varint,10,opt,name=state,proto3,enum=permissions.v1.AccessRequestState" json:"state,omitempty"`
+	Message              string                 `protobuf:"bytes,11,opt,name=message,proto3" json:"message,omitempty"`
+	DecisionNote         string                 `protobuf:"bytes,12,opt,name=decision_note,json=decisionNote,proto3" json:"decision_note,omitempty"`
+	ApprovedRole         *v1.ContentRole        `protobuf:"varint,13,opt,name=approved_role,json=approvedRole,proto3,enum=common.v1.ContentRole,oneof" json:"approved_role,omitempty"`
+	RespondedByUserId    *string                `protobuf:"bytes,14,opt,name=responded_by_user_id,json=respondedByUserId,proto3,oneof" json:"responded_by_user_id,omitempty"`
+	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	RespondedAt          *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=responded_at,json=respondedAt,proto3,oneof" json:"responded_at,omitempty"`
+	CanRequestAgainAt    *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=can_request_again_at,json=canRequestAgainAt,proto3,oneof" json:"can_request_again_at,omitempty"`
+	RequesterHasAccess   bool                   `protobuf:"varint,19,opt,name=requester_has_access,json=requesterHasAccess,proto3" json:"requester_has_access,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ContentAccessRequest) Reset() {
+	*x = ContentAccessRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContentAccessRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContentAccessRequest) ProtoMessage() {}
+
+func (x *ContentAccessRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContentAccessRequest.ProtoReflect.Descriptor instead.
+func (*ContentAccessRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ContentAccessRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetRequestedUrn() string {
+	if x != nil {
+		return x.RequestedUrn
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetOriginalContentType() v1.ContentType {
+	if x != nil {
+		return x.OriginalContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *ContentAccessRequest) GetOriginalContentId() string {
+	if x != nil {
+		return x.OriginalContentId
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetCanonicalContentType() v1.ContentType {
+	if x != nil {
+		return x.CanonicalContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *ContentAccessRequest) GetCanonicalContentId() string {
+	if x != nil {
+		return x.CanonicalContentId
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetRequesterId() string {
+	if x != nil {
+		return x.RequesterId
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetRequesterDisplayName() string {
+	if x != nil {
+		return x.RequesterDisplayName
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetState() AccessRequestState {
+	if x != nil {
+		return x.State
+	}
+	return AccessRequestState_ACCESS_REQUEST_STATE_UNSPECIFIED
+}
+
+func (x *ContentAccessRequest) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetDecisionNote() string {
+	if x != nil {
+		return x.DecisionNote
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetApprovedRole() v1.ContentRole {
+	if x != nil && x.ApprovedRole != nil {
+		return *x.ApprovedRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *ContentAccessRequest) GetRespondedByUserId() string {
+	if x != nil && x.RespondedByUserId != nil {
+		return *x.RespondedByUserId
+	}
+	return ""
+}
+
+func (x *ContentAccessRequest) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *ContentAccessRequest) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *ContentAccessRequest) GetRespondedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RespondedAt
+	}
+	return nil
+}
+
+func (x *ContentAccessRequest) GetCanRequestAgainAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CanRequestAgainAt
+	}
+	return nil
+}
+
+func (x *ContentAccessRequest) GetRequesterHasAccess() bool {
+	if x != nil {
+		return x.RequesterHasAccess
+	}
+	return false
+}
+
+type AccessRequestStatus struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	RequestedUrn       string                 `protobuf:"bytes,1,opt,name=requested_urn,json=requestedUrn,proto3" json:"requested_urn,omitempty"`
+	State              AccessRequestState     `protobuf:"varint,2,opt,name=state,proto3,enum=permissions.v1.AccessRequestState" json:"state,omitempty"`
+	RequestId          *string                `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3,oneof" json:"request_id,omitempty"`
+	CanRequestAgainAt  *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=can_request_again_at,json=canRequestAgainAt,proto3,oneof" json:"can_request_again_at,omitempty"`
+	RequesterHasAccess bool                   `protobuf:"varint,5,opt,name=requester_has_access,json=requesterHasAccess,proto3" json:"requester_has_access,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *AccessRequestStatus) Reset() {
+	*x = AccessRequestStatus{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccessRequestStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccessRequestStatus) ProtoMessage() {}
+
+func (x *AccessRequestStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccessRequestStatus.ProtoReflect.Descriptor instead.
+func (*AccessRequestStatus) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AccessRequestStatus) GetRequestedUrn() string {
+	if x != nil {
+		return x.RequestedUrn
+	}
+	return ""
+}
+
+func (x *AccessRequestStatus) GetState() AccessRequestState {
+	if x != nil {
+		return x.State
+	}
+	return AccessRequestState_ACCESS_REQUEST_STATE_UNSPECIFIED
+}
+
+func (x *AccessRequestStatus) GetRequestId() string {
+	if x != nil && x.RequestId != nil {
+		return *x.RequestId
+	}
+	return ""
+}
+
+func (x *AccessRequestStatus) GetCanRequestAgainAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CanRequestAgainAt
+	}
+	return nil
+}
+
+func (x *AccessRequestStatus) GetRequesterHasAccess() bool {
+	if x != nil {
+		return x.RequesterHasAccess
+	}
+	return false
+}
+
 type ListMembersRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -391,7 +814,7 @@ type ListMembersRequest struct {
 
 func (x *ListMembersRequest) Reset() {
 	*x = ListMembersRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[3]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -403,7 +826,7 @@ func (x *ListMembersRequest) String() string {
 func (*ListMembersRequest) ProtoMessage() {}
 
 func (x *ListMembersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[3]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -416,7 +839,7 @@ func (x *ListMembersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMembersRequest.ProtoReflect.Descriptor instead.
 func (*ListMembersRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{3}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListMembersRequest) GetOrganizationId() string {
@@ -450,7 +873,7 @@ type ListMembersResponse struct {
 
 func (x *ListMembersResponse) Reset() {
 	*x = ListMembersResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[4]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -462,7 +885,7 @@ func (x *ListMembersResponse) String() string {
 func (*ListMembersResponse) ProtoMessage() {}
 
 func (x *ListMembersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[4]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -475,7 +898,7 @@ func (x *ListMembersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMembersResponse.ProtoReflect.Descriptor instead.
 func (*ListMembersResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{4}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListMembersResponse) GetPolicy() *ContentAccessPolicy {
@@ -508,7 +931,7 @@ type AddMemberRequest struct {
 
 func (x *AddMemberRequest) Reset() {
 	*x = AddMemberRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[5]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -520,7 +943,7 @@ func (x *AddMemberRequest) String() string {
 func (*AddMemberRequest) ProtoMessage() {}
 
 func (x *AddMemberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[5]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -533,7 +956,7 @@ func (x *AddMemberRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddMemberRequest.ProtoReflect.Descriptor instead.
 func (*AddMemberRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{5}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AddMemberRequest) GetOrganizationId() string {
@@ -607,7 +1030,7 @@ type UpdateMemberRoleRequest struct {
 
 func (x *UpdateMemberRoleRequest) Reset() {
 	*x = UpdateMemberRoleRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[6]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -619,7 +1042,7 @@ func (x *UpdateMemberRoleRequest) String() string {
 func (*UpdateMemberRoleRequest) ProtoMessage() {}
 
 func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[6]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -632,7 +1055,7 @@ func (x *UpdateMemberRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMemberRoleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMemberRoleRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{6}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UpdateMemberRoleRequest) GetOrganizationId() string {
@@ -698,7 +1121,7 @@ type RemoveMemberRequest struct {
 
 func (x *RemoveMemberRequest) Reset() {
 	*x = RemoveMemberRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[7]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -710,7 +1133,7 @@ func (x *RemoveMemberRequest) String() string {
 func (*RemoveMemberRequest) ProtoMessage() {}
 
 func (x *RemoveMemberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[7]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -723,7 +1146,7 @@ func (x *RemoveMemberRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveMemberRequest.ProtoReflect.Descriptor instead.
 func (*RemoveMemberRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{7}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RemoveMemberRequest) GetOrganizationId() string {
@@ -777,7 +1200,7 @@ type RemoveMemberResponse struct {
 
 func (x *RemoveMemberResponse) Reset() {
 	*x = RemoveMemberResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[8]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -789,7 +1212,7 @@ func (x *RemoveMemberResponse) String() string {
 func (*RemoveMemberResponse) ProtoMessage() {}
 
 func (x *RemoveMemberResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[8]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -802,7 +1225,7 @@ func (x *RemoveMemberResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveMemberResponse.ProtoReflect.Descriptor instead.
 func (*RemoveMemberResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{8}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RemoveMemberResponse) GetSuccess() bool {
@@ -827,7 +1250,7 @@ type SetAccessModeRequest struct {
 
 func (x *SetAccessModeRequest) Reset() {
 	*x = SetAccessModeRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[9]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -839,7 +1262,7 @@ func (x *SetAccessModeRequest) String() string {
 func (*SetAccessModeRequest) ProtoMessage() {}
 
 func (x *SetAccessModeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[9]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -852,7 +1275,7 @@ func (x *SetAccessModeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAccessModeRequest.ProtoReflect.Descriptor instead.
 func (*SetAccessModeRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{9}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SetAccessModeRequest) GetOrganizationId() string {
@@ -913,7 +1336,7 @@ type SetAccessModeResponse struct {
 
 func (x *SetAccessModeResponse) Reset() {
 	*x = SetAccessModeResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[10]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -925,7 +1348,7 @@ func (x *SetAccessModeResponse) String() string {
 func (*SetAccessModeResponse) ProtoMessage() {}
 
 func (x *SetAccessModeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[10]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -938,7 +1361,7 @@ func (x *SetAccessModeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAccessModeResponse.ProtoReflect.Descriptor instead.
 func (*SetAccessModeResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{10}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SetAccessModeResponse) GetPolicy() *ContentAccessPolicy {
@@ -961,7 +1384,7 @@ type TransferOwnershipRequest struct {
 
 func (x *TransferOwnershipRequest) Reset() {
 	*x = TransferOwnershipRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[11]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -973,7 +1396,7 @@ func (x *TransferOwnershipRequest) String() string {
 func (*TransferOwnershipRequest) ProtoMessage() {}
 
 func (x *TransferOwnershipRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[11]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -986,7 +1409,7 @@ func (x *TransferOwnershipRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferOwnershipRequest.ProtoReflect.Descriptor instead.
 func (*TransferOwnershipRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{11}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *TransferOwnershipRequest) GetOrganizationId() string {
@@ -1033,7 +1456,7 @@ type TransferOwnershipResponse struct {
 
 func (x *TransferOwnershipResponse) Reset() {
 	*x = TransferOwnershipResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[12]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1045,7 +1468,7 @@ func (x *TransferOwnershipResponse) String() string {
 func (*TransferOwnershipResponse) ProtoMessage() {}
 
 func (x *TransferOwnershipResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[12]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1058,7 +1481,7 @@ func (x *TransferOwnershipResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferOwnershipResponse.ProtoReflect.Descriptor instead.
 func (*TransferOwnershipResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{12}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *TransferOwnershipResponse) GetPolicy() *ContentAccessPolicy {
@@ -1077,7 +1500,7 @@ type AddMemberResponse struct {
 
 func (x *AddMemberResponse) Reset() {
 	*x = AddMemberResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[13]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1089,7 +1512,7 @@ func (x *AddMemberResponse) String() string {
 func (*AddMemberResponse) ProtoMessage() {}
 
 func (x *AddMemberResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[13]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1102,7 +1525,7 @@ func (x *AddMemberResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddMemberResponse.ProtoReflect.Descriptor instead.
 func (*AddMemberResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{13}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *AddMemberResponse) GetMember() *ContentMember {
@@ -1121,7 +1544,7 @@ type UpdateMemberRoleResponse struct {
 
 func (x *UpdateMemberRoleResponse) Reset() {
 	*x = UpdateMemberRoleResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1133,7 +1556,7 @@ func (x *UpdateMemberRoleResponse) String() string {
 func (*UpdateMemberRoleResponse) ProtoMessage() {}
 
 func (x *UpdateMemberRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[14]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1146,7 +1569,7 @@ func (x *UpdateMemberRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMemberRoleResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMemberRoleResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{14}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateMemberRoleResponse) GetMember() *ContentMember {
@@ -1172,7 +1595,7 @@ type ListMemberEventsRequest struct {
 
 func (x *ListMemberEventsRequest) Reset() {
 	*x = ListMemberEventsRequest{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1184,7 +1607,7 @@ func (x *ListMemberEventsRequest) String() string {
 func (*ListMemberEventsRequest) ProtoMessage() {}
 
 func (x *ListMemberEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[15]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1197,7 +1620,7 @@ func (x *ListMemberEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMemberEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListMemberEventsRequest) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{15}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListMemberEventsRequest) GetOrganizationId() string {
@@ -1266,7 +1689,7 @@ type ListMemberEventsResponse struct {
 
 func (x *ListMemberEventsResponse) Reset() {
 	*x = ListMemberEventsResponse{}
-	mi := &file_permissions_v1_permissions_proto_msgTypes[16]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1278,7 +1701,7 @@ func (x *ListMemberEventsResponse) String() string {
 func (*ListMemberEventsResponse) ProtoMessage() {}
 
 func (x *ListMemberEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_permissions_v1_permissions_proto_msgTypes[16]
+	mi := &file_permissions_v1_permissions_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1291,7 +1714,7 @@ func (x *ListMemberEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMemberEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListMemberEventsResponse) Descriptor() ([]byte, []int) {
-	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{16}
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListMemberEventsResponse) GetEvents() []*ContentMemberEvent {
@@ -1304,6 +1727,662 @@ func (x *ListMemberEventsResponse) GetEvents() []*ContentMemberEvent {
 func (x *ListMemberEventsResponse) GetPagination() *v1.PaginationResponse {
 	if x != nil {
 		return x.Pagination
+	}
+	return nil
+}
+
+type RequestAccessRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	RequestedUrn   string                 `protobuf:"bytes,2,opt,name=requested_urn,json=requestedUrn,proto3" json:"requested_urn,omitempty"`
+	Message        string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RequestAccessRequest) Reset() {
+	*x = RequestAccessRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestAccessRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestAccessRequest) ProtoMessage() {}
+
+func (x *RequestAccessRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestAccessRequest.ProtoReflect.Descriptor instead.
+func (*RequestAccessRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *RequestAccessRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RequestAccessRequest) GetRequestedUrn() string {
+	if x != nil {
+		return x.RequestedUrn
+	}
+	return ""
+}
+
+func (x *RequestAccessRequest) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type RequestAccessResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Outcome           RequestAccessOutcome   `protobuf:"varint,1,opt,name=outcome,proto3,enum=permissions.v1.RequestAccessOutcome" json:"outcome,omitempty"`
+	AccessRequest     *ContentAccessRequest  `protobuf:"bytes,2,opt,name=access_request,json=accessRequest,proto3,oneof" json:"access_request,omitempty"`
+	CanRequestAgainAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=can_request_again_at,json=canRequestAgainAt,proto3,oneof" json:"can_request_again_at,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *RequestAccessResponse) Reset() {
+	*x = RequestAccessResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestAccessResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestAccessResponse) ProtoMessage() {}
+
+func (x *RequestAccessResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestAccessResponse.ProtoReflect.Descriptor instead.
+func (*RequestAccessResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *RequestAccessResponse) GetOutcome() RequestAccessOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return RequestAccessOutcome_REQUEST_ACCESS_OUTCOME_UNSPECIFIED
+}
+
+func (x *RequestAccessResponse) GetAccessRequest() *ContentAccessRequest {
+	if x != nil {
+		return x.AccessRequest
+	}
+	return nil
+}
+
+func (x *RequestAccessResponse) GetCanRequestAgainAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CanRequestAgainAt
+	}
+	return nil
+}
+
+type GetMyAccessRequestStatusesRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	RequestedUrns  []string               `protobuf:"bytes,2,rep,name=requested_urns,json=requestedUrns,proto3" json:"requested_urns,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetMyAccessRequestStatusesRequest) Reset() {
+	*x = GetMyAccessRequestStatusesRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMyAccessRequestStatusesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMyAccessRequestStatusesRequest) ProtoMessage() {}
+
+func (x *GetMyAccessRequestStatusesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMyAccessRequestStatusesRequest.ProtoReflect.Descriptor instead.
+func (*GetMyAccessRequestStatusesRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *GetMyAccessRequestStatusesRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GetMyAccessRequestStatusesRequest) GetRequestedUrns() []string {
+	if x != nil {
+		return x.RequestedUrns
+	}
+	return nil
+}
+
+type GetMyAccessRequestStatusesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Statuses      []*AccessRequestStatus `protobuf:"bytes,1,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMyAccessRequestStatusesResponse) Reset() {
+	*x = GetMyAccessRequestStatusesResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMyAccessRequestStatusesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMyAccessRequestStatusesResponse) ProtoMessage() {}
+
+func (x *GetMyAccessRequestStatusesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMyAccessRequestStatusesResponse.ProtoReflect.Descriptor instead.
+func (*GetMyAccessRequestStatusesResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetMyAccessRequestStatusesResponse) GetStatuses() []*AccessRequestStatus {
+	if x != nil {
+		return x.Statuses
+	}
+	return nil
+}
+
+type GetAccessRequestRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetAccessRequestRequest) Reset() {
+	*x = GetAccessRequestRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAccessRequestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAccessRequestRequest) ProtoMessage() {}
+
+func (x *GetAccessRequestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAccessRequestRequest.ProtoReflect.Descriptor instead.
+func (*GetAccessRequestRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetAccessRequestRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GetAccessRequestRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+type GetAccessRequestResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccessRequest *ContentAccessRequest  `protobuf:"bytes,1,opt,name=access_request,json=accessRequest,proto3" json:"access_request,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAccessRequestResponse) Reset() {
+	*x = GetAccessRequestResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAccessRequestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAccessRequestResponse) ProtoMessage() {}
+
+func (x *GetAccessRequestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAccessRequestResponse.ProtoReflect.Descriptor instead.
+func (*GetAccessRequestResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GetAccessRequestResponse) GetAccessRequest() *ContentAccessRequest {
+	if x != nil {
+		return x.AccessRequest
+	}
+	return nil
+}
+
+type ListAccessRequestsRequest struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId       string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	CanonicalContentType *v1.ContentType        `protobuf:"varint,2,opt,name=canonical_content_type,json=canonicalContentType,proto3,enum=common.v1.ContentType,oneof" json:"canonical_content_type,omitempty"`
+	CanonicalContentId   *string                `protobuf:"bytes,3,opt,name=canonical_content_id,json=canonicalContentId,proto3,oneof" json:"canonical_content_id,omitempty"`
+	State                *AccessRequestState    `protobuf:"varint,4,opt,name=state,proto3,enum=permissions.v1.AccessRequestState,oneof" json:"state,omitempty"`
+	Pagination           *v1.PaginationRequest  `protobuf:"bytes,5,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ListAccessRequestsRequest) Reset() {
+	*x = ListAccessRequestsRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAccessRequestsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAccessRequestsRequest) ProtoMessage() {}
+
+func (x *ListAccessRequestsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAccessRequestsRequest.ProtoReflect.Descriptor instead.
+func (*ListAccessRequestsRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ListAccessRequestsRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ListAccessRequestsRequest) GetCanonicalContentType() v1.ContentType {
+	if x != nil && x.CanonicalContentType != nil {
+		return *x.CanonicalContentType
+	}
+	return v1.ContentType(0)
+}
+
+func (x *ListAccessRequestsRequest) GetCanonicalContentId() string {
+	if x != nil && x.CanonicalContentId != nil {
+		return *x.CanonicalContentId
+	}
+	return ""
+}
+
+func (x *ListAccessRequestsRequest) GetState() AccessRequestState {
+	if x != nil && x.State != nil {
+		return *x.State
+	}
+	return AccessRequestState_ACCESS_REQUEST_STATE_UNSPECIFIED
+}
+
+func (x *ListAccessRequestsRequest) GetPagination() *v1.PaginationRequest {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+type ListAccessRequestsResponse struct {
+	state          protoimpl.MessageState  `protogen:"open.v1"`
+	AccessRequests []*ContentAccessRequest `protobuf:"bytes,1,rep,name=access_requests,json=accessRequests,proto3" json:"access_requests,omitempty"`
+	Pagination     *v1.PaginationResponse  `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListAccessRequestsResponse) Reset() {
+	*x = ListAccessRequestsResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAccessRequestsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAccessRequestsResponse) ProtoMessage() {}
+
+func (x *ListAccessRequestsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAccessRequestsResponse.ProtoReflect.Descriptor instead.
+func (*ListAccessRequestsResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ListAccessRequestsResponse) GetAccessRequests() []*ContentAccessRequest {
+	if x != nil {
+		return x.AccessRequests
+	}
+	return nil
+}
+
+func (x *ListAccessRequestsResponse) GetPagination() *v1.PaginationResponse {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+type RespondToAccessRequestRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Decision       AccessRequestDecision  `protobuf:"varint,3,opt,name=decision,proto3,enum=permissions.v1.AccessRequestDecision" json:"decision,omitempty"`
+	ApprovedRole   *v1.ContentRole        `protobuf:"varint,4,opt,name=approved_role,json=approvedRole,proto3,enum=common.v1.ContentRole,oneof" json:"approved_role,omitempty"`
+	DecisionNote   string                 `protobuf:"bytes,5,opt,name=decision_note,json=decisionNote,proto3" json:"decision_note,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RespondToAccessRequestRequest) Reset() {
+	*x = RespondToAccessRequestRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RespondToAccessRequestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RespondToAccessRequestRequest) ProtoMessage() {}
+
+func (x *RespondToAccessRequestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RespondToAccessRequestRequest.ProtoReflect.Descriptor instead.
+func (*RespondToAccessRequestRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *RespondToAccessRequestRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RespondToAccessRequestRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *RespondToAccessRequestRequest) GetDecision() AccessRequestDecision {
+	if x != nil {
+		return x.Decision
+	}
+	return AccessRequestDecision_ACCESS_REQUEST_DECISION_UNSPECIFIED
+}
+
+func (x *RespondToAccessRequestRequest) GetApprovedRole() v1.ContentRole {
+	if x != nil && x.ApprovedRole != nil {
+		return *x.ApprovedRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *RespondToAccessRequestRequest) GetDecisionNote() string {
+	if x != nil {
+		return x.DecisionNote
+	}
+	return ""
+}
+
+type RespondToAccessRequestResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccessRequest *ContentAccessRequest  `protobuf:"bytes,1,opt,name=access_request,json=accessRequest,proto3" json:"access_request,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RespondToAccessRequestResponse) Reset() {
+	*x = RespondToAccessRequestResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RespondToAccessRequestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RespondToAccessRequestResponse) ProtoMessage() {}
+
+func (x *RespondToAccessRequestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RespondToAccessRequestResponse.ProtoReflect.Descriptor instead.
+func (*RespondToAccessRequestResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *RespondToAccessRequestResponse) GetAccessRequest() *ContentAccessRequest {
+	if x != nil {
+		return x.AccessRequest
+	}
+	return nil
+}
+
+type CancelAccessRequestRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CancelAccessRequestRequest) Reset() {
+	*x = CancelAccessRequestRequest{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelAccessRequestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelAccessRequestRequest) ProtoMessage() {}
+
+func (x *CancelAccessRequestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelAccessRequestRequest.ProtoReflect.Descriptor instead.
+func (*CancelAccessRequestRequest) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *CancelAccessRequestRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *CancelAccessRequestRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+type CancelAccessRequestResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccessRequest *ContentAccessRequest  `protobuf:"bytes,1,opt,name=access_request,json=accessRequest,proto3" json:"access_request,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelAccessRequestResponse) Reset() {
+	*x = CancelAccessRequestResponse{}
+	mi := &file_permissions_v1_permissions_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelAccessRequestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelAccessRequestResponse) ProtoMessage() {}
+
+func (x *CancelAccessRequestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_permissions_v1_permissions_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelAccessRequestResponse.ProtoReflect.Descriptor instead.
+func (*CancelAccessRequestResponse) Descriptor() ([]byte, []int) {
+	return file_permissions_v1_permissions_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *CancelAccessRequestResponse) GetAccessRequest() *ContentAccessRequest {
+	if x != nil {
+		return x.AccessRequest
 	}
 	return nil
 }
@@ -1369,7 +2448,43 @@ const file_permissions_v1_permissions_proto_rawDesc = "" +
 	"\x17_previous_baseline_roleB\x14\n" +
 	"\x12_new_baseline_roleB\x14\n" +
 	"\x12_previous_owner_idB\x0f\n" +
-	"\r_new_owner_id\"\x97\x01\n" +
+	"\r_new_owner_id\"\xcd\b\n" +
+	"\x14ContentAccessRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12#\n" +
+	"\rrequested_urn\x18\x03 \x01(\tR\frequestedUrn\x12J\n" +
+	"\x15original_content_type\x18\x04 \x01(\x0e2\x16.common.v1.ContentTypeR\x13originalContentType\x12.\n" +
+	"\x13original_content_id\x18\x05 \x01(\tR\x11originalContentId\x12L\n" +
+	"\x16canonical_content_type\x18\x06 \x01(\x0e2\x16.common.v1.ContentTypeR\x14canonicalContentType\x120\n" +
+	"\x14canonical_content_id\x18\a \x01(\tR\x12canonicalContentId\x12!\n" +
+	"\frequester_id\x18\b \x01(\tR\vrequesterId\x124\n" +
+	"\x16requester_display_name\x18\t \x01(\tR\x14requesterDisplayName\x128\n" +
+	"\x05state\x18\n" +
+	" \x01(\x0e2\".permissions.v1.AccessRequestStateR\x05state\x12\x18\n" +
+	"\amessage\x18\v \x01(\tR\amessage\x12#\n" +
+	"\rdecision_note\x18\f \x01(\tR\fdecisionNote\x12@\n" +
+	"\rapproved_role\x18\r \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fapprovedRole\x88\x01\x01\x124\n" +
+	"\x14responded_by_user_id\x18\x0e \x01(\tH\x01R\x11respondedByUserId\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12B\n" +
+	"\fresponded_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\vrespondedAt\x88\x01\x01\x12P\n" +
+	"\x14can_request_again_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\x11canRequestAgainAt\x88\x01\x01\x120\n" +
+	"\x14requester_has_access\x18\x13 \x01(\bR\x12requesterHasAccessB\x10\n" +
+	"\x0e_approved_roleB\x17\n" +
+	"\x15_responded_by_user_idB\x0f\n" +
+	"\r_responded_atB\x17\n" +
+	"\x15_can_request_again_at\"\xc4\x02\n" +
+	"\x13AccessRequestStatus\x12#\n" +
+	"\rrequested_urn\x18\x01 \x01(\tR\frequestedUrn\x128\n" +
+	"\x05state\x18\x02 \x01(\x0e2\".permissions.v1.AccessRequestStateR\x05state\x12\"\n" +
+	"\n" +
+	"request_id\x18\x03 \x01(\tH\x00R\trequestId\x88\x01\x01\x12P\n" +
+	"\x14can_request_again_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\x11canRequestAgainAt\x88\x01\x01\x120\n" +
+	"\x14requester_has_access\x18\x05 \x01(\bR\x12requesterHasAccessB\r\n" +
+	"\v_request_idB\x17\n" +
+	"\x15_can_request_again_at\"\x97\x01\n" +
 	"\x12ListMembersRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
 	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
@@ -1459,7 +2574,78 @@ const file_permissions_v1_permissions_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2\".permissions.v1.ContentMemberEventR\x06events\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination2\xab\x05\n" +
+	"pagination\"~\n" +
+	"\x14RequestAccessRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n" +
+	"\rrequested_urn\x18\x02 \x01(\tR\frequestedUrn\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"\xa7\x02\n" +
+	"\x15RequestAccessResponse\x12>\n" +
+	"\aoutcome\x18\x01 \x01(\x0e2$.permissions.v1.RequestAccessOutcomeR\aoutcome\x12P\n" +
+	"\x0eaccess_request\x18\x02 \x01(\v2$.permissions.v1.ContentAccessRequestH\x00R\raccessRequest\x88\x01\x01\x12P\n" +
+	"\x14can_request_again_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\x11canRequestAgainAt\x88\x01\x01B\x11\n" +
+	"\x0f_access_requestB\x17\n" +
+	"\x15_can_request_again_at\"s\n" +
+	"!GetMyAccessRequestStatusesRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12%\n" +
+	"\x0erequested_urns\x18\x02 \x03(\tR\rrequestedUrns\"e\n" +
+	"\"GetMyAccessRequestStatusesResponse\x12?\n" +
+	"\bstatuses\x18\x01 \x03(\v2#.permissions.v1.AccessRequestStatusR\bstatuses\"a\n" +
+	"\x17GetAccessRequestRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\"g\n" +
+	"\x18GetAccessRequestResponse\x12K\n" +
+	"\x0eaccess_request\x18\x01 \x01(\v2$.permissions.v1.ContentAccessRequestR\raccessRequest\"\x9d\x03\n" +
+	"\x19ListAccessRequestsRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12Q\n" +
+	"\x16canonical_content_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeH\x00R\x14canonicalContentType\x88\x01\x01\x125\n" +
+	"\x14canonical_content_id\x18\x03 \x01(\tH\x01R\x12canonicalContentId\x88\x01\x01\x12=\n" +
+	"\x05state\x18\x04 \x01(\x0e2\".permissions.v1.AccessRequestStateH\x02R\x05state\x88\x01\x01\x12A\n" +
+	"\n" +
+	"pagination\x18\x05 \x01(\v2\x1c.common.v1.PaginationRequestH\x03R\n" +
+	"pagination\x88\x01\x01B\x19\n" +
+	"\x17_canonical_content_typeB\x17\n" +
+	"\x15_canonical_content_idB\b\n" +
+	"\x06_stateB\r\n" +
+	"\v_pagination\"\xaa\x01\n" +
+	"\x1aListAccessRequestsResponse\x12M\n" +
+	"\x0faccess_requests\x18\x01 \x03(\v2$.permissions.v1.ContentAccessRequestR\x0eaccessRequests\x12=\n" +
+	"\n" +
+	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
+	"pagination\"\xa3\x02\n" +
+	"\x1dRespondToAccessRequestRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\x12A\n" +
+	"\bdecision\x18\x03 \x01(\x0e2%.permissions.v1.AccessRequestDecisionR\bdecision\x12@\n" +
+	"\rapproved_role\x18\x04 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fapprovedRole\x88\x01\x01\x12#\n" +
+	"\rdecision_note\x18\x05 \x01(\tR\fdecisionNoteB\x10\n" +
+	"\x0e_approved_role\"m\n" +
+	"\x1eRespondToAccessRequestResponse\x12K\n" +
+	"\x0eaccess_request\x18\x01 \x01(\v2$.permissions.v1.ContentAccessRequestR\raccessRequest\"d\n" +
+	"\x1aCancelAccessRequestRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\"j\n" +
+	"\x1bCancelAccessRequestResponse\x12K\n" +
+	"\x0eaccess_request\x18\x01 \x01(\v2$.permissions.v1.ContentAccessRequestR\raccessRequest*\xc3\x01\n" +
+	"\x12AccessRequestState\x12$\n" +
+	" ACCESS_REQUEST_STATE_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cACCESS_REQUEST_STATE_PENDING\x10\x01\x12!\n" +
+	"\x1dACCESS_REQUEST_STATE_APPROVED\x10\x02\x12\x1f\n" +
+	"\x1bACCESS_REQUEST_STATE_DENIED\x10\x03\x12!\n" +
+	"\x1dACCESS_REQUEST_STATE_CANCELED\x10\x04*\x87\x01\n" +
+	"\x15AccessRequestDecision\x12'\n" +
+	"#ACCESS_REQUEST_DECISION_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fACCESS_REQUEST_DECISION_APPROVE\x10\x01\x12 \n" +
+	"\x1cACCESS_REQUEST_DECISION_DENY\x10\x02*\xe2\x01\n" +
+	"\x14RequestAccessOutcome\x12&\n" +
+	"\"REQUEST_ACCESS_OUTCOME_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eREQUEST_ACCESS_OUTCOME_CREATED\x10\x01\x12*\n" +
+	"&REQUEST_ACCESS_OUTCOME_ALREADY_PENDING\x10\x02\x12-\n" +
+	")REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE\x10\x03\x12#\n" +
+	"\x1fREQUEST_ACCESS_OUTCOME_COOLDOWN\x10\x042\xcc\n" +
+	"\n" +
 	"\x0eMembersService\x12V\n" +
 	"\vListMembers\x12\".permissions.v1.ListMembersRequest\x1a#.permissions.v1.ListMembersResponse\x12P\n" +
 	"\tAddMember\x12 .permissions.v1.AddMemberRequest\x1a!.permissions.v1.AddMemberResponse\x12e\n" +
@@ -1467,7 +2653,13 @@ const file_permissions_v1_permissions_proto_rawDesc = "" +
 	"\fRemoveMember\x12#.permissions.v1.RemoveMemberRequest\x1a$.permissions.v1.RemoveMemberResponse\x12\\\n" +
 	"\rSetAccessMode\x12$.permissions.v1.SetAccessModeRequest\x1a%.permissions.v1.SetAccessModeResponse\x12h\n" +
 	"\x11TransferOwnership\x12(.permissions.v1.TransferOwnershipRequest\x1a).permissions.v1.TransferOwnershipResponse\x12e\n" +
-	"\x10ListMemberEvents\x12'.permissions.v1.ListMemberEventsRequest\x1a(.permissions.v1.ListMemberEventsResponseBCZAgithub.com/uniffy-io/uniffy-proto-go/permissions/v1;permissionsv1b\x06proto3"
+	"\x10ListMemberEvents\x12'.permissions.v1.ListMemberEventsRequest\x1a(.permissions.v1.ListMemberEventsResponse\x12\\\n" +
+	"\rRequestAccess\x12$.permissions.v1.RequestAccessRequest\x1a%.permissions.v1.RequestAccessResponse\x12\x83\x01\n" +
+	"\x1aGetMyAccessRequestStatuses\x121.permissions.v1.GetMyAccessRequestStatusesRequest\x1a2.permissions.v1.GetMyAccessRequestStatusesResponse\x12e\n" +
+	"\x10GetAccessRequest\x12'.permissions.v1.GetAccessRequestRequest\x1a(.permissions.v1.GetAccessRequestResponse\x12k\n" +
+	"\x12ListAccessRequests\x12).permissions.v1.ListAccessRequestsRequest\x1a*.permissions.v1.ListAccessRequestsResponse\x12w\n" +
+	"\x16RespondToAccessRequest\x12-.permissions.v1.RespondToAccessRequestRequest\x1a..permissions.v1.RespondToAccessRequestResponse\x12n\n" +
+	"\x13CancelAccessRequest\x12*.permissions.v1.CancelAccessRequestRequest\x1a+.permissions.v1.CancelAccessRequestResponseBCZAgithub.com/uniffy-io/uniffy-proto-go/permissions/v1;permissionsv1b\x06proto3"
 
 var (
 	file_permissions_v1_permissions_proto_rawDescOnce sync.Once
@@ -1481,102 +2673,156 @@ func file_permissions_v1_permissions_proto_rawDescGZIP() []byte {
 	return file_permissions_v1_permissions_proto_rawDescData
 }
 
-var file_permissions_v1_permissions_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_permissions_v1_permissions_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_permissions_v1_permissions_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_permissions_v1_permissions_proto_goTypes = []any{
-	(*ContentMember)(nil),             // 0: permissions.v1.ContentMember
-	(*ContentAccessPolicy)(nil),       // 1: permissions.v1.ContentAccessPolicy
-	(*ContentMemberEvent)(nil),        // 2: permissions.v1.ContentMemberEvent
-	(*ListMembersRequest)(nil),        // 3: permissions.v1.ListMembersRequest
-	(*ListMembersResponse)(nil),       // 4: permissions.v1.ListMembersResponse
-	(*AddMemberRequest)(nil),          // 5: permissions.v1.AddMemberRequest
-	(*UpdateMemberRoleRequest)(nil),   // 6: permissions.v1.UpdateMemberRoleRequest
-	(*RemoveMemberRequest)(nil),       // 7: permissions.v1.RemoveMemberRequest
-	(*RemoveMemberResponse)(nil),      // 8: permissions.v1.RemoveMemberResponse
-	(*SetAccessModeRequest)(nil),      // 9: permissions.v1.SetAccessModeRequest
-	(*SetAccessModeResponse)(nil),     // 10: permissions.v1.SetAccessModeResponse
-	(*TransferOwnershipRequest)(nil),  // 11: permissions.v1.TransferOwnershipRequest
-	(*TransferOwnershipResponse)(nil), // 12: permissions.v1.TransferOwnershipResponse
-	(*AddMemberResponse)(nil),         // 13: permissions.v1.AddMemberResponse
-	(*UpdateMemberRoleResponse)(nil),  // 14: permissions.v1.UpdateMemberRoleResponse
-	(*ListMemberEventsRequest)(nil),   // 15: permissions.v1.ListMemberEventsRequest
-	(*ListMemberEventsResponse)(nil),  // 16: permissions.v1.ListMemberEventsResponse
-	(v1.SubjectType)(0),               // 17: common.v1.SubjectType
-	(v1.ContentRole)(0),               // 18: common.v1.ContentRole
-	(*timestamppb.Timestamp)(nil),     // 19: google.protobuf.Timestamp
-	(v1.AccessMode)(0),                // 20: common.v1.AccessMode
-	(v1.ContentType)(0),               // 21: common.v1.ContentType
-	(v1.ContentMemberAction)(0),       // 22: common.v1.ContentMemberAction
-	(v1.OrganizationRole)(0),          // 23: common.v1.OrganizationRole
-	(*v1.PaginationRequest)(nil),      // 24: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),     // 25: common.v1.PaginationResponse
+	(AccessRequestState)(0),                    // 0: permissions.v1.AccessRequestState
+	(AccessRequestDecision)(0),                 // 1: permissions.v1.AccessRequestDecision
+	(RequestAccessOutcome)(0),                  // 2: permissions.v1.RequestAccessOutcome
+	(*ContentMember)(nil),                      // 3: permissions.v1.ContentMember
+	(*ContentAccessPolicy)(nil),                // 4: permissions.v1.ContentAccessPolicy
+	(*ContentMemberEvent)(nil),                 // 5: permissions.v1.ContentMemberEvent
+	(*ContentAccessRequest)(nil),               // 6: permissions.v1.ContentAccessRequest
+	(*AccessRequestStatus)(nil),                // 7: permissions.v1.AccessRequestStatus
+	(*ListMembersRequest)(nil),                 // 8: permissions.v1.ListMembersRequest
+	(*ListMembersResponse)(nil),                // 9: permissions.v1.ListMembersResponse
+	(*AddMemberRequest)(nil),                   // 10: permissions.v1.AddMemberRequest
+	(*UpdateMemberRoleRequest)(nil),            // 11: permissions.v1.UpdateMemberRoleRequest
+	(*RemoveMemberRequest)(nil),                // 12: permissions.v1.RemoveMemberRequest
+	(*RemoveMemberResponse)(nil),               // 13: permissions.v1.RemoveMemberResponse
+	(*SetAccessModeRequest)(nil),               // 14: permissions.v1.SetAccessModeRequest
+	(*SetAccessModeResponse)(nil),              // 15: permissions.v1.SetAccessModeResponse
+	(*TransferOwnershipRequest)(nil),           // 16: permissions.v1.TransferOwnershipRequest
+	(*TransferOwnershipResponse)(nil),          // 17: permissions.v1.TransferOwnershipResponse
+	(*AddMemberResponse)(nil),                  // 18: permissions.v1.AddMemberResponse
+	(*UpdateMemberRoleResponse)(nil),           // 19: permissions.v1.UpdateMemberRoleResponse
+	(*ListMemberEventsRequest)(nil),            // 20: permissions.v1.ListMemberEventsRequest
+	(*ListMemberEventsResponse)(nil),           // 21: permissions.v1.ListMemberEventsResponse
+	(*RequestAccessRequest)(nil),               // 22: permissions.v1.RequestAccessRequest
+	(*RequestAccessResponse)(nil),              // 23: permissions.v1.RequestAccessResponse
+	(*GetMyAccessRequestStatusesRequest)(nil),  // 24: permissions.v1.GetMyAccessRequestStatusesRequest
+	(*GetMyAccessRequestStatusesResponse)(nil), // 25: permissions.v1.GetMyAccessRequestStatusesResponse
+	(*GetAccessRequestRequest)(nil),            // 26: permissions.v1.GetAccessRequestRequest
+	(*GetAccessRequestResponse)(nil),           // 27: permissions.v1.GetAccessRequestResponse
+	(*ListAccessRequestsRequest)(nil),          // 28: permissions.v1.ListAccessRequestsRequest
+	(*ListAccessRequestsResponse)(nil),         // 29: permissions.v1.ListAccessRequestsResponse
+	(*RespondToAccessRequestRequest)(nil),      // 30: permissions.v1.RespondToAccessRequestRequest
+	(*RespondToAccessRequestResponse)(nil),     // 31: permissions.v1.RespondToAccessRequestResponse
+	(*CancelAccessRequestRequest)(nil),         // 32: permissions.v1.CancelAccessRequestRequest
+	(*CancelAccessRequestResponse)(nil),        // 33: permissions.v1.CancelAccessRequestResponse
+	(v1.SubjectType)(0),                        // 34: common.v1.SubjectType
+	(v1.ContentRole)(0),                        // 35: common.v1.ContentRole
+	(*timestamppb.Timestamp)(nil),              // 36: google.protobuf.Timestamp
+	(v1.AccessMode)(0),                         // 37: common.v1.AccessMode
+	(v1.ContentType)(0),                        // 38: common.v1.ContentType
+	(v1.ContentMemberAction)(0),                // 39: common.v1.ContentMemberAction
+	(v1.OrganizationRole)(0),                   // 40: common.v1.OrganizationRole
+	(*v1.PaginationRequest)(nil),               // 41: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),              // 42: common.v1.PaginationResponse
 }
 var file_permissions_v1_permissions_proto_depIdxs = []int32{
-	17, // 0: permissions.v1.ContentMember.subject_type:type_name -> common.v1.SubjectType
-	18, // 1: permissions.v1.ContentMember.role:type_name -> common.v1.ContentRole
-	19, // 2: permissions.v1.ContentMember.added_at:type_name -> google.protobuf.Timestamp
-	19, // 3: permissions.v1.ContentMember.updated_at:type_name -> google.protobuf.Timestamp
-	19, // 4: permissions.v1.ContentMember.expires_at:type_name -> google.protobuf.Timestamp
-	20, // 5: permissions.v1.ContentAccessPolicy.access_mode:type_name -> common.v1.AccessMode
-	18, // 6: permissions.v1.ContentAccessPolicy.baseline_role:type_name -> common.v1.ContentRole
-	18, // 7: permissions.v1.ContentAccessPolicy.caller_role:type_name -> common.v1.ContentRole
-	20, // 8: permissions.v1.ContentAccessPolicy.effective_access_mode:type_name -> common.v1.AccessMode
-	21, // 9: permissions.v1.ContentMemberEvent.content_type:type_name -> common.v1.ContentType
-	22, // 10: permissions.v1.ContentMemberEvent.action:type_name -> common.v1.ContentMemberAction
-	17, // 11: permissions.v1.ContentMemberEvent.subject_type:type_name -> common.v1.SubjectType
-	18, // 12: permissions.v1.ContentMemberEvent.previous_role:type_name -> common.v1.ContentRole
-	18, // 13: permissions.v1.ContentMemberEvent.new_role:type_name -> common.v1.ContentRole
-	20, // 14: permissions.v1.ContentMemberEvent.previous_access_mode:type_name -> common.v1.AccessMode
-	20, // 15: permissions.v1.ContentMemberEvent.new_access_mode:type_name -> common.v1.AccessMode
-	18, // 16: permissions.v1.ContentMemberEvent.previous_baseline_role:type_name -> common.v1.ContentRole
-	18, // 17: permissions.v1.ContentMemberEvent.new_baseline_role:type_name -> common.v1.ContentRole
-	23, // 18: permissions.v1.ContentMemberEvent.actor_org_role:type_name -> common.v1.OrganizationRole
-	19, // 19: permissions.v1.ContentMemberEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	21, // 20: permissions.v1.ListMembersRequest.content_type:type_name -> common.v1.ContentType
-	1,  // 21: permissions.v1.ListMembersResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
-	0,  // 22: permissions.v1.ListMembersResponse.members:type_name -> permissions.v1.ContentMember
-	21, // 23: permissions.v1.AddMemberRequest.content_type:type_name -> common.v1.ContentType
-	17, // 24: permissions.v1.AddMemberRequest.subject_type:type_name -> common.v1.SubjectType
-	18, // 25: permissions.v1.AddMemberRequest.role:type_name -> common.v1.ContentRole
-	19, // 26: permissions.v1.AddMemberRequest.expires_at:type_name -> google.protobuf.Timestamp
-	21, // 27: permissions.v1.UpdateMemberRoleRequest.content_type:type_name -> common.v1.ContentType
-	17, // 28: permissions.v1.UpdateMemberRoleRequest.subject_type:type_name -> common.v1.SubjectType
-	18, // 29: permissions.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ContentRole
-	21, // 30: permissions.v1.RemoveMemberRequest.content_type:type_name -> common.v1.ContentType
-	17, // 31: permissions.v1.RemoveMemberRequest.subject_type:type_name -> common.v1.SubjectType
-	21, // 32: permissions.v1.SetAccessModeRequest.content_type:type_name -> common.v1.ContentType
-	20, // 33: permissions.v1.SetAccessModeRequest.access_mode:type_name -> common.v1.AccessMode
-	18, // 34: permissions.v1.SetAccessModeRequest.baseline_role:type_name -> common.v1.ContentRole
-	1,  // 35: permissions.v1.SetAccessModeResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
-	21, // 36: permissions.v1.TransferOwnershipRequest.content_type:type_name -> common.v1.ContentType
-	1,  // 37: permissions.v1.TransferOwnershipResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
-	0,  // 38: permissions.v1.AddMemberResponse.member:type_name -> permissions.v1.ContentMember
-	0,  // 39: permissions.v1.UpdateMemberRoleResponse.member:type_name -> permissions.v1.ContentMember
-	21, // 40: permissions.v1.ListMemberEventsRequest.content_type:type_name -> common.v1.ContentType
-	24, // 41: permissions.v1.ListMemberEventsRequest.pagination:type_name -> common.v1.PaginationRequest
-	22, // 42: permissions.v1.ListMemberEventsRequest.action:type_name -> common.v1.ContentMemberAction
-	19, // 43: permissions.v1.ListMemberEventsRequest.after:type_name -> google.protobuf.Timestamp
-	19, // 44: permissions.v1.ListMemberEventsRequest.before:type_name -> google.protobuf.Timestamp
-	2,  // 45: permissions.v1.ListMemberEventsResponse.events:type_name -> permissions.v1.ContentMemberEvent
-	25, // 46: permissions.v1.ListMemberEventsResponse.pagination:type_name -> common.v1.PaginationResponse
-	3,  // 47: permissions.v1.MembersService.ListMembers:input_type -> permissions.v1.ListMembersRequest
-	5,  // 48: permissions.v1.MembersService.AddMember:input_type -> permissions.v1.AddMemberRequest
-	6,  // 49: permissions.v1.MembersService.UpdateMemberRole:input_type -> permissions.v1.UpdateMemberRoleRequest
-	7,  // 50: permissions.v1.MembersService.RemoveMember:input_type -> permissions.v1.RemoveMemberRequest
-	9,  // 51: permissions.v1.MembersService.SetAccessMode:input_type -> permissions.v1.SetAccessModeRequest
-	11, // 52: permissions.v1.MembersService.TransferOwnership:input_type -> permissions.v1.TransferOwnershipRequest
-	15, // 53: permissions.v1.MembersService.ListMemberEvents:input_type -> permissions.v1.ListMemberEventsRequest
-	4,  // 54: permissions.v1.MembersService.ListMembers:output_type -> permissions.v1.ListMembersResponse
-	13, // 55: permissions.v1.MembersService.AddMember:output_type -> permissions.v1.AddMemberResponse
-	14, // 56: permissions.v1.MembersService.UpdateMemberRole:output_type -> permissions.v1.UpdateMemberRoleResponse
-	8,  // 57: permissions.v1.MembersService.RemoveMember:output_type -> permissions.v1.RemoveMemberResponse
-	10, // 58: permissions.v1.MembersService.SetAccessMode:output_type -> permissions.v1.SetAccessModeResponse
-	12, // 59: permissions.v1.MembersService.TransferOwnership:output_type -> permissions.v1.TransferOwnershipResponse
-	16, // 60: permissions.v1.MembersService.ListMemberEvents:output_type -> permissions.v1.ListMemberEventsResponse
-	54, // [54:61] is the sub-list for method output_type
-	47, // [47:54] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	34, // 0: permissions.v1.ContentMember.subject_type:type_name -> common.v1.SubjectType
+	35, // 1: permissions.v1.ContentMember.role:type_name -> common.v1.ContentRole
+	36, // 2: permissions.v1.ContentMember.added_at:type_name -> google.protobuf.Timestamp
+	36, // 3: permissions.v1.ContentMember.updated_at:type_name -> google.protobuf.Timestamp
+	36, // 4: permissions.v1.ContentMember.expires_at:type_name -> google.protobuf.Timestamp
+	37, // 5: permissions.v1.ContentAccessPolicy.access_mode:type_name -> common.v1.AccessMode
+	35, // 6: permissions.v1.ContentAccessPolicy.baseline_role:type_name -> common.v1.ContentRole
+	35, // 7: permissions.v1.ContentAccessPolicy.caller_role:type_name -> common.v1.ContentRole
+	37, // 8: permissions.v1.ContentAccessPolicy.effective_access_mode:type_name -> common.v1.AccessMode
+	38, // 9: permissions.v1.ContentMemberEvent.content_type:type_name -> common.v1.ContentType
+	39, // 10: permissions.v1.ContentMemberEvent.action:type_name -> common.v1.ContentMemberAction
+	34, // 11: permissions.v1.ContentMemberEvent.subject_type:type_name -> common.v1.SubjectType
+	35, // 12: permissions.v1.ContentMemberEvent.previous_role:type_name -> common.v1.ContentRole
+	35, // 13: permissions.v1.ContentMemberEvent.new_role:type_name -> common.v1.ContentRole
+	37, // 14: permissions.v1.ContentMemberEvent.previous_access_mode:type_name -> common.v1.AccessMode
+	37, // 15: permissions.v1.ContentMemberEvent.new_access_mode:type_name -> common.v1.AccessMode
+	35, // 16: permissions.v1.ContentMemberEvent.previous_baseline_role:type_name -> common.v1.ContentRole
+	35, // 17: permissions.v1.ContentMemberEvent.new_baseline_role:type_name -> common.v1.ContentRole
+	40, // 18: permissions.v1.ContentMemberEvent.actor_org_role:type_name -> common.v1.OrganizationRole
+	36, // 19: permissions.v1.ContentMemberEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	38, // 20: permissions.v1.ContentAccessRequest.original_content_type:type_name -> common.v1.ContentType
+	38, // 21: permissions.v1.ContentAccessRequest.canonical_content_type:type_name -> common.v1.ContentType
+	0,  // 22: permissions.v1.ContentAccessRequest.state:type_name -> permissions.v1.AccessRequestState
+	35, // 23: permissions.v1.ContentAccessRequest.approved_role:type_name -> common.v1.ContentRole
+	36, // 24: permissions.v1.ContentAccessRequest.created_at:type_name -> google.protobuf.Timestamp
+	36, // 25: permissions.v1.ContentAccessRequest.updated_at:type_name -> google.protobuf.Timestamp
+	36, // 26: permissions.v1.ContentAccessRequest.responded_at:type_name -> google.protobuf.Timestamp
+	36, // 27: permissions.v1.ContentAccessRequest.can_request_again_at:type_name -> google.protobuf.Timestamp
+	0,  // 28: permissions.v1.AccessRequestStatus.state:type_name -> permissions.v1.AccessRequestState
+	36, // 29: permissions.v1.AccessRequestStatus.can_request_again_at:type_name -> google.protobuf.Timestamp
+	38, // 30: permissions.v1.ListMembersRequest.content_type:type_name -> common.v1.ContentType
+	4,  // 31: permissions.v1.ListMembersResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	3,  // 32: permissions.v1.ListMembersResponse.members:type_name -> permissions.v1.ContentMember
+	38, // 33: permissions.v1.AddMemberRequest.content_type:type_name -> common.v1.ContentType
+	34, // 34: permissions.v1.AddMemberRequest.subject_type:type_name -> common.v1.SubjectType
+	35, // 35: permissions.v1.AddMemberRequest.role:type_name -> common.v1.ContentRole
+	36, // 36: permissions.v1.AddMemberRequest.expires_at:type_name -> google.protobuf.Timestamp
+	38, // 37: permissions.v1.UpdateMemberRoleRequest.content_type:type_name -> common.v1.ContentType
+	34, // 38: permissions.v1.UpdateMemberRoleRequest.subject_type:type_name -> common.v1.SubjectType
+	35, // 39: permissions.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ContentRole
+	38, // 40: permissions.v1.RemoveMemberRequest.content_type:type_name -> common.v1.ContentType
+	34, // 41: permissions.v1.RemoveMemberRequest.subject_type:type_name -> common.v1.SubjectType
+	38, // 42: permissions.v1.SetAccessModeRequest.content_type:type_name -> common.v1.ContentType
+	37, // 43: permissions.v1.SetAccessModeRequest.access_mode:type_name -> common.v1.AccessMode
+	35, // 44: permissions.v1.SetAccessModeRequest.baseline_role:type_name -> common.v1.ContentRole
+	4,  // 45: permissions.v1.SetAccessModeResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	38, // 46: permissions.v1.TransferOwnershipRequest.content_type:type_name -> common.v1.ContentType
+	4,  // 47: permissions.v1.TransferOwnershipResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	3,  // 48: permissions.v1.AddMemberResponse.member:type_name -> permissions.v1.ContentMember
+	3,  // 49: permissions.v1.UpdateMemberRoleResponse.member:type_name -> permissions.v1.ContentMember
+	38, // 50: permissions.v1.ListMemberEventsRequest.content_type:type_name -> common.v1.ContentType
+	41, // 51: permissions.v1.ListMemberEventsRequest.pagination:type_name -> common.v1.PaginationRequest
+	39, // 52: permissions.v1.ListMemberEventsRequest.action:type_name -> common.v1.ContentMemberAction
+	36, // 53: permissions.v1.ListMemberEventsRequest.after:type_name -> google.protobuf.Timestamp
+	36, // 54: permissions.v1.ListMemberEventsRequest.before:type_name -> google.protobuf.Timestamp
+	5,  // 55: permissions.v1.ListMemberEventsResponse.events:type_name -> permissions.v1.ContentMemberEvent
+	42, // 56: permissions.v1.ListMemberEventsResponse.pagination:type_name -> common.v1.PaginationResponse
+	2,  // 57: permissions.v1.RequestAccessResponse.outcome:type_name -> permissions.v1.RequestAccessOutcome
+	6,  // 58: permissions.v1.RequestAccessResponse.access_request:type_name -> permissions.v1.ContentAccessRequest
+	36, // 59: permissions.v1.RequestAccessResponse.can_request_again_at:type_name -> google.protobuf.Timestamp
+	7,  // 60: permissions.v1.GetMyAccessRequestStatusesResponse.statuses:type_name -> permissions.v1.AccessRequestStatus
+	6,  // 61: permissions.v1.GetAccessRequestResponse.access_request:type_name -> permissions.v1.ContentAccessRequest
+	38, // 62: permissions.v1.ListAccessRequestsRequest.canonical_content_type:type_name -> common.v1.ContentType
+	0,  // 63: permissions.v1.ListAccessRequestsRequest.state:type_name -> permissions.v1.AccessRequestState
+	41, // 64: permissions.v1.ListAccessRequestsRequest.pagination:type_name -> common.v1.PaginationRequest
+	6,  // 65: permissions.v1.ListAccessRequestsResponse.access_requests:type_name -> permissions.v1.ContentAccessRequest
+	42, // 66: permissions.v1.ListAccessRequestsResponse.pagination:type_name -> common.v1.PaginationResponse
+	1,  // 67: permissions.v1.RespondToAccessRequestRequest.decision:type_name -> permissions.v1.AccessRequestDecision
+	35, // 68: permissions.v1.RespondToAccessRequestRequest.approved_role:type_name -> common.v1.ContentRole
+	6,  // 69: permissions.v1.RespondToAccessRequestResponse.access_request:type_name -> permissions.v1.ContentAccessRequest
+	6,  // 70: permissions.v1.CancelAccessRequestResponse.access_request:type_name -> permissions.v1.ContentAccessRequest
+	8,  // 71: permissions.v1.MembersService.ListMembers:input_type -> permissions.v1.ListMembersRequest
+	10, // 72: permissions.v1.MembersService.AddMember:input_type -> permissions.v1.AddMemberRequest
+	11, // 73: permissions.v1.MembersService.UpdateMemberRole:input_type -> permissions.v1.UpdateMemberRoleRequest
+	12, // 74: permissions.v1.MembersService.RemoveMember:input_type -> permissions.v1.RemoveMemberRequest
+	14, // 75: permissions.v1.MembersService.SetAccessMode:input_type -> permissions.v1.SetAccessModeRequest
+	16, // 76: permissions.v1.MembersService.TransferOwnership:input_type -> permissions.v1.TransferOwnershipRequest
+	20, // 77: permissions.v1.MembersService.ListMemberEvents:input_type -> permissions.v1.ListMemberEventsRequest
+	22, // 78: permissions.v1.MembersService.RequestAccess:input_type -> permissions.v1.RequestAccessRequest
+	24, // 79: permissions.v1.MembersService.GetMyAccessRequestStatuses:input_type -> permissions.v1.GetMyAccessRequestStatusesRequest
+	26, // 80: permissions.v1.MembersService.GetAccessRequest:input_type -> permissions.v1.GetAccessRequestRequest
+	28, // 81: permissions.v1.MembersService.ListAccessRequests:input_type -> permissions.v1.ListAccessRequestsRequest
+	30, // 82: permissions.v1.MembersService.RespondToAccessRequest:input_type -> permissions.v1.RespondToAccessRequestRequest
+	32, // 83: permissions.v1.MembersService.CancelAccessRequest:input_type -> permissions.v1.CancelAccessRequestRequest
+	9,  // 84: permissions.v1.MembersService.ListMembers:output_type -> permissions.v1.ListMembersResponse
+	18, // 85: permissions.v1.MembersService.AddMember:output_type -> permissions.v1.AddMemberResponse
+	19, // 86: permissions.v1.MembersService.UpdateMemberRole:output_type -> permissions.v1.UpdateMemberRoleResponse
+	13, // 87: permissions.v1.MembersService.RemoveMember:output_type -> permissions.v1.RemoveMemberResponse
+	15, // 88: permissions.v1.MembersService.SetAccessMode:output_type -> permissions.v1.SetAccessModeResponse
+	17, // 89: permissions.v1.MembersService.TransferOwnership:output_type -> permissions.v1.TransferOwnershipResponse
+	21, // 90: permissions.v1.MembersService.ListMemberEvents:output_type -> permissions.v1.ListMemberEventsResponse
+	23, // 91: permissions.v1.MembersService.RequestAccess:output_type -> permissions.v1.RequestAccessResponse
+	25, // 92: permissions.v1.MembersService.GetMyAccessRequestStatuses:output_type -> permissions.v1.GetMyAccessRequestStatusesResponse
+	27, // 93: permissions.v1.MembersService.GetAccessRequest:output_type -> permissions.v1.GetAccessRequestResponse
+	29, // 94: permissions.v1.MembersService.ListAccessRequests:output_type -> permissions.v1.ListAccessRequestsResponse
+	31, // 95: permissions.v1.MembersService.RespondToAccessRequest:output_type -> permissions.v1.RespondToAccessRequestResponse
+	33, // 96: permissions.v1.MembersService.CancelAccessRequest:output_type -> permissions.v1.CancelAccessRequestResponse
+	84, // [84:97] is the sub-list for method output_type
+	71, // [71:84] is the sub-list for method input_type
+	71, // [71:71] is the sub-list for extension type_name
+	71, // [71:71] is the sub-list for extension extendee
+	0,  // [0:71] is the sub-list for field type_name
 }
 
 func init() { file_permissions_v1_permissions_proto_init() }
@@ -1587,21 +2833,27 @@ func file_permissions_v1_permissions_proto_init() {
 	file_permissions_v1_permissions_proto_msgTypes[0].OneofWrappers = []any{}
 	file_permissions_v1_permissions_proto_msgTypes[1].OneofWrappers = []any{}
 	file_permissions_v1_permissions_proto_msgTypes[2].OneofWrappers = []any{}
-	file_permissions_v1_permissions_proto_msgTypes[5].OneofWrappers = []any{}
-	file_permissions_v1_permissions_proto_msgTypes[9].OneofWrappers = []any{}
-	file_permissions_v1_permissions_proto_msgTypes[15].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[3].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[4].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[7].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[11].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[17].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[20].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[25].OneofWrappers = []any{}
+	file_permissions_v1_permissions_proto_msgTypes[27].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_permissions_v1_permissions_proto_rawDesc), len(file_permissions_v1_permissions_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   17,
+			NumEnums:      3,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_permissions_v1_permissions_proto_goTypes,
 		DependencyIndexes: file_permissions_v1_permissions_proto_depIdxs,
+		EnumInfos:         file_permissions_v1_permissions_proto_enumTypes,
 		MessageInfos:      file_permissions_v1_permissions_proto_msgTypes,
 	}.Build()
 	File_permissions_v1_permissions_proto = out.File

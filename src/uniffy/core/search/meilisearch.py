@@ -19,6 +19,7 @@ from meilisearch_python_sdk.models.settings import (
 )
 
 from uniffy.core.content.references import parse_urn
+from uniffy.core.search.stop_words import STOP_WORDS
 from uniffy.observability.metrics import (
     SEARCH_OPERATION_DURATION,
     SEARCH_OPERATION_ERRORS_TOTAL,
@@ -74,6 +75,16 @@ class MeilisearchConfig:
         )
 
 
+@dataclass(frozen=True)
+class DocumentLookupResult:
+    documents: dict[str, dict[str, Any]]
+    failed_urns: frozenset[str]
+
+    @property
+    def complete(self) -> bool:
+        return not self.failed_urns
+
+
 INDEX_SETTINGS = MeilisearchSettings(
     searchable_attributes=[
         "title",
@@ -113,6 +124,7 @@ INDEX_SETTINGS = MeilisearchSettings(
         "sort",
         "exactness",
     ],
+    stop_words=list(STOP_WORDS),
     typo_tolerance=TypoTolerance(
         enabled=True,
         min_word_size_for_typos=MinWordSizeForTypos(
@@ -598,6 +610,78 @@ class MeilisearchClient:
         )
         return updated
 
+    async def update_task_sharing(
+        self,
+        *,
+        organization_id: UUID,
+        project_id: UUID,
+        owner_id: UUID,
+        access_mode: str,
+        baseline_role: str | None,
+        shared_user_ids: list[UUID],
+        shared_group_ids: list[UUID],
+        blocked_user_ids: list[UUID],
+        blocked_group_ids: list[UUID],
+    ) -> int:
+        index = self.client.index(self.config.index_name)
+        filter_expr = (
+            f'organization_id = "{organization_id}" AND '
+            f'entity_type = "task" AND metadata.project_id = "{project_id}"'
+        )
+        shared_users = [str(user_id) for user_id in shared_user_ids]
+        shared_groups = [str(group_id) for group_id in shared_group_ids]
+        blocked_users = [str(user_id) for user_id in blocked_user_ids]
+        blocked_groups = [str(group_id) for group_id in blocked_group_ids]
+        batch_size = 500
+        offset = 0
+        updated = 0
+
+        while True:
+            docs = await index.get_documents(
+                filter=filter_expr,
+                fields=["id"],
+                limit=batch_size,
+                offset=offset,
+            )
+            rows = list(docs.results)
+            if not rows:
+                break
+            partials = [
+                {
+                    "id": row["id"],
+                    "owner_id": str(owner_id),
+                    "access_mode": access_mode,
+                    "baseline_role": baseline_role,
+                    "shared_user_ids": shared_users,
+                    "shared_group_ids": shared_groups,
+                    "blocked_user_ids": blocked_users,
+                    "blocked_group_ids": blocked_groups,
+                }
+                for row in rows
+                if row.get("id")
+            ]
+            if partials:
+                task = await index.update_documents(partials, skip_creation=True)
+                task_uid = getattr(task, "task_uid", None) or getattr(task, "taskUid", None)
+                if task_uid is not None:
+                    completed = await self.client.wait_for_task(task_uid, timeout_in_ms=5000)
+                    status = str(getattr(completed, "status", "succeeded")).lower()
+                    if not status.endswith("succeeded"):
+                        raise RuntimeError(
+                            f"Meilisearch task ACL refresh {task_uid} ended with {status}"
+                        )
+                updated += len(partials)
+            if len(rows) < batch_size:
+                break
+            offset += len(rows)
+
+        SEARCH_OPERATIONS_TOTAL.labels(operation="update_sharing").inc()
+        logger.info(
+            f"Meilisearch: refreshed task sharing count={updated}",
+            project_id=str(project_id),
+        )
+        return updated
+
     async def update_document_attendees(
         self,
         urn: str,
@@ -730,11 +814,11 @@ class MeilisearchClient:
         self,
         urns: list[str],
         organization_id: UUID,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> DocumentLookupResult:
         """Map ``urn -> document`` for the requested URNs in one org via chunked filter lookups."""
         urns = [urn for urn in urns if parse_urn(urn) is not None]
         if not urns:
-            return {}
+            return DocumentLookupResult(documents={}, failed_urns=frozenset())
 
         start = time.perf_counter()
         index = self.client.index(self.config.index_name)
@@ -742,14 +826,15 @@ class MeilisearchClient:
 
         # Chunk to stay under Meilisearch's filter complexity limits.
         result: dict[str, dict[str, Any]] = {}
+        failed_urns: set[str] = set()
         chunk_size = 50
 
-        try:
-            for i in range(0, len(urns), chunk_size):
-                chunk = urns[i : i + chunk_size]
-                urn_filters = " OR ".join(f'urn = "{urn}"' for urn in chunk)
-                combined_filter = f"({urn_filters}) AND {org_filter}"
+        for i in range(0, len(urns), chunk_size):
+            chunk = urns[i : i + chunk_size]
+            urn_filters = " OR ".join(f'urn = "{urn}"' for urn in chunk)
+            combined_filter = f"({urn_filters}) AND {org_filter}"
 
+            try:
                 docs = await index.get_documents(
                     filter=combined_filter,
                     limit=len(chunk),
@@ -757,25 +842,27 @@ class MeilisearchClient:
                 for doc in docs.results:
                     if "urn" in doc:  # noqa: PLR2004
                         result[doc["urn"]] = doc
+            except Exception:
+                failed_urns.update(chunk)
+                logger.opt(exception=True).warning(
+                    "Meilisearch: get_documents_by_urns chunk failed",
+                    chunk_size=len(chunk),
+                )
 
-            elapsed_ms = (time.perf_counter() - start) * 1000
-            SEARCH_OPERATIONS_TOTAL.labels(operation="get_batch").inc()
-            SEARCH_OPERATION_DURATION.labels(operation="get_batch").observe(elapsed_ms / 1000)
-            logger.info(
-                f"Meilisearch: get_documents_by_urns found={len(result)}/{len(urns)}",
-                ms=f"{elapsed_ms:.1f}",
-            )
-            return result
-        except Exception as e:
-            elapsed_ms = (time.perf_counter() - start) * 1000
-            SEARCH_OPERATIONS_TOTAL.labels(operation="get_batch").inc()
-            SEARCH_OPERATION_DURATION.labels(operation="get_batch").observe(elapsed_ms / 1000)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="get_batch").inc()
+        SEARCH_OPERATION_DURATION.labels(operation="get_batch").observe(elapsed_ms / 1000)
+        if failed_urns:
             SEARCH_OPERATION_ERRORS_TOTAL.labels(operation="get_batch").inc()
-            logger.warning(
-                f"Meilisearch: get_documents_by_urns failed: {e}",
-                ms=f"{elapsed_ms:.1f}",
-            )
-            return {}
+        logger.info(
+            f"Meilisearch: get_documents_by_urns found={len(result)}/{len(urns)}",
+            failed=len(failed_urns),
+            ms=f"{elapsed_ms:.1f}",
+        )
+        return DocumentLookupResult(
+            documents=result,
+            failed_urns=frozenset(failed_urns),
+        )
 
     async def health_check(self) -> bool:
         start = time.perf_counter()

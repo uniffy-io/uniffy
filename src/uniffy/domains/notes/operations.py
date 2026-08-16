@@ -23,6 +23,10 @@ from uniffy.core.content.members import (
     register_attachment_cascade_loader,
     register_content_loader,
 )
+from uniffy.core.content.reference_state import (
+    model_reference_state_loader,
+    register_reference_state_loader,
+)
 from uniffy.core.content.references import (
     CanvasNodeType,
     extract_all_outgoing_references,
@@ -1322,6 +1326,7 @@ async def _load_note(
 
 
 register_content_loader(ContentType.NOTE, _load_note)
+register_reference_state_loader(ContentType.NOTE, model_reference_state_loader(Note))
 
 
 async def _note_attachment_cascade(

@@ -8,6 +8,7 @@ Publisher reconnects on transient failures.
 import asyncio
 import contextlib
 from collections.abc import AsyncGenerator
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
@@ -36,6 +37,7 @@ class NotificationPayloadType(StrEnum):
     PERMISSIONS_CHANGED = "permissions_changed"
     CONTENT_ACCESS_CHANGED = "content_access_changed"
     MENTION_STATE_CHANGED = "mention_state_changed"
+    ACCESS_REQUEST_CHANGED = "access_request_changed"
 
 
 def _build_client(url: str) -> aioredis.Redis:
@@ -165,6 +167,25 @@ async def publish_content_access_changed(
         return
     for user_id in target_user_ids:
         await publish_to_channel(_channel_name(user_id), payload)
+
+
+async def publish_access_request_changed(
+    *,
+    user_id: UUID,
+    request_id: UUID,
+    requested_urn: str,
+    state: int,
+    can_request_again_at: datetime | None = None,
+) -> None:
+    payload = {
+        "_type": NotificationPayloadType.ACCESS_REQUEST_CHANGED,
+        "request_id": str(request_id),
+        "requested_urn": requested_urn,
+        "state": state,
+    }
+    if can_request_again_at is not None:
+        payload["can_request_again_at"] = can_request_again_at.isoformat()
+    await publish_to_channel(_channel_name(user_id), payload)
 
 
 async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]:

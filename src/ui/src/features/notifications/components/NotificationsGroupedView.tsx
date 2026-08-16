@@ -1,10 +1,9 @@
 import { useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { CaretDown, CaretRight, BellSimple } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { parseUrn } from "@/shared/utils/urn";
-import { notificationTargetPath } from "@/features/notifications/utils/notificationTarget";
+import { useNotificationAction } from "@/features/notifications/hooks/useNotificationAction";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
 import { getUrnTypeTheme } from "@/config/theme/urnColors";
 import { formatSmartDateTime } from "@/shared/utils/dateFormatting";
@@ -54,7 +53,6 @@ function groupBySource(notifications: SerializedPageNotification[]): Notificatio
 
 export function NotificationsGroupedView() {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const notifications = useAppSelector((s) => s.notificationsPage.notifications);
   const loading = useAppSelector((s) => s.notificationsPage.loading);
   const selectedIds = useAppSelector((s) => s.notificationsPage.selectedIds);
@@ -89,18 +87,7 @@ export function NotificationsGroupedView() {
     [dispatch],
   );
 
-  const handleClick = useCallback(
-    (notification: SerializedPageNotification) => {
-      if (!notification.isRead) {
-        dispatch(markNotificationAsRead(notification.id));
-      }
-      const path = notificationTargetPath(notification);
-      if (path) {
-        navigate(path);
-      }
-    },
-    [dispatch, navigate],
-  );
+  const handleClick = useNotificationAction();
 
   if (loading && notifications.length === 0) {
     return (

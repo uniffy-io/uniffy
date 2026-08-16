@@ -362,6 +362,53 @@ class TestTransferOwnershipRejections:
 
         assert order[:2] == ["hook", "commit"]
 
+    async def test_child_acl_refresh_is_recorded_before_commit_and_enqueued_after(self) -> None:
+        from uniffy.core.content import members as members_module
+
+        ops = _make_ops()
+        content = _fake_content()
+        new_owner = generate_id()
+        order: list[str] = []
+
+        async def record(session, organization_id, content_id):
+            order.append("record")
+
+        async def enqueue(content_id):
+            order.append("enqueue")
+
+        async def commit():
+            order.append("commit")
+
+        ops.session.commit = AsyncMock(side_effect=commit)
+        p1, p2 = self._patch_prereqs(ops, content)
+        members_module.register_child_acl_refresh_hook(ContentType.NOTE, record, enqueue)
+        try:
+            with (
+                p1,
+                p2,
+                patch.object(ops, "_is_active_org_member", AsyncMock(return_value=True)),
+                patch.object(ops, "_get_existing_member", AsyncMock(return_value=None)),
+                patch.object(ops, "_sync_search_access_policy", AsyncMock()),
+                patch.object(ops, "_sync_search_sharing", AsyncMock()),
+                patch.object(ops, "_emit_granted_notification", AsyncMock()),
+                patch.object(members_module, "record_ownership_transferred", AsyncMock()),
+                patch.object(members_module, "record_member_added", AsyncMock()),
+                patch.object(members_module, "invalidate_perm_role", AsyncMock()),
+                patch.object(members_module, "invalidate_visible_sets_for_user", AsyncMock()),
+                patch.object(members_module, "publish_perm_change", AsyncMock()),
+            ):
+                await ops.transfer_ownership(
+                    actor_user_id=generate_id(),
+                    organization_id=generate_id(),
+                    content_type=ContentType.NOTE,
+                    content_id=content.id,
+                    new_owner_user_id=new_owner,
+                )
+        finally:
+            members_module._child_acl_refresh_hooks.pop(ContentType.NOTE, None)
+
+        assert order == ["record", "commit", "enqueue"]
+
 
 class _Reached(Exception):
     """Sentinel raised by the first collaborator after a passed gate."""

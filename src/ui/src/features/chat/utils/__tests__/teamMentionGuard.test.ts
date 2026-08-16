@@ -10,6 +10,7 @@ import {
   getCachedPreview,
   resolveUrnBatched,
 } from "@/components/mention/useBatchedSubjectResolver";
+import { MentionAvailability } from "@/components/mention/types";
 
 vi.mock("@/components/mention/mentionStateEmitter", () => ({
   getMentionState: vi.fn(),
@@ -94,6 +95,8 @@ describe("resolveTeamMentionTotal", () => {
       description: "",
       type: "team" as never,
       metadata: { member_count: "15" },
+      availability: MentionAvailability.Available,
+      canRequestAccess: false,
     });
 
     const result = await resolveTeamMentionTotal([{ label: "Engineering", urn: ENG }], ORG);

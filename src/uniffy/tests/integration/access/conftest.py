@@ -31,7 +31,10 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.permissions.content_member import ContentMember
+from uniffy.core.models.permissions.content_access_request import ContentAccessRequest
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
+from uniffy.core.models.projects.project import Project
+from uniffy.core.models.projects.task import Task
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
 from uniffy.db import close_db, init_db, open_session
 from uniffy.db.session import get_database_url
@@ -244,7 +247,14 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
     await db_session.execute(
         delete(ContentMember).where(ContentMember.organization_id.in_(env.org_ids))
     )
+    await db_session.execute(
+        delete(ContentAccessRequest).where(
+            ContentAccessRequest.organization_id.in_(env.org_ids)
+        )
+    )
     await db_session.execute(delete(Note).where(Note.organization_id.in_(env.org_ids)))
+    await db_session.execute(delete(Task).where(Task.organization_id.in_(env.org_ids)))
+    await db_session.execute(delete(Project).where(Project.organization_id.in_(env.org_ids)))
     event_ids = (
         (
             await db_session.execute(

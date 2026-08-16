@@ -3,7 +3,19 @@ export type TaskStatus = string;
 
 export type FileProcessingStatus = "pending" | "processing" | "completed" | "failed" | "skipped";
 
-export type MentionStatus = "ok" | "deleted";
+export enum MentionAvailability {
+  Available = "available",
+  Restricted = "restricted",
+  Deleted = "deleted",
+  Unavailable = "unavailable",
+}
+
+export enum MentionAccessRequestStatus {
+  Pending = "pending",
+  Approved = "approved",
+  Denied = "denied",
+  Canceled = "canceled",
+}
 
 export interface MentionLiveState {
   urn: string;
@@ -14,8 +26,11 @@ export interface MentionLiveState {
   updatedAt?: string;
   updatedByName?: string;
 
-  /** Tombstone marker. 'deleted' = referenced target no longer exists. */
-  status?: MentionStatus;
+  availability?: MentionAvailability;
+  canRequestAccess?: boolean;
+  accessRequestId?: string;
+  accessRequestStatus?: MentionAccessRequestStatus;
+  canRequestAgainAt?: string;
 
   // TASK
   taskStatus?: TaskStatus;

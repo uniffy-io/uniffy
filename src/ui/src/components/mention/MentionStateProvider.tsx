@@ -2,6 +2,7 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppSelector } from "@/app/hooks";
 import { searchApi } from "@/features/search/api/searchApi";
+import { membersApi } from "@/features/permissions/api/membersApi";
 import { parseUrn, UrnType } from "@/shared/utils/urn";
 import {
   onMentionStateChange,
@@ -9,9 +10,14 @@ import {
   clearMentionStates,
   setMentionUrl,
 } from "@/components/mention/mentionStateEmitter";
-import type { MentionLiveState } from "@/components/mention/types";
-import type { UrnMetadata } from "@uniffy/proto/search/v1/search_pb";
+import { MentionAvailability, type MentionLiveState } from "@/components/mention/types";
+import {
+  UrnAvailability as ProtoUrnAvailability,
+  type UrnMetadata,
+} from "@uniffy/proto/search/v1/search_pb";
 import { useAppearanceSettings } from "@/features/settings/hooks/useSettings";
+import { clearPreviewCache } from "@/components/mention/useBatchedSubjectResolver";
+import { accessRequestStatusToLiveState } from "@/components/mention/accessRequestState";
 
 export type MentionDisplayMode = "expanded" | "compact";
 
@@ -34,7 +40,7 @@ export const MentionStateContext = createContext<MentionStateContextValue>({
   mentionDisplay: "expanded",
 });
 
-function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
+export function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
   const parsed = parseUrn(urn);
   const m = meta.metadata ?? {};
 
@@ -45,7 +51,8 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
     updatedAt: m.updated_at || undefined,
     updatedByName: m.updated_by_name || undefined,
     parentLabel: m.parent_label || undefined,
-    status: m.urn_status === "DELETED" ? "deleted" : "ok",
+    availability: mentionAvailabilityFromProto(meta.availability, meta.urnStatus || m.urn_status),
+    canRequestAccess: meta.canRequestAccess,
   };
 
   if (meta.contentTags?.length) state.contentTags = [...meta.contentTags];
@@ -166,6 +173,26 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
   return state;
 }
 
+function mentionAvailabilityFromProto(
+  availability: ProtoUrnAvailability,
+  compatibilityStatus?: string,
+): MentionAvailability {
+  switch (availability) {
+    case ProtoUrnAvailability.RESTRICTED:
+      return MentionAvailability.Restricted;
+    case ProtoUrnAvailability.DELETED:
+      return MentionAvailability.Deleted;
+    case ProtoUrnAvailability.UNAVAILABLE:
+      return MentionAvailability.Unavailable;
+    case ProtoUrnAvailability.AVAILABLE:
+      return MentionAvailability.Available;
+    default:
+      return compatibilityStatus === "DELETED"
+        ? MentionAvailability.Deleted
+        : MentionAvailability.Available;
+  }
+}
+
 /** Decodes the pipe/colon serialised per-domain breakdown (e.g. `NOTE:12|FILE:3`). */
 function parseTagDomainBreakdown(raw: string): Record<string, number> {
   const out: Record<string, number> = {};
@@ -199,7 +226,11 @@ export function streamChangesToLiveState(
         patch.updatedByName = value || undefined;
         break;
       case "urn_status":
-        patch.status = value === "DELETED" ? "deleted" : "ok";
+        patch.availability =
+          value === "DELETED" ? MentionAvailability.Deleted : MentionAvailability.Available;
+        break;
+      case "availability":
+        patch.availability = mentionAvailabilityFromStream(value);
         break;
       case "parent_label":
         patch.parentLabel = value || undefined;
@@ -392,6 +423,19 @@ export function streamChangesToLiveState(
   return patch;
 }
 
+function mentionAvailabilityFromStream(value: string): MentionAvailability {
+  switch (value) {
+    case "RESTRICTED":
+      return MentionAvailability.Restricted;
+    case "DELETED":
+      return MentionAvailability.Deleted;
+    case "UNAVAILABLE":
+      return MentionAvailability.Unavailable;
+    default:
+      return MentionAvailability.Available;
+  }
+}
+
 interface MentionStateProviderProps {
   children: React.ReactNode;
 }
@@ -420,11 +464,41 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
 
       if (!response.resolved) return;
 
+      const restrictedUrns = Object.entries(response.resolved)
+        .filter(([, metadata]) => {
+          const meta = metadata as UrnMetadata;
+          return (
+            mentionAvailabilityFromProto(meta.availability, meta.urnStatus) ===
+              MentionAvailability.Restricted && meta.canRequestAccess
+          );
+        })
+        .map(([urn]) => urn);
+      let requestStatusByUrn = new Map<
+        string,
+        Awaited<ReturnType<typeof membersApi.getMyAccessRequestStatuses>>["statuses"][number]
+      >();
+      if (restrictedUrns.length > 0) {
+        try {
+          const statusResponse = await membersApi.getMyAccessRequestStatuses({
+            organizationId,
+            requestedUrns: restrictedUrns,
+          });
+          requestStatusByUrn = new Map(
+            statusResponse.statuses.map((status) => [status.requestedUrn, status]),
+          );
+        } catch {
+          requestStatusByUrn = new Map();
+        }
+      }
+
       setStates((prev) => {
         const next = new Map(prev);
         for (const [urn, metadata] of Object.entries(response.resolved)) {
           const meta = metadata as UrnMetadata;
-          const liveState = metadataToLiveState(urn, meta);
+          const liveState = {
+            ...metadataToLiveState(urn, meta),
+            ...accessRequestStatusToLiveState(requestStatusByUrn.get(urn)),
+          };
           next.set(urn, liveState);
           // Also publish to the module-level emitter so ProseMirror NodeView roots pick it up.
           setMentionState(urn, liveState);
@@ -470,8 +544,21 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
 
   // Stream patches arrive snake_case; spread both shapes then overlay the translated camelCase patch so deltas land on the right fields.
   useEffect(() => {
-    const unsubscribe = onMentionStateChange((urn, changes) => {
+    const unsubscribe = onMentionStateChange((urn, changes, operation) => {
       setStates((prev) => {
+        if (operation === "invalidate") {
+          if (!prev.has(urn)) return prev;
+          const next = new Map(prev);
+          next.delete(urn);
+          return next;
+        }
+        if (operation === "replace") {
+          const replacement = changes as MentionLiveState;
+          const next = new Map(prev);
+          next.set(urn, replacement);
+          setMentionState(urn, replacement);
+          return next;
+        }
         const existing = prev.get(urn);
         if (!existing) return prev;
         const patch = streamChangesToLiveState(changes as Record<string, string>);
@@ -490,6 +577,7 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     return () => {
       if (resolveTimer.current) clearTimeout(resolveTimer.current);
       clearMentionStates();
+      clearPreviewCache();
     };
   }, []);
 
@@ -499,6 +587,7 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     // eslint-disable-next-line react/react-compiler -- an org switch must drop every resolved title before the refetch, or chips keep rendering the previous tenant's content
     setStates(new Map());
     clearMentionStates();
+    clearPreviewCache();
 
     for (const urn of registeredUrns.current.keys()) {
       pendingUrns.current.add(urn);

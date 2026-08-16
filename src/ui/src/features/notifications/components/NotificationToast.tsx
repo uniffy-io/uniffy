@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { X } from "@phosphor-icons/react";
 import {
   Bell,
@@ -19,12 +18,14 @@ import {
   UserPlus,
   UserMinus,
   ArrowBendUpLeft,
+  LockKeyOpen,
+  Prohibit,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { cn } from "@/shared/utils/cn";
 import { parseUrn } from "@/shared/utils/urn";
-import { notificationTargetPath } from "@/features/notifications/utils/notificationTarget";
+import { useNotificationAction } from "@/features/notifications/hooks/useNotificationAction";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { SUBJECT_TYPE } from "@/components/subject/types";
 import { getUrnTypeTheme } from "@/config/theme/urnColors";
@@ -50,6 +51,8 @@ const TYPE_ICON_MAP: Record<number, Icon> = {
   [NotificationType.CHAT_CHANNEL_INVITE]: UserPlus,
   [NotificationType.CHAT_CHANNEL_REMOVED]: UserMinus,
   [NotificationType.CHAT_THREAD_REPLY]: ArrowBendUpLeft,
+  [NotificationType.ACCESS_REQUESTED]: LockKeyOpen,
+  [NotificationType.ACCESS_REQUEST_DENIED]: Prohibit,
 };
 
 interface NotificationToastProps {
@@ -59,7 +62,6 @@ interface NotificationToastProps {
 }
 
 export function NotificationToast({ notification, toastId, onMarkAsRead }: NotificationToastProps) {
-  const navigate = useNavigate();
   const TypeIcon = TYPE_ICON_MAP[notification.notificationType] ?? Bell;
 
   const parsedUrn = notification.sourceUrn ? parseUrn(notification.sourceUrn) : null;
@@ -76,15 +78,12 @@ export function NotificationToast({ notification, toastId, onMarkAsRead }: Notif
       }
     : null;
 
-  const handleClick = useCallback(() => {
-    onMarkAsRead(notification.id);
-    toast.dismiss(toastId);
-
-    const path = notificationTargetPath(notification);
-    if (path) {
-      navigate(path);
-    }
-  }, [notification, toastId, onMarkAsRead, navigate]);
+  const dismiss = useCallback(() => toast.dismiss(toastId), [toastId]);
+  const handleNotification = useNotificationAction(dismiss, onMarkAsRead);
+  const handleClick = useCallback(
+    () => handleNotification(notification),
+    [handleNotification, notification],
+  );
 
   const handleDismiss = useCallback(
     (e: React.MouseEvent) => {
@@ -133,6 +132,18 @@ export function NotificationToast({ notification, toastId, onMarkAsRead }: Notif
           >
             <SourceIcon size={10} weight="fill" />
             {sourceConfig.label}
+          </span>
+        )}
+        {notification.notificationType === NotificationType.ACCESS_REQUESTED && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium mt-1",
+              "border border-border text-muted-foreground",
+              sourceConfig && "ml-1.5",
+            )}
+          >
+            <LockKeyOpen size={10} weight="fill" />
+            Review request
           </span>
         )}
       </div>

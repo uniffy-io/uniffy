@@ -15,6 +15,10 @@ from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
+from uniffy.core.content.reference_state import (
+    model_reference_state_loader,
+    register_reference_state_loader,
+)
 from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.errors import (
@@ -2329,3 +2333,7 @@ async def _load_calendar_event(
 
 
 register_content_loader(ContentType.CALENDAR_EVENT, _load_calendar_event)
+register_reference_state_loader(
+    ContentType.CALENDAR_EVENT,
+    model_reference_state_loader(CalendarEvent),
+)

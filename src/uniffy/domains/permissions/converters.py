@@ -3,7 +3,22 @@
 from uuid import UUID
 
 from uniffy_proto.permissions.v1.permissions_pb2 import (
+    ACCESS_REQUEST_STATE_APPROVED,
+    ACCESS_REQUEST_STATE_CANCELED,
+    ACCESS_REQUEST_STATE_DENIED,
+    ACCESS_REQUEST_STATE_PENDING,
+    ACCESS_REQUEST_STATE_UNSPECIFIED,
+    REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE,
+    REQUEST_ACCESS_OUTCOME_ALREADY_PENDING,
+    REQUEST_ACCESS_OUTCOME_COOLDOWN,
+    REQUEST_ACCESS_OUTCOME_CREATED,
+    AccessRequestStatus,
+)
+from uniffy_proto.permissions.v1.permissions_pb2 import (
     ContentAccessPolicy as ProtoContentAccessPolicy,
+)
+from uniffy_proto.permissions.v1.permissions_pb2 import (
+    ContentAccessRequest as ProtoContentAccessRequest,
 )
 from uniffy_proto.permissions.v1.permissions_pb2 import (
     ContentMember as ProtoContentMember,
@@ -25,6 +40,7 @@ from uniffy.core.converters.proto import (
     optional_timestamp,
 )
 from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.permissions.content_access_request import ContentAccessRequestState
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.types import (
     AccessMode,
@@ -32,6 +48,11 @@ from uniffy.core.types import (
     ContentRole,
     ContentType,
     SubjectType,
+)
+from uniffy.domains.permissions.access_requests import (
+    AccessRequestStatusView,
+    AccessRequestView,
+    RequestAccessOutcome,
 )
 
 _ACTION_FROM_AUDIT: dict[str, ContentMemberAction] = {
@@ -45,6 +66,20 @@ _ACTION_FROM_AUDIT: dict[str, ContentMemberAction] = {
 
 _ACTION_TO_AUDIT: dict[ContentMemberAction, str] = {
     domain: audit for audit, domain in _ACTION_FROM_AUDIT.items()
+}
+
+_ACCESS_REQUEST_STATE_TO_PROTO = {
+    ContentAccessRequestState.PENDING: ACCESS_REQUEST_STATE_PENDING,
+    ContentAccessRequestState.APPROVED: ACCESS_REQUEST_STATE_APPROVED,
+    ContentAccessRequestState.DENIED: ACCESS_REQUEST_STATE_DENIED,
+    ContentAccessRequestState.CANCELED: ACCESS_REQUEST_STATE_CANCELED,
+}
+
+_REQUEST_ACCESS_OUTCOME_TO_PROTO = {
+    RequestAccessOutcome.CREATED: REQUEST_ACCESS_OUTCOME_CREATED,
+    RequestAccessOutcome.ALREADY_PENDING: REQUEST_ACCESS_OUTCOME_ALREADY_PENDING,
+    RequestAccessOutcome.ALREADY_ACCESSIBLE: REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE,
+    RequestAccessOutcome.COOLDOWN: REQUEST_ACCESS_OUTCOME_COOLDOWN,
 }
 
 
@@ -64,6 +99,60 @@ def content_member_to_proto(member: ContentMember) -> ProtoContentMember:
     expires_ts = optional_timestamp(member.expires_at)
     if expires_ts is not None:
         proto.expires_at.CopyFrom(expires_ts)
+    return proto
+
+
+def access_request_outcome_to_proto(outcome: RequestAccessOutcome) -> int:
+    return _REQUEST_ACCESS_OUTCOME_TO_PROTO[outcome]
+
+
+def access_request_view_to_proto(view: AccessRequestView) -> ProtoContentAccessRequest:
+    request = view.request
+    proto = ProtoContentAccessRequest(
+        id=str(request.id),
+        organization_id=str(request.organization_id),
+        requested_urn=request.requested_urn,
+        original_content_type=content_type_to_proto(request.original_content_type),
+        original_content_id=str(request.original_content_id),
+        canonical_content_type=content_type_to_proto(request.canonical_content_type),
+        canonical_content_id=str(request.canonical_content_id),
+        requester_id=str(request.requester_id),
+        requester_display_name=view.requester_display_name,
+        state=_ACCESS_REQUEST_STATE_TO_PROTO[request.state],
+        message=request.message,
+        decision_note=request.decision_note,
+        created_at=datetime_to_timestamp(request.created_at),
+        updated_at=datetime_to_timestamp(request.updated_at),
+        requester_has_access=view.requester_has_access,
+    )
+    if request.approved_role is not None:
+        proto.approved_role = content_role_to_proto(request.approved_role)
+    if request.responded_by_user_id is not None:
+        proto.responded_by_user_id = str(request.responded_by_user_id)
+    responded_at = optional_timestamp(request.responded_at)
+    if responded_at is not None:
+        proto.responded_at.CopyFrom(responded_at)
+    can_request_again_at = optional_timestamp(view.can_request_again_at)
+    if can_request_again_at is not None:
+        proto.can_request_again_at.CopyFrom(can_request_again_at)
+    return proto
+
+
+def access_request_status_to_proto(view: AccessRequestStatusView) -> AccessRequestStatus:
+    proto = AccessRequestStatus(
+        requested_urn=view.requested_urn,
+        state=(
+            _ACCESS_REQUEST_STATE_TO_PROTO[view.state]
+            if view.state is not None
+            else ACCESS_REQUEST_STATE_UNSPECIFIED
+        ),
+        requester_has_access=view.requester_has_access,
+    )
+    if view.request_id is not None:
+        proto.request_id = str(view.request_id)
+    can_request_again_at = optional_timestamp(view.can_request_again_at)
+    if can_request_again_at is not None:
+        proto.can_request_again_at.CopyFrom(can_request_again_at)
     return proto
 
 

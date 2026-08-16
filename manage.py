@@ -586,6 +586,7 @@ def lint(service, stack):
         )
     if service in ("ui", "all"):
         workspace_cmd("ui", stack, ["lint"])
+        workspace_cmd("ui", stack, ["format:check"])
     if service == "mobile":
         workspace_cmd("mobile", stack, ["lint"])
         workspace_cmd("mobile", stack, ["format:check"])
@@ -594,10 +595,16 @@ def lint(service, stack):
 
 
 @cli.command("format")
+@click.option("--service", "-s", type=click.Choice(["all", "backend", "ui", "mobile"]), default="all")
 @stack_option
-def format_cmd(stack):
-    """Format backend code (ruff)."""
-    workspace_cmd("backend", stack, ["run", "ruff", "format", "src/uniffy/", "--exclude", "src/gen"])
+def format_cmd(service, stack):
+    """Format code (ruff for backend, oxfmt for the node workspaces)."""
+    if service in ("backend", "all"):
+        workspace_cmd("backend", stack, ["run", "ruff", "format", "src/uniffy/", "--exclude", "src/gen"])
+    if service in ("ui", "all"):
+        workspace_cmd("ui", stack, ["format"])
+    if service == "mobile":
+        workspace_cmd("mobile", stack, ["format"])
 
 
 @cli.command()

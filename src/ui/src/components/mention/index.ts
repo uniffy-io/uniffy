@@ -25,7 +25,11 @@ export {
   MentionDisplayBridge,
 } from "@/components/mention/MentionStateProvider";
 export { useMentionState, useMentionDisplay } from "@/components/mention/useMentionState";
-export { emitMentionStateChange, getMentionState } from "@/components/mention/mentionStateEmitter";
+export {
+  emitMentionStateChange,
+  getMentionState,
+  mergeMentionState,
+} from "@/components/mention/mentionStateEmitter";
 export { isTaskDoneStatus } from "@/components/mention/types";
 export type {
   MentionLiveState,

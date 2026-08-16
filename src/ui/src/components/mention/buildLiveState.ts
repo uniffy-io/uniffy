@@ -1,4 +1,4 @@
-import type { MentionLiveState } from "@/components/mention/types";
+import { MentionAvailability, type MentionLiveState } from "@/components/mention/types";
 
 export function buildLiveStateFromMetadata(
   urn: string,
@@ -10,6 +10,10 @@ export function buildLiveStateFromMetadata(
     title: title || undefined,
     updatedAt: metadata.updated_at || undefined,
     updatedByName: metadata.updated_by_name || undefined,
+    availability:
+      metadata.urn_status === "DELETED"
+        ? MentionAvailability.Deleted
+        : MentionAvailability.Available,
   };
 
   if (metadata.status) state.taskStatus = metadata.status;

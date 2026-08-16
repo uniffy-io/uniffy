@@ -27,6 +27,10 @@ export type MentionTriggerEvent = {
   view: EditorView;
 };
 
+export function isMentionInteractiveTarget(target: Pick<HTMLElement, "closest">): boolean {
+  return target.closest("button") !== null;
+}
+
 // Set rather than single callback so multiple editor instances can subscribe.
 const mentionEventCallbacks = new Set<(event: MentionTriggerEvent | null) => void>();
 
@@ -234,7 +238,7 @@ class MentionNodeView implements NodeView {
 
         // Let interactive descendants (expand/collapse buttons) handle their own events.
         const target = e.target as HTMLElement;
-        if (target.closest("button")) return;
+        if (isMentionInteractiveTarget(target)) return;
 
         e.preventDefault();
         e.stopPropagation();

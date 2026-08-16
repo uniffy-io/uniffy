@@ -3,8 +3,11 @@ from uniffy_proto.search.v1.search_pb2 import (
     SearchResultType,
     UrnMetadata,
 )
+from uniffy_proto.search.v1.search_pb2 import (
+    UrnAvailability as ProtoUrnAvailability,
+)
 
-from uniffy.domains.search.queries import SearchResult
+from uniffy.domains.search.queries import SearchResult, UrnAvailability
 
 ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
     "note": SearchResultType.SEARCH_RESULT_TYPE_NOTE,
@@ -25,6 +28,13 @@ ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
 }
 
 PROTO_TO_ENTITY_TYPE: dict[SearchResultType, str] = {v: k for k, v in ENTITY_TYPE_TO_PROTO.items()}
+
+URN_AVAILABILITY_TO_PROTO: dict[UrnAvailability, ProtoUrnAvailability] = {
+    UrnAvailability.AVAILABLE: ProtoUrnAvailability.URN_AVAILABILITY_AVAILABLE,
+    UrnAvailability.RESTRICTED: ProtoUrnAvailability.URN_AVAILABILITY_RESTRICTED,
+    UrnAvailability.DELETED: ProtoUrnAvailability.URN_AVAILABILITY_DELETED,
+    UrnAvailability.UNAVAILABLE: ProtoUrnAvailability.URN_AVAILABILITY_UNAVAILABLE,
+}
 
 
 def entity_type_to_proto(entity_type: str) -> SearchResultType:
@@ -61,12 +71,12 @@ def search_result_to_proto(
 
 
 def search_result_to_urn_metadata(item: SearchResult) -> UrnMetadata:
-    metadata = dict(item.metadata) if item.metadata else {}
+    restricted = item.availability == UrnAvailability.RESTRICTED
+    metadata = {} if restricted else dict(item.metadata or {})
 
-    # urn_status marks a tombstone synthesized by resolve_urns for a missing URN -
-    # the frontend renders this as a deleted-state chip.
-    if item.urn_status:
-        metadata["urn_status"] = item.urn_status
+    urn_status = "DELETED" if item.availability == UrnAvailability.DELETED else ""
+    if urn_status:
+        metadata["urn_status"] = urn_status
 
     if item.updated_at:
         metadata["updated_at"] = item.updated_at.isoformat()
@@ -146,11 +156,14 @@ def search_result_to_urn_metadata(item: SearchResult) -> UrnMetadata:
         metadata["user_email"] = item.user_email
 
     return UrnMetadata(
-        title=item.title,
-        description=item.description or "",
+        title="" if restricted else item.title,
+        description="" if restricted else item.description or "",
         type=entity_type_to_proto(item.entity_type),
-        url=item.url_path,
+        url="" if restricted else item.url_path,
         metadata=metadata,
+        urn_status=urn_status,
+        availability=URN_AVAILABILITY_TO_PROTO[item.availability],
+        can_request_access=item.can_request_access,
         priority=item.priority or "",
         priority_label=item.priority_label or "",
         priority_color=item.priority_color or "",

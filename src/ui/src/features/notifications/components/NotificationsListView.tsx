@@ -1,9 +1,8 @@
 import { useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { BellSimple, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { notificationTargetPath } from "@/features/notifications/utils/notificationTarget";
+import { useNotificationAction } from "@/features/notifications/hooks/useNotificationAction";
 import { NotificationItem } from "@/features/notifications/components/NotificationItem";
 import {
   markNotificationAsRead,
@@ -52,7 +51,6 @@ function groupByTime(notifications: SerializedPageNotification[]): TimeGroup[] {
 
 export function NotificationsListView() {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
 
   const notifications = useAppSelector((s) => s.notificationsPage.notifications);
   const loading = useAppSelector((s) => s.notificationsPage.loading);
@@ -78,18 +76,7 @@ export function NotificationsListView() {
     [dispatch],
   );
 
-  const handleClick = useCallback(
-    (notification: SerializedPageNotification) => {
-      if (!notification.isRead) {
-        dispatch(markNotificationAsRead(notification.id));
-      }
-      const path = notificationTargetPath(notification);
-      if (path) {
-        navigate(path);
-      }
-    },
-    [dispatch, navigate],
-  );
+  const handleClick = useNotificationAction();
 
   const handlePageChange = useCallback(
     (newPage: number) => {

@@ -11,6 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.content.reference_state import (
+    ReferenceRowState,
+    register_reference_state_loader,
+)
 from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_mentioned_agent_ids_from_content,
@@ -38,6 +42,30 @@ from uniffy.domains.chat.rate_limits import SEND, check_chat_mutation_limit
 from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="chat.messages.operations")
+
+
+async def _load_message_reference_states(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_ids: set[UUID],
+) -> dict[UUID, ReferenceRowState]:
+    rows = (
+        await session.execute(
+            select(ChatMessage.id, ChatMessage.is_deleted)
+            .join(ChatChannel, ChatChannel.id == ChatMessage.channel_id)
+            .where(
+                ChatMessage.id.in_(content_ids),
+                ChatChannel.organization_id == organization_id,
+            )
+        )
+    ).all()
+    return {
+        message_id: ReferenceRowState.DELETED if is_deleted else ReferenceRowState.LIVE
+        for message_id, is_deleted in rows
+    }
+
+
+register_reference_state_loader(ContentType.CHAT_MESSAGE, _load_message_reference_states)
 
 MAX_MESSAGE_LENGTH = 30_000
 EDIT_WINDOW_MINUTES = 2

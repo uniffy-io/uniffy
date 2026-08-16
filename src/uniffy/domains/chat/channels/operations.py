@@ -18,6 +18,10 @@ from uniffy.core.auth.permissions import (
     role_can_view,
 )
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.reference_state import (
+    model_reference_state_loader,
+    register_reference_state_loader,
+)
 from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import (
     NotFoundError,
@@ -74,6 +78,9 @@ from uniffy.domains.chat.subjects import ChatSubject
 from uniffy.domains.tags import TagAssignment, TagOperations
 
 logger = logger.bind(component="chat.channels.operations")
+
+register_reference_state_loader(ContentType.CHAT, model_reference_state_loader(ChatChannel))
+register_reference_state_loader(ContentType.AGENT_CHAT, model_reference_state_loader(ChatChannel))
 
 DEFAULT_PAGE_SIZE = 200
 MAX_PAGE_SIZE = 500

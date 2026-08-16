@@ -16,6 +16,7 @@ import { AddMemberPopover } from "@/features/permissions/components/AddMemberPop
 import { MemberRow } from "@/features/permissions/components/MemberRow";
 import { BlockedMembersSection } from "@/features/permissions/components/BlockedMembersSection";
 import { AuditLogPanel } from "@/features/permissions/components/AuditLogPanel";
+import { PendingAccessRequests } from "@/features/permissions/components/PendingAccessRequests";
 import type { SerializedContentMember } from "@/features/permissions/store/permissionsSlice";
 
 interface AccessPolicyPanelProps {
@@ -225,6 +226,18 @@ export function AccessPolicyPanel({
         )}
         <BlockedMembersSection members={blocked} canEdit={canManage} onUnblock={handleUnblock} />
       </div>
+
+      {canManage && (
+        <div>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Pending requests
+          </h3>
+          <PendingAccessRequests
+            canonicalContentType={contentType}
+            canonicalContentId={contentId}
+          />
+        </div>
+      )}
 
       {showAuditLink && (
         <div>

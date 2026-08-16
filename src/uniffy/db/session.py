@@ -15,6 +15,7 @@ from sqlalchemy.pool import AsyncAdaptedQueuePool
 from sqlalchemy.sql import text
 
 from uniffy.core.json_codec import dumps_str, loads
+from uniffy.observability import logger as obs_logger
 from uniffy.observability.metrics import DB_POOL_TIMEOUT_TOTAL
 
 logger = logger.bind(component="db.session")
@@ -161,11 +162,17 @@ async def init_db(*, skip_migrations: bool = False) -> None:
             "command_timeout": command_timeout_seconds,
             # TCP keepalive catches dead connections through firewalls/LBs.
             "server_settings": {
+                # Resolved here, after setup_observability has run, so each
+                # process shows its own name in pg_stat_activity.
+                "application_name": obs_logger.app_name,
                 # Bare date/timestamp literals and date_trunc() resolve in the
                 # session TimeZone; pin it so a non-UTC server default cannot
                 # shift bucketing or partition bounds.
                 "TimeZone": "UTC",
                 "statement_timeout": str(statement_timeout_ms),
+                # Short OLTP queries never recoup JIT compile time; a plan that
+                # crosses jit_above_cost would pay a random compile spike.
+                "jit": "off",
                 "tcp_keepalives_idle": "60",
                 "tcp_keepalives_interval": "10",
                 "tcp_keepalives_count": "3",

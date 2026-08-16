@@ -1269,8 +1269,8 @@ class ChannelHandlers:
             from uniffy.core.search.meilisearch import MeilisearchClient
 
             async with MeilisearchClient() as ms_client:
-                docs = await ms_client.get_documents_by_urns(urns, organization_id)
-                for urn, doc in docs.items():
+                lookup = await ms_client.get_documents_by_urns(urns, organization_id)
+                for urn, doc in lookup.documents.items():
                     title_map[urn] = doc.get("title", "")
         except Exception:
             logger.warning("Meilisearch title resolve failed, skipping")

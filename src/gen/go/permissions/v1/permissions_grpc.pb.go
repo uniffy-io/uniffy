@@ -19,13 +19,19 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MembersService_ListMembers_FullMethodName       = "/permissions.v1.MembersService/ListMembers"
-	MembersService_AddMember_FullMethodName         = "/permissions.v1.MembersService/AddMember"
-	MembersService_UpdateMemberRole_FullMethodName  = "/permissions.v1.MembersService/UpdateMemberRole"
-	MembersService_RemoveMember_FullMethodName      = "/permissions.v1.MembersService/RemoveMember"
-	MembersService_SetAccessMode_FullMethodName     = "/permissions.v1.MembersService/SetAccessMode"
-	MembersService_TransferOwnership_FullMethodName = "/permissions.v1.MembersService/TransferOwnership"
-	MembersService_ListMemberEvents_FullMethodName  = "/permissions.v1.MembersService/ListMemberEvents"
+	MembersService_ListMembers_FullMethodName                = "/permissions.v1.MembersService/ListMembers"
+	MembersService_AddMember_FullMethodName                  = "/permissions.v1.MembersService/AddMember"
+	MembersService_UpdateMemberRole_FullMethodName           = "/permissions.v1.MembersService/UpdateMemberRole"
+	MembersService_RemoveMember_FullMethodName               = "/permissions.v1.MembersService/RemoveMember"
+	MembersService_SetAccessMode_FullMethodName              = "/permissions.v1.MembersService/SetAccessMode"
+	MembersService_TransferOwnership_FullMethodName          = "/permissions.v1.MembersService/TransferOwnership"
+	MembersService_ListMemberEvents_FullMethodName           = "/permissions.v1.MembersService/ListMemberEvents"
+	MembersService_RequestAccess_FullMethodName              = "/permissions.v1.MembersService/RequestAccess"
+	MembersService_GetMyAccessRequestStatuses_FullMethodName = "/permissions.v1.MembersService/GetMyAccessRequestStatuses"
+	MembersService_GetAccessRequest_FullMethodName           = "/permissions.v1.MembersService/GetAccessRequest"
+	MembersService_ListAccessRequests_FullMethodName         = "/permissions.v1.MembersService/ListAccessRequests"
+	MembersService_RespondToAccessRequest_FullMethodName     = "/permissions.v1.MembersService/RespondToAccessRequest"
+	MembersService_CancelAccessRequest_FullMethodName        = "/permissions.v1.MembersService/CancelAccessRequest"
 )
 
 // MembersServiceClient is the client API for MembersService service.
@@ -39,6 +45,12 @@ type MembersServiceClient interface {
 	SetAccessMode(ctx context.Context, in *SetAccessModeRequest, opts ...grpc.CallOption) (*SetAccessModeResponse, error)
 	TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error)
 	ListMemberEvents(ctx context.Context, in *ListMemberEventsRequest, opts ...grpc.CallOption) (*ListMemberEventsResponse, error)
+	RequestAccess(ctx context.Context, in *RequestAccessRequest, opts ...grpc.CallOption) (*RequestAccessResponse, error)
+	GetMyAccessRequestStatuses(ctx context.Context, in *GetMyAccessRequestStatusesRequest, opts ...grpc.CallOption) (*GetMyAccessRequestStatusesResponse, error)
+	GetAccessRequest(ctx context.Context, in *GetAccessRequestRequest, opts ...grpc.CallOption) (*GetAccessRequestResponse, error)
+	ListAccessRequests(ctx context.Context, in *ListAccessRequestsRequest, opts ...grpc.CallOption) (*ListAccessRequestsResponse, error)
+	RespondToAccessRequest(ctx context.Context, in *RespondToAccessRequestRequest, opts ...grpc.CallOption) (*RespondToAccessRequestResponse, error)
+	CancelAccessRequest(ctx context.Context, in *CancelAccessRequestRequest, opts ...grpc.CallOption) (*CancelAccessRequestResponse, error)
 }
 
 type membersServiceClient struct {
@@ -119,6 +131,66 @@ func (c *membersServiceClient) ListMemberEvents(ctx context.Context, in *ListMem
 	return out, nil
 }
 
+func (c *membersServiceClient) RequestAccess(ctx context.Context, in *RequestAccessRequest, opts ...grpc.CallOption) (*RequestAccessResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequestAccessResponse)
+	err := c.cc.Invoke(ctx, MembersService_RequestAccess_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *membersServiceClient) GetMyAccessRequestStatuses(ctx context.Context, in *GetMyAccessRequestStatusesRequest, opts ...grpc.CallOption) (*GetMyAccessRequestStatusesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMyAccessRequestStatusesResponse)
+	err := c.cc.Invoke(ctx, MembersService_GetMyAccessRequestStatuses_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *membersServiceClient) GetAccessRequest(ctx context.Context, in *GetAccessRequestRequest, opts ...grpc.CallOption) (*GetAccessRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAccessRequestResponse)
+	err := c.cc.Invoke(ctx, MembersService_GetAccessRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *membersServiceClient) ListAccessRequests(ctx context.Context, in *ListAccessRequestsRequest, opts ...grpc.CallOption) (*ListAccessRequestsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAccessRequestsResponse)
+	err := c.cc.Invoke(ctx, MembersService_ListAccessRequests_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *membersServiceClient) RespondToAccessRequest(ctx context.Context, in *RespondToAccessRequestRequest, opts ...grpc.CallOption) (*RespondToAccessRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RespondToAccessRequestResponse)
+	err := c.cc.Invoke(ctx, MembersService_RespondToAccessRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *membersServiceClient) CancelAccessRequest(ctx context.Context, in *CancelAccessRequestRequest, opts ...grpc.CallOption) (*CancelAccessRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelAccessRequestResponse)
+	err := c.cc.Invoke(ctx, MembersService_CancelAccessRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MembersServiceServer is the server API for MembersService service.
 // All implementations must embed UnimplementedMembersServiceServer
 // for forward compatibility.
@@ -130,6 +202,12 @@ type MembersServiceServer interface {
 	SetAccessMode(context.Context, *SetAccessModeRequest) (*SetAccessModeResponse, error)
 	TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error)
 	ListMemberEvents(context.Context, *ListMemberEventsRequest) (*ListMemberEventsResponse, error)
+	RequestAccess(context.Context, *RequestAccessRequest) (*RequestAccessResponse, error)
+	GetMyAccessRequestStatuses(context.Context, *GetMyAccessRequestStatusesRequest) (*GetMyAccessRequestStatusesResponse, error)
+	GetAccessRequest(context.Context, *GetAccessRequestRequest) (*GetAccessRequestResponse, error)
+	ListAccessRequests(context.Context, *ListAccessRequestsRequest) (*ListAccessRequestsResponse, error)
+	RespondToAccessRequest(context.Context, *RespondToAccessRequestRequest) (*RespondToAccessRequestResponse, error)
+	CancelAccessRequest(context.Context, *CancelAccessRequestRequest) (*CancelAccessRequestResponse, error)
 	mustEmbedUnimplementedMembersServiceServer()
 }
 
@@ -160,6 +238,24 @@ func (UnimplementedMembersServiceServer) TransferOwnership(context.Context, *Tra
 }
 func (UnimplementedMembersServiceServer) ListMemberEvents(context.Context, *ListMemberEventsRequest) (*ListMemberEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMemberEvents not implemented")
+}
+func (UnimplementedMembersServiceServer) RequestAccess(context.Context, *RequestAccessRequest) (*RequestAccessResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RequestAccess not implemented")
+}
+func (UnimplementedMembersServiceServer) GetMyAccessRequestStatuses(context.Context, *GetMyAccessRequestStatusesRequest) (*GetMyAccessRequestStatusesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMyAccessRequestStatuses not implemented")
+}
+func (UnimplementedMembersServiceServer) GetAccessRequest(context.Context, *GetAccessRequestRequest) (*GetAccessRequestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAccessRequest not implemented")
+}
+func (UnimplementedMembersServiceServer) ListAccessRequests(context.Context, *ListAccessRequestsRequest) (*ListAccessRequestsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAccessRequests not implemented")
+}
+func (UnimplementedMembersServiceServer) RespondToAccessRequest(context.Context, *RespondToAccessRequestRequest) (*RespondToAccessRequestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RespondToAccessRequest not implemented")
+}
+func (UnimplementedMembersServiceServer) CancelAccessRequest(context.Context, *CancelAccessRequestRequest) (*CancelAccessRequestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelAccessRequest not implemented")
 }
 func (UnimplementedMembersServiceServer) mustEmbedUnimplementedMembersServiceServer() {}
 func (UnimplementedMembersServiceServer) testEmbeddedByValue()                        {}
@@ -308,6 +404,114 @@ func _MembersService_ListMemberEvents_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MembersService_RequestAccess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestAccessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MembersServiceServer).RequestAccess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MembersService_RequestAccess_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MembersServiceServer).RequestAccess(ctx, req.(*RequestAccessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MembersService_GetMyAccessRequestStatuses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMyAccessRequestStatusesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MembersServiceServer).GetMyAccessRequestStatuses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MembersService_GetMyAccessRequestStatuses_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MembersServiceServer).GetMyAccessRequestStatuses(ctx, req.(*GetMyAccessRequestStatusesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MembersService_GetAccessRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccessRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MembersServiceServer).GetAccessRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MembersService_GetAccessRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MembersServiceServer).GetAccessRequest(ctx, req.(*GetAccessRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MembersService_ListAccessRequests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAccessRequestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MembersServiceServer).ListAccessRequests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MembersService_ListAccessRequests_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MembersServiceServer).ListAccessRequests(ctx, req.(*ListAccessRequestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MembersService_RespondToAccessRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RespondToAccessRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MembersServiceServer).RespondToAccessRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MembersService_RespondToAccessRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MembersServiceServer).RespondToAccessRequest(ctx, req.(*RespondToAccessRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MembersService_CancelAccessRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelAccessRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MembersServiceServer).CancelAccessRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MembersService_CancelAccessRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MembersServiceServer).CancelAccessRequest(ctx, req.(*CancelAccessRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MembersService_ServiceDesc is the grpc.ServiceDesc for MembersService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -342,6 +546,30 @@ var MembersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListMemberEvents",
 			Handler:    _MembersService_ListMemberEvents_Handler,
+		},
+		{
+			MethodName: "RequestAccess",
+			Handler:    _MembersService_RequestAccess_Handler,
+		},
+		{
+			MethodName: "GetMyAccessRequestStatuses",
+			Handler:    _MembersService_GetMyAccessRequestStatuses_Handler,
+		},
+		{
+			MethodName: "GetAccessRequest",
+			Handler:    _MembersService_GetAccessRequest_Handler,
+		},
+		{
+			MethodName: "ListAccessRequests",
+			Handler:    _MembersService_ListAccessRequests_Handler,
+		},
+		{
+			MethodName: "RespondToAccessRequest",
+			Handler:    _MembersService_RespondToAccessRequest_Handler,
+		},
+		{
+			MethodName: "CancelAccessRequest",
+			Handler:    _MembersService_CancelAccessRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -35,6 +35,10 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
         ProtoNotificationType.NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED
     ),
     NotificationType.CHAT_THREAD_REPLY: (ProtoNotificationType.NOTIFICATION_TYPE_CHAT_THREAD_REPLY),
+    NotificationType.ACCESS_REQUESTED: ProtoNotificationType.NOTIFICATION_TYPE_ACCESS_REQUESTED,
+    NotificationType.ACCESS_REQUEST_DENIED: (
+        ProtoNotificationType.NOTIFICATION_TYPE_ACCESS_REQUEST_DENIED
+    ),
 }
 
 NOTIFICATION_TYPE_FROM_PROTO: dict[int, NotificationType] = {

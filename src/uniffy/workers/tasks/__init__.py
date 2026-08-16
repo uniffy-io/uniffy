@@ -23,6 +23,7 @@ class JobName(StrEnum):
     SAVE_REALTIME_SNAPSHOT = "save_realtime_snapshot"
     FLUSH_SEARCH_REMOVALS = "flush_search_removals"
     REFRESH_CHAT_SEARCH_ACL = "refresh_chat_search_acl"
+    REFRESH_PROJECT_SEARCH_ACL = "refresh_project_search_acl"
     RESPOND_TO_CHAT_MESSAGE = "respond_to_chat_message"
     COMPACT_SESSION = "compact_session"
     ANALYZE_SESSION_FOR_SKILLS = "analyze_session_for_skills"

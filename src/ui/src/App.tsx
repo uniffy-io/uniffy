@@ -32,7 +32,11 @@ import { PageLoader } from "@/components/feedback/PageLoader";
 import { PageErrorFallback } from "@/components/feedback/PageErrorFallback";
 import { AppErrorFallback } from "@/components/feedback/AppErrorFallback";
 import { NotFoundPage } from "@/components/feedback/NotFoundPage";
-import { AccessPolicyDialogProvider, AccessPolicyDialog } from "@/features/permissions";
+import {
+  AccessPolicyDialogProvider,
+  AccessPolicyDialog,
+  AccessRequestDialogs,
+} from "@/features/permissions";
 import { MentionStateProvider } from "@/components/mention";
 import { lazyImport } from "@/shared/utils/lazyImport";
 import { loadLastOpenedNote } from "@/features/notes/utils/lastOpenedNote";
@@ -418,6 +422,7 @@ export function App() {
 
             <AccessPolicyDialogProvider>
               <AccessPolicyDialog />
+              <AccessRequestDialogs />
 
               {/*
                * MentionStateProvider sits above the router so every route

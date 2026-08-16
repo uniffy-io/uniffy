@@ -4,6 +4,7 @@ package notifications.v1;
 
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
+import "permissions/v1/permissions.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/notifications/v1;notificationsv1";
 
@@ -69,6 +70,8 @@ enum NotificationType {
   NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE = 15;
   NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED = 16;
   NOTIFICATION_TYPE_CHAT_THREAD_REPLY = 17;
+  NOTIFICATION_TYPE_ACCESS_REQUESTED = 18;
+  NOTIFICATION_TYPE_ACCESS_REQUEST_DENIED = 19;
 }
 
 // Notification model
@@ -242,6 +245,8 @@ message StreamNotificationsResponse {
     // The set of content the user can see changed (shared with them, or content
     // became/ceased OPEN_TO_ORG) - triggers a sidebar/tree refresh
     EVENT_TYPE_CONTENT_ACCESS_CHANGED = 7;
+    // A persisted access request changed independently of notification preferences
+    EVENT_TYPE_ACCESS_REQUEST_CHANGED = 8;
   }
 
   // Type of this event
@@ -258,6 +263,8 @@ message StreamNotificationsResponse {
   MentionStateChangedPayload mention_state_changed = 6;
   // Content access change payload (present for CONTENT_ACCESS_CHANGED events)
   ContentAccessChangedPayload content_access_changed = 7;
+  // Access request payload (present for ACCESS_REQUEST_CHANGED events)
+  AccessRequestChangedPayload access_request_changed = 8;
 }
 
 // Payload for presence change events
@@ -292,6 +299,13 @@ message ContentAccessChangedPayload {
   string content_id = 2;
   // What happened: "granted", "revoked", or "access_mode_changed"
   string action = 3;
+}
+
+message AccessRequestChangedPayload {
+  string request_id = 1;
+  string requested_urn = 2;
+  permissions.v1.AccessRequestState state = 3;
+  google.protobuf.Timestamp can_request_again_at = 4;
 }
 
 // Request to get VAPID public key

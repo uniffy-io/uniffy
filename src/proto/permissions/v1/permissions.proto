@@ -18,6 +18,12 @@ service MembersService {
   rpc SetAccessMode(SetAccessModeRequest) returns (SetAccessModeResponse);
   rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
   rpc ListMemberEvents(ListMemberEventsRequest) returns (ListMemberEventsResponse);
+  rpc RequestAccess(RequestAccessRequest) returns (RequestAccessResponse);
+  rpc GetMyAccessRequestStatuses(GetMyAccessRequestStatusesRequest) returns (GetMyAccessRequestStatusesResponse);
+  rpc GetAccessRequest(GetAccessRequestRequest) returns (GetAccessRequestResponse);
+  rpc ListAccessRequests(ListAccessRequestsRequest) returns (ListAccessRequestsResponse);
+  rpc RespondToAccessRequest(RespondToAccessRequestRequest) returns (RespondToAccessRequestResponse);
+  rpc CancelAccessRequest(CancelAccessRequestRequest) returns (CancelAccessRequestResponse);
 }
 
 // Data Messages
@@ -68,6 +74,58 @@ message ContentMemberEvent {
   common.v1.OrganizationRole actor_org_role = 16;
   string note = 17;
   google.protobuf.Timestamp occurred_at = 18;
+}
+
+enum AccessRequestState {
+  ACCESS_REQUEST_STATE_UNSPECIFIED = 0;
+  ACCESS_REQUEST_STATE_PENDING = 1;
+  ACCESS_REQUEST_STATE_APPROVED = 2;
+  ACCESS_REQUEST_STATE_DENIED = 3;
+  ACCESS_REQUEST_STATE_CANCELED = 4;
+}
+
+enum AccessRequestDecision {
+  ACCESS_REQUEST_DECISION_UNSPECIFIED = 0;
+  ACCESS_REQUEST_DECISION_APPROVE = 1;
+  ACCESS_REQUEST_DECISION_DENY = 2;
+}
+
+enum RequestAccessOutcome {
+  REQUEST_ACCESS_OUTCOME_UNSPECIFIED = 0;
+  REQUEST_ACCESS_OUTCOME_CREATED = 1;
+  REQUEST_ACCESS_OUTCOME_ALREADY_PENDING = 2;
+  REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE = 3;
+  REQUEST_ACCESS_OUTCOME_COOLDOWN = 4;
+}
+
+message ContentAccessRequest {
+  string id = 1;
+  string organization_id = 2;
+  string requested_urn = 3;
+  common.v1.ContentType original_content_type = 4;
+  string original_content_id = 5;
+  common.v1.ContentType canonical_content_type = 6;
+  string canonical_content_id = 7;
+  string requester_id = 8;
+  string requester_display_name = 9;
+  AccessRequestState state = 10;
+  string message = 11;
+  string decision_note = 12;
+  optional common.v1.ContentRole approved_role = 13;
+  optional string responded_by_user_id = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+  optional google.protobuf.Timestamp responded_at = 17;
+  optional google.protobuf.Timestamp can_request_again_at = 18;
+  bool requester_has_access = 19;
+}
+
+message AccessRequestStatus {
+  string requested_urn = 1;
+  AccessRequestState state = 2;
+  optional string request_id = 3;
+  optional google.protobuf.Timestamp can_request_again_at = 4;
+  bool requester_has_access = 5;
 }
 
 // Request Messages
@@ -165,4 +223,68 @@ message ListMemberEventsRequest {
 message ListMemberEventsResponse {
   repeated ContentMemberEvent events = 1;
   common.v1.PaginationResponse pagination = 2;
+}
+
+message RequestAccessRequest {
+  string organization_id = 1;
+  string requested_urn = 2;
+  string message = 3;
+}
+
+message RequestAccessResponse {
+  RequestAccessOutcome outcome = 1;
+  optional ContentAccessRequest access_request = 2;
+  optional google.protobuf.Timestamp can_request_again_at = 3;
+}
+
+message GetMyAccessRequestStatusesRequest {
+  string organization_id = 1;
+  repeated string requested_urns = 2;
+}
+
+message GetMyAccessRequestStatusesResponse {
+  repeated AccessRequestStatus statuses = 1;
+}
+
+message GetAccessRequestRequest {
+  string organization_id = 1;
+  string request_id = 2;
+}
+
+message GetAccessRequestResponse {
+  ContentAccessRequest access_request = 1;
+}
+
+message ListAccessRequestsRequest {
+  string organization_id = 1;
+  optional common.v1.ContentType canonical_content_type = 2;
+  optional string canonical_content_id = 3;
+  optional AccessRequestState state = 4;
+  optional common.v1.PaginationRequest pagination = 5;
+}
+
+message ListAccessRequestsResponse {
+  repeated ContentAccessRequest access_requests = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+message RespondToAccessRequestRequest {
+  string organization_id = 1;
+  string request_id = 2;
+  AccessRequestDecision decision = 3;
+  optional common.v1.ContentRole approved_role = 4;
+  string decision_note = 5;
+}
+
+message RespondToAccessRequestResponse {
+  ContentAccessRequest access_request = 1;
+}
+
+message CancelAccessRequestRequest {
+  string organization_id = 1;
+  string request_id = 2;
+}
+
+message CancelAccessRequestResponse {
+  ContentAccessRequest access_request = 1;
 }

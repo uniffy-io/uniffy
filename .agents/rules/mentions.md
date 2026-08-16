@@ -24,8 +24,8 @@ This rule defines the architecture so changes here stay coherent. **Reading the 
 Every mention chip satisfies these properties:
 
 1. **Live**: when the referenced content changes (rename, status flip, member add, folder rename, …) every visible chip pointing to it updates without a page refresh.
-2. **Snapshot-safe**: when the reference target is deleted or no longer accessible, the chip renders a tombstone - a half-broken card or a generic "Note content" placeholder reads as a bug.
-3. **Pure-Meili reads**: the resolve path runs zero database queries. Everything a chip displays is denormalized into the Meilisearch document at index time. If a chip needs a new field, add it to the index rather than to a resolve-time enrichment hook.
+2. **Availability-safe**: an existing inaccessible target renders Restricted, a confirmed deleted target renders a tombstone, and an uncertain lookup renders Unavailable. Authorization failure and deletion are never conflated.
+3. **Index-first reads**: Meilisearch supplies normal display data and both permission-filtered and raw existence checks. A successful raw-index miss may use the registered PostgreSQL reference-state loader only to classify live/deleted/missing; that fallback never supplies title, description, URL, owner, or metadata.
 4. **Same component everywhere, setting-driven default**: one chip component renders in chat messages, search results, comments, and the note editor, and the user's `mentionDisplay` setting decides pill vs card uniformly. A mid-sentence expanded card breaks out as a block that splits the line boxes (editor CSS owns that); it never renders as an inline island.
 5. **Stable size**: a chip in expanded mode reserves the expanded-card footprint immediately (skeleton). Growing from inline-pill to block-card after the fetch lands tends to feel janky.
 
@@ -124,15 +124,19 @@ Conventions:
 - Send the **full** denormalized payload rather than a diff. Diffing across callers tends to be fragile; the payload is small.
 - The publish call is idempotent - safe to retry, safe to no-op when there are no listeners (Valkey-down case).
 
-### Resolve path (read-only, no DB!)
+### Resolve path and privacy boundary
 
 `SearchOperations.resolve_urns` is the public read path. It:
 
-1. Fetches `UrnMetadata` documents from Meilisearch (permission-filtered there).
-2. **Synthesizes tombstone results** for every input URN missing from the index. Tombstones carry `urn_status="DELETED"` so the chip renders a deleted-state rather than a generic fallback. We do not distinguish `DELETED` / `NOT_FOUND` / `FORBIDDEN` - "missing from index" is treated uniformly.
-3. Returns one `SearchResult` per input URN (silent drops are a bug).
+1. Runs a permission-filtered Meilisearch multi-get. Hits are `AVAILABLE` and may carry display metadata.
+2. Runs an organization-scoped raw Meilisearch multi-get only for filtered misses. A raw hit proves existence and becomes `RESTRICTED`; every private display field is discarded before conversion.
+3. For a successful raw miss only, runs the registered, batched PostgreSQL reference-state loader. Confirmed deleted/missing rows become `DELETED`; live rows absent from the index become `UNAVAILABLE` so indexing lag is not misreported as deletion.
+4. Any failed or incomplete Meilisearch chunk becomes `UNAVAILABLE`. A service failure never becomes `RESTRICTED` or `DELETED`.
+5. Returns one typed result per valid input URN; silent drops are a bug.
 
-**Adding new database queries to `resolve_urns` or to `_enrich_*` helpers tends to regress the design.** If a chip needs a new field, push it into the index from the writing domain. The single `_enrich_channels` helper that survives is intentionally a no-op left in place to document that decision.
+Active organization membership is required before either index pass. Raw lookups remain scoped to `organization_id`, and restricted results expose only the requested URN, its type, `availability`, and `can_request_access`. The label shown by React comes from the already-readable Markdown reference, not from the raw search document.
+
+`core/content/reference_state.py` is the only sanctioned database fallback for availability classification. Register bounded, organization-scoped loaders there. Do not add display hydration to the fallback or return raw index fields for restricted results. New display fields still belong in the search document at write time.
 
 ### Cascade-removal on parent delete
 
@@ -149,14 +153,20 @@ The filter approach requires the child to carry a parent id in its search metada
 
 When you add a new parent/child relationship that reaches search, add the parent id to the child's `_get_search_metadata` and to the filterable list, then wire the cascade. Skipping the cascade is the default failure mode - the index keeps growing and "deleted" content stays searchable.
 
-### Tombstones
+### Availability and requestability
 
-A URN is missing from Meilisearch if any of:
-- the content was deleted (`SearchIndexer.remove(urn)` was called)
-- the document was never indexed (data corruption / new content type rollout)
-- the requesting user lacks permission
+`UrnAvailability` has four states:
 
-All three look identical to the resolver. The frontend renders them as a dashed, strikethrough "Deleted X" chip. There is no recovery flow - the chip is dead, the reader knows it is dead, that is the whole behaviour.
+| State | Meaning | UI behavior |
+|---|---|---|
+| `AVAILABLE` | Permission-filtered index hit | Normal live chip, preview, navigation, and expansion. |
+| `RESTRICTED` | Raw same-org index hit after a filtered miss | Lock chip using only the stored Markdown label; no preview or navigation. |
+| `DELETED` | Registered authoritative loader reports deleted/missing | Privacy-safe type-only tombstone with no recovery action. |
+| `UNAVAILABLE` | Index failure, live row absent from the index, or unregistered authoritative state | Non-navigable retry state; never a tombstone. |
+
+`can_request_access` is computed from the raw document type and policy shape without exposing either. Requestable restricted chips open the persisted permissions access-request workflow. Requests for tasks canonicalize to their project; requests for private chat messages canonicalize to their channel. Unsupported types stay restricted without an action.
+
+Access-request ids, state, and cooldown timestamps are not search metadata. The frontend batches them through `GetMyAccessRequestStatuses` after restricted resolution and merges `ACCESS_REQUEST_CHANGED` stream events into the shared mention cache. Approval force-resolves the original URN with bounded retries so asynchronous child ACL propagation can finish.
 
 To mark a URN as DELETED for visible chips in real time: emit `publish_mention_state(..., changes={"urn_status": "DELETED"})` from your `delete()` path **and** call `SearchIndexer.remove`.
 
@@ -224,6 +234,8 @@ MentionChip          (full chip; hover preview, expand button, live state)
 │  ├─ ProjectMentionPreview
 │  └─ AgentMentionPreview
 ├─ MentionExpandedCardSkeleton  (loading footprint, prevents size jump)
+├─ MentionRestricted            (privacy-safe lock state and request action)
+├─ MentionUnavailable           (non-final retry state)
 ├─ MentionTombstoneChip / MentionTombstoneCard  (deleted state)
 └─ MentionPreview (hover popover; attaches on every chip type - the expand caret suppresses it.
    USER routes to the shared PersonCardContent instead of the content-preview shell; see below)
@@ -233,7 +245,7 @@ MentionChipCompact   (dense inline pill; same data, smaller)
 
 **People tokens:** `USER`, `AGENT`, and `TEAM` do not render as boxed chips. All three variants render them as a Slack-style `@Name` text token, composed from `peopleTokenClasses` + `PEOPLE_TOKEN_TYPES` in `mentionConstants.ts` (every surface reuses that helper - hand-copied class strings drift): one accent for every subject kind (`text-primary` on `bg-primary/10`, `bg-primary/25` when the mentioned user IS the viewer; the compose static chip renders without viewer context, so it never applies the self-mention wash), baseline-aligned, no border, no avatar, no presence. Avatars, presence, the agent badge, and member counts live in the hover card only. Teams get the people treatment because a team mention notifies its members - it behaves like a people mention, so it reads like one.
 
-**One person card everywhere.** Hovering a USER token opens `PersonHoverCard` / `PersonCardContent` (`src/ui/src/components/subject/PersonHoverCard.tsx`) - the same card the chat sender name and the org chart open. There is exactly one person hover card in the app; a surface that needs a person popover mounts this one instead of hand-rolling markup. The card merges two sources: the people-store profile snapshot (`fetchPersonThunk` - pronouns, phones, office, bio, teams with lead badges, the fields Meili does not carry) and the USER mention live state via `useMentionState` on the canonical `urn:uniffy:content:USER:{id}` key, so display name, job title, department, team, email, and timezone changes stream into an open card through `MENTION_STATE_CHANGED` without a refetch. The profile RPC on hover is a sanctioned exception to pure-Meili reads (people profiles are org-readable member-record data, see `permissions.md`); the live fields still ride the index, so the USER metadata keys and their three translator entries stay load-bearing. Mobile mirrors the contract with `MentionToken` (`src/mobile/src/shared/mentions/MentionToken.tsx`, composed by `MarkdownRenderer`): same three kinds, same single accent, self-mention wash from the signed-in user; GROUP stays a boxed chip on both platforms, and chat SYSTEM messages keep their capsule rendering with plain emphasized names.
+**One person card everywhere.** Hovering a USER token opens `PersonHoverCard` / `PersonCardContent` (`src/ui/src/components/subject/PersonHoverCard.tsx`) - the same card the chat sender name and the org chart open. There is exactly one person hover card in the app; a surface that needs a person popover mounts this one instead of hand-rolling markup. The card merges two sources: the people-store profile snapshot (`fetchPersonThunk` - pronouns, phones, office, bio, teams with lead badges, the fields Meili does not carry) and the USER mention live state via `useMentionState` on the canonical `urn:uniffy:content:USER:{id}` key, so display name, job title, department, team, email, and timezone changes stream into an open card through `MENTION_STATE_CHANGED` without a refetch. The profile RPC on hover is a sanctioned index-first exception because people profiles are org-readable member-record data (see `permissions.md`); the live fields still ride the index, so the USER metadata keys and their three translator entries stay load-bearing. Mobile mirrors the contract with `MentionToken` (`src/mobile/src/shared/mentions/MentionToken.tsx`, composed by `MarkdownRenderer`): same three kinds, same single accent, self-mention wash from the signed-in user; GROUP stays a boxed chip on both platforms, and chat SYSTEM messages keep their capsule rendering with plain emphasized names.
 
 **Expandable types** (may render the block card): `TASK`, `CALENDAR_EVENT`, `PROJECT`, `FILE`, `FOLDER`, `NOTE`, `CHAT`, `CHAT_MESSAGE`, `TAG`, `ROOM`. See `mentionConstants.ts`. Other non-token types render as inline pills with a hover popover.
 
@@ -254,9 +266,9 @@ The expanded card header has a fixed slot order in its meta row:
 
 When you add a new mention type or extend an existing preview, place new metadata to the **right** of the existing row rather than inside it.
 
-### Tombstone rendering
+### Availability rendering
 
-`MentionLiveState.status === 'deleted'` short-circuits the render before any other branch. The chip renders `MentionTombstoneChip` (compact) or `MentionTombstoneCard` (expanded). Hover, click, expand, and live indicators are all suppressed - there is nothing to navigate to.
+`MentionLiveState.availability` short-circuits before people tokens, previews, expansion, navigation, embedding, and live indicators. Restricted variants render the Markdown fallback label and a real descendant button that opens the global Redux request dialog. Unavailable variants render Retry. Deleted variants render `MentionTombstoneChip` or `MentionTombstoneCard` and intentionally discard the stored label.
 
 Recovery or re-fetch of a tombstone is not part of the contract. The state is final.
 
@@ -287,7 +299,9 @@ Concrete checklist when, e.g., adding `assignee_count` to project mentions:
 
 ## Anti-patterns (worth a second look before committing)
 
-- DB queries inside `resolve_urns` or any `_enrich_*` helper. The pattern is retired; every new addition is a regression.
+- Database display hydration in the reference-state fallback. It may classify registered ids only; it must not return content fields.
+- Treating a filtered or raw Meilisearch failure as a miss. Incomplete chunks are `UNAVAILABLE`.
+- Putting access-request status into search metadata. It is requester-specific workflow state and belongs in the permissions status RPC and stream event.
 - Reading raw metadata-dict keys (`liveState.metadata?.member_count`) from a render component. Translators exist for a reason.
 - A re-index call without a matching `publish_mention_state` (or vice versa). The two together are the contract.
 - A new chip variant with bespoke layout instead of using `<ParentBadge>` / `<MetaSeparator>`.
@@ -305,7 +319,8 @@ Concrete checklist when, e.g., adding `assignee_count` to project mentions:
 | `src/uniffy/core/content/base_operations.py` | `_get_search_metadata_async` hook + canonical `_index_for_search`. |
 | `src/uniffy/core/search/indexer.py` | `SearchIndexer.index` / `remove`. |
 | `src/uniffy/core/valkey/mentions.py` | `publish_mention_state`. |
-| `src/uniffy/domains/search/operations.py` | `resolve_urns` + tombstone synthesis (`_build_tombstone`). |
+| `src/uniffy/core/content/reference_state.py` | Registered authoritative state loaders for successful raw-index misses. |
+| `src/uniffy/domains/search/operations.py` | Two-pass typed availability classification and metadata scrubbing. |
 | `src/uniffy/domains/search/converters.py` | `SearchResult` -> `UrnMetadata` proto, including `urn_status` passthrough. |
 | `src/uniffy/domains/search/queries.py` | `SearchResult` dataclass. |
 | `src/ui/src/components/mention/types.ts` | `MentionLiveState`. |
@@ -313,9 +328,9 @@ Concrete checklist when, e.g., adding `assignee_count` to project mentions:
 | `src/ui/src/components/mention/useBatchedSubjectResolver.ts` | Module-level batch resolver, `previewDataToLiveState`, broadcast. |
 | `src/ui/src/components/mention/useMentionState.ts` | The hook every chip uses to subscribe. |
 | `src/ui/src/components/mention/mentionStateEmitter.ts` | Module-level emitter (`publishMentionState` etc.). |
-| `src/ui/src/components/mention/MentionChip.tsx` | Full chip + compact + basic + tombstone + skeleton. |
+| `src/ui/src/components/mention/MentionChip.tsx` | Full/compact available, restricted, deleted, unavailable, and skeleton states. |
 | `src/ui/src/components/mention/MentionExpandedCard.tsx` | Block-level wrapper that routes to per-type preview. |
 | `src/ui/src/components/mention/previews/ParentBadge.tsx` | Shared `<ParentBadge>` + `<MetaSeparator>`. |
 | `src/ui/src/components/mention/previews/*MentionPreview.tsx` | Per-type expanded card body. |
 | `src/ui/src/components/mention/mentionConstants.ts` | `EXPANDABLE_URN_TYPES`. |
-| `src/ui/src/features/notifications/hooks/useNotificationStream.ts` | Streams `MENTION_STATE_CHANGED` into `emitMentionStateChange`. |
+| `src/ui/src/features/notifications/hooks/useNotificationStream.ts` | Streams mention patches and access-request state into the shared cache. |

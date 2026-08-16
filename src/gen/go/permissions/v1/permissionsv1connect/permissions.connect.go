@@ -54,6 +54,24 @@ const (
 	// MembersServiceListMemberEventsProcedure is the fully-qualified name of the MembersService's
 	// ListMemberEvents RPC.
 	MembersServiceListMemberEventsProcedure = "/permissions.v1.MembersService/ListMemberEvents"
+	// MembersServiceRequestAccessProcedure is the fully-qualified name of the MembersService's
+	// RequestAccess RPC.
+	MembersServiceRequestAccessProcedure = "/permissions.v1.MembersService/RequestAccess"
+	// MembersServiceGetMyAccessRequestStatusesProcedure is the fully-qualified name of the
+	// MembersService's GetMyAccessRequestStatuses RPC.
+	MembersServiceGetMyAccessRequestStatusesProcedure = "/permissions.v1.MembersService/GetMyAccessRequestStatuses"
+	// MembersServiceGetAccessRequestProcedure is the fully-qualified name of the MembersService's
+	// GetAccessRequest RPC.
+	MembersServiceGetAccessRequestProcedure = "/permissions.v1.MembersService/GetAccessRequest"
+	// MembersServiceListAccessRequestsProcedure is the fully-qualified name of the MembersService's
+	// ListAccessRequests RPC.
+	MembersServiceListAccessRequestsProcedure = "/permissions.v1.MembersService/ListAccessRequests"
+	// MembersServiceRespondToAccessRequestProcedure is the fully-qualified name of the MembersService's
+	// RespondToAccessRequest RPC.
+	MembersServiceRespondToAccessRequestProcedure = "/permissions.v1.MembersService/RespondToAccessRequest"
+	// MembersServiceCancelAccessRequestProcedure is the fully-qualified name of the MembersService's
+	// CancelAccessRequest RPC.
+	MembersServiceCancelAccessRequestProcedure = "/permissions.v1.MembersService/CancelAccessRequest"
 )
 
 // MembersServiceClient is a client for the permissions.v1.MembersService service.
@@ -65,6 +83,12 @@ type MembersServiceClient interface {
 	SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.SetAccessModeResponse], error)
 	TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error)
 	ListMemberEvents(context.Context, *connect.Request[v1.ListMemberEventsRequest]) (*connect.Response[v1.ListMemberEventsResponse], error)
+	RequestAccess(context.Context, *connect.Request[v1.RequestAccessRequest]) (*connect.Response[v1.RequestAccessResponse], error)
+	GetMyAccessRequestStatuses(context.Context, *connect.Request[v1.GetMyAccessRequestStatusesRequest]) (*connect.Response[v1.GetMyAccessRequestStatusesResponse], error)
+	GetAccessRequest(context.Context, *connect.Request[v1.GetAccessRequestRequest]) (*connect.Response[v1.GetAccessRequestResponse], error)
+	ListAccessRequests(context.Context, *connect.Request[v1.ListAccessRequestsRequest]) (*connect.Response[v1.ListAccessRequestsResponse], error)
+	RespondToAccessRequest(context.Context, *connect.Request[v1.RespondToAccessRequestRequest]) (*connect.Response[v1.RespondToAccessRequestResponse], error)
+	CancelAccessRequest(context.Context, *connect.Request[v1.CancelAccessRequestRequest]) (*connect.Response[v1.CancelAccessRequestResponse], error)
 }
 
 // NewMembersServiceClient constructs a client for the permissions.v1.MembersService service. By
@@ -120,18 +144,60 @@ func NewMembersServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(membersServiceMethods.ByName("ListMemberEvents")),
 			connect.WithClientOptions(opts...),
 		),
+		requestAccess: connect.NewClient[v1.RequestAccessRequest, v1.RequestAccessResponse](
+			httpClient,
+			baseURL+MembersServiceRequestAccessProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("RequestAccess")),
+			connect.WithClientOptions(opts...),
+		),
+		getMyAccessRequestStatuses: connect.NewClient[v1.GetMyAccessRequestStatusesRequest, v1.GetMyAccessRequestStatusesResponse](
+			httpClient,
+			baseURL+MembersServiceGetMyAccessRequestStatusesProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("GetMyAccessRequestStatuses")),
+			connect.WithClientOptions(opts...),
+		),
+		getAccessRequest: connect.NewClient[v1.GetAccessRequestRequest, v1.GetAccessRequestResponse](
+			httpClient,
+			baseURL+MembersServiceGetAccessRequestProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("GetAccessRequest")),
+			connect.WithClientOptions(opts...),
+		),
+		listAccessRequests: connect.NewClient[v1.ListAccessRequestsRequest, v1.ListAccessRequestsResponse](
+			httpClient,
+			baseURL+MembersServiceListAccessRequestsProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("ListAccessRequests")),
+			connect.WithClientOptions(opts...),
+		),
+		respondToAccessRequest: connect.NewClient[v1.RespondToAccessRequestRequest, v1.RespondToAccessRequestResponse](
+			httpClient,
+			baseURL+MembersServiceRespondToAccessRequestProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("RespondToAccessRequest")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelAccessRequest: connect.NewClient[v1.CancelAccessRequestRequest, v1.CancelAccessRequestResponse](
+			httpClient,
+			baseURL+MembersServiceCancelAccessRequestProcedure,
+			connect.WithSchema(membersServiceMethods.ByName("CancelAccessRequest")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // membersServiceClient implements MembersServiceClient.
 type membersServiceClient struct {
-	listMembers       *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
-	addMember         *connect.Client[v1.AddMemberRequest, v1.AddMemberResponse]
-	updateMemberRole  *connect.Client[v1.UpdateMemberRoleRequest, v1.UpdateMemberRoleResponse]
-	removeMember      *connect.Client[v1.RemoveMemberRequest, v1.RemoveMemberResponse]
-	setAccessMode     *connect.Client[v1.SetAccessModeRequest, v1.SetAccessModeResponse]
-	transferOwnership *connect.Client[v1.TransferOwnershipRequest, v1.TransferOwnershipResponse]
-	listMemberEvents  *connect.Client[v1.ListMemberEventsRequest, v1.ListMemberEventsResponse]
+	listMembers                *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
+	addMember                  *connect.Client[v1.AddMemberRequest, v1.AddMemberResponse]
+	updateMemberRole           *connect.Client[v1.UpdateMemberRoleRequest, v1.UpdateMemberRoleResponse]
+	removeMember               *connect.Client[v1.RemoveMemberRequest, v1.RemoveMemberResponse]
+	setAccessMode              *connect.Client[v1.SetAccessModeRequest, v1.SetAccessModeResponse]
+	transferOwnership          *connect.Client[v1.TransferOwnershipRequest, v1.TransferOwnershipResponse]
+	listMemberEvents           *connect.Client[v1.ListMemberEventsRequest, v1.ListMemberEventsResponse]
+	requestAccess              *connect.Client[v1.RequestAccessRequest, v1.RequestAccessResponse]
+	getMyAccessRequestStatuses *connect.Client[v1.GetMyAccessRequestStatusesRequest, v1.GetMyAccessRequestStatusesResponse]
+	getAccessRequest           *connect.Client[v1.GetAccessRequestRequest, v1.GetAccessRequestResponse]
+	listAccessRequests         *connect.Client[v1.ListAccessRequestsRequest, v1.ListAccessRequestsResponse]
+	respondToAccessRequest     *connect.Client[v1.RespondToAccessRequestRequest, v1.RespondToAccessRequestResponse]
+	cancelAccessRequest        *connect.Client[v1.CancelAccessRequestRequest, v1.CancelAccessRequestResponse]
 }
 
 // ListMembers calls permissions.v1.MembersService.ListMembers.
@@ -169,6 +235,36 @@ func (c *membersServiceClient) ListMemberEvents(ctx context.Context, req *connec
 	return c.listMemberEvents.CallUnary(ctx, req)
 }
 
+// RequestAccess calls permissions.v1.MembersService.RequestAccess.
+func (c *membersServiceClient) RequestAccess(ctx context.Context, req *connect.Request[v1.RequestAccessRequest]) (*connect.Response[v1.RequestAccessResponse], error) {
+	return c.requestAccess.CallUnary(ctx, req)
+}
+
+// GetMyAccessRequestStatuses calls permissions.v1.MembersService.GetMyAccessRequestStatuses.
+func (c *membersServiceClient) GetMyAccessRequestStatuses(ctx context.Context, req *connect.Request[v1.GetMyAccessRequestStatusesRequest]) (*connect.Response[v1.GetMyAccessRequestStatusesResponse], error) {
+	return c.getMyAccessRequestStatuses.CallUnary(ctx, req)
+}
+
+// GetAccessRequest calls permissions.v1.MembersService.GetAccessRequest.
+func (c *membersServiceClient) GetAccessRequest(ctx context.Context, req *connect.Request[v1.GetAccessRequestRequest]) (*connect.Response[v1.GetAccessRequestResponse], error) {
+	return c.getAccessRequest.CallUnary(ctx, req)
+}
+
+// ListAccessRequests calls permissions.v1.MembersService.ListAccessRequests.
+func (c *membersServiceClient) ListAccessRequests(ctx context.Context, req *connect.Request[v1.ListAccessRequestsRequest]) (*connect.Response[v1.ListAccessRequestsResponse], error) {
+	return c.listAccessRequests.CallUnary(ctx, req)
+}
+
+// RespondToAccessRequest calls permissions.v1.MembersService.RespondToAccessRequest.
+func (c *membersServiceClient) RespondToAccessRequest(ctx context.Context, req *connect.Request[v1.RespondToAccessRequestRequest]) (*connect.Response[v1.RespondToAccessRequestResponse], error) {
+	return c.respondToAccessRequest.CallUnary(ctx, req)
+}
+
+// CancelAccessRequest calls permissions.v1.MembersService.CancelAccessRequest.
+func (c *membersServiceClient) CancelAccessRequest(ctx context.Context, req *connect.Request[v1.CancelAccessRequestRequest]) (*connect.Response[v1.CancelAccessRequestResponse], error) {
+	return c.cancelAccessRequest.CallUnary(ctx, req)
+}
+
 // MembersServiceHandler is an implementation of the permissions.v1.MembersService service.
 type MembersServiceHandler interface {
 	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
@@ -178,6 +274,12 @@ type MembersServiceHandler interface {
 	SetAccessMode(context.Context, *connect.Request[v1.SetAccessModeRequest]) (*connect.Response[v1.SetAccessModeResponse], error)
 	TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error)
 	ListMemberEvents(context.Context, *connect.Request[v1.ListMemberEventsRequest]) (*connect.Response[v1.ListMemberEventsResponse], error)
+	RequestAccess(context.Context, *connect.Request[v1.RequestAccessRequest]) (*connect.Response[v1.RequestAccessResponse], error)
+	GetMyAccessRequestStatuses(context.Context, *connect.Request[v1.GetMyAccessRequestStatusesRequest]) (*connect.Response[v1.GetMyAccessRequestStatusesResponse], error)
+	GetAccessRequest(context.Context, *connect.Request[v1.GetAccessRequestRequest]) (*connect.Response[v1.GetAccessRequestResponse], error)
+	ListAccessRequests(context.Context, *connect.Request[v1.ListAccessRequestsRequest]) (*connect.Response[v1.ListAccessRequestsResponse], error)
+	RespondToAccessRequest(context.Context, *connect.Request[v1.RespondToAccessRequestRequest]) (*connect.Response[v1.RespondToAccessRequestResponse], error)
+	CancelAccessRequest(context.Context, *connect.Request[v1.CancelAccessRequestRequest]) (*connect.Response[v1.CancelAccessRequestResponse], error)
 }
 
 // NewMembersServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -229,6 +331,42 @@ func NewMembersServiceHandler(svc MembersServiceHandler, opts ...connect.Handler
 		connect.WithSchema(membersServiceMethods.ByName("ListMemberEvents")),
 		connect.WithHandlerOptions(opts...),
 	)
+	membersServiceRequestAccessHandler := connect.NewUnaryHandler(
+		MembersServiceRequestAccessProcedure,
+		svc.RequestAccess,
+		connect.WithSchema(membersServiceMethods.ByName("RequestAccess")),
+		connect.WithHandlerOptions(opts...),
+	)
+	membersServiceGetMyAccessRequestStatusesHandler := connect.NewUnaryHandler(
+		MembersServiceGetMyAccessRequestStatusesProcedure,
+		svc.GetMyAccessRequestStatuses,
+		connect.WithSchema(membersServiceMethods.ByName("GetMyAccessRequestStatuses")),
+		connect.WithHandlerOptions(opts...),
+	)
+	membersServiceGetAccessRequestHandler := connect.NewUnaryHandler(
+		MembersServiceGetAccessRequestProcedure,
+		svc.GetAccessRequest,
+		connect.WithSchema(membersServiceMethods.ByName("GetAccessRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
+	membersServiceListAccessRequestsHandler := connect.NewUnaryHandler(
+		MembersServiceListAccessRequestsProcedure,
+		svc.ListAccessRequests,
+		connect.WithSchema(membersServiceMethods.ByName("ListAccessRequests")),
+		connect.WithHandlerOptions(opts...),
+	)
+	membersServiceRespondToAccessRequestHandler := connect.NewUnaryHandler(
+		MembersServiceRespondToAccessRequestProcedure,
+		svc.RespondToAccessRequest,
+		connect.WithSchema(membersServiceMethods.ByName("RespondToAccessRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
+	membersServiceCancelAccessRequestHandler := connect.NewUnaryHandler(
+		MembersServiceCancelAccessRequestProcedure,
+		svc.CancelAccessRequest,
+		connect.WithSchema(membersServiceMethods.ByName("CancelAccessRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/permissions.v1.MembersService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case MembersServiceListMembersProcedure:
@@ -245,6 +383,18 @@ func NewMembersServiceHandler(svc MembersServiceHandler, opts ...connect.Handler
 			membersServiceTransferOwnershipHandler.ServeHTTP(w, r)
 		case MembersServiceListMemberEventsProcedure:
 			membersServiceListMemberEventsHandler.ServeHTTP(w, r)
+		case MembersServiceRequestAccessProcedure:
+			membersServiceRequestAccessHandler.ServeHTTP(w, r)
+		case MembersServiceGetMyAccessRequestStatusesProcedure:
+			membersServiceGetMyAccessRequestStatusesHandler.ServeHTTP(w, r)
+		case MembersServiceGetAccessRequestProcedure:
+			membersServiceGetAccessRequestHandler.ServeHTTP(w, r)
+		case MembersServiceListAccessRequestsProcedure:
+			membersServiceListAccessRequestsHandler.ServeHTTP(w, r)
+		case MembersServiceRespondToAccessRequestProcedure:
+			membersServiceRespondToAccessRequestHandler.ServeHTTP(w, r)
+		case MembersServiceCancelAccessRequestProcedure:
+			membersServiceCancelAccessRequestHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -280,4 +430,28 @@ func (UnimplementedMembersServiceHandler) TransferOwnership(context.Context, *co
 
 func (UnimplementedMembersServiceHandler) ListMemberEvents(context.Context, *connect.Request[v1.ListMemberEventsRequest]) (*connect.Response[v1.ListMemberEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.ListMemberEvents is not implemented"))
+}
+
+func (UnimplementedMembersServiceHandler) RequestAccess(context.Context, *connect.Request[v1.RequestAccessRequest]) (*connect.Response[v1.RequestAccessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.RequestAccess is not implemented"))
+}
+
+func (UnimplementedMembersServiceHandler) GetMyAccessRequestStatuses(context.Context, *connect.Request[v1.GetMyAccessRequestStatusesRequest]) (*connect.Response[v1.GetMyAccessRequestStatusesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.GetMyAccessRequestStatuses is not implemented"))
+}
+
+func (UnimplementedMembersServiceHandler) GetAccessRequest(context.Context, *connect.Request[v1.GetAccessRequestRequest]) (*connect.Response[v1.GetAccessRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.GetAccessRequest is not implemented"))
+}
+
+func (UnimplementedMembersServiceHandler) ListAccessRequests(context.Context, *connect.Request[v1.ListAccessRequestsRequest]) (*connect.Response[v1.ListAccessRequestsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.ListAccessRequests is not implemented"))
+}
+
+func (UnimplementedMembersServiceHandler) RespondToAccessRequest(context.Context, *connect.Request[v1.RespondToAccessRequestRequest]) (*connect.Response[v1.RespondToAccessRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.RespondToAccessRequest is not implemented"))
+}
+
+func (UnimplementedMembersServiceHandler) CancelAccessRequest(context.Context, *connect.Request[v1.CancelAccessRequestRequest]) (*connect.Response[v1.CancelAccessRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("permissions.v1.MembersService.CancelAccessRequest is not implemented"))
 }

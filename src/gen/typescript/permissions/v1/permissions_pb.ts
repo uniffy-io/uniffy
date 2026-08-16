@@ -2,8 +2,8 @@
 // @generated from file permissions/v1/permissions.proto (package permissions.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { AccessMode, ContentMemberAction, ContentRole, ContentType, OrganizationRole, PaginationRequest, PaginationResponse, SubjectType } from "../../common/v1/common_pb.js";
 import { file_common_v1_common } from "../../common/v1/common_pb.js";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file permissions/v1/permissions.proto.
  */
 export const file_permissions_v1_permissions: GenFile = /*@__PURE__*/
-  fileDesc("CiBwZXJtaXNzaW9ucy92MS9wZXJtaXNzaW9ucy5wcm90bxIOcGVybWlzc2lvbnMudjEiswIKDUNvbnRlbnRNZW1iZXISLAoMc3ViamVjdF90eXBlGAEgASgOMhYuY29tbW9uLnYxLlN1YmplY3RUeXBlEhIKCnN1YmplY3RfaWQYAiABKAkSJAoEcm9sZRgDIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZRIYChBhZGRlZF9ieV91c2VyX2lkGAQgASgJEiwKCGFkZGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIzCgpleHBpcmVzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBQg0KC19leHBpcmVzX2F0IrACChNDb250ZW50QWNjZXNzUG9saWN5EhAKCG93bmVyX2lkGAEgASgJEioKC2FjY2Vzc19tb2RlGAIgASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGUSMgoNYmFzZWxpbmVfcm9sZRgDIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZUgAiAEBEjAKC2NhbGxlcl9yb2xlGAQgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlSAGIAQESOQoVZWZmZWN0aXZlX2FjY2Vzc19tb2RlGAUgASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGVIAogBAUIQCg5fYmFzZWxpbmVfcm9sZUIOCgxfY2FsbGVyX3JvbGVCGAoWX2VmZmVjdGl2ZV9hY2Nlc3NfbW9kZSKvBwoSQ29udGVudE1lbWJlckV2ZW50EgoKAmlkGAEgASgJEiwKDGNvbnRlbnRfdHlwZRgCIAEoDjIWLmNvbW1vbi52MS5Db250ZW50VHlwZRISCgpjb250ZW50X2lkGAMgASgJEi4KBmFjdGlvbhgEIAEoDjIeLmNvbW1vbi52MS5Db250ZW50TWVtYmVyQWN0aW9uEjEKDHN1YmplY3RfdHlwZRgFIAEoDjIWLmNvbW1vbi52MS5TdWJqZWN0VHlwZUgAiAEBEhcKCnN1YmplY3RfaWQYBiABKAlIAYgBARIyCg1wcmV2aW91c19yb2xlGAcgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlSAKIAQESLQoIbmV3X3JvbGUYCCABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIA4gBARI4ChRwcmV2aW91c19hY2Nlc3NfbW9kZRgJIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlSASIAQESMwoPbmV3X2FjY2Vzc19tb2RlGAogASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGVIBYgBARI7ChZwcmV2aW91c19iYXNlbGluZV9yb2xlGAsgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlSAaIAQESNgoRbmV3X2Jhc2VsaW5lX3JvbGUYDCABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIB4gBARIeChFwcmV2aW91c19vd25lcl9pZBgNIAEoCUgIiAEBEhkKDG5ld19vd25lcl9pZBgOIAEoCUgJiAEBEhUKDWFjdG9yX3VzZXJfaWQYDyABKAkSMwoOYWN0b3Jfb3JnX3JvbGUYECABKA4yGy5jb21tb24udjEuT3JnYW5pemF0aW9uUm9sZRIMCgRub3RlGBEgASgJEi8KC29jY3VycmVkX2F0GBIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIPCg1fc3ViamVjdF90eXBlQg0KC19zdWJqZWN0X2lkQhAKDl9wcmV2aW91c19yb2xlQgsKCV9uZXdfcm9sZUIXChVfcHJldmlvdXNfYWNjZXNzX21vZGVCEgoQX25ld19hY2Nlc3NfbW9kZUIZChdfcHJldmlvdXNfYmFzZWxpbmVfcm9sZUIUChJfbmV3X2Jhc2VsaW5lX3JvbGVCFAoSX3ByZXZpb3VzX293bmVyX2lkQg8KDV9uZXdfb3duZXJfaWQibwoSTGlzdE1lbWJlcnNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIsCgxjb250ZW50X3R5cGUYAiABKA4yFi5jb21tb24udjEuQ29udGVudFR5cGUSEgoKY29udGVudF9pZBgDIAEoCSJ6ChNMaXN0TWVtYmVyc1Jlc3BvbnNlEjMKBnBvbGljeRgBIAEoCzIjLnBlcm1pc3Npb25zLnYxLkNvbnRlbnRBY2Nlc3NQb2xpY3kSLgoHbWVtYmVycxgCIAMoCzIdLnBlcm1pc3Npb25zLnYxLkNvbnRlbnRNZW1iZXIipwIKEEFkZE1lbWJlclJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEiwKDGNvbnRlbnRfdHlwZRgCIAEoDjIWLmNvbW1vbi52MS5Db250ZW50VHlwZRISCgpjb250ZW50X2lkGAMgASgJEiwKDHN1YmplY3RfdHlwZRgEIAEoDjIWLmNvbW1vbi52MS5TdWJqZWN0VHlwZRISCgpzdWJqZWN0X2lkGAUgASgJEiQKBHJvbGUYBiABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGUSMwoKZXhwaXJlc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBARIMCgRub3RlGAggASgJQg0KC19leHBpcmVzX2F0Iu4BChdVcGRhdGVNZW1iZXJSb2xlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSLAoMY29udGVudF90eXBlGAIgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRUeXBlEhIKCmNvbnRlbnRfaWQYAyABKAkSLAoMc3ViamVjdF90eXBlGAQgASgOMhYuY29tbW9uLnYxLlN1YmplY3RUeXBlEhIKCnN1YmplY3RfaWQYBSABKAkSKAoIbmV3X3JvbGUYBiABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGUSDAoEbm90ZRgHIAEoCSLAAQoTUmVtb3ZlTWVtYmVyUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSLAoMY29udGVudF90eXBlGAIgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRUeXBlEhIKCmNvbnRlbnRfaWQYAyABKAkSLAoMc3ViamVjdF90eXBlGAQgASgOMhYuY29tbW9uLnYxLlN1YmplY3RUeXBlEhIKCnN1YmplY3RfaWQYBSABKAkSDAoEbm90ZRgGIAEoCSInChRSZW1vdmVNZW1iZXJSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIpMCChRTZXRBY2Nlc3NNb2RlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSLAoMY29udGVudF90eXBlGAIgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRUeXBlEhIKCmNvbnRlbnRfaWQYAyABKAkSKgoLYWNjZXNzX21vZGUYBCABKA4yFS5jb21tb24udjEuQWNjZXNzTW9kZRIyCg1iYXNlbGluZV9yb2xlGAUgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlSACIAQESIAoYcmVtb3ZlX21lbWJlcnNfb25fbmFycm93GAYgASgIEgwKBG5vdGUYByABKAlCEAoOX2Jhc2VsaW5lX3JvbGUiTAoVU2V0QWNjZXNzTW9kZVJlc3BvbnNlEjMKBnBvbGljeRgBIAEoCzIjLnBlcm1pc3Npb25zLnYxLkNvbnRlbnRBY2Nlc3NQb2xpY3kingEKGFRyYW5zZmVyT3duZXJzaGlwUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSLAoMY29udGVudF90eXBlGAIgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRUeXBlEhIKCmNvbnRlbnRfaWQYAyABKAkSGQoRbmV3X293bmVyX3VzZXJfaWQYBCABKAkSDAoEbm90ZRgFIAEoCSJQChlUcmFuc2Zlck93bmVyc2hpcFJlc3BvbnNlEjMKBnBvbGljeRgBIAEoCzIjLnBlcm1pc3Npb25zLnYxLkNvbnRlbnRBY2Nlc3NQb2xpY3kiQgoRQWRkTWVtYmVyUmVzcG9uc2USLQoGbWVtYmVyGAEgASgLMh0ucGVybWlzc2lvbnMudjEuQ29udGVudE1lbWJlciJJChhVcGRhdGVNZW1iZXJSb2xlUmVzcG9uc2USLQoGbWVtYmVyGAEgASgLMh0ucGVybWlzc2lvbnMudjEuQ29udGVudE1lbWJlciKeAwoXTGlzdE1lbWJlckV2ZW50c1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEiwKDGNvbnRlbnRfdHlwZRgCIAEoDjIWLmNvbW1vbi52MS5Db250ZW50VHlwZRISCgpjb250ZW50X2lkGAMgASgJEjUKCnBhZ2luYXRpb24YBCABKAsyHC5jb21tb24udjEuUGFnaW5hdGlvblJlcXVlc3RIAIgBARIaCg1hY3Rvcl91c2VyX2lkGAUgASgJSAGIAQESMwoGYWN0aW9uGAYgASgOMh4uY29tbW9uLnYxLkNvbnRlbnRNZW1iZXJBY3Rpb25IAogBARIuCgVhZnRlchgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIA4gBARIvCgZiZWZvcmUYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSASIAQFCDQoLX3BhZ2luYXRpb25CEAoOX2FjdG9yX3VzZXJfaWRCCQoHX2FjdGlvbkIICgZfYWZ0ZXJCCQoHX2JlZm9yZSKBAQoYTGlzdE1lbWJlckV2ZW50c1Jlc3BvbnNlEjIKBmV2ZW50cxgBIAMoCzIiLnBlcm1pc3Npb25zLnYxLkNvbnRlbnRNZW1iZXJFdmVudBIxCgpwYWdpbmF0aW9uGAIgASgLMh0uY29tbW9uLnYxLlBhZ2luYXRpb25SZXNwb25zZTKrBQoOTWVtYmVyc1NlcnZpY2USVgoLTGlzdE1lbWJlcnMSIi5wZXJtaXNzaW9ucy52MS5MaXN0TWVtYmVyc1JlcXVlc3QaIy5wZXJtaXNzaW9ucy52MS5MaXN0TWVtYmVyc1Jlc3BvbnNlElAKCUFkZE1lbWJlchIgLnBlcm1pc3Npb25zLnYxLkFkZE1lbWJlclJlcXVlc3QaIS5wZXJtaXNzaW9ucy52MS5BZGRNZW1iZXJSZXNwb25zZRJlChBVcGRhdGVNZW1iZXJSb2xlEicucGVybWlzc2lvbnMudjEuVXBkYXRlTWVtYmVyUm9sZVJlcXVlc3QaKC5wZXJtaXNzaW9ucy52MS5VcGRhdGVNZW1iZXJSb2xlUmVzcG9uc2USWQoMUmVtb3ZlTWVtYmVyEiMucGVybWlzc2lvbnMudjEuUmVtb3ZlTWVtYmVyUmVxdWVzdBokLnBlcm1pc3Npb25zLnYxLlJlbW92ZU1lbWJlclJlc3BvbnNlElwKDVNldEFjY2Vzc01vZGUSJC5wZXJtaXNzaW9ucy52MS5TZXRBY2Nlc3NNb2RlUmVxdWVzdBolLnBlcm1pc3Npb25zLnYxLlNldEFjY2Vzc01vZGVSZXNwb25zZRJoChFUcmFuc2Zlck93bmVyc2hpcBIoLnBlcm1pc3Npb25zLnYxLlRyYW5zZmVyT3duZXJzaGlwUmVxdWVzdBopLnBlcm1pc3Npb25zLnYxLlRyYW5zZmVyT3duZXJzaGlwUmVzcG9uc2USZQoQTGlzdE1lbWJlckV2ZW50cxInLnBlcm1pc3Npb25zLnYxLkxpc3RNZW1iZXJFdmVudHNSZXF1ZXN0GigucGVybWlzc2lvbnMudjEuTGlzdE1lbWJlckV2ZW50c1Jlc3BvbnNlQkNaQWdpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9wZXJtaXNzaW9ucy92MTtwZXJtaXNzaW9uc3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("CiBwZXJtaXNzaW9ucy92MS9wZXJtaXNzaW9ucy5wcm90bxIOcGVybWlzc2lvbnMudjEiswIKDUNvbnRlbnRNZW1iZXISLAoMc3ViamVjdF90eXBlGAEgASgOMhYuY29tbW9uLnYxLlN1YmplY3RUeXBlEhIKCnN1YmplY3RfaWQYAiABKAkSJAoEcm9sZRgDIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZRIYChBhZGRlZF9ieV91c2VyX2lkGAQgASgJEiwKCGFkZGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIzCgpleHBpcmVzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBQg0KC19leHBpcmVzX2F0IrACChNDb250ZW50QWNjZXNzUG9saWN5EhAKCG93bmVyX2lkGAEgASgJEioKC2FjY2Vzc19tb2RlGAIgASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGUSMgoNYmFzZWxpbmVfcm9sZRgDIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZUgAiAEBEjAKC2NhbGxlcl9yb2xlGAQgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlSAGIAQESOQoVZWZmZWN0aXZlX2FjY2Vzc19tb2RlGAUgASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGVIAogBAUIQCg5fYmFzZWxpbmVfcm9sZUIOCgxfY2FsbGVyX3JvbGVCGAoWX2VmZmVjdGl2ZV9hY2Nlc3NfbW9kZSKvBwoSQ29udGVudE1lbWJlckV2ZW50EgoKAmlkGAEgASgJEiwKDGNvbnRlbnRfdHlwZRgCIAEoDjIWLmNvbW1vbi52MS5Db250ZW50VHlwZRISCgpjb250ZW50X2lkGAMgASgJEi4KBmFjdGlvbhgEIAEoDjIeLmNvbW1vbi52MS5Db250ZW50TWVtYmVyQWN0aW9uEjEKDHN1YmplY3RfdHlwZRgFIAEoDjIWLmNvbW1vbi52MS5TdWJqZWN0VHlwZUgAiAEBEhcKCnN1YmplY3RfaWQYBiABKAlIAYgBARIyCg1wcmV2aW91c19yb2xlGAcgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlSAKIAQESLQoIbmV3X3JvbGUYCCABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIA4gBARI4ChRwcmV2aW91c19hY2Nlc3NfbW9kZRgJIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlSASIAQESMwoPbmV3X2FjY2Vzc19tb2RlGAogASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGVIBYgBARI7ChZwcmV2aW91c19iYXNlbGluZV9yb2xlGAsgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlSAaIAQESNgoRbmV3X2Jhc2VsaW5lX3JvbGUYDCABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIB4gBARIeChFwcmV2aW91c19vd25lcl9pZBgNIAEoCUgIiAEBEhkKDG5ld19vd25lcl9pZBgOIAEoCUgJiAEBEhUKDWFjdG9yX3VzZXJfaWQYDyABKAkSMwoOYWN0b3Jfb3JnX3JvbGUYECABKA4yGy5jb21tb24udjEuT3JnYW5pemF0aW9uUm9sZRIMCgRub3RlGBEgASgJEi8KC29jY3VycmVkX2F0GBIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIPCg1fc3ViamVjdF90eXBlQg0KC19zdWJqZWN0X2lkQhAKDl9wcmV2aW91c19yb2xlQgsKCV9uZXdfcm9sZUIXChVfcHJldmlvdXNfYWNjZXNzX21vZGVCEgoQX25ld19hY2Nlc3NfbW9kZUIZChdfcHJldmlvdXNfYmFzZWxpbmVfcm9sZUIUChJfbmV3X2Jhc2VsaW5lX3JvbGVCFAoSX3ByZXZpb3VzX293bmVyX2lkQg8KDV9uZXdfb3duZXJfaWQirQYKFENvbnRlbnRBY2Nlc3NSZXF1ZXN0EgoKAmlkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRIVCg1yZXF1ZXN0ZWRfdXJuGAMgASgJEjUKFW9yaWdpbmFsX2NvbnRlbnRfdHlwZRgEIAEoDjIWLmNvbW1vbi52MS5Db250ZW50VHlwZRIbChNvcmlnaW5hbF9jb250ZW50X2lkGAUgASgJEjYKFmNhbm9uaWNhbF9jb250ZW50X3R5cGUYBiABKA4yFi5jb21tb24udjEuQ29udGVudFR5cGUSHAoUY2Fub25pY2FsX2NvbnRlbnRfaWQYByABKAkSFAoMcmVxdWVzdGVyX2lkGAggASgJEh4KFnJlcXVlc3Rlcl9kaXNwbGF5X25hbWUYCSABKAkSMQoFc3RhdGUYCiABKA4yIi5wZXJtaXNzaW9ucy52MS5BY2Nlc3NSZXF1ZXN0U3RhdGUSDwoHbWVzc2FnZRgLIAEoCRIVCg1kZWNpc2lvbl9ub3RlGAwgASgJEjIKDWFwcHJvdmVkX3JvbGUYDSABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAIgBARIhChRyZXNwb25kZWRfYnlfdXNlcl9pZBgOIAEoCUgBiAEBEi4KCmNyZWF0ZWRfYXQYDyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYECABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKDHJlc3BvbmRlZF9hdBgRIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAogBARI9ChRjYW5fcmVxdWVzdF9hZ2Fpbl9hdBgSIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIA4gBARIcChRyZXF1ZXN0ZXJfaGFzX2FjY2VzcxgTIAEoCEIQCg5fYXBwcm92ZWRfcm9sZUIXChVfcmVzcG9uZGVkX2J5X3VzZXJfaWRCDwoNX3Jlc3BvbmRlZF9hdEIXChVfY2FuX3JlcXVlc3RfYWdhaW5fYXQi/QEKE0FjY2Vzc1JlcXVlc3RTdGF0dXMSFQoNcmVxdWVzdGVkX3VybhgBIAEoCRIxCgVzdGF0ZRgCIAEoDjIiLnBlcm1pc3Npb25zLnYxLkFjY2Vzc1JlcXVlc3RTdGF0ZRIXCgpyZXF1ZXN0X2lkGAMgASgJSACIAQESPQoUY2FuX3JlcXVlc3RfYWdhaW5fYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESHAoUcmVxdWVzdGVyX2hhc19hY2Nlc3MYBSABKAhCDQoLX3JlcXVlc3RfaWRCFwoVX2Nhbl9yZXF1ZXN0X2FnYWluX2F0Im8KEkxpc3RNZW1iZXJzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSLAoMY29udGVudF90eXBlGAIgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRUeXBlEhIKCmNvbnRlbnRfaWQYAyABKAkiegoTTGlzdE1lbWJlcnNSZXNwb25zZRIzCgZwb2xpY3kYASABKAsyIy5wZXJtaXNzaW9ucy52MS5Db250ZW50QWNjZXNzUG9saWN5Ei4KB21lbWJlcnMYAiADKAsyHS5wZXJtaXNzaW9ucy52MS5Db250ZW50TWVtYmVyIqcCChBBZGRNZW1iZXJSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIsCgxjb250ZW50X3R5cGUYAiABKA4yFi5jb21tb24udjEuQ29udGVudFR5cGUSEgoKY29udGVudF9pZBgDIAEoCRIsCgxzdWJqZWN0X3R5cGUYBCABKA4yFi5jb21tb24udjEuU3ViamVjdFR5cGUSEgoKc3ViamVjdF9pZBgFIAEoCRIkCgRyb2xlGAYgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlEjMKCmV4cGlyZXNfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQESDAoEbm90ZRgIIAEoCUINCgtfZXhwaXJlc19hdCLuAQoXVXBkYXRlTWVtYmVyUm9sZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEiwKDGNvbnRlbnRfdHlwZRgCIAEoDjIWLmNvbW1vbi52MS5Db250ZW50VHlwZRISCgpjb250ZW50X2lkGAMgASgJEiwKDHN1YmplY3RfdHlwZRgEIAEoDjIWLmNvbW1vbi52MS5TdWJqZWN0VHlwZRISCgpzdWJqZWN0X2lkGAUgASgJEigKCG5ld19yb2xlGAYgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlEgwKBG5vdGUYByABKAkiwAEKE1JlbW92ZU1lbWJlclJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEiwKDGNvbnRlbnRfdHlwZRgCIAEoDjIWLmNvbW1vbi52MS5Db250ZW50VHlwZRISCgpjb250ZW50X2lkGAMgASgJEiwKDHN1YmplY3RfdHlwZRgEIAEoDjIWLmNvbW1vbi52MS5TdWJqZWN0VHlwZRISCgpzdWJqZWN0X2lkGAUgASgJEgwKBG5vdGUYBiABKAkiJwoUUmVtb3ZlTWVtYmVyUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCKTAgoUU2V0QWNjZXNzTW9kZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEiwKDGNvbnRlbnRfdHlwZRgCIAEoDjIWLmNvbW1vbi52MS5Db250ZW50VHlwZRISCgpjb250ZW50X2lkGAMgASgJEioKC2FjY2Vzc19tb2RlGAQgASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGUSMgoNYmFzZWxpbmVfcm9sZRgFIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZUgAiAEBEiAKGHJlbW92ZV9tZW1iZXJzX29uX25hcnJvdxgGIAEoCBIMCgRub3RlGAcgASgJQhAKDl9iYXNlbGluZV9yb2xlIkwKFVNldEFjY2Vzc01vZGVSZXNwb25zZRIzCgZwb2xpY3kYASABKAsyIy5wZXJtaXNzaW9ucy52MS5Db250ZW50QWNjZXNzUG9saWN5Ip4BChhUcmFuc2Zlck93bmVyc2hpcFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEiwKDGNvbnRlbnRfdHlwZRgCIAEoDjIWLmNvbW1vbi52MS5Db250ZW50VHlwZRISCgpjb250ZW50X2lkGAMgASgJEhkKEW5ld19vd25lcl91c2VyX2lkGAQgASgJEgwKBG5vdGUYBSABKAkiUAoZVHJhbnNmZXJPd25lcnNoaXBSZXNwb25zZRIzCgZwb2xpY3kYASABKAsyIy5wZXJtaXNzaW9ucy52MS5Db250ZW50QWNjZXNzUG9saWN5IkIKEUFkZE1lbWJlclJlc3BvbnNlEi0KBm1lbWJlchgBIAEoCzIdLnBlcm1pc3Npb25zLnYxLkNvbnRlbnRNZW1iZXIiSQoYVXBkYXRlTWVtYmVyUm9sZVJlc3BvbnNlEi0KBm1lbWJlchgBIAEoCzIdLnBlcm1pc3Npb25zLnYxLkNvbnRlbnRNZW1iZXIingMKF0xpc3RNZW1iZXJFdmVudHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIsCgxjb250ZW50X3R5cGUYAiABKA4yFi5jb21tb24udjEuQ29udGVudFR5cGUSEgoKY29udGVudF9pZBgDIAEoCRI1CgpwYWdpbmF0aW9uGAQgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQESGgoNYWN0b3JfdXNlcl9pZBgFIAEoCUgBiAEBEjMKBmFjdGlvbhgGIAEoDjIeLmNvbW1vbi52MS5Db250ZW50TWVtYmVyQWN0aW9uSAKIAQESLgoFYWZ0ZXIYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAOIAQESLwoGYmVmb3JlGAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgEiAEBQg0KC19wYWdpbmF0aW9uQhAKDl9hY3Rvcl91c2VyX2lkQgkKB19hY3Rpb25CCAoGX2FmdGVyQgkKB19iZWZvcmUigQEKGExpc3RNZW1iZXJFdmVudHNSZXNwb25zZRIyCgZldmVudHMYASADKAsyIi5wZXJtaXNzaW9ucy52MS5Db250ZW50TWVtYmVyRXZlbnQSMQoKcGFnaW5hdGlvbhgCIAEoCzIdLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVzcG9uc2UiVwoUUmVxdWVzdEFjY2Vzc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhUKDXJlcXVlc3RlZF91cm4YAiABKAkSDwoHbWVzc2FnZRgDIAEoCSL8AQoVUmVxdWVzdEFjY2Vzc1Jlc3BvbnNlEjUKB291dGNvbWUYASABKA4yJC5wZXJtaXNzaW9ucy52MS5SZXF1ZXN0QWNjZXNzT3V0Y29tZRJBCg5hY2Nlc3NfcmVxdWVzdBgCIAEoCzIkLnBlcm1pc3Npb25zLnYxLkNvbnRlbnRBY2Nlc3NSZXF1ZXN0SACIAQESPQoUY2FuX3JlcXVlc3RfYWdhaW5fYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQFCEQoPX2FjY2Vzc19yZXF1ZXN0QhcKFV9jYW5fcmVxdWVzdF9hZ2Fpbl9hdCJUCiFHZXRNeUFjY2Vzc1JlcXVlc3RTdGF0dXNlc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhYKDnJlcXVlc3RlZF91cm5zGAIgAygJIlsKIkdldE15QWNjZXNzUmVxdWVzdFN0YXR1c2VzUmVzcG9uc2USNQoIc3RhdHVzZXMYASADKAsyIy5wZXJtaXNzaW9ucy52MS5BY2Nlc3NSZXF1ZXN0U3RhdHVzIkYKF0dldEFjY2Vzc1JlcXVlc3RSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpyZXF1ZXN0X2lkGAIgASgJIlgKGEdldEFjY2Vzc1JlcXVlc3RSZXNwb25zZRI8Cg5hY2Nlc3NfcmVxdWVzdBgBIAEoCzIkLnBlcm1pc3Npb25zLnYxLkNvbnRlbnRBY2Nlc3NSZXF1ZXN0ItACChlMaXN0QWNjZXNzUmVxdWVzdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRI7ChZjYW5vbmljYWxfY29udGVudF90eXBlGAIgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRUeXBlSACIAQESIQoUY2Fub25pY2FsX2NvbnRlbnRfaWQYAyABKAlIAYgBARI2CgVzdGF0ZRgEIAEoDjIiLnBlcm1pc3Npb25zLnYxLkFjY2Vzc1JlcXVlc3RTdGF0ZUgCiAEBEjUKCnBhZ2luYXRpb24YBSABKAsyHC5jb21tb24udjEuUGFnaW5hdGlvblJlcXVlc3RIA4gBAUIZChdfY2Fub25pY2FsX2NvbnRlbnRfdHlwZUIXChVfY2Fub25pY2FsX2NvbnRlbnRfaWRCCAoGX3N0YXRlQg0KC19wYWdpbmF0aW9uIo4BChpMaXN0QWNjZXNzUmVxdWVzdHNSZXNwb25zZRI9Cg9hY2Nlc3NfcmVxdWVzdHMYASADKAsyJC5wZXJtaXNzaW9ucy52MS5Db250ZW50QWNjZXNzUmVxdWVzdBIxCgpwYWdpbmF0aW9uGAIgASgLMh0uY29tbW9uLnYxLlBhZ2luYXRpb25SZXNwb25zZSLiAQodUmVzcG9uZFRvQWNjZXNzUmVxdWVzdFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnJlcXVlc3RfaWQYAiABKAkSNwoIZGVjaXNpb24YAyABKA4yJS5wZXJtaXNzaW9ucy52MS5BY2Nlc3NSZXF1ZXN0RGVjaXNpb24SMgoNYXBwcm92ZWRfcm9sZRgEIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZUgAiAEBEhUKDWRlY2lzaW9uX25vdGUYBSABKAlCEAoOX2FwcHJvdmVkX3JvbGUiXgoeUmVzcG9uZFRvQWNjZXNzUmVxdWVzdFJlc3BvbnNlEjwKDmFjY2Vzc19yZXF1ZXN0GAEgASgLMiQucGVybWlzc2lvbnMudjEuQ29udGVudEFjY2Vzc1JlcXVlc3QiSQoaQ2FuY2VsQWNjZXNzUmVxdWVzdFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnJlcXVlc3RfaWQYAiABKAkiWwobQ2FuY2VsQWNjZXNzUmVxdWVzdFJlc3BvbnNlEjwKDmFjY2Vzc19yZXF1ZXN0GAEgASgLMiQucGVybWlzc2lvbnMudjEuQ29udGVudEFjY2Vzc1JlcXVlc3QqwwEKEkFjY2Vzc1JlcXVlc3RTdGF0ZRIkCiBBQ0NFU1NfUkVRVUVTVF9TVEFURV9VTlNQRUNJRklFRBAAEiAKHEFDQ0VTU19SRVFVRVNUX1NUQVRFX1BFTkRJTkcQARIhCh1BQ0NFU1NfUkVRVUVTVF9TVEFURV9BUFBST1ZFRBACEh8KG0FDQ0VTU19SRVFVRVNUX1NUQVRFX0RFTklFRBADEiEKHUFDQ0VTU19SRVFVRVNUX1NUQVRFX0NBTkNFTEVEEAQqhwEKFUFjY2Vzc1JlcXVlc3REZWNpc2lvbhInCiNBQ0NFU1NfUkVRVUVTVF9ERUNJU0lPTl9VTlNQRUNJRklFRBAAEiMKH0FDQ0VTU19SRVFVRVNUX0RFQ0lTSU9OX0FQUFJPVkUQARIgChxBQ0NFU1NfUkVRVUVTVF9ERUNJU0lPTl9ERU5ZEAIq4gEKFFJlcXVlc3RBY2Nlc3NPdXRjb21lEiYKIlJFUVVFU1RfQUNDRVNTX09VVENPTUVfVU5TUEVDSUZJRUQQABIiCh5SRVFVRVNUX0FDQ0VTU19PVVRDT01FX0NSRUFURUQQARIqCiZSRVFVRVNUX0FDQ0VTU19PVVRDT01FX0FMUkVBRFlfUEVORElORxACEi0KKVJFUVVFU1RfQUNDRVNTX09VVENPTUVfQUxSRUFEWV9BQ0NFU1NJQkxFEAMSIwofUkVRVUVTVF9BQ0NFU1NfT1VUQ09NRV9DT09MRE9XThAEMswKCg5NZW1iZXJzU2VydmljZRJWCgtMaXN0TWVtYmVycxIiLnBlcm1pc3Npb25zLnYxLkxpc3RNZW1iZXJzUmVxdWVzdBojLnBlcm1pc3Npb25zLnYxLkxpc3RNZW1iZXJzUmVzcG9uc2USUAoJQWRkTWVtYmVyEiAucGVybWlzc2lvbnMudjEuQWRkTWVtYmVyUmVxdWVzdBohLnBlcm1pc3Npb25zLnYxLkFkZE1lbWJlclJlc3BvbnNlEmUKEFVwZGF0ZU1lbWJlclJvbGUSJy5wZXJtaXNzaW9ucy52MS5VcGRhdGVNZW1iZXJSb2xlUmVxdWVzdBooLnBlcm1pc3Npb25zLnYxLlVwZGF0ZU1lbWJlclJvbGVSZXNwb25zZRJZCgxSZW1vdmVNZW1iZXISIy5wZXJtaXNzaW9ucy52MS5SZW1vdmVNZW1iZXJSZXF1ZXN0GiQucGVybWlzc2lvbnMudjEuUmVtb3ZlTWVtYmVyUmVzcG9uc2USXAoNU2V0QWNjZXNzTW9kZRIkLnBlcm1pc3Npb25zLnYxLlNldEFjY2Vzc01vZGVSZXF1ZXN0GiUucGVybWlzc2lvbnMudjEuU2V0QWNjZXNzTW9kZVJlc3BvbnNlEmgKEVRyYW5zZmVyT3duZXJzaGlwEigucGVybWlzc2lvbnMudjEuVHJhbnNmZXJPd25lcnNoaXBSZXF1ZXN0GikucGVybWlzc2lvbnMudjEuVHJhbnNmZXJPd25lcnNoaXBSZXNwb25zZRJlChBMaXN0TWVtYmVyRXZlbnRzEicucGVybWlzc2lvbnMudjEuTGlzdE1lbWJlckV2ZW50c1JlcXVlc3QaKC5wZXJtaXNzaW9ucy52MS5MaXN0TWVtYmVyRXZlbnRzUmVzcG9uc2USXAoNUmVxdWVzdEFjY2VzcxIkLnBlcm1pc3Npb25zLnYxLlJlcXVlc3RBY2Nlc3NSZXF1ZXN0GiUucGVybWlzc2lvbnMudjEuUmVxdWVzdEFjY2Vzc1Jlc3BvbnNlEoMBChpHZXRNeUFjY2Vzc1JlcXVlc3RTdGF0dXNlcxIxLnBlcm1pc3Npb25zLnYxLkdldE15QWNjZXNzUmVxdWVzdFN0YXR1c2VzUmVxdWVzdBoyLnBlcm1pc3Npb25zLnYxLkdldE15QWNjZXNzUmVxdWVzdFN0YXR1c2VzUmVzcG9uc2USZQoQR2V0QWNjZXNzUmVxdWVzdBInLnBlcm1pc3Npb25zLnYxLkdldEFjY2Vzc1JlcXVlc3RSZXF1ZXN0GigucGVybWlzc2lvbnMudjEuR2V0QWNjZXNzUmVxdWVzdFJlc3BvbnNlEmsKEkxpc3RBY2Nlc3NSZXF1ZXN0cxIpLnBlcm1pc3Npb25zLnYxLkxpc3RBY2Nlc3NSZXF1ZXN0c1JlcXVlc3QaKi5wZXJtaXNzaW9ucy52MS5MaXN0QWNjZXNzUmVxdWVzdHNSZXNwb25zZRJ3ChZSZXNwb25kVG9BY2Nlc3NSZXF1ZXN0Ei0ucGVybWlzc2lvbnMudjEuUmVzcG9uZFRvQWNjZXNzUmVxdWVzdFJlcXVlc3QaLi5wZXJtaXNzaW9ucy52MS5SZXNwb25kVG9BY2Nlc3NSZXF1ZXN0UmVzcG9uc2USbgoTQ2FuY2VsQWNjZXNzUmVxdWVzdBIqLnBlcm1pc3Npb25zLnYxLkNhbmNlbEFjY2Vzc1JlcXVlc3RSZXF1ZXN0GisucGVybWlzc2lvbnMudjEuQ2FuY2VsQWNjZXNzUmVxdWVzdFJlc3BvbnNlQkNaQWdpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9wZXJtaXNzaW9ucy92MTtwZXJtaXNzaW9uc3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * A single member row on a piece of content.
@@ -217,6 +217,150 @@ export const ContentMemberEventSchema: GenMessage<ContentMemberEvent> = /*@__PUR
   messageDesc(file_permissions_v1_permissions, 2);
 
 /**
+ * @generated from message permissions.v1.ContentAccessRequest
+ */
+export type ContentAccessRequest = Message<"permissions.v1.ContentAccessRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string requested_urn = 3;
+   */
+  requestedUrn: string;
+
+  /**
+   * @generated from field: common.v1.ContentType original_content_type = 4;
+   */
+  originalContentType: ContentType;
+
+  /**
+   * @generated from field: string original_content_id = 5;
+   */
+  originalContentId: string;
+
+  /**
+   * @generated from field: common.v1.ContentType canonical_content_type = 6;
+   */
+  canonicalContentType: ContentType;
+
+  /**
+   * @generated from field: string canonical_content_id = 7;
+   */
+  canonicalContentId: string;
+
+  /**
+   * @generated from field: string requester_id = 8;
+   */
+  requesterId: string;
+
+  /**
+   * @generated from field: string requester_display_name = 9;
+   */
+  requesterDisplayName: string;
+
+  /**
+   * @generated from field: permissions.v1.AccessRequestState state = 10;
+   */
+  state: AccessRequestState;
+
+  /**
+   * @generated from field: string message = 11;
+   */
+  message: string;
+
+  /**
+   * @generated from field: string decision_note = 12;
+   */
+  decisionNote: string;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole approved_role = 13;
+   */
+  approvedRole?: ContentRole | undefined;
+
+  /**
+   * @generated from field: optional string responded_by_user_id = 14;
+   */
+  respondedByUserId?: string | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 15;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 16;
+   */
+  updatedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp responded_at = 17;
+   */
+  respondedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp can_request_again_at = 18;
+   */
+  canRequestAgainAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: bool requester_has_access = 19;
+   */
+  requesterHasAccess: boolean;
+};
+
+/**
+ * Describes the message permissions.v1.ContentAccessRequest.
+ * Use `create(ContentAccessRequestSchema)` to create a new message.
+ */
+export const ContentAccessRequestSchema: GenMessage<ContentAccessRequest> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 3);
+
+/**
+ * @generated from message permissions.v1.AccessRequestStatus
+ */
+export type AccessRequestStatus = Message<"permissions.v1.AccessRequestStatus"> & {
+  /**
+   * @generated from field: string requested_urn = 1;
+   */
+  requestedUrn: string;
+
+  /**
+   * @generated from field: permissions.v1.AccessRequestState state = 2;
+   */
+  state: AccessRequestState;
+
+  /**
+   * @generated from field: optional string request_id = 3;
+   */
+  requestId?: string | undefined;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp can_request_again_at = 4;
+   */
+  canRequestAgainAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: bool requester_has_access = 5;
+   */
+  requesterHasAccess: boolean;
+};
+
+/**
+ * Describes the message permissions.v1.AccessRequestStatus.
+ * Use `create(AccessRequestStatusSchema)` to create a new message.
+ */
+export const AccessRequestStatusSchema: GenMessage<AccessRequestStatus> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 4);
+
+/**
  * @generated from message permissions.v1.ListMembersRequest
  */
 export type ListMembersRequest = Message<"permissions.v1.ListMembersRequest"> & {
@@ -241,7 +385,7 @@ export type ListMembersRequest = Message<"permissions.v1.ListMembersRequest"> & 
  * Use `create(ListMembersRequestSchema)` to create a new message.
  */
 export const ListMembersRequestSchema: GenMessage<ListMembersRequest> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 3);
+  messageDesc(file_permissions_v1_permissions, 5);
 
 /**
  * @generated from message permissions.v1.ListMembersResponse
@@ -263,7 +407,7 @@ export type ListMembersResponse = Message<"permissions.v1.ListMembersResponse"> 
  * Use `create(ListMembersResponseSchema)` to create a new message.
  */
 export const ListMembersResponseSchema: GenMessage<ListMembersResponse> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 4);
+  messageDesc(file_permissions_v1_permissions, 6);
 
 /**
  * @generated from message permissions.v1.AddMemberRequest
@@ -315,7 +459,7 @@ export type AddMemberRequest = Message<"permissions.v1.AddMemberRequest"> & {
  * Use `create(AddMemberRequestSchema)` to create a new message.
  */
 export const AddMemberRequestSchema: GenMessage<AddMemberRequest> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 5);
+  messageDesc(file_permissions_v1_permissions, 7);
 
 /**
  * @generated from message permissions.v1.UpdateMemberRoleRequest
@@ -362,7 +506,7 @@ export type UpdateMemberRoleRequest = Message<"permissions.v1.UpdateMemberRoleRe
  * Use `create(UpdateMemberRoleRequestSchema)` to create a new message.
  */
 export const UpdateMemberRoleRequestSchema: GenMessage<UpdateMemberRoleRequest> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 6);
+  messageDesc(file_permissions_v1_permissions, 8);
 
 /**
  * @generated from message permissions.v1.RemoveMemberRequest
@@ -404,7 +548,7 @@ export type RemoveMemberRequest = Message<"permissions.v1.RemoveMemberRequest"> 
  * Use `create(RemoveMemberRequestSchema)` to create a new message.
  */
 export const RemoveMemberRequestSchema: GenMessage<RemoveMemberRequest> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 7);
+  messageDesc(file_permissions_v1_permissions, 9);
 
 /**
  * @generated from message permissions.v1.RemoveMemberResponse
@@ -421,7 +565,7 @@ export type RemoveMemberResponse = Message<"permissions.v1.RemoveMemberResponse"
  * Use `create(RemoveMemberResponseSchema)` to create a new message.
  */
 export const RemoveMemberResponseSchema: GenMessage<RemoveMemberResponse> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 8);
+  messageDesc(file_permissions_v1_permissions, 10);
 
 /**
  * @generated from message permissions.v1.SetAccessModeRequest
@@ -468,7 +612,7 @@ export type SetAccessModeRequest = Message<"permissions.v1.SetAccessModeRequest"
  * Use `create(SetAccessModeRequestSchema)` to create a new message.
  */
 export const SetAccessModeRequestSchema: GenMessage<SetAccessModeRequest> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 9);
+  messageDesc(file_permissions_v1_permissions, 11);
 
 /**
  * @generated from message permissions.v1.SetAccessModeResponse
@@ -485,7 +629,7 @@ export type SetAccessModeResponse = Message<"permissions.v1.SetAccessModeRespons
  * Use `create(SetAccessModeResponseSchema)` to create a new message.
  */
 export const SetAccessModeResponseSchema: GenMessage<SetAccessModeResponse> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 10);
+  messageDesc(file_permissions_v1_permissions, 12);
 
 /**
  * @generated from message permissions.v1.TransferOwnershipRequest
@@ -522,7 +666,7 @@ export type TransferOwnershipRequest = Message<"permissions.v1.TransferOwnership
  * Use `create(TransferOwnershipRequestSchema)` to create a new message.
  */
 export const TransferOwnershipRequestSchema: GenMessage<TransferOwnershipRequest> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 11);
+  messageDesc(file_permissions_v1_permissions, 13);
 
 /**
  * @generated from message permissions.v1.TransferOwnershipResponse
@@ -539,7 +683,7 @@ export type TransferOwnershipResponse = Message<"permissions.v1.TransferOwnershi
  * Use `create(TransferOwnershipResponseSchema)` to create a new message.
  */
 export const TransferOwnershipResponseSchema: GenMessage<TransferOwnershipResponse> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 12);
+  messageDesc(file_permissions_v1_permissions, 14);
 
 /**
  * @generated from message permissions.v1.AddMemberResponse
@@ -556,7 +700,7 @@ export type AddMemberResponse = Message<"permissions.v1.AddMemberResponse"> & {
  * Use `create(AddMemberResponseSchema)` to create a new message.
  */
 export const AddMemberResponseSchema: GenMessage<AddMemberResponse> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 13);
+  messageDesc(file_permissions_v1_permissions, 15);
 
 /**
  * @generated from message permissions.v1.UpdateMemberRoleResponse
@@ -573,7 +717,7 @@ export type UpdateMemberRoleResponse = Message<"permissions.v1.UpdateMemberRoleR
  * Use `create(UpdateMemberRoleResponseSchema)` to create a new message.
  */
 export const UpdateMemberRoleResponseSchema: GenMessage<UpdateMemberRoleResponse> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 14);
+  messageDesc(file_permissions_v1_permissions, 16);
 
 /**
  * @generated from message permissions.v1.ListMemberEventsRequest
@@ -625,7 +769,7 @@ export type ListMemberEventsRequest = Message<"permissions.v1.ListMemberEventsRe
  * Use `create(ListMemberEventsRequestSchema)` to create a new message.
  */
 export const ListMemberEventsRequestSchema: GenMessage<ListMemberEventsRequest> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 15);
+  messageDesc(file_permissions_v1_permissions, 17);
 
 /**
  * @generated from message permissions.v1.ListMemberEventsResponse
@@ -647,7 +791,389 @@ export type ListMemberEventsResponse = Message<"permissions.v1.ListMemberEventsR
  * Use `create(ListMemberEventsResponseSchema)` to create a new message.
  */
 export const ListMemberEventsResponseSchema: GenMessage<ListMemberEventsResponse> = /*@__PURE__*/
-  messageDesc(file_permissions_v1_permissions, 16);
+  messageDesc(file_permissions_v1_permissions, 18);
+
+/**
+ * @generated from message permissions.v1.RequestAccessRequest
+ */
+export type RequestAccessRequest = Message<"permissions.v1.RequestAccessRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string requested_urn = 2;
+   */
+  requestedUrn: string;
+
+  /**
+   * @generated from field: string message = 3;
+   */
+  message: string;
+};
+
+/**
+ * Describes the message permissions.v1.RequestAccessRequest.
+ * Use `create(RequestAccessRequestSchema)` to create a new message.
+ */
+export const RequestAccessRequestSchema: GenMessage<RequestAccessRequest> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 19);
+
+/**
+ * @generated from message permissions.v1.RequestAccessResponse
+ */
+export type RequestAccessResponse = Message<"permissions.v1.RequestAccessResponse"> & {
+  /**
+   * @generated from field: permissions.v1.RequestAccessOutcome outcome = 1;
+   */
+  outcome: RequestAccessOutcome;
+
+  /**
+   * @generated from field: optional permissions.v1.ContentAccessRequest access_request = 2;
+   */
+  accessRequest?: ContentAccessRequest | undefined;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp can_request_again_at = 3;
+   */
+  canRequestAgainAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message permissions.v1.RequestAccessResponse.
+ * Use `create(RequestAccessResponseSchema)` to create a new message.
+ */
+export const RequestAccessResponseSchema: GenMessage<RequestAccessResponse> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 20);
+
+/**
+ * @generated from message permissions.v1.GetMyAccessRequestStatusesRequest
+ */
+export type GetMyAccessRequestStatusesRequest = Message<"permissions.v1.GetMyAccessRequestStatusesRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: repeated string requested_urns = 2;
+   */
+  requestedUrns: string[];
+};
+
+/**
+ * Describes the message permissions.v1.GetMyAccessRequestStatusesRequest.
+ * Use `create(GetMyAccessRequestStatusesRequestSchema)` to create a new message.
+ */
+export const GetMyAccessRequestStatusesRequestSchema: GenMessage<GetMyAccessRequestStatusesRequest> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 21);
+
+/**
+ * @generated from message permissions.v1.GetMyAccessRequestStatusesResponse
+ */
+export type GetMyAccessRequestStatusesResponse = Message<"permissions.v1.GetMyAccessRequestStatusesResponse"> & {
+  /**
+   * @generated from field: repeated permissions.v1.AccessRequestStatus statuses = 1;
+   */
+  statuses: AccessRequestStatus[];
+};
+
+/**
+ * Describes the message permissions.v1.GetMyAccessRequestStatusesResponse.
+ * Use `create(GetMyAccessRequestStatusesResponseSchema)` to create a new message.
+ */
+export const GetMyAccessRequestStatusesResponseSchema: GenMessage<GetMyAccessRequestStatusesResponse> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 22);
+
+/**
+ * @generated from message permissions.v1.GetAccessRequestRequest
+ */
+export type GetAccessRequestRequest = Message<"permissions.v1.GetAccessRequestRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string request_id = 2;
+   */
+  requestId: string;
+};
+
+/**
+ * Describes the message permissions.v1.GetAccessRequestRequest.
+ * Use `create(GetAccessRequestRequestSchema)` to create a new message.
+ */
+export const GetAccessRequestRequestSchema: GenMessage<GetAccessRequestRequest> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 23);
+
+/**
+ * @generated from message permissions.v1.GetAccessRequestResponse
+ */
+export type GetAccessRequestResponse = Message<"permissions.v1.GetAccessRequestResponse"> & {
+  /**
+   * @generated from field: permissions.v1.ContentAccessRequest access_request = 1;
+   */
+  accessRequest?: ContentAccessRequest | undefined;
+};
+
+/**
+ * Describes the message permissions.v1.GetAccessRequestResponse.
+ * Use `create(GetAccessRequestResponseSchema)` to create a new message.
+ */
+export const GetAccessRequestResponseSchema: GenMessage<GetAccessRequestResponse> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 24);
+
+/**
+ * @generated from message permissions.v1.ListAccessRequestsRequest
+ */
+export type ListAccessRequestsRequest = Message<"permissions.v1.ListAccessRequestsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: optional common.v1.ContentType canonical_content_type = 2;
+   */
+  canonicalContentType?: ContentType | undefined;
+
+  /**
+   * @generated from field: optional string canonical_content_id = 3;
+   */
+  canonicalContentId?: string | undefined;
+
+  /**
+   * @generated from field: optional permissions.v1.AccessRequestState state = 4;
+   */
+  state?: AccessRequestState | undefined;
+
+  /**
+   * @generated from field: optional common.v1.PaginationRequest pagination = 5;
+   */
+  pagination?: PaginationRequest | undefined;
+};
+
+/**
+ * Describes the message permissions.v1.ListAccessRequestsRequest.
+ * Use `create(ListAccessRequestsRequestSchema)` to create a new message.
+ */
+export const ListAccessRequestsRequestSchema: GenMessage<ListAccessRequestsRequest> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 25);
+
+/**
+ * @generated from message permissions.v1.ListAccessRequestsResponse
+ */
+export type ListAccessRequestsResponse = Message<"permissions.v1.ListAccessRequestsResponse"> & {
+  /**
+   * @generated from field: repeated permissions.v1.ContentAccessRequest access_requests = 1;
+   */
+  accessRequests: ContentAccessRequest[];
+
+  /**
+   * @generated from field: common.v1.PaginationResponse pagination = 2;
+   */
+  pagination?: PaginationResponse | undefined;
+};
+
+/**
+ * Describes the message permissions.v1.ListAccessRequestsResponse.
+ * Use `create(ListAccessRequestsResponseSchema)` to create a new message.
+ */
+export const ListAccessRequestsResponseSchema: GenMessage<ListAccessRequestsResponse> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 26);
+
+/**
+ * @generated from message permissions.v1.RespondToAccessRequestRequest
+ */
+export type RespondToAccessRequestRequest = Message<"permissions.v1.RespondToAccessRequestRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string request_id = 2;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: permissions.v1.AccessRequestDecision decision = 3;
+   */
+  decision: AccessRequestDecision;
+
+  /**
+   * @generated from field: optional common.v1.ContentRole approved_role = 4;
+   */
+  approvedRole?: ContentRole | undefined;
+
+  /**
+   * @generated from field: string decision_note = 5;
+   */
+  decisionNote: string;
+};
+
+/**
+ * Describes the message permissions.v1.RespondToAccessRequestRequest.
+ * Use `create(RespondToAccessRequestRequestSchema)` to create a new message.
+ */
+export const RespondToAccessRequestRequestSchema: GenMessage<RespondToAccessRequestRequest> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 27);
+
+/**
+ * @generated from message permissions.v1.RespondToAccessRequestResponse
+ */
+export type RespondToAccessRequestResponse = Message<"permissions.v1.RespondToAccessRequestResponse"> & {
+  /**
+   * @generated from field: permissions.v1.ContentAccessRequest access_request = 1;
+   */
+  accessRequest?: ContentAccessRequest | undefined;
+};
+
+/**
+ * Describes the message permissions.v1.RespondToAccessRequestResponse.
+ * Use `create(RespondToAccessRequestResponseSchema)` to create a new message.
+ */
+export const RespondToAccessRequestResponseSchema: GenMessage<RespondToAccessRequestResponse> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 28);
+
+/**
+ * @generated from message permissions.v1.CancelAccessRequestRequest
+ */
+export type CancelAccessRequestRequest = Message<"permissions.v1.CancelAccessRequestRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string request_id = 2;
+   */
+  requestId: string;
+};
+
+/**
+ * Describes the message permissions.v1.CancelAccessRequestRequest.
+ * Use `create(CancelAccessRequestRequestSchema)` to create a new message.
+ */
+export const CancelAccessRequestRequestSchema: GenMessage<CancelAccessRequestRequest> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 29);
+
+/**
+ * @generated from message permissions.v1.CancelAccessRequestResponse
+ */
+export type CancelAccessRequestResponse = Message<"permissions.v1.CancelAccessRequestResponse"> & {
+  /**
+   * @generated from field: permissions.v1.ContentAccessRequest access_request = 1;
+   */
+  accessRequest?: ContentAccessRequest | undefined;
+};
+
+/**
+ * Describes the message permissions.v1.CancelAccessRequestResponse.
+ * Use `create(CancelAccessRequestResponseSchema)` to create a new message.
+ */
+export const CancelAccessRequestResponseSchema: GenMessage<CancelAccessRequestResponse> = /*@__PURE__*/
+  messageDesc(file_permissions_v1_permissions, 30);
+
+/**
+ * @generated from enum permissions.v1.AccessRequestState
+ */
+export enum AccessRequestState {
+  /**
+   * @generated from enum value: ACCESS_REQUEST_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: ACCESS_REQUEST_STATE_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * @generated from enum value: ACCESS_REQUEST_STATE_APPROVED = 2;
+   */
+  APPROVED = 2,
+
+  /**
+   * @generated from enum value: ACCESS_REQUEST_STATE_DENIED = 3;
+   */
+  DENIED = 3,
+
+  /**
+   * @generated from enum value: ACCESS_REQUEST_STATE_CANCELED = 4;
+   */
+  CANCELED = 4,
+}
+
+/**
+ * Describes the enum permissions.v1.AccessRequestState.
+ */
+export const AccessRequestStateSchema: GenEnum<AccessRequestState> = /*@__PURE__*/
+  enumDesc(file_permissions_v1_permissions, 0);
+
+/**
+ * @generated from enum permissions.v1.AccessRequestDecision
+ */
+export enum AccessRequestDecision {
+  /**
+   * @generated from enum value: ACCESS_REQUEST_DECISION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: ACCESS_REQUEST_DECISION_APPROVE = 1;
+   */
+  APPROVE = 1,
+
+  /**
+   * @generated from enum value: ACCESS_REQUEST_DECISION_DENY = 2;
+   */
+  DENY = 2,
+}
+
+/**
+ * Describes the enum permissions.v1.AccessRequestDecision.
+ */
+export const AccessRequestDecisionSchema: GenEnum<AccessRequestDecision> = /*@__PURE__*/
+  enumDesc(file_permissions_v1_permissions, 1);
+
+/**
+ * @generated from enum permissions.v1.RequestAccessOutcome
+ */
+export enum RequestAccessOutcome {
+  /**
+   * @generated from enum value: REQUEST_ACCESS_OUTCOME_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: REQUEST_ACCESS_OUTCOME_CREATED = 1;
+   */
+  CREATED = 1,
+
+  /**
+   * @generated from enum value: REQUEST_ACCESS_OUTCOME_ALREADY_PENDING = 2;
+   */
+  ALREADY_PENDING = 2,
+
+  /**
+   * @generated from enum value: REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE = 3;
+   */
+  ALREADY_ACCESSIBLE = 3,
+
+  /**
+   * @generated from enum value: REQUEST_ACCESS_OUTCOME_COOLDOWN = 4;
+   */
+  COOLDOWN = 4,
+}
+
+/**
+ * Describes the enum permissions.v1.RequestAccessOutcome.
+ */
+export const RequestAccessOutcomeSchema: GenEnum<RequestAccessOutcome> = /*@__PURE__*/
+  enumDesc(file_permissions_v1_permissions, 2);
 
 /**
  * @generated from service permissions.v1.MembersService
@@ -708,6 +1234,54 @@ export const MembersService: GenService<{
     methodKind: "unary";
     input: typeof ListMemberEventsRequestSchema;
     output: typeof ListMemberEventsResponseSchema;
+  },
+  /**
+   * @generated from rpc permissions.v1.MembersService.RequestAccess
+   */
+  requestAccess: {
+    methodKind: "unary";
+    input: typeof RequestAccessRequestSchema;
+    output: typeof RequestAccessResponseSchema;
+  },
+  /**
+   * @generated from rpc permissions.v1.MembersService.GetMyAccessRequestStatuses
+   */
+  getMyAccessRequestStatuses: {
+    methodKind: "unary";
+    input: typeof GetMyAccessRequestStatusesRequestSchema;
+    output: typeof GetMyAccessRequestStatusesResponseSchema;
+  },
+  /**
+   * @generated from rpc permissions.v1.MembersService.GetAccessRequest
+   */
+  getAccessRequest: {
+    methodKind: "unary";
+    input: typeof GetAccessRequestRequestSchema;
+    output: typeof GetAccessRequestResponseSchema;
+  },
+  /**
+   * @generated from rpc permissions.v1.MembersService.ListAccessRequests
+   */
+  listAccessRequests: {
+    methodKind: "unary";
+    input: typeof ListAccessRequestsRequestSchema;
+    output: typeof ListAccessRequestsResponseSchema;
+  },
+  /**
+   * @generated from rpc permissions.v1.MembersService.RespondToAccessRequest
+   */
+  respondToAccessRequest: {
+    methodKind: "unary";
+    input: typeof RespondToAccessRequestRequestSchema;
+    output: typeof RespondToAccessRequestResponseSchema;
+  },
+  /**
+   * @generated from rpc permissions.v1.MembersService.CancelAccessRequest
+   */
+  cancelAccessRequest: {
+    methodKind: "unary";
+    input: typeof CancelAccessRequestRequestSchema;
+    output: typeof CancelAccessRequestResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_permissions_v1_permissions, 0);

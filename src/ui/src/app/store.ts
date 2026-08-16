@@ -24,7 +24,7 @@ import { notesReducer } from "@/features/notes/store/notesSlice";
 import { notesTreeReducer } from "@/features/notes/store/notesTreeSlice";
 import { editorReducer } from "@/features/notes/store/editorSlice";
 import { settingsReducer } from "@/features/settings/store/settingsSlice";
-import { permissionsReducer } from "@/features/permissions";
+import { accessRequestsReducer, permissionsReducer } from "@/features/permissions";
 import { adminReducer } from "@/features/admin/store/adminSlice";
 import { agentsGovernanceReducer } from "@/features/admin/store/agentsGovernanceSlice";
 import { agentRuntimeSettingsReducer } from "@/features/admin/store/agentRuntimeSettingsSlice";
@@ -182,6 +182,7 @@ const rootReducer = combineReducers({
   editor: editorReducer,
   settings: settingsReducer,
   permissions: permissionsReducer,
+  accessRequests: accessRequestsReducer,
   admin: adminReducer,
   agentsGovernance: agentsGovernanceReducer,
   agentRuntimeSettings: agentRuntimeSettingsReducer,

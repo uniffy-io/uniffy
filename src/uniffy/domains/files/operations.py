@@ -23,6 +23,10 @@ from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
+from uniffy.core.content.reference_state import (
+    model_reference_state_loader,
+    register_reference_state_loader,
+)
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
@@ -2306,3 +2310,5 @@ async def _load_folder(
 
 register_content_loader(ContentType.FILE, _load_file)
 register_content_loader(ContentType.FOLDER, _load_folder)
+register_reference_state_loader(ContentType.FILE, model_reference_state_loader(File))
+register_reference_state_loader(ContentType.FOLDER, model_reference_state_loader(Folder))

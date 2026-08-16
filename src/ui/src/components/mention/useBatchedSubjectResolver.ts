@@ -2,15 +2,24 @@
 
 import { useCallback } from "react";
 import { searchApi } from "@/features/search";
+import { membersApi } from "@/features/permissions/api/membersApi";
 import { parseUrn, UrnType } from "@/shared/utils/urn";
-import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
+import {
+  SearchResultType,
+  UrnAvailability as ProtoUrnAvailability,
+} from "@uniffy/proto/search/v1/search_pb";
 import { getContentTypeLabel } from "@/config/theme/contentTypes";
 import { useAppSelector } from "@/app/hooks";
 import {
   onMentionStateChange,
   publishMentionState,
 } from "@/components/mention/mentionStateEmitter";
-import type { MentionLiveState } from "@/components/mention/types";
+import {
+  MentionAvailability,
+  type MentionAccessRequestStatus,
+  type MentionLiveState,
+} from "@/components/mention/types";
+import { accessRequestStatusToLiveState } from "@/components/mention/accessRequestState";
 
 export interface UrnPreviewData {
   urn: string;
@@ -21,6 +30,11 @@ export interface UrnPreviewData {
   updatedAt?: string;
   createdAt?: string;
   metadata?: Record<string, string>;
+  availability: MentionAvailability;
+  canRequestAccess: boolean;
+  accessRequestId?: string;
+  accessRequestStatus?: MentionAccessRequestStatus;
+  canRequestAgainAt?: string;
 }
 
 const previewCache = new Map<string, UrnPreviewData>();
@@ -36,20 +50,48 @@ function mergePreviewChanges(
 ): UrnPreviewData | null {
   const title = typeof changes.title === "string" ? changes.title : undefined;
   const description = typeof changes.description === "string" ? changes.description : undefined;
-  if (title === undefined && description === undefined) return null;
+  const hasAccessRequestId = Object.hasOwn(changes, "accessRequestId");
+  const hasAccessRequestStatus = Object.hasOwn(changes, "accessRequestStatus");
+  const hasCanRequestAgainAt = Object.hasOwn(changes, "canRequestAgainAt");
+  if (
+    title === undefined &&
+    description === undefined &&
+    !hasAccessRequestId &&
+    !hasAccessRequestStatus &&
+    !hasCanRequestAgainAt
+  ) {
+    return null;
+  }
 
   const next: UrnPreviewData = {
     ...cached,
     title: title || cached.title,
     description: description ?? cached.description,
+    accessRequestId: hasAccessRequestId ? changes.accessRequestId : cached.accessRequestId,
+    accessRequestStatus: hasAccessRequestStatus
+      ? changes.accessRequestStatus
+      : cached.accessRequestStatus,
+    canRequestAgainAt: hasCanRequestAgainAt ? changes.canRequestAgainAt : cached.canRequestAgainAt,
   };
-  if (next.title === cached.title && next.description === cached.description) return null;
+  if (
+    next.title === cached.title &&
+    next.description === cached.description &&
+    next.accessRequestId === cached.accessRequestId &&
+    next.accessRequestStatus === cached.accessRequestStatus &&
+    next.canRequestAgainAt === cached.canRequestAgainAt
+  ) {
+    return null;
+  }
   return next;
 }
 
 // Live patches must reach the cache, not just the chips: the hover popover reads
 // the cached entry, so an unpatched rename resurfaces on the next hover.
-onMentionStateChange((urn, changes) => {
+onMentionStateChange((urn, changes, operation) => {
+  if (operation === "invalidate") {
+    previewCache.delete(urn);
+    return;
+  }
   const cached = previewCache.get(urn);
   if (!cached) return;
   const next = mergePreviewChanges(cached, changes);
@@ -113,6 +155,8 @@ async function flush(): Promise<void> {
           type: SearchResultType;
           url?: string;
           metadata?: Record<string, string>;
+          availability: ProtoUrnAvailability;
+          canRequestAccess: boolean;
         }
       >
     | undefined;
@@ -124,19 +168,55 @@ async function flush(): Promise<void> {
     resolved = undefined;
   }
 
+  const restrictedUrns = Object.entries(resolved ?? {})
+    .filter(([, result]) => {
+      const availability = previewAvailability(
+        result.availability,
+        result.metadata?.["urn_status"],
+      );
+      return availability === MentionAvailability.Restricted && result.canRequestAccess;
+    })
+    .map(([urn]) => urn);
+  let requestStatusByUrn = new Map<
+    string,
+    Awaited<ReturnType<typeof membersApi.getMyAccessRequestStatuses>>["statuses"][number]
+  >();
+  if (restrictedUrns.length > 0) {
+    try {
+      const statusResponse = await membersApi.getMyAccessRequestStatuses({
+        organizationId: orgId,
+        requestedUrns: restrictedUrns,
+      });
+      requestStatusByUrn = new Map(
+        statusResponse.statuses.map((status) => [status.requestedUrn, status]),
+      );
+    } catch {
+      requestStatusByUrn = new Map();
+    }
+  }
+
   for (const [urn, callbacks] of consumers.entries()) {
     const r = resolved?.[urn];
     let data: UrnPreviewData | null = null;
     if (r) {
       const parsed = parseUrn(urn);
+      const availability = previewAvailability(r.availability, r.metadata?.["urn_status"]);
+      const accessRequestState = accessRequestStatusToLiveState(requestStatusByUrn.get(urn));
       data = {
         urn,
-        title: r.title || getContentTypeLabel(parsed.type),
+        title:
+          r.title ||
+          (availability === MentionAvailability.Available ? getContentTypeLabel(parsed.type) : ""),
         description: r.description || "",
         type: searchResultTypeToUrnType(r.type),
         url: r.url,
         updatedAt: r.metadata?.["updated_at"] || undefined,
         metadata: r.metadata,
+        availability,
+        canRequestAccess: r.canRequestAccess,
+        accessRequestId: accessRequestState.accessRequestId,
+        accessRequestStatus: accessRequestState.accessRequestStatus,
+        canRequestAgainAt: accessRequestState.canRequestAgainAt,
       };
       previewCache.set(urn, data);
       // Wake up chips that subscribe via the module-level emitter (e.g. editor NodeViews outside the React provider).
@@ -149,6 +229,8 @@ async function flush(): Promise<void> {
             title: getContentTypeLabel(parsed.type),
             description: `${parsed.type} content`,
             type: parsed.type,
+            availability: MentionAvailability.Unavailable,
+            canRequestAccess: false,
           }
         : null;
     }
@@ -167,7 +249,11 @@ function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveS
     updatedAt: m["updated_at"] || undefined,
     updatedByName: m["updated_by_name"] || undefined,
     parentLabel: m["parent_label"] || undefined,
-    status: m["urn_status"] === "DELETED" ? "deleted" : "ok",
+    availability: data.availability,
+    canRequestAccess: data.canRequestAccess,
+    accessRequestId: data.accessRequestId,
+    accessRequestStatus: data.accessRequestStatus,
+    canRequestAgainAt: data.canRequestAgainAt,
   };
   if (m["content_tags"]) state.contentTags = m["content_tags"].split(",").filter(Boolean);
 
@@ -271,6 +357,26 @@ function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveS
   return state;
 }
 
+function previewAvailability(
+  availability: ProtoUrnAvailability,
+  compatibilityStatus?: string,
+): MentionAvailability {
+  switch (availability) {
+    case ProtoUrnAvailability.RESTRICTED:
+      return MentionAvailability.Restricted;
+    case ProtoUrnAvailability.DELETED:
+      return MentionAvailability.Deleted;
+    case ProtoUrnAvailability.UNAVAILABLE:
+      return MentionAvailability.Unavailable;
+    case ProtoUrnAvailability.AVAILABLE:
+      return MentionAvailability.Available;
+    default:
+      return compatibilityStatus === "DELETED"
+        ? MentionAvailability.Deleted
+        : MentionAvailability.Available;
+  }
+}
+
 function parseTagDomainBreakdown(raw: string): Record<string, number> {
   const out: Record<string, number> = {};
   for (const pair of raw.split("|")) {
@@ -285,7 +391,9 @@ function parseTagDomainBreakdown(raw: string): Record<string, number> {
 export function resolveUrnBatched(
   urn: string,
   organizationId: string,
+  options?: { force?: boolean },
 ): Promise<UrnPreviewData | null> {
+  if (options?.force) previewCache.delete(urn);
   const cached = previewCache.get(urn);
   if (cached) return Promise.resolve(cached);
 

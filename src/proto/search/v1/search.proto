@@ -37,6 +37,14 @@ enum SearchResultType {
   SEARCH_RESULT_TYPE_TEAM = 15;
 }
 
+enum UrnAvailability {
+  URN_AVAILABILITY_UNSPECIFIED = 0;
+  URN_AVAILABILITY_AVAILABLE = 1;
+  URN_AVAILABILITY_RESTRICTED = 2;
+  URN_AVAILABILITY_DELETED = 3;
+  URN_AVAILABILITY_UNAVAILABLE = 4;
+}
+
 message SearchRequest {
   string organization_id = 1;
   string query = 2;
@@ -182,10 +190,12 @@ message UrnMetadata {
   repeated string assignee_ids = 46; // user IDs for avatar rendering
   repeated string content_tags = 47; // content tags
 
-  // Tombstone marker for mentions whose target was deleted or is no
-  // longer accessible. Empty/"OK" for live URNs, "DELETED" for missing
-  // ones. ResolveUrns synthesizes this when the search index does not
-  // contain the requested URN, so the frontend can render a tombstone
-  // chip instead of a generic fallback.
+  // Deprecated compatibility projection. "DELETED" is emitted only when
+  // availability is URN_AVAILABILITY_DELETED.
   string urn_status = 48;
+
+  // Authorization-safe state of the referenced resource. Restricted results
+  // contain no title, description, URL, metadata, or owner information.
+  UrnAvailability availability = 50;
+  bool can_request_access = 51;
 }

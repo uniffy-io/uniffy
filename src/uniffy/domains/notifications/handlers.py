@@ -14,6 +14,7 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
 from sqlalchemy import select
 from uniffy_proto.notifications.v1.notifications_pb2 import (
+    AccessRequestChangedPayload,
     BulkDeleteNotificationsRequest,
     BulkDeleteNotificationsResponse,
     BulkMarkAsReadRequest,
@@ -624,6 +625,27 @@ class NotificationsHandlers:
                                 content_id=payload.get("content_id", ""),
                                 action=payload.get("action", ""),
                             ),
+                        )
+                        last_send = now
+                        continue
+
+                    if payload.get("_type") == NotificationPayloadType.ACCESS_REQUEST_CHANGED:
+                        changed = AccessRequestChangedPayload(
+                            request_id=payload.get("request_id", ""),
+                            requested_urn=payload.get("requested_urn", ""),
+                            state=payload.get("state", 0),
+                        )
+                        if payload.get("can_request_again_at"):
+                            retry_at = Timestamp()
+                            retry_at.FromDatetime(
+                                datetime.fromisoformat(payload["can_request_again_at"])
+                            )
+                            changed.can_request_again_at.CopyFrom(retry_at)
+                        yield StreamNotificationsResponse(
+                            event_type=(
+                                StreamNotificationsResponse.EVENT_TYPE_ACCESS_REQUEST_CHANGED
+                            ),
+                            access_request_changed=changed,
                         )
                         last_send = now
                         continue

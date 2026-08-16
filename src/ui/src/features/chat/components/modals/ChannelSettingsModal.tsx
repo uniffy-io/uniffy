@@ -53,6 +53,8 @@ import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
 import { formatDateFull } from "@/shared/utils/dateFormatting";
 import type { ChatChannelMember } from "@/features/chat/types";
 import { TagPicker } from "@/features/tags";
+import { PendingAccessRequests } from "@/features/permissions";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
 type SettingsTab = "overview" | "members";
 
@@ -513,6 +515,17 @@ export function ChannelSettingsModal() {
               </div>
             ) : (
               <div className="flex flex-col">
+                {canEdit && activeChannel.channelType === "PRIVATE" && (
+                  <div className="border-b border-border px-6 py-4">
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Pending access requests
+                    </h3>
+                    <PendingAccessRequests
+                      canonicalContentType={ContentType.CHAT}
+                      canonicalContentId={channelId}
+                    />
+                  </div>
+                )}
                 {canEdit && (
                   <div className="px-6 pt-4 pb-3">
                     <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">

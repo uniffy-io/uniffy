@@ -64,8 +64,8 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 ./manage.py toolbox <cmd>                    # run in deps-manager container (pnpm/uv/buf); try: toolbox bash
 
 # Quality
-./manage.py lint [-s backend|ui|mobile|cli]  # ruff / oxlint / go vet
-./manage.py format                           # ruff format (backend)
+./manage.py lint [-s backend|ui|mobile|cli]  # ruff / oxlint + oxfmt --check / go vet
+./manage.py format [-s backend|ui|mobile]    # ruff format (backend) / oxfmt (ui, mobile)
 ./manage.py test [-s backend|ui|cli]         # pytest / vitest / go test
 ./manage.py bench                            # backend benchmarks
 
