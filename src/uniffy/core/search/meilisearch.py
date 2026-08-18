@@ -763,6 +763,42 @@ class MeilisearchClient:
             urn=urn,
         )
 
+    async def update_document_access_policy_bulk(
+        self,
+        organization_id: UUID,
+        items: list[tuple[str, str, str | None]],
+    ) -> int:
+        """Bulk access-policy update in one HTTP call; ``items`` is
+        ``(urn, access_mode, baseline_role)``.
+
+        ``skip_creation`` keeps a partial from minting a document that carries
+        no title, urn, or organization scope. A row missing from the index stays
+        missing until its own write path indexes it.
+        """
+        if not items:
+            return 0
+        partials = [
+            {
+                "id": build_document_id(urn, organization_id),
+                "access_mode": access_mode,
+                "baseline_role": baseline_role,
+            }
+            for urn, access_mode, baseline_role in items
+        ]
+
+        start = time.perf_counter()
+        index = self.client.index(self.config.index_name)
+        task = await index.update_documents(partials, skip_creation=True)
+        await self._await_task(task)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="update_access_policy").inc(len(partials))
+        SEARCH_OPERATION_DURATION.labels(operation="update_access_policy").observe(elapsed_ms / 1000)
+        logger.info(
+            f"Meilisearch: update_access_policy_bulk batch={len(partials)}",
+            ms=f"{elapsed_ms:.1f}",
+        )
+        return len(partials)
+
     async def update_document_tags(
         self,
         urn: str,

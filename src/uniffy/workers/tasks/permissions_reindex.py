@@ -4,8 +4,9 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 
+from uniffy.core.auth.permissions.defaults import resolve_effective_policy
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.files.file import File
@@ -13,7 +14,8 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.types import ContentType
+from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.core.valkey import QueueName, get_queue
 from uniffy.db import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
@@ -63,7 +65,6 @@ async def reindex_org_content_for_defaults(
 
     cursor = UUID(after_id) if after_id else None
     project_refresh_ids: list[UUID] = []
-    failed_ids: list[UUID] = []
     async with open_session() as session:
         rows = list(
             (await session.execute(_keyset_query(model_cls, org_id, cursor))).scalars().all()
@@ -72,21 +73,32 @@ async def reindex_org_content_for_defaults(
             return {"status": "complete", "processed": 0, "succeeded": 0, "failed": 0}
 
         operations = ops_cls(session)
-        for row in rows:
-            try:
-                await operations._index_for_search(row)
-                if content_type == ContentType.PROJECT:
-                    await record_project_search_acl_refresh(session, org_id, row.id)
-                    project_refresh_ids.append(row.id)
-            except Exception:
-                failed_ids.append(row.id)
-                logger.opt(exception=True).warning(
-                    f"Default-policy reindex failed for {content_type.value} {row.id}"
-                )
+        default_mode, default_baseline = await operations.permission_checker.get_org_defaults(
+            org_id,
+            content_type,
+        )
 
-        if failed_ids:
+        items: list[tuple[str, AccessMode, ContentRole | None]] = []
+        for row in rows:
+            mode, baseline = resolve_effective_policy(
+                row.access_mode,
+                row.baseline_role,
+                default_mode,
+                default_baseline,
+            )
+            items.append((build_content_urn(content_type, row.id), mode, baseline))
+            if content_type == ContentType.PROJECT:
+                await record_project_search_acl_refresh(session, org_id, row.id)
+                project_refresh_ids.append(row.id)
+
+        try:
+            await operations.search_indexer.update_access_policy_bulk(org_id, items)
+        except Exception:
             await session.rollback()
-            raise Retry(defer=max(10, ctx.get("job_try", 1) * 10))
+            logger.opt(exception=True).warning(
+                f"Default-policy reindex page failed for {content_type.value} org={org_id}"
+            )
+            raise Retry(defer=max(10, ctx.get("job_try", 1) * 10)) from None
         await session.commit()
 
     for project_id in project_refresh_ids:
@@ -128,6 +140,15 @@ def _keyset_query(model_cls: Any, organization_id: UUID, after_id: UUID | None):
     predicates = [
         model_cls.organization_id == organization_id,
         model_cls.is_deleted == False,  # noqa: E712
+        # Rows carrying an explicit mode (and an explicit baseline when open)
+        # resolve identically before and after a defaults change.
+        or_(
+            model_cls.access_mode.is_(None),
+            and_(
+                model_cls.access_mode == AccessMode.OPEN_TO_ORG,
+                model_cls.baseline_role.is_(None),
+            ),
+        ),
     ]
     if after_id is not None:
         predicates.append(model_cls.id > after_id)

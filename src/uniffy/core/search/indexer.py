@@ -288,6 +288,25 @@ class SearchIndexer:
             owner_id=owner_id,
         )
 
+    async def update_access_policy_bulk(
+        self,
+        organization_id: UUID,
+        items: list[tuple[str, AccessMode, ContentRole | None]],
+    ) -> int:
+        """Bulk access-policy update via one ``update_documents`` call; ``items``
+        is ``(urn, access_mode, baseline_role)``. Returns the documents written.
+        """
+        from uniffy.core.search.meilisearch import get_meilisearch_client
+
+        client = get_meilisearch_client()
+        return await client.update_document_access_policy_bulk(
+            organization_id=organization_id,
+            items=[
+                (urn, access_mode.value, baseline_role.value if baseline_role else None)
+                for urn, access_mode, baseline_role in items
+            ],
+        )
+
     async def update_tags_for_urn(
         self,
         urn: str,
