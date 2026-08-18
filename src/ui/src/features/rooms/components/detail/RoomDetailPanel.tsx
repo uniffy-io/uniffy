@@ -1,6 +1,9 @@
 import { useEffect } from "react";
-import { X, Door, CalendarPlus } from "@phosphor-icons/react";
+import { X, Door, CalendarPlus, ShareNetwork } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { useAccessPolicyDialog } from "@/features/permissions";
+import { roleCanManage } from "@/shared/utils/contentRoles";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,6 +35,11 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
   const availability = useAppSelector((state: RootState) => selectRoomAvailability(state, roomId));
   const loading = useAppSelector(selectRoomsLoading);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
+  const canShareRoom = room
+    ? roleCanManage(room.userRole) || room.ownerId === currentUserId
+    : false;
 
   useEffect(() => {
     if (!organizationId || !roomId) return;
@@ -109,13 +117,27 @@ export function RoomDetailPanel({ roomId, onClose, onBook, className }: RoomDeta
     <div className={cn("flex flex-col h-full bg-card", className)}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <span className="text-sm font-semibold text-foreground">Room Details</span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-        >
-          <X size={16} weight="bold" />
-        </button>
+        <div className="flex items-center gap-1">
+          {canShareRoom && (
+            <button
+              type="button"
+              onClick={() =>
+                openAccessPolicyDialog(ContentType.ROOM, room.id, room.name, room.userRole)
+              }
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Share"
+            >
+              <ShareNetwork size={16} weight="duotone" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <X size={16} weight="bold" />
+          </button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1">

@@ -19,6 +19,7 @@ def cron_task_to_proto(
     agent_name: str | None = None,
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
+    user_role: ContentRole | None = None,
 ) -> CronTaskInfo:
     resolved_mode = effective_access_mode if effective_access_mode is not None else task.access_mode
     resolved_baseline = (
@@ -46,6 +47,9 @@ def cron_task_to_proto(
 
     if resolved_baseline is not None:
         info.baseline_role = content_role_to_proto(resolved_baseline)
+
+    if user_role is not None:
+        info.user_role = content_role_to_proto(user_role)
 
     if task.session_id is not None:
         info.session_id = str(task.session_id)

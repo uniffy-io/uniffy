@@ -5,12 +5,12 @@ path and an allowed path. Allowed paths use a sentinel: the first collaborator
 after the gate raises ``_Reached`` so we prove control passed the gate without
 mocking the whole write tail.
 
-The builder gate (``is_agents_builder``) is exercised for real: the Valkey
-perm-cache wrapper is patched to a pass-through and a dispatching fake session
-answers the org-role and domain-admin queries, so the org-admin / domain-admin
-resolution logic itself is under test rather than a mocked verdict.
+The builder gate (``is_agents_builder``) is exercised with a dispatching fake
+session that answers the org-role and domain-admin queries, so the resolution
+logic itself is under test rather than a mocked verdict.
 """
 
+from contextlib import contextmanager
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -33,16 +33,9 @@ def _result(value):
     return res
 
 
-def _cache_passthrough():
-    """Route the perm-cache wrappers straight to their loaders (no Valkey)."""
-
-    async def _pass(key, loader, ttl=None, *, tags=None):
-        return await loader()
-
-    return patch(
-        "uniffy.core.auth.cache.cache_get_or_set_locked",
-        AsyncMock(side_effect=_pass),
-    )
+@contextmanager
+def _authorization_context():
+    yield
 
 
 def _queried_domain(stmt):
@@ -73,7 +66,7 @@ def _perm_session(
             return _result(None)
         entity = stmt.column_descriptions[0].get("entity")
         if entity is OrganizationMember:
-            return _result(org_role)
+            return _result(NS(role=org_role) if org_role is not None else None)
         if entity is DomainAdmin:
             domain = _queried_domain(stmt)
             return _result(generate_id() if domain in admin_domains else None)
@@ -131,7 +124,7 @@ class TestIsAgentsBuilder:
         from uniffy.domains.agents.access import is_agents_builder
 
         session = _perm_session(org_role=org_role, admin_domains=admin_domains)
-        with _cache_passthrough():
+        with _authorization_context():
             result = await is_agents_builder(session, generate_id(), generate_id())
         assert result is allowed
 
@@ -139,7 +132,7 @@ class TestIsAgentsBuilder:
         from uniffy.domains.agents.access import require_agents_builder
 
         session = _perm_session(org_role=OrganizationRole.MEMBER)
-        with _cache_passthrough(), pytest.raises(PermissionDeniedError):
+        with _authorization_context(), pytest.raises(PermissionDeniedError):
             await require_agents_builder(session, generate_id(), generate_id())
 
 
@@ -161,7 +154,7 @@ class TestCreateAgentBuilderGate:
             name="Helper",
         )
         with (
-            _cache_passthrough(),
+            _authorization_context(),
             patch.object(ops, "_resolve_access_policy", AsyncMock(side_effect=_Reached())),
             pytest.raises(_Reached if allowed else PermissionDeniedError),
         ):
@@ -200,7 +193,7 @@ class TestUpdateAgentBuilderGate:
         ops = self._ops(session, agent)
         session.commit = AsyncMock(side_effect=_Reached())
         with (
-            _cache_passthrough(),
+            _authorization_context(),
             pytest.raises(_Reached if allowed else PermissionDeniedError),
         ):
             await ops.update_agent(
@@ -220,7 +213,7 @@ class TestUpdateAgentBuilderGate:
         ops = self._ops(session, agent)
         session.commit = AsyncMock(side_effect=_Reached())
         with (
-            _cache_passthrough(),
+            _authorization_context(),
             pytest.raises(_Reached if allowed else PermissionDeniedError),
         ):
             await ops.delete_agent(
@@ -378,7 +371,7 @@ class TestSkillBuilderGate:
     async def test_member_denied_create_skill(self) -> None:
         session = _perm_session(org_role=OrganizationRole.MEMBER)
         ops = self._ops(session)
-        with _cache_passthrough(), pytest.raises(PermissionDeniedError):
+        with _authorization_context(), pytest.raises(PermissionDeniedError):
             await ops.create_skill(
                 user_id=generate_id(),
                 organization_id=generate_id(),
@@ -398,7 +391,7 @@ class TestSkillBuilderGate:
         ops = self._ops(session)
         ops._snapshot_version = AsyncMock()
         with (
-            _cache_passthrough(),
+            _authorization_context(),
             patch(
                 "uniffy.domains.agents.skills.operations.write_audit_event",
                 AsyncMock(),
@@ -424,7 +417,7 @@ class TestSkillBuilderGate:
         ops = self._ops(session)
         ops._snapshot_version = AsyncMock()
         with (
-            _cache_passthrough(),
+            _authorization_context(),
             patch(
                 "uniffy.domains.agents.skills.operations.write_audit_event",
                 AsyncMock(),
@@ -448,7 +441,7 @@ class TestSkillBuilderGate:
             rows={AgentSkill: skill},
         )
         ops = self._ops(session)
-        with _cache_passthrough(), pytest.raises(PermissionDeniedError):
+        with _authorization_context(), pytest.raises(PermissionDeniedError):
             await ops.update_skill(
                 user_id=generate_id(),
                 organization_id=generate_id(),
@@ -467,7 +460,7 @@ class TestSkillBuilderGate:
         )
         ops = self._ops(session)
         with (
-            _cache_passthrough(),
+            _authorization_context(),
             patch(
                 "uniffy.domains.agents.skills.operations.clean_skill_update",
                 side_effect=_Reached(),
@@ -490,7 +483,7 @@ class TestSkillBuilderGate:
             rows={AgentSkill: skill},
         )
         ops = self._ops(session)
-        with _cache_passthrough(), pytest.raises(PermissionDeniedError):
+        with _authorization_context(), pytest.raises(PermissionDeniedError):
             await ops.delete_skill(
                 user_id=generate_id(),
                 organization_id=generate_id(),
@@ -740,7 +733,7 @@ class TestCronExecutionIdentity:
     async def _update(self, editor, task, **fields):
         session = _perm_session(org_role=OrganizationRole.ADMIN)
         ops = self._ops(session, task)
-        with _cache_passthrough():
+        with _authorization_context():
             await ops.update_cron_task(
                 user_id=editor,
                 organization_id=task.organization_id,
@@ -795,7 +788,7 @@ class TestCronExecutionIdentity:
         ops.get_by_id = AsyncMock(return_value=task)
         # The queue handoff is the first collaborator past the gate.
         with (
-            _cache_passthrough(),
+            _authorization_context(),
             patch(
                 "uniffy.domains.agents.cron.operations.get_queue",
                 MagicMock(side_effect=_Reached()),
@@ -822,7 +815,7 @@ class TestCronExecutionIdentity:
     async def _update_with_role(self, editor, task, role, **fields):
         session = _perm_session(org_role=OrganizationRole.ADMIN)
         ops = self._ops(session, task, role=role)
-        with _cache_passthrough():
+        with _authorization_context():
             await ops.update_cron_task(
                 user_id=editor,
                 organization_id=task.organization_id,
@@ -857,7 +850,7 @@ class TestCronExecutionIdentity:
         session = _perm_session(org_role=OrganizationRole.ADMIN)
         ops = self._ops(session, task, role=role)
         ops.search_indexer = MagicMock(remove=AsyncMock())
-        with _cache_passthrough():
+        with _authorization_context():
             await ops.delete_cron_task(
                 user_id=actor,
                 organization_id=task.organization_id,

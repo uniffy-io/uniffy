@@ -1,12 +1,8 @@
-"""Authorization + cursor pagination on ``AuditOperations.list_events``.
-
-DB calls are mocked. A tenant's audit trail is tenant data, so a platform
-operator outside the org reaches it only through an active SupportSession -
-``is_system_admin`` alone is not a key.
-"""
+"""Authorization and cursor pagination for audit-event reads."""
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from connectrpc.errors import ConnectError
@@ -34,42 +30,44 @@ def _scalar_result(value):
     return result
 
 
-def _ops(*results, support_session: bool = False) -> AuditOperations:
-    """``AuditOperations`` whose session replays ``results`` in query order."""
+def _ops(*results) -> AuditOperations:
     session = MagicMock()
     session.execute = AsyncMock(side_effect=list(results))
-    ops = AuditOperations(session)
-    ops._has_active_support_session = AsyncMock(return_value=support_session)
-    return ops
+    return AuditOperations(session)
+
+
+def _auth(role: OrganizationRole | None = None, *, support: bool = False):
+    membership = SimpleNamespace(role=role) if role is not None else None
+    return patch.multiple(
+        "uniffy.domains.audit.operations",
+        get_active_membership=AsyncMock(return_value=membership),
+        get_active_support_access=AsyncMock(return_value=MagicMock() if support else None),
+    )
 
 
 async def test_org_admin_can_query_own_org() -> None:
-    ops = _ops(_scalar_result(OrganizationRole.ADMIN), _list_result([]))
+    ops = _ops(_list_result([]))
 
-    page = await ops.list_events(
-        generate_id(),
-        ListEventsFilter(organization_id=generate_id()),
-    )
+    with _auth(OrganizationRole.ADMIN):
+        page = await ops.list_events(generate_id(), ListEventsFilter(organization_id=generate_id()))
 
     assert page.events == []
     assert page.next_page_token is None
 
 
 async def test_org_owner_can_query_own_org() -> None:
-    ops = _ops(_scalar_result(OrganizationRole.OWNER), _list_result([]))
+    ops = _ops(_list_result([]))
 
-    page = await ops.list_events(
-        generate_id(),
-        ListEventsFilter(organization_id=generate_id()),
-    )
+    with _auth(OrganizationRole.OWNER):
+        page = await ops.list_events(generate_id(), ListEventsFilter(organization_id=generate_id()))
 
     assert page.events == []
 
 
 async def test_regular_member_denied() -> None:
-    ops = _ops(_scalar_result(OrganizationRole.MEMBER))
+    ops = _ops()
 
-    with pytest.raises(PermissionDeniedError):
+    with _auth(OrganizationRole.MEMBER), pytest.raises(PermissionDeniedError):
         await ops.list_events(
             generate_id(),
             ListEventsFilter(organization_id=generate_id()),
@@ -77,13 +75,9 @@ async def test_regular_member_denied() -> None:
 
 
 async def test_system_admin_denied_without_support_session() -> None:
-    ops = _ops(
-        _scalar_result(None),
-        _scalar_result(True),
-        support_session=False,
-    )
+    ops = _ops()
 
-    with pytest.raises(PermissionDeniedError):
+    with _auth(), pytest.raises(PermissionDeniedError):
         await ops.list_events(
             generate_id(),
             ListEventsFilter(organization_id=generate_id()),
@@ -91,26 +85,18 @@ async def test_system_admin_denied_without_support_session() -> None:
 
 
 async def test_system_admin_allowed_with_active_support_session() -> None:
-    ops = _ops(
-        _scalar_result(None),
-        _scalar_result(True),
-        _list_result([]),
-        support_session=True,
-    )
+    ops = _ops(_list_result([]))
 
-    page = await ops.list_events(
-        generate_id(),
-        ListEventsFilter(organization_id=generate_id()),
-    )
+    with _auth(support=True):
+        page = await ops.list_events(generate_id(), ListEventsFilter(organization_id=generate_id()))
 
     assert page.events == []
 
 
 async def test_system_admin_who_is_a_plain_member_gets_no_bypass() -> None:
-    """Membership is evaluated first, so a MEMBER row denies before the operator path."""
-    ops = _ops(_scalar_result(OrganizationRole.MEMBER), support_session=True)
+    ops = _ops()
 
-    with pytest.raises(PermissionDeniedError):
+    with _auth(OrganizationRole.MEMBER, support=True), pytest.raises(PermissionDeniedError):
         await ops.list_events(
             generate_id(),
             ListEventsFilter(organization_id=generate_id()),
@@ -118,9 +104,9 @@ async def test_system_admin_who_is_a_plain_member_gets_no_bypass() -> None:
 
 
 async def test_non_member_non_admin_denied() -> None:
-    ops = _ops(_scalar_result(None), _scalar_result(False))
+    ops = _ops()
 
-    with pytest.raises(PermissionDeniedError):
+    with _auth(), pytest.raises(PermissionDeniedError):
         await ops.list_events(
             generate_id(),
             ListEventsFilter(organization_id=generate_id()),

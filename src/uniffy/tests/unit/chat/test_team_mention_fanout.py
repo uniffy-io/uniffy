@@ -1,10 +1,7 @@
-"""Chat mention fan-out: who gets notified, who must not, and which copy they get.
-
-DB calls are stubbed; these exercise the visibility set math and the emit chain
-of ``ChatMessageOperations``.
-"""
+"""Chat mention recipient filtering and notification fan-out."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import UUID
 
 from uniffy.core.content.team_mentions import TeamExpansion
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
@@ -42,35 +39,37 @@ def _rows_result(rows):
     return result
 
 
-def _ops(execute_results=None) -> ChatMessageOperations:
+def _ops(execute_results=None, *, allowed: list[UUID] | None = None) -> ChatMessageOperations:
     session = MagicMock()
     if execute_results is None:
         session.execute = AsyncMock(return_value=_rows_result([]))
     else:
         session.execute = AsyncMock(side_effect=execute_results)
-    return ChatMessageOperations(session, access=MagicMock())
+    access = MagicMock()
+    access.filter_viewers = AsyncMock(return_value=allowed or [])
+    return ChatMessageOperations(session, access=access)
 
 
 class TestVisibleMentionTargets:
     async def test_member_channel_intersects_with_channel_members(self) -> None:
         inside, outside = generate_id(), generate_id()
-        ops = _ops()
+        ops = _ops(allowed=[inside])
         expansion = TeamExpansion(generate_id(), "Engineering", (inside, outside))
 
         direct, teams = await ops._visible_mention_targets(
-            _channel(ChannelType.PRIVATE), [inside], set(), [expansion]
+            _channel(ChannelType.PRIVATE), set(), [expansion]
         )
 
         assert direct == set()
         assert teams == [(expansion, [inside])]
-        ops.session.execute.assert_not_awaited()
+        ops.access.filter_viewers.assert_awaited_once()
 
     async def test_member_channel_drops_direct_mention_of_non_member(self) -> None:
         member, outsider = generate_id(), generate_id()
-        ops = _ops()
+        ops = _ops(allowed=[member])
 
         direct, teams = await ops._visible_mention_targets(
-            _channel(ChannelType.PRIVATE), [member], {member, outsider}, []
+            _channel(ChannelType.PRIVATE), {member, outsider}, []
         )
 
         assert direct == {member}
@@ -81,34 +80,34 @@ class TestVisibleMentionTargets:
         expansion = TeamExpansion(generate_id(), "Engineering", (generate_id(),))
 
         _, teams = await ops._visible_mention_targets(
-            _channel(ChannelType.PRIVATE), [generate_id()], set(), [expansion]
+            _channel(ChannelType.PRIVATE), set(), [expansion]
         )
 
         assert teams == []
 
     async def test_public_channel_passes_expansion_through(self) -> None:
         a, b = generate_id(), generate_id()
-        ops = _ops()
+        ops = _ops(allowed=[a, b])
         expansion = TeamExpansion(generate_id(), "Engineering", (a, b))
 
         direct, teams = await ops._visible_mention_targets(
-            _channel(ChannelType.PUBLIC), [], set(), [expansion]
+            _channel(ChannelType.PUBLIC), set(), [expansion]
         )
 
         assert teams == [(expansion, [a, b])]
         assert direct == set()
-        ops.session.execute.assert_not_awaited()
+        ops.access.filter_viewers.assert_awaited_once()
 
     async def test_public_channel_checks_direct_targets_once(self) -> None:
         active, deactivated = generate_id(), generate_id()
-        ops = _ops([_rows_result([(active,)])])
+        ops = _ops(allowed=[active])
 
         direct, _ = await ops._visible_mention_targets(
-            _channel(ChannelType.PUBLIC), [], {active, deactivated}, []
+            _channel(ChannelType.PUBLIC), {active, deactivated}, []
         )
 
         assert direct == {active}
-        assert ops.session.execute.await_count == 1
+        ops.access.filter_viewers.assert_awaited_once()
 
 
 def _capture_notifications():
@@ -234,6 +233,11 @@ class TestEmitSendNotifications:
 class TestBackgroundPostSendFanout:
     async def _run(self, channel, message, member_ids, expansions):
         ops = _ops()
+        ops.access.filter_viewers = AsyncMock(
+            side_effect=lambda _org, _channel, candidates: [
+                user_id for user_id in candidates if user_id in member_ids
+            ]
+        )
         ops._index_message = AsyncMock()
         ops._update_resources = AsyncMock()
         ops._publish_unread_notifications = AsyncMock()

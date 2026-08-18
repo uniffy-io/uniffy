@@ -17,6 +17,7 @@ import { DependencyGraphView } from "@/features/projects/components/views/graph/
 import { ResourceView } from "@/features/projects/components/views/resources/ResourceView";
 import { TaskDetailModal } from "@/features/projects/components/detail/TaskDetailModal";
 import { TaskDetailPanel } from "@/features/projects/components/detail/TaskDetailPanel";
+import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { CreateTaskModal } from "@/features/projects/components/modals/CreateTaskModal";
 import { CreateProjectModal } from "@/features/projects/components/modals/CreateProjectModal";
 import { EditProjectModal } from "@/features/projects/components/modals/EditProjectModal";
@@ -57,6 +58,7 @@ export function ProjectsLayout() {
   const currentProject = useAppSelector(selectCurrentProject);
   const currentProjectId = currentProject?.id;
   const isCreateTaskModalOpen = useAppSelector((state) => state.projectsUi.isCreateTaskModalOpen);
+  const { canEdit: canEditProject } = useProjectPermission();
   const isCreateProjectModalOpen = useAppSelector(
     (state) => state.projectsUi.isCreateProjectModalOpen,
   );
@@ -215,7 +217,7 @@ export function ProjectsLayout() {
       )}
 
       {/* Modals */}
-      {isCreateTaskModalOpen && <CreateTaskModal />}
+      {isCreateTaskModalOpen && canEditProject && <CreateTaskModal />}
       {isCreateProjectModalOpen && <CreateProjectModal />}
       {editProjectId && <EditProjectModal />}
     </>

@@ -11,7 +11,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CronTaskInfo(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "agent_id", "execution_user_id", "session_id", "name", "description", "prompt", "cron_expression", "timezone", "is_enabled", "last_run_at", "next_run_at", "last_run_status", "last_run_error", "run_count", "consecutive_failures", "max_consecutive_failures", "access_mode", "created_at", "updated_at", "agent_name", "baseline_role")
+    __slots__ = ("id", "organization_id", "owner_id", "agent_id", "execution_user_id", "session_id", "name", "description", "prompt", "cron_expression", "timezone", "is_enabled", "last_run_at", "next_run_at", "last_run_status", "last_run_error", "run_count", "consecutive_failures", "max_consecutive_failures", "access_mode", "created_at", "updated_at", "agent_name", "baseline_role", "user_role")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -36,6 +36,7 @@ class CronTaskInfo(_message.Message):
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     AGENT_NAME_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    USER_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -60,7 +61,8 @@ class CronTaskInfo(_message.Message):
     updated_at: _timestamp_pb2.Timestamp
     agent_name: str
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., execution_user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., prompt: _Optional[str] = ..., cron_expression: _Optional[str] = ..., timezone: _Optional[str] = ..., is_enabled: _Optional[bool] = ..., last_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., next_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_run_status: _Optional[str] = ..., last_run_error: _Optional[str] = ..., run_count: _Optional[int] = ..., consecutive_failures: _Optional[int] = ..., max_consecutive_failures: _Optional[int] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., agent_name: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    user_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., execution_user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., prompt: _Optional[str] = ..., cron_expression: _Optional[str] = ..., timezone: _Optional[str] = ..., is_enabled: _Optional[bool] = ..., last_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., next_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_run_status: _Optional[str] = ..., last_run_error: _Optional[str] = ..., run_count: _Optional[int] = ..., consecutive_failures: _Optional[int] = ..., max_consecutive_failures: _Optional[int] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., agent_name: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class CronRunLogInfo(_message.Message):
     __slots__ = ("id", "cron_task_id", "organization_id", "session_id", "status", "error", "started_at", "completed_at", "input_tokens", "output_tokens")

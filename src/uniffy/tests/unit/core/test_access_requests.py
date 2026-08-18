@@ -14,10 +14,16 @@ from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequestState,
 )
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
-from uniffy.domains.permissions.access_request_targets import (
+from uniffy.domains.permissions.resource_access.targets import (
     AccessGrantKind,
     AccessRequestTarget,
     AccessRequestTargetResolver,
+)
+from uniffy.domains.permissions.resource_access.types import (
+    RequestTarget,
+    ResourceAccessDecision,
+    ResourceKey,
+    ResourceRowState,
 )
 from uniffy.domains.permissions.access_requests import (
     AccessRequestDecision,
@@ -69,22 +75,34 @@ async def test_task_request_maps_to_project() -> None:
     organization_id = generate_id()
     task_id = generate_id()
     project_id = generate_id()
-    task = SimpleNamespace(id=task_id, project_id=project_id)
     project = SimpleNamespace(id=project_id, is_deleted=False)
-
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = task
     session = MagicMock()
-    session.execute = AsyncMock(return_value=result)
     loader = AsyncMock(return_value=project)
+    resolver = AccessRequestTargetResolver(session)
+    key = ResourceKey(ContentType.TASK, task_id)
+    resolver.resources.resolve = AsyncMock(
+        return_value={
+            key: ResourceAccessDecision(
+                key=key,
+                row_state=ResourceRowState.LIVE,
+                can_view=False,
+                request_target=RequestTarget(
+                    ContentType.PROJECT,
+                    project_id,
+                    AccessGrantKind.STANDARD,
+                ),
+            )
+        }
+    )
 
     with patch(
-        "uniffy.domains.permissions.access_request_targets.get_content_loader",
+        "uniffy.domains.permissions.resource_access.targets.get_content_loader",
         return_value=loader,
     ):
-        target = await AccessRequestTargetResolver(session).resolve(
+        target = await resolver.resolve(
             organization_id,
             f"urn:uniffy:content:TASK:{task_id}",
+            actor_id=generate_id(),
         )
 
     assert target.original_content_type == ContentType.TASK
@@ -105,13 +123,30 @@ async def test_private_message_request_maps_to_channel() -> None:
     )
     message = ChatMessage(channel_id=channel.id, sender_id=generate_id())
     result = MagicMock()
-    result.one_or_none.return_value = (message, channel)
+    result.scalar_one_or_none.return_value = channel
     session = MagicMock()
     session.execute = AsyncMock(return_value=result)
+    resolver = AccessRequestTargetResolver(session)
+    key = ResourceKey(ContentType.CHAT_MESSAGE, message.id)
+    resolver.resources.resolve = AsyncMock(
+        return_value={
+            key: ResourceAccessDecision(
+                key=key,
+                row_state=ResourceRowState.LIVE,
+                can_view=False,
+                request_target=RequestTarget(
+                    ContentType.CHAT,
+                    channel.id,
+                    AccessGrantKind.CHAT,
+                ),
+            )
+        }
+    )
 
-    target = await AccessRequestTargetResolver(session).resolve(
+    target = await resolver.resolve(
         organization_id,
         f"urn:uniffy:content:CHAT_MESSAGE:{message.id}",
+        actor_id=generate_id(),
     )
 
     assert target.original_content_type == ContentType.CHAT_MESSAGE
@@ -133,11 +168,28 @@ async def test_non_private_chat_targets_are_rejected(channel_type: ChannelType) 
     result.scalar_one_or_none.return_value = channel
     session = MagicMock()
     session.execute = AsyncMock(return_value=result)
+    resolver = AccessRequestTargetResolver(session)
+    key = ResourceKey(ContentType.CHAT, channel.id)
+    resolver.resources.resolve = AsyncMock(
+        return_value={
+            key: ResourceAccessDecision(
+                key=key,
+                row_state=ResourceRowState.LIVE,
+                can_view=False,
+                request_target=RequestTarget(
+                    ContentType.CHAT,
+                    channel.id,
+                    AccessGrantKind.CHAT,
+                ),
+            )
+        }
+    )
 
     with pytest.raises(ValidationError, match="Only private channels"):
-        await AccessRequestTargetResolver(session).resolve(
+        await resolver.resolve(
             channel.organization_id,
             f"urn:uniffy:content:CHAT:{channel.id}",
+            actor_id=generate_id(),
         )
 
 

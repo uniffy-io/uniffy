@@ -18,6 +18,7 @@ import {
   selectIsDetailPanelOpen,
 } from "../store/projectsUiSlice";
 import { fetchProjects, fetchProjectTasks } from "../store/projectsThunks";
+import { useProjectPermission } from "../hooks/useProjectPermissions";
 import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
@@ -30,6 +31,7 @@ export function ProjectsPage() {
   const selectedTaskId = useAppSelector(selectSelectedTaskId);
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const isDetailPanelOpen = useAppSelector(selectIsDetailPanelOpen);
+  const { canEdit } = useProjectPermission();
 
   // Suppresses the URL->state effect immediately after a state->URL navigation.
   const isProgrammaticNav = useRef(false);
@@ -41,7 +43,7 @@ export function ProjectsPage() {
       dispatch(toggleSidebar());
     },
     "projects.newTask": () => {
-      if (currentProject) {
+      if (currentProject && canEdit) {
         dispatch(openCreateTaskModal());
       }
     },

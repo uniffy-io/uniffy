@@ -7,12 +7,14 @@ the expression builder has proper InstrumentedAttribute objects, and a fake
 session that answers only the membership lookup.
 """
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from sqlalchemy.sql.elements import False_
+from sqlalchemy.sql.elements import False_, True_
 
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.models.notes.note import Note
+from uniffy.core.models.platform.support_session import SupportSessionScope
 from uniffy.core.types import ContentType, generate_id
 
 
@@ -20,6 +22,7 @@ def _session(*, member_active: bool = True):
     async def execute(stmt):
         res = MagicMock()
         res.scalar_one_or_none = MagicMock(return_value="MEMBER" if member_active else None)
+        res.one_or_none = MagicMock(return_value=None)
         return res
 
     session = MagicMock()
@@ -61,6 +64,23 @@ class TestBuildAccessibleFilter:
     async def test_inactive_member_gets_a_no_rows_filter(self) -> None:
         result = await _build(ContentAccessQuery(_session(member_active=False)))
         assert isinstance(result, False_)
+
+    async def test_active_support_session_gets_the_list_filter(self) -> None:
+        membership = MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+        support = MagicMock(
+            one_or_none=MagicMock(
+                return_value=SimpleNamespace(
+                    id=generate_id(),
+                    scope=SupportSessionScope.READ_ONLY,
+                )
+            )
+        )
+        session = MagicMock()
+        session.execute = AsyncMock(side_effect=[membership, support])
+
+        result = await _build(ContentAccessQuery(session))
+
+        assert isinstance(result, True_)
 
     async def test_membership_lookup_is_memoized_per_query_object(self) -> None:
         session = _session()

@@ -43,11 +43,6 @@ from uniffy.core.auth.permissions.roles import (
 from uniffy.core.auth.permissions.visible_sets import (
     compute_visible_content_ids_by_type,
     compute_visible_tag_ids,
-    get_visible_content_ids_by_type,
-    get_visible_tag_ids,
-    invalidate_visible_sets_for_org,
-    invalidate_visible_sets_for_user,
-    invalidate_visible_sets_for_user_global,
 )
 
 __all__ = [
@@ -62,11 +57,6 @@ __all__ = [
     "ROLE_ORDINAL",
     "compute_visible_content_ids_by_type",
     "compute_visible_tag_ids",
-    "get_visible_content_ids_by_type",
-    "get_visible_tag_ids",
-    "invalidate_visible_sets_for_org",
-    "invalidate_visible_sets_for_user",
-    "invalidate_visible_sets_for_user_global",
     "max_role",
     "modes_at_least_as_open",
     "record_access_mode_changed",

@@ -13,10 +13,6 @@ from uniffy.core.content.members import (
     ContentMembersOperations,
     register_content_loader,
 )
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationRole
@@ -232,7 +228,6 @@ class RoomOperations(BaseContentOperations[Room]):
         await self.session.commit()
 
         if changed_keys:
-            effective_mode, _ = await self._effective_policy(organization_id, room)
             try:
                 # Full denormalized payload; empty strings clear fields that
                 # mention chips must stop showing once the room drops them.
@@ -249,7 +244,6 @@ class RoomOperations(BaseContentOperations[Room]):
                         "location": room.location or "",
                         "amenities": ", ".join((room.amenities or [])[:4]),
                     },
-                    restricted=effective_mode != AccessMode.OPEN_TO_ORG,
                 )
             except Exception:
                 logger.opt(exception=True).warning(
@@ -287,9 +281,6 @@ class RoomOperations(BaseContentOperations[Room]):
                 "Cancel the bookings first.",
             )
 
-        # Resolved before the delete: the row is unreadable after the commit.
-        effective_mode, _ = await self._effective_policy(organization_id, room)
-
         if permanent:
             await self.session.delete(room)
         else:
@@ -318,7 +309,6 @@ class RoomOperations(BaseContentOperations[Room]):
                 organization_id=organization_id,
                 urn=build_content_urn(self.content_type, room_id),
                 changes={"urn_status": "DELETED"},
-                restricted=effective_mode != AccessMode.OPEN_TO_ORG,
             )
         except Exception:
             logger.opt(exception=True).warning(f"Failed to publish room tombstone for {room_id}")
@@ -646,4 +636,3 @@ async def _load_room(
 
 
 register_content_loader(ContentType.ROOM, _load_room)
-register_reference_state_loader(ContentType.ROOM, model_reference_state_loader(Room))

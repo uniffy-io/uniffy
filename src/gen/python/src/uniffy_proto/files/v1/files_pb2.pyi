@@ -547,7 +547,7 @@ class GetFilesTreeResponse(_message.Message):
     def __init__(self, nodes: _Optional[_Iterable[_Union[TreeNode, _Mapping]]] = ...) -> None: ...
 
 class TreeNode(_message.Message):
-    __slots__ = ("id", "name", "is_folder", "parent_id", "access_mode", "child_count", "size_bytes", "mime_type", "children", "baseline_role")
+    __slots__ = ("id", "name", "is_folder", "parent_id", "access_mode", "child_count", "size_bytes", "mime_type", "children", "baseline_role", "owner_id")
     ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     IS_FOLDER_FIELD_NUMBER: _ClassVar[int]
@@ -558,6 +558,7 @@ class TreeNode(_message.Message):
     MIME_TYPE_FIELD_NUMBER: _ClassVar[int]
     CHILDREN_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    OWNER_ID_FIELD_NUMBER: _ClassVar[int]
     id: str
     name: str
     is_folder: bool
@@ -568,7 +569,8 @@ class TreeNode(_message.Message):
     mime_type: str
     children: _containers.RepeatedCompositeFieldContainer[TreeNode]
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., is_folder: _Optional[bool] = ..., parent_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., child_count: _Optional[int] = ..., size_bytes: _Optional[int] = ..., mime_type: _Optional[str] = ..., children: _Optional[_Iterable[_Union[TreeNode, _Mapping]]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    owner_id: str
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., is_folder: _Optional[bool] = ..., parent_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., child_count: _Optional[int] = ..., size_bytes: _Optional[int] = ..., mime_type: _Optional[str] = ..., children: _Optional[_Iterable[_Union[TreeNode, _Mapping]]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., owner_id: _Optional[str] = ...) -> None: ...
 
 class MoveItemsRequest(_message.Message):
     __slots__ = ("organization_id", "file_ids", "folder_ids", "target_folder_id", "target_access_mode", "target_baseline_role")

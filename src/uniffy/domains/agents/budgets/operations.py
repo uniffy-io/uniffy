@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.errors import (
     BudgetExceededError,
     NotFoundError,
@@ -617,11 +618,10 @@ class BudgetsOperations:
         return Decimal(result.scalar() or 0)
 
     async def _is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
-        """Return True if the user is org admin or org owner."""
         from uniffy.core.models.login.organization_member import OrganizationRole
 
-        membership = await self._org_ops.get_membership(user_id, organization_id)
-        if membership is None or not membership.is_active:
+        membership = await get_active_membership(self._session, user_id, organization_id)
+        if membership is None:
             return False
         return membership.role in (OrganizationRole.ADMIN, OrganizationRole.OWNER)
 

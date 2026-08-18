@@ -79,7 +79,7 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.invitations.converters import invitation_to_proto
 from uniffy.domains.invitations.errors import (
     InvitationAlreadyUsedError,
@@ -133,7 +133,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -168,7 +168,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -202,7 +202,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -236,7 +236,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -295,7 +295,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
@@ -335,7 +335,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
@@ -372,7 +372,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
@@ -404,7 +404,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -432,7 +432,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -477,7 +477,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -505,7 +505,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -540,7 +540,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
@@ -577,7 +577,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
@@ -612,7 +612,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -665,7 +665,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id or user_id")
@@ -699,7 +699,7 @@ class OrganizationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -729,7 +729,7 @@ class OrganizationsHandlers:
     ) -> InviteMemberResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
         role = org_role_from_proto(request.role) or OrganizationRole.MEMBER
@@ -772,7 +772,7 @@ class OrganizationsHandlers:
     ) -> ListInvitationsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -860,7 +860,7 @@ class OrganizationsHandlers:
     ) -> GetSecuritySettingsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
         try:
@@ -890,7 +890,7 @@ class OrganizationsHandlers:
     ) -> UpdateSecuritySettingsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
         try:

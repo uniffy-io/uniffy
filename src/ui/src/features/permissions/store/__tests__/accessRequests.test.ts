@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { AccessMode, ContentRole, ContentType } from "@uniffy/proto/common/v1/common_pb";
 import {
+  AccessRequestDecision,
   AccessRequestState,
   RequestAccessOutcome,
 } from "@uniffy/proto/permissions/v1/permissions_pb";
@@ -11,8 +13,13 @@ import {
 import {
   cancelAccessRequest,
   requestContentAccess,
+  respondToAccessRequest,
 } from "@/features/permissions/store/accessRequestThunks";
-import { clearPermissions } from "@/features/permissions/store/permissionsSlice";
+import {
+  clearPermissions,
+  permissionsReducer,
+} from "@/features/permissions/store/permissionsSlice";
+import { fetchContentMembers } from "@/features/permissions/store/permissionsThunks";
 
 const URN = "urn:uniffy:content:NOTE:019fc01f-12b6-7f11-a7f1-a3197c6cefca";
 const REQUEST_ID = "019fc01f-12b6-7000-bba7-2e7c6de0e775";
@@ -64,6 +71,24 @@ describe("accessRequestsReducer", () => {
     expect(state.byUrn[URN]).toMatchObject({
       state: AccessRequestState.PENDING,
       requestId: REQUEST_ID,
+    });
+  });
+
+  it("does not treat a historical approval as current resource access", () => {
+    const state = accessRequestsReducer(
+      undefined,
+      openRequestAccessDialog({
+        urn: URN,
+        label: "Roadmap",
+        canRequestAccess: true,
+        state: AccessRequestState.APPROVED,
+        requestId: REQUEST_ID,
+      }),
+    );
+
+    expect(state.byUrn[URN]).toMatchObject({
+      state: AccessRequestState.APPROVED,
+      requesterHasAccess: false,
     });
   });
 
@@ -160,5 +185,40 @@ describe("accessRequestsReducer", () => {
     expect(reset.requestDialog).toBeNull();
     expect(reset.byUrn).toEqual({});
     expect(reset.byId).toEqual({});
+  });
+
+  it("invalidates the canonical member list after approval", () => {
+    const contentType = ContentType.NOTE;
+    const contentId = "note-1";
+    let state = permissionsReducer(
+      undefined,
+      fetchContentMembers.fulfilled(
+        {
+          policy: {
+            ownerId: "owner-1",
+            accessMode: AccessMode.EXPLICIT_MEMBERS,
+            baselineRole: null,
+            callerRole: ContentRole.OWNER,
+            effectiveAccessMode: AccessMode.EXPLICIT_MEMBERS,
+          },
+          members: [],
+        },
+        "members-1",
+        { contentType, contentId },
+      ),
+    );
+
+    expect(state.byContent[`${contentType}:${contentId}`]).toBeDefined();
+
+    state = permissionsReducer(
+      state,
+      respondToAccessRequest.fulfilled(request(AccessRequestState.APPROVED), "respond-1", {
+        requestId: REQUEST_ID,
+        decision: AccessRequestDecision.APPROVE,
+        approvedRole: ContentRole.VIEWER,
+      }),
+    );
+
+    expect(state.byContent[`${contentType}:${contentId}`]).toBeUndefined();
   });
 });

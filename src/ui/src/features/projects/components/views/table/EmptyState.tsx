@@ -2,18 +2,22 @@ import { Plus } from "@phosphor-icons/react";
 import { EmptyState as SharedEmptyState } from "@/components/feedback/EmptyState";
 
 interface EmptyStateProps {
-  onCreateTask: () => void;
+  onCreateTask?: () => void;
 }
 
 export function EmptyState({ onCreateTask }: EmptyStateProps) {
   return (
     <SharedEmptyState
       icon={Plus}
-      title="Create your first task"
-      description="Start building your project by adding tasks. You can organize them in Table, Board, or Roadmap views."
-      actionLabel="New Task"
+      title={onCreateTask ? "Create your first task" : "No tasks yet"}
+      description={
+        onCreateTask
+          ? "Start building your project by adding tasks. You can organize them in Table, Board, or Roadmap views."
+          : "Tasks added to this project will show up here."
+      }
+      actionLabel={onCreateTask ? "New Task" : undefined}
       onAction={onCreateTask}
-      shortcutKey="projects.newTask"
+      shortcutKey={onCreateTask ? "projects.newTask" : undefined}
       tips={[
         {
           color: "primary",

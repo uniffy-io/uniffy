@@ -29,8 +29,8 @@ from uniffy.domains.permissions.access_request_queries import (
     AccessRequestStatusView,
     AccessRequestView,
 )
-from uniffy.domains.permissions.access_request_targets import (
-    AccessGrantKind,
+from uniffy.domains.permissions.resource_access import AccessGrantKind
+from uniffy.domains.permissions.resource_access.targets import (
     AccessRequestTarget,
     AccessRequestTargetResolver,
 )
@@ -78,7 +78,11 @@ class ContentAccessRequestOperations:
         if len(message) > 500:
             raise ValidationError("message", "Message must be 500 characters or fewer")
 
-        target = await self.targets.resolve(organization_id, requested_urn)
+        target = await self.targets.resolve(
+            organization_id,
+            requested_urn,
+            actor_id=requester_id,
+        )
         if await self.targets.requester_has_access(requester_id, organization_id, target):
             return RequestAccessResult(RequestAccessOutcome.ALREADY_ACCESSIBLE)
 

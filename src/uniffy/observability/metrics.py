@@ -9,6 +9,7 @@ use `multiprocess_mode='livesum'` so per-process values sum across live workers.
 import atexit
 import contextlib
 import os
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
@@ -151,6 +152,33 @@ SEARCH_OPERATION_ERRORS_TOTAL = Counter(
 )
 
 
+class SearchAuthorizationOutcome(StrEnum):
+    ALLOWED = "allowed"
+    DENIED = "denied"
+    UNRESOLVED = "unresolved"
+
+
+RESOURCE_ACCESS_DURATION = Histogram(
+    "uniffy_resource_access_duration_seconds",
+    "PostgreSQL resource authorization duration",
+    ["purpose"],
+    buckets=(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.02, 0.05, 0.1, 0.25, 0.5),
+)
+
+RESOURCE_ACCESS_CANDIDATES = Histogram(
+    "uniffy_resource_access_candidates",
+    "Candidates in a PostgreSQL resource authorization batch",
+    ["purpose"],
+    buckets=(1, 5, 10, 20, 60, 100, 200, 300),
+)
+
+SEARCH_AUTHORIZATION_TOTAL = Counter(
+    "uniffy_search_authorization_total",
+    "Search candidates classified by the PostgreSQL authorization gate",
+    ["outcome"],
+)
+
+
 WORKER_JOBS_STARTED_TOTAL = Counter(
     "uniffy_worker_jobs_started_total",
     "Total worker jobs started",
@@ -200,13 +228,6 @@ NOTIFICATION_RECIPIENTS_DROPPED_TOTAL = Counter(
     "uniffy_notification_recipients_dropped_total",
     "Recipients dropped before delivery for lacking view access on the content",
 )
-
-NOTIFICATION_RECIPIENTS_UNFILTERED_TOTAL = Counter(
-    "uniffy_notification_recipients_unfiltered_total",
-    "Notification events delivered without an access check, by content type",
-    ["content_type"],
-)
-
 
 APPROVAL_STORE_PENDING_SIZE = Gauge(
     "uniffy_approval_store_pending_size",

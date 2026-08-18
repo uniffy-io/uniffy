@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
@@ -6,6 +7,7 @@ import pytest
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import SubjectType, generate_id
 from uniffy.domains.chat import access as access_module
 from uniffy.domains.chat.access import ChatAccessChecker
@@ -70,6 +72,76 @@ async def test_inactive_org_member_is_denied_from_public_channel(
 
     with pytest.raises(PermissionDeniedError):
         await checker.check_access(user_id, channel.organization_id, channel)
+
+
+async def test_batch_viewers_apply_private_membership_and_moderation() -> None:
+    member_id, admin_id, chat_admin_id, outsider_id = (generate_id() for _ in range(4))
+    rows = [
+        SimpleNamespace(
+            user_id=member_id,
+            role=OrganizationRole.MEMBER,
+            channel_member=True,
+            chat_admin=False,
+        ),
+        SimpleNamespace(
+            user_id=admin_id,
+            role=OrganizationRole.ADMIN,
+            channel_member=False,
+            chat_admin=False,
+        ),
+        SimpleNamespace(
+            user_id=chat_admin_id,
+            role=OrganizationRole.MEMBER,
+            channel_member=False,
+            chat_admin=True,
+        ),
+        SimpleNamespace(
+            user_id=outsider_id,
+            role=OrganizationRole.MEMBER,
+            channel_member=False,
+            chat_admin=False,
+        ),
+    ]
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=MagicMock(all=lambda: rows))
+    channel = _channel(ChannelType.PRIVATE)
+
+    allowed = await ChatAccessChecker(session).filter_viewers(
+        channel.organization_id,
+        channel,
+        [member_id, admin_id, chat_admin_id, outsider_id],
+    )
+
+    assert allowed == [member_id, admin_id, chat_admin_id]
+
+
+async def test_batch_viewers_keep_candidate_order_for_public_channels() -> None:
+    first, second = generate_id(), generate_id()
+    rows = [
+        SimpleNamespace(
+            user_id=second,
+            role=OrganizationRole.MEMBER,
+            channel_member=False,
+            chat_admin=False,
+        ),
+        SimpleNamespace(
+            user_id=first,
+            role=OrganizationRole.MEMBER,
+            channel_member=False,
+            chat_admin=False,
+        ),
+    ]
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=MagicMock(all=lambda: rows))
+    channel = _channel(ChannelType.PUBLIC)
+
+    allowed = await ChatAccessChecker(session).filter_viewers(
+        channel.organization_id,
+        channel,
+        [first, second],
+    )
+
+    assert allowed == [first, second]
 
 
 def _denied_operations() -> tuple[ChatChannelOperations, tuple[UUID, UUID]]:

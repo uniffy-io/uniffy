@@ -13,7 +13,6 @@ from uniffy.core.search.meilisearch import (
     escape_filter_value,
 )
 from uniffy.core.types import generate_id
-from uniffy.domains.search import queries
 
 
 def _client_capturing_filter() -> tuple[MeilisearchClient, MagicMock]:
@@ -173,19 +172,6 @@ class TestUrnValidation:
         emitted = index.get_documents.await_args.kwargs["filter"]
         assert f'urn = "{urn}"' in emitted
 
-    async def test_permission_scoped_lookup_drops_injection(self, monkeypatch) -> None:
-        client, index = _client_capturing_filter()
-        monkeypatch.setattr(queries, "get_meilisearch_client", lambda: client)
-        payload = 'a") OR (entity_type = "note") OR (urn = "b'
-        good = f"urn:uniffy:content:NOTE:{generate_id()}"
-
-        await queries.get_documents_by_urns([payload, good], generate_id(), generate_id(), [])
-
-        emitted = index.get_documents.await_args.kwargs["filter"]
-        assert payload not in emitted
-        assert f'urn = "{good}"' in emitted
-
-
 class TestBatchLookupFailures:
     async def test_raw_lookup_preserves_successful_chunks(self) -> None:
         client, index = _client_capturing_filter()
@@ -200,28 +186,3 @@ class TestBatchLookupFailures:
         assert result.documents == {urns[0]: {"urn": urns[0]}}
         assert result.failed_urns == frozenset({urns[50]})
         assert result.complete is False
-
-    async def test_permission_lookup_marks_only_failed_chunk(self, monkeypatch) -> None:
-        client, index = _client_capturing_filter()
-        monkeypatch.setattr(queries, "get_meilisearch_client", lambda: client)
-        organization_id = generate_id()
-        urns = [f"urn:uniffy:content:NOTE:{generate_id()}" for _ in range(51)]
-        visible = {
-            "urn": urns[0],
-            "organization_id": str(organization_id),
-            "owner_id": str(generate_id()),
-        }
-        index.get_documents.side_effect = [
-            MagicMock(results=[visible]),
-            RuntimeError("transport failed"),
-        ]
-
-        result = await queries.get_permission_filtered_documents_by_urns(
-            urns,
-            organization_id,
-            generate_id(),
-            [],
-        )
-
-        assert set(result.documents) == {urns[0]}
-        assert result.failed_urns == frozenset({urns[50]})

@@ -30,6 +30,7 @@ from uniffy_proto.tags.v1.tags_pb2 import (
     UrnTags,
 )
 
+from uniffy.core.content.references import parse_urn
 from uniffy.core.converters.common_proto import (
     content_type_from_proto,
     content_type_to_proto,
@@ -62,6 +63,7 @@ from uniffy.domains.tags.operations import (
     TagOperations,
     TagSlugCollisionError,
 )
+from uniffy.domains.tags.target_access import TagTargetAccess
 from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="tags.handlers")
@@ -312,6 +314,14 @@ class TagsHandlers:
         try:
             async with open_session() as session:
                 ops = TagOperations(session)
+                target = parse_urn(request.content_urn)
+                if target is None:
+                    raise ValidationError("content_urn", "Invalid content URN")
+                await TagTargetAccess(session).require_edit(
+                    actor_id,
+                    organization_id,
+                    *target,
+                )
                 assignments = await ops.assign(
                     actor_id=actor_id,
                     organization_id=organization_id,
@@ -345,6 +355,14 @@ class TagsHandlers:
         try:
             async with open_session() as session:
                 ops = TagOperations(session)
+                target = parse_urn(request.content_urn)
+                if target is None:
+                    raise ValidationError("content_urn", "Invalid content URN")
+                await TagTargetAccess(session).require_edit(
+                    user_id,
+                    organization_id,
+                    *target,
+                )
                 await ops.unassign(
                     actor_id=user_id,
                     organization_id=organization_id,
@@ -364,15 +382,20 @@ class TagsHandlers:
         request: GetTagsForUrnsRequest,
         ctx: RequestContext,
     ) -> GetTagsForUrnsResponse:
-        get_user_id_from_context(ctx)
+        actor_id = get_user_id_from_context(ctx)
         organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
                 ops = TagOperations(session)
+                content_urns = await ops.filter_viewable_urns(
+                    actor_id=actor_id,
+                    organization_id=organization_id,
+                    content_urns=request.content_urns,
+                )
                 grouped = await ops.get_for_urns(
                     organization_id=organization_id,
-                    content_urns=list(request.content_urns),
+                    content_urns=content_urns,
                 )
                 all_ids = list({tag.id for tags in grouped.values() for tag in tags})
                 counts = await ops._get_usage_counts(organization_id, all_ids)

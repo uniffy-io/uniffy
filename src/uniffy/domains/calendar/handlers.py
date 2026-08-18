@@ -63,7 +63,7 @@ from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.types import ContentRole, ContentType, RecurrencePattern
+from uniffy.core.types import ContentType, RecurrencePattern
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.calendar import queries
@@ -84,6 +84,7 @@ from uniffy.domains.calendar.operations import (
     EventTemplateOperations,
 )
 from uniffy.domains.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
+from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.tags import TagOperations
 
 logger = logger.bind(component="calendar.handlers")
@@ -527,6 +528,11 @@ class CalendarHandlers:
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, [event.id for event in events]
                 )
+                decisions = await ResourceAccessResolver(session).resolve_page(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    keys=[ResourceKey(ContentType.CALENDAR_EVENT, event.id) for event in events],
+                )
 
                 proto_events = []
                 for event in events:
@@ -540,7 +546,9 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                                 [],
                             ),
-                            user_role=await ops._resolve_role(user_id, organization_id, event),
+                            user_role=decisions[
+                                ResourceKey(ContentType.CALENDAR_EVENT, event.id)
+                            ].role,
                             **room_info,
                         )
                     )
@@ -588,12 +596,17 @@ class CalendarHandlers:
 
                 attendees_cache: dict[str, list] = {}
                 room_info_cache: dict[str, dict] = {}
-                # Expanded occurrences inherit the master's policy, so key by master id.
-                role_cache: dict[str, ContentRole | None] = {}
                 master_ids: set[UUID] = set()
                 for event in events:
                     master_ids.add(_parse_event_id(str(event.id)))
                 tags_by_urn = await _hydrate_event_tags(session, organization_id, list(master_ids))
+                decisions = await ResourceAccessResolver(session).resolve_page(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    keys=[
+                        ResourceKey(ContentType.CALENDAR_EVENT, event_id) for event_id in master_ids
+                    ],
+                )
 
                 proto_events = []
                 for event in events:
@@ -609,10 +622,6 @@ class CalendarHandlers:
                             session,
                             real_id,
                         )
-                    if real_id_str not in role_cache:
-                        role_cache[real_id_str] = await ops._resolve_role(
-                            user_id, organization_id, event
-                        )
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -621,7 +630,9 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, real_id),
                                 [],
                             ),
-                            user_role=role_cache[real_id_str],
+                            user_role=decisions[
+                                ResourceKey(ContentType.CALENDAR_EVENT, real_id)
+                            ].role,
                             **room_info_cache[real_id_str],
                         )
                     )

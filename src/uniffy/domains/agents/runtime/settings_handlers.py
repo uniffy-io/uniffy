@@ -1,7 +1,5 @@
 """RPC handlers for the per-org agent runtime settings surface."""
 
-from uuid import UUID
-
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
@@ -20,7 +18,7 @@ from uniffy.domains.agents.runtime.settings import (
     ResolvedRuntimeSettings,
     RuntimeSettingsOperations,
 )
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 
 logger = logger.bind(component="agents.runtime.settings_handlers")
 
@@ -52,7 +50,7 @@ class RuntimeSettingsHandlers:
     ) -> GetRuntimeSettingsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -78,7 +76,7 @@ class RuntimeSettingsHandlers:
     ) -> UpdateRuntimeSettingsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 

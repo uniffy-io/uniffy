@@ -1,11 +1,4 @@
-"""Authorization guards on GroupOperations.
-
-Groups are permission subjects: a ``GroupMember`` row makes every
-``ContentMember`` grant the group holds resolve for that user through
-``effective_role``. An ungated ``add_member`` is therefore a content
-escalation, not just a directory edit. These tests pin the gate on every
-method so the escalation cannot be reintroduced.
-"""
+"""Authorization guards on group operations."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -17,7 +10,6 @@ from uniffy.core.models.login.group_member import GroupRole
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.types import generate_id
 from uniffy.domains.groups.operations import GroupOperations
-from uniffy.domains.organizations.operations import OrganizationOperations
 
 ORG = generate_id()
 OTHER_ORG = generate_id()
@@ -65,9 +57,11 @@ def _session() -> MagicMock:
 
 
 def _as(role: OrganizationRole | None, is_active: bool = True):
-    """Patch membership resolution so the gates see the given org role."""
-    row = None if role is None else _membership(role, is_active)
-    return patch.object(OrganizationOperations, "get_membership", AsyncMock(return_value=row))
+    row = None if role is None or not is_active else _membership(role)
+    return patch(
+        "uniffy.domains.organizations.operations.get_active_membership",
+        AsyncMock(return_value=row),
+    )
 
 
 _MUTATIONS = [
@@ -214,12 +208,13 @@ async def test_add_member_rejects_target_outside_the_org() -> None:
     ops = GroupOperations(_session())
     group = _group()
 
-    async def membership_for(user_id, org_id):
+    async def membership_for(_session, user_id, org_id):
         return _membership(OrganizationRole.ADMIN) if user_id == ACTOR else None
 
     with (
-        patch.object(
-            OrganizationOperations, "get_membership", AsyncMock(side_effect=membership_for)
+        patch(
+            "uniffy.domains.organizations.operations.get_active_membership",
+            AsyncMock(side_effect=membership_for),
         ),
         patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
         pytest.raises(PermissionDeniedError),

@@ -10,7 +10,7 @@ from uniffy.core.models.permissions.content_access_request import (
 )
 from uniffy.core.types import ContentType, NotificationType, generate_id
 from uniffy.domains.permissions.access_request_notifications import AccessRequestNotifier
-from uniffy.domains.permissions.access_request_targets import (
+from uniffy.domains.permissions.resource_access.targets import (
     AccessGrantKind,
     AccessRequestTarget,
 )
@@ -129,4 +129,3 @@ async def test_private_chat_request_deduplicates_active_channel_owners() -> None
     recipients = await AccessRequestNotifier(session)._review_recipients(request, target)
 
     assert recipients == [owner_a, owner_b]
-

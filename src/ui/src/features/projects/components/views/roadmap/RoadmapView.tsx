@@ -17,6 +17,7 @@ import {
   openCreateTaskModal,
 } from "@/features/projects/store/projectsUiSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
+import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task } from "@/features/projects/types";
@@ -103,6 +104,7 @@ export function RoadmapView() {
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
   const searchQuery = useAppSelector(selectSearchQuery);
+  const { canEdit } = useProjectPermission();
 
   // Zoom level state
   const [zoom, setZoom] = useState<ZoomLevel>("week");
@@ -252,7 +254,7 @@ export function RoadmapView() {
 
   // Show empty state if no tasks
   if (filteredTasks.length === 0 && !searchQuery) {
-    return <EmptyState onCreateTask={handleAddTask} />;
+    return <EmptyState onCreateTask={canEdit ? handleAddTask : undefined} />;
   }
 
   // Check for overdue tasks

@@ -47,6 +47,7 @@ import { usePdfStamper } from "@/features/files/hooks/usePdfStamper";
 import type { SerializedFile } from "@/features/files/store/filesThunks";
 import { formatFileSize } from "@/features/files/components/list/utils";
 import { getDownloadGateState } from "@/features/files/utils/transcodeGate";
+import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 
 interface ViewerToolbarProps {
@@ -83,6 +84,7 @@ export function ViewerToolbar({
   const pdfPresentation = useAppSelector((state) => state.fileViewer.pdfPresentation);
   const pdfDocumentInfo = useAppSelector((state) => state.fileViewer.pdfDocumentInfo);
   const pdfWatermark = useAppSelector((state) => state.fileViewer.pdfWatermark);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const { isDesktop } = useBreakpoint();
 
   const stamper = usePdfStamper(file);
@@ -104,7 +106,12 @@ export function ViewerToolbar({
   const isImage = file.mimeType.startsWith("image/");
   const isPdf = file.mimeType === "application/pdf";
   const showImageControls = isImage && !isEditing;
-  const canEdit = (isImage || isPdf) && !isEditing;
+  // The owner check keeps the affordance live before fetchFile hydrates
+  // userRole on list-loaded files.
+  const canEnterEditor =
+    (isImage || isPdf) &&
+    !isEditing &&
+    (roleCanEdit(file.userRole) || file.ownerId === currentUserId);
 
   const downloadGate = getDownloadGateState(file.transcodeStatus);
   const downloadTitle = downloadGate.disabled
@@ -340,7 +347,7 @@ export function ViewerToolbar({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1">
-        {canEdit && onEdit && (
+        {canEnterEditor && onEdit && (
           <button onClick={onEdit} className="viewer-btn p-2" title="Edit (E)">
             <PencilSimple size={20} />
           </button>

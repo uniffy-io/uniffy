@@ -1,5 +1,6 @@
 """TEAM docs stay paired with mention fanout across every group mutation."""
 
+from contextlib import nullcontext
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.models.login.group import Group, GroupKind
@@ -8,7 +9,6 @@ from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, generate_id
 from uniffy.domains.groups.operations import GroupOperations
 from uniffy.domains.groups.search import TeamSearchIndexer, build_team_urn
-from uniffy.domains.organizations.operations import OrganizationOperations
 
 ORG = generate_id()
 ACTOR = generate_id()
@@ -64,7 +64,10 @@ def _as_admin():
     row = OrganizationMember(
         user_id=ACTOR, organization_id=ORG, role=OrganizationRole.ADMIN, is_active=True
     )
-    return patch.object(OrganizationOperations, "get_membership", AsyncMock(return_value=row))
+    return patch(
+        "uniffy.domains.organizations.operations.get_active_membership",
+        AsyncMock(return_value=row),
+    )
 
 
 def _ops_patches():
@@ -73,7 +76,7 @@ def _ops_patches():
         patch("uniffy.domains.groups.operations.invalidate_chart", AsyncMock()),
         patch("uniffy.domains.groups.operations.invalidate_org_people", AsyncMock()),
         patch("uniffy.domains.groups.operations.invalidate_person", AsyncMock()),
-        patch("uniffy.domains.groups.operations.invalidate_perm_user", AsyncMock()),
+        nullcontext(),
         patch("uniffy.domains.groups.operations.ensure_name_available", AsyncMock()),
         patch(
             "uniffy.domains.groups.operations.resolve_slug",
@@ -389,8 +392,6 @@ class TestGroupOperationsWiring:
 
 class TestFirstTeamDerivation:
     async def test_rename_resyncs_member_docs(self) -> None:
-        """A team rename re-derives every member's team_name via
-        sync_people_search; this is the staleness fix for _first_team_name."""
         group = _group()
         member_ids = [generate_id()]
         session = _session()

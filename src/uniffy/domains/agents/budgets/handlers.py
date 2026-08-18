@@ -66,7 +66,7 @@ class BudgetsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -96,7 +96,7 @@ class BudgetsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -139,7 +139,7 @@ class BudgetsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -168,7 +168,7 @@ class BudgetsHandlers:
         actor_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             target_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -203,7 +203,7 @@ class BudgetsHandlers:
         actor_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             target_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -250,7 +250,7 @@ class BudgetsHandlers:
         actor_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             target_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -284,7 +284,7 @@ class BudgetsHandlers:
         actor_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -334,7 +334,7 @@ class BudgetsHandlers:
         actor_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -373,7 +373,7 @@ class BudgetsHandlers:
         """Return the org's manual exchange rates (org admin only)."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -400,7 +400,7 @@ class BudgetsHandlers:
         """Create or update a single exchange rate row."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -433,7 +433,7 @@ class BudgetsHandlers:
         """Delete a single exchange rate row."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -486,7 +486,7 @@ class BudgetsHandlers:
         """Set the org's display currency (org admin only)."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 

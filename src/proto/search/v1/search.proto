@@ -76,8 +76,12 @@ message SearchRequest {
 
 message SearchResponse {
   repeated SearchResultItem items = 1;
-  // Estimated total matches before pagination
-  int32 total_count = 2;
+  reserved 2;
+  reserved "total_count";
+  // True only when another PostgreSQL-authorized result exists inside the bounded scan horizon.
+  bool has_more = 3;
+  // Authorized-stream offset to send in the next SearchRequest.
+  int32 next_offset = 4;
 }
 
 message SearchResultItem {

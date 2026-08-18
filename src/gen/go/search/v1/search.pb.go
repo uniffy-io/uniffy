@@ -308,8 +308,10 @@ func (x *SearchRequest) GetNameMatchesOnly() bool {
 type SearchResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Items []*SearchResultItem    `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	// Estimated total matches before pagination
-	TotalCount    int32 `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	// True only when another PostgreSQL-authorized result exists inside the bounded scan horizon.
+	HasMore bool `protobuf:"varint,3,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
+	// Authorized-stream offset to send in the next SearchRequest.
+	NextOffset    int32 `protobuf:"varint,4,opt,name=next_offset,json=nextOffset,proto3" json:"next_offset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -351,9 +353,16 @@ func (x *SearchResponse) GetItems() []*SearchResultItem {
 	return nil
 }
 
-func (x *SearchResponse) GetTotalCount() int32 {
+func (x *SearchResponse) GetHasMore() bool {
 	if x != nil {
-		return x.TotalCount
+		return x.HasMore
+	}
+	return false
+}
+
+func (x *SearchResponse) GetNextOffset() int32 {
+	if x != nil {
+		return x.NextOffset
 	}
 	return 0
 }
@@ -1135,11 +1144,12 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x11name_matches_only\x18\f \x01(\bR\x0fnameMatchesOnly\x1aB\n" +
 	"\x14MetadataFiltersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"d\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x92\x01\n" +
 	"\x0eSearchResponse\x121\n" +
-	"\x05items\x18\x01 \x03(\v2\x1b.search.v1.SearchResultItemR\x05items\x12\x1f\n" +
-	"\vtotal_count\x18\x02 \x01(\x05R\n" +
-	"totalCount\"\xb3\x03\n" +
+	"\x05items\x18\x01 \x03(\v2\x1b.search.v1.SearchResultItemR\x05items\x12\x19\n" +
+	"\bhas_more\x18\x03 \x01(\bR\ahasMore\x12\x1f\n" +
+	"\vnext_offset\x18\x04 \x01(\x05R\n" +
+	"nextOffsetJ\x04\b\x02\x10\x03R\vtotal_count\"\xb3\x03\n" +
 	"\x10SearchResultItem\x12\x10\n" +
 	"\x03urn\x18\x01 \x01(\tR\x03urn\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +

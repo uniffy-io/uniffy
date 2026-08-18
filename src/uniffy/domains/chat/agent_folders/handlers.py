@@ -23,7 +23,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.agent_folder import ChatAgentFolder
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.chat.agent_folders.operations import AgentFolderOperations
 
 logger = logger.bind(component="chat.agent_folders.handlers")
@@ -50,7 +50,7 @@ class AgentFolderHandlers:
     ) -> CreateAgentFolderResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -69,7 +69,7 @@ class AgentFolderHandlers:
     ) -> RenameAgentFolderResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             folder_id = UUID(request.folder_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -89,7 +89,7 @@ class AgentFolderHandlers:
     ) -> DeleteAgentFolderResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             folder_id = UUID(request.folder_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -109,7 +109,7 @@ class AgentFolderHandlers:
     ) -> ListAgentFoldersResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -125,7 +125,7 @@ class AgentFolderHandlers:
     ) -> SetAgentChatFolderResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             folder_id = (
                 UUID(request.folder_id)

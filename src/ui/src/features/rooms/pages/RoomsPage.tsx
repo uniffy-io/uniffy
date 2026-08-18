@@ -4,6 +4,7 @@ import {
   MagnifyingGlass,
   Door,
   PencilSimple,
+  ShareNetwork,
   Trash,
   Users,
   MapPin,
@@ -11,6 +12,9 @@ import {
 } from "@phosphor-icons/react";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { useAccessPolicyDialog } from "@/features/permissions";
+import { roleCanEdit, roleCanDelete, roleCanManage } from "@/shared/utils/contentRoles";
 import { cn } from "@/shared/utils/cn";
 import { initializeRoomsData, deleteRoom, fetchBookings } from "@/features/rooms/store/roomsThunks";
 import {
@@ -39,6 +43,8 @@ export function RoomsPage() {
   useDocumentTitle("Rooms - Admin");
 
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
   const rooms = useAppSelector(selectAllRooms);
   const loading = useAppSelector(selectRoomsLoading);
   const filters = useAppSelector(selectRoomFilters);
@@ -430,26 +436,47 @@ export function RoomsPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditRoom(room);
-                            }}
-                            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                            title="Edit room"
-                          >
-                            <PencilSimple size={16} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteRoom(room);
-                            }}
-                            className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors"
-                            title="Delete room"
-                          >
-                            <Trash size={16} />
-                          </button>
+                          {(roleCanManage(room.userRole) || room.ownerId === currentUserId) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openAccessPolicyDialog(
+                                  ContentType.ROOM,
+                                  room.id,
+                                  room.name,
+                                  room.userRole,
+                                );
+                              }}
+                              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                              title="Share"
+                            >
+                              <ShareNetwork size={16} />
+                            </button>
+                          )}
+                          {(roleCanEdit(room.userRole) || room.ownerId === currentUserId) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditRoom(room);
+                              }}
+                              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                              title="Edit room"
+                            >
+                              <PencilSimple size={16} />
+                            </button>
+                          )}
+                          {(roleCanDelete(room.userRole) || room.ownerId === currentUserId) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRoom(room);
+                              }}
+                              className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors"
+                              title="Delete room"
+                            >
+                              <Trash size={16} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

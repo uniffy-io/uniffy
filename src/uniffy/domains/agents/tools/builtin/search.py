@@ -15,7 +15,7 @@ async def _execute_search_query(ctx: ToolContext, args: dict) -> ToolResult:
     type_filters = args.get("type_filters")
 
     ops = SearchOperations(ctx.session)
-    results, total = await ops.search(
+    results, has_more, _next_offset = await ops.search(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         query_text=query,
@@ -26,7 +26,8 @@ async def _execute_search_query(ctx: ToolContext, args: dict) -> ToolResult:
     if not results:
         return ToolResult(success=True, data="No results found.")
 
-    lines = [f"Found {total} results (showing {len(results)}):"]
+    suffix = " (more available)" if has_more else ""
+    lines = [f"Found {len(results)} results{suffix}:"]
     for r in results:
         desc = f" - {r.description[:100]}..." if r.description else ""
         content_type = r.urn.split(":")[3] if ":" in r.urn else "UNKNOWN"  # noqa: PLR2004

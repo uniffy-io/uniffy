@@ -103,8 +103,10 @@ async def get_thumbnail(
 
             headers = {
                 "Content-Type": "image/jpeg",
-                # private: permission-gated per-user content must never sit in a shared cache.
-                "Cache-Control": "private, max-age=86400, immutable",
+                # private: permission-gated per-user content must never sit in a
+                # shared cache. Short max-age bounds how long a revoked viewer's
+                # browser can replay the cached bytes; the ETag keeps re-checks cheap.
+                "Cache-Control": "private, max-age=300, must-revalidate",
             }
 
             if etag:

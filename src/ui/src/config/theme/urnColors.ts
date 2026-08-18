@@ -14,6 +14,7 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.PROJECT]: "#f97316", // orange-500
   [UrnType.TASK]: "#14b8a6", // teal-500
   [UrnType.AGENT]: "#06b6d4", // cyan-500
+  [UrnType.AGENT_CRON_TASK]: "#6366f1", // indigo-500
   [UrnType.ROOM]: "#0ea5e9", // sky-500
   [UrnType.CHAT_MESSAGE]: "#8b5cf6", // violet-500 (same as chat)
   [UrnType.TAG]: "#64748b", // slate-500 (per-tag color overrides at chip level)
@@ -133,6 +134,15 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     border: "border-cyan-500/40 dark:border-cyan-500/20",
     borderHover: "hover:border-cyan-500/60 dark:hover:border-cyan-500/40",
     shadow: "shadow-cyan-500/50",
+  },
+  [UrnType.AGENT_CRON_TASK]: {
+    iconBg: "bg-gradient-to-br from-indigo-500 to-indigo-600",
+    iconBoxAccent: "border border-primary/55 bg-primary/10 text-primary",
+    accentText: "text-indigo-600 dark:text-indigo-400",
+    badgeBg: "bg-indigo-500/10",
+    border: "border-indigo-500/40 dark:border-indigo-500/20",
+    borderHover: "hover:border-indigo-500/60 dark:hover:border-indigo-500/40",
+    shadow: "shadow-indigo-500/50",
   },
   [UrnType.ROOM]: {
     iconBg: "bg-gradient-to-br from-sky-500 to-sky-600",

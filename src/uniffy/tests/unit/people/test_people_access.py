@@ -12,7 +12,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import uniffy.domains.people as people_package
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.permissions.scalar import ScalarAuthorizationFacts
 from uniffy.core.content.members import _manage_overrides
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
 from uniffy.domains.people.access import ViewerRelation, relation_for
 from uniffy.domains.people.converters import profile_to_proto
@@ -47,6 +49,20 @@ def _content_path_references(tree: ast.AST) -> set[str]:
         elif isinstance(node, ast.Attribute) and node.attr in FORBIDDEN_NAMES:
             found.add(node.attr)
     return found
+
+
+def _admin_facts() -> ScalarAuthorizationFacts:
+    return ScalarAuthorizationFacts(
+        is_active_user=True,
+        is_system_admin=False,
+        organization_role=OrganizationRole.ADMIN,
+        support_session_id=None,
+        support_scope=None,
+        default_access_mode=None,
+        default_baseline_role=None,
+        blocked=False,
+        granted_role=None,
+    )
 
 
 def _payload(**overrides):
@@ -139,11 +155,9 @@ class TestNoContentBypass:
         # The people surface calls this admin ORG_ADMIN for edit affordances.
         assert relation_for(admin_id, generate_id(), is_admin=True) is ViewerRelation.ORG_ADMIN
 
-        with (
-            patch.object(checker, "_is_system_admin", AsyncMock(return_value=False)),
-            patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=True)),
-            patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
-            patch.object(checker, "_is_org_admin", AsyncMock(return_value=True)),
+        with patch(
+            "uniffy.core.auth.permissions.checker.load_scalar_authorization_facts",
+            AsyncMock(return_value=_admin_facts()),
         ):
             role = await checker.effective_role(
                 user_id=admin_id,
@@ -158,11 +172,9 @@ class TestNoContentBypass:
 
     async def test_org_admin_gets_no_bypass_on_explicit_members(self) -> None:
         checker = PermissionChecker(MagicMock())
-        with (
-            patch.object(checker, "_is_system_admin", AsyncMock(return_value=False)),
-            patch.object(checker, "_is_user_in_organization", AsyncMock(return_value=True)),
-            patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
-            patch.object(checker, "_is_org_admin", AsyncMock(return_value=True)),
+        with patch(
+            "uniffy.core.auth.permissions.checker.load_scalar_authorization_facts",
+            AsyncMock(return_value=_admin_facts()),
         ):
             role = await checker.effective_role(
                 user_id=generate_id(),

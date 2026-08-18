@@ -4,6 +4,7 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import selectinload
 
@@ -13,6 +14,7 @@ from uniffy.core.auth.permissions.defaults import (
 )
 from uniffy.core.extraction import UnsupportedFormatError, extract_text
 from uniffy.core.models.files.file import ExtractionStatus, File
+from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage.s3_client import get_s3_client
@@ -145,9 +147,32 @@ async def extract_document_content(
             return {"status": "failed", "error": str(e)}
 
 
+async def _is_staged_attachment(session: Any, file: File) -> bool:
+    """Unclaimed upload in a staging folder - attached files DO carry a doc."""
+    if file.folder_id is None:
+        return False
+    from uniffy.core.models.files.attachment import Attachment
+    from uniffy.domains.files.attachments.operations import is_attachment_staging_folder
+
+    folder = (
+        await session.execute(select(Folder).where(Folder.id == file.folder_id))
+    ).scalar_one_or_none()
+    if not is_attachment_staging_folder(folder):
+        return False
+    claimed = (
+        await session.execute(select(Attachment.id).where(Attachment.file_id == file.id).limit(1))
+    ).first()
+    return claimed is None
+
+
 async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
     """Re-index the file in Meilisearch with extracted text added to the keywords."""
     try:
+        if await _is_staged_attachment(session, file):
+            # Staged/private attachment uploads have no search document;
+            # reindexing here would recreate one.
+            return
+
         urn = build_content_urn(ContentType.FILE, file.id)
         parts = [file.filename, file.original_filename]
         if file.description:

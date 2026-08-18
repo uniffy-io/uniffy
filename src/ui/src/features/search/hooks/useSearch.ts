@@ -24,8 +24,8 @@ interface UseSearchResult {
   query: string;
   setQuery: (query: string) => void;
   results: SearchResultItem[];
-  /** Meilisearch estimate of all matches before pagination (0 while empty). */
-  totalCount: number;
+  hasMore: boolean;
+  nextOffset: number;
   isLoading: boolean;
   error: string | null;
   clearResults: () => void;
@@ -36,7 +36,8 @@ interface UseSearchResult {
 export function useSearch(options?: UseSearchOptions): UseSearchResult {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +61,8 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
 
       if (!hasSearchCriteria || !organizationId) {
         setResults([]);
-        setTotalCount(0);
+        setHasMore(false);
+        setNextOffset(0);
         setIsLoading(false);
         return;
       }
@@ -100,14 +102,16 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
         );
 
         setResults(response.items);
-        setTotalCount(response.totalCount);
+        setHasMore(response.hasMore);
+        setNextOffset(response.nextOffset);
       } catch (err) {
         if (isCanceledError(err)) {
           return;
         }
         setError(err instanceof Error ? err.message : "Search failed");
         setResults([]);
-        setTotalCount(0);
+        setHasMore(false);
+        setNextOffset(0);
       } finally {
         // A superseded request must not clear the spinner for the one that replaced it.
         if (abortControllerRef.current === controller) {
@@ -135,7 +139,8 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
     if (!hasSearchCriteria) {
       // eslint-disable-next-line react/react-compiler -- clearing a query must drop the previous results here; the debounced fetch below never runs for an empty query
       setResults([]);
-      setTotalCount(0);
+      setHasMore(false);
+      setNextOffset(0);
       setIsLoading(false);
       return;
     }
@@ -156,7 +161,8 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
   const clearResults = useCallback(() => {
     setQuery("");
     setResults([]);
-    setTotalCount(0);
+    setHasMore(false);
+    setNextOffset(0);
     setError(null);
   }, []);
 
@@ -164,7 +170,8 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
     query,
     setQuery,
     results,
-    totalCount,
+    hasMore,
+    nextOffset,
     isLoading,
     error,
     clearResults,

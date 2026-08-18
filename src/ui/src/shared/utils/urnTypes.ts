@@ -13,6 +13,7 @@ export const UrnType = {
   PROJECT: "project",
   TASK: "task",
   AGENT: "agent",
+  AGENT_CRON_TASK: "agent_cron_task",
   ROOM: "room",
   TAG: "tag",
   UNKNOWN: "unknown",

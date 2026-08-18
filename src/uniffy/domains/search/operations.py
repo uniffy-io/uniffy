@@ -1,5 +1,6 @@
-"""Unified search business logic; reads go through Meilisearch with permission filtering."""
+"""Unified search and reference resolution."""
 
+import asyncio
 from uuid import UUID
 
 from loguru import logger
@@ -11,32 +12,33 @@ from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_policy,
 )
-from uniffy.core.content.reference_state import ReferenceRowState
 from uniffy.core.content.references import parse_urn
+from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.files.file import File
-from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
-from uniffy.core.models.tags.tag import Tag, TagAssignment
+from uniffy.core.models.tags.tag import TagAssignment
+from uniffy.core.search.meilisearch import SearchCandidateScope
 from uniffy.core.types import AccessMode, ContentType
-from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.permissions.resource_access import (
+    ResourceAccessPurpose,
+    ResourceAccessResolver,
+    ResourceKey,
+    ResourceRowState,
+)
+from uniffy.domains.search.authorized_search import AuthorizedSearch, AuthorizedSearchQuery
 from uniffy.domains.search.queries import (
     SearchResult,
     UrnAvailability,
-    UrnLookupResult,
-    apply_type_priority,
     execute_search,
-    get_authoritative_reference_states,
-    get_permission_filtered_documents_by_urns,
     get_raw_documents_by_urns,
 )
 from uniffy.domains.tags import TagOperations
-from uniffy.domains.tags.visibility import TagVisibilityFilter
 
 logger = logger.bind(component="search.operations")
 
@@ -45,6 +47,7 @@ class SearchOperations:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.access_query = ContentAccessQuery(session)
+        self.resource_access = ResourceAccessResolver(session)
 
     async def search(
         self,
@@ -60,54 +63,37 @@ class SearchOperations:
         offset: int = 0,
         type_priority: list[str] | None = None,
         name_matches_only: bool = False,
-    ) -> tuple[list[SearchResult], int]:
-        await self._require_org_member(user_id, organization_id)
-
-        user_group_ids = await self._get_user_group_ids(user_id)
-
-        # Type-priority re-ranking needs a window larger than the page: the
-        # boosted types sit at the bottom of the Meili order (low rank_score)
-        # and would otherwise never enter the page at all. Re-rank the
-        # window, then slice locally.
-        window = min(max((offset + limit) * 3, 60), 300) if type_priority else None
-
-        results, total = await execute_search(
-            query_text=query_text,
+    ) -> tuple[list[SearchResult], bool, int]:
+        subject = await self.resource_access.subject(
+            actor_id=user_id,
             organization_id=organization_id,
-            user_id=user_id,
-            user_group_ids=user_group_ids,
-            type_filters=type_filters,
-            tag_filters=tag_filters,
-            my_content_only=my_content_only,
-            owner_filter=owner_filter,
-            metadata_filters=metadata_filters,
-            limit=window if window else limit,
-            offset=0 if window else offset,
-            name_matches_only=name_matches_only,
         )
+        if not subject.is_active_member and subject.support_role is None:
+            raise PermissionDeniedError("access", "organization")
 
-        # Tag entity rows are indexed OPEN_TO_ORG so Meili lets every org
-        # member resolve them. Spotlight respects the unified-tag privacy
-        # rule by dropping rows whose underlying assignments aren't visible
-        # to the caller. ``total`` is a Meili estimate; the post-filter
-        # only narrows the page so the estimate stays directionally correct.
-        tag_results = [r for r in results if r.entity_type == ContentType.TAG.value.lower()]
-        if tag_results:
-            visible_tags = await self._filter_visible_tag_results(
-                user_id, organization_id, tag_results
+        candidate_scope = (
+            SearchCandidateScope.MEMBER_HINT
+            if subject.is_active_member
+            else SearchCandidateScope.ORGANIZATION
+        )
+        return await AuthorizedSearch(self.resource_access, execute_search).run(
+            AuthorizedSearchQuery(
+                user_id=user_id,
+                organization_id=organization_id,
+                query_text=query_text,
+                user_group_ids=tuple(subject.group_ids),
+                candidate_scope=candidate_scope,
+                type_filters=tuple(type_filters) if type_filters else None,
+                tag_filters=tuple(tag_filters) if tag_filters else None,
+                my_content_only=my_content_only,
+                owner_filter=owner_filter,
+                metadata_filters=metadata_filters,
+                limit=limit,
+                offset=offset,
+                type_priority=tuple(type_priority) if type_priority else None,
+                name_matches_only=name_matches_only,
             )
-            visible_urns = {r.urn for r in visible_tags}
-            results = [
-                r
-                for r in results
-                if r.entity_type != ContentType.TAG.value.lower() or r.urn in visible_urns
-            ]
-
-        if type_priority:
-            results = apply_type_priority(results, type_priority)
-            results = results[offset : offset + limit]
-
-        return results, total
+        )
 
     async def get_references(
         self,
@@ -201,76 +187,83 @@ class SearchOperations:
         if not urns:
             return {}
 
-        await self._require_org_member(user_id, organization_id)
-
         urns = list(dict.fromkeys(urns[:100]))
+        key_by_urn = {
+            urn: ResourceKey(*parsed) for urn in urns if (parsed := parse_urn(urn)) is not None
+        }
+        if not key_by_urn:
+            return {}
 
-        user_group_ids = await self._get_user_group_ids(user_id)
-        filtered = await get_permission_filtered_documents_by_urns(
-            urns,
-            organization_id,
-            user_id,
-            user_group_ids,
+        raw_result, decisions_result = await asyncio.gather(
+            get_raw_documents_by_urns(list(key_by_urn), organization_id),
+            self.resource_access.resolve(
+                actor_id=user_id,
+                organization_id=organization_id,
+                keys=key_by_urn.values(),
+                purpose=ResourceAccessPurpose.REFERENCE,
+            ),
+            return_exceptions=True,
         )
-        resolved = filtered.documents
+        if isinstance(decisions_result, BaseException):
+            logger.opt(exception=decisions_result).warning("PostgreSQL URN authorization failed")
+            return {
+                urn: _build_reference_result(
+                    urn,
+                    organization_id,
+                    UrnAvailability.UNAVAILABLE,
+                )
+                for urn in key_by_urn
+            }
+        decisions = decisions_result
+        if isinstance(raw_result, BaseException):
+            logger.opt(exception=raw_result).warning("Meilisearch URN preview lookup failed")
+            return {
+                urn: _build_reference_result(
+                    urn,
+                    organization_id,
+                    UrnAvailability.UNAVAILABLE,
+                )
+                for urn in key_by_urn
+            }
+        raw = raw_result
 
-        await self._enrich_live_state(resolved, organization_id, user_id)
-        for item in resolved.values():
-            item.availability = UrnAvailability.AVAILABLE
-
-        misses = [
-            urn
-            for urn in urns
-            if urn not in resolved and urn not in filtered.failed_urns and parse_urn(urn) is not None
-        ]
-        raw = (
-            await get_raw_documents_by_urns(misses, organization_id)
-            if misses
-            else UrnLookupResult(documents={}, failed_urns=frozenset())
-        )
-
-        authoritative_misses = [
-            urn for urn in misses if urn not in raw.documents and urn not in raw.failed_urns
-        ]
-        reference_states = (
-            await get_authoritative_reference_states(
-                self.session,
-                organization_id,
-                authoritative_misses,
-            )
-            if authoritative_misses
-            else {}
-        )
-
-        for urn in urns:
-            if urn in resolved:
-                continue
-            if urn in filtered.failed_urns or urn in raw.failed_urns:
+        resolved: dict[str, SearchResult] = {}
+        available: dict[str, SearchResult] = {}
+        for urn, key in key_by_urn.items():
+            decision = decisions.get(key)
+            if decision is None:
                 resolved[urn] = _build_reference_result(
                     urn,
                     organization_id,
                     UrnAvailability.UNAVAILABLE,
                 )
-                continue
-
-            raw_document = raw.documents.get(urn)
-            if raw_document is not None:
+            elif decision.row_state in {ResourceRowState.DELETED, ResourceRowState.MISSING}:
+                resolved[urn] = _build_reference_result(
+                    urn,
+                    organization_id,
+                    UrnAvailability.DELETED,
+                )
+            elif not decision.can_view:
                 resolved[urn] = _build_reference_result(
                     urn,
                     organization_id,
                     UrnAvailability.RESTRICTED,
-                    can_request_access=_is_requestable(raw_document),
+                    can_request_access=decision.request_target is not None,
                 )
-                continue
+            elif urn in raw.failed_urns or urn not in raw.documents:
+                resolved[urn] = _build_reference_result(
+                    urn,
+                    organization_id,
+                    UrnAvailability.UNAVAILABLE,
+                )
+            else:
+                raw_document = raw.documents[urn]
+                raw_document.availability = UrnAvailability.AVAILABLE
+                raw_document.can_request_access = False
+                resolved[urn] = raw_document
+                available[urn] = raw_document
 
-            row_state = reference_states.get(urn)
-            availability = (
-                UrnAvailability.DELETED
-                if row_state in (ReferenceRowState.DELETED, ReferenceRowState.MISSING)
-                else UrnAvailability.UNAVAILABLE
-            )
-            resolved[urn] = _build_reference_result(urn, organization_id, availability)
-
+        await self._enrich_live_state(available, organization_id, user_id)
         return resolved
 
     async def _enrich_live_state(
@@ -682,57 +675,6 @@ class SearchOperations:
         except Exception:
             logger.opt(exception=True).warning("Failed to enrich agent live state")
 
-    async def _require_org_member(self, user_id: UUID, organization_id: UUID) -> None:
-        """Meili's permission filter matches on ``organization_id`` alone, so its
-        ``OPEN_TO_ORG`` branch is true for any caller who names the org. Active
-        membership is the precondition the filter cannot express.
-        """
-        await OrganizationOperations(self.session).require_org_member(user_id, organization_id)
-
-    async def _get_user_group_ids(self, user_id: UUID) -> list[UUID]:
-        result = await self.session.execute(
-            select(GroupMember.group_id).where(
-                GroupMember.user_id == user_id,
-                GroupMember.is_active == True,  # noqa: E712
-            )
-        )
-        return [row[0] for row in result.all()]
-
-    async def _filter_visible_tag_results(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        tag_results: list[SearchResult],
-    ) -> list[SearchResult]:
-        """Tag docs in Meili lack per-assignment data; hydrate from PG and
-        delegate to ``TagVisibilityFilter``.
-        """
-        urn_to_tag_id: dict[str, UUID] = {}
-        for sr in tag_results:
-            parts = sr.urn.split(":")
-            if len(parts) != 5:
-                continue
-            try:
-                urn_to_tag_id[sr.urn] = UUID(parts[4])
-            except ValueError:
-                continue
-
-        if not urn_to_tag_id:
-            return []
-
-        result = await self.session.execute(
-            select(Tag).where(
-                Tag.organization_id == organization_id,
-                Tag.id.in_(urn_to_tag_id.values()),
-            )
-        )
-        tag_by_id = {t.id: t for t in result.scalars().all()}
-
-        candidates = [tag_by_id[tag_id] for tag_id in urn_to_tag_id.values() if tag_id in tag_by_id]
-        visibility = TagVisibilityFilter(self.session, user_id, organization_id)
-        visible_ids = await visibility.visible_id_set(candidates)
-        return [sr for sr in tag_results if urn_to_tag_id.get(sr.urn) in visible_ids]
-
     async def _enrich_tags(
         self,
         results: dict[str, SearchResult],
@@ -741,36 +683,21 @@ class SearchOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Invisible tag URNs are dropped (tombstone); per-user
-        ``user_assignment_count`` cannot be denormalized.
-        """
+        """Attach the per-user assignment count to authorized tag previews."""
         try:
-            stmt = select(Tag).where(
-                Tag.organization_id == organization_id,
-                Tag.id.in_(tag_ids),
-            )
-            tag_rows = (await self.session.execute(stmt)).scalars().all()
-            tag_by_id = {t.id: t for t in tag_rows}
-
-            visibility = TagVisibilityFilter(self.session, user_id, organization_id)
-            candidates = [tag_by_id[tid] for tid in tag_ids if tid in tag_by_id]
-            visible_ids = await visibility.visible_id_set(candidates)
-
             id_to_urn = {v: k for k, v in urn_to_id.items()}
-            for tag_id in tag_ids:
-                urn = id_to_urn.get(tag_id)
-                if urn is None or urn not in results:
-                    continue
-                if tag_id not in visible_ids:
-                    results.pop(urn, None)
-
-            if not visible_ids:
+            authorized_ids = {
+                tag_id
+                for tag_id in tag_ids
+                if (urn := id_to_urn.get(tag_id)) is not None and urn in results
+            }
+            if not authorized_ids:
                 return
 
             count_stmt = (
                 select(TagAssignment.tag_id, func.count())
                 .where(
-                    TagAssignment.tag_id.in_(visible_ids),
+                    TagAssignment.tag_id.in_(authorized_ids),
                     TagAssignment.assigned_by == user_id,
                 )
                 .group_by(TagAssignment.tag_id)
@@ -778,7 +705,7 @@ class SearchOperations:
             count_rows = (await self.session.execute(count_stmt)).all()
             counts: dict[UUID, int] = {row[0]: int(row[1]) for row in count_rows}
 
-            for tag_id in visible_ids:
+            for tag_id in authorized_ids:
                 urn = id_to_urn.get(tag_id)
                 if urn is None or urn not in results:
                     continue
@@ -817,38 +744,3 @@ def _build_reference_result(
         availability=availability,
         can_request_access=can_request_access,
     )
-
-
-def _is_requestable(raw_document: SearchResult) -> bool:
-    parsed = parse_urn(raw_document.urn)
-    if parsed is None:
-        return False
-    content_type, _ = parsed
-    if content_type in {
-        ContentType.NOTE,
-        ContentType.FILE,
-        ContentType.FOLDER,
-        ContentType.CALENDAR_EVENT,
-        ContentType.PROJECT,
-        ContentType.AGENT,
-        ContentType.ROOM,
-    }:
-        return True
-
-    metadata = raw_document.metadata or {}
-    if content_type == ContentType.TASK:
-        return _metadata_has_uuid(metadata, "project_id")
-    if content_type in {ContentType.CHAT, ContentType.CHAT_MESSAGE}:
-        return (
-            metadata.get("channel_type") == "PRIVATE"  # noqa: PLR2004 -- indexed enum boundary
-            and (content_type == ContentType.CHAT or _metadata_has_uuid(metadata, "channel_id"))
-        )
-    return False
-
-
-def _metadata_has_uuid(metadata: dict[str, str], key: str) -> bool:
-    try:
-        UUID(metadata.get(key, ""))
-    except ValueError:
-        return False
-    return True

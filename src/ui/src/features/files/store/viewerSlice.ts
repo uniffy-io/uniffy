@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import { removeFile } from "@/features/files/store/filesSlice";
 import { fetchFile, restoreFileVersion } from "@/features/files/store/filesThunks";
 import type { SerializedFile } from "@/features/files/store/filesThunks";
 
@@ -322,6 +323,14 @@ export const viewerSlice = createSlice({
       .addCase(restoreFileVersion.fulfilled, (state, action) => {
         if (state.currentFileId === action.payload.id && state.fileData) {
           state.fileData = action.payload;
+        }
+      })
+      // An access revocation removes the row; a viewer left open on it would
+      // keep showing content the user can no longer read.
+      .addCase(removeFile, (state, action) => {
+        if (state.isOpen && state.currentFileId === action.payload) {
+          state.isOpen = false;
+          state.isFullscreen = false;
         }
       });
   },

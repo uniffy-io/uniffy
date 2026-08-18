@@ -201,7 +201,7 @@ class TestDeprovision:
         assert done is False
         assert membership.is_active is True
 
-    async def test_flips_membership_and_drops_caches(self) -> None:
+    async def test_flips_membership_and_removes_search_document(self) -> None:
         source = _source()
         user_id = generate_id()
         membership = MagicMock()
@@ -214,8 +214,6 @@ class TestDeprovision:
         indexer.remove_from_organization = AsyncMock()
         with (
             patch.object(reconcile, "OrganizationOperations", return_value=org_ops),
-            patch.object(reconcile, "_drop_user_perm_cache", AsyncMock()) as drop_cache,
-            patch.object(reconcile, "invalidate_membership_cache", AsyncMock()) as drop_member,
             patch.object(reconcile, "invalidate_person", AsyncMock()),
             patch.object(reconcile, "UserSearchIndexer", return_value=indexer),
             patch.object(reconcile, "publish_mention_state", AsyncMock()) as publish,
@@ -224,8 +222,6 @@ class TestDeprovision:
 
         assert done is True
         assert membership.is_active is False
-        drop_cache.assert_awaited_once_with(user_id)
-        drop_member.assert_awaited_once()
         indexer.remove_from_organization.assert_awaited_once_with(user_id, source.organization_id)
         publish.assert_awaited_once()
         assert publish.await_args.args[2] == {"urn_status": "DELETED"}

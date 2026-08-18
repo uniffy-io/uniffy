@@ -51,6 +51,7 @@ from uniffy.domains.notes.converters import (
     note_to_reference,
 )
 from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.tags import TagOperations
 
 logger = logger.bind(component="notes.handlers")
@@ -434,18 +435,20 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[urn_for(n) for n in notes],
                 )
-                # Share one checker so org-role / domain-admin caches hit once per page.
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
                     organization_id,
                     ContentType.NOTE,
                 )
+                decisions = await ResourceAccessResolver(session).resolve_page(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    keys=[ResourceKey(ContentType.NOTE, note.id) for note in notes],
+                )
                 proto_notes = []
                 for n in notes:
                     info = sharing.get(n.id)
-                    user_role = await _resolve_user_role(
-                        session, user_id, organization_id, n, checker=checker
-                    )
+                    user_role = decisions[ResourceKey(ContentType.NOTE, n.id)].role
                     eff_mode, eff_baseline = resolve_effective_policy(
                         n.access_mode,
                         n.baseline_role,

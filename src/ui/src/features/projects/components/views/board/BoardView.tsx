@@ -398,7 +398,7 @@ export function BoardView() {
 
   // Show empty state if no tasks, no search, and no sprints at all (non-sprint project)
   if (tasks.length === 0 && !searchQuery && !hasSprints) {
-    return <EmptyState onCreateTask={handleAddTask} />;
+    return <EmptyState onCreateTask={canEdit ? handleAddTask : undefined} />;
   }
 
   // Show empty state when no tasks match the current filter
@@ -464,7 +464,7 @@ export function BoardView() {
                   selectedTaskIds={selectedTaskIds}
                   onTaskClick={handleTaskClick}
                   onCheckboxChange={handleCheckboxChange}
-                  onAddTask={handleAddTask}
+                  onAddTask={canEdit ? handleAddTask : undefined}
                   projectSlug={project?.slug || ""}
                   reparentHintActive={reparentHintActive}
                   activeDragTaskId={activeTask?.id ?? null}
@@ -482,7 +482,7 @@ export function BoardView() {
                 selectedTaskIds={selectedTaskIds}
                 onTaskClick={handleTaskClick}
                 onCheckboxChange={handleCheckboxChange}
-                onAddTask={handleAddTask}
+                onAddTask={canEdit ? handleAddTask : undefined}
                 projectSlug={project?.slug || ""}
                 reparentHintActive={reparentHintActive}
                 activeDragTaskId={activeTask?.id ?? null}
@@ -502,7 +502,7 @@ export function BoardView() {
                   selectedTaskIds={selectedTaskIds}
                   onTaskClick={handleTaskClick}
                   onCheckboxChange={handleCheckboxChange}
-                  onAddTask={handleAddTask}
+                  onAddTask={canEdit ? handleAddTask : undefined}
                   projectSlug={project?.slug || ""}
                   reparentHintActive={reparentHintActive}
                   activeDragTaskId={activeTask?.id ?? null}

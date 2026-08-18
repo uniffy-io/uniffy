@@ -7,10 +7,6 @@ from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.agent_folder import ChatAgentFolder
 from uniffy.core.models.chat.channel import ChatChannel
@@ -20,11 +16,6 @@ from uniffy.core.types import AccessMode, ContentType, SubjectType
 from uniffy.domains.chat.cache import invalidate_cached_member_ids
 
 logger = logger.bind(component="chat.agent_folders.operations")
-
-register_reference_state_loader(
-    ContentType.AGENT_FOLDER,
-    model_reference_state_loader(ChatAgentFolder, deleted_attribute=None),
-)
 
 MAX_FOLDERS_PER_USER = 100
 

@@ -215,6 +215,38 @@ Secure cookie, so several of these cannot be exercised there.
 - [ ] A user who had the OLD `media-stream-worker` installed loads the app once: it is unregistered on boot
       (Application > Service Workers shows it removed) and assets still load via the cookie.
 
+## Attachments - staging privacy and parent-derived access
+
+Editor/chat uploads land in the personal Attachments staging folder as `OWNER_ONLY` and are linked in
+place on attach; readers reach the bytes only through the parent they can view.
+
+- [ ] Paste an image into a private (owner-only) note. As a second org member: the note is denied, the
+      image's `/api/files`, `/api/thumbnails`, and `/api/media` URLs all return 403, and the filename
+      appears nowhere in global search or mention lookup.
+- [ ] Share that note as Viewer with the second member: the embedded image renders and its byte routes
+      return 200 for them, without any share on the file itself. Revoke the note share: bytes 403 again.
+- [ ] Send a file into a private chat channel. A non-member cannot fetch the attachment bytes; a channel
+      member can. The attachment chip in the message resolves for members and shows Restricted for others.
+- [ ] Attach the same uploaded file to an org-visible (OPEN_TO_ORG) note: the file moves to the
+      Organization Attachments folder, becomes org-searchable, and the note's embedded URL keeps working.
+- [ ] Permanently delete a note with pasted images (trash, then empty trash): the attachment rows, file
+      rows, and bytes are gone (owner's byte route 404s). Deleting a channel does the same for its
+      message attachments. Removing an image from a note and saving detaches that image's staged file.
+- [ ] An explicit BLOCKED grant on the attachment file itself denies the bytes even for someone who can
+      view the parent.
+
+## Sharing surfaces - calendar events, rooms, automations
+
+- [ ] Event detail modal shows Share for the organizer (manage role); the access dialog lists members and
+      offers Owner only / Specific people but NOT "Everyone in org" (events are invite-only; the backend
+      also rejects it). A shared-in Viewer sees the event; revocation removes it.
+- [ ] Rooms: the room detail panel and the rooms table row offer Share to the owner/manager; Edit/Delete
+      row actions are hidden without the matching role. A shared Viewer can see/book per role.
+- [ ] Agent automations (`/agents/automations`): the task detail header offers Share to the task owner.
+      Transferring ownership repoints the execution identity (the task runs as the new owner).
+- [ ] Sharing an agent to a member makes it appear in their chat agent picker without a reload;
+      BLOCKED/unshare removes it live from an already-open picker.
+
 ## Calls: screen-share quality
 
 The screen-share ceiling is layered: env default (`CALLS_DEFAULT_SCREEN_SHARE_QUALITY`) ->

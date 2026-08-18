@@ -937,7 +937,7 @@ export function TableView() {
   }
 
   if (filteredTasks.length === 0 && !searchQuery) {
-    return <EmptyState onCreateTask={handleAddTask} />;
+    return <EmptyState onCreateTask={canEdit ? handleAddTask : undefined} />;
   }
 
   const renderSubtaskRow = (task: Task, depth: number = 1): React.ReactNode => {
@@ -1271,22 +1271,23 @@ export function TableView() {
                 </SortableContext>
               )}
 
-              {/* Add Task Row */}
-              <div
-                className="flex items-center border-b border-border hover:bg-muted/30 cursor-pointer"
-                style={{ height: LAYOUT.TABLE_ROW_HEIGHT }}
-                onClick={handleAddTask}
-              >
-                <div className="shrink-0" style={{ width: 28 }} />
+              {canEdit && (
                 <div
-                  className="shrink-0 flex items-center justify-center border-r border-border"
-                  style={{ width: TABLE_COLUMNS.CHECKBOX_WIDTH }}
-                />
-                <div className="flex items-center gap-2 px-3 text-muted-foreground">
-                  <Plus size={14} />
-                  <span className="text-sm">Add task</span>
+                  className="flex items-center border-b border-border hover:bg-muted/30 cursor-pointer"
+                  style={{ height: LAYOUT.TABLE_ROW_HEIGHT }}
+                  onClick={handleAddTask}
+                >
+                  <div className="shrink-0" style={{ width: 28 }} />
+                  <div
+                    className="shrink-0 flex items-center justify-center border-r border-border"
+                    style={{ width: TABLE_COLUMNS.CHECKBOX_WIDTH }}
+                  />
+                  <div className="flex items-center gap-2 px-3 text-muted-foreground">
+                    <Plus size={14} />
+                    <span className="text-sm">Add task</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Drag Overlay */}

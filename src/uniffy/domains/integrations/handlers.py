@@ -109,7 +109,6 @@ class IntegrationsHandlers:
                     organization_id=org_id,
                     provider=provider,
                 )
-                # One cached role read per RPC, not per row.
                 diagnostics = await is_org_admin(session, user_id, org_id)
                 return ListConnectionsResponse(
                     connections=[

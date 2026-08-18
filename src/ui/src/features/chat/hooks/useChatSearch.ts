@@ -13,7 +13,8 @@ interface UseChatSearchResult {
   results: SearchResultItem[];
   isLoading: boolean;
   error: string | null;
-  totalCount: number;
+  resultCount: number;
+  hasMore: boolean;
   search: (query: string, filters?: ChatSearchFilters) => void;
   clear: () => void;
 }
@@ -25,7 +26,7 @@ export function useChatSearch(): UseChatSearchResult {
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const timerRef = useRef<number | undefined>(undefined);
   const abortRef = useRef<AbortController | undefined>(undefined);
 
@@ -36,7 +37,7 @@ export function useChatSearch(): UseChatSearchResult {
 
       if (!query.trim() && !filters?.channelId && !filters?.senderId) {
         setResults([]);
-        setTotalCount(0);
+        setHasMore(false);
         setError(null);
         return;
       }
@@ -69,7 +70,7 @@ export function useChatSearch(): UseChatSearchResult {
 
           if (!controller.signal.aborted) {
             setResults([...response.items]);
-            setTotalCount(response.totalCount || response.items.length);
+            setHasMore(response.hasMore);
             setIsLoading(false);
           }
         } catch (err) {
@@ -87,7 +88,7 @@ export function useChatSearch(): UseChatSearchResult {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (abortRef.current) abortRef.current.abort();
     setResults([]);
-    setTotalCount(0);
+    setHasMore(false);
     setError(null);
     setIsLoading(false);
   }, []);
@@ -99,5 +100,13 @@ export function useChatSearch(): UseChatSearchResult {
     };
   }, []);
 
-  return { results, isLoading, error, totalCount, search, clear };
+  return {
+    results,
+    isLoading,
+    error,
+    resultCount: results.length,
+    hasMore,
+    search,
+    clear,
+  };
 }

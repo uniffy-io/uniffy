@@ -503,21 +503,24 @@ class TestCalendarAttendeeFloor:
     ) -> None:
         event = await _event_with_attendee(session, access, access.peer_id)
         ops = CalendarEventOperations(session)
+        attendee_access = await ops._attendee_access_filter(access.peer_id, access.org_id)
 
         visible = await session.execute(
             select(CalendarEvent.id).where(
                 CalendarEvent.organization_id == access.org_id,
-                ops._attendee_access_filter(access.peer_id, access.org_id),
+                attendee_access,
             )
         )
         assert event.id in set(visible.scalars().all())
 
         await _deactivate(session, access, access.peer_id)
+        ops = CalendarEventOperations(session)
+        attendee_access = await ops._attendee_access_filter(access.peer_id, access.org_id)
 
         visible = await session.execute(
             select(CalendarEvent.id).where(
                 CalendarEvent.organization_id == access.org_id,
-                ops._attendee_access_filter(access.peer_id, access.org_id),
+                attendee_access,
             )
         )
         assert visible.scalars().all() == []

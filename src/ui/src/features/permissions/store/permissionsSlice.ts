@@ -1,4 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { AccessRequestState } from "@uniffy/proto/permissions/v1/permissions_pb";
+import { respondToAccessRequest } from "@/features/permissions/store/accessRequestThunks";
 import {
   fetchContentMembers,
   addContentMember,
@@ -291,6 +293,12 @@ const permissionsSlice = createSlice({
         );
         entry.loading.audit = false;
         entry.errors.audit = (action.payload as string | undefined) ?? "Failed to load audit log";
+      })
+      .addCase(respondToAccessRequest.fulfilled, (state, action) => {
+        if (action.payload.state !== AccessRequestState.APPROVED) return;
+        delete state.byContent[
+          contentKey(action.payload.canonicalContentType, action.payload.canonicalContentId)
+        ];
       });
   },
 });

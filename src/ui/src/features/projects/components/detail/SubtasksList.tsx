@@ -11,6 +11,7 @@ import {
 } from "@/features/projects/store/projectsSlice";
 import { selectTask } from "@/features/projects/store/projectsUiSlice";
 import { createTask, updateTask } from "@/features/projects/store/projectsThunks";
+import { useTaskPermission } from "@/features/projects/hooks/useProjectPermissions";
 import type { Task } from "@/features/projects/types/project";
 
 const STATUS_DONE = "status_done";
@@ -26,6 +27,7 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
   const subtasks = useAppSelector(selectSubtasksByParentId(taskId));
+  const { canEdit } = useTaskPermission(taskId);
   const [addingForParentId, setAddingForParentId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -120,6 +122,7 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
             onKeyDown={handleKeyDown}
             onSubmit={handleSubmit}
             inputRef={inputRef}
+            canEdit={canEdit}
           />
         ))}
 
@@ -141,7 +144,7 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
         )}
       </div>
 
-      {!addingForParentId && (
+      {!addingForParentId && canEdit && (
         <Button
           variant="ghost"
           size="sm"
@@ -168,6 +171,7 @@ interface SubtaskItemProps {
   onKeyDown: (e: React.KeyboardEvent) => void;
   onSubmit: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  canEdit: boolean;
 }
 
 function SubtaskItem({
@@ -182,6 +186,7 @@ function SubtaskItem({
   onKeyDown,
   onSubmit,
   inputRef,
+  canEdit,
 }: SubtaskItemProps) {
   const dispatch = useAppDispatch();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -215,7 +220,7 @@ function SubtaskItem({
           type="button"
           className="text-muted-foreground hover:text-primary transition-colors shrink-0"
           onClick={() => onToggle(task)}
-          disabled={parentCompleted}
+          disabled={parentCompleted || !canEdit}
         >
           {isCompleted ? (
             <CheckCircle className="h-4 w-4 text-primary" weight="fill" />
@@ -250,7 +255,7 @@ function SubtaskItem({
         )}
 
         {/* Add child button (hover-only, hidden at max depth) */}
-        {depth < MAX_DEPTH && (
+        {depth < MAX_DEPTH && canEdit && (
           <button
             type="button"
             className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-muted-foreground hover:text-foreground transition-all shrink-0"
@@ -282,6 +287,7 @@ function SubtaskItem({
             onKeyDown={onKeyDown}
             onSubmit={onSubmit}
             inputRef={inputRef}
+            canEdit={canEdit}
           />
         ))}
 

@@ -35,7 +35,6 @@ export function ProjectsSidebar() {
   const currentProjectId = useAppSelector(selectCurrentProjectId);
   const projectCompletion = useAppSelector(selectProjectCompletion);
   const projectScope = useAppSelector(selectProjectScope);
-  const isSystemAdmin = useAppSelector((s) => s.auth.user?.isSystemAdmin ?? false);
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
 
   const filteredProjects = useMemo(() => {
@@ -123,7 +122,7 @@ export function ProjectsSidebar() {
               </div>
             ) : (
               filteredProjects.map((project) => {
-                const canAccessSettings = roleCanManage(project.userRole) || isSystemAdmin;
+                const canAccessSettings = roleCanManage(project.userRole);
                 return (
                   <ProjectListItem
                     key={project.id}

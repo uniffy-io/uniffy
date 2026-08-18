@@ -8,10 +8,11 @@ delegate to the parent's access policy.
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
@@ -30,7 +31,7 @@ from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
-from uniffy.core.valkey import publish_content_access_changed
+from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
 
 
 class BaseContentOperations[TModel](ABC):
@@ -91,9 +92,21 @@ class BaseContentOperations[TModel](ABC):
     ) -> TModel:
         """Fetch by id, enforcing view permission."""
         content = await self._fetch_by_id(content_id, organization_id)
-        if not content:
+        if not content or getattr(content, "is_deleted", False):
             raise NotFoundError(self.content_type.value, content_id)
         await self._require_view(user_id, organization_id, content)
+        return content
+
+    async def get_for_edit(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_id: UUID,
+    ) -> TModel:
+        content = await self._fetch_by_id(content_id, organization_id)
+        if not content or getattr(content, "is_deleted", False):
+            raise NotFoundError(self.content_type.value, content_id)
+        await self._require_edit(user_id, organization_id, content)
         return content
 
     async def list_accessible(
@@ -184,7 +197,7 @@ class BaseContentOperations[TModel](ABC):
         await publish_content_access_changed(
             content_type=content_type_to_proto(self.content_type),
             content_id=content_id,
-            action="granted",
+            action=ContentAccessAction.GRANTED,
             organization_id=organization_id,
         )
 
@@ -279,7 +292,7 @@ class BaseContentOperations[TModel](ABC):
                 shared_group_ids,
                 blocked_user_ids,
                 blocked_group_ids,
-            ) = await self._get_member_id_lists(model.id)
+            ) = await self._get_member_id_lists(model.organization_id, model.id)
 
         # Live policy resolution keeps Meili filters in sync; inheriting rows
         # would otherwise carry a stale create-time snapshot.
@@ -312,19 +325,26 @@ class BaseContentOperations[TModel](ABC):
 
     async def _get_member_id_lists(
         self,
+        organization_id: UUID,
         content_id: UUID,
     ) -> tuple[list[UUID], list[UUID], list[UUID], list[UUID]]:
         """``(shared_users, shared_groups, blocked_users, blocked_groups)``."""
         from uniffy.core.models.permissions.content_member import ContentMember
 
+        now = datetime.now(UTC)
         result = await self.session.execute(
             select(
                 ContentMember.subject_type,
                 ContentMember.subject_id,
                 ContentMember.role,
             ).where(
+                ContentMember.organization_id == organization_id,
                 ContentMember.content_type == self.content_type,
                 ContentMember.content_id == content_id,
+                or_(
+                    ContentMember.expires_at.is_(None),
+                    ContentMember.expires_at > now,
+                ),
             )
         )
         shared_users: list[UUID] = []

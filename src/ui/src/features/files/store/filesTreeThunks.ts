@@ -25,6 +25,7 @@ const treeNodeToPlain = (node: TreeNode): SerializedTreeNode => ({
       : node.sizeBytes
     : undefined,
   mimeType: node.mimeType,
+  ownerId: node.ownerId,
   children: node.children?.map(treeNodeToPlain),
 });
 
@@ -46,6 +47,7 @@ export interface SerializedTreeNode {
   childCount: number;
   sizeBytes?: number;
   mimeType?: string;
+  ownerId?: string;
   children?: SerializedTreeNode[];
 }
 

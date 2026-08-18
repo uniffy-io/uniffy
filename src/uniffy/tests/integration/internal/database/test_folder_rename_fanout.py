@@ -16,7 +16,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 async def _capture_publishes(monkeypatch) -> list[tuple[str, dict]]:
     published: list[tuple[str, dict]] = []
 
-    async def capture(organization_id, urn, changes, restricted=False):
+    async def capture(organization_id, urn, changes):
         published.append((urn, dict(changes)))
 
     monkeypatch.setattr("uniffy.domains.files.operations.publish_mention_state", capture)

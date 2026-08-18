@@ -24,11 +24,11 @@ Org-level powers (managing members, settings, permission defaults, quotas, billi
 
 `User.is_active`, `OrganizationMember.is_active`, and `GroupMember.is_active` are access conditions, not bookkeeping. A deactivated membership fails **every** gate: `require_org_admin` / `require_org_owner` / `require_org_member`, the org-admin checks in `PermissionChecker`, `ChatAccessChecker`, and `is_agents_builder`, the membership gate in `effective_role` (which covers ownership and explicit grants, not just `OPEN_TO_ORG`), the no-rows short-circuit in `ContentAccessQuery.build_accessible_filter`, and group-derived `ContentMember` grants. `DomainAdmin` follows membership - `is_domain_admin` joins `organization_members`, so a grant held by a deactivated member confers nothing.
 
-`OrganizationOperations.add_member` reactivates an existing inactive row (applying the incoming role and dropping the perm caches) - re-adding a deactivated member is the restore path.
+`OrganizationOperations.add_member` reactivates an existing inactive row and applies the incoming role; re-adding a deactivated member is the restore path.
 
 `OrganizationOperations.get_membership` deliberately still returns deactivated rows because management flows (re-add, remove, role edits) need to see them; the `is_active` condition lives in the `require_org_*` gates, which is where the security decision happens.
 
-Any flow that flips an activation flag MUST drop the perm caches in the same operation - `_drop_user_perm_cache` / `invalidate_user` plus `invalidate_membership_cache` per org. Without that, the 600s `perm:org_admin:*` and `perm:domain_admin:*` entries keep a deactivated user fully powered for ten minutes.
+Any flow that flips an activation flag commits the PostgreSQL fact before returning. Permission reads observe that database state directly; no cross-request cache invalidation is part of the security boundary.
 
 ## The model (every content row)
 
@@ -53,8 +53,8 @@ Explicit grants are `ContentMember` rows (`permissions_content_members`) keyed o
 
 1. **System admin not in the org** -> active `SupportSession` role (`EDITOR` if `READ_WRITE`, else `VIEWER`) or `None`. A system admin who IS an org member falls through to the member path - access flows from membership, not from `is_system_admin`.
 2. **Not an active member of the org** -> `None`. Runs before the owner check, so removal/deactivation cuts off everything at once - ownership, explicit grants, baselines.
-3. `owner_id == user_id` -> `OWNER`.
-4. Any matching `BLOCKED` `ContentMember` (direct or via group) -> `None` immediately (overrides ownership-of-content too).
+3. Any matching `BLOCKED` `ContentMember` (direct or via group) -> `None` immediately (overrides ownership-of-content too).
+4. `owner_id == user_id` -> `OWNER`.
 5. Highest non-blocked role across the user's direct + group `ContentMember` rows.
 6. `OPEN_TO_ORG` -> `baseline_role` (membership was already established in step 2).
 7. Otherwise `None`.
@@ -99,13 +99,17 @@ All member and access-mode changes go through `ContentMembersOperations` (`core/
 
 Every mutation writes a `ContentMemberEvent` audit row in the same transaction (`record_*` helpers in `audit.py`) and publishes a realtime perm fanout (`realtime:perm:{ct}:{id}` - see `notes-realtime.md`). Mutating `access_mode` or `ContentMember` rows directly from a domain bypasses the audit log and the cache invalidation - do not.
 
-## Caching (`core/auth/cache.py`)
+## Authorization reads
 
-Hot permission reads are Valkey-cached: `perm:role:{org}:{user}:{ct}:{id}` (300s, even `None`/no-access is cached), `perm:org_admin:*`, `perm:domain_admin:*` (600s). Entries carry tags `user:{id}`, `content:{ct}:{id}`, `defaults:{org}:{ct}`. Mutations invalidate by tag: `invalidate_content` on access-mode/BLOCKED/group grants, `invalidate_user` on membership/group changes, `invalidate_org_defaults` on default changes. Tag-visibility sets cache separately in `visible_sets.py`.
+PostgreSQL is authoritative on every permission boundary. Scalar content roles, active membership, org/domain-admin gates, SupportSessions, search hits, and URN batches do not accept a Valkey value as proof of access. This keeps revocation, deactivation, expiry, BLOCKED, and ownership precedence transactional and makes authorization independent of cache availability.
+
+Point checks use the scalar PostgreSQL resolver after loading the domain row. Candidate paths use bounded set queries through `ResourceAccessResolver`; never loop over the scalar checker for search or URN batches. Request-scoped checker/resolver instances may reuse actor facts, group ids, defaults, and exact decisions while the request owns an unchanged database snapshot. A mutation must use a fresh context or clear the affected request-local entries.
+
+Valkey remains appropriate for queues, realtime, rate limits, search candidate hints, and non-authoritative presentation caches. Tag visibility used as an authorization filter must also have a live PostgreSQL gate before rows or metadata are returned.
 
 ## Search and tags
 
-- **Meilisearch** (`core/search/meilisearch.py::_build_permission_filter`): filters on `owner_id` / `shared_user_ids` / `shared_group_ids` / `OPEN_TO_ORG` minus `blocked_*`. It has **no admin bypass and must keep none.** Sharing fields are denormalised into the index by `BaseContentOperations._index_for_search` and refreshed by `update_document_sharing` on every member mutation.
+- **Meilisearch** (`core/search/meilisearch.py::_build_permission_filter`): filters on `owner_id` / `shared_user_ids` / `shared_group_ids` / `OPEN_TO_ORG` minus `blocked_*`. It is a candidate-reduction hint only; every returned candidate passes the PostgreSQL resource resolver before preview metadata is exposed. It has **no admin bypass and must keep none.** Sharing fields are denormalised into the index by `BaseContentOperations._index_for_search` and refreshed by `update_document_sharing` on every member mutation.
 - **`visible_sets.py`** (tag visibility + content-type id sets, drives the tag search post-filter and tag-filter UI): admins are filtered like members, with one exception - a `chat_moderator` (org admin or chat domain admin) sees all `CHAT` assignments, mirroring chat moderation.
 
 ## Domain admin (`DomainAdmin`)
@@ -115,7 +119,7 @@ Hot permission reads are Valkey-cached: `perm:role:{org}:{user}:{ct}:{id}` (300s
 - **Chat moderation** - org admins + chat domain admins via `ChatAccessChecker`.
 - **Agents builders** - org admins + AGENTS domain admins (`is_agents_builder`, `domains/agents/access.py`) manage the org-wide agent surface: agent/skill/automation CRUD, the skill-draft inbox, and org-scope agent memories all gate on `require_agents_builder` instead of content roles. Agents/automations remain ordinary content rows for READS (`effective_role`, `build_accessible_filter`, Meili - all unchanged); only management is domain-level. Cron tasks additionally move their execution identity to whoever rewrites the prompt (see `agents.md`) - a domain-level manage power must never become a way to run code as another user.
 
-Granting or revoking a `DomainAdmin` row MUST drop the perm cache (`invalidate_domain_admin`); the gate reads a 600s Valkey entry, so skipping it leaves a revoked admin fully powered for ten minutes. The grant is also conditional on an active `OrganizationMember` row (see "Deactivation").
+Granting or revoking a `DomainAdmin` row commits the PostgreSQL fact and publishes the existing audit/realtime effects. The grant is conditional on an active `OrganizationMember` row (see "Deactivation").
 
 ### Manage override (`register_manage_override`)
 

@@ -81,6 +81,7 @@ def room_to_proto(
     room: Room,
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
+    user_role: ContentRole | None = None,
 ) -> ProtoRoom:
     proto_room_type = ROOM_TYPE_TO_PROTO.get(
         room.room_type,
@@ -115,6 +116,9 @@ def room_to_proto(
 
     if resolved_baseline is not None:
         proto_room.baseline_role = content_role_to_proto(resolved_baseline)
+
+    if user_role is not None:
+        proto_room.user_role = content_role_to_proto(user_role)
 
     if room.floor:
         proto_room.floor = room.floor

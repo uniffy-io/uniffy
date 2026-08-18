@@ -234,7 +234,6 @@ class TestLeaveChannelOwnerGuard:
             "uniffy.domains.chat.channels.operations",
             invalidate_cached_member_ids=AsyncMock(),
             invalidate_cached_dm_peers=AsyncMock(),
-            invalidate_visible_sets_for_user=AsyncMock(),
             kick_user_from_active_call=AsyncMock(),
         )
 
@@ -296,7 +295,6 @@ class TestLeaveChannelOwnerGuard:
             "uniffy.domains.chat.channels.operations",
             invalidate_cached_member_ids=AsyncMock(),
             invalidate_cached_dm_peers=peers_mock,
-            invalidate_visible_sets_for_user=AsyncMock(),
             kick_user_from_active_call=AsyncMock(),
         ):
             await ops.leave_channel(user_id, channel.organization_id, channel.id)

@@ -30,8 +30,7 @@ export function GlobalSearch() {
     [routePriority],
   );
 
-  const { query, setQuery, results, totalCount, isLoading, clearResults } =
-    useSearch(searchOptions);
+  const { query, setQuery, results, hasMore, isLoading, clearResults } = useSearch(searchOptions);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
   const searchShortcut = useFormattedKeybinding("nav.search");
@@ -231,7 +230,7 @@ export function GlobalSearch() {
             onClose={handleClose}
             className="max-h-[70vh]"
             showHeader={false}
-            totalCount={totalCount}
+            hasMore={hasMore}
           />
         </div>
       )}

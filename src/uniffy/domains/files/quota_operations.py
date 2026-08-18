@@ -16,7 +16,9 @@ from uniffy.core.models.files.file import File
 from uniffy.core.models.files.storage_quota import StorageQuota
 from uniffy.core.models.files.storage_usage import StorageUsage
 from uniffy.core.models.files.user_storage_quota_override import UserStorageQuotaOverride
+from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.models.login.user import User
 from uniffy.core.types import DomainType
 
 logger = logger.bind(component="files.quota_operations")
@@ -55,7 +57,6 @@ class QuotaOperations:
         self.permission_checker = PermissionChecker(session)
 
     async def _require_admin(self, user_id: UUID, organization_id: UUID) -> None:
-        """Org admin, system admin, or files domain admin."""
         is_org_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
         if is_org_admin:
             return
@@ -303,9 +304,14 @@ class QuotaOperations:
                 (UserStorageQuotaOverride.user_id == OrganizationMember.user_id)
                 & (UserStorageQuotaOverride.organization_id == OrganizationMember.organization_id),
             )
+            .join(User, User.id == OrganizationMember.user_id)
+            .join(Organization, Organization.id == OrganizationMember.organization_id)
             .where(
                 OrganizationMember.organization_id == organization_id,
-                OrganizationMember.is_active == True,  # noqa: E712
+                OrganizationMember.is_active.is_(True),
+                User.is_active.is_(True),
+                Organization.deleted_at.is_(None),
+                Organization.is_suspended.is_(False),
             )
             .order_by(used_col.desc(), OrganizationMember.user_id.asc())
         )

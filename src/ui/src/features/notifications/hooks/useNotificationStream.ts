@@ -5,9 +5,13 @@ import { toast } from "sonner";
 import { createElement } from "react";
 import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { fetchFile } from "@/features/files/store/filesSlice";
+import { fetchAgents } from "@/features/agents/store/agentsThunks";
+import { fetchFile, initializeFilesData, removeFile } from "@/features/files/store/filesSlice";
+import { fetchFilesTree } from "@/features/files/store/filesTreeSlice";
 import { initializeNotesData } from "@/features/notes/store/notesThunks";
+import { removeNote } from "@/features/notes/store/notesSlice";
 import {
+  contentAccessUrn,
   emitContentAccessChanged,
   type ContentAccessAction,
 } from "@/features/notifications/contentAccessEmitter";
@@ -23,6 +27,7 @@ import { updatePresenceWithCustomStatus } from "@/features/presence/store/presen
 import { setDomainAdminDomains } from "@/features/auth/store/authSlice";
 import { adminApi } from "@/features/admin/api/adminApi";
 import { emitMentionStateChange, mergeMentionState } from "@/components/mention";
+import { invalidateMentionState } from "@/components/mention/mentionStateEmitter";
 import { accessRequestStateToLiveState } from "@/components/mention/accessRequestState";
 import { resolveUrnBatched } from "@/components/mention/useBatchedSubjectResolver";
 import { MentionAvailability } from "@/components/mention/types";
@@ -31,7 +36,7 @@ import { AccessRequestState } from "@uniffy/proto/permissions/v1/permissions_pb"
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { getState } from "@/app/storeRef";
 import { NotificationToast } from "@/features/notifications/components/NotificationToast";
-import { applyAccessRequestState } from "@/features/permissions";
+import { applyAccessRequestState, clearContentMembers } from "@/features/permissions";
 
 const MAX_BACKOFF_MS = 30000;
 const INITIAL_BACKOFF_MS = 1000;
@@ -56,6 +61,8 @@ export function useNotificationStream() {
     const pendingFileUpdates = new Map<string, ReturnType<typeof setTimeout>>();
     const pendingAccessRefreshes = new Map<string, ReturnType<typeof setTimeout>>();
     let pendingTreeRefresh: ReturnType<typeof setTimeout> | null = null;
+    let pendingFilesRefresh: ReturnType<typeof setTimeout> | null = null;
+    let pendingAgentsRefresh: ReturnType<typeof setTimeout> | null = null;
 
     function scheduleApprovedMentionRefresh(urn: string, attempt = 0): void {
       const existing = pendingAccessRefreshes.get(urn);
@@ -259,12 +266,62 @@ export function useNotificationStream() {
               event.contentAccessChanged
             ) {
               const { contentType, contentId, action } = event.contentAccessChanged;
-              if (contentType === ContentType.NOTE && getState()?.notesTree.treeLoaded) {
-                if (pendingTreeRefresh) clearTimeout(pendingTreeRefresh);
-                pendingTreeRefresh = setTimeout(() => {
-                  pendingTreeRefresh = null;
-                  dispatch(initializeNotesData({ forceRefresh: true }));
-                }, 500);
+              // Membership changed server-side, so a cached member list for
+              // this content is stale; drop it and let the share dialog refetch.
+              dispatch(clearContentMembers({ contentType, contentId }));
+              const changedUrn = contentAccessUrn({
+                contentType,
+                contentId,
+                action: action as ContentAccessAction,
+              });
+              if (changedUrn) {
+                invalidateMentionState(changedUrn);
+                const requestStatus = getState()?.accessRequests.byUrn[changedUrn];
+                if (action === "revoked" && requestStatus) {
+                  dispatch(
+                    applyAccessRequestState({
+                      ...requestStatus,
+                      requesterHasAccess: false,
+                    }),
+                  );
+                }
+                void resolveUrnBatched(changedUrn, organizationId!, { force: true });
+              }
+              if (contentType === ContentType.NOTE) {
+                if (action === "revoked") dispatch(removeNote(contentId));
+                if (getState()?.notesTree.treeLoaded) {
+                  if (pendingTreeRefresh) clearTimeout(pendingTreeRefresh);
+                  pendingTreeRefresh = setTimeout(() => {
+                    pendingTreeRefresh = null;
+                    dispatch(initializeNotesData({ forceRefresh: true }));
+                  }, 500);
+                }
+              }
+              if (contentType === ContentType.FILE || contentType === ContentType.FOLDER) {
+                if (contentType === ContentType.FILE && action === "revoked") {
+                  dispatch(removeFile(contentId));
+                }
+                const filesState = getState();
+                const filesLoaded =
+                  Object.keys(filesState?.files.files ?? {}).length > 0 ||
+                  Object.keys(filesState?.filesTree.folders ?? {}).length > 0;
+                if (filesLoaded) {
+                  if (pendingFilesRefresh) clearTimeout(pendingFilesRefresh);
+                  pendingFilesRefresh = setTimeout(() => {
+                    pendingFilesRefresh = null;
+                    dispatch(initializeFilesData({ forceRefresh: true }));
+                    dispatch(fetchFilesTree({ includeFiles: false }));
+                  }, 500);
+                }
+              }
+              if (contentType === ContentType.AGENT) {
+                if (Object.keys(getState()?.agents.agents ?? {}).length > 0) {
+                  if (pendingAgentsRefresh) clearTimeout(pendingAgentsRefresh);
+                  pendingAgentsRefresh = setTimeout(() => {
+                    pendingAgentsRefresh = null;
+                    dispatch(fetchAgents());
+                  }, 500);
+                }
               }
               emitContentAccessChanged({
                 contentType,
@@ -316,6 +373,8 @@ export function useNotificationStream() {
       }
       pendingAccessRefreshes.clear();
       if (pendingTreeRefresh) clearTimeout(pendingTreeRefresh);
+      if (pendingFilesRefresh) clearTimeout(pendingFilesRefresh);
+      if (pendingAgentsRefresh) clearTimeout(pendingAgentsRefresh);
     };
   }, [dispatch, organizationId, userId, isAuthenticated]);
 }

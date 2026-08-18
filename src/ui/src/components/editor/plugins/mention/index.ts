@@ -15,7 +15,8 @@ import { parseUrn, urnToPath, UrnType } from "@/shared/utils/urn";
 import { openRoomViewer } from "@/features/rooms/store/roomsThunks";
 import { navigateTo, openInNewTab } from "@/shared/utils/navigation";
 import { getResolvedUrl } from "@/components/editor/plugins/mention/useUrnPreview";
-import { getMentionUrl } from "@/components/mention/mentionStateEmitter";
+import { getMentionState, getMentionUrl } from "@/components/mention/mentionStateEmitter";
+import { MentionAvailability } from "@/components/mention/types";
 import { getActiveEditorView } from "@/components/editor/editorRegistry";
 import { visit, SKIP } from "unist-util-visit";
 import type { Parent, Node as UnistNode } from "unist";
@@ -245,6 +246,11 @@ class MentionNodeView implements NodeView {
         e.stopImmediatePropagation();
 
         const { urn } = this.node.attrs as { urn: string };
+
+        // A chip the viewer cannot open never navigates; the restricted
+        // variant's own Request-access button is the only interaction.
+        const availability = getMentionState(urn)?.availability;
+        if (availability && availability !== MentionAvailability.Available) return;
 
         // ROOM opens in place: the writer stays in the document instead of losing it to a route.
         const parsed = parseUrn(urn);

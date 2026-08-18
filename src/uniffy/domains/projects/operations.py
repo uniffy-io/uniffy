@@ -26,10 +26,6 @@ from uniffy.core.content.members import (
     register_child_acl_refresh_hook,
     register_content_loader,
 )
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
 from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, ValidationError
@@ -43,7 +39,6 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
-from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import (
     DefaultTaskStatusId,
@@ -66,8 +61,9 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
-from uniffy.core.valkey import publish_content_access_changed
+from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
 from uniffy.core.valkey.mentions import publish_mention_state
+from uniffy.domains.permissions.resource_access import ResourceAudienceResolver
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.recurrence import (
     compute_next_occurrence,
@@ -294,12 +290,24 @@ class ProjectOperations(BaseContentOperations[Project]):
             task_id_rows = await self.session.execute(
                 select(Task.id).where(Task.project_id == project_id)
             )
-            for (task_id,) in task_id_rows:
+            task_ids = [task_id for (task_id,) in task_id_rows]
+            for task_id in task_ids:
                 await tag_ops.unassign_all_for_urn(
                     actor_id=user_id,
                     organization_id=organization_id,
                     content_urn=build_content_urn(ContentType.TASK, task_id),
                 )
+
+            from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+            attachment_ops = AttachmentOperations(self.session)
+            await attachment_ops.purge_attachments_for_content(
+                organization_id, self.content_type, [project_id]
+            )
+            await attachment_ops.purge_attachments_for_content(
+                organization_id, ContentType.TASK, task_ids
+            )
+
             await queries.delete_project_cascade(self.session, project_id)
             await self.session.delete(project)
         else:
@@ -872,7 +880,7 @@ class TaskOperations(BaseContentOperations[Task]):
         await publish_content_access_changed(
             content_type=content_type_to_proto(ContentType.PROJECT),
             content_id=project_id,
-            action="child_added",
+            action=ContentAccessAction.CHILD_ADDED,
             organization_id=organization_id,
             target_user_ids=audience,
         )
@@ -904,33 +912,14 @@ class TaskOperations(BaseContentOperations[Task]):
         if effective_mode == AccessMode.OPEN_TO_ORG:
             return None
 
-        rows = await self.session.execute(
-            select(
-                ContentMember.subject_type,
-                ContentMember.subject_id,
-                ContentMember.role,
-            ).where(
-                ContentMember.content_type == ContentType.PROJECT,
-                ContentMember.content_id == project.id,
-            )
+        return await ResourceAudienceResolver(self.session).standard_audience(
+            organization_id=organization_id,
+            content_type=ContentType.PROJECT,
+            content_id=project.id,
+            owner_id=project.owner_id,
+            access_mode=project.access_mode,
+            baseline_role=project.baseline_role,
         )
-        viewers: set[UUID] = {project.owner_id}
-        blocked: set[UUID] = set()
-        group_ids: list[UUID] = []
-        for subject_type, subject_id, role in rows.all():
-            if subject_type == SubjectType.USER:
-                (blocked if role == ContentRole.BLOCKED else viewers).add(subject_id)
-            elif subject_type == SubjectType.GROUP and role != ContentRole.BLOCKED:
-                group_ids.append(subject_id)
-        if group_ids:
-            members = await self.session.execute(
-                select(GroupMember.user_id).where(
-                    GroupMember.group_id.in_(group_ids),
-                    GroupMember.is_active == True,  # noqa: E712
-                )
-            )
-            viewers.update(row[0] for row in members.all())
-        return list(viewers - blocked)
 
     async def update(
         self,
@@ -1345,6 +1334,13 @@ class TaskOperations(BaseContentOperations[Task]):
                 organization_id=organization_id,
                 content_urn=build_content_urn(self.content_type, task_id),
             )
+
+            from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+            await AttachmentOperations(self.session).purge_attachments_for_content(
+                organization_id, self.content_type, [task_id]
+            )
+
             await self.session.execute(delete(TaskActivity).where(TaskActivity.task_id == task_id))
             await self.session.delete(task)
         else:
@@ -2183,8 +2179,6 @@ async def _load_task(
 
 register_content_loader(ContentType.PROJECT, _load_project)
 register_content_loader(ContentType.TASK, _load_task)
-register_reference_state_loader(ContentType.PROJECT, model_reference_state_loader(Project))
-register_reference_state_loader(ContentType.TASK, model_reference_state_loader(Task))
 
 
 async def _project_attachment_cascade(

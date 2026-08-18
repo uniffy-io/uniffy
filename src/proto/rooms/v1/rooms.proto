@@ -81,6 +81,8 @@ message Room {
   google.protobuf.Timestamp created_at = 15;
   google.protobuf.Timestamp updated_at = 16;
   optional common.v1.ContentRole baseline_role = 17;
+  // Caller's effective role on this room.
+  common.v1.ContentRole user_role = 18;
 }
 
 // A booking record linking a room to a time slot

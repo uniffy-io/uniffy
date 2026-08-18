@@ -17,7 +17,7 @@ async def test_refresh_parent_folder_computes_metadata_once(session, env, monkey
     monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
     published: list[dict] = []
 
-    async def capture(organization_id, urn, changes, restricted=False):
+    async def capture(organization_id, urn, changes):
         published.append(dict(changes))
 
     monkeypatch.setattr("uniffy.domains.notes.operations.publish_mention_state", capture)

@@ -15,7 +15,7 @@ interface BoardColumnProps {
   selectedTaskIds: string[];
   onTaskClick: (taskId: string, e: React.MouseEvent) => void;
   onCheckboxChange: (taskId: string) => void;
-  onAddTask: () => void;
+  onAddTask?: () => void;
   projectSlug: string;
   reparentHintActive?: boolean;
   activeDragTaskId?: string | null;
@@ -104,7 +104,7 @@ export function BoardColumn({
         </div>
       </ScrollArea>
 
-      {showFooter && (
+      {showFooter && onAddTask && (
         <button
           type="button"
           onClick={onAddTask}

@@ -84,7 +84,7 @@ from uniffy.domains.agents.runtime.settings import (
 )
 from uniffy.domains.agents.runtime.usage import UsageOperations
 from uniffy.domains.agents.sessions.operations import SessionOperations
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.observability.metrics import (
     AGENT_RUN_ENQUEUE_FAILURES_TOTAL,
@@ -242,7 +242,7 @@ class RuntimeHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -334,7 +334,7 @@ class RuntimeHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -400,7 +400,7 @@ class RuntimeHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             message_id = UUID(request.message_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -513,7 +513,7 @@ class RuntimeHandlers:
 
         try:
             run_id = UUID(request.run_id)
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -570,7 +570,7 @@ class RuntimeHandlers:
         user_id = get_user_id_from_context(ctx)
         try:
             run_id = UUID(request.run_id)
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -686,7 +686,7 @@ class RuntimeHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -727,7 +727,7 @@ class RuntimeHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -774,7 +774,7 @@ class RuntimeHandlers:
         """Re-run a generated image with adjusted parameters."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:

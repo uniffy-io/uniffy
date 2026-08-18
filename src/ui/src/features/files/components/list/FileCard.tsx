@@ -38,6 +38,8 @@ export interface FileCardProps {
   isChecked: boolean;
   onToggleCheck: (id: string, shiftKey: boolean) => void;
   canShare?: boolean;
+  canDelete?: boolean;
+  canEdit?: boolean;
   trashMode?: boolean;
   onRestore?: (id: string) => void;
   canRestore?: boolean;
@@ -61,6 +63,8 @@ export function FileCard({
   isChecked,
   onToggleCheck,
   canShare = true,
+  canDelete = true,
+  canEdit = true,
   trashMode = false,
   onRestore,
   canRestore = true,
@@ -360,6 +364,8 @@ export function FileCard({
             onEditTags={handleEditTagsClick}
             onMove={() => onMove(file.id)}
             canShare={canShare}
+            canDelete={canDelete}
+            canEdit={canEdit}
             trashMode={trashMode}
             onRestore={onRestore ? () => onRestore(file.id) : undefined}
             canRestore={canRestore}
@@ -495,6 +501,8 @@ export function FileCard({
           onEditTags={handleEditTagsClick}
           onMove={() => onMove(file.id)}
           canShare={canShare}
+          canDelete={canDelete}
+          canEdit={canEdit}
           trashMode={trashMode}
           onRestore={onRestore ? () => onRestore(file.id) : undefined}
           canRestore={canRestore}

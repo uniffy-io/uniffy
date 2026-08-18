@@ -108,10 +108,6 @@ async def test_add_member_emits_member_added() -> None:
             "uniffy.domains.chat.channels.operations.ChatChannelOperations",
             chat_factory,
         ),
-        patch(
-            "uniffy.domains.organizations.operations._drop_user_perm_cache",
-            AsyncMock(return_value=None),
-        ),
     ):
         await ops.add_member(target, org_id, OrganizationRole.ADMIN, actor_user_id=actor)
 
@@ -152,10 +148,6 @@ async def test_update_member_role_emits_role_changed_with_previous_role() -> Non
             "get_membership",
             AsyncMock(return_value=admin_membership),
         ),
-        patch(
-            "uniffy.domains.organizations.operations._drop_user_perm_cache",
-            AsyncMock(return_value=None),
-        ),
     ):
         await ops.update_member_role(admin, org_id, target, OrganizationRole.ADMIN)
 
@@ -194,10 +186,6 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
             OrganizationOperations,
             "get_membership",
             AsyncMock(return_value=membership),
-        ),
-        patch(
-            "uniffy.domains.organizations.operations._drop_user_perm_cache",
-            AsyncMock(return_value=None),
         ),
     ):
         await ops.remove_member(admin, org_id, target)

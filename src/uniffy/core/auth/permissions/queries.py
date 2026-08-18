@@ -1,21 +1,16 @@
-"""SQLAlchemy WHERE-clause builders for content access filtering.
-
-Selects rows the user owns, has a non-BLOCKED ContentMember on (direct or
-via group), or that are OPEN_TO_ORG with a baseline; minus any content the
-user is BLOCKED on. Does NOT apply org/domain admin bypass - callers skip
-the filter entirely in that case. An actor without an active org membership
-gets a no-rows filter, mirroring the membership gate in ``effective_role``.
-"""
+"""SQLAlchemy WHERE-clause builders for content access filtering."""
 
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, case, false, func, or_, select
+from sqlalchemy import and_, case, false, func, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 from sqlalchemy.sql import Select
 
+from uniffy.core.auth.membership import get_active_membership
+from uniffy.core.auth.permissions.support import get_active_support_access
 from uniffy.core.models.permissions.org_permission_defaults import (
     OrganizationPermissionDefaults,
 )
@@ -28,25 +23,38 @@ class ContentAccessQuery:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self._active_member_cache: dict[tuple[UUID, UUID], bool] = {}
+        self._support_access_cache: dict[tuple[UUID, UUID], bool] = {}
 
-    async def _is_active_member(self, user_id: UUID, organization_id: UUID) -> bool:
-        from uniffy.core.models.login.organization_member import OrganizationMember
-
+    async def is_active_member(self, user_id: UUID, organization_id: UUID) -> bool:
         key = (user_id, organization_id)
         cached = self._active_member_cache.get(key)
         if cached is not None:
             return cached
 
-        result = await self.session.execute(
-            select(OrganizationMember.role).where(
-                OrganizationMember.user_id == user_id,
-                OrganizationMember.organization_id == organization_id,
-                OrganizationMember.is_active == True,  # noqa: E712
+        active = (
+            await get_active_membership(
+                self.session,
+                user_id,
+                organization_id,
             )
+            is not None
         )
-        active = result.scalar_one_or_none() is not None
         self._active_member_cache[key] = active
         return active
+
+    async def has_support_access(self, user_id: UUID, organization_id: UUID) -> bool:
+        key = (user_id, organization_id)
+        cached = self._support_access_cache.get(key)
+        if cached is not None:
+            return cached
+        active = await get_active_support_access(self.session, user_id, organization_id) is not None
+        self._support_access_cache[key] = active
+        return active
+
+    async def has_standard_access(self, user_id: UUID, organization_id: UUID) -> bool:
+        return await self.is_active_member(
+            user_id, organization_id
+        ) or await self.has_support_access(user_id, organization_id)
 
     async def build_accessible_filter(
         self,
@@ -68,20 +76,26 @@ class ContentAccessQuery:
         The caller is still responsible for scoping the outer query to
         ``organization_id`` on the content table.
         """
+        from uniffy.core.models.login.group import Group
         from uniffy.core.models.login.group_member import GroupMember
         from uniffy.core.models.permissions.content_member import ContentMember
 
         # Membership is resolved once per (user, org) per query object rather
         # than as a correlated EXISTS, which would ride along on every row of
         # every list query.
-        if not await self._is_active_member(user_id, organization_id):
-            return false()
+        if not await self.is_active_member(user_id, organization_id):
+            return true() if await self.has_support_access(user_id, organization_id) else false()
 
         now = datetime.now(UTC)
 
-        user_groups_subq = select(GroupMember.group_id).where(
-            GroupMember.user_id == user_id,
-            GroupMember.is_active == True,  # noqa: E712
+        user_groups_subq = (
+            select(GroupMember.group_id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .where(
+                GroupMember.user_id == user_id,
+                GroupMember.is_active.is_(True),
+                Group.organization_id == organization_id,
+            )
         )
 
         explicit_member_subq = select(ContentMember.content_id).where(
@@ -181,14 +195,20 @@ class ContentAccessQuery:
         onto ``build_accessible_filter`` (e.g. domain-membership bypasses) must
         AND this onto that branch.
         """
+        from uniffy.core.models.login.group import Group
         from uniffy.core.models.login.group_member import GroupMember
         from uniffy.core.models.permissions.content_member import ContentMember
 
         now = datetime.now(UTC)
 
-        user_groups_subq = select(GroupMember.group_id).where(
-            GroupMember.user_id == user_id,
-            GroupMember.is_active == True,  # noqa: E712
+        user_groups_subq = (
+            select(GroupMember.group_id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .where(
+                GroupMember.user_id == user_id,
+                GroupMember.is_active.is_(True),
+                Group.organization_id == organization_id,
+            )
         )
 
         blocked_subq = select(ContentMember.content_id).where(

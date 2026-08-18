@@ -332,12 +332,12 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
 
     if access_mode == AccessMode.OPEN_TO_ORG:
         from uniffy.core.converters.common_proto import content_type_to_proto
-        from uniffy.core.valkey import publish_content_access_changed
+        from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
 
         await publish_content_access_changed(
             content_type=content_type_to_proto(ContentType.FILE),
             content_id=file_id,
-            action="granted",
+            action=ContentAccessAction.GRANTED,
             organization_id=ctx.organization_id,
         )
 

@@ -8,6 +8,8 @@ Two layers are tested here:
    only exercise the validation branches.
 """
 
+from contextlib import contextmanager
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -237,11 +239,69 @@ class TestSetAccessModeRejections:
                 remove_members_on_narrow=False,
             )
 
+    async def test_rejects_open_to_org_for_calendar_event(self) -> None:
+        """Events are invite-only: OPEN_TO_ORG would leak an event to the whole org."""
+        ops = _make_ops()
+        content = _fake_content()
+        p1, p2 = self._patch_prereqs(ops, content)
+        with p1, p2, pytest.raises(ValidationError, match="invite-only"):
+            await ops.set_access_mode(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.CALENDAR_EVENT,
+                content_id=content.id,
+                new_access_mode=AccessMode.OPEN_TO_ORG,
+                new_baseline_role=ContentRole.VIEWER,
+            )
+
+    async def test_calendar_event_accepts_explicit_members(self) -> None:
+        """Explicit member grants stay allowed on events; only OPEN_TO_ORG is refused."""
+        ops = _make_ops()
+        content = _fake_content()
+        p1, p2 = self._patch_prereqs(ops, content)
+        with (
+            p1,
+            p2,
+            patch.object(ops, "_resolve_effective_mode", AsyncMock(side_effect=_Reached())),
+            pytest.raises(_Reached),
+        ):
+            await ops.set_access_mode(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.CALENDAR_EVENT,
+                content_id=content.id,
+                new_access_mode=AccessMode.EXPLICIT_MEMBERS,
+            )
+
+    async def test_calendar_event_accepts_owner_only(self) -> None:
+        ops = _make_ops()
+        content = _fake_content()
+
+        member_query_result = MagicMock()
+        member_query_result.scalars.return_value.all.return_value = []
+        ops.session.execute = AsyncMock(return_value=member_query_result)
+
+        p1, p2 = self._patch_prereqs(ops, content)
+        with (
+            p1,
+            p2,
+            patch.object(ops, "_resolve_effective_mode", AsyncMock(side_effect=_Reached())),
+            pytest.raises(_Reached),
+        ):
+            await ops.set_access_mode(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.CALENDAR_EVENT,
+                content_id=content.id,
+                new_access_mode=AccessMode.OWNER_ONLY,
+            )
+
     async def test_accepts_owner_only_with_remove_members_flag(self) -> None:
-        """remove_members_on_narrow=True allows the transition and deletes members."""
         ops = _make_ops()
         content = _fake_content()
         content.access_mode = AccessMode.EXPLICIT_MEMBERS
+        actor_user_id = generate_id()
+        organization_id = generate_id()
 
         existing_member = MagicMock()
         existing_member.subject_type = SubjectType.USER
@@ -253,6 +313,8 @@ class TestSetAccessModeRejections:
         ops.session.execute = AsyncMock(return_value=member_query_result)
 
         search_sync_mock = AsyncMock()
+        revoked_notification_mock = AsyncMock()
+        access_change_mock = AsyncMock()
 
         p1, p2 = self._patch_prereqs(ops, content)
         with (
@@ -260,10 +322,12 @@ class TestSetAccessModeRejections:
             p2,
             patch.object(ops, "_sync_search_sharing", search_sync_mock),
             patch.object(ops, "_sync_search_access_policy", AsyncMock()),
+            patch.object(ops, "_emit_revoked_notification", revoked_notification_mock),
+            patch.object(ops, "_publish_access_change", access_change_mock),
         ):
             await ops.set_access_mode(
-                actor_user_id=generate_id(),
-                organization_id=generate_id(),
+                actor_user_id=actor_user_id,
+                organization_id=organization_id,
                 content_type=ContentType.NOTE,
                 content_id=content.id,
                 new_access_mode=AccessMode.OWNER_ONLY,
@@ -271,6 +335,22 @@ class TestSetAccessModeRejections:
                 remove_members_on_narrow=True,
             )
         ops.session.delete.assert_called_once_with(existing_member)
+        revoked_notification_mock.assert_awaited_once_with(
+            organization_id=organization_id,
+            actor_user_id=actor_user_id,
+            content_type=ContentType.NOTE,
+            content_id=content.id,
+            subject_type=SubjectType.USER,
+            subject_id=existing_member.subject_id,
+        )
+        access_change_mock.assert_awaited_once_with(
+            organization_id=organization_id,
+            content_type=ContentType.NOTE,
+            content_id=content.id,
+            subject_type=SubjectType.USER,
+            subject_id=existing_member.subject_id,
+            action="revoked",
+        )
 
 
 class TestTransferOwnershipRejections:
@@ -346,8 +426,6 @@ class TestTransferOwnershipRejections:
                 patch.object(ops, "_emit_granted_notification", AsyncMock()),
                 patch.object(members_module, "record_ownership_transferred", AsyncMock()),
                 patch.object(members_module, "record_member_added", AsyncMock()),
-                patch.object(members_module, "invalidate_perm_role", AsyncMock()),
-                patch.object(members_module, "invalidate_visible_sets_for_user", AsyncMock()),
                 patch.object(members_module, "publish_perm_change", AsyncMock()),
             ):
                 await ops.transfer_ownership(
@@ -393,8 +471,6 @@ class TestTransferOwnershipRejections:
                 patch.object(ops, "_emit_granted_notification", AsyncMock()),
                 patch.object(members_module, "record_ownership_transferred", AsyncMock()),
                 patch.object(members_module, "record_member_added", AsyncMock()),
-                patch.object(members_module, "invalidate_perm_role", AsyncMock()),
-                patch.object(members_module, "invalidate_visible_sets_for_user", AsyncMock()),
                 patch.object(members_module, "publish_perm_change", AsyncMock()),
             ):
                 await ops.transfer_ownership(
@@ -414,16 +490,9 @@ class _Reached(Exception):
     """Sentinel raised by the first collaborator after a passed gate."""
 
 
-def _cache_passthrough():
-    """Route the perm-cache wrappers straight to their loaders (no Valkey)."""
-
-    async def _pass(key, loader, ttl=None, *, tags=None):
-        return await loader()
-
-    return patch(
-        "uniffy.core.auth.cache.cache_get_or_set_locked",
-        AsyncMock(side_effect=_pass),
-    )
+@contextmanager
+def _authorization_context():
+    yield
 
 
 def _dispatch_session(*, org_role=None, admin_domains: frozenset = frozenset()):
@@ -443,7 +512,8 @@ def _dispatch_session(*, org_role=None, admin_domains: frozenset = frozenset()):
         result = MagicMock()
         entity = stmt.column_descriptions[0].get("entity")
         if entity is OrganizationMember:
-            result.scalar_one_or_none = MagicMock(return_value=org_role)
+            membership = SimpleNamespace(role=org_role) if org_role is not None else None
+            result.scalar_one_or_none = MagicMock(return_value=membership)
         elif entity is DomainAdmin:
             domain = _queried_domain(stmt)
             hit = generate_id() if domain in admin_domains else None
@@ -513,7 +583,7 @@ class TestManageOverrides:
         content = self._agent_content()
         with (
             patch.object(ops, "_load_content", AsyncMock(return_value=content)),
-            _cache_passthrough(),
+            _authorization_context(),
             pytest.raises(PermissionDeniedError),
         ):
             await ops.set_access_mode(
@@ -530,7 +600,7 @@ class TestManageOverrides:
         with (
             patch.object(ops, "_load_content", AsyncMock(return_value=content)),
             patch.object(ops, "_get_existing_member", AsyncMock(side_effect=_Reached())),
-            _cache_passthrough(),
+            _authorization_context(),
             pytest.raises(_Reached),
         ):
             await ops.add_member(
@@ -554,7 +624,7 @@ class TestManageOverrides:
         with (
             patch.object(ops, "_load_content", AsyncMock(return_value=content)),
             patch.object(ops, "_resolve_effective_mode", AsyncMock(side_effect=_Reached())),
-            _cache_passthrough(),
+            _authorization_context(),
             pytest.raises(_Reached),
         ):
             await ops.set_access_mode(
@@ -572,7 +642,7 @@ class TestManageOverrides:
         content = self._agent_content()
         with (
             patch.object(ops, "_load_content", AsyncMock(return_value=content)),
-            _cache_passthrough(),
+            _authorization_context(),
             pytest.raises(PermissionDeniedError),
         ):
             await ops.add_member(
@@ -597,7 +667,7 @@ class TestManageOverrides:
         content = self._agent_content()
         with (
             patch.object(ops, "_load_content", AsyncMock(return_value=content)),
-            _cache_passthrough(),
+            _authorization_context(),
             pytest.raises(PermissionDeniedError),
         ):
             await ops.add_member(
@@ -619,7 +689,7 @@ class TestManageOverrides:
         content = self._agent_content()
         with (
             patch.object(ops, "_load_content", AsyncMock(return_value=content)),
-            _cache_passthrough(),
+            _authorization_context(),
             pytest.raises(PermissionDeniedError),
         ):
             await ops.list_members(
@@ -640,7 +710,7 @@ class TestManageOverrides:
         content = self._agent_content()
         with (
             patch.object(ops, "_load_content", AsyncMock(return_value=content)),
-            _cache_passthrough(),
+            _authorization_context(),
             pytest.raises(PermissionDeniedError),
         ):
             await ops.transfer_ownership(

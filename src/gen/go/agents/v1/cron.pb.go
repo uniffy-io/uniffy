@@ -51,7 +51,9 @@ type CronTaskInfo struct {
 	// Agent name for display purposes
 	AgentName *string `protobuf:"bytes,23,opt,name=agent_name,json=agentName,proto3,oneof" json:"agent_name,omitempty"`
 	// Baseline role granted by access mode (when applicable)
-	BaselineRole  *v1.ContentRole `protobuf:"varint,24,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	BaselineRole *v1.ContentRole `protobuf:"varint,24,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	// Caller's effective role on this task.
+	UserRole      v1.ContentRole `protobuf:"varint,25,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -250,6 +252,13 @@ func (x *CronTaskInfo) GetAgentName() string {
 func (x *CronTaskInfo) GetBaselineRole() v1.ContentRole {
 	if x != nil && x.BaselineRole != nil {
 		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *CronTaskInfo) GetUserRole() v1.ContentRole {
+	if x != nil {
+		return x.UserRole
 	}
 	return v1.ContentRole(0)
 }
@@ -1194,7 +1203,7 @@ var File_agents_v1_cron_proto protoreflect.FileDescriptor
 
 const file_agents_v1_cron_proto_rawDesc = "" +
 	"\n" +
-	"\x14agents/v1/cron.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x82\t\n" +
+	"\x14agents/v1/cron.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb7\t\n" +
 	"\fCronTaskInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -1226,7 +1235,8 @@ const file_agents_v1_cron_proto_rawDesc = "" +
 	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampH\x05R\tupdatedAt\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"agent_name\x18\x17 \x01(\tH\x06R\tagentName\x88\x01\x01\x12@\n" +
-	"\rbaseline_role\x18\x18 \x01(\x0e2\x16.common.v1.ContentRoleH\aR\fbaselineRole\x88\x01\x01B\r\n" +
+	"\rbaseline_role\x18\x18 \x01(\x0e2\x16.common.v1.ContentRoleH\aR\fbaselineRole\x88\x01\x01\x123\n" +
+	"\tuser_role\x18\x19 \x01(\x0e2\x16.common.v1.ContentRoleR\buserRoleB\r\n" +
 	"\v_session_idB\x0e\n" +
 	"\f_last_run_atB\x0e\n" +
 	"\f_next_run_atB\x12\n" +
@@ -1380,40 +1390,41 @@ var file_agents_v1_cron_proto_depIdxs = []int32{
 	16, // 3: agents.v1.CronTaskInfo.created_at:type_name -> google.protobuf.Timestamp
 	16, // 4: agents.v1.CronTaskInfo.updated_at:type_name -> google.protobuf.Timestamp
 	18, // 5: agents.v1.CronTaskInfo.baseline_role:type_name -> common.v1.ContentRole
-	16, // 6: agents.v1.CronRunLogInfo.started_at:type_name -> google.protobuf.Timestamp
-	16, // 7: agents.v1.CronRunLogInfo.completed_at:type_name -> google.protobuf.Timestamp
-	17, // 8: agents.v1.CreateCronTaskRequest.access_mode:type_name -> common.v1.AccessMode
-	18, // 9: agents.v1.CreateCronTaskRequest.baseline_role:type_name -> common.v1.ContentRole
-	0,  // 10: agents.v1.CreateCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
-	0,  // 11: agents.v1.GetCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
-	0,  // 12: agents.v1.UpdateCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
-	19, // 13: agents.v1.ListCronTasksRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,  // 14: agents.v1.ListCronTasksResponse.tasks:type_name -> agents.v1.CronTaskInfo
-	20, // 15: agents.v1.ListCronTasksResponse.pagination:type_name -> common.v1.PaginationResponse
-	19, // 16: agents.v1.ListCronRunLogsRequest.pagination:type_name -> common.v1.PaginationRequest
-	1,  // 17: agents.v1.ListCronRunLogsResponse.logs:type_name -> agents.v1.CronRunLogInfo
-	20, // 18: agents.v1.ListCronRunLogsResponse.pagination:type_name -> common.v1.PaginationResponse
-	1,  // 19: agents.v1.TriggerCronTaskResponse.run_log:type_name -> agents.v1.CronRunLogInfo
-	0,  // 20: agents.v1.TriggerCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
-	2,  // 21: agents.v1.CronService.CreateCronTask:input_type -> agents.v1.CreateCronTaskRequest
-	6,  // 22: agents.v1.CronService.GetCronTask:input_type -> agents.v1.GetCronTaskRequest
-	7,  // 23: agents.v1.CronService.ListCronTasks:input_type -> agents.v1.ListCronTasksRequest
-	9,  // 24: agents.v1.CronService.UpdateCronTask:input_type -> agents.v1.UpdateCronTaskRequest
-	10, // 25: agents.v1.CronService.DeleteCronTask:input_type -> agents.v1.DeleteCronTaskRequest
-	12, // 26: agents.v1.CronService.ListCronRunLogs:input_type -> agents.v1.ListCronRunLogsRequest
-	14, // 27: agents.v1.CronService.TriggerCronTask:input_type -> agents.v1.TriggerCronTaskRequest
-	3,  // 28: agents.v1.CronService.CreateCronTask:output_type -> agents.v1.CreateCronTaskResponse
-	4,  // 29: agents.v1.CronService.GetCronTask:output_type -> agents.v1.GetCronTaskResponse
-	8,  // 30: agents.v1.CronService.ListCronTasks:output_type -> agents.v1.ListCronTasksResponse
-	5,  // 31: agents.v1.CronService.UpdateCronTask:output_type -> agents.v1.UpdateCronTaskResponse
-	11, // 32: agents.v1.CronService.DeleteCronTask:output_type -> agents.v1.DeleteCronTaskResponse
-	13, // 33: agents.v1.CronService.ListCronRunLogs:output_type -> agents.v1.ListCronRunLogsResponse
-	15, // 34: agents.v1.CronService.TriggerCronTask:output_type -> agents.v1.TriggerCronTaskResponse
-	28, // [28:35] is the sub-list for method output_type
-	21, // [21:28] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	18, // 6: agents.v1.CronTaskInfo.user_role:type_name -> common.v1.ContentRole
+	16, // 7: agents.v1.CronRunLogInfo.started_at:type_name -> google.protobuf.Timestamp
+	16, // 8: agents.v1.CronRunLogInfo.completed_at:type_name -> google.protobuf.Timestamp
+	17, // 9: agents.v1.CreateCronTaskRequest.access_mode:type_name -> common.v1.AccessMode
+	18, // 10: agents.v1.CreateCronTaskRequest.baseline_role:type_name -> common.v1.ContentRole
+	0,  // 11: agents.v1.CreateCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	0,  // 12: agents.v1.GetCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	0,  // 13: agents.v1.UpdateCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	19, // 14: agents.v1.ListCronTasksRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,  // 15: agents.v1.ListCronTasksResponse.tasks:type_name -> agents.v1.CronTaskInfo
+	20, // 16: agents.v1.ListCronTasksResponse.pagination:type_name -> common.v1.PaginationResponse
+	19, // 17: agents.v1.ListCronRunLogsRequest.pagination:type_name -> common.v1.PaginationRequest
+	1,  // 18: agents.v1.ListCronRunLogsResponse.logs:type_name -> agents.v1.CronRunLogInfo
+	20, // 19: agents.v1.ListCronRunLogsResponse.pagination:type_name -> common.v1.PaginationResponse
+	1,  // 20: agents.v1.TriggerCronTaskResponse.run_log:type_name -> agents.v1.CronRunLogInfo
+	0,  // 21: agents.v1.TriggerCronTaskResponse.task:type_name -> agents.v1.CronTaskInfo
+	2,  // 22: agents.v1.CronService.CreateCronTask:input_type -> agents.v1.CreateCronTaskRequest
+	6,  // 23: agents.v1.CronService.GetCronTask:input_type -> agents.v1.GetCronTaskRequest
+	7,  // 24: agents.v1.CronService.ListCronTasks:input_type -> agents.v1.ListCronTasksRequest
+	9,  // 25: agents.v1.CronService.UpdateCronTask:input_type -> agents.v1.UpdateCronTaskRequest
+	10, // 26: agents.v1.CronService.DeleteCronTask:input_type -> agents.v1.DeleteCronTaskRequest
+	12, // 27: agents.v1.CronService.ListCronRunLogs:input_type -> agents.v1.ListCronRunLogsRequest
+	14, // 28: agents.v1.CronService.TriggerCronTask:input_type -> agents.v1.TriggerCronTaskRequest
+	3,  // 29: agents.v1.CronService.CreateCronTask:output_type -> agents.v1.CreateCronTaskResponse
+	4,  // 30: agents.v1.CronService.GetCronTask:output_type -> agents.v1.GetCronTaskResponse
+	8,  // 31: agents.v1.CronService.ListCronTasks:output_type -> agents.v1.ListCronTasksResponse
+	5,  // 32: agents.v1.CronService.UpdateCronTask:output_type -> agents.v1.UpdateCronTaskResponse
+	11, // 33: agents.v1.CronService.DeleteCronTask:output_type -> agents.v1.DeleteCronTaskResponse
+	13, // 34: agents.v1.CronService.ListCronRunLogs:output_type -> agents.v1.ListCronRunLogsResponse
+	15, // 35: agents.v1.CronService.TriggerCronTask:output_type -> agents.v1.TriggerCronTaskResponse
+	29, // [29:36] is the sub-list for method output_type
+	22, // [22:29] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_cron_proto_init() }

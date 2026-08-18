@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import String, cast, func, or_, select, text
+from sqlalchemy import String, and_, cast, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -17,16 +17,13 @@ from uniffy.core.auth.permissions import (
     modes_at_least_as_open,
     resolve_access_policy,
     resolve_effective_policy,
+    role_can_delete,
     role_can_view,
 )
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
@@ -47,7 +44,7 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
-from uniffy.core.valkey import publish_content_access_changed
+from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.files.quota_operations import QuotaOperations
 from uniffy.domains.files.version_policy import (
@@ -122,6 +119,12 @@ class FileOperations(BaseContentOperations[File]):
         """
         role = await super()._resolve_role(user_id, organization_id, content)
         if role is not None and role_can_view(role):
+            return role
+
+        # BLOCKED on the file itself beats the parent-derived grant.
+        if await self.permission_checker.is_blocked(
+            user_id, organization_id, self.content_type, content.id
+        ):
             return role
 
         from uniffy.domains.files.attachments.operations import AttachmentOperations
@@ -220,6 +223,7 @@ class FileOperations(BaseContentOperations[File]):
         uploader, matching ``move_file``'s contract; ``complete_upload`` copies
         ``folder_id`` onto the File verbatim, so this is the only gate.
         """
+        folder = None
         if folder_id is not None:
             folder_ops = FolderOperations(self.session)
             folder = await folder_ops.get_by_id(folder_id, organization_id)
@@ -227,9 +231,16 @@ class FileOperations(BaseContentOperations[File]):
                 raise NotFoundError("Folder", folder_id)
             await folder_ops.require_view(user_id, organization_id, folder)
 
-        access_mode, baseline_role = await self._resolve_access_policy(
-            organization_id, access_mode, baseline_role
-        )
+        from uniffy.domains.files.attachments.operations import is_attachment_staging_folder
+
+        if is_attachment_staging_folder(folder):
+            # Staged attachment uploads never inherit the org FILE default:
+            # they stay private until attach_file derives access from a parent.
+            access_mode, baseline_role = AccessMode.OWNER_ONLY, None
+        else:
+            access_mode, baseline_role = await self._resolve_access_policy(
+                organization_id, access_mode, baseline_role
+            )
 
         is_streaming = total_size <= 0
 
@@ -336,7 +347,6 @@ class FileOperations(BaseContentOperations[File]):
         self,
         upload_id: UUID,
         user_id: UUID,
-        group_ids: list[UUID] | None = None,
         tag_ids: list[UUID] | None = None,
         version_of_file_id: UUID | None = None,
     ) -> File:
@@ -454,21 +464,6 @@ class FileOperations(BaseContentOperations[File]):
 
         file.current_version_id = version.id
 
-        # Optional convenience; canonical path is MembersService.AddMember.
-        if group_ids:
-            for gid in group_ids:
-                self.session.add(
-                    ContentMember(
-                        organization_id=upload.organization_id,
-                        content_type=ContentType.FILE,
-                        content_id=file.id,
-                        subject_type=SubjectType.GROUP,
-                        subject_id=gid,
-                        role=ContentRole.VIEWER,
-                        added_by_user_id=user_id,
-                    )
-                )
-
         upload.status = UploadStatus.COMPLETED
         upload.updated_at = datetime.now(UTC)
 
@@ -512,14 +507,25 @@ class FileOperations(BaseContentOperations[File]):
                 "Failed to increment storage usage", file_id=str(file.id)
             )
 
-        await self._index_for_search(
-            model=file,
-            skip_member_lookup=not group_ids,
-        )
-        await self.session.commit()
+        from uniffy.domains.files.attachments.operations import is_attachment_staging_folder
 
-        effective_mode, _ = await self._effective_policy(file.organization_id, file)
-        await self._broadcast_open_to_org_create(file.organization_id, file.id, effective_mode)
+        staging_folder = None
+        if file.folder_id is not None:
+            staging_folder = (
+                await self.session.execute(select(Folder).where(Folder.id == file.folder_id))
+            ).scalar_one_or_none()
+
+        # Staged attachment uploads stay out of search/mentions until an
+        # attach links them; attach_file indexes the org-wide ones itself.
+        if not is_attachment_staging_folder(staging_folder):
+            await self._index_for_search(
+                model=file,
+                skip_member_lookup=True,
+            )
+            await self.session.commit()
+
+            effective_mode, _ = await self._effective_policy(file.organization_id, file)
+            await self._broadcast_open_to_org_create(file.organization_id, file.id, effective_mode)
 
         await FolderOperations(self.session).refresh_folder_stats(
             file.folder_id, file.organization_id
@@ -1111,20 +1117,40 @@ class FileOperations(BaseContentOperations[File]):
         organization_id: UUID,
     ) -> tuple[list[File], list[Folder]]:
         """Flat (files, folders) of soft-deleted items owned by the user."""
+        file_access = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.FILE,
+            content_id_column=File.id,
+            owner_id_column=File.owner_id,
+            access_mode_column=File.access_mode,
+            baseline_role_column=File.baseline_role,
+        )
         files_result = await self.session.execute(
             select(File).where(
                 File.organization_id == organization_id,
                 File.owner_id == user_id,
                 File.is_deleted == True,  # noqa: E712
+                file_access,
             )
         )
         files = list(files_result.scalars().all())
 
+        folder_access = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.FOLDER,
+            content_id_column=Folder.id,
+            owner_id_column=Folder.owner_id,
+            access_mode_column=Folder.access_mode,
+            baseline_role_column=Folder.baseline_role,
+        )
         folders_result = await self.session.execute(
             select(Folder).where(
                 Folder.organization_id == organization_id,
                 Folder.owner_id == user_id,
                 Folder.is_deleted == True,  # noqa: E712
+                folder_access,
             )
         )
         folders = list(folders_result.scalars().all())
@@ -1150,49 +1176,23 @@ class FileOperations(BaseContentOperations[File]):
         """List files with filters; folder_id 'all' means cross-folder; tag_ids AND-joined."""
         query = select(File).where(File.organization_id == organization_id)
 
+        access_filter = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=File.id,
+            owner_id_column=File.owner_id,
+            access_mode_column=File.access_mode,
+            baseline_role_column=File.baseline_role,
+        )
+        query = query.where(access_filter)
         if personal_only:
             query = query.where(File.owner_id == user_id)
         elif shared_only:
-            from sqlalchemy import and_
-
-            from uniffy.core.models.login.group_member import GroupMember
-
-            now = datetime.now(UTC)
-            user_groups_subq = select(GroupMember.group_id).where(
-                GroupMember.user_id == user_id,
-                GroupMember.is_active == True,  # noqa: E712
+            query = query.where(
+                File.owner_id != user_id,
+                File.id.in_(self._explicit_grant_subquery(user_id, organization_id)),
             )
-            shared_subq = select(ContentMember.content_id).where(
-                ContentMember.organization_id == organization_id,
-                ContentMember.content_type == self.content_type,
-                ContentMember.role != ContentRole.BLOCKED,
-                or_(
-                    ContentMember.expires_at.is_(None),
-                    ContentMember.expires_at > now,
-                ),
-                or_(
-                    and_(
-                        ContentMember.subject_type == SubjectType.USER,
-                        ContentMember.subject_id == user_id,
-                    ),
-                    and_(
-                        ContentMember.subject_type == SubjectType.GROUP,
-                        ContentMember.subject_id.in_(user_groups_subq),
-                    ),
-                ),
-            )
-            query = query.where(File.owner_id != user_id, File.id.in_(shared_subq))
-        else:
-            access_filter = await self.access_query.build_accessible_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=File.id,
-                owner_id_column=File.owner_id,
-                access_mode_column=File.access_mode,
-                baseline_role_column=File.baseline_role,
-            )
-            query = query.where(access_filter)
 
         if group_id is not None:
             now = datetime.now(UTC)
@@ -1228,10 +1228,16 @@ class FileOperations(BaseContentOperations[File]):
                 Folder.organization_id == organization_id,
                 folder_access_filter,
             )
+            # The folder gate hides org-baseline files that merely sit inside
+            # a private folder. Ownership and explicit grants pierce it: a file
+            # shared directly with this user must be listable even when its
+            # parent folder is not - the folder and siblings stay hidden.
             query = query.where(
                 or_(
                     File.folder_id.is_(None),
                     File.folder_id.in_(accessible_folders_query),
+                    File.owner_id == user_id,
+                    File.id.in_(self._explicit_grant_subquery(user_id, organization_id)),
                 )
             )
 
@@ -1260,6 +1266,41 @@ class FileOperations(BaseContentOperations[File]):
         files = list(result.scalars().all())
 
         return files, total
+
+    def _explicit_grant_subquery(self, user_id: UUID, organization_id: UUID):
+        """File ids carrying a live non-BLOCKED direct or group grant for the user."""
+        from uniffy.core.models.login.group import Group
+        from uniffy.core.models.login.group_member import GroupMember
+
+        now = datetime.now(UTC)
+        user_groups_subq = (
+            select(GroupMember.group_id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .where(
+                GroupMember.user_id == user_id,
+                GroupMember.is_active.is_(True),
+                Group.organization_id == organization_id,
+            )
+        )
+        return select(ContentMember.content_id).where(
+            ContentMember.organization_id == organization_id,
+            ContentMember.content_type == self.content_type,
+            ContentMember.role != ContentRole.BLOCKED,
+            or_(
+                ContentMember.expires_at.is_(None),
+                ContentMember.expires_at > now,
+            ),
+            or_(
+                and_(
+                    ContentMember.subject_type == SubjectType.USER,
+                    ContentMember.subject_id == user_id,
+                ),
+                and_(
+                    ContentMember.subject_type == SubjectType.GROUP,
+                    ContentMember.subject_id.in_(user_groups_subq),
+                ),
+            ),
+        )
 
     def _tag_filter_subquery(self, tag_ids: list[UUID]):
         """Subquery: file ids that carry every tag id in ``tag_ids``.
@@ -1296,11 +1337,21 @@ class FileOperations(BaseContentOperations[File]):
         """Permanently delete every trashed file and folder; returns
         (files_deleted, folders_deleted).
         """
+        file_access = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.FILE,
+            content_id_column=File.id,
+            owner_id_column=File.owner_id,
+            access_mode_column=File.access_mode,
+            baseline_role_column=File.baseline_role,
+        )
         files_result = await self.session.execute(
             select(File).where(
                 File.organization_id == organization_id,
                 File.is_deleted == True,  # noqa: E712
-                File.owner_id == user_id,  # Only user's own files
+                File.owner_id == user_id,
+                file_access,
             )
         )
         files = list(files_result.scalars().all())
@@ -1341,11 +1392,21 @@ class FileOperations(BaseContentOperations[File]):
             await self.session.delete(file)
 
         # Get all deleted folders
+        folder_access = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.FOLDER,
+            content_id_column=Folder.id,
+            owner_id_column=Folder.owner_id,
+            access_mode_column=Folder.access_mode,
+            baseline_role_column=Folder.baseline_role,
+        )
         folders_result = await self.session.execute(
             select(Folder).where(
                 Folder.organization_id == organization_id,
                 Folder.is_deleted == True,  # noqa: E712
                 Folder.owner_id == user_id,
+                folder_access,
             )
         )
         folders = list(folders_result.scalars().all())
@@ -1419,14 +1480,20 @@ class FolderOperations:
             effective_policy = await self._effective_policy(folder.organization_id, folder)
         effective_mode, effective_baseline = effective_policy
 
+        now = datetime.now(UTC)
         members = await self.session.execute(
             select(
                 ContentMember.subject_type,
                 ContentMember.subject_id,
                 ContentMember.role,
             ).where(
+                ContentMember.organization_id == folder.organization_id,
                 ContentMember.content_type == ContentType.FOLDER,
                 ContentMember.content_id == folder.id,
+                or_(
+                    ContentMember.expires_at.is_(None),
+                    ContentMember.expires_at > now,
+                ),
             )
         )
         shared_users: list[UUID] = []
@@ -1555,7 +1622,6 @@ class FolderOperations:
                 organization_id=organization_id,
                 urn=build_content_urn(ContentType.FOLDER, folder.id),
                 changes={"title": folder.name, **metadata},
-                restricted=effective_policy[0] != AccessMode.OPEN_TO_ORG,
             )
         except Exception:
             logger.opt(exception=True).warning(f"Failed to refresh folder stats for {folder_id}")
@@ -1570,8 +1636,6 @@ class FolderOperations:
             logger.warning(f"Search remove failed for folder {folder_id}")
 
     async def _role_for(self, user_id: UUID, organization_id: UUID, folder: Folder):
-        if folder.owner_id == user_id:
-            return ContentRole.OWNER
         return await self.permission_checker.effective_role(
             user_id=user_id,
             organization_id=organization_id,
@@ -1591,6 +1655,10 @@ class FolderOperations:
 
         if not role_can_edit(await self._role_for(user_id, organization_id, folder)):
             raise PermissionDeniedError("edit", "folder")
+
+    async def require_delete(self, user_id: UUID, organization_id: UUID, folder: Folder) -> None:
+        if not role_can_delete(await self._role_for(user_id, organization_id, folder)):
+            raise PermissionDeniedError("delete", "folder")
 
     async def _require_moveable_under(
         self,
@@ -1660,7 +1728,7 @@ class FolderOperations:
             await publish_content_access_changed(
                 content_type=content_type_to_proto(ContentType.FOLDER),
                 content_id=folder.id,
-                action="granted",
+                action=ContentAccessAction.GRANTED,
                 organization_id=organization_id,
             )
 
@@ -1811,8 +1879,7 @@ class FolderOperations:
         if folder.is_system:
             raise PermissionDeniedError("delete_system", "folder")
 
-        if folder.owner_id != user_id:
-            raise PermissionDeniedError("delete", "folder")
+        await self.require_delete(user_id, organization_id, folder)
 
         files_deleted = 0
         folders_deleted = 0
@@ -1823,8 +1890,6 @@ class FolderOperations:
             )
 
         parent_id = folder.parent_id
-        # Resolved before the delete: the row is unreadable after the commit.
-        effective_mode, _ = await self._effective_policy(organization_id, folder)
 
         if permanent:
             uploads_result = await self.session.execute(
@@ -1847,7 +1912,6 @@ class FolderOperations:
                 organization_id=organization_id,
                 urn=build_content_urn(ContentType.FOLDER, folder_id),
                 changes={"urn_status": "DELETED"},
-                restricted=effective_mode != AccessMode.OPEN_TO_ORG,
             )
         except Exception:
             logger.opt(exception=True).warning(f"Failed to publish folder tombstone for {folder_id}")
@@ -1861,12 +1925,7 @@ class FolderOperations:
         organization_id: UUID,
         folder_id: UUID,
     ) -> Folder:
-        """
-        Restore a soft-deleted folder (and all of its contents) back to active.
-
-        Only the owner may restore. Cascades to every file and subfolder that
-        was soft-deleted alongside it.
-        """
+        """Restore a deleted folder and the actor-owned deleted descendants."""
         folder = await self.session.execute(
             select(Folder).where(
                 Folder.id == folder_id,
@@ -1877,8 +1936,7 @@ class FolderOperations:
         if not folder_obj:
             raise NotFoundError("Folder", str(folder_id))
 
-        if folder_obj.owner_id != user_id:
-            raise PermissionDeniedError("restore", "folder")
+        await self.require_edit(user_id, organization_id, folder_obj)
 
         folder_obj.is_deleted = False
         folder_obj.deleted_at = None
@@ -1924,12 +1982,22 @@ class FolderOperations:
         restored_files: list[File] = []
         restored_folders: list[Folder] = []
 
+        file_access = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.FILE,
+            content_id_column=File.id,
+            owner_id_column=File.owner_id,
+            access_mode_column=File.access_mode,
+            baseline_role_column=File.baseline_role,
+        )
         files_result = await self.session.execute(
             select(File).where(
                 File.folder_id == folder_id,
                 File.organization_id == organization_id,
                 File.owner_id == user_id,
                 File.is_deleted == True,  # noqa: E712
+                file_access,
             )
         )
         for file in files_result.scalars().all():
@@ -1937,12 +2005,22 @@ class FolderOperations:
             file.deleted_at = None
             restored_files.append(file)
 
+        folder_access = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.FOLDER,
+            content_id_column=Folder.id,
+            owner_id_column=Folder.owner_id,
+            access_mode_column=Folder.access_mode,
+            baseline_role_column=Folder.baseline_role,
+        )
         folders_result = await self.session.execute(
             select(Folder).where(
                 Folder.parent_id == folder_id,
                 Folder.organization_id == organization_id,
                 Folder.owner_id == user_id,
                 Folder.is_deleted == True,  # noqa: E712
+                folder_access,
             )
         )
         for child in folders_result.scalars().all():
@@ -1982,10 +2060,9 @@ class FolderOperations:
         )
         files = list(files_result.scalars().all())
 
-        # SECURITY CHECK: Verify ownership of each file before deletion
+        file_ops = FileOperations(self.session)
         for file in files:
-            if file.owner_id != user_id:
-                raise PermissionDeniedError("delete_nested", "file")
+            await file_ops._require_delete(user_id, organization_id, file)
 
         # Safe to delete all files (ownership verified)
         if permanent and files:
@@ -2044,10 +2121,8 @@ class FolderOperations:
         )
         folders = list(folders_result.scalars().all())
 
-        # SECURITY CHECK: Verify ownership of each folder before deletion
         for child_folder in folders:
-            if child_folder.owner_id != user_id:
-                raise PermissionDeniedError("delete_nested", "folder")
+            await self.require_delete(user_id, organization_id, child_folder)
 
         # Clean up multipart uploads referencing these folders before deleting them
         if permanent and folders:
@@ -2242,19 +2317,18 @@ class FolderOperations:
         """
         query = select(Folder).where(Folder.organization_id == organization_id)
 
+        access_filter = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=Folder.id,
+            owner_id_column=Folder.owner_id,
+            access_mode_column=Folder.access_mode,
+            baseline_role_column=Folder.baseline_role,
+        )
+        query = query.where(access_filter)
         if personal_only:
             query = query.where(Folder.owner_id == user_id)
-        else:
-            access_filter = await self.access_query.build_accessible_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=Folder.id,
-                owner_id_column=Folder.owner_id,
-                access_mode_column=Folder.access_mode,
-                baseline_role_column=Folder.baseline_role,
-            )
-            query = query.where(access_filter)
 
         if parent_id is None:
             query = query.where(Folder.parent_id.is_(None))
@@ -2272,6 +2346,32 @@ class FolderOperations:
             query = query.offset(offset).limit(limit)
 
         result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def list_accessible_folders(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> list[Folder]:
+        """Every live folder the user can access, regardless of nesting."""
+        access_filter = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=Folder.id,
+            owner_id_column=Folder.owner_id,
+            access_mode_column=Folder.access_mode,
+            baseline_role_column=Folder.baseline_role,
+        )
+        result = await self.session.execute(
+            select(Folder)
+            .where(
+                Folder.organization_id == organization_id,
+                Folder.is_deleted == False,  # noqa: E712
+                access_filter,
+            )
+            .order_by(Folder.name.asc())
+        )
         return list(result.scalars().all())
 
 
@@ -2310,5 +2410,3 @@ async def _load_folder(
 
 register_content_loader(ContentType.FILE, _load_file)
 register_content_loader(ContentType.FOLDER, _load_folder)
-register_reference_state_loader(ContentType.FILE, model_reference_state_loader(File))
-register_reference_state_loader(ContentType.FOLDER, model_reference_state_loader(Folder))

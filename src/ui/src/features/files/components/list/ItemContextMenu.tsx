@@ -24,6 +24,8 @@ interface ItemContextMenuProps {
   onEditTags?: () => void;
   onMove?: () => void;
   canShare?: boolean;
+  canDelete?: boolean;
+  canEdit?: boolean;
   /** In trash mode, only Restore + Delete Permanently are shown. */
   trashMode?: boolean;
   onRestore?: () => void;
@@ -49,6 +51,8 @@ export function ItemContextMenu({
   onEditTags,
   onMove,
   canShare = true,
+  canDelete = true,
+  canEdit = true,
   trashMode = false,
   onRestore,
   canRestore = true,
@@ -137,13 +141,15 @@ export function ItemContextMenu({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="py-1">
-        <button
-          onClick={(e) => handleAction(onRename, e)}
-          className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-        >
-          <PencilSimple size={16} className="text-primary" />
-          Rename
-        </button>
+        {canEdit && (
+          <button
+            onClick={(e) => handleAction(onRename, e)}
+            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+          >
+            <PencilSimple size={16} className="text-primary" />
+            Rename
+          </button>
+        )}
 
         {onBookmark && (
           <button
@@ -160,7 +166,7 @@ export function ItemContextMenu({
           </button>
         )}
 
-        {onEditTags && (
+        {onEditTags && canEdit && (
           <button
             onClick={(e) => handleAction(onEditTags, e)}
             className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
@@ -170,7 +176,7 @@ export function ItemContextMenu({
           </button>
         )}
 
-        {onMove && (
+        {onMove && canEdit && (
           <button
             onClick={(e) => handleAction(onMove, e)}
             className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
@@ -200,15 +206,19 @@ export function ItemContextMenu({
           Download
         </button>
 
-        <div className="my-1 h-px bg-border" />
+        {canDelete && (
+          <>
+            <div className="my-1 h-px bg-border" />
 
-        <button
-          onClick={(e) => handleAction(onDelete, e)}
-          className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-600/10 dark:hover:bg-red-400/10 transition-colors"
-        >
-          <Trash size={16} className="text-red-600 dark:text-red-400" />
-          Delete
-        </button>
+            <button
+              onClick={(e) => handleAction(onDelete, e)}
+              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-600/10 dark:hover:bg-red-400/10 transition-colors"
+            >
+              <Trash size={16} className="text-red-600 dark:text-red-400" />
+              Delete
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

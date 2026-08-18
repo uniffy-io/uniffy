@@ -18,10 +18,6 @@ from uniffy.core.content.members import (
     register_content_loader,
     register_manage_override,
 )
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronTask
@@ -422,6 +418,17 @@ class AgentOperations(BaseContentOperations[Agent]):
             Agent.is_deleted == deleted_only,
         )
 
+        access_filter = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=Agent.id,
+            owner_id_column=Agent.owner_id,
+            access_mode_column=Agent.access_mode,
+            baseline_role_column=Agent.baseline_role,
+        )
+        query = query.where(access_filter)
+
         if group_id:
             now = datetime.now(UTC)
             group_subq = select(ContentMember.content_id).where(
@@ -436,18 +443,6 @@ class AgentOperations(BaseContentOperations[Agent]):
                 ),
             )
             query = query.where(Agent.id.in_(group_subq))
-        else:
-            access_filter = await self.access_query.build_accessible_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=Agent.id,
-                owner_id_column=Agent.owner_id,
-                access_mode_column=Agent.access_mode,
-                baseline_role_column=Agent.baseline_role,
-            )
-            query = query.where(access_filter)
-
         if access_mode is not None:
             query = query.where(Agent.access_mode == access_mode)
 
@@ -925,5 +920,4 @@ async def _load_agent(
 
 
 register_content_loader(ContentType.AGENT, _load_agent)
-register_reference_state_loader(ContentType.AGENT, model_reference_state_loader(Agent))
 register_manage_override(ContentType.AGENT, is_agents_builder)

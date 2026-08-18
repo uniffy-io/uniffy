@@ -1,4 +1,4 @@
-"""Stress + bench for the cached tag-visibility predicate.
+"""Stress and benchmark the PostgreSQL tag-visibility predicate.
 
 Re-runs skip seeding when the marker prefix is already present in tag names.
 Pass ``--reseed`` to wipe and reseed.
@@ -249,18 +249,12 @@ async def _bench_list_tags(
     iterations: int,
     *,
     label: str,
-    cold: bool,
 ) -> dict[str, float]:
-    from uniffy.core.auth.permissions.visible_sets import (
-        invalidate_visible_sets_for_user,
-    )
     from uniffy.db.session import open_session
     from uniffy.domains.tags.operations import TagOperations
 
     samples: list[float] = []
     for _ in range(iterations):
-        if cold:
-            await invalidate_visible_sets_for_user(org_id, actor_id)
         async with open_session() as session:
             ops = TagOperations(session)
             start = time.perf_counter()
@@ -280,18 +274,12 @@ async def _bench_list_content(
     iterations: int,
     *,
     label: str,
-    cold: bool,
 ) -> dict[str, float]:
-    from uniffy.core.auth.permissions.visible_sets import (
-        invalidate_visible_sets_for_user,
-    )
     from uniffy.db.session import open_session
     from uniffy.domains.tags.operations import TagOperations
 
     samples: list[float] = []
     for _ in range(iterations):
-        if cold:
-            await invalidate_visible_sets_for_user(org_id, actor_id)
         async with open_session() as session:
             ops = TagOperations(session)
             start = time.perf_counter()
@@ -421,29 +409,16 @@ async def run_visibility_stress(config: StressConfig) -> None:
                 org_id,
                 actor_member.id,
                 config.iterations,
-                label="list_tags member cold",
-                cold=True,
+                label="list_tags member",
             )
         )
 
-        results.append(
-            await _bench_list_tags(
-                org_id,
-                actor_member.id,
-                config.iterations,
-                label="list_tags member warm",
-                cold=False,
-            )
-        )
-
-        # Admin warm should short-circuit (no predicate).
         results.append(
             await _bench_list_tags(
                 org_id,
                 actor_admin.id,
                 config.iterations,
-                label="list_tags admin warm",
-                cold=False,
+                label="list_tags admin",
             )
         )
 
@@ -453,24 +428,12 @@ async def run_visibility_stress(config: StressConfig) -> None:
                 actor_member.id,
                 popular_tag.slug,
                 config.iterations,
-                label="list_content member cold",
-                cold=True,
-            )
-        )
-
-        results.append(
-            await _bench_list_content(
-                org_id,
-                actor_member.id,
-                popular_tag.slug,
-                config.iterations,
-                label="list_content member warm",
-                cold=False,
+                label="list_content member",
             )
         )
 
         print()
-        print("Tag visibility cache - bench")
+        print("PostgreSQL tag visibility - bench")
         print(f"Org: {org.name} ({org_id})  actor (member): alice  actor (admin): admin")
         print(
             f"Notes: {config.note_count}  Tags: {config.tag_count}  "
@@ -500,7 +463,7 @@ async def run_visibility_stress(config: StressConfig) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Stress + bench the cached tag-visibility predicate.",
+        description="Stress and benchmark the PostgreSQL tag-visibility predicate.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("--notes", type=int, default=1200)

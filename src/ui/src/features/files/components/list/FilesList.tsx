@@ -63,7 +63,7 @@ import { useAccessPolicyDialog } from "@/features/permissions";
 import { toggleBookmark } from "@/features/bookmarks";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { ContentType, AccessMode } from "@uniffy/proto/common/v1/common_pb";
-import { bucketForContent } from "@/shared/utils/contentRoles";
+import { bucketForContent, roleCanDelete, roleCanEdit } from "@/shared/utils/contentRoles";
 import type { FileDownloadItem } from "@/features/files/utils/archiveDownload";
 import {
   collectAllDownloadFiles,
@@ -701,7 +701,7 @@ export function FilesList({
 
   const handleShareFolder = useCallback(
     (folderId: string, folderName: string) => {
-      openFor(ContentType.FILE, folderId, folderName);
+      openFor(ContentType.FOLDER, folderId, folderName);
     },
     [openFor],
   );
@@ -729,6 +729,38 @@ export function FilesList({
     // inside try/finally blocks and object-literal call arguments.
     // eslint-disable-next-line react/react-compiler
   }, [dispatch, selectedFileIds]);
+
+  const canDeleteFile = useCallback(
+    (file: SerializedFile) => file.ownerId === userId || roleCanDelete(file.userRole),
+    [userId],
+  );
+
+  const canEditFile = useCallback(
+    (file: SerializedFile) => file.ownerId === userId || roleCanEdit(file.userRole),
+    [userId],
+  );
+
+  // The backend stays the gate either way.
+  const canModifyFolder = useCallback(
+    (folderId: string) => {
+      const folder = folders[folderId];
+      if (!folder) return true;
+      // Unknown owner (older cached rows): show the control and let the
+      // backend gate, rather than hiding it from the actual owner.
+      if (!folder.ownerId) return true;
+      return !!userId && folder.ownerId === userId;
+    },
+    [folders, userId],
+  );
+
+  const bulkDeleteAllowed = useMemo(
+    () =>
+      selectedFileIds.every((id) => {
+        const file = filesMap[id];
+        return !file || canDeleteFile(file);
+      }) && selectedFolderIds.every((id) => canModifyFolder(id)),
+    [selectedFileIds, selectedFolderIds, filesMap, canDeleteFile, canModifyFolder],
+  );
 
   // Check if all visible items are selected
   const totalItemCount = scopedFiles.length + scopedSubfolders.length;
@@ -855,9 +887,13 @@ export function FilesList({
               {/* Bulk delete */}
               <button
                 onClick={handleBulkDelete}
-                disabled={bulkActionLoading || totalSelectedCount === 0}
+                disabled={bulkActionLoading || totalSelectedCount === 0 || !bulkDeleteAllowed}
                 className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm rounded-md text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                title="Delete selected"
+                title={
+                  bulkDeleteAllowed
+                    ? "Delete selected"
+                    : "Selection includes items you cannot delete"
+                }
               >
                 <Trash size={16} />
                 <span className="hidden md:inline">Delete</span>
@@ -1117,7 +1153,9 @@ export function FilesList({
                 isSelectMode={isSelectMode}
                 isChecked={selectedFolderIds.includes(folder.id)}
                 onToggleCheck={handleToggleFolderCheck}
-                canShare={true}
+                canShare={canModifyFolder(folder.id)}
+                canDelete={canModifyFolder(folder.id)}
+                canEdit={canModifyFolder(folder.id)}
                 autoRename={folder.id === pendingRenameFolderId}
                 onAutoRenameResolved={handleAutoRenameResolved}
               />
@@ -1143,6 +1181,8 @@ export function FilesList({
                 isChecked={selectedFileIds.includes(file.id)}
                 onToggleCheck={handleToggleFileCheck}
                 canShare={file.ownerId === userId}
+                canDelete={canDeleteFile(file)}
+                canEdit={canEditFile(file)}
               />
             ))}
           </div>
@@ -1181,7 +1221,9 @@ export function FilesList({
               isSelectMode={isSelectMode}
               isChecked={selectedFolderIds.includes(folder.id)}
               onToggleCheck={handleToggleFolderCheck}
-              canShare={true}
+              canShare={canModifyFolder(folder.id)}
+              canDelete={canModifyFolder(folder.id)}
+              canEdit={canModifyFolder(folder.id)}
               autoRename={folder.id === pendingRenameFolderId}
               onAutoRenameResolved={handleAutoRenameResolved}
             />
@@ -1207,6 +1249,8 @@ export function FilesList({
               isChecked={selectedFileIds.includes(file.id)}
               onToggleCheck={handleToggleFileCheck}
               canShare={file.ownerId === userId}
+              canDelete={canDeleteFile(file)}
+              canEdit={canEditFile(file)}
             />
           ))}
         </div>

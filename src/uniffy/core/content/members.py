@@ -8,19 +8,17 @@ This is the only place in the backend that mutates access-control state.
 """
 
 from collections.abc import Awaitable, Callable
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
+if TYPE_CHECKING:
+    from uniffy.core.models.files.file import File
+
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.cache import (
-    invalidate_content as invalidate_perm_content,
-)
-from uniffy.core.auth.cache import (
-    invalidate_role_for_user as invalidate_perm_role,
-)
 from uniffy.core.auth.permissions.audit import (
     record_access_mode_changed,
     record_baseline_role_changed,
@@ -37,10 +35,6 @@ from uniffy.core.auth.permissions.defaults import (
 from uniffy.core.auth.permissions.roles import (
     role_can_manage,
     role_can_transfer,
-)
-from uniffy.core.auth.permissions.visible_sets import (
-    invalidate_visible_sets_for_org,
-    invalidate_visible_sets_for_user,
 )
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -60,7 +54,7 @@ from uniffy.core.types import (
     NotificationType,
     SubjectType,
 )
-from uniffy.core.valkey import publish_content_access_changed
+from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
 
 logger = logger.bind(component="content.members")
 
@@ -177,29 +171,6 @@ class ContentMembersOperations:
         self.session = session
         self.permission_checker = PermissionChecker(session)
         self.search_indexer = SearchIndexer(session)
-
-    async def _drop_perm_cache_for_member_change(
-        self,
-        *,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-        subject_type: SubjectType,
-        subject_id: UUID,
-        role: ContentRole,
-    ) -> None:
-        """Drop perm-cache entries affected by a member mutation.
-
-        USER + non-BLOCKED drops one key; BLOCKED grants and GROUP subjects wipe
-        the whole content tag because the affected user set isn't enumerable
-        cheaply.
-        """
-        if subject_type == SubjectType.USER and role != ContentRole.BLOCKED:
-            await invalidate_perm_role(organization_id, subject_id, content_type, content_id)
-            await invalidate_visible_sets_for_user(organization_id, subject_id)
-        else:
-            await invalidate_perm_content(content_type, content_id)
-            await invalidate_visible_sets_for_org(organization_id)
 
     async def list_members(
         self,
@@ -334,15 +305,6 @@ class ContentMembersOperations:
         await self._enqueue_child_acl_refresh(content_type, content_id)
         await self.session.refresh(member)
 
-        await self._drop_perm_cache_for_member_change(
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            subject_type=subject_type,
-            subject_id=subject_id,
-            role=role,
-        )
-
         await self._emit_granted_notification(
             organization_id=organization_id,
             actor_user_id=actor_user_id,
@@ -365,7 +327,11 @@ class ContentMembersOperations:
             content_id=content_id,
             subject_type=subject_type,
             subject_id=subject_id,
-            action="revoked" if role == ContentRole.BLOCKED else "granted",
+            action=(
+                ContentAccessAction.REVOKED
+                if role == ContentRole.BLOCKED
+                else ContentAccessAction.GRANTED
+            ),
         )
 
         return member
@@ -426,20 +392,6 @@ class ContentMembersOperations:
         await self._enqueue_child_acl_refresh(content_type, content_id)
         await self.session.refresh(existing)
 
-        # Toggling in or out of BLOCKED requires dropping both the affected
-        # user's key and the content tag so previously cached group/BLOCKED-
-        # derived denials clear.
-        await self._drop_perm_cache_for_member_change(
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            subject_type=subject_type,
-            subject_id=subject_id,
-            role=new_role,
-        )
-        if previous_role == ContentRole.BLOCKED and new_role != ContentRole.BLOCKED:
-            await invalidate_perm_content(content_type, content_id)
-
         await self._emit_granted_notification(
             organization_id=organization_id,
             actor_user_id=actor_user_id,
@@ -462,7 +414,11 @@ class ContentMembersOperations:
             content_id=content_id,
             subject_type=subject_type,
             subject_id=subject_id,
-            action="revoked" if new_role == ContentRole.BLOCKED else "granted",
+            action=(
+                ContentAccessAction.REVOKED
+                if new_role == ContentRole.BLOCKED
+                else ContentAccessAction.GRANTED
+            ),
         )
 
         return existing
@@ -511,15 +467,6 @@ class ContentMembersOperations:
         await self.session.commit()
         await self._enqueue_child_acl_refresh(content_type, content_id)
 
-        await self._drop_perm_cache_for_member_change(
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            subject_type=subject_type,
-            subject_id=subject_id,
-            role=previous_role,
-        )
-
         await self._emit_revoked_notification(
             organization_id=organization_id,
             actor_user_id=actor_user_id,
@@ -541,7 +488,7 @@ class ContentMembersOperations:
             content_id=content_id,
             subject_type=subject_type,
             subject_id=subject_id,
-            action="revoked",
+            action=ContentAccessAction.REVOKED,
         )
 
     async def set_access_mode(
@@ -571,6 +518,13 @@ class ContentMembersOperations:
 
         self._validate_access_mode(new_access_mode, new_baseline_role)
 
+        if content_type == ContentType.CALENDAR_EVENT and new_access_mode == AccessMode.OPEN_TO_ORG:
+            raise ValidationError(
+                "access_mode",
+                "Calendar events are invite-only and cannot be opened to the organization.",
+            )
+
+        removed_members: list[tuple[SubjectType, UUID]] = []
         if new_access_mode == AccessMode.OWNER_ONLY:
             member_rows = (
                 (
@@ -593,6 +547,7 @@ class ContentMembersOperations:
                     "to remove them.",
                 )
             for member in member_rows:
+                removed_members.append((member.subject_type, member.subject_id))
                 await record_member_removed(
                     self.session,
                     organization_id=organization_id,
@@ -656,11 +611,6 @@ class ContentMembersOperations:
         await self.session.commit()
         await self._enqueue_child_acl_refresh(content_type, content_id)
 
-        # Access-mode or baseline-role flip changes the answer for an unbounded
-        # user set; wipe by content tag.
-        await invalidate_perm_content(content_type, content_id)
-        await invalidate_visible_sets_for_org(organization_id)
-
         await self._sync_search_access_policy(
             organization_id=organization_id,
             content_type=content_type,
@@ -672,10 +622,27 @@ class ContentMembersOperations:
         await self._sync_search_sharing(organization_id, content_type, content_id)
         await publish_perm_change(content_type, content_id, None, None)
 
+        for subject_type, subject_id in removed_members:
+            await self._emit_revoked_notification(
+                organization_id=organization_id,
+                actor_user_id=actor_user_id,
+                content_type=content_type,
+                content_id=content_id,
+                subject_type=subject_type,
+                subject_id=subject_id,
+            )
+            await self._publish_access_change(
+                organization_id=organization_id,
+                content_type=content_type,
+                content_id=content_id,
+                subject_type=subject_type,
+                subject_id=subject_id,
+                action=ContentAccessAction.REVOKED,
+            )
+
         # Crossing the OPEN_TO_ORG boundary changes the org-member-visible set;
         # tell every member's sidebar to refresh. Transitions that don't touch
-        # org visibility (e.g. OWNER_ONLY <-> EXPLICIT_MEMBERS) are covered by
-        # the per-member publishes in add/remove_member instead.
+        # org visibility are covered by per-member publishes.
         if previous_effective_mode != new_effective_mode and (
             previous_effective_mode == AccessMode.OPEN_TO_ORG
             or new_effective_mode == AccessMode.OPEN_TO_ORG
@@ -683,7 +650,7 @@ class ContentMembersOperations:
             await publish_content_access_changed(
                 content_type=content_type_to_proto(content_type),
                 content_id=content_id,
-                action="access_mode_changed",
+                action=ContentAccessAction.ACCESS_MODE_CHANGED,
                 organization_id=organization_id,
             )
 
@@ -763,7 +730,6 @@ class ContentMembersOperations:
                 ).scalar_one_or_none()
                 if file_row is None:
                     continue
-
                 if new_effective_mode == AccessMode.OPEN_TO_ORG:
                     if file_row.folder_id != target_folder_id:
                         file_row.folder_id = target_folder_id
@@ -782,8 +748,21 @@ class ContentMembersOperations:
                         file_row.access_mode = target_mode
                     if file_row.baseline_role != target_baseline:
                         file_row.baseline_role = target_baseline
+                await self.session.flush()
+                # Re-index under the new policy: the doc's access fields decide
+                # candidate visibility, and mention chips need the preview
+                # either way.
+                await self._sync_attachment_search_doc(file_row)
 
         await self.session.commit()
+
+    async def _sync_attachment_search_doc(self, file_row: File) -> None:
+        from uniffy.domains.files.operations import FileOperations
+
+        await FileOperations(self.session)._index_for_search(
+            model=file_row,
+            skip_member_lookup=True,
+        )
 
     async def transfer_ownership(
         self,
@@ -867,11 +846,6 @@ class ContentMembersOperations:
         await self.session.commit()
         await self._enqueue_child_acl_refresh(content_type, content_id)
         await self.session.refresh(content)
-
-        await invalidate_perm_role(organization_id, previous_owner_id, content_type, content_id)
-        await invalidate_perm_role(organization_id, new_owner_user_id, content_type, content_id)
-        await invalidate_visible_sets_for_user(organization_id, previous_owner_id)
-        await invalidate_visible_sets_for_user(organization_id, new_owner_user_id)
 
         await self._sync_search_access_policy(
             organization_id=organization_id,
@@ -1154,7 +1128,7 @@ class ContentMembersOperations:
         content_id: UUID,
         subject_type: SubjectType,
         subject_id: UUID,
-        action: str,
+        action: ContentAccessAction,
     ) -> None:
         """Signal the affected users' sidebars to refresh after an explicit grant/revoke."""
         target_ids = await self._resolve_notification_targets(
@@ -1252,6 +1226,7 @@ class ContentMembersOperations:
         content_id: UUID,
     ) -> None:
         try:
+            now = datetime.now(UTC)
             result = await self.session.execute(
                 select(
                     ContentMember.subject_type,
@@ -1261,6 +1236,10 @@ class ContentMembersOperations:
                     ContentMember.organization_id == organization_id,
                     ContentMember.content_type == content_type,
                     ContentMember.content_id == content_id,
+                    or_(
+                        ContentMember.expires_at.is_(None),
+                        ContentMember.expires_at > now,
+                    ),
                 )
             )
             shared_users: list[UUID] = []

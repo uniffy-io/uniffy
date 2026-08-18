@@ -3,28 +3,30 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, select, update
+from sqlalchemy import delete, func, select, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
-from uniffy.core.models.files.file import File
 from uniffy.core.models.login.user import User
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
-    AccessMode,
-    ContentRole,
     ContentType,
     NotificationType,
     generate_id,
 )
+from uniffy.domains.comments.access import CommentTargetAccess
 from uniffy.domains.comments.queries import (
     aggregate_reactions,
     build_comments_query,
     count_comments_query,
+)
+from uniffy.domains.permissions.resource_access import (
+    ResourceAccessPurpose,
+    ResourceAccessResolver,
+    ResourceKey,
 )
 
 
@@ -38,6 +40,7 @@ class CommentOperations:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+        self._target_access = CommentTargetAccess(session)
 
     async def create_comment(
         self,
@@ -57,6 +60,8 @@ class CommentOperations:
         if parent_comment_id:
             parent = await self._get_comment(parent_comment_id, organization_id)
             if not parent:
+                raise NotFoundError("Comment", str(parent_comment_id))
+            if parent.content_type != content_type or parent.content_id != content_id:
                 raise NotFoundError("Comment", str(parent_comment_id))
             parent_author_id = parent.author_id
 
@@ -96,6 +101,9 @@ class CommentOperations:
 
         if comment.author_id != user_id:
             raise PermissionDeniedError("edit", "comment")
+        await self._verify_content_access(
+            user_id, organization_id, comment.content_type, comment.content_id
+        )
 
         comment.body = body
         comment.updated_at = datetime.now(UTC)
@@ -117,7 +125,11 @@ class CommentOperations:
         if not comment:
             raise NotFoundError("Comment", str(comment_id))
 
-        if comment.author_id != user_id:
+        if comment.author_id == user_id:
+            await self._verify_content_access(
+                user_id, organization_id, comment.content_type, comment.content_id
+            )
+        else:
             await self._verify_content_edit(
                 user_id, organization_id, comment.content_type, comment.content_id
             )
@@ -361,6 +373,12 @@ class CommentOperations:
         emoji: str,
     ) -> bool:
         """Remove a reaction; users can only remove their own."""
+        comment = await self._get_comment(comment_id, organization_id)
+        if not comment:
+            raise NotFoundError("Comment", str(comment_id))
+        await self._verify_content_access(
+            user_id, organization_id, comment.content_type, comment.content_id
+        )
         await self._session.execute(
             delete(CommentReaction).where(
                 CommentReaction.comment_id == comment_id,
@@ -381,9 +399,16 @@ class CommentOperations:
         if not content_refs:
             return {}
 
-        conditions = []
-        for ct, cid in content_refs:
-            conditions.append(and_(Comment.content_type == ct, Comment.content_id == cid))
+        keys = list(dict.fromkeys(ResourceKey(ct, cid) for ct, cid in content_refs))
+        decisions = await ResourceAccessResolver(self._session).resolve(
+            actor_id=user_id,
+            organization_id=organization_id,
+            keys=keys,
+            purpose=ResourceAccessPurpose.LIST,
+        )
+        visible = [key for key in keys if decisions[key].can_view]
+        if not visible:
+            return {}
 
         result = await self._session.execute(
             select(
@@ -395,25 +420,20 @@ class CommentOperations:
                 Comment.organization_id == organization_id,
                 Comment.is_deleted == False,  # noqa: E712
                 Comment.parent_comment_id == None,  # noqa: E711
-            )
-            .where(
-                func.bool_or(*[
-                    and_(Comment.content_type == ct, Comment.content_id == cid)
-                    for ct, cid in content_refs
-                ])
-                if len(content_refs) > 1
-                else conditions[0]
+                tuple_(Comment.content_type, Comment.content_id).in_([
+                    (key.content_type, key.content_id) for key in visible
+                ]),
             )
             .group_by(Comment.content_type, Comment.content_id)
         )
 
         counts = {}
         for row in result.all():
-            key = f"{row.content_type}:{row.content_id}"
+            key = f"{row.content_type.value}:{row.content_id}"
             counts[key] = row.count
 
-        for ct, cid in content_refs:
-            key = f"{ct.value}:{cid}"
+        for resource in visible:
+            key = f"{resource.content_type.value}:{resource.content_id}"
             if key not in counts:
                 counts[key] = 0
 
@@ -519,128 +539,6 @@ class CommentOperations:
             return "Unknown", None
         return row[0] or "Unknown", None
 
-    async def _resolve_parent_role(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-    ) -> ContentRole | None:
-        """Comments inherit access from parent; tasks delegate to their project."""
-        from uniffy.core.auth.permissions.checker import PermissionChecker
-
-        (
-            owner_id,
-            access_mode,
-            baseline_role,
-            resolved_type,
-            resolved_id,
-        ) = await self._load_parent_policy(organization_id, content_type, content_id)
-
-        checker = PermissionChecker(self._session)
-        return await checker.effective_role(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=resolved_type,
-            content_id=resolved_id,
-            owner_id=owner_id,
-            access_mode=access_mode,
-            baseline_role=baseline_role,
-        )
-
-    async def _load_parent_policy(
-        self,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-    ) -> tuple[UUID, AccessMode, ContentRole | None, ContentType, UUID]:
-        """Load (owner_id, access_mode, baseline_role, type, id); tasks resolve to their project."""
-        if content_type == ContentType.NOTE:
-            from uniffy.core.models.notes.note import Note
-
-            result = await self._session.execute(
-                select(Note.owner_id, Note.access_mode, Note.baseline_role).where(
-                    Note.id == content_id,
-                    Note.organization_id == organization_id,
-                )
-            )
-            row = result.one_or_none()
-            if not row:
-                raise NotFoundError("Note", str(content_id))
-            return row[0], row[1], row[2], content_type, content_id
-
-        if content_type == ContentType.FILE:
-            result = await self._session.execute(
-                select(File.owner_id, File.access_mode, File.baseline_role).where(
-                    File.id == content_id,
-                    File.organization_id == organization_id,
-                )
-            )
-            row = result.one_or_none()
-            if not row:
-                raise NotFoundError("File", str(content_id))
-            return row[0], row[1], row[2], content_type, content_id
-
-        if content_type == ContentType.CALENDAR_EVENT:
-            from uniffy.core.models.calendar.event import CalendarEvent
-
-            result = await self._session.execute(
-                select(
-                    CalendarEvent.organizer_id,
-                    CalendarEvent.access_mode,
-                    CalendarEvent.baseline_role,
-                ).where(
-                    CalendarEvent.id == content_id,
-                    CalendarEvent.organization_id == organization_id,
-                )
-            )
-            row = result.one_or_none()
-            if not row:
-                raise NotFoundError("CalendarEvent", str(content_id))
-            return row[0], row[1], row[2], content_type, content_id
-
-        if content_type == ContentType.PROJECT:
-            from uniffy.core.models.projects.project import Project
-
-            result = await self._session.execute(
-                select(Project.owner_id, Project.access_mode, Project.baseline_role).where(
-                    Project.id == content_id,
-                    Project.organization_id == organization_id,
-                )
-            )
-            row = result.one_or_none()
-            if not row:
-                raise NotFoundError("Project", str(content_id))
-            return row[0], row[1], row[2], content_type, content_id
-
-        if content_type == ContentType.TASK:
-            from uniffy.core.models.projects.project import Project
-            from uniffy.core.models.projects.task import Task
-
-            task_result = await self._session.execute(
-                select(Task.project_id).where(
-                    Task.id == content_id,
-                    Task.organization_id == organization_id,
-                )
-            )
-            task_row = task_result.one_or_none()
-            if not task_row:
-                raise NotFoundError("Task", str(content_id))
-            project_id = task_row[0]
-
-            proj_result = await self._session.execute(
-                select(Project.owner_id, Project.access_mode, Project.baseline_role).where(
-                    Project.id == project_id,
-                    Project.organization_id == organization_id,
-                )
-            )
-            proj_row = proj_result.one_or_none()
-            if not proj_row:
-                raise NotFoundError("Project", str(project_id))
-            return proj_row[0], proj_row[1], proj_row[2], ContentType.PROJECT, project_id
-
-        raise NotFoundError("Content", str(content_id))
-
     async def _verify_content_access(
         self,
         user_id: UUID,
@@ -648,9 +546,12 @@ class CommentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
-        if not role_can_view(role):
-            raise PermissionDeniedError("access", "content")
+        await self._target_access.require_view(
+            user_id,
+            organization_id,
+            content_type,
+            content_id,
+        )
 
     async def _verify_content_edit(
         self,
@@ -659,6 +560,9 @@ class CommentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
-        if not role_can_edit(role):
-            raise PermissionDeniedError("edit", "content")
+        await self._target_access.require_edit(
+            user_id,
+            organization_id,
+            content_type,
+            content_id,
+        )

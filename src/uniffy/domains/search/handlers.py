@@ -94,7 +94,7 @@ class SearchHandlers:
         try:
             async with open_session() as session:
                 ops = SearchOperations(session)
-                results, total = await ops.search(
+                results, has_more, next_offset = await ops.search(
                     user_id=user_id,
                     organization_id=organization_id,
                     query_text=query_text,
@@ -111,7 +111,11 @@ class SearchHandlers:
 
                 items = [search_result_to_proto(item) for item in results]
 
-                return SearchResponse(items=items, total_count=total)
+                return SearchResponse(
+                    items=items,
+                    has_more=has_more,
+                    next_offset=next_offset,
+                )
 
         except ConnectError:
             raise

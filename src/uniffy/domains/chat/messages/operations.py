@@ -11,10 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.content.reference_state import (
-    ReferenceRowState,
-    register_reference_state_loader,
-)
 from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_mentioned_agent_ids_from_content,
@@ -28,7 +24,6 @@ from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChanne
 from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKind, SenderType
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
-from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.db import open_session
@@ -43,29 +38,6 @@ from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="chat.messages.operations")
 
-
-async def _load_message_reference_states(
-    session: AsyncSession,
-    organization_id: UUID,
-    content_ids: set[UUID],
-) -> dict[UUID, ReferenceRowState]:
-    rows = (
-        await session.execute(
-            select(ChatMessage.id, ChatMessage.is_deleted)
-            .join(ChatChannel, ChatChannel.id == ChatMessage.channel_id)
-            .where(
-                ChatMessage.id.in_(content_ids),
-                ChatChannel.organization_id == organization_id,
-            )
-        )
-    ).all()
-    return {
-        message_id: ReferenceRowState.DELETED if is_deleted else ReferenceRowState.LIVE
-        for message_id, is_deleted in rows
-    }
-
-
-register_reference_state_loader(ContentType.CHAT_MESSAGE, _load_message_reference_states)
 
 MAX_MESSAGE_LENGTH = 30_000
 EDIT_WINDOW_MINUTES = 2
@@ -498,7 +470,6 @@ class ChatMessageOperations:
             )
             visible_mentioned, team_mentions = await self._visible_mention_targets(
                 channel,
-                member_ids,
                 mentioned_user_ids,
                 team_expansions,
             )
@@ -571,42 +542,25 @@ class ChatMessageOperations:
     async def _visible_mention_targets(
         self,
         channel: ChatChannel,
-        member_ids: list[UUID],
         mentioned_user_ids: set[UUID],
         team_expansions: list[TeamExpansion],
     ) -> tuple[set[UUID], list[tuple[TeamExpansion, list[UUID]]]]:
-        """Narrow mention recipients to whoever can already see the channel.
-
-        The notification worker has no CHAT access loader, so this is the only
-        filter between a mention and a 200-char preview of a channel the
-        recipient is not in. Set math against the member ids the send pipeline
-        already fetched; no per-recipient access check.
-        """
-        if channel.channel_type != ChannelType.PUBLIC:
-            member_set = set(member_ids)
-            team_mentions = [
-                (exp, [uid for uid in exp.member_ids if uid in member_set])
-                for exp in team_expansions
-            ]
-            return (
-                mentioned_user_ids & member_set,
-                [(exp, uids) for exp, uids in team_mentions if uids],
+        candidates = set(mentioned_user_ids)
+        for expansion in team_expansions:
+            candidates.update(expansion.member_ids)
+        allowed = set(
+            await self.access.filter_viewers(
+                channel.organization_id,
+                channel,
+                candidates,
             )
-
-        # PUBLIC access IS active org membership, which the expansion query
-        # already joined; only the direct targets still need checking.
-        visible_direct: set[UUID] = set()
-        if mentioned_user_ids:
-            result = await self.session.execute(
-                select(OrganizationMember.user_id).where(
-                    OrganizationMember.organization_id == channel.organization_id,
-                    OrganizationMember.user_id.in_(mentioned_user_ids),
-                    OrganizationMember.is_active == True,  # noqa: E712
-                )
-            )
-            visible_direct = {row[0] for row in result.all()}
-        return visible_direct, [
-            (exp, list(exp.member_ids)) for exp in team_expansions if exp.member_ids
+        )
+        visible_teams = [
+            (expansion, [user_id for user_id in expansion.member_ids if user_id in allowed])
+            for expansion in team_expansions
+        ]
+        return mentioned_user_ids & allowed, [
+            (expansion, user_ids) for expansion, user_ids in visible_teams if user_ids
         ]
 
     async def _get_channel_member_ids(self, channel_id: UUID) -> list[UUID]:
@@ -1210,6 +1164,15 @@ class ChatMessageOperations:
             user_id, organization_id, channel_id, msg, ChatMessageAction.DELETE
         )
 
+        from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+        await AttachmentOperations(self.session).detach_all_for_content(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.CHAT_MESSAGE,
+            content_id=message_id,
+        )
+
         was_pinned = msg.is_pinned
         now = datetime.now(UTC)
         msg.is_deleted = True
@@ -1290,19 +1253,6 @@ class ChatMessageOperations:
             await ops.decrement_resources_from_message(channel_id, msg.content)
         except Exception:
             logger.warning(f"Resource decrement failed for message {msg.id}")
-
-        try:
-            from uniffy.domains.files.attachments.operations import AttachmentOperations
-
-            att_ops = AttachmentOperations(self.session)
-            await att_ops.detach_all_for_content(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=ContentType.CHAT_MESSAGE,
-                content_id=message_id,
-            )
-        except Exception:
-            logger.warning(f"Attachment cleanup failed for message {msg.id}")
 
     async def pin_message(
         self,

@@ -45,6 +45,7 @@ from uniffy.core.models.rooms.room import Room
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.rooms.converters import (
     BOOKING_STATUS_FROM_PROTO,
     booking_to_proto,
@@ -151,11 +152,13 @@ class RoomHandlers:
                     organization_id,
                     room,
                 )
+                user_role = await ops._resolve_role(user_id, organization_id, room)
                 return CreateRoomResponse(
                     room=room_to_proto(
                         room,
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -181,11 +184,13 @@ class RoomHandlers:
                     organization_id,
                     room,
                 )
+                user_role = await ops._resolve_role(user_id, organization_id, room)
                 return GetRoomResponse(
                     room=room_to_proto(
                         room,
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -238,11 +243,13 @@ class RoomHandlers:
                     organization_id,
                     room,
                 )
+                user_role = await ops._resolve_role(user_id, organization_id, room)
                 return UpdateRoomResponse(
                     room=room_to_proto(
                         room,
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -321,6 +328,11 @@ class RoomHandlers:
                     organization_id,
                     ContentType.ROOM,
                 )
+                decisions = await ResourceAccessResolver(session).resolve_page(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    keys=[ResourceKey(ContentType.ROOM, r.id) for r in rooms],
+                )
                 proto_rooms = []
                 for r in rooms:
                     eff_mode, eff_baseline = resolve_effective_policy(
@@ -334,6 +346,7 @@ class RoomHandlers:
                             r,
                             effective_access_mode=eff_mode,
                             effective_baseline_role=eff_baseline,
+                            user_role=decisions[ResourceKey(ContentType.ROOM, r.id)].role,
                         )
                     )
 
@@ -566,6 +579,11 @@ class BookingHandlers:
                     organization_id,
                     ContentType.ROOM,
                 )
+                decisions = await ResourceAccessResolver(session).resolve_page(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    keys=[ResourceKey(ContentType.ROOM, r.id) for r in rooms],
+                )
                 proto_rooms = []
                 for r in rooms:
                     eff_mode, eff_baseline = resolve_effective_policy(
@@ -579,6 +597,7 @@ class BookingHandlers:
                             r,
                             effective_access_mode=eff_mode,
                             effective_baseline_role=eff_baseline,
+                            user_role=decisions[ResourceKey(ContentType.ROOM, r.id)].role,
                         )
                     )
                 return FindAvailableRoomsResponse(rooms=proto_rooms)
