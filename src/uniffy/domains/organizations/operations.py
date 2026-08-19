@@ -13,10 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.auth.cache import invalidate_domain_admin, invalidate_org_defaults
-from uniffy.core.auth.membership import invalidate_membership_cache
-from uniffy.core.auth.permissions import invalidate_visible_sets_for_user
-from uniffy.core.auth.permissions.visible_sets import invalidate_visible_sets_for_org
+from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.crypto import OrgCipher
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
@@ -25,7 +22,6 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
-from uniffy.core.valkey.cache import cache_invalidate_by_tag
 from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.domains.calls.operations import kick_user_from_active_call
 from uniffy.domains.chat.cache import (
@@ -38,17 +34,6 @@ from uniffy.domains.organizations.defaults import DEFAULT_ORG_SETTINGS
 from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="org-ops")
-
-
-async def _drop_user_perm_cache(user_id: UUID) -> None:
-    """Drop every cached perm entry tied to ``user_id``; failures fall back to TTL expiry."""
-    try:
-        await cache_invalidate_by_tag(f"user:{user_id}")
-    except Exception:
-        logger.warning(
-            f"Perm-cache invalidation failed for user {user_id}",
-            component="org-ops",
-        )
 
 
 class OrganizationOperations:
@@ -328,9 +313,9 @@ class OrganizationOperations:
         user_id: UUID,
         org_id: UUID,
     ) -> OrganizationMember:
-        membership = await self.get_membership(user_id, org_id)
+        membership = await get_active_membership(self._session, user_id, org_id)
         admin_roles = (OrganizationRole.OWNER, OrganizationRole.ADMIN)
-        if not membership or not membership.is_active or membership.role not in admin_roles:
+        if not membership or membership.role not in admin_roles:
             raise PermissionDeniedError("Requires organization admin privileges")
         return membership
 
@@ -342,8 +327,8 @@ class OrganizationOperations:
         """Stricter than ``require_org_admin``; used for actions kept to a
         single accountable person.
         """
-        membership = await self.get_membership(user_id, org_id)
-        if not membership or not membership.is_active or membership.role != OrganizationRole.OWNER:
+        membership = await get_active_membership(self._session, user_id, org_id)
+        if not membership or membership.role != OrganizationRole.OWNER:
             raise PermissionDeniedError("Requires organization owner privileges")
         return membership
 
@@ -352,8 +337,8 @@ class OrganizationOperations:
         user_id: UUID,
         org_id: UUID,
     ) -> OrganizationMember:
-        membership = await self.get_membership(user_id, org_id)
-        if not membership or not membership.is_active:
+        membership = await get_active_membership(self._session, user_id, org_id)
+        if not membership:
             raise PermissionDeniedError("Requires organization membership")
         return membership
 
@@ -449,11 +434,6 @@ class OrganizationOperations:
             await self._session.commit()
             await self._session.refresh(existing)
 
-            await _drop_user_perm_cache(user_id)
-            from uniffy.core.auth.membership import invalidate_membership_cache
-
-            await invalidate_membership_cache(user_id, org_id)
-
             return existing
 
         await self._require_member_capacity(org_id)
@@ -495,11 +475,6 @@ class OrganizationOperations:
             details={"role": role.value},
         )
         await self._session.commit()
-
-        await _drop_user_perm_cache(user_id)
-        from uniffy.core.auth.membership import invalidate_membership_cache
-
-        await invalidate_membership_cache(user_id, org_id)
 
         return membership
 
@@ -549,9 +524,6 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(member)
 
-        await _drop_user_perm_cache(target_user_id)
-        await invalidate_membership_cache(target_user_id, org_id)
-
         return (member, user)
 
     async def remove_member(
@@ -598,10 +570,6 @@ class OrganizationOperations:
 
         await self._user_indexer.remove_from_organization(target_user_id, org_id)
         await self._session.commit()
-
-        await _drop_user_perm_cache(target_user_id)
-        await invalidate_membership_cache(target_user_id, org_id)
-        await invalidate_visible_sets_for_user(org_id, target_user_id)
 
         if chat_cleanup.channel_ids:
             private_channel_ids = set(chat_cleanup.private_channel_ids)
@@ -710,18 +678,18 @@ class OrganizationOperations:
         )
         await self._session.commit()
 
-        # A defaults flip changes the effective policy for every inheriting row.
-        await invalidate_org_defaults(org_id, content_type)
-        await invalidate_visible_sets_for_org(org_id)
-
-        # Search docs bake the resolved policy at index time; job-id dedup coalesces burst toggles.
+        # Include the row revision so retained ARQ results cannot suppress a
+        # later defaults mutation.
         try:
+            reindex_run_id = str(int(defaults.updated_at.timestamp() * 1_000_000))
             queue = get_queue(QueueName.CORE)
             await queue.enqueue_job(
                 JobName.REINDEX_ORG_CONTENT_FOR_DEFAULTS,
                 str(org_id),
                 content_type.value,
-                _job_id=f"reindex_defaults:{org_id}:{content_type.value}",
+                None,
+                reindex_run_id,
+                _job_id=f"reindex_defaults:{org_id}:{content_type.value}:{reindex_run_id}",
             )
         except Exception:
             logger.opt(exception=True).warning(
@@ -822,9 +790,6 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(da)
 
-        await invalidate_domain_admin(org_id, target_user_id, domain)
-        await invalidate_visible_sets_for_user(org_id, target_user_id)
-
         from uniffy.core.valkey.pubsub import NotificationPayloadType, publish_notification
 
         await publish_notification(
@@ -874,11 +839,6 @@ class OrganizationOperations:
         )
 
         await self._session.commit()
-
-        # The gate reads this through a 600s Valkey entry, so without an
-        # explicit drop a revoked domain admin keeps their powers.
-        await invalidate_domain_admin(org_id, target_user_id, domain)
-        await invalidate_visible_sets_for_user(org_id, target_user_id)
 
         from uniffy.core.valkey.pubsub import NotificationPayloadType, publish_notification
 

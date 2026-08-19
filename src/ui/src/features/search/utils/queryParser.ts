@@ -60,6 +60,8 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
   tasks: SearchResultType.TASK,
   agent: SearchResultType.AGENT,
   agents: SearchResultType.AGENT,
+  automation: SearchResultType.AGENT_CRON_TASK,
+  automations: SearchResultType.AGENT_CRON_TASK,
   room: SearchResultType.ROOM,
   rooms: SearchResultType.ROOM,
   // tag entity itself, not "content tagged with X" - use tag: for the latter

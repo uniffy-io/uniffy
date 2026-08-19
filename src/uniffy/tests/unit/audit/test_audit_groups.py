@@ -45,12 +45,6 @@ def _permitted(group: Group | None = None) -> ExitStack:
     stack.enter_context(
         patch.object(OrganizationOperations, "require_org_member", AsyncMock(return_value=None))
     )
-    stack.enter_context(
-        patch(
-            "uniffy.domains.groups.operations.invalidate_perm_user",
-            AsyncMock(return_value=None),
-        )
-    )
     if group is not None:
         stack.enter_context(patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)))
     return stack

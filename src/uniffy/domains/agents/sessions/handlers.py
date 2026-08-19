@@ -32,7 +32,7 @@ from uniffy.domains.agents.sessions.converters import (
     session_to_proto,
 )
 from uniffy.domains.agents.sessions.operations import SessionOperations
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 
 logger = logger.bind(component="agents.sessions.handlers")
 
@@ -63,7 +63,7 @@ class SessionsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             agent_id = UUID(request.agent_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -120,7 +120,7 @@ class SessionsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -168,7 +168,7 @@ class SessionsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -233,7 +233,7 @@ class SessionsHandlers:
         """Handle edit_message RPC call."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             message_id = UUID(request.message_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -269,7 +269,7 @@ class SessionsHandlers:
         """Handle retry_message RPC call."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             message_id = UUID(request.message_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -309,7 +309,7 @@ class SessionsHandlers:
                 "Exactly one of message_id and chat_message_id is required",
             )
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             message_id = UUID(request.message_id) if request.message_id else None
             chat_message_id = UUID(request.chat_message_id) if request.chat_message_id else None
         except ValueError:

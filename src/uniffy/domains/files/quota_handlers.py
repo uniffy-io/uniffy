@@ -94,7 +94,7 @@ class QuotaHandlersMixin:
     ) -> SetOrgStorageQuotaResponse:
         """Set or update the organization storage quota configuration."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -150,7 +150,7 @@ class QuotaHandlersMixin:
     ) -> GetUserStorageQuotaResponse:
         """Get a user's effective storage quota and current usage."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -202,7 +202,7 @@ class QuotaHandlersMixin:
     ) -> SetUserStorageQuotaOverrideResponse:
         """Set or update a per-user quota override."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -241,7 +241,7 @@ class QuotaHandlersMixin:
     ) -> RemoveUserStorageQuotaOverrideResponse:
         """Remove a per-user quota override."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -276,7 +276,7 @@ class QuotaHandlersMixin:
     ) -> ListUserStorageQuotaOverridesResponse:
         """List all per-user quota overrides in an organization."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -309,7 +309,7 @@ class QuotaHandlersMixin:
     ) -> GetStorageUsageResponse:
         """Get storage usage for a user."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -357,7 +357,7 @@ class QuotaHandlersMixin:
     ) -> ListOrgStorageUsageResponse:
         """List storage usage for all users in an organization."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -395,7 +395,7 @@ class QuotaHandlersMixin:
     ) -> RecalculateStorageUsageResponse:
         """Recalculate storage usage from actual files."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -449,7 +449,7 @@ class QuotaHandlersMixin:
     ) -> CheckStorageQuotaResponse:
         """Pre-check whether an upload of a given size is allowed under quota."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -492,7 +492,7 @@ class QuotaHandlersMixin:
     ) -> GetOrgFileVersionPolicyResponse:
         """Effective version retention policy for the admin surface."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -522,7 +522,7 @@ class QuotaHandlersMixin:
         ctx: RequestContext,
     ) -> UpdateOrgFileVersionPolicyResponse:
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 

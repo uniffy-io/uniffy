@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
 from uniffy.core.content.references import CanvasNodeType
 from uniffy.core.json_codec import loads
@@ -79,6 +80,7 @@ async def get_backlinks(
     session: AsyncSession,
     note_id: UUID,
     organization_id: UUID,
+    access_filter: ColumnElement[bool],
 ) -> list[Note]:
     """Return notes whose ``outgoing_references`` contains ``note_id``."""
     target_urn = f"urn:uniffy:content:NOTE:{note_id}"
@@ -88,6 +90,7 @@ async def get_backlinks(
                 Note.organization_id == organization_id,
                 Note.is_deleted == False,  # noqa: E712
                 Note.outgoing_references.contains([target_urn]),
+                access_filter,
             )
         )
     )
@@ -137,21 +140,15 @@ async def permanent_delete_recursive(
 async def empty_trash(
     session: AsyncSession,
     organization_id: UUID,
-    owner_id: UUID,
+    note_ids: list[UUID],
 ) -> int:
-    """Hard-delete the owner's soft-deleted notes; returns the count.
-
-    Scoped to the caller's own notes: the trash list shows what the user can
-    see, and there is no admin god-mode that may destroy other members'
-    content (permissions.md core principle).
-    """
+    """Hard-delete the already-authorized soft-deleted notes."""
+    if not note_ids:
+        return 0
     result = await session.execute(
         select(Note).where(
-            and_(
-                Note.organization_id == organization_id,
-                Note.owner_id == owner_id,
-                Note.is_deleted == True,  # noqa: E712
-            )
+            Note.id.in_(note_ids),
+            Note.is_deleted.is_(True),
         )
     )
     deleted_notes = list(result.scalars().all())

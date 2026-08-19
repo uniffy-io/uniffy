@@ -127,3 +127,33 @@ def resolve_effective_policy(
         return raw_access_mode, baseline
 
     return raw_access_mode, raw_baseline_role
+
+
+def resolve_effective_content_role(
+    *,
+    user_id: UUID,
+    owner_id: UUID,
+    is_active_member: bool,
+    support_role: ContentRole | None,
+    blocked: bool,
+    granted_role: ContentRole | None,
+    raw_access_mode: AccessMode | None,
+    raw_baseline_role: ContentRole | None,
+    org_default_access_mode: AccessMode | None,
+    org_default_baseline_role: ContentRole | None,
+) -> ContentRole | None:
+    if support_role is not None:
+        return support_role
+    if not is_active_member or blocked:
+        return None
+    if owner_id == user_id:
+        return ContentRole.OWNER
+    if granted_role is not None:
+        return granted_role
+    mode, baseline = resolve_effective_policy(
+        raw_access_mode,
+        raw_baseline_role,
+        org_default_access_mode,
+        org_default_baseline_role,
+    )
+    return baseline if mode == AccessMode.OPEN_TO_ORG else None

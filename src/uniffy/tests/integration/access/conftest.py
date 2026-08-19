@@ -22,8 +22,11 @@ from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.chat.agent_folder import ChatAgentFolder
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
+from uniffy.core.models.comments.comment import Comment
+from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization import Organization
@@ -35,7 +38,10 @@ from uniffy.core.models.permissions.content_access_request import ContentAccessR
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.platform.support_session import SupportSession
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
+from uniffy.core.valkey.ops import close_ops_client, init_ops_client
 from uniffy.db import close_db, init_db, open_session
 from uniffy.db.session import get_database_url
 
@@ -51,6 +57,19 @@ async def database():
         yield
     finally:
         await close_db()
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)
+async def valkey_backend():
+    try:
+        await init_ops_client()
+    except Exception:
+        yield
+    else:
+        try:
+            yield
+        finally:
+            await close_ops_client()
 
 
 @pytest_asyncio.fixture(loop_scope="session")
@@ -228,6 +247,20 @@ async def _seed_access(db_session: AsyncSession) -> NS:
 
 async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
     await db_session.rollback()
+    comment_ids = (
+        await db_session.execute(
+            select(Comment.id).where(Comment.organization_id.in_(env.org_ids))
+        )
+    ).scalars()
+    await db_session.execute(delete(CommentReaction).where(CommentReaction.comment_id.in_(comment_ids)))
+    await db_session.execute(delete(Comment).where(Comment.organization_id.in_(env.org_ids)))
+    await db_session.execute(
+        delete(SupportSession).where(SupportSession.organization_id.in_(env.org_ids))
+    )
+    await db_session.execute(
+        delete(ChatAgentFolder).where(ChatAgentFolder.organization_id.in_(env.org_ids))
+    )
+    await db_session.execute(delete(Tag).where(Tag.organization_id.in_(env.org_ids)))
     # Tests grant domain-admin rows and open channels; both hold FKs on the org.
     channel_ids = (
         (

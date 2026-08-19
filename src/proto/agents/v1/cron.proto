@@ -59,6 +59,8 @@ message CronTaskInfo {
   optional string agent_name = 23;
   // Baseline role granted by access mode (when applicable)
   optional common.v1.ContentRole baseline_role = 24;
+  // Caller's effective role on this task.
+  common.v1.ContentRole user_role = 25;
 }
 
 // Execution log entry, served from the shared agents_run_logs table.

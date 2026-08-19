@@ -23,10 +23,6 @@ from uniffy.core.content.members import (
     register_attachment_cascade_loader,
     register_content_loader,
 )
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
 from uniffy.core.content.references import (
     CanvasNodeType,
     extract_all_outgoing_references,
@@ -138,6 +134,20 @@ class _NoteContentFields:
     parsed_inline_tag_names: list[str]
 
 
+_FILE_URN_PREFIX = f"urn:uniffy:content:{ContentType.FILE.value}:"
+
+
+def _referenced_file_ids(outgoing_references: list[str] | None) -> set[UUID]:
+    ids: set[UUID] = set()
+    for urn in outgoing_references or []:
+        if urn.startswith(_FILE_URN_PREFIX):
+            try:
+                ids.add(UUID(urn[len(_FILE_URN_PREFIX) :]))
+            except ValueError:
+                continue
+    return ids
+
+
 class NoteOperations(BaseContentOperations[Note]):
     """Note CRUD with permissions, search indexing, and notifications."""
 
@@ -240,12 +250,10 @@ class NoteOperations(BaseContentOperations[Note]):
             return
         try:
             meta = await self._index_for_search(parent) or {}
-            effective_mode, _ = await self._effective_policy(organization_id, parent)
             await publish_mention_state(
                 organization_id=organization_id,
                 urn=build_content_urn(self.content_type, parent.id),
                 changes={"title": parent.title, **meta},
-                restricted=effective_mode != AccessMode.OPEN_TO_ORG,
             )
         except Exception:
             logger.opt(exception=True).warning(
@@ -478,6 +486,18 @@ class NoteOperations(BaseContentOperations[Note]):
             # overwrite the column.
             await publish_content_replace(self.content_type, note_id, fields.content)
 
+        if content_changed and fields is not None:
+            from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+            referenced_file_ids = _referenced_file_ids(fields.outgoing_references)
+            await AttachmentOperations(self.session).reconcile_inline_attachments(
+                organization_id,
+                self.content_type,
+                note_id,
+                referenced_file_ids,
+            )
+            await self.session.commit()
+
         await self._sync_tags_after_save(
             user_id=user_id,
             organization_id=organization_id,
@@ -569,6 +589,15 @@ class NoteOperations(BaseContentOperations[Note]):
         removed_ids = await self._collect_descendant_ids(note)
 
         if permanent:
+            # Trash keeps attachment bytes for restore; a permanent delete is
+            # the end of the parent, so its attachment files go with it.
+            from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+            await AttachmentOperations(self.session).purge_attachments_for_content(
+                organization_id,
+                self.content_type,
+                removed_ids,
+            )
             await queries.permanent_delete_recursive(self.session, note)
         else:
             await queries.soft_delete_recursive(self.session, note)
@@ -801,14 +830,21 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self._require_view(user_id, organization_id, note)
 
-        all_backlinks = await queries.get_backlinks(self.session, note_id, organization_id)
-
-        accessible: list[Note] = []
-        for backlink in all_backlinks:
-            role = await self._resolve_role(user_id, organization_id, backlink)
-            if role is not None and role != ContentRole.BLOCKED:
-                accessible.append(backlink)
-        return accessible
+        access_filter = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=Note.id,
+            owner_id_column=Note.owner_id,
+            access_mode_column=Note.access_mode,
+            baseline_role_column=Note.baseline_role,
+        )
+        return await queries.get_backlinks(
+            self.session,
+            note_id,
+            organization_id,
+            access_filter,
+        )
 
     async def empty_trash(
         self,
@@ -816,17 +852,34 @@ class NoteOperations(BaseContentOperations[Note]):
         organization_id: UUID,
     ) -> int:
         """Permanently delete the caller's soft-deleted notes."""
-        # Capture ids first so search cleanup can run after the rows are gone.
+        access_filter = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=Note.id,
+            owner_id_column=Note.owner_id,
+            access_mode_column=Note.access_mode,
+            baseline_role_column=Note.baseline_role,
+        )
         trash_ids_result = await self.session.execute(
             select(Note.id).where(
                 Note.organization_id == organization_id,
                 Note.owner_id == user_id,
                 Note.is_deleted == True,  # noqa: E712
+                access_filter,
             )
         )
         trash_ids = list(trash_ids_result.scalars().all())
 
-        count = await queries.empty_trash(self.session, organization_id, user_id)
+        from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+        await AttachmentOperations(self.session).purge_attachments_for_content(
+            organization_id,
+            self.content_type,
+            trash_ids,
+        )
+
+        count = await queries.empty_trash(self.session, organization_id, trash_ids)
 
         tag_ops = TagOperations(self.session)
         for nid in trash_ids:
@@ -1166,12 +1219,6 @@ class NoteOperations(BaseContentOperations[Note]):
         *,
         personal_only: bool,
     ) -> Any:
-        # ``personal_only`` -> owner only; otherwise the accessible-filter for
-        # everyone. Admins are NOT exempt: this feeds the personal sidebar, which
-        # must not surface other members' OWNER_ONLY notes.
-        if personal_only:
-            return query.where(Note.owner_id == user_id)
-
         access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
@@ -1181,7 +1228,10 @@ class NoteOperations(BaseContentOperations[Note]):
             access_mode_column=Note.access_mode,
             baseline_role_column=Note.baseline_role,
         )
-        return query.where(access_filter)
+        query = query.where(access_filter)
+        if personal_only:
+            query = query.where(Note.owner_id == user_id)
+        return query
 
     def _group_member_subquery(self, organization_id: UUID, group_id: UUID):
         now = datetime.now(UTC)
@@ -1326,7 +1376,6 @@ async def _load_note(
 
 
 register_content_loader(ContentType.NOTE, _load_note)
-register_reference_state_loader(ContentType.NOTE, model_reference_state_loader(Note))
 
 
 async def _note_attachment_cascade(

@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.auth.cache import invalidate_user as invalidate_user_perm_cache
 from uniffy.core.errors import (
     NotFoundError,
     PermissionDeniedError,
@@ -39,12 +38,6 @@ from uniffy.core.models.platform.support_session import (
 from uniffy.core.types import NotificationType
 from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
-from uniffy.domains.platform.support_session.cache import (
-    CACHE_MISS,
-    get_active_session,
-    invalidate_active_session,
-    set_active_session,
-)
 from uniffy.domains.platform.support_session.errors import (
     SupportSessionScopeError,
     SupportSessionTransitionError,
@@ -124,59 +117,6 @@ def _clamp_page_size(page_size: int) -> int:
 
 def _safe_page(page: int) -> int:
     return page if page > 0 else 0
-
-
-def _serialize_for_cache(session: SupportSession) -> dict:
-    return {
-        "id": str(session.id),
-        "organization_id": str(session.organization_id),
-        "support_user_id": str(session.support_user_id),
-        "scope": session.scope.value,
-        "state": session.state.value,
-        "expires_at": session.expires_at.isoformat(),
-        "granted_at": (session.granted_at.isoformat() if session.granted_at else None),
-    }
-
-
-def _from_cache_payload(
-    payload: dict,
-    expected_user_id: UUID,
-    expected_org_id: UUID,
-) -> SupportSession | None:
-    """Returns a transient (not session-attached) row; ``None`` if invalid,
-    expired, or for another (user, org).
-    """
-    try:
-        cached_state = payload.get("state")
-        if cached_state != SupportSessionState.ACTIVE.value:
-            return None
-        expires_raw = payload.get("expires_at")
-        if not expires_raw:
-            return None
-        expires_at = datetime.fromisoformat(expires_raw)
-        if expires_at <= datetime.now(UTC):
-            return None
-        cached_user_id = UUID(payload["support_user_id"])
-        cached_org_id = UUID(payload["organization_id"])
-        if cached_user_id != expected_user_id or cached_org_id != expected_org_id:
-            return None
-        row = SupportSession(
-            id=UUID(payload["id"]),
-            organization_id=cached_org_id,
-            support_user_id=cached_user_id,
-            requested_by_user_id=cached_user_id,
-            reason="",
-            scope=SupportSessionScope(payload["scope"]),
-            state=SupportSessionState.ACTIVE,
-            requested_at=expires_at,
-            expires_at=expires_at,
-        )
-        granted_raw = payload.get("granted_at")
-        if granted_raw:
-            row.granted_at = datetime.fromisoformat(granted_raw)
-        return row
-    except KeyError, ValueError, TypeError:
-        return None
 
 
 class SupportSessionOperations:
@@ -268,14 +208,6 @@ class SupportSessionOperations:
 
         await self._session.commit()
 
-        if row.state == SupportSessionState.ACTIVE:
-            await set_active_session(
-                actor_user_id,
-                org.id,
-                _serialize_for_cache(row),
-                row.expires_at,
-            )
-
         lifecycle_event = "requested" if initial_state == SupportSessionState.PENDING else "started"
         await self._fanout_lifecycle(row, lifecycle_event)
 
@@ -329,17 +261,6 @@ class SupportSessionOperations:
             details={"scope": row.scope.value},
         )
         await self._session.commit()
-
-        await set_active_session(
-            row.support_user_id,
-            row.organization_id,
-            _serialize_for_cache(row),
-            row.expires_at,
-        )
-        # Drop any stale permission cache the operator built up before
-        # the session went ACTIVE so the next read recomputes through
-        # _support_session_role.
-        await invalidate_user_perm_cache(row.support_user_id)
 
         await self._fanout_lifecycle(row, "started")
 
@@ -407,7 +328,6 @@ class SupportSessionOperations:
             raise ValidationError("reason", "reason exceeds 2000 characters")
 
         now = datetime.now(UTC)
-        was_active = row.state == SupportSessionState.ACTIVE
         row.state = SupportSessionState.REVOKED
         row.revoked_at = now
         row.revoked_by_user_id = actor_user_id
@@ -429,12 +349,6 @@ class SupportSessionOperations:
             },
         )
         await self._session.commit()
-
-        if was_active:
-            await invalidate_active_session(row.support_user_id, row.organization_id)
-        # The operator's cached VIEWER role on tenant content would
-        # otherwise outlive the revoke up to _ROLE_TTL.
-        await invalidate_user_perm_cache(row.support_user_id)
 
         await self._fanout_lifecycle(row, "revoked", extra={"revoke_reason": reason})
 
@@ -539,16 +453,7 @@ class SupportSessionOperations:
     async def active_session_for(
         self, *, user_id: UUID, organization_id: UUID
     ) -> SupportSession | None:
-        """Hot lookup used by :class:`PermissionChecker`; cache hits return
-        a transient (unattached) row.
-        """
-        cached = await get_active_session(user_id, organization_id)
-        if cached is not CACHE_MISS and cached is not None:
-            row = _from_cache_payload(cached, user_id, organization_id)
-            if row is not None:
-                return row
-
-        row = (
+        return (
             await self._session.execute(
                 select(SupportSession)
                 .where(SupportSession.support_user_id == user_id)
@@ -559,19 +464,6 @@ class SupportSessionOperations:
                 .limit(1)
             )
         ).scalar_one_or_none()
-
-        if row is None:
-            # Drop stale entry so the next lookup short-circuits via cache instead of PG.
-            await invalidate_active_session(user_id, organization_id)
-            return None
-
-        await set_active_session(
-            user_id,
-            organization_id,
-            _serialize_for_cache(row),
-            row.expires_at,
-        )
-        return row
 
     async def get_org_consent_mode(
         self,
@@ -691,8 +583,6 @@ class SupportSessionOperations:
             await self._session.commit()
 
             for row in rows:
-                await invalidate_active_session(row.support_user_id, row.organization_id)
-                await invalidate_user_perm_cache(row.support_user_id)
                 await self._fanout_lifecycle(row, "expired")
 
             total_flipped += len(rows)

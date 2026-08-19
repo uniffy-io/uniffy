@@ -34,6 +34,7 @@ from uniffy.domains.auth.context import (
     get_user_agent_from_context,
     get_user_id_from_context,
     get_user_id_from_enrollment_context,
+    resolve_organization_id,
 )
 from uniffy.domains.auth.cookies import attach_asset_cookie
 from uniffy.domains.auth.errors import (
@@ -264,7 +265,7 @@ class MfaHandlers:
                 ops = MfaOperations(session)
                 await ops.admin_reset_mfa(
                     actor_user_id=actor_id,
-                    organization_id=UUID(request.organization_id),
+                    organization_id=resolve_organization_id(ctx, request.organization_id),
                     target_user_id=UUID(request.target_user_id),
                     reason=request.reason,
                 )
@@ -273,6 +274,8 @@ class MfaHandlers:
             raise ConnectError(Code.PERMISSION_DENIED, str(exc))
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc))
+        except ConnectError:
+            raise
         except Exception as exc:
             logger.exception(f"AdminResetMfa failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

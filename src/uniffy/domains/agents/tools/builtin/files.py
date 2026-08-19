@@ -143,7 +143,7 @@ async def _execute_search_files(ctx: ToolContext, args: dict) -> ToolResult:
     limit = clamp_int(args.get("limit", 10), 10, 1, 20)
 
     ops = SearchOperations(ctx.session)
-    results, _total = await ops.search(
+    results, _has_more, _next_offset = await ops.search(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         query_text=query,

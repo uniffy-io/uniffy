@@ -23,8 +23,11 @@ import { ViewerContent } from "@/features/files/components/viewer/ViewerContent"
 import { usePlaylistPrefetch } from "@/features/files/components/viewer/hooks/usePlaylistPrefetch";
 import { printPdf } from "@/features/files/components/viewer/pdf/printPdf";
 import { buildMediaUrl } from "@/shared/utils/fileUrls";
+import { fetchFile } from "@/features/files/store/filesSlice";
 import type { SerializedFile } from "@/features/files/store/filesThunks";
 import { getDownloadGateState } from "@/features/files/utils/transcodeGate";
+import { roleCanEdit } from "@/shared/utils/contentRoles";
+import { ContentRole } from "@uniffy/proto/common/v1/common_pb";
 
 // Import viewer-specific styles
 import "../../styles/viewer.css";
@@ -67,6 +70,21 @@ export function FileViewerModal() {
   // Check if current file is a PDF
   const isPdf = useMemo(() => file?.mimeType === "application/pdf", [file?.mimeType]);
   const isImage = useMemo(() => file?.mimeType.startsWith("image/"), [file?.mimeType]);
+
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  // The owner check keeps the affordance live before fetchFile hydrates
+  // userRole on list-loaded files.
+  const canEnterEditor =
+    !!file && (isImage || isPdf) && (roleCanEdit(file.userRole) || file.ownerId === currentUserId);
+
+  // List responses leave userRole unresolved; GetFile fills it in so the
+  // edit gates see the caller's actual role.
+  const viewerFileRole = file?.userRole;
+  useEffect(() => {
+    if (isOpen && currentFileId && viewerFileRole === ContentRole.UNSPECIFIED) {
+      void dispatch(fetchFile(currentFileId));
+    }
+  }, [dispatch, isOpen, currentFileId, viewerFileRole]);
 
   // Image editing mode
   const [isEditing, setIsEditing] = useState(false);
@@ -178,7 +196,7 @@ export function FileViewerModal() {
         }
       },
       "viewer.edit": () => {
-        if ((isImage || isPdf) && !isEditing) {
+        if (canEnterEditor && !isEditing) {
           handleEdit();
         }
       },

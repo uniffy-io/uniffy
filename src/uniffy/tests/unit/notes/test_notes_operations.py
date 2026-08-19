@@ -26,6 +26,18 @@ def publish_mock(monkeypatch):
     return mock
 
 
+@pytest.fixture(autouse=True)
+def reconcile_mock(monkeypatch):
+    """Content updates reconcile inline attachments; keep unit tests off that query."""
+    mock = AsyncMock(return_value=0)
+    monkeypatch.setattr(
+        "uniffy.domains.files.attachments.operations."
+        "AttachmentOperations.reconcile_inline_attachments",
+        mock,
+    )
+    return mock
+
+
 def _make_note(*, version: int = 3, content: str = "old content") -> Note:
     return Note(
         id=generate_id(),

@@ -7,14 +7,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from uniffy.core.auth.permissions import role_can_edit, role_can_view
-from uniffy.core.auth.permissions.queries import ContentAccessQuery
+from uniffy.core.auth.permissions import PermissionChecker, resolve_effective_policy
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
+from uniffy.core.models.login.organization import Organization
+from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.storage import get_s3_client
 from uniffy.core.types import (
@@ -22,6 +23,14 @@ from uniffy.core.types import (
     ContentRole,
     ContentType,
     generate_id,
+)
+from uniffy.core.valkey import QueueName, get_queue
+from uniffy.domains.files.attachments.access import AttachmentTargetAccess
+from uniffy.domains.permissions.resource_access import (
+    ResourceAccessPurpose,
+    ResourceAccessResolver,
+    ResourceKey,
+    ResourceRowState,
 )
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, supports_thumbnail
 
@@ -31,12 +40,23 @@ ATTACHMENTS_FOLDER_NAME = "Attachments"
 ORG_ATTACHMENTS_FOLDER_NAME = "Organization Attachments"
 
 
+def is_attachment_staging_folder(folder: Folder | None) -> bool:
+    """True for a personal Attachments folder - uploads staged there stay
+    OWNER_ONLY and out of the search index until an attach links them to a parent."""
+    return (
+        folder is not None
+        and folder.is_system
+        and not folder.is_org_attachments
+        and folder.name == ATTACHMENTS_FOLDER_NAME
+        and folder.parent_id is None
+    )
+
+
 class AttachmentOperations:
     """Link files to content; manages file copies in the Attachments folder."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-        self._access_query = ContentAccessQuery(session)
         self._s3 = get_s3_client()
 
     async def get_or_create_attachments_folder(
@@ -94,19 +114,17 @@ class AttachmentOperations:
         if folder:
             return folder
 
-        from uniffy.core.models.login.organization_member import (
-            OrganizationMember,
-            OrganizationRole,
-        )
-
-        # FK owner is nominal; pick highest-ranking active member so the
-        # FK survives deactivation of the original creator.
         members = (
             await self._session.execute(
                 select(OrganizationMember.user_id, OrganizationMember.role)
+                .join(User, User.id == OrganizationMember.user_id)
+                .join(Organization, Organization.id == OrganizationMember.organization_id)
                 .where(
                     OrganizationMember.organization_id == organization_id,
-                    OrganizationMember.is_active == True,  # noqa: E712
+                    OrganizationMember.is_active.is_(True),
+                    User.is_active.is_(True),
+                    Organization.deleted_at.is_(None),
+                    Organization.is_suspended.is_(False),
                 )
                 .order_by(OrganizationMember.joined_at)
             )
@@ -144,9 +162,6 @@ class AttachmentOperations:
         raw_baseline_role: ContentRole | None,
     ) -> tuple[AccessMode, ContentRole | None]:
         """Resolve effective `(mode, baseline)` using org defaults when NULL."""
-        from uniffy.core.auth.permissions import resolve_effective_policy
-        from uniffy.core.auth.permissions.checker import PermissionChecker
-
         checker = PermissionChecker(self._session)
         default_mode, default_baseline = await checker.get_org_defaults(
             organization_id,
@@ -190,16 +205,17 @@ class AttachmentOperations:
         if not source_file:
             raise NotFoundError("File", str(source_file_id))
 
-        await self._verify_content_access(user_id, organization_id, content_type, content_id)
-
-        _, parent_mode_raw, parent_baseline_raw, parent_type, _ = await self._load_parent_policy(
-            organization_id, content_type, content_id
+        target_policy = await AttachmentTargetAccess(self._session).require_edit(
+            user_id,
+            organization_id,
+            content_type,
+            content_id,
         )
         parent_mode, parent_baseline = await self._resolve_parent_effective(
             organization_id,
-            parent_type,
-            parent_mode_raw,
-            parent_baseline_raw,
+            target_policy.content_type,
+            target_policy.access_mode,
+            target_policy.baseline_role,
         )
 
         # Org-wide parent -> org Attachments folder + OPEN_TO_ORG/EDITOR file.
@@ -213,17 +229,20 @@ class AttachmentOperations:
             file_access_mode = AccessMode.OWNER_ONLY
             file_baseline_role = None
 
-        if source_file.folder_id == folder.id and (
-            parent_mode == AccessMode.OPEN_TO_ORG or source_file.owner_id == user_id
-        ):
-            if (
-                source_file.access_mode != file_access_mode
-                or source_file.baseline_role != file_baseline_role
-            ):
-                source_file.access_mode = file_access_mode
-                source_file.baseline_role = file_baseline_role
-                await self._session.flush()
+        # A staged upload is linked in place, never copied: the editor/composer
+        # already embedded ITS id in the content, so the id the readers resolve
+        # must be the id the attachment protects. Copying leaves the content
+        # pointing at an unprotected leftover. Anything else (reuse of a real
+        # Files-area file, or a staged file another attachment already claimed -
+        # file_id is unique) gets a private copy so the original lives on.
+        if await self._can_link_in_place(source_file, user_id):
             file_to_link = source_file
+            await self._apply_attachment_policy(
+                file_to_link,
+                target_folder_id=folder.id,
+                access_mode=file_access_mode,
+                baseline_role=file_baseline_role,
+            )
         else:
             file_to_link = await self._copy_file_to_folder(
                 source_file=source_file,
@@ -248,6 +267,50 @@ class AttachmentOperations:
 
         return attachment
 
+    async def _can_link_in_place(self, source_file: File, user_id: UUID) -> bool:
+        """Staged upload owned by the attacher, still unclaimed by any attachment."""
+        if source_file.owner_id != user_id:
+            return False
+        if source_file.folder_id is None:
+            return False
+        folder = (
+            await self._session.execute(select(Folder).where(Folder.id == source_file.folder_id))
+        ).scalar_one_or_none()
+        if not is_attachment_staging_folder(folder):
+            return False
+        claimed = (
+            await self._session.execute(
+                select(Attachment.id).where(Attachment.file_id == source_file.id).limit(1)
+            )
+        ).first()
+        return claimed is None
+
+    async def _apply_attachment_policy(
+        self,
+        file: File,
+        target_folder_id: UUID,
+        access_mode: AccessMode,
+        baseline_role: ContentRole | None,
+    ) -> None:
+        """Move a linked file under its attachment policy; index org-wide ones."""
+        file.folder_id = target_folder_id
+        file.access_mode = access_mode
+        file.baseline_role = baseline_role
+        await self._session.flush()
+
+        # Staged uploads carry no search document; the attach creates one so
+        # mention chips resolve a preview. Its access fields keep the doc out
+        # of other users' candidates - authorization stays with PostgreSQL.
+        await self._index_attachment_file(file)
+
+    async def _index_attachment_file(self, file: File) -> None:
+        from uniffy.domains.files.operations import FileOperations
+
+        await FileOperations(self._session)._index_for_search(
+            model=file,
+            skip_member_lookup=True,
+        )
+
     async def detach_file(
         self,
         user_id: UUID,
@@ -265,7 +328,14 @@ class AttachmentOperations:
         if not attachment:
             raise NotFoundError("Attachment", str(attachment_id))
 
-        if attachment.attached_by_user_id != user_id:
+        if attachment.attached_by_user_id == user_id:
+            await self._verify_content_access(
+                user_id,
+                organization_id,
+                attachment.content_type,
+                attachment.content_id,
+            )
+        else:
             await self._verify_content_edit_access(
                 user_id,
                 organization_id,
@@ -273,6 +343,10 @@ class AttachmentOperations:
                 attachment.content_id,
             )
 
+        await self._delete_attachment(attachment)
+        return True
+
+    async def _delete_attachment(self, attachment: Attachment) -> None:
         file_result = await self._session.execute(select(File).where(File.id == attachment.file_id))
         file = file_result.scalar_one_or_none()
 
@@ -289,12 +363,37 @@ class AttachmentOperations:
 
             file.current_version_id = None
             await self._session.flush()
+
+            file_owner = file.owner_id
+            file_org = file.organization_id
+            file_size = file.size_bytes
             await self._session.delete(file)
+
+            from uniffy.core.search.indexer import SearchIndexer
+
+            urn = f"urn:uniffy:content:{ContentType.FILE.value}:{attachment.file_id}"
+            await SearchIndexer(self._session).remove(urn)
+
+            # A linked staged upload was quota-counted at complete_upload;
+            # copies never were, so only the linked shape decrements.
+            if attachment.source_file_id == attachment.file_id:
+                from uniffy.domains.files.quota_operations import QuotaOperations
+
+                try:
+                    await QuotaOperations(self._session).decrement_usage(
+                        organization_id=file_org,
+                        user_id=file_owner,
+                        bytes_delta=file_size,
+                        file_count_delta=1,
+                    )
+                except Exception:
+                    logger.opt(exception=True).warning(
+                        "Failed to decrement storage usage on detach",
+                        file_id=str(attachment.file_id),
+                    )
 
         await self._session.delete(attachment)
         await self._session.flush()
-
-        return True
 
     async def detach_all_for_content(
         self,
@@ -303,7 +402,13 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> int:
-        """Detach all files from a piece of content; called on content delete."""
+        """Detach every file after one authoritative parent edit check."""
+        await self._verify_content_edit_access(
+            user_id,
+            organization_id,
+            content_type,
+            content_id,
+        )
         result = await self._session.execute(
             select(Attachment).where(
                 Attachment.organization_id == organization_id,
@@ -313,12 +418,68 @@ class AttachmentOperations:
         )
         attachments = list(result.scalars().all())
 
-        count = 0
         for attachment in attachments:
-            await self.detach_file(user_id, organization_id, attachment.id)
-            count += 1
+            await self._delete_attachment(attachment)
 
-        return count
+        return len(attachments)
+
+    async def reconcile_inline_attachments(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+        referenced_file_ids: set[UUID],
+    ) -> int:
+        """Detach editor uploads their parent's content no longer references.
+
+        Only attachments that own their staged upload (``source_file_id ==
+        file_id``) are eligible - those exist purely as inline media. Copies
+        made from picked existing files stay until explicitly detached.
+        """
+        result = await self._session.execute(
+            select(Attachment).where(
+                Attachment.organization_id == organization_id,
+                Attachment.content_type == content_type,
+                Attachment.content_id == content_id,
+            )
+        )
+        removed = 0
+        for attachment in result.scalars().all():
+            if attachment.source_file_id != attachment.file_id:
+                continue
+            if attachment.file_id in referenced_file_ids:
+                continue
+            await self._delete_attachment(attachment)
+            removed += 1
+        return removed
+
+    async def purge_attachments_for_content(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_ids: list[UUID],
+    ) -> int:
+        """Delete attachments (rows, files, bytes) for parents being destroyed.
+
+        No actor gate: the caller already authorized the parent delete, and the
+        parent row may be gone by the time this runs.
+        """
+        if not content_ids:
+            return 0
+        deleted = 0
+        for start in range(0, len(content_ids), 200):
+            batch = content_ids[start : start + 200]
+            result = await self._session.execute(
+                select(Attachment).where(
+                    Attachment.organization_id == organization_id,
+                    Attachment.content_type == content_type,
+                    Attachment.content_id.in_(batch),
+                )
+            )
+            for attachment in result.scalars().all():
+                await self._delete_attachment(attachment)
+                deleted += 1
+        return deleted
 
     async def list_attachments(
         self,
@@ -361,24 +522,13 @@ class AttachmentOperations:
         if not source_ids:
             return set()
 
-        access_filter = await self._access_query.build_accessible_filter(
-            user_id=user_id,
+        decisions = await ResourceAccessResolver(self._session).resolve(
+            actor_id=user_id,
             organization_id=organization_id,
-            content_type=ContentType.FILE,
-            content_id_column=File.id,
-            owner_id_column=File.owner_id,
-            access_mode_column=File.access_mode,
-            baseline_role_column=File.baseline_role,
+            keys=[ResourceKey(ContentType.FILE, file_id) for file_id in source_ids],
+            purpose=ResourceAccessPurpose.LIST,
         )
-        rows = await self._session.execute(
-            select(File.id).where(
-                File.id.in_(source_ids),
-                File.organization_id == organization_id,
-                File.is_deleted == False,  # noqa: E712
-                access_filter,
-            )
-        )
-        return set(rows.scalars().all())
+        return {key.content_id for key, decision in decisions.items() if decision.can_view}
 
     async def batch_list_attachments(
         self,
@@ -387,48 +537,19 @@ class AttachmentOperations:
         content_type: ContentType,
         content_ids: list[UUID],
     ) -> dict[UUID, list[tuple[Attachment, File, User | None]]]:
-        """Batched attachment list for N content rows in a single SQL round-trip.
-
-        Chat messages share the channel access check across the batch;
-        other types fall back to per-row verification.
-        """
+        """Batched attachment list for an authorized content page."""
         if not content_ids:
             return {}
         content_ids = content_ids[:200]
 
-        accessible_ids: list[UUID] = []
-        if content_type == ContentType.CHAT_MESSAGE:
-            from uniffy.core.models.chat.message import ChatMessage
-            from uniffy.domains.chat.access import ChatAccessChecker
-
-            msg_rows = await self._session.execute(
-                select(ChatMessage.id, ChatMessage.channel_id).where(
-                    ChatMessage.id.in_(content_ids),
-                    ChatMessage.is_deleted == False,  # noqa: E712
-                )
-            )
-            messages_by_channel: dict[UUID, list[UUID]] = {}
-            for mid, cid in msg_rows.all():
-                messages_by_channel.setdefault(cid, []).append(mid)
-
-            checker = ChatAccessChecker(self._session)
-            for channel_id, message_ids in messages_by_channel.items():
-                try:
-                    channel = await checker.get_channel(channel_id, organization_id)
-                    await checker.check_access(user_id, organization_id, channel)
-                    accessible_ids.extend(message_ids)
-                except NotFoundError, PermissionDeniedError:
-                    continue
-        else:
-            for cid in content_ids:
-                try:
-                    role = await self._resolve_parent_role(
-                        user_id, organization_id, content_type, cid
-                    )
-                    if role_can_view(role):
-                        accessible_ids.append(cid)
-                except NotFoundError:
-                    continue
+        keys = [ResourceKey(content_type, content_id) for content_id in content_ids]
+        decisions = await ResourceAccessResolver(self._session).resolve(
+            actor_id=user_id,
+            organization_id=organization_id,
+            keys=keys,
+            purpose=ResourceAccessPurpose.LIST,
+        )
+        accessible_ids = [key.content_id for key in keys if decisions[key].can_view]
 
         if not accessible_ids:
             return {}
@@ -476,7 +597,7 @@ class AttachmentOperations:
                 attachment.content_id,
             )
             return True
-        except PermissionDeniedError:
+        except PermissionDeniedError, NotFoundError:
             return False
 
     async def can_view_file_via_attachment(
@@ -527,26 +648,16 @@ class AttachmentOperations:
         if not file:
             return None
 
-        access_filter = await self._access_query.build_accessible_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=ContentType.FILE,
-            content_id_column=File.id,
-            owner_id_column=File.owner_id,
-            access_mode_column=File.access_mode,
-            baseline_role_column=File.baseline_role,
-        )
-
-        result = await self._session.execute(
-            select(File)
-            .where(
-                File.id == file_id,
-                File.organization_id == organization_id,
-                access_filter,
+        key = ResourceKey(ContentType.FILE, file_id)
+        decision = (
+            await ResourceAccessResolver(self._session).resolve(
+                actor_id=user_id,
+                organization_id=organization_id,
+                keys=[key],
+                purpose=ResourceAccessPurpose.REFERENCE,
             )
-            .options(selectinload(File.media_info))
-        )
-        return result.scalar_one_or_none()
+        )[key]
+        return file if decision.can_view else None
 
     async def _copy_file_to_folder(
         self,
@@ -667,11 +778,11 @@ class AttachmentOperations:
         if extraction_status == ExtractionStatus.PENDING:
             await self._enqueue_processing_jobs(new_file)
 
+        await self._index_attachment_file(new_file)
+
         return new_file
 
     async def _enqueue_processing_jobs(self, file: File) -> None:
-        from uniffy.core.valkey import QueueName, get_queue
-
         jobs = get_jobs_for_mime_type(file.mime_type or "")
         if not jobs:
             return
@@ -689,187 +800,6 @@ class AttachmentOperations:
             # Queue not available; file stays PENDING.
             logger.warning(f"Could not enqueue jobs for attachment {file.id}: {e}")
 
-    async def _verify_chat_message_access(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        message_id: UUID,
-        require_sender: bool = False,
-    ) -> None:
-        """Delegate chat-message access to `ChatAccessChecker`.
-
-        `require_sender=True` additionally demands sender or elevated role
-        (used for edit operations like detaching files).
-        """
-        from uniffy.core.models.chat.message import ChatMessage
-        from uniffy.domains.chat.access import ChatAccessChecker
-
-        result = await self._session.execute(
-            select(ChatMessage.channel_id, ChatMessage.sender_id).where(
-                ChatMessage.id == message_id,
-                ChatMessage.is_deleted == False,  # noqa: E712
-            )
-        )
-        row = result.one_or_none()
-        if not row:
-            raise NotFoundError("ChatMessage", str(message_id))
-
-        channel_id, sender_id = row[0], row[1]
-        checker = ChatAccessChecker(self._session)
-        channel = await checker.get_channel(channel_id, organization_id)
-        await checker.check_access(user_id, organization_id, channel)
-
-        if require_sender and sender_id != user_id:
-            is_elevated = await checker.require_elevated(user_id, organization_id, channel.id)
-            if not is_elevated:
-                raise PermissionDeniedError("edit", "chat message")
-
-    async def _load_parent_policy(
-        self,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-    ) -> tuple[UUID, AccessMode, ContentRole | None, ContentType, UUID]:
-        """Load `(owner_id, access_mode, baseline_role, type, id)` for a parent.
-
-        Tasks resolve to their parent project for the checker.
-        """
-        if content_type == ContentType.NOTE:
-            from uniffy.core.models.notes.note import Note
-
-            result = await self._session.execute(
-                select(Note.owner_id, Note.access_mode, Note.baseline_role).where(
-                    Note.id == content_id,
-                    Note.organization_id == organization_id,
-                )
-            )
-            row = result.one_or_none()
-            if not row:
-                raise NotFoundError("Note", str(content_id))
-            return row[0], row[1], row[2], content_type, content_id
-
-        if content_type == ContentType.FILE:
-            result = await self._session.execute(
-                select(File.owner_id, File.access_mode, File.baseline_role).where(
-                    File.id == content_id,
-                    File.organization_id == organization_id,
-                )
-            )
-            row = result.one_or_none()
-            if not row:
-                raise NotFoundError("File", str(content_id))
-            return row[0], row[1], row[2], content_type, content_id
-
-        if content_type == ContentType.CALENDAR_EVENT:
-            from uniffy.core.models.calendar.event import CalendarEvent
-
-            result = await self._session.execute(
-                select(
-                    CalendarEvent.organizer_id,
-                    CalendarEvent.access_mode,
-                    CalendarEvent.baseline_role,
-                ).where(
-                    CalendarEvent.id == content_id,
-                    CalendarEvent.organization_id == organization_id,
-                )
-            )
-            row = result.one_or_none()
-            if not row:
-                raise NotFoundError("CalendarEvent", str(content_id))
-            return row[0], row[1], row[2], content_type, content_id
-
-        if content_type == ContentType.TASK:
-            from uniffy.core.models.projects.project import Project
-            from uniffy.core.models.projects.task import Task
-
-            task_result = await self._session.execute(
-                select(Task.project_id).where(
-                    Task.id == content_id,
-                    Task.organization_id == organization_id,
-                )
-            )
-            task_row = task_result.one_or_none()
-            if not task_row:
-                raise NotFoundError("Task", str(content_id))
-            project_id = task_row[0]
-
-            proj_result = await self._session.execute(
-                select(Project.owner_id, Project.access_mode, Project.baseline_role).where(
-                    Project.id == project_id,
-                    Project.organization_id == organization_id,
-                )
-            )
-            proj_row = proj_result.one_or_none()
-            if not proj_row:
-                raise NotFoundError("Project", str(project_id))
-            return proj_row[0], proj_row[1], proj_row[2], ContentType.PROJECT, project_id
-
-        if content_type == ContentType.CHAT_MESSAGE:
-            from uniffy.core.models.chat.channel import ChannelType, ChatChannel
-            from uniffy.core.models.chat.message import ChatMessage
-
-            msg_result = await self._session.execute(
-                select(ChatMessage.channel_id).where(
-                    ChatMessage.id == content_id,
-                )
-            )
-            channel_id = msg_result.scalar_one_or_none()
-            if not channel_id:
-                raise NotFoundError("ChatMessage", str(content_id))
-
-            ch_result = await self._session.execute(
-                select(ChatChannel.owner_id, ChatChannel.channel_type).where(
-                    ChatChannel.id == channel_id,
-                    ChatChannel.organization_id == organization_id,
-                )
-            )
-            ch_row = ch_result.one_or_none()
-            if not ch_row:
-                raise NotFoundError("ChatChannel", str(channel_id))
-
-            # PUBLIC channels inherit OPEN_TO_ORG so inline previews work for
-            # everyone; private/DM stays OWNER_ONLY and relies on channel
-            # membership via _verify_chat_message_access.
-            if ch_row[1] == ChannelType.PUBLIC:
-                return (
-                    ch_row[0],
-                    AccessMode.OPEN_TO_ORG,
-                    ContentRole.VIEWER,
-                    ContentType.CHAT,
-                    channel_id,
-                )
-            return ch_row[0], AccessMode.OWNER_ONLY, None, ContentType.CHAT, channel_id
-
-        raise NotFoundError("Content", str(content_id))
-
-    async def _resolve_parent_role(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        content_type: ContentType,
-        content_id: UUID,
-    ) -> ContentRole | None:
-        from uniffy.core.auth.permissions.checker import PermissionChecker
-
-        (
-            owner_id,
-            access_mode,
-            baseline_role,
-            resolved_type,
-            resolved_id,
-        ) = await self._load_parent_policy(organization_id, content_type, content_id)
-
-        checker = PermissionChecker(self._session)
-        return await checker.effective_role(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=resolved_type,
-            content_id=resolved_id,
-            owner_id=owner_id,
-            access_mode=access_mode,
-            baseline_role=baseline_role,
-        )
-
     async def _verify_content_access(
         self,
         user_id: UUID,
@@ -877,11 +807,18 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        if content_type == ContentType.CHAT_MESSAGE:
-            await self._verify_chat_message_access(user_id, organization_id, content_id)
-            return
-        role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
-        if not role_can_view(role):
+        key = ResourceKey(content_type, content_id)
+        decision = (
+            await ResourceAccessResolver(self._session).resolve(
+                actor_id=user_id,
+                organization_id=organization_id,
+                keys=[key],
+                purpose=ResourceAccessPurpose.REFERENCE,
+            )
+        )[key]
+        if decision.row_state != ResourceRowState.LIVE:
+            raise NotFoundError(content_type.value, str(content_id))
+        if not decision.can_view:
             raise PermissionDeniedError("access", "content")
 
     async def _verify_content_edit_access(
@@ -891,11 +828,9 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        if content_type == ContentType.CHAT_MESSAGE:
-            await self._verify_chat_message_access(
-                user_id, organization_id, content_id, require_sender=True
-            )
-            return
-        role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
-        if not role_can_edit(role):
-            raise PermissionDeniedError("edit", "content")
+        await AttachmentTargetAccess(self._session).require_edit(
+            user_id,
+            organization_id,
+            content_type,
+            content_id,
+        )

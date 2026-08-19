@@ -38,9 +38,6 @@ service NotesService {
   // List notes in organization with pagination and filters
   rpc ListNotes(ListNotesRequest) returns (ListNotesResponse) {}
 
-  // Search notes using full-text search
-  rpc SearchNotes(SearchNotesRequest) returns (SearchNotesResponse) {}
-
   // Get backlinks for a note (other notes that reference this note)
   rpc GetBacklinks(GetBacklinksRequest) returns (GetBacklinksResponse) {}
 
@@ -55,21 +52,6 @@ service NotesService {
 
   // Copy note to another space
   rpc CopyNote(CopyNoteRequest) returns (CopyNoteResponse) {}
-
-  // Share note with group(s)
-  rpc ShareNoteWithGroup(ShareNoteWithGroupRequest) returns (ShareNoteWithGroupResponse) {}
-
-  // Unshare note from group
-  rpc UnshareNoteFromGroup(UnshareNoteFromGroupRequest) returns (UnshareNoteFromGroupResponse) {}
-
-  // Get sharing info for a note
-  rpc GetNoteSharing(GetNoteSharingRequest) returns (GetNoteSharingResponse) {}
-
-  // Grant permission to user/group for a note
-  rpc GrantPermission(GrantPermissionRequest) returns (GrantPermissionResponse) {}
-
-  // Revoke permission from user/group for a note
-  rpc RevokePermission(RevokePermissionRequest) returns (RevokePermissionResponse) {}
 }
 
 // Request to create a new note
@@ -235,32 +217,6 @@ message ListNotesResponse {
   int32 total_pages = 5;
 }
 
-// Request to search notes
-message SearchNotesRequest {
-  // Organization ID
-  string organization_id = 1;
-  // Search query (full-text search)
-  string query = 2;
-  // Include deleted notes
-  bool include_deleted = 3;
-  // Pagination: page number (1-indexed)
-  int32 page = 4;
-  // Pagination: page size (default: 50, max: 100)
-  int32 page_size = 5;
-}
-
-// Response for searching notes
-message SearchNotesResponse {
-  // List of notes matching search
-  repeated Note notes = 1;
-  // Total count of notes matching search
-  int32 total_count = 2;
-  // Current page
-  int32 page = 3;
-  // Page size
-  int32 page_size = 4;
-}
-
 // Request to get backlinks
 message GetBacklinksRequest {
   // Note ID to get backlinks for
@@ -411,140 +367,6 @@ message CopyNoteRequest {
   optional string title = 5;
   // Target baseline role granted by access mode
   optional common.v1.ContentRole target_baseline_role = 6;
-}
-
-// Request to share note with group
-message ShareNoteWithGroupRequest {
-  // Note ID
-  string note_id = 1;
-  // Organization ID for access control
-  string organization_id = 2;
-  // Group ID to share with
-  string group_id = 3;
-}
-
-// Request to unshare note from group
-message UnshareNoteFromGroupRequest {
-  // Note ID
-  string note_id = 1;
-  // Organization ID for access control
-  string organization_id = 2;
-  // Group ID to unshare from
-  string group_id = 3;
-}
-
-// Response for share operation
-message ShareNoteWithGroupResponse {
-  // Success flag
-  bool success = 1;
-  // Message
-  string message = 2;
-  // Updated list of group IDs
-  repeated string group_ids = 3;
-}
-
-// Response for unshare operation
-message UnshareNoteFromGroupResponse {
-  // Success flag
-  bool success = 1;
-  // Message
-  string message = 2;
-  // Updated list of group IDs
-  repeated string group_ids = 3;
-}
-
-// Request to get note sharing info
-message GetNoteSharingRequest {
-  // Note ID
-  string note_id = 1;
-  // Organization ID for access control
-  string organization_id = 2;
-}
-
-// Response with note sharing information
-message GetNoteSharingResponse {
-  // Note access mode
-  common.v1.AccessMode access_mode = 1;
-  // Owner user ID
-  string owner_id = 2;
-  // Group IDs if shared with groups
-  repeated string group_ids = 3;
-  // Explicit permissions granted
-  repeated ContentPermission permissions = 4;
-  // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 5;
-}
-
-// Request to grant permission
-message GrantPermissionRequest {
-  // Note ID
-  string note_id = 1;
-  // Organization ID for access control
-  string organization_id = 2;
-  // Subject type (user or group)
-  string subject_type = 3;
-  // Subject ID (user or group ID)
-  string subject_id = 4;
-  // Role to grant
-  common.v1.ContentRole role = 5;
-  // Optional: fine-grained permissions
-  optional bool can_view = 6;
-  optional bool can_edit = 7;
-  optional bool can_delete = 8;
-  optional bool can_share = 9;
-  optional bool can_move = 10;
-}
-
-// Request to revoke permission
-message RevokePermissionRequest {
-  // Note ID
-  string note_id = 1;
-  // Organization ID for access control
-  string organization_id = 2;
-  // Subject type (user or group)
-  string subject_type = 3;
-  // Subject ID (user or group ID)
-  string subject_id = 4;
-}
-
-// Response for grant permission
-message GrantPermissionResponse {
-  // Success flag
-  bool success = 1;
-  // Message
-  string message = 2;
-}
-
-// Response for revoke permission
-message RevokePermissionResponse {
-  // Success flag
-  bool success = 1;
-  // Message
-  string message = 2;
-}
-
-// Content permission details
-message ContentPermission {
-  // Permission ID
-  string id = 1;
-  // Subject type (user, group, organization)
-  string subject_type = 2;
-  // Subject ID
-  string subject_id = 3;
-  // Role granted
-  common.v1.ContentRole role = 4;
-  // Fine-grained permissions
-  bool can_view = 5;
-  bool can_edit = 6;
-  bool can_delete = 7;
-  bool can_share = 8;
-  bool can_move = 9;
-  // Granted by user ID
-  string granted_by_user_id = 10;
-  // Granted timestamp
-  google.protobuf.Timestamp granted_at = 11;
-  // Optional expiration
-  optional google.protobuf.Timestamp expires_at = 12;
 }
 
 // Lightweight owner information for shared notes

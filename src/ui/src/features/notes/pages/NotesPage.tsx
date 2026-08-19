@@ -108,7 +108,7 @@ export function NotesPage() {
   const notesCount = Object.keys(notesState?.notes ?? {}).length;
   const treeLoaded = useAppSelector((state) => state.notesTree.treeLoaded);
 
-  // Gating on tree state (not notesCount) - fetchNote/searchNotes can mask an empty tree.
+  // Gating on tree state (not notesCount) - fetchNote can mask an empty tree.
   useEffect(() => {
     if (!organizationId || treeLoaded) return;
 

@@ -11,14 +11,11 @@ from sqlalchemy.orm import InstrumentedAttribute
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
 from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.errors import (
@@ -40,10 +37,12 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
+from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
     OrganizationRole,
 )
+from uniffy.core.models.login.user import User
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
@@ -219,23 +218,20 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         removal would leave every event the user was ever invited to readable,
         because ``remove_member`` does not delete attendee rows.
         """
+        if not await self.access_query.is_active_member(user_id, organization_id):
+            return False
+
         result = await self.session.execute(
             select(EventAttendee.id)
-            .join(
-                OrganizationMember,
-                OrganizationMember.user_id == EventAttendee.user_id,
-            )
             .where(
                 EventAttendee.event_id == event_id,
                 EventAttendee.user_id == user_id,
-                OrganizationMember.organization_id == organization_id,
-                OrganizationMember.is_active.is_(True),
             )
             .limit(1)
         )
         return result.scalar_one_or_none() is not None
 
-    def _attendee_access_filter(self, user_id: UUID, organization_id: UUID):
+    async def _attendee_access_filter(self, user_id: UUID, organization_id: UUID):
         """WHERE branch granting invitees visibility, minus explicit BLOCKED grants.
 
         The membership EXISTS is uncorrelated, so it collapses to a constant
@@ -245,18 +241,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         attendee_subquery = select(EventAttendee.event_id).where(
             EventAttendee.user_id == user_id,
         )
-        active_membership = (
-            select(OrganizationMember.id)
-            .where(
-                OrganizationMember.user_id == user_id,
-                OrganizationMember.organization_id == organization_id,
-                OrganizationMember.is_active.is_(True),
-            )
-            .exists()
-        )
+        if not await self.access_query.is_active_member(user_id, organization_id):
+            return False
         return and_(
             CalendarEvent.id.in_(attendee_subquery),
-            active_membership,
             self.access_query.build_not_blocked_filter(
                 user_id=user_id,
                 organization_id=organization_id,
@@ -985,7 +973,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
         permission_filter = or_(
             access_filter,
-            self._attendee_access_filter(user_id, organization_id),
+            await self._attendee_access_filter(user_id, organization_id),
         )
 
         base_filters = [
@@ -1404,7 +1392,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         query = query.where(
             or_(
                 access_filter,
-                self._attendee_access_filter(user_id, organization_id),
+                await self._attendee_access_filter(user_id, organization_id),
             )
         )
 
@@ -1884,10 +1872,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if not resolved:
             return [], {}
         active = await self.session.execute(
-            select(OrganizationMember.user_id).where(
+            select(OrganizationMember.user_id)
+            .join(User, User.id == OrganizationMember.user_id)
+            .join(Organization, Organization.id == OrganizationMember.organization_id)
+            .where(
                 OrganizationMember.user_id.in_(resolved),
                 OrganizationMember.organization_id == organization_id,
                 OrganizationMember.is_active.is_(True),
+                User.is_active.is_(True),
+                Organization.deleted_at.is_(None),
+                Organization.is_suspended.is_(False),
             )
         )
         active_ids = {row[0] for row in active.all()}
@@ -1897,15 +1891,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
 
     async def _is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
-        result = await self.session.execute(
-            select(OrganizationMember.id).where(
-                OrganizationMember.user_id == user_id,
-                OrganizationMember.organization_id == organization_id,
-                OrganizationMember.is_active.is_(True),
-                OrganizationMember.role.in_([OrganizationRole.OWNER, OrganizationRole.ADMIN]),
-            )
+        membership = await get_active_membership(self.session, user_id, organization_id)
+        return membership is not None and membership.role in (
+            OrganizationRole.OWNER,
+            OrganizationRole.ADMIN,
         )
-        return result.scalar_one_or_none() is not None
 
     async def _validate_channel_binding(
         self,
@@ -2017,18 +2007,7 @@ class CategoryOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        result = await self.session.execute(
-            select(OrganizationMember).where(
-                and_(
-                    OrganizationMember.user_id == user_id,
-                    OrganizationMember.organization_id == organization_id,
-                    OrganizationMember.is_active == True,  # noqa: E712
-                )
-            )
-        )
-        membership = result.scalar_one_or_none()
-
-        if not membership:
+        if await get_active_membership(self.session, user_id, organization_id) is None:
             raise PermissionDeniedError("access", "organization")
 
     async def create(
@@ -2158,18 +2137,7 @@ class EventTemplateOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        result = await self.session.execute(
-            select(OrganizationMember).where(
-                and_(
-                    OrganizationMember.user_id == user_id,
-                    OrganizationMember.organization_id == organization_id,
-                    OrganizationMember.is_active == True,  # noqa: E712
-                )
-            )
-        )
-        membership = result.scalar_one_or_none()
-
-        if not membership:
+        if await get_active_membership(self.session, user_id, organization_id) is None:
             raise PermissionDeniedError("access", "organization")
 
     async def create(
@@ -2333,7 +2301,3 @@ async def _load_calendar_event(
 
 
 register_content_loader(ContentType.CALENDAR_EVENT, _load_calendar_event)
-register_reference_state_loader(
-    ContentType.CALENDAR_EVENT,
-    model_reference_state_loader(CalendarEvent),
-)

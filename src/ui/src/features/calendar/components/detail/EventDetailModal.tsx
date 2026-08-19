@@ -1,5 +1,14 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { BookmarkSimple, Trash, X, Link, Warning, Clock, MapPin } from "@phosphor-icons/react";
+import {
+  BookmarkSimple,
+  ShareNetwork,
+  Trash,
+  X,
+  Link,
+  Warning,
+  Clock,
+  MapPin,
+} from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { deselectEvent } from "@/features/calendar/store";
 import { deleteEvent as deleteEventThunk } from "@/features/calendar/store/calendarThunks";
@@ -9,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useCalendarEvents } from "@/features/calendar/hooks";
 import { useEventCommit } from "@/features/calendar/hooks/useEventCommit";
 import { useEventPermission } from "@/features/calendar/hooks/useEventPermission";
+import { useAccessPolicyDialog } from "@/features/permissions";
 import { ACCENT_EVENT_COLOR } from "@/features/calendar/constants";
 import { useBookmarkToggle } from "@/features/bookmarks";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
@@ -33,7 +43,8 @@ export function EventDetailModal() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteScopeDialog, setShowDeleteScopeDialog] = useState(false);
 
-  const { canEdit, canDelete } = useEventPermission(selectedEvent);
+  const { canEdit, canDelete, canManage } = useEventPermission(selectedEvent);
+  const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
   const { commit, pendingPatch, resolveScope, cancelScope, isRecurring } =
     useEventCommit(selectedEvent);
 
@@ -159,6 +170,22 @@ export function EventDetailModal() {
                   className="text-primary"
                 />
               </button>
+              {canManage && (
+                <button
+                  onClick={() =>
+                    openAccessPolicyDialog(
+                      ContentType.CALENDAR_EVENT,
+                      selectedEvent.id,
+                      selectedEvent.title,
+                      selectedEvent.userRole,
+                    )
+                  }
+                  className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
+                  title="Share"
+                >
+                  <ShareNetwork size={20} weight="duotone" className="text-primary" />
+                </button>
+              )}
               {canDelete && (
                 <button
                   onClick={handleDeleteClick}

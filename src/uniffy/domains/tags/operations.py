@@ -12,12 +12,7 @@ from sqlalchemy import and_, delete, exists, func, literal, or_, select, text, u
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import invalidate_visible_sets_for_org
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
-from uniffy.core.content.references import CONTENT_URN_PREFIX
+from uniffy.core.content.references import CONTENT_URN_PREFIX, parse_urn
 from uniffy.core.errors import (
     ConflictError,
     NotFoundError,
@@ -41,15 +36,15 @@ from uniffy.core.valkey.tags import (
     EVENT_TAG_UPDATED,
     publish_tag_event,
 )
+from uniffy.domains.permissions.resource_access import (
+    ResourceAccessPurpose,
+    ResourceAccessResolver,
+    ResourceKey,
+)
 from uniffy.domains.tags.normalize import slugify_tag
 from uniffy.domains.tags.visibility import (
     build_assignment_visibility_predicate,
     build_tag_visibility_predicate,
-)
-
-register_reference_state_loader(
-    ContentType.TAG,
-    model_reference_state_loader(Tag, deleted_attribute=None),
 )
 
 LOGGER_COMPONENT = "tags.ops"
@@ -140,6 +135,31 @@ class TagOperations:
         self.session = session
         self.indexer = SearchIndexer()
 
+    async def filter_viewable_urns(
+        self,
+        *,
+        actor_id: UUID,
+        organization_id: UUID,
+        content_urns: Iterable[str],
+    ) -> list[str]:
+        parsed = {
+            urn: ResourceKey(*key)
+            for urn in dict.fromkeys(content_urns)
+            if (key := parse_urn(urn)) is not None
+        }
+        if not parsed:
+            return []
+        try:
+            decisions = await ResourceAccessResolver(self.session).resolve(
+                actor_id=actor_id,
+                organization_id=organization_id,
+                keys=parsed.values(),
+                purpose=ResourceAccessPurpose.REFERENCE,
+            )
+        except ValueError as exc:
+            raise ValidationError("content_urns", str(exc)) from exc
+        return [urn for urn, key in parsed.items() if decisions[key].can_view]
+
     async def create(
         self,
         *,
@@ -173,7 +193,6 @@ class TagOperations:
         await self.session.refresh(tag)
 
         await self._index_tag_entity(tag, usage_count=0)
-        await invalidate_visible_sets_for_org(organization_id)
         await publish_tag_event(
             organization_id,
             EVENT_TAG_CREATED,
@@ -260,7 +279,6 @@ class TagOperations:
 
         await cache_delete(_count_cache_key(organization_id, tag_id))
         await self._remove_tag_entity(tag_urn, organization_id)
-        await invalidate_visible_sets_for_org(organization_id)
 
         await publish_tag_event(
             organization_id,
@@ -515,7 +533,6 @@ class TagOperations:
 
         affected_tag_ids = [t.id for t in tags]
         await self._invalidate_counts(organization_id, affected_tag_ids)
-        await invalidate_visible_sets_for_org(organization_id)
 
         rows = await self._fetch_assignments(content_urn, affected_tag_ids)
         tag_counts = await self._reindex_tag_docs(organization_id, affected_tag_ids)
@@ -598,7 +615,6 @@ class TagOperations:
 
         if removed_tag_ids:
             await self._invalidate_counts(organization_id, removed_tag_ids)
-        await invalidate_visible_sets_for_org(organization_id)
 
         affected_tag_ids.update(removed_tag_ids)
         affected_id_list = list(affected_tag_ids)
@@ -730,7 +746,6 @@ class TagOperations:
 
         if affected_tag_ids:
             await self._invalidate_counts(organization_id, affected_tag_ids)
-        await invalidate_visible_sets_for_org(organization_id)
         affected_id_list = list(affected_tag_ids)
         tag_counts = await self._reindex_tag_docs(organization_id, affected_id_list)
 
@@ -926,7 +941,6 @@ class TagOperations:
 
         await cache_delete(_count_cache_key(organization_id, source_tag_id))
         await cache_delete(_count_cache_key(organization_id, target_tag_id))
-        await invalidate_visible_sets_for_org(organization_id)
 
         await self._remove_tag_entity(source_urn, organization_id)
         target_counts = await self._reindex_tag_docs(organization_id, [target_tag_id])

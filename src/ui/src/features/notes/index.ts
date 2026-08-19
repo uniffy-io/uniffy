@@ -83,7 +83,6 @@ export {
   updateNote,
   deleteNote,
   restoreNote,
-  searchNotes,
   moveNote,
   copyNote,
   initializeNotesData,

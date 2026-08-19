@@ -105,6 +105,9 @@ const roomFromProto = (proto: ProtoRoom): Room => ({
   amenities: [...proto.amenities],
   imageFileId: proto.imageFileId || null,
   visibility: accessModeToFrontendVisibility(proto.accessMode),
+  accessMode: proto.accessMode,
+  baselineRole: proto.baselineRole ?? null,
+  userRole: proto.userRole,
   createdAt: timestampToIso(proto.createdAt),
   updatedAt: timestampToIso(proto.updatedAt),
 });

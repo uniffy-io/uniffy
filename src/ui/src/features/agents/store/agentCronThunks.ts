@@ -39,6 +39,7 @@ export const cronTaskToPlain = (task: CronTaskInfo) => ({
   maxConsecutiveFailures: task.maxConsecutiveFailures,
   accessMode: task.accessMode,
   baselineRole: task.baselineRole,
+  userRole: task.userRole,
   createdAt: timestampToPlain(task.createdAt),
   updatedAt: timestampToPlain(task.updatedAt),
   agentName: task.agentName || "",

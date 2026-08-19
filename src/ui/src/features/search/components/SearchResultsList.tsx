@@ -38,6 +38,7 @@ const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.AGENT]: UrnType.AGENT,
   [SearchResultType.ROOM]: UrnType.ROOM,
   [SearchResultType.TAG]: UrnType.TAG,
+  [SearchResultType.AGENT_CRON_TASK]: UrnType.AGENT_CRON_TASK,
 };
 
 interface ResultTheme extends UrnTypeTheme {
@@ -110,13 +111,12 @@ interface SearchResultsListProps {
   selectedIndex?: number;
   onSelectedIndexChange?: (index: number) => void;
   copiedUrn?: boolean;
-  /** Estimated total matches before pagination; shows "N of M" when it exceeds the page. */
-  totalCount?: number;
+  hasMore?: boolean;
 }
 
-function resultCountLabel(shown: number, totalCount?: number): string {
-  if (totalCount !== undefined && totalCount > shown) {
-    return `${shown} of ${totalCount} results`;
+function resultCountLabel(shown: number, hasMore?: boolean): string {
+  if (hasMore) {
+    return `Showing first ${shown} results`;
   }
   return `${shown} result${shown !== 1 ? "s" : ""}`;
 }
@@ -134,7 +134,7 @@ export function SearchResultsList({
   selectedIndex: controlledIndex,
   onSelectedIndexChange,
   copiedUrn = false,
-  totalCount,
+  hasMore,
 }: SearchResultsListProps) {
   const [internalIndex, setInternalIndex] = useState(0);
   const itemRefs = useRef<Map<number, HTMLLIElement>>(new Map());
@@ -207,7 +207,7 @@ export function SearchResultsList({
             </span>
             {results.length > 0 && (
               <span className="text-[10px] text-muted-foreground/70 ml-auto">
-                {resultCountLabel(results.length, totalCount)}
+                {resultCountLabel(results.length, hasMore)}
               </span>
             )}
           </div>
@@ -409,7 +409,7 @@ export function SearchResultsList({
             <div className="border-t border-border/50 px-3 py-2 flex items-center justify-center gap-3 text-[10px] text-muted-foreground/70">
               {!showHeader && (
                 <span className="mr-auto text-muted-foreground/60">
-                  {resultCountLabel(results.length, totalCount)}
+                  {resultCountLabel(results.length, hasMore)}
                 </span>
               )}
               <span className="flex items-center gap-1">

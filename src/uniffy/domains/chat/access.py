@@ -1,18 +1,20 @@
 """Shared chat access checking with request-scoped caching."""
 
+from collections.abc import Collection
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.cache import get_or_load_org_admin
-from uniffy.core.auth.membership import is_active_member
+from uniffy.core.auth.membership import get_active_membership, is_active_member
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
+from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
-from uniffy.core.types import SubjectType
-from uniffy.domains.chat.cache import get_or_load_channel
+from uniffy.core.models.login.user import User
+from uniffy.core.models.permissions.domain_admin import DomainAdmin
+from uniffy.core.types import DomainType, SubjectType
 
 
 class ChatAccessChecker:
@@ -27,11 +29,18 @@ class ChatAccessChecker:
         self._org_member_cache: dict[tuple[UUID, UUID], bool] = {}
 
     async def get_channel(self, channel_id: UUID, organization_id: UUID) -> ChatChannel:
-        """Fetch channel via L0 request cache -> L1 Valkey (stampede-protected) -> PG."""
         if channel_id in self._channel_cache:
             return self._channel_cache[channel_id]
 
-        channel = await get_or_load_channel(self.session, channel_id, organization_id)
+        channel = (
+            await self.session.execute(
+                select(ChatChannel).where(
+                    ChatChannel.id == channel_id,
+                    ChatChannel.organization_id == organization_id,
+                    ChatChannel.is_deleted.is_(False),
+                )
+            )
+        ).scalar_one_or_none()
         if not channel:
             raise NotFoundError("channel", channel_id)
 
@@ -64,23 +73,14 @@ class ChatAccessChecker:
         return await self.get_membership_by_subject(channel_id, SubjectType.USER, user_id)
 
     async def is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
-        """Check if user is org admin/owner via L0 request cache -> L1 Valkey -> PG."""
+        """Check if user is an active org admin/owner."""
         key = (user_id, organization_id)
         if key in self._org_admin_cache:
             return self._org_admin_cache[key]
 
-        async def _load() -> bool:
-            result = await self.session.execute(
-                select(OrganizationMember.role).where(
-                    OrganizationMember.user_id == user_id,
-                    OrganizationMember.organization_id == organization_id,
-                    OrganizationMember.is_active == True,  # noqa: E712
-                )
-            )
-            role = result.scalar_one_or_none()
-            return role in (OrganizationRole.ADMIN, OrganizationRole.OWNER)
-
-        is_admin = await get_or_load_org_admin(organization_id, user_id, _load)
+        membership = await get_active_membership(self.session, user_id, organization_id)
+        role = membership.role if membership is not None else None
+        is_admin = role in (OrganizationRole.ADMIN, OrganizationRole.OWNER)
         self._org_admin_cache[key] = is_admin
         return is_admin
 
@@ -124,6 +124,59 @@ class ChatAccessChecker:
         member = await self.get_membership(channel.id, user_id)
         if not member:
             raise PermissionDeniedError("access", "channel")
+
+    async def filter_viewers(
+        self,
+        organization_id: UUID,
+        channel: ChatChannel,
+        candidate_user_ids: Collection[UUID],
+    ) -> list[UUID]:
+        candidates = tuple(dict.fromkeys(candidate_user_ids))
+        if not candidates:
+            return []
+        channel_member = exists(
+            select(ChatChannelMember.subject_id).where(
+                ChatChannelMember.channel_id == channel.id,
+                ChatChannelMember.subject_type == SubjectType.USER,
+                ChatChannelMember.subject_id == OrganizationMember.user_id,
+            )
+        )
+        chat_admin = exists(
+            select(DomainAdmin.id).where(
+                DomainAdmin.organization_id == organization_id,
+                DomainAdmin.user_id == OrganizationMember.user_id,
+                DomainAdmin.domain == DomainType.CHAT,
+            )
+        )
+        rows = (
+            await self.session.execute(
+                select(
+                    OrganizationMember.user_id,
+                    OrganizationMember.role,
+                    channel_member.label("channel_member"),
+                    chat_admin.label("chat_admin"),
+                )
+                .join(User, User.id == OrganizationMember.user_id)
+                .join(Organization, Organization.id == OrganizationMember.organization_id)
+                .where(
+                    OrganizationMember.organization_id == organization_id,
+                    OrganizationMember.user_id.in_(candidates),
+                    OrganizationMember.is_active.is_(True),
+                    User.is_active.is_(True),
+                    Organization.deleted_at.is_(None),
+                    Organization.is_suspended.is_(False),
+                )
+            )
+        ).all()
+        allowed = {
+            row.user_id
+            for row in rows
+            if row.role in (OrganizationRole.OWNER, OrganizationRole.ADMIN)
+            or row.chat_admin
+            or channel.channel_type == ChannelType.PUBLIC
+            or row.channel_member
+        }
+        return [user_id for user_id in candidates if user_id in allowed]
 
     async def require_send(
         self,

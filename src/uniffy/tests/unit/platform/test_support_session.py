@@ -1,8 +1,4 @@
-"""Unit tests for the support session slice.
-
-Hits validation paths + the cache TTL math + the cipher bridge + the
-audit writer ContextVar merge. Pure mock-based; no DB required.
-"""
+"""Unit tests for support-session validation, consent, and audit context."""
 
 from __future__ import annotations
 
@@ -18,9 +14,6 @@ from uniffy.core.models.platform.support_session import (
     SupportSessionState,
 )
 from uniffy.core.types import generate_id
-from uniffy.domains.platform.support_session.cache import (
-    _ttl_until,
-)
 from uniffy.domains.platform.support_session.context import (
     ActiveSupportSession,
     active_support_session_var,
@@ -60,21 +53,6 @@ class TestClampDuration:
 
     def test_below_floor_clamps_up_to_floor(self) -> None:
         assert _clamp_duration(1) == DEFAULT_DURATION_FLOOR_MINUTES
-
-
-class TestTtlUntil:
-    def test_past_expiry_returns_zero(self) -> None:
-        past = datetime.now(UTC) - timedelta(minutes=5)
-        assert _ttl_until(past) == 0
-
-    def test_future_expiry_returns_seconds(self) -> None:
-        future = datetime.now(UTC) + timedelta(seconds=120)
-        ttl = _ttl_until(future)
-        assert 115 <= ttl <= 120
-
-    def test_clamps_to_30_minute_ceiling(self) -> None:
-        far_future = datetime.now(UTC) + timedelta(hours=2)
-        assert _ttl_until(far_future) == 30 * 60
 
 
 class TestScopeRejection:

@@ -82,6 +82,11 @@ async def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> No
             AsyncMock(return_value=None),
             create=True,
         ),
+        patch(
+            "uniffy.domains.files.attachments.operations."
+            "AttachmentOperations.detach_all_for_content",
+            AsyncMock(return_value=0),
+        ),
     ):
         await ops.delete_message(admin_id, org_id, channel_id, message.id)
 
@@ -143,8 +148,72 @@ async def test_self_delete_does_not_audit() -> None:
             AsyncMock(return_value=None),
             create=True,
         ),
+        patch(
+            "uniffy.domains.files.attachments.operations."
+            "AttachmentOperations.detach_all_for_content",
+            AsyncMock(return_value=0),
+        ),
     ):
         await ops.delete_message(user_id, org_id, channel_id, message.id)
 
     rows = _audit_rows(session)
     assert [r for r in rows if r.action == Action.CHAT_MESSAGE_DELETED_BY_ADMIN] == []
+
+
+async def test_message_attachments_are_removed_before_soft_delete_commit() -> None:
+    from datetime import UTC, datetime
+
+    from uniffy.core.models.chat.message import ChatMessage, SenderType
+    from uniffy.domains.chat.messages.operations import ChatMessageOperations
+
+    user_id = generate_id()
+    org_id = generate_id()
+    channel_id = generate_id()
+    message = ChatMessage(
+        id=generate_id(),
+        channel_id=channel_id,
+        sender_id=user_id,
+        sender_type=SenderType.USER,
+        content="hi",
+        is_deleted=False,
+        is_pinned=False,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    session = _build_session()
+    session.execute = AsyncMock(return_value=MagicMock())
+    ops = ChatMessageOperations(session)
+    ops.access = MagicMock()
+    ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
+
+    async def assert_precommit_cleanup(*_args, **_kwargs) -> int:
+        assert message.is_deleted is False
+        session.commit.assert_not_awaited()
+        return 1
+
+    with (
+        patch.object(
+            ChatMessageOperations,
+            "_get_message_by_id",
+            AsyncMock(return_value=message),
+        ),
+        patch.object(
+            ChatMessageOperations,
+            "_require_message_action",
+            AsyncMock(return_value=None),
+        ),
+        patch.object(
+            ChatMessageOperations,
+            "_get_channel_member_ids",
+            AsyncMock(return_value=[]),
+        ),
+        patch(
+            "uniffy.domains.files.attachments.operations."
+            "AttachmentOperations.detach_all_for_content",
+            AsyncMock(side_effect=assert_precommit_cleanup),
+        ),
+    ):
+        await ops.delete_message(user_id, org_id, channel_id, message.id)
+
+    assert message.is_deleted is True
+    session.commit.assert_awaited_once()

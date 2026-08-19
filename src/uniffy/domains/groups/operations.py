@@ -9,18 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.auth.cache import invalidate_user as invalidate_perm_user
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
-from uniffy.core.types import ContentType
 from uniffy.domains.groups.naming import ensure_name_available, resolve_slug
 from uniffy.domains.groups.search import TeamSearchIndexer
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -30,15 +24,6 @@ from uniffy.domains.people.cache import (
     invalidate_person,
 )
 from uniffy.domains.people.search_sync import sync_people_search
-
-register_reference_state_loader(
-    ContentType.TEAM,
-    model_reference_state_loader(
-        Group,
-        deleted_attribute=None,
-        extra_conditions=(Group.kind == GroupKind.TEAM,),
-    ),
-)
 
 _ADMIN_ROLES = (OrganizationRole.OWNER, OrganizationRole.ADMIN)
 
@@ -53,8 +38,9 @@ class GroupOperations:
     Groups are permission subjects: ``ContentMember`` rows key on
     ``subject_type=GROUP`` and ``effective_role`` resolves grants through
     group membership. Writing a membership row therefore hands the target
-    every content grant the group holds, so mutations here gate on org
-    admin and reads gate on active org membership.
+    every content grant the group holds, so group lifecycle gates on org
+    admin, membership rows gate on org admin or that group's own ADMIN,
+    and reads gate on active org membership.
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -160,9 +146,13 @@ class GroupOperations:
         return parent
 
     async def require_active_member(self, organization_id: UUID, user_id: UUID, field: str) -> None:
-        membership = await self._org_ops.get_membership(user_id, organization_id)
-        if not membership or not membership.is_active:
-            raise ValidationError(field, "must be an active member of the organization")
+        try:
+            await self._org_ops.require_org_member(user_id, organization_id)
+        except PermissionDeniedError as exc:
+            raise ValidationError(
+                field,
+                "must be an active member of the organization",
+            ) from exc
 
     async def reject_parent_cycle(
         self, organization_id: UUID, group_id: UUID, parent_id: UUID
@@ -354,8 +344,6 @@ class GroupOperations:
         await self._session.delete(group)
         await self._session.commit()
 
-        for user_id in member_user_ids:
-            await invalidate_perm_user(user_id)
         if was_team:
             await invalidate_org_people(organization_id)
             await sync_people_search(self._session, organization_id, member_user_ids)
@@ -428,6 +416,29 @@ class GroupOperations:
 
         return groups_with_counts, total
 
+    async def _require_group_manager(
+        self,
+        actor_user_id: UUID,
+        organization_id: UUID,
+        group_id: UUID,
+    ) -> None:
+        """Org admins manage every group's membership; a group ADMIN manages
+        only their own group's. Both ride on an active org membership."""
+        try:
+            await self._org_ops.require_org_admin(actor_user_id, organization_id)
+        except PermissionDeniedError:
+            await self._org_ops.require_org_member(actor_user_id, organization_id)
+            result = await self._session.execute(
+                select(GroupMember).where(
+                    GroupMember.group_id == group_id,
+                    GroupMember.user_id == actor_user_id,
+                    GroupMember.role == GroupRole.ADMIN,
+                    GroupMember.is_active.is_(True),
+                )
+            )
+            if result.scalar_one_or_none() is None:
+                raise PermissionDeniedError("manage members", "group") from None
+
     async def add_member(
         self,
         group_id: UUID,
@@ -436,7 +447,7 @@ class GroupOperations:
         actor_user_id: UUID,
         role: GroupRole = GroupRole.MEMBER,
     ) -> GroupMember:
-        await self._org_ops.require_org_admin(actor_user_id, organization_id)
+        await self._require_group_manager(actor_user_id, organization_id, group_id)
         group = await self._fetch(group_id, organization_id)
         # The target inherits the group's content grants, so they must
         # already be an active member of the same org.
@@ -471,7 +482,6 @@ class GroupOperations:
         )
         await self._session.commit()
 
-        await invalidate_perm_user(user_id)
         await self._invalidate_team_membership(group, user_id)
 
         return membership
@@ -494,7 +504,7 @@ class GroupOperations:
         role: GroupRole,
         actor_user_id: UUID,
     ) -> GroupMember:
-        await self._org_ops.require_org_admin(actor_user_id, organization_id)
+        await self._require_group_manager(actor_user_id, organization_id, group_id)
         group = await self._fetch(group_id, organization_id)
 
         result = await self._session.execute(
@@ -526,7 +536,6 @@ class GroupOperations:
 
         await self._session.commit()
         await self._session.refresh(membership)
-        await invalidate_perm_user(user_id)
         await self._invalidate_team_membership(group, user_id)
         return membership
 
@@ -537,7 +546,7 @@ class GroupOperations:
         user_id: UUID,
         actor_user_id: UUID,
     ) -> None:
-        await self._org_ops.require_org_admin(actor_user_id, organization_id)
+        await self._require_group_manager(actor_user_id, organization_id, group_id)
         group = await self._fetch(group_id, organization_id)
 
         result = await self._session.execute(
@@ -565,7 +574,6 @@ class GroupOperations:
             )
 
             await self._session.commit()
-            await invalidate_perm_user(user_id)
             await self._invalidate_team_membership(group, user_id)
 
     async def get_member(
@@ -600,12 +608,19 @@ class GroupOperations:
         page_size: int = 20,
         role_filter: GroupRole | None = None,
     ) -> tuple[list[tuple[GroupMember, User]], int]:
-        await self._org_ops.require_org_member(actor_user_id, organization_id)
+        actor_membership = await self._org_ops.require_org_member(
+            actor_user_id,
+            organization_id,
+        )
         group = await self._fetch(group_id, organization_id)
 
         # A private group's roster is visible to its own members and to admins.
         if group.is_private:
-            await self._require_group_visibility(group_id, organization_id, actor_user_id)
+            await self._require_group_visibility(
+                group_id,
+                actor_user_id,
+                actor_membership.role,
+            )
 
         query = (
             select(GroupMember, User)
@@ -633,8 +648,8 @@ class GroupOperations:
     async def _require_group_visibility(
         self,
         group_id: UUID,
-        organization_id: UUID,
         actor_user_id: UUID,
+        actor_role: OrganizationRole,
     ) -> None:
         own = await self._session.execute(
             select(GroupMember.id).where(
@@ -645,8 +660,7 @@ class GroupOperations:
         )
         if own.scalar_one_or_none() is not None:
             return
-        membership = await self._org_ops.get_membership(actor_user_id, organization_id)
-        if membership and membership.is_active and membership.role in _ADMIN_ROLES:
+        if actor_role in _ADMIN_ROLES:
             return
         raise PermissionDeniedError("Requires membership of this group")
 

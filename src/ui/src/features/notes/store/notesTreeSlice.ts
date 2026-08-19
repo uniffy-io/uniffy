@@ -114,7 +114,7 @@ interface NotesTreeState {
   isTreeCollapsed: boolean;
   loading: boolean;
   error: string | null;
-  // Distinguishes "tree hydrated" from "state.notes populated", since fetchNote/searchNotes can fill notes without tree.
+  // Distinguishes "tree hydrated" from "state.notes populated", since fetchNote can fill notes without tree.
   treeLoaded: boolean;
 }
 

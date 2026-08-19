@@ -29,7 +29,11 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
+from uniffy.domains.auth.context import (
+    get_sender_info_from_context,
+    get_user_id_from_context,
+    resolve_organization_id,
+)
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import message_to_proto
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
@@ -61,7 +65,7 @@ class MessageHandlers:
         # event, response proto) expects the HTTP avatar URL.
         jwt_avatar = get_avatar_url(user_id, jwt_avatar_key or None)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -123,7 +127,7 @@ class MessageHandlers:
     ) -> GetMessagesResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -168,7 +172,7 @@ class MessageHandlers:
     ) -> GetMessageResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:
@@ -189,7 +193,7 @@ class MessageHandlers:
     ) -> UpdateMessageResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:
@@ -212,7 +216,7 @@ class MessageHandlers:
     ) -> DeleteMessageResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:
@@ -233,7 +237,7 @@ class MessageHandlers:
     ) -> PinMessageResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:
@@ -254,7 +258,7 @@ class MessageHandlers:
     ) -> UnpinMessageResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:
@@ -275,7 +279,7 @@ class MessageHandlers:
     ) -> GetPinnedMessagesResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")

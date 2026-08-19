@@ -1,16 +1,12 @@
-"""Per-recipient projector for org-wide tag and restricted mention events."""
+"""Per-recipient projector for org-wide tag and mention-state events."""
 
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
 
-from uniffy.core.auth.cache import get_or_load_effective_role
-from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.content.references import parse_urn
-from uniffy.core.models.tags.tag import Tag
-from uniffy.core.types import ContentRole, ContentType
+from uniffy.core.types import ContentType
 from uniffy.core.valkey.tags import (
     EVENT_TAG_ASSIGNMENT_CHANGED,
     EVENT_TAG_CREATED,
@@ -18,18 +14,21 @@ from uniffy.core.valkey.tags import (
     EVENT_TAG_UPDATED,
 )
 from uniffy.db import open_session
-from uniffy.domains.tags.visibility import TagVisibilityFilter
+from uniffy.domains.permissions.resource_access import (
+    ResourceAccessPurpose,
+    ResourceAccessResolver,
+    ResourceKey,
+)
 
-logger = logger.bind(component="notifications.tag_relay")
+logger = logger.bind(component="domains.notifications.tag_relay")
 
 
 class TagEventRelay:
-    """Per-recipient filter / projector for tag events and restricted chip state."""
+    """Filter org-wide tag and mention-state events for one recipient."""
 
     def __init__(self, user_id: UUID, organization_id: UUID) -> None:
         self.user_id = user_id
         self.organization_id = organization_id
-        self._tag_visibility_cache: dict[UUID, bool] = {}
 
     async def project(self, payload: dict[str, Any]) -> list[dict[str, str]]:
         """Return zero or more ``MENTION_STATE_CHANGED`` change-maps for this event."""
@@ -46,7 +45,7 @@ class TagEventRelay:
             if event_type == EVENT_TAG_DELETED:
                 return self._project_tag_deleted(body)
         except Exception:
-            logger.warning("tag-event projection failed", component="notifications.tag_relay")
+            logger.warning("tag-event projection failed")
         return []
 
     async def _project_assignment_changed(self, body: dict[str, Any]) -> list[dict[str, str]]:
@@ -112,12 +111,15 @@ class TagEventRelay:
         return [changes]
 
     async def allows_mention_state(self, payload: dict[str, Any]) -> bool:
-        """Recipient gate for ``restricted`` mention-state events; fails closed."""
+        """Fail-closed recipient gate for every org-wide mention-state event."""
         parsed = parse_urn(payload.get("urn") or "")
         if parsed is None:
             return False
         content_type, content_id = parsed
         try:
+            changes = payload.get("changes") or {}
+            if changes == {"urn_status": "DELETED"}:
+                return await self._is_active_recipient()
             return await self._can_view_content(content_type, content_id)
         except Exception:
             logger.opt(exception=True).warning("mention-state recipient gate failed; dropping event")
@@ -130,94 +132,29 @@ class TagEventRelay:
         except TypeError, ValueError:
             return []
         urn = f"urn:uniffy:content:TAG:{tag_id}"
-        self._tag_visibility_cache.pop(tag_id, None)
         return [{"urn": urn, "urn_status": "DELETED"}]
 
     async def _can_view_content(self, content_type: ContentType, content_id: UUID) -> bool:
-        if content_type == ContentType.CHAT:
-            return await self._can_view_channel(content_id)
-
-        async def _load() -> ContentRole | None:
-            async with open_session() as session:
-                checker = PermissionChecker(session)
-                policy = await _load_minimal_policy(
-                    session, content_type, self.organization_id, content_id
-                )
-                if policy is None:
-                    return None
-                owner_id, access_mode, baseline_role = policy
-                return await checker.effective_role(
-                    user_id=self.user_id,
-                    organization_id=self.organization_id,
-                    content_type=content_type,
-                    content_id=content_id,
-                    owner_id=owner_id,
-                    access_mode=access_mode,
-                    baseline_role=baseline_role,
-                )
-
-        role = await get_or_load_effective_role(
-            self.organization_id,
-            self.user_id,
-            content_type,
-            content_id,
-            _load,
-        )
-        return role is not None
-
-    async def _can_view_channel(self, channel_id: UUID) -> bool:
-        # Chat channels use membership rather than access-mode columns.
-        from uniffy.core.models.chat.channel import ChannelType, ChatChannel
-        from uniffy.core.models.chat.channel_member import ChatChannelMember
-
+        key = ResourceKey(content_type, content_id)
         async with open_session() as session:
-            checker = PermissionChecker(session)
-            if await checker.is_org_admin(self.user_id, self.organization_id):
-                return True
-            if await checker.is_domain_admin(self.user_id, self.organization_id, ContentType.CHAT):
-                return True
-            channel = (
-                await session.execute(
-                    select(ChatChannel.channel_type).where(
-                        ChatChannel.id == channel_id,
-                        ChatChannel.organization_id == self.organization_id,
-                        ChatChannel.is_deleted == False,  # noqa: E712
-                    )
-                )
-            ).scalar_one_or_none()
-            if channel is None:
-                return False
-            if channel == ChannelType.PUBLIC:
-                return True
-            membership = (
-                await session.execute(
-                    select(ChatChannelMember.id).where(
-                        ChatChannelMember.channel_id == channel_id,
-                        ChatChannelMember.user_id == self.user_id,
-                    )
-                )
-            ).scalar_one_or_none()
-            return membership is not None
+            decisions = await ResourceAccessResolver(session).resolve(
+                actor_id=self.user_id,
+                organization_id=self.organization_id,
+                keys=[key],
+                purpose=ResourceAccessPurpose.REFERENCE,
+            )
+        return decisions[key].can_view
 
     async def _tag_visible(self, tag_id: UUID) -> bool:
-        if tag_id in self._tag_visibility_cache:
-            return self._tag_visibility_cache[tag_id]
+        return await self._can_view_content(ContentType.TAG, tag_id)
+
+    async def _is_active_recipient(self) -> bool:
         async with open_session() as session:
-            tag_row = (
-                await session.execute(
-                    select(Tag).where(
-                        Tag.id == tag_id,
-                        Tag.organization_id == self.organization_id,
-                    )
-                )
-            ).scalar_one_or_none()
-            if tag_row is None:
-                self._tag_visibility_cache[tag_id] = False
-                return False
-            visibility = TagVisibilityFilter(session, self.user_id, self.organization_id)
-            visible = await visibility.is_visible(tag_row)
-        self._tag_visibility_cache[tag_id] = visible
-        return visible
+            subject = await ResourceAccessResolver(session).subject(
+                actor_id=self.user_id,
+                organization_id=self.organization_id,
+            )
+        return subject.is_active_member
 
 
 def _normalize_tag_state(state: dict[str, Any]) -> dict[str, str]:
@@ -238,107 +175,3 @@ def _content_id_from_urn(content_urn: str) -> UUID | None:
         return UUID(parts[1])
     except ValueError:
         return None
-
-
-async def _load_minimal_policy(
-    session,
-    content_type: ContentType,
-    organization_id: UUID,
-    content_id: UUID,
-) -> tuple | None:
-    # Chat channels are NOT routed here - they lack access-mode columns and use
-    # membership instead (see ``TagEventRelay._can_view_channel``).
-    if content_type == ContentType.NOTE:
-        from uniffy.core.models.notes.note import Note
-
-        result = await session.execute(
-            select(Note.owner_id, Note.access_mode, Note.baseline_role).where(
-                Note.id == content_id,
-                Note.organization_id == organization_id,
-            )
-        )
-    elif content_type == ContentType.FILE:
-        from uniffy.core.models.files.file import File
-
-        result = await session.execute(
-            select(File.owner_id, File.access_mode, File.baseline_role).where(
-                File.id == content_id,
-                File.organization_id == organization_id,
-            )
-        )
-    elif content_type == ContentType.CALENDAR_EVENT:
-        from uniffy.core.models.calendar.event import CalendarEvent
-
-        result = await session.execute(
-            select(
-                CalendarEvent.owner_id,
-                CalendarEvent.access_mode,
-                CalendarEvent.baseline_role,
-            ).where(
-                CalendarEvent.id == content_id,
-                CalendarEvent.organization_id == organization_id,
-            )
-        )
-    elif content_type == ContentType.PROJECT:
-        from uniffy.core.models.projects.project import Project
-
-        result = await session.execute(
-            select(Project.owner_id, Project.access_mode, Project.baseline_role).where(
-                Project.id == content_id,
-                Project.organization_id == organization_id,
-            )
-        )
-    elif content_type == ContentType.TASK:
-        from uniffy.core.models.projects.project import Project
-        from uniffy.core.models.projects.task import Task
-
-        task = (
-            await session.execute(
-                select(Task.project_id).where(
-                    Task.id == content_id,
-                    Task.organization_id == organization_id,
-                )
-            )
-        ).scalar_one_or_none()
-        if task is None:
-            return None
-        result = await session.execute(
-            select(Project.owner_id, Project.access_mode, Project.baseline_role).where(
-                Project.id == task,
-                Project.organization_id == organization_id,
-            )
-        )
-    elif content_type == ContentType.AGENT:
-        from uniffy.core.models.agents.agent import Agent
-
-        result = await session.execute(
-            select(Agent.owner_id, Agent.access_mode, Agent.baseline_role).where(
-                Agent.id == content_id,
-                Agent.organization_id == organization_id,
-            )
-        )
-    elif content_type == ContentType.FOLDER:
-        from uniffy.core.models.files.folder import Folder
-
-        result = await session.execute(
-            select(Folder.owner_id, Folder.access_mode, Folder.baseline_role).where(
-                Folder.id == content_id,
-                Folder.organization_id == organization_id,
-            )
-        )
-    elif content_type == ContentType.ROOM:
-        from uniffy.core.models.rooms.room import Room
-
-        result = await session.execute(
-            select(Room.owner_id, Room.access_mode, Room.baseline_role).where(
-                Room.id == content_id,
-                Room.organization_id == organization_id,
-            )
-        )
-    else:
-        return None
-
-    row = result.first()
-    if row is None:
-        return None
-    return (row[0], row[1], row[2])

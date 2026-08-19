@@ -25,7 +25,7 @@ Every mention chip satisfies these properties:
 
 1. **Live**: when the referenced content changes (rename, status flip, member add, folder rename, …) every visible chip pointing to it updates without a page refresh.
 2. **Availability-safe**: an existing inaccessible target renders Restricted, a confirmed deleted target renders a tombstone, and an uncertain lookup renders Unavailable. Authorization failure and deletion are never conflated.
-3. **Index-first reads**: Meilisearch supplies normal display data and both permission-filtered and raw existence checks. A successful raw-index miss may use the registered PostgreSQL reference-state loader only to classify live/deleted/missing; that fallback never supplies title, description, URL, owner, or metadata.
+3. **PostgreSQL-authorized reads**: PostgreSQL decides lifecycle, access, and requestability for every resolved URN. Meilisearch supplies only same-organization preview data, and that data is attached only after PostgreSQL authorizes the resource.
 4. **Same component everywhere, setting-driven default**: one chip component renders in chat messages, search results, comments, and the note editor, and the user's `mentionDisplay` setting decides pill vs card uniformly. A mid-sentence expanded card breaks out as a block that splits the line boxes (editor CSS owns that); it never renders as an inline island.
 5. **Stable size**: a chip in expanded mode reserves the expanded-card footprint immediately (skeleton). Growing from inline-pill to block-card after the fetch lands tends to feel janky.
 
@@ -54,8 +54,8 @@ If a change you are about to make breaks one of these, it is a good moment to re
         ▼                               ▼
 ┌──────────────────────────┐   ┌──────────────────────────────┐
 │ search.ResolveUrns RPC   │   │ notifications.StreamNotifi-  │
-│ -> Meili.get_documents   │   │ cations -> MENTION_STATE_    │
-│ -> proto UrnMetadata     │   │ CHANGED event                │
+│ -> PostgreSQL access     │   │ cations -> MENTION_STATE_    │
+│ -> raw Meili preview     │   │ CHANGED event                │
 └──────────┬───────────────┘   └──────────┬───────────────────┘
            │                              │
            ▼                              ▼
@@ -123,20 +123,24 @@ Conventions:
 - The `changes` payload is a `dict[str, str]` with snake_case keys - same shape as the index metadata, plus virtual keys `title`, `description`, `urn_status`.
 - Send the **full** denormalized payload rather than a diff. Diffing across callers tends to be fragile; the payload is small.
 - The publish call is idempotent - safe to retry, safe to no-op when there are no listeners (Valkey-down case).
+- The org-wide pubsub payload carries no authorization hint. `NotificationsHandlers` gates every mention-state event per recipient through `TagEventRelay`; callers cannot opt out by classifying an event as unrestricted.
+- Only an exact type-only tombstone (`{"urn_status": "DELETED"}`) may bypass current content access, and only for active members of that organization. Every payload containing display state requires current authoritative access.
 
 ### Resolve path and privacy boundary
 
 `SearchOperations.resolve_urns` is the public read path. It:
 
-1. Runs a permission-filtered Meilisearch multi-get. Hits are `AVAILABLE` and may carry display metadata.
-2. Runs an organization-scoped raw Meilisearch multi-get only for filtered misses. A raw hit proves existence and becomes `RESTRICTED`; every private display field is discarded before conversion.
-3. For a successful raw miss only, runs the registered, batched PostgreSQL reference-state loader. Confirmed deleted/missing rows become `DELETED`; live rows absent from the index become `UNAVAILABLE` so indexing lag is not misreported as deletion.
-4. Any failed or incomplete Meilisearch chunk becomes `UNAVAILABLE`. A service failure never becomes `RESTRICTED` or `DELETED`.
-5. Returns one typed result per valid input URN; silent drops are a bug.
+1. Parses and deduplicates the bounded URN batch before performing I/O.
+2. Batch-resolves lifecycle, access, and the canonical access-request target through PostgreSQL.
+3. Loads organization-scoped raw Meilisearch documents as preview data only. A raw hit never proves existence or access.
+4. Returns `AVAILABLE` only for a live, authorized PostgreSQL decision with a preview. Authorized rows missing a preview are `UNAVAILABLE` until indexing catches up.
+5. Returns `RESTRICTED` for live PostgreSQL rows the actor cannot view, and exposes no display metadata from Meili.
+6. Returns `DELETED` for PostgreSQL-deleted or missing rows, ignoring stale raw index documents.
+7. Returns one typed result per valid input URN; PostgreSQL or Meilisearch uncertainty fails closed as `UNAVAILABLE`, never as available metadata.
 
-Active organization membership is required before either index pass. Raw lookups remain scoped to `organization_id`, and restricted results expose only the requested URN, its type, `availability`, and `can_request_access`. The label shown by React comes from the already-readable Markdown reference, not from the raw search document.
+Restricted results expose only the requested URN, its type, `availability`, and `can_request_access`. The label shown by React comes from the already-readable Markdown reference, not from the raw search document. A non-member platform admin reaches tenant content only through the same audited, active `SupportSession` decision used by point reads.
 
-`core/content/reference_state.py` is the only sanctioned database fallback for availability classification. Register bounded, organization-scoped loaders there. Do not add display hydration to the fallback or return raw index fields for restricted results. New display fields still belong in the search document at write time.
+`ResourceAccessResolver` is the authoritative bounded database path. Do not loop over scalar permission checks, return raw index fields for restricted results, or add display fields to access decisions. New display fields still belong in the search document at write time.
 
 ### Cascade-removal on parent delete
 
@@ -159,12 +163,12 @@ When you add a new parent/child relationship that reaches search, add the parent
 
 | State | Meaning | UI behavior |
 |---|---|---|
-| `AVAILABLE` | Permission-filtered index hit | Normal live chip, preview, navigation, and expansion. |
-| `RESTRICTED` | Raw same-org index hit after a filtered miss | Lock chip using only the stored Markdown label; no preview or navigation. |
-| `DELETED` | Registered authoritative loader reports deleted/missing | Privacy-safe type-only tombstone with no recovery action. |
-| `UNAVAILABLE` | Index failure, live row absent from the index, or unregistered authoritative state | Non-navigable retry state; never a tombstone. |
+| `AVAILABLE` | PostgreSQL says live and viewable, and a raw same-org preview is present | Normal live chip, preview, navigation, and expansion. |
+| `RESTRICTED` | PostgreSQL says live but not viewable | Lock chip using only the stored Markdown label; no preview or navigation. |
+| `DELETED` | PostgreSQL reports deleted or missing | Privacy-safe type-only tombstone with no recovery action. |
+| `UNAVAILABLE` | PostgreSQL resolution or preview lookup failed, or an authorized live row is not indexed yet | Non-navigable retry state; never a tombstone. |
 
-`can_request_access` is computed from the raw document type and policy shape without exposing either. Requestable restricted chips open the persisted permissions access-request workflow. Requests for tasks canonicalize to their project; requests for private chat messages canonicalize to their channel. Unsupported types stay restricted without an action.
+`can_request_access` comes only from the PostgreSQL decision's canonical request target. Requestable restricted chips open the persisted permissions access-request workflow. Requests for tasks canonicalize to their project; requests for private chat messages canonicalize to their channel. Unsupported types stay restricted without an action.
 
 Access-request ids, state, and cooldown timestamps are not search metadata. The frontend batches them through `GetMyAccessRequestStatuses` after restricted resolution and merges `ACCESS_REQUEST_CHANGED` stream events into the shared mention cache. Approval force-resolves the original URN with bounded retries so asynchronous child ACL propagation can finish.
 
@@ -299,8 +303,8 @@ Concrete checklist when, e.g., adding `assignee_count` to project mentions:
 
 ## Anti-patterns (worth a second look before committing)
 
-- Database display hydration in the reference-state fallback. It may classify registered ids only; it must not return content fields.
-- Treating a filtered or raw Meilisearch failure as a miss. Incomplete chunks are `UNAVAILABLE`.
+- Adding display metadata to `ResourceAccessDecision`; PostgreSQL decides access and lifecycle, while Meilisearch owns previews.
+- Treating a PostgreSQL or raw Meilisearch failure as a miss. Incomplete resolution is `UNAVAILABLE`.
 - Putting access-request status into search metadata. It is requester-specific workflow state and belongs in the permissions status RPC and stream event.
 - Reading raw metadata-dict keys (`liveState.metadata?.member_count`) from a render component. Translators exist for a reason.
 - A re-index call without a matching `publish_mention_state` (or vice versa). The two together are the contract.
@@ -319,8 +323,8 @@ Concrete checklist when, e.g., adding `assignee_count` to project mentions:
 | `src/uniffy/core/content/base_operations.py` | `_get_search_metadata_async` hook + canonical `_index_for_search`. |
 | `src/uniffy/core/search/indexer.py` | `SearchIndexer.index` / `remove`. |
 | `src/uniffy/core/valkey/mentions.py` | `publish_mention_state`. |
-| `src/uniffy/core/content/reference_state.py` | Registered authoritative state loaders for successful raw-index misses. |
-| `src/uniffy/domains/search/operations.py` | Two-pass typed availability classification and metadata scrubbing. |
+| `src/uniffy/domains/permissions/resource_access/` | PostgreSQL-authoritative lifecycle, access, and canonical request targets. |
+| `src/uniffy/domains/search/operations.py` | Authorized search and typed availability composition. |
 | `src/uniffy/domains/search/converters.py` | `SearchResult` -> `UrnMetadata` proto, including `urn_status` passthrough. |
 | `src/uniffy/domains/search/queries.py` | `SearchResult` dataclass. |
 | `src/ui/src/components/mention/types.ts` | `MentionLiveState`. |

@@ -14,14 +14,9 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import (
     PermissionChecker,
-    invalidate_visible_sets_for_user,
     role_can_view,
 )
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.content.reference_state import (
-    model_reference_state_loader,
-    register_reference_state_loader,
-)
 from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import (
     NotFoundError,
@@ -60,7 +55,6 @@ from uniffy.domains.calls.operations import (
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
     fetch_channel_members,
-    invalidate_cached_channel,
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
 )
@@ -78,9 +72,6 @@ from uniffy.domains.chat.subjects import ChatSubject
 from uniffy.domains.tags import TagAssignment, TagOperations
 
 logger = logger.bind(component="chat.channels.operations")
-
-register_reference_state_loader(ContentType.CHAT, model_reference_state_loader(ChatChannel))
-register_reference_state_loader(ContentType.AGENT_CHAT, model_reference_state_loader(ChatChannel))
 
 DEFAULT_PAGE_SIZE = 200
 MAX_PAGE_SIZE = 500
@@ -705,8 +696,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             tag_ids=tag_ids,
         )
 
-        await invalidate_cached_channel(channel.id)
-
         await self._refresh_channel_live_state(channel)
         await self._publish_channel_updated(channel)
 
@@ -770,7 +759,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         await self.session.refresh(channel)
 
-        await invalidate_cached_channel(channel.id)
         await invalidate_cached_member_ids(channel.id)
         await invalidate_cached_dm_peers(channel.id)
 
@@ -840,8 +828,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         await self.session.commit()
 
-        await invalidate_cached_channel(channel.id)
-
         await end_active_call_for_channel(self.session, channel.id, CallEndReason.CHANNEL_ARCHIVED)
 
         await self._broadcast_channel_removed(channel)
@@ -879,7 +865,39 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         await self.session.commit()
 
-        await invalidate_cached_channel(channel.id)
+        # Channel delete has no restore path, so message attachments (rows,
+        # file copies, bytes) go with it; only messages that actually carry
+        # attachments are loaded.
+        from uniffy.core.models.chat.message import ChatMessage
+        from uniffy.core.models.files.attachment import Attachment
+        from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+        attachment_parent_ids = list(
+            (
+                await self.session.execute(
+                    select(ChatMessage.id)
+                    .join(
+                        Attachment,
+                        and_(
+                            Attachment.content_id == ChatMessage.id,
+                            Attachment.content_type == ContentType.CHAT_MESSAGE,
+                        ),
+                    )
+                    .where(ChatMessage.channel_id == channel.id)
+                    .distinct()
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if attachment_parent_ids:
+            await AttachmentOperations(self.session).purge_attachments_for_content(
+                organization_id,
+                ContentType.CHAT_MESSAGE,
+                attachment_parent_ids,
+            )
+            await self.session.commit()
+
         await invalidate_cached_member_ids(channel.id)
         await invalidate_cached_dm_peers(channel.id)
 
@@ -964,7 +982,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self.session.commit()
         self.access.invalidate_membership(channel_id, user_id)
         await invalidate_cached_member_ids(channel_id)
-        await invalidate_visible_sets_for_user(organization_id, user_id)
 
         await self._publish_member_event(channel_id, user_id, joined=True)
         await self._post_join_system_message(user_id, organization_id, channel)
@@ -1070,7 +1087,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await invalidate_cached_member_ids(channel_id)
         if channel.channel_type == ChannelType.GROUP_DM:
             await invalidate_cached_dm_peers(channel_id)
-        await invalidate_visible_sets_for_user(organization_id, user_id)
 
         await kick_user_from_active_call(self.session, channel_id, user_id)
 
@@ -1156,10 +1172,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 await enqueue_chat_search_acl_refresh(channel_id)
 
             await invalidate_cached_member_ids(channel_id)
-
-            for member in added:
-                if member.user_id is not None:
-                    await invalidate_visible_sets_for_user(organization_id, member.user_id)
 
             await self._publish_members_changed(
                 channel_id,
@@ -1266,7 +1278,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
             for removed_id in removable_ids:
                 if removed_id is not None:
-                    await invalidate_visible_sets_for_user(organization_id, removed_id)
                     await kick_user_from_active_call(self.session, channel_id, removed_id)
 
             await self._publish_members_changed(channel_id, removable_ids, added=False)
@@ -2093,8 +2104,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel.updated_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(channel)
-
-        await invalidate_cached_channel(channel.id)
 
         await self._refresh_channel_live_state(channel)
         await self._publish_channel_updated(channel)

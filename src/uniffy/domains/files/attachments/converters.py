@@ -19,7 +19,6 @@ CONTENT_TYPE_TO_PROTO = {
     ContentType.FILE: ProtoContentType.CONTENT_TYPE_FILE,
     ContentType.CALENDAR_EVENT: ProtoContentType.CONTENT_TYPE_CALENDAR_EVENT,
     ContentType.CHAT_MESSAGE: ProtoContentType.CONTENT_TYPE_CHAT_MESSAGE,
-    ContentType.USER: ProtoContentType.CONTENT_TYPE_USER,
     ContentType.PROJECT: ProtoContentType.CONTENT_TYPE_PROJECT,
     ContentType.TASK: ProtoContentType.CONTENT_TYPE_TASK,
 }
@@ -29,7 +28,6 @@ CONTENT_TYPE_FROM_PROTO = {
     ProtoContentType.CONTENT_TYPE_FILE: ContentType.FILE,
     ProtoContentType.CONTENT_TYPE_CALENDAR_EVENT: ContentType.CALENDAR_EVENT,
     ProtoContentType.CONTENT_TYPE_CHAT_MESSAGE: ContentType.CHAT_MESSAGE,
-    ProtoContentType.CONTENT_TYPE_USER: ContentType.USER,
     ProtoContentType.CONTENT_TYPE_PROJECT: ContentType.PROJECT,
     ProtoContentType.CONTENT_TYPE_TASK: ContentType.TASK,
 }

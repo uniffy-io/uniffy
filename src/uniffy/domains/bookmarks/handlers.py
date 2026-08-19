@@ -1,7 +1,5 @@
 """Bookmarks RPC handlers - thin layer delegating to operations."""
 
-from uuid import UUID
-
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
@@ -16,7 +14,7 @@ from uniffy_proto.bookmarks.v1.bookmarks_pb2 import (
 )
 
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.bookmarks.converters import bookmark_to_proto
 from uniffy.domains.bookmarks.operations import BookmarksOperations
 
@@ -52,7 +50,7 @@ class BookmarksHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -106,7 +104,7 @@ class BookmarksHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -165,7 +163,7 @@ class BookmarksHandlers:
         # since bookmarks are unique per user+urn, but we validate for consistency)
         if request.organization_id:
             try:
-                UUID(request.organization_id)
+                resolve_organization_id(ctx, request.organization_id)
             except ValueError:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 

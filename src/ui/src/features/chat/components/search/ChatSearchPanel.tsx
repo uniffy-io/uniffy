@@ -32,7 +32,7 @@ export function ChatSearchPanel({
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [filters, setFilters] = useState<ChatSearchFilterValues>(channelId ? { channelId } : {});
 
-  const { results, isLoading, error, totalCount, search, clear } = useChatSearch();
+  const { results, isLoading, error, resultCount, hasMore, search, clear } = useChatSearch();
 
   const [position, setPosition] = useState({ top: 100, left: 100 });
 
@@ -215,7 +215,9 @@ export function ChatSearchPanel({
           <div className="py-1">
             <div className="px-4 py-1">
               <span className="text-xs text-muted-foreground">
-                {totalCount} {totalCount === 1 ? "result" : "results"}
+                {hasMore
+                  ? `Showing first ${resultCount} results`
+                  : `${resultCount} ${resultCount === 1 ? "result" : "results"}`}
               </span>
             </div>
             {results.map((result, index) => (

@@ -14,7 +14,9 @@ from uniffy_proto.permissions.v1.permissions_pb2 import (
 from uniffy.core.auth.membership import is_active_member
 from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
+from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.models.login.user import User
 from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequest,
     ContentAccessRequestState,
@@ -22,7 +24,7 @@ from uniffy.core.models.permissions.content_access_request import (
 from uniffy.core.types import NotificationType
 from uniffy.core.valkey import publish_access_request_changed
 from uniffy.domains.permissions.access_request_queries import DENIAL_COOLDOWN
-from uniffy.domains.permissions.access_request_targets import (
+from uniffy.domains.permissions.resource_access.targets import (
     AccessGrantKind,
     AccessRequestTarget,
 )
@@ -107,11 +109,16 @@ class AccessRequestNotifier:
                     (OrganizationMember.user_id == ChatChannelMember.user_id)
                     & (OrganizationMember.organization_id == request.organization_id),
                 )
+                .join(User, User.id == OrganizationMember.user_id)
+                .join(Organization, Organization.id == OrganizationMember.organization_id)
                 .where(
                     ChatChannelMember.channel_id == target.canonical_content_id,
                     ChatChannelMember.role == ChannelRole.OWNER,
                     ChatChannelMember.user_id.is_not(None),
                     OrganizationMember.is_active == True,  # noqa: E712
+                    User.is_active.is_(True),
+                    Organization.deleted_at.is_(None),
+                    Organization.is_suspended.is_(False),
                 )
             )
         ).scalars()

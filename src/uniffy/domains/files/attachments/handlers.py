@@ -22,7 +22,7 @@ from uniffy_proto.files.v1.files_pb2 import (
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.files.attachments.converters import (
     attachment_to_proto,
     content_type_from_proto,
@@ -42,7 +42,7 @@ class AttachmentsHandlersMixin:
     ) -> AttachFileResponse:
         """Attach a file to content."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             source_file_id = UUID(request.source_file_id)
             content_id = UUID(request.content_id)
         except ValueError as e:
@@ -107,7 +107,7 @@ class AttachmentsHandlersMixin:
     ) -> DetachFileResponse:
         """Detach a file from content."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             attachment_id = UUID(request.attachment_id)
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
@@ -144,7 +144,7 @@ class AttachmentsHandlersMixin:
     ) -> ListAttachmentsResponse:
         """List attachments for a piece of content."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             content_id = UUID(request.content_id)
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
@@ -196,7 +196,7 @@ class AttachmentsHandlersMixin:
     ) -> BatchListAttachmentsResponse:
         """List attachments for many content rows in one call."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
 
@@ -259,7 +259,7 @@ class AttachmentsHandlersMixin:
     ) -> GetAttachmentsFolderResponse:
         """Get the user's Attachments folder ID."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
 

@@ -69,6 +69,7 @@ from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.integrations.tool_gate import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.tags import Tag, TagOperations
 from uniffy.domains.users.operations import UserOperations
 
@@ -345,7 +346,11 @@ class AgentsHandlers:
                     deleted_only=request.deleted_only,
                 )
                 total_pages = (total + page_size - 1) // page_size if page_size else 1
-                roles = [await ops.resolve_role(user_id, org_id, a) for a in agents]
+                decisions = await ResourceAccessResolver(session).resolve_page(
+                    actor_id=user_id,
+                    organization_id=org_id,
+                    keys=[ResourceKey(ContentType.AGENT, agent.id) for agent in agents],
+                )
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [a.id for a in agents])
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
@@ -353,7 +358,8 @@ class AgentsHandlers:
                     ContentType.AGENT,
                 )
                 proto_agents = []
-                for a, r in zip(agents, roles, strict=True):
+                for a in agents:
+                    role = decisions[ResourceKey(ContentType.AGENT, a.id)].role
                     eff_mode, eff_baseline = resolve_effective_policy(
                         a.access_mode,
                         a.baseline_role,
@@ -363,7 +369,7 @@ class AgentsHandlers:
                     proto_agents.append(
                         agent_to_proto(
                             a,
-                            user_role=r,
+                            user_role=role,
                             tags=tags_by_id.get(a.id),
                             effective_access_mode=eff_mode,
                             effective_baseline_role=eff_baseline,

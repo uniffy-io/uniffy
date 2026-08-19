@@ -1,11 +1,4 @@
-"""Tests for the tag visibility filter and SQL predicate.
-
-The filter is now a thin facade over
-:func:`get_visible_tag_ids` which is itself cached in Valkey. The tests
-patch the cache helper and verify the filter intersects correctly. The
-SQL predicate tests verify the org-admin short-circuit and the
-``IN(...)`` clause shape.
-"""
+"""Tests for live PostgreSQL tag visibility filters and predicates."""
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -32,7 +25,7 @@ def _make_tag(*, organization_id=None, created_by=None, name="docs") -> Tag:
 
 
 class TestVisibilityFilter:
-    async def test_org_admin_returns_all_tags(self) -> None:
+    async def test_filter_returns_all_visible_tags(self) -> None:
         org_id = generate_id()
         user_id = generate_id()
         session = MagicMock()
@@ -40,14 +33,14 @@ class TestVisibilityFilter:
         tags = [_make_tag(organization_id=org_id) for _ in range(3)]
 
         with patch(
-            "uniffy.domains.tags.visibility.filter.get_visible_tag_ids",
-            new=AsyncMock(return_value=None),
+            "uniffy.domains.tags.visibility.filter.compute_visible_tag_ids",
+            new=AsyncMock(return_value={tag.id for tag in tags}),
         ):
             result = await visibility.filter_visible(tags)
 
         assert result == tags
 
-    async def test_intersects_against_cached_visible_set(self) -> None:
+    async def test_intersects_against_live_visible_set(self) -> None:
         org_id = generate_id()
         user_id = generate_id()
         session = MagicMock()
@@ -57,7 +50,7 @@ class TestVisibilityFilter:
         invisible_tag = _make_tag(organization_id=org_id)
 
         with patch(
-            "uniffy.domains.tags.visibility.filter.get_visible_tag_ids",
+            "uniffy.domains.tags.visibility.filter.compute_visible_tag_ids",
             new=AsyncMock(return_value={visible_tag.id}),
         ):
             result = await visibility.filter_visible([visible_tag, invisible_tag])
@@ -72,14 +65,14 @@ class TestVisibilityFilter:
         tags = [_make_tag(organization_id=org_id) for _ in range(2)]
 
         with patch(
-            "uniffy.domains.tags.visibility.filter.get_visible_tag_ids",
+            "uniffy.domains.tags.visibility.filter.compute_visible_tag_ids",
             new=AsyncMock(return_value=set()),
         ):
             result = await visibility.filter_visible(tags)
 
         assert result == []
 
-    async def test_visible_id_set_admin_returns_every_input(self) -> None:
+    async def test_visible_id_set_returns_every_visible_input(self) -> None:
         org_id = generate_id()
         user_id = generate_id()
         session = MagicMock()
@@ -87,14 +80,14 @@ class TestVisibilityFilter:
         tags = [_make_tag(organization_id=org_id) for _ in range(2)]
 
         with patch(
-            "uniffy.domains.tags.visibility.filter.get_visible_tag_ids",
-            new=AsyncMock(return_value=None),
+            "uniffy.domains.tags.visibility.filter.compute_visible_tag_ids",
+            new=AsyncMock(return_value={tag.id for tag in tags}),
         ):
             ids = await visibility.visible_id_set(tags)
 
         assert ids == {t.id for t in tags}
 
-    async def test_is_visible_admin_short_circuit(self) -> None:
+    async def test_is_visible_true(self) -> None:
         org_id = generate_id()
         user_id = generate_id()
         session = MagicMock()
@@ -102,8 +95,8 @@ class TestVisibilityFilter:
         tag = _make_tag(organization_id=org_id, created_by=generate_id())
 
         with patch(
-            "uniffy.domains.tags.visibility.filter.get_visible_tag_ids",
-            new=AsyncMock(return_value=None),
+            "uniffy.domains.tags.visibility.filter.compute_visible_tag_ids",
+            new=AsyncMock(return_value={tag.id}),
         ):
             assert await visibility.is_visible(tag)
 
@@ -116,7 +109,7 @@ class TestVisibilityFilter:
         invisible_tag = _make_tag(organization_id=org_id)
 
         with patch(
-            "uniffy.domains.tags.visibility.filter.get_visible_tag_ids",
+            "uniffy.domains.tags.visibility.filter.compute_visible_tag_ids",
             new=AsyncMock(return_value={visible_tag.id}),
         ):
             assert await visibility.is_visible(visible_tag) is True
@@ -124,11 +117,14 @@ class TestVisibilityFilter:
 
 
 class TestBuildTagVisibilityPredicate:
-    async def test_admin_returns_none(self) -> None:
+    async def test_visible_set_returns_in_clause(self) -> None:
+        from sqlalchemy.sql.elements import BinaryExpression
+
         session = MagicMock()
+        tag_id = generate_id()
         with patch(
-            "uniffy.domains.tags.visibility.predicate.get_visible_tag_ids",
-            new=AsyncMock(return_value=None),
+            "uniffy.domains.tags.visibility.predicate.compute_visible_tag_ids",
+            new=AsyncMock(return_value={tag_id}),
         ):
             result = await build_tag_visibility_predicate(
                 session,
@@ -136,14 +132,14 @@ class TestBuildTagVisibilityPredicate:
                 organization_id=generate_id(),
             )
 
-        assert result is None
+        assert isinstance(result, BinaryExpression)
 
     async def test_empty_visible_set_returns_false_literal(self) -> None:
         from sqlalchemy.sql.elements import False_
 
         session = MagicMock()
         with patch(
-            "uniffy.domains.tags.visibility.predicate.get_visible_tag_ids",
+            "uniffy.domains.tags.visibility.predicate.compute_visible_tag_ids",
             new=AsyncMock(return_value=set()),
         ):
             result = await build_tag_visibility_predicate(
@@ -160,7 +156,7 @@ class TestBuildTagVisibilityPredicate:
         session = MagicMock()
         ids = {generate_id() for _ in range(3)}
         with patch(
-            "uniffy.domains.tags.visibility.predicate.get_visible_tag_ids",
+            "uniffy.domains.tags.visibility.predicate.compute_visible_tag_ids",
             new=AsyncMock(return_value=ids),
         ):
             result = await build_tag_visibility_predicate(
@@ -176,7 +172,7 @@ class TestBuildAssignmentVisibilityPredicate:
     async def test_org_admin_collapses_to_none(self) -> None:
         session = MagicMock()
         with patch(
-            "uniffy.domains.tags.visibility.predicate.get_visible_content_ids_by_type",
+            "uniffy.domains.tags.visibility.predicate.compute_visible_content_ids_by_type",
             new=AsyncMock(return_value=None),
         ):
             result = await build_assignment_visibility_predicate(
@@ -198,7 +194,7 @@ class TestBuildAssignmentVisibilityPredicate:
 
         session = MagicMock()
         with patch(
-            "uniffy.domains.tags.visibility.predicate.get_visible_content_ids_by_type",
+            "uniffy.domains.tags.visibility.predicate.compute_visible_content_ids_by_type",
             new=AsyncMock(side_effect=fake_visible),
         ):
             result = await build_assignment_visibility_predicate(
@@ -217,7 +213,7 @@ class TestBuildAssignmentVisibilityPredicate:
 
         session = MagicMock()
         with patch(
-            "uniffy.domains.tags.visibility.predicate.get_visible_content_ids_by_type",
+            "uniffy.domains.tags.visibility.predicate.compute_visible_content_ids_by_type",
             new=AsyncMock(side_effect=fake_visible),
         ):
             result = await build_assignment_visibility_predicate(

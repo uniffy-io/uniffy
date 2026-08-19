@@ -1,21 +1,15 @@
-"""Thin facade over ``get_visible_tag_ids`` for callers holding ``Tag``
-rows; cached in Valkey for 60s.
-"""
+"""Candidate-bounded PostgreSQL visibility checks for ``Tag`` rows."""
 
 from collections.abc import Iterable
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions.visible_sets import get_visible_tag_ids
+from uniffy.core.auth.permissions.visible_sets import compute_visible_tag_ids
 from uniffy.core.models.tags.tag import Tag
 
 
 class TagVisibilityFilter:
-    """Org admins fall through (helper returns ``None``); everyone else
-    gets the set-membership check.
-    """
-
     def __init__(
         self,
         session: AsyncSession,
@@ -31,34 +25,31 @@ class TagVisibilityFilter:
         tag_list = list(tags)
         if not tag_list:
             return []
-        visible = await get_visible_tag_ids(
+        visible = await compute_visible_tag_ids(
             self.session,
             user_id=self.user_id,
             organization_id=self.organization_id,
+            candidate_tag_ids={tag.id for tag in tag_list},
         )
-        if visible is None:
-            return tag_list
         return [t for t in tag_list if t.id in visible]
 
     async def visible_id_set(self, tags: Iterable[Tag]) -> set[UUID]:
         tag_list = list(tags)
         if not tag_list:
             return set()
-        visible = await get_visible_tag_ids(
+        visible = await compute_visible_tag_ids(
             self.session,
             user_id=self.user_id,
             organization_id=self.organization_id,
+            candidate_tag_ids={tag.id for tag in tag_list},
         )
-        if visible is None:
-            return {t.id for t in tag_list}
         return {t.id for t in tag_list if t.id in visible}
 
     async def is_visible(self, tag: Tag) -> bool:
-        visible = await get_visible_tag_ids(
+        visible = await compute_visible_tag_ids(
             self.session,
             user_id=self.user_id,
             organization_id=self.organization_id,
+            candidate_tag_ids={tag.id},
         )
-        if visible is None:
-            return True
         return tag.id in visible

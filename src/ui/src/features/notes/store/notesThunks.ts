@@ -378,29 +378,6 @@ export const restoreNote = createAsyncThunk<
   }
 });
 
-export const searchNotes = createAsyncThunk<
-  { notes: SerializedNote[]; totalCount: number },
-  { query: string; includeDeleted?: boolean },
-  { state: RootState; rejectValue: string; dispatch: AppDispatch }
->("notes/searchNotes", async (params, { getState, rejectWithValue, dispatch }) => {
-  try {
-    const organizationId = getOrganizationId(getState());
-    const response = await notesApi.searchNotes({
-      organizationId,
-      query: params.query,
-      includeDeleted: params.includeDeleted ?? false,
-      pageSize: 50,
-    });
-    hydrateNoteTags(dispatch, response.notes);
-    return {
-      notes: response.notes.map(noteToPlain),
-      totalCount: response.totalCount,
-    };
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Search failed");
-  }
-});
-
 export const fetchBacklinks = createAsyncThunk<
   { noteId: string; backlinks: Array<{ id: string; title: string; slug: string }> },
   string,
@@ -554,7 +531,7 @@ export const initializeNotesData = createAsyncThunk<
 
     const forceRefresh = params?.forceRefresh ?? false;
 
-    // Skip only when tree is hydrated; notesCount can be populated by fetchNote/searchNotes alone.
+    // Skip only when tree is hydrated; notesCount can be populated by fetchNote alone.
     if (state.notesTree.treeLoaded && !forceRefresh) {
       const existingNotes = Object.values(state.notes.notes);
       return {

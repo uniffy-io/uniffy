@@ -12,14 +12,10 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.content.reference_state import (
-    ReferenceRowState,
-    resolve_reference_states,
-)
 from uniffy.core.content.references import parse_urn
 from uniffy.core.search import get_meilisearch_client
+from uniffy.core.search.meilisearch import SearchCandidateScope
 
 logger = logger.bind(component="search.queries")
 
@@ -203,6 +199,7 @@ async def execute_search(
     limit: int = 20,
     offset: int = 0,
     name_matches_only: bool = False,
+    candidate_scope: SearchCandidateScope = SearchCandidateScope.MEMBER_HINT,
 ) -> tuple[list[SearchResult], int]:
     client = get_meilisearch_client()
 
@@ -219,64 +216,12 @@ async def execute_search(
         metadata_filters=metadata_filters,
         limit=limit,
         offset=offset,
+        candidate_scope=candidate_scope,
     )
 
     search_results = [SearchResult.from_meilisearch_hit(hit) for hit in results.hits]
 
     return search_results, results.estimated_total_hits or len(search_results)
-
-
-async def get_permission_filtered_documents_by_urns(
-    urns: list[str],
-    organization_id: UUID,
-    user_id: UUID,
-    user_group_ids: list[UUID] | None,
-) -> UrnLookupResult:
-    """Fetch URNs through the canonical Meilisearch permission filter."""
-    # A URN is interpolated into the filter expression next to the permission
-    # clause. ``parse_urn`` rejects anything that is not
-    # ``urn:uniffy:content:{TYPE}:{uuid}``, which excludes the quote needed to
-    # break out of the literal. Dropped entries fall through to the caller's
-    # tombstone synthesis.
-    urns = [urn for urn in urns if parse_urn(urn) is not None]
-    if not urns:
-        return UrnLookupResult(documents={}, failed_urns=frozenset())
-
-    client = get_meilisearch_client()
-    all_results: dict[str, SearchResult] = {}
-    failed_urns: set[str] = set()
-    chunk_size = 50
-    perm_filter = client._build_permission_filter(
-        organization_id=organization_id,
-        user_id=user_id,
-        user_group_ids=user_group_ids,
-    )
-    index = client.client.index(client.config.index_name)
-
-    for i in range(0, len(urns), chunk_size):
-        chunk = urns[i : i + chunk_size]
-        urn_filter = " OR ".join(f'urn = "{urn}"' for urn in chunk)
-        combined_filter = f"({urn_filter}) AND ({perm_filter})"
-
-        try:
-            docs = await index.get_documents(
-                filter=combined_filter,
-                limit=len(chunk),
-            )
-            for doc in docs.results:
-                if "urn" in doc:  # noqa: PLR2004
-                    all_results[doc["urn"]] = SearchResult.from_meilisearch_hit(doc)
-        except Exception:
-            failed_urns.update(chunk)
-            logger.opt(exception=True).warning(
-                "Permission-filtered URN lookup chunk failed",
-                chunk_size=len(chunk),
-            )
-
-    return UrnLookupResult(
-        documents=all_results,
-        failed_urns=frozenset(failed_urns),
-    )
 
 
 async def get_raw_documents_by_urns(
@@ -295,37 +240,3 @@ async def get_raw_documents_by_urns(
         },
         failed_urns=lookup.failed_urns,
     )
-
-
-async def get_authoritative_reference_states(
-    session: AsyncSession,
-    organization_id: UUID,
-    urns: list[str],
-) -> dict[str, ReferenceRowState]:
-    parsed_by_urn = {urn: parsed for urn in urns if (parsed := parse_urn(urn)) is not None}
-    grouped: dict[Any, set[UUID]] = {}
-    for content_type, content_id in parsed_by_urn.values():
-        grouped.setdefault(content_type, set()).add(content_id)
-
-    states = await resolve_reference_states(session, organization_id, grouped)
-    return {
-        urn: state
-        for urn, (content_type, content_id) in parsed_by_urn.items()
-        if (state := states.get((content_type, content_id))) is not None
-    }
-
-
-async def get_documents_by_urns(
-    urns: list[str],
-    organization_id: UUID,
-    user_id: UUID | None = None,
-    user_group_ids: list[UUID] | None = None,
-) -> UrnLookupResult:
-    if user_id is not None:
-        return await get_permission_filtered_documents_by_urns(
-            urns,
-            organization_id,
-            user_id,
-            user_group_ids,
-        )
-    return await get_raw_documents_by_urns(urns, organization_id)

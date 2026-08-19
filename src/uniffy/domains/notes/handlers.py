@@ -23,7 +23,6 @@ from uniffy_proto.notes.v1.notes_pb2 import (
     MoveNoteResponse,
     RestoreNoteRequest,
     RestoreNoteResponse,
-    SearchNotesRequest,
     UpdateNoteRequest,
     UpdateNoteResponse,
 )
@@ -51,6 +50,7 @@ from uniffy.domains.notes.converters import (
     note_to_reference,
 )
 from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.tags import TagOperations
 
 logger = logger.bind(component="notes.handlers")
@@ -434,18 +434,20 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[urn_for(n) for n in notes],
                 )
-                # Share one checker so org-role / domain-admin caches hit once per page.
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
                     organization_id,
                     ContentType.NOTE,
                 )
+                decisions = await ResourceAccessResolver(session).resolve_page(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    keys=[ResourceKey(ContentType.NOTE, note.id) for note in notes],
+                )
                 proto_notes = []
                 for n in notes:
                     info = sharing.get(n.id)
-                    user_role = await _resolve_user_role(
-                        session, user_id, organization_id, n, checker=checker
-                    )
+                    user_role = decisions[ResourceKey(ContentType.NOTE, n.id)].role
                     eff_mode, eff_baseline = resolve_effective_policy(
                         n.access_mode,
                         n.baseline_role,
@@ -575,30 +577,6 @@ class NotesHandlers:
         except Exception as exc:
             raise _map_domain_error("move_note", exc) from exc
 
-    async def search_notes(self, request: SearchNotesRequest, ctx: RequestContext):
-        """Use ``search.v1.SearchService`` instead."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use SearchService for note search")
-
     async def copy_note(self, request, ctx: RequestContext):
         """Not yet implemented."""
         raise ConnectError(Code.UNIMPLEMENTED, "CopyNote not yet implemented")
-
-    async def share_note_with_group(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.AddMember``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.AddMember instead")
-
-    async def unshare_note_from_group(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.RemoveMember``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.RemoveMember instead")
-
-    async def get_note_sharing(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.ListMembers``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.ListMembers instead")
-
-    async def grant_permission(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.AddMember``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.AddMember instead")
-
-    async def revoke_permission(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.RemoveMember``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.RemoveMember instead")

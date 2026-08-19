@@ -32,7 +32,7 @@ from uniffy_proto.comments.v1.comments_pb2 import (
 from uniffy.core.converters import content_type_from_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.comments.converters import (
     anchor_type_from_proto,
     comment_to_proto,
@@ -52,7 +52,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             content_id = UUID(request.content_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
@@ -122,7 +122,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             comment_id = UUID(request.comment_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
@@ -173,7 +173,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             comment_id = UUID(request.comment_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
@@ -206,7 +206,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             content_id = UUID(request.content_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
@@ -301,7 +301,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             comment_id = UUID(request.comment_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
@@ -373,7 +373,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             comment_id = UUID(request.comment_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
@@ -420,7 +420,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             comment_id = UUID(request.comment_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
@@ -467,7 +467,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             comment_id = UUID(request.comment_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
@@ -504,7 +504,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             comment_id = UUID(request.comment_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid UUID format")
@@ -537,7 +537,7 @@ class CommentsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 

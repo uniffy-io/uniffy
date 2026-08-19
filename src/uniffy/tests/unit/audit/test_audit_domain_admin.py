@@ -1,17 +1,4 @@
-"""Audit emissions and permission-cache drops for DomainAdmin grant / revoke.
-
-Wires the writer through ``OrganizationOperations.grant_domain_admin``
-and ``revoke_domain_admin``. DB calls are mocked. The test asserts:
-
-- Grant emits exactly one ``domain_admin.granted`` row with the right shape.
-- Revoke emits exactly one ``domain_admin.revoked`` row and packs
-  ``previous_state`` into ``details``.
-- Both writes happen before the surrounding commit so a mid-tx raise
-  rolls the audit row back together with the mutation.
-- The existing ``require_org_admin`` permission check blocks non-admins
-  before any audit write runs.
-- Both paths drop the Valkey entry the ``is_domain_admin`` gate reads.
-"""
+"""Audit emissions for DomainAdmin grant and revoke operations."""
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -50,9 +37,6 @@ def _build_session_for_grant(existing: DomainAdmin | None) -> MagicMock:
 
 
 def _patch_helpers() -> tuple:
-    """Patch the side-effect helpers (`require_*`, pubsub, cache) so
-    only the audit path under test runs.
-    """
     require_admin = patch.object(
         OrganizationOperations,
         "require_org_admin",
@@ -63,15 +47,11 @@ def _patch_helpers() -> tuple:
         "require_org_member",
         AsyncMock(return_value=None),
     )
-    invalidate = patch(
-        "uniffy.domains.organizations.operations.invalidate_visible_sets_for_user",
-        AsyncMock(return_value=None),
-    )
     publish = patch(
         "uniffy.core.valkey.pubsub.publish_notification",
         AsyncMock(return_value=None),
     )
-    return require_admin, require_member, invalidate, publish
+    return require_admin, require_member, publish
 
 
 def _build_session_for_revoke(existing: DomainAdmin) -> MagicMock:
@@ -96,8 +76,8 @@ async def test_grant_emits_one_audit_row_with_correct_shape() -> None:
     org_id = generate_id()
     target_id = generate_id()
 
-    rqa, rqm, inv, pub = _patch_helpers()
-    with rqa, rqm, inv, pub:
+    rqa, rqm, pub = _patch_helpers()
+    with rqa, rqm, pub:
         await ops.grant_domain_admin(admin_id, org_id, target_id, DomainType.CHAT)
 
     added = [c.args[0] for c in session.add.call_args_list]
@@ -133,8 +113,8 @@ async def test_grant_writes_audit_before_commit() -> None:
     session.add = tracking_add
     session.commit = tracking_commit
 
-    rqa, rqm, inv, pub = _patch_helpers()
-    with rqa, rqm, inv, pub:
+    rqa, rqm, pub = _patch_helpers()
+    with rqa, rqm, pub:
         await ops.grant_domain_admin(generate_id(), generate_id(), generate_id(), DomainType.FILES)
 
     assert call_order == ["audit_add", "commit"]
@@ -155,8 +135,8 @@ async def test_revoke_emits_one_audit_row_with_previous_state() -> None:
     org_id = generate_id()
     target_id = generate_id()
 
-    rqa, rqm, inv, pub = _patch_helpers()
-    with rqa, rqm, inv, pub:
+    rqa, rqm, pub = _patch_helpers()
+    with rqa, rqm, pub:
         await ops.revoke_domain_admin(admin_id, org_id, target_id, DomainType.CALENDAR)
 
     added = [c.args[0] for c in session.add.call_args_list]
@@ -198,56 +178,3 @@ async def test_non_admin_blocked_before_audit_runs() -> None:
     added = [c.args[0] for c in session.add.call_args_list]
     audit_rows = [obj for obj in added if obj.__class__.__name__ == "AuditEvent"]
     assert audit_rows == []
-
-
-def _capture_cache_drops():
-    """Patch the Valkey layer under ``invalidate_domain_admin`` and collect the
-    keys it drops, so the assertion is about the real gate key."""
-    dropped: list[str] = []
-
-    async def _drop(*keys):
-        dropped.extend(keys)
-
-    return dropped, patch(
-        "uniffy.core.auth.cache.cache_invalidate_many",
-        AsyncMock(side_effect=_drop),
-    )
-
-
-async def test_grant_drops_the_domain_admin_gate_cache_entry() -> None:
-    from uniffy.core.auth.cache import _domain_admin_key
-
-    session = _build_session_for_grant(existing=None)
-    ops = OrganizationOperations(session)
-    org_id = generate_id()
-    target_id = generate_id()
-
-    dropped, cache_patch = _capture_cache_drops()
-    rqa, rqm, inv, pub = _patch_helpers()
-    with rqa, rqm, inv, pub, cache_patch:
-        await ops.grant_domain_admin(generate_id(), org_id, target_id, DomainType.AGENTS)
-
-    assert _domain_admin_key(org_id, target_id, DomainType.AGENTS) in dropped
-
-
-async def test_revoke_drops_the_domain_admin_gate_cache_entry() -> None:
-    from uniffy.core.auth.cache import _domain_admin_key
-
-    org_id = generate_id()
-    target_id = generate_id()
-    existing = DomainAdmin(
-        user_id=target_id,
-        organization_id=org_id,
-        domain=DomainType.AGENTS,
-        granted_by=generate_id(),
-        granted_at=datetime(2026, 5, 19, 11, 30, 0, tzinfo=UTC),
-    )
-    session = _build_session_for_revoke(existing)
-    ops = OrganizationOperations(session)
-
-    dropped, cache_patch = _capture_cache_drops()
-    rqa, rqm, inv, pub = _patch_helpers()
-    with rqa, rqm, inv, pub, cache_patch:
-        await ops.revoke_domain_admin(generate_id(), org_id, target_id, DomainType.AGENTS)
-
-    assert _domain_admin_key(org_id, target_id, DomainType.AGENTS) in dropped

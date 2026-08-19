@@ -7,7 +7,7 @@ validation. Mocked sessions throughout; no live DB or Valkey.
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -83,11 +83,10 @@ class TestScopeRouting:
     async def _resolve(self, destination, *, session_kind=None, channel=None):
         fake_self = SimpleNamespace(_session=MagicMock())
         if channel is not None or isinstance(destination, ChatDestination):
-            import uniffy.domains.chat.cache as chat_cache
-
-            original = chat_cache.get_or_load_channel
-            chat_cache.get_or_load_channel = AsyncMock(return_value=channel)
-            try:
+            with patch(
+                "uniffy.domains.chat.access.ChatAccessChecker.get_channel",
+                new=AsyncMock(return_value=channel),
+            ):
                 return await RuntimeOperations._resolve_memory_scope(
                     fake_self,
                     destination=destination,
@@ -95,8 +94,6 @@ class TestScopeRouting:
                     organization_id=ORG_ID,
                     session_kind=session_kind,
                 )
-            finally:
-                chat_cache.get_or_load_channel = original
         return await RuntimeOperations._resolve_memory_scope(
             fake_self,
             destination=destination,

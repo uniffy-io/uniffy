@@ -16,6 +16,9 @@ export interface Room {
   amenities: string[];
   imageFileId: string | null;
   visibility: "private" | "organization";
+  accessMode: number;
+  baselineRole: number | null;
+  userRole: number;
   createdAt: string;
   updatedAt: string;
 }

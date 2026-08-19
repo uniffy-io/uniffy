@@ -25,6 +25,7 @@ class SearchResultType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SEARCH_RESULT_TYPE_FOLDER: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_AGENT_FOLDER: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_TEAM: _ClassVar[SearchResultType]
+    SEARCH_RESULT_TYPE_AGENT_CRON_TASK: _ClassVar[SearchResultType]
 
 class UrnAvailability(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -49,6 +50,7 @@ SEARCH_RESULT_TYPE_TAG: SearchResultType
 SEARCH_RESULT_TYPE_FOLDER: SearchResultType
 SEARCH_RESULT_TYPE_AGENT_FOLDER: SearchResultType
 SEARCH_RESULT_TYPE_TEAM: SearchResultType
+SEARCH_RESULT_TYPE_AGENT_CRON_TASK: SearchResultType
 URN_AVAILABILITY_UNSPECIFIED: UrnAvailability
 URN_AVAILABILITY_AVAILABLE: UrnAvailability
 URN_AVAILABILITY_RESTRICTED: UrnAvailability
@@ -91,12 +93,14 @@ class SearchRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., query: _Optional[str] = ..., type_filters: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., limit: _Optional[int] = ..., tag_filters: _Optional[_Iterable[str]] = ..., project_filters: _Optional[_Iterable[str]] = ..., my_content_only: _Optional[bool] = ..., owner_filter: _Optional[str] = ..., metadata_filters: _Optional[_Mapping[str, str]] = ..., offset: _Optional[int] = ..., type_priority: _Optional[_Iterable[_Union[SearchResultType, str]]] = ..., name_matches_only: _Optional[bool] = ...) -> None: ...
 
 class SearchResponse(_message.Message):
-    __slots__ = ("items", "total_count")
+    __slots__ = ("items", "has_more", "next_offset")
     ITEMS_FIELD_NUMBER: _ClassVar[int]
-    TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
+    HAS_MORE_FIELD_NUMBER: _ClassVar[int]
+    NEXT_OFFSET_FIELD_NUMBER: _ClassVar[int]
     items: _containers.RepeatedCompositeFieldContainer[SearchResultItem]
-    total_count: int
-    def __init__(self, items: _Optional[_Iterable[_Union[SearchResultItem, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
+    has_more: bool
+    next_offset: int
+    def __init__(self, items: _Optional[_Iterable[_Union[SearchResultItem, _Mapping]]] = ..., has_more: _Optional[bool] = ..., next_offset: _Optional[int] = ...) -> None: ...
 
 class SearchResultItem(_message.Message):
     __slots__ = ("urn", "title", "description", "type", "url", "score", "metadata", "tags", "title_highlighted", "description_highlighted")

@@ -5,15 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.content.reference_state import (
-    ReferenceRowState,
-    register_reference_state_loader,
-)
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
+from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
-from uniffy.core.types import ContentType
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.core.valkey.cache import cache_invalidate_by_tag
 from uniffy.domains.people.cache import invalidate_chart
@@ -24,29 +20,6 @@ from uniffy.domains.users.avatars import (
     upload_avatar as s3_upload_avatar,
 )
 from uniffy.domains.users.search import UserSearchIndexer
-
-
-async def _load_user_reference_states(
-    session: AsyncSession,
-    organization_id: UUID,
-    content_ids: set[UUID],
-) -> dict[UUID, ReferenceRowState]:
-    rows = (
-        await session.execute(
-            select(User.id)
-            .join(OrganizationMember, OrganizationMember.user_id == User.id)
-            .where(
-                User.id.in_(content_ids),
-                User.is_active.is_(True),
-                OrganizationMember.organization_id == organization_id,
-                OrganizationMember.is_active.is_(True),
-            )
-        )
-    ).scalars()
-    return {user_id: ReferenceRowState.LIVE for user_id in rows}
-
-
-register_reference_state_loader(ContentType.USER, _load_user_reference_states)
 
 
 class UserOperations:
@@ -64,9 +37,14 @@ class UserOperations:
         """Most recent active membership; ``None`` when the user has no orgs."""
         result = await self._session.execute(
             select(OrganizationMember.organization_id)
+            .join(User, User.id == OrganizationMember.user_id)
+            .join(Organization, Organization.id == OrganizationMember.organization_id)
             .where(
                 OrganizationMember.user_id == user_id,
                 OrganizationMember.is_active.is_(True),
+                User.is_active.is_(True),
+                Organization.deleted_at.is_(None),
+                Organization.is_suspended.is_(False),
             )
             .order_by(OrganizationMember.joined_at.desc())
             .limit(1)
@@ -75,9 +53,15 @@ class UserOperations:
 
     async def _active_org_ids(self, user_id: UUID) -> list[UUID]:
         result = await self._session.execute(
-            select(OrganizationMember.organization_id).where(
+            select(OrganizationMember.organization_id)
+            .join(User, User.id == OrganizationMember.user_id)
+            .join(Organization, Organization.id == OrganizationMember.organization_id)
+            .where(
                 OrganizationMember.user_id == user_id,
                 OrganizationMember.is_active.is_(True),
+                User.is_active.is_(True),
+                Organization.deleted_at.is_(None),
+                Organization.is_suspended.is_(False),
             )
         )
         return list(result.scalars().all())

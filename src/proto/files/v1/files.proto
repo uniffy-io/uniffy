@@ -554,6 +554,7 @@ message TreeNode {
   optional string mime_type = 8; // For files: MIME type
   repeated TreeNode children = 9; // Nested children (if requested)
   optional common.v1.ContentRole baseline_role = 10;
+  string owner_id = 11; // Owner of the folder/file this node represents
 }
 
 // BULK OPERATION MESSAGES

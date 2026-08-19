@@ -41,6 +41,7 @@ from uniffy.domains.agents.cron.converters import (
 )
 from uniffy.domains.agents.cron.operations import CronTaskOperations
 from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
 
 logger = logger.bind(component="agents.cron.handlers")
 
@@ -125,11 +126,13 @@ class CronHandlers:
                     org_id,
                     task,
                 )
+                user_role = await ops._resolve_role(user_id, org_id, task)
                 return CreateCronTaskResponse(
                     task=cron_task_to_proto(
                         task,
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -156,11 +159,13 @@ class CronHandlers:
                     org_id,
                     task,
                 )
+                user_role = await ops._resolve_role(user_id, org_id, task)
                 return GetCronTaskResponse(
                     task=cron_task_to_proto(
                         task,
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -203,6 +208,11 @@ class CronHandlers:
                     org_id,
                     ContentType.AGENT_CRON_TASK,
                 )
+                decisions = await ResourceAccessResolver(session).resolve_page(
+                    actor_id=user_id,
+                    organization_id=org_id,
+                    keys=[ResourceKey(ContentType.AGENT_CRON_TASK, t.id) for t in tasks],
+                )
                 proto_tasks = []
                 for t in tasks:
                     eff_mode, eff_baseline = resolve_effective_policy(
@@ -216,6 +226,7 @@ class CronHandlers:
                             t,
                             effective_access_mode=eff_mode,
                             effective_baseline_role=eff_baseline,
+                            user_role=decisions[ResourceKey(ContentType.AGENT_CRON_TASK, t.id)].role,
                         )
                     )
                 return ListCronTasksResponse(
@@ -273,11 +284,13 @@ class CronHandlers:
                     org_id,
                     task,
                 )
+                user_role = await ops._resolve_role(user_id, org_id, task)
                 return UpdateCronTaskResponse(
                     task=cron_task_to_proto(
                         task,
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        user_role=user_role,
                     )
                 )
         except ConnectError:
@@ -373,12 +386,14 @@ class CronHandlers:
                     org_id,
                     task,
                 )
+                user_role = await ops._resolve_role(user_id, org_id, task)
                 return TriggerCronTaskResponse(
                     run_log=cron_run_log_to_proto(run_log),
                     task=cron_task_to_proto(
                         task,
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
+                        user_role=user_role,
                     ),
                 )
         except ConnectError:

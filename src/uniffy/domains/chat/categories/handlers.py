@@ -52,7 +52,7 @@ class CategoryHandlers:
     ) -> CreateCategoryResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -71,7 +71,7 @@ class CategoryHandlers:
     ) -> UpdateCategoryResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             cat_id = UUID(request.category_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -93,7 +93,7 @@ class CategoryHandlers:
     ) -> DeleteCategoryResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             cat_id = UUID(request.category_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -129,7 +129,7 @@ class CategoryHandlers:
     ) -> ReorderCategoriesResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             cat_ids = [UUID(c) for c in request.category_ids]
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -149,7 +149,7 @@ class CategoryHandlers:
     ) -> MoveChannelToCategoryResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             cat_id = None
             if request.HasField("category_id") and request.category_id:

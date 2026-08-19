@@ -15,10 +15,10 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 async def test_folder_delete_tombstones_and_restore_republishes(session, env, monkeypatch) -> None:
     monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
     monkeypatch.setattr(SearchIndexer, "remove", AsyncMock())
-    published: list[tuple[str, dict, bool]] = []
+    published: list[tuple[str, dict]] = []
 
-    async def capture(organization_id, urn, changes, restricted=False):
-        published.append((urn, dict(changes), restricted))
+    async def capture(organization_id, urn, changes):
+        published.append((urn, dict(changes)))
 
     monkeypatch.setattr("uniffy.domains.files.operations.publish_mention_state", capture)
 
@@ -35,9 +35,7 @@ async def test_folder_delete_tombstones_and_restore_republishes(session, env, mo
             p for p in published if p[0] == parent_urn and p[1].get("urn_status") == "DELETED"
         ]
         assert len(tombstones) == 1
-        # A default-created folder resolves to OWNER_ONLY, so the tombstone
-        # must ride the recipient-gated path.
-        assert tombstones[0][2] is True
+        assert tombstones[0][1] == {"urn_status": "DELETED"}
 
         published.clear()
         await folder_ops.restore_folder(env.admin_id, env.org_id, parent.id)

@@ -21,7 +21,7 @@ from uniffy_proto.files.v1.files_pb2 import (
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.files.filters.converters import (
     criteria_from_proto,
     icon_from_proto,
@@ -39,7 +39,7 @@ class SavedFilterHandlersMixin:
         ctx: RequestContext,
     ) -> CreateSavedFilterResponse:
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -86,7 +86,7 @@ class SavedFilterHandlersMixin:
     ) -> GetSavedFilterResponse:
         try:
             filter_id = UUID(request.filter_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -115,7 +115,7 @@ class SavedFilterHandlersMixin:
     ) -> UpdateSavedFilterResponse:
         try:
             filter_id = UUID(request.filter_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -164,7 +164,7 @@ class SavedFilterHandlersMixin:
     ) -> DeleteSavedFilterResponse:
         try:
             filter_id = UUID(request.filter_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -195,7 +195,7 @@ class SavedFilterHandlersMixin:
         ctx: RequestContext,
     ) -> ListSavedFiltersResponse:
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 

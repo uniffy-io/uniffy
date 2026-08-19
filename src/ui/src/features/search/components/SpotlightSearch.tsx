@@ -64,7 +64,7 @@ export function SpotlightSearch() {
     [directMessages],
   );
 
-  const { query, setQuery, results, totalCount, isLoading, clearResults, parsedQuery, hasFilters } =
+  const { query, setQuery, results, hasMore, isLoading, clearResults, parsedQuery, hasFilters } =
     useSearch(searchOptions);
   const shortcutDisplay = useFormattedKeybinding("nav.search");
 
@@ -366,7 +366,7 @@ export function SpotlightSearch() {
                 selectedIndex={boundedSelectedIndex}
                 onSelectedIndexChange={setSelectedIndex}
                 copiedUrn={copiedUrn}
-                totalCount={totalCount}
+                hasMore={hasMore}
               />
             ) : recentResults.length > 0 || peopleDms.length > 0 ? (
               <div className="pb-2">

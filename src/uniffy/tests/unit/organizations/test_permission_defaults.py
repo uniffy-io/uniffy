@@ -36,14 +36,6 @@ async def test_defaults_change_enqueues_content_reindex_on_core_queue() -> None:
             new=AsyncMock(),
         ),
         patch(
-            "uniffy.domains.organizations.operations.invalidate_org_defaults",
-            new=AsyncMock(),
-        ),
-        patch(
-            "uniffy.domains.organizations.operations.invalidate_visible_sets_for_org",
-            new=AsyncMock(),
-        ),
-        patch(
             "uniffy.core.realtime.publisher.publish_defaults_changed",
             new=AsyncMock(),
         ),
@@ -58,9 +50,12 @@ async def test_defaults_change_enqueues_content_reindex_on_core_queue() -> None:
 
     assert updated is defaults
     get_queue.assert_called_once_with(QueueName.CORE)
+    run_id = str(int(defaults.updated_at.timestamp() * 1_000_000))
     queue.enqueue_job.assert_awaited_once_with(
         JobName.REINDEX_ORG_CONTENT_FOR_DEFAULTS,
         str(organization_id),
         ContentType.NOTE.value,
-        _job_id=f"reindex_defaults:{organization_id}:{ContentType.NOTE.value}",
+        None,
+        run_id,
+        _job_id=f"reindex_defaults:{organization_id}:{ContentType.NOTE.value}:{run_id}",
     )

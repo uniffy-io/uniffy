@@ -247,6 +247,19 @@ class TestEnforceRoleChange:
         assert handle.closed is False
         handle.ws.close.assert_not_called()
 
+    async def test_commenter_stays_view_only(self) -> None:
+        manager = YDocManager()
+        handle = _make_handle(can_edit=True)
+        await manager._enforce_role_change(handle, "COMMENTER")
+        assert handle.can_edit is False
+        assert handle.closed is False
+
+    async def test_unknown_role_fails_closed(self) -> None:
+        manager = YDocManager()
+        handle = _make_handle(can_edit=True)
+        await manager._enforce_role_change(handle, "SUPERUSER")
+        assert handle.closed is True
+
     async def test_editor_restores_edit(self) -> None:
         manager = YDocManager()
         handle = _make_handle(can_edit=False)

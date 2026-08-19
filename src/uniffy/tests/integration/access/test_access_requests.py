@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy import func, select
 
+from uniffy.core.content.members import ContentMembersOperations
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.permissions.content_access_request import (
@@ -135,6 +136,32 @@ async def test_owner_approval_uses_canonical_member_operations(session, access) 
         )
     ).scalar_one()
     assert member.role == ContentRole.VIEWER
+
+    await ContentMembersOperations(session).remove_member(
+        actor_user_id=access.member_id,
+        organization_id=access.org_id,
+        content_type=ContentType.NOTE,
+        content_id=access.private_note_id,
+        subject_type=SubjectType.USER,
+        subject_id=access.peer_id,
+    )
+    revoked_statuses = await operations.get_my_statuses(
+        requester_id=access.peer_id,
+        organization_id=access.org_id,
+        requested_urns=[urn],
+    )
+    assert revoked_statuses[0].state == ContentAccessRequestState.APPROVED
+    assert revoked_statuses[0].requester_has_access is False
+
+    requested_again = await operations.request_access(
+        requester_id=access.peer_id,
+        organization_id=access.org_id,
+        requested_urn=urn,
+        message="Access was revoked, so a new request is valid.",
+    )
+    assert requested_again.outcome == RequestAccessOutcome.CREATED
+    assert requested_again.view is not None
+    assert requested_again.view.request.id != request_id
 
     actions = set(
         (

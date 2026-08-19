@@ -159,9 +159,8 @@ Failure isolation: multiplexed transport has head-of-line blocking (slow doc can
 - `core/content/members.py` publishes `realtime:perm:{content_type}:{content_id}` after every commit in `add_member`, `update_member_role`, `remove_member`, `set_access_mode`, `transfer_ownership`. Targeted user_id when the subject is a USER; content-wide (`user_id=None`) for GROUP / access-mode / ownership changes (re-authorizes every active client).
 - `domains/users/operations.py::update_user` fires `publish_token_revoke(user_id, new_version)` after every `token_version` bump (deactivation + password change). The single home for realtime fanouts is `core/realtime/publisher.py` - splitting it into `core/auth/revocation.py` tends to scatter the contract.
 - Decision matrix (`_enforce_role_change` in `ydoc_manager.py`):
-  - BLOCKED / None -> `4403` close.
-  - VIEWER -> flip `handle.can_edit = False` in place.
-  - COMMENTER / EDITOR / ADMIN / OWNER -> restore `can_edit = True`.
+  - BLOCKED / None / unknown role value -> `4403` close.
+  - Otherwise `handle.can_edit = role_can_edit(role)` - the same EDITOR floor as attach-time, so VIEWER and COMMENTER are read-only in place.
 - `_close_handle` is idempotent via the `closed` flag - subscribers can call it from outside the session loop.
 
 ---

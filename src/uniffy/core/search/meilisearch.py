@@ -1,9 +1,11 @@
 """Async Meilisearch client wrapper."""
 
+import asyncio
 import os
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -29,6 +31,16 @@ from uniffy.observability.metrics import (
 logger = logger.bind(component="search.meilisearch")
 
 UNIFFY_INDEX_NAME = "uniffy"
+
+
+class SearchCandidateScope(StrEnum):
+    MEMBER_HINT = "MEMBER_HINT"
+    ORGANIZATION = "ORGANIZATION"
+
+
+class MeilisearchTaskStatus(StrEnum):
+    SUCCEEDED = "succeeded"
+
 
 # Private-use characters wrap matched spans in _formatted hits; they cannot
 # collide with real text and pass through JSON untouched. The frontend
@@ -370,16 +382,23 @@ class MeilisearchClient:
             )
 
     async def _await_task(self, task: object | None) -> None:
-        """Block until a Meilisearch task settles; errors are swallowed (DB row is already gone)."""
+        """Return only after Meilisearch confirms terminal success."""
         if task is None:
-            return
+            raise RuntimeError("Meilisearch did not return a task")
         task_uid = getattr(task, "task_uid", None) or getattr(task, "taskUid", None)
         if task_uid is None:
-            return
+            raise RuntimeError("Meilisearch task has no uid")
         try:
-            await self.client.wait_for_task(task_uid, timeout_in_ms=5000)
+            result = await self.client.wait_for_task(task_uid, timeout_in_ms=5000)
+            if getattr(result, "status", None) != MeilisearchTaskStatus.SUCCEEDED.value:
+                raise RuntimeError("Meilisearch task did not succeed")
         except Exception:
-            logger.warning("Meilisearch: wait_for_task failed", task_uid=task_uid)
+            SEARCH_OPERATION_ERRORS_TOTAL.labels(operation="wait_task").inc()
+            logger.opt(exception=True).warning(
+                "Meilisearch task completion failed",
+                task_uid=task_uid,
+            )
+            raise
 
     async def delete_documents_by_filter_expr(self, filter_expr: str) -> None:
         """Delete every document matching ``filter_expr`` (filterable attributes only)."""
@@ -416,17 +435,25 @@ class MeilisearchClient:
         limit: int = 20,
         offset: int = 0,
         attributes_to_search_on: list[str] | None = None,
+        candidate_scope: SearchCandidateScope = SearchCandidateScope.MEMBER_HINT,
     ) -> SearchResults:
-        """Search with permission filtering applied as a Meilisearch filter expression."""
+        """Search with an organization-scoped candidate-reduction filter."""
         index = self.client.index(self.config.index_name)
 
-        filters = self._build_permission_filter(
-            organization_id=organization_id,
-            user_id=user_id,
-            user_group_ids=user_group_ids,
-            my_content_only=my_content_only,
-            owner_filter=owner_filter,
-        )
+        if candidate_scope is SearchCandidateScope.ORGANIZATION:
+            filters = f'organization_id = "{organization_id}"'
+            if my_content_only:
+                filters = f'{filters} AND owner_id = "{user_id}"'
+            if owner_filter:
+                filters = f'{filters} AND owner_id = "{owner_filter}"'
+        else:
+            filters = self._build_permission_filter(
+                organization_id=organization_id,
+                user_id=user_id,
+                user_group_ids=user_group_ids,
+                my_content_only=my_content_only,
+                owner_filter=owner_filter,
+            )
 
         if type_filters:
             type_filter = " OR ".join(
@@ -736,6 +763,42 @@ class MeilisearchClient:
             urn=urn,
         )
 
+    async def update_document_access_policy_bulk(
+        self,
+        organization_id: UUID,
+        items: list[tuple[str, str, str | None]],
+    ) -> int:
+        """Bulk access-policy update in one HTTP call; ``items`` is
+        ``(urn, access_mode, baseline_role)``.
+
+        ``skip_creation`` keeps a partial from minting a document that carries
+        no title, urn, or organization scope. A row missing from the index stays
+        missing until its own write path indexes it.
+        """
+        if not items:
+            return 0
+        partials = [
+            {
+                "id": build_document_id(urn, organization_id),
+                "access_mode": access_mode,
+                "baseline_role": baseline_role,
+            }
+            for urn, access_mode, baseline_role in items
+        ]
+
+        start = time.perf_counter()
+        index = self.client.index(self.config.index_name)
+        task = await index.update_documents(partials, skip_creation=True)
+        await self._await_task(task)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="update_access_policy").inc(len(partials))
+        SEARCH_OPERATION_DURATION.labels(operation="update_access_policy").observe(elapsed_ms / 1000)
+        logger.info(
+            f"Meilisearch: update_access_policy_bulk batch={len(partials)}",
+            ms=f"{elapsed_ms:.1f}",
+        )
+        return len(partials)
+
     async def update_document_tags(
         self,
         urn: str,
@@ -829,8 +892,9 @@ class MeilisearchClient:
         failed_urns: set[str] = set()
         chunk_size = 50
 
-        for i in range(0, len(urns), chunk_size):
-            chunk = urns[i : i + chunk_size]
+        async def load_chunk(chunk: list[str]) -> tuple[dict[str, dict[str, Any]], set[str]]:
+            chunk_result: dict[str, dict[str, Any]] = {}
+            chunk_failures: set[str] = set()
             urn_filters = " OR ".join(f'urn = "{urn}"' for urn in chunk)
             combined_filter = f"({urn_filters}) AND {org_filter}"
 
@@ -841,13 +905,21 @@ class MeilisearchClient:
                 )
                 for doc in docs.results:
                     if "urn" in doc:  # noqa: PLR2004
-                        result[doc["urn"]] = doc
+                        chunk_result[doc["urn"]] = doc
             except Exception:
-                failed_urns.update(chunk)
+                chunk_failures.update(chunk)
                 logger.opt(exception=True).warning(
                     "Meilisearch: get_documents_by_urns chunk failed",
                     chunk_size=len(chunk),
                 )
+            return chunk_result, chunk_failures
+
+        chunks = [urns[i : i + chunk_size] for i in range(0, len(urns), chunk_size)]
+        for chunk_result, chunk_failures in await asyncio.gather(
+            *(load_chunk(chunk) for chunk in chunks)
+        ):
+            result.update(chunk_result)
+            failed_urns.update(chunk_failures)
 
         elapsed_ms = (time.perf_counter() - start) * 1000
         SEARCH_OPERATIONS_TOTAL.labels(operation="get_batch").inc()

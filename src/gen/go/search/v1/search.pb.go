@@ -24,22 +24,23 @@ const (
 type SearchResultType int32
 
 const (
-	SearchResultType_SEARCH_RESULT_TYPE_UNSPECIFIED    SearchResultType = 0
-	SearchResultType_SEARCH_RESULT_TYPE_NOTE           SearchResultType = 1
-	SearchResultType_SEARCH_RESULT_TYPE_FILE           SearchResultType = 2
-	SearchResultType_SEARCH_RESULT_TYPE_CHAT           SearchResultType = 3
-	SearchResultType_SEARCH_RESULT_TYPE_USER           SearchResultType = 4
-	SearchResultType_SEARCH_RESULT_TYPE_CALENDAR_EVENT SearchResultType = 5
-	SearchResultType_SEARCH_RESULT_TYPE_PROJECT        SearchResultType = 6
-	SearchResultType_SEARCH_RESULT_TYPE_TASK           SearchResultType = 7
-	SearchResultType_SEARCH_RESULT_TYPE_AGENT          SearchResultType = 8
-	SearchResultType_SEARCH_RESULT_TYPE_CHAT_MESSAGE   SearchResultType = 9
-	SearchResultType_SEARCH_RESULT_TYPE_ROOM           SearchResultType = 10
-	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CHAT     SearchResultType = 11
-	SearchResultType_SEARCH_RESULT_TYPE_TAG            SearchResultType = 12
-	SearchResultType_SEARCH_RESULT_TYPE_FOLDER         SearchResultType = 13
-	SearchResultType_SEARCH_RESULT_TYPE_AGENT_FOLDER   SearchResultType = 14
-	SearchResultType_SEARCH_RESULT_TYPE_TEAM           SearchResultType = 15
+	SearchResultType_SEARCH_RESULT_TYPE_UNSPECIFIED     SearchResultType = 0
+	SearchResultType_SEARCH_RESULT_TYPE_NOTE            SearchResultType = 1
+	SearchResultType_SEARCH_RESULT_TYPE_FILE            SearchResultType = 2
+	SearchResultType_SEARCH_RESULT_TYPE_CHAT            SearchResultType = 3
+	SearchResultType_SEARCH_RESULT_TYPE_USER            SearchResultType = 4
+	SearchResultType_SEARCH_RESULT_TYPE_CALENDAR_EVENT  SearchResultType = 5
+	SearchResultType_SEARCH_RESULT_TYPE_PROJECT         SearchResultType = 6
+	SearchResultType_SEARCH_RESULT_TYPE_TASK            SearchResultType = 7
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT           SearchResultType = 8
+	SearchResultType_SEARCH_RESULT_TYPE_CHAT_MESSAGE    SearchResultType = 9
+	SearchResultType_SEARCH_RESULT_TYPE_ROOM            SearchResultType = 10
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CHAT      SearchResultType = 11
+	SearchResultType_SEARCH_RESULT_TYPE_TAG             SearchResultType = 12
+	SearchResultType_SEARCH_RESULT_TYPE_FOLDER          SearchResultType = 13
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_FOLDER    SearchResultType = 14
+	SearchResultType_SEARCH_RESULT_TYPE_TEAM            SearchResultType = 15
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CRON_TASK SearchResultType = 16
 )
 
 // Enum value maps for SearchResultType.
@@ -61,24 +62,26 @@ var (
 		13: "SEARCH_RESULT_TYPE_FOLDER",
 		14: "SEARCH_RESULT_TYPE_AGENT_FOLDER",
 		15: "SEARCH_RESULT_TYPE_TEAM",
+		16: "SEARCH_RESULT_TYPE_AGENT_CRON_TASK",
 	}
 	SearchResultType_value = map[string]int32{
-		"SEARCH_RESULT_TYPE_UNSPECIFIED":    0,
-		"SEARCH_RESULT_TYPE_NOTE":           1,
-		"SEARCH_RESULT_TYPE_FILE":           2,
-		"SEARCH_RESULT_TYPE_CHAT":           3,
-		"SEARCH_RESULT_TYPE_USER":           4,
-		"SEARCH_RESULT_TYPE_CALENDAR_EVENT": 5,
-		"SEARCH_RESULT_TYPE_PROJECT":        6,
-		"SEARCH_RESULT_TYPE_TASK":           7,
-		"SEARCH_RESULT_TYPE_AGENT":          8,
-		"SEARCH_RESULT_TYPE_CHAT_MESSAGE":   9,
-		"SEARCH_RESULT_TYPE_ROOM":           10,
-		"SEARCH_RESULT_TYPE_AGENT_CHAT":     11,
-		"SEARCH_RESULT_TYPE_TAG":            12,
-		"SEARCH_RESULT_TYPE_FOLDER":         13,
-		"SEARCH_RESULT_TYPE_AGENT_FOLDER":   14,
-		"SEARCH_RESULT_TYPE_TEAM":           15,
+		"SEARCH_RESULT_TYPE_UNSPECIFIED":     0,
+		"SEARCH_RESULT_TYPE_NOTE":            1,
+		"SEARCH_RESULT_TYPE_FILE":            2,
+		"SEARCH_RESULT_TYPE_CHAT":            3,
+		"SEARCH_RESULT_TYPE_USER":            4,
+		"SEARCH_RESULT_TYPE_CALENDAR_EVENT":  5,
+		"SEARCH_RESULT_TYPE_PROJECT":         6,
+		"SEARCH_RESULT_TYPE_TASK":            7,
+		"SEARCH_RESULT_TYPE_AGENT":           8,
+		"SEARCH_RESULT_TYPE_CHAT_MESSAGE":    9,
+		"SEARCH_RESULT_TYPE_ROOM":            10,
+		"SEARCH_RESULT_TYPE_AGENT_CHAT":      11,
+		"SEARCH_RESULT_TYPE_TAG":             12,
+		"SEARCH_RESULT_TYPE_FOLDER":          13,
+		"SEARCH_RESULT_TYPE_AGENT_FOLDER":    14,
+		"SEARCH_RESULT_TYPE_TEAM":            15,
+		"SEARCH_RESULT_TYPE_AGENT_CRON_TASK": 16,
 	}
 )
 
@@ -308,8 +311,10 @@ func (x *SearchRequest) GetNameMatchesOnly() bool {
 type SearchResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Items []*SearchResultItem    `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	// Estimated total matches before pagination
-	TotalCount    int32 `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	// True only when another PostgreSQL-authorized result exists inside the bounded scan horizon.
+	HasMore bool `protobuf:"varint,3,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
+	// Authorized-stream offset to send in the next SearchRequest.
+	NextOffset    int32 `protobuf:"varint,4,opt,name=next_offset,json=nextOffset,proto3" json:"next_offset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -351,9 +356,16 @@ func (x *SearchResponse) GetItems() []*SearchResultItem {
 	return nil
 }
 
-func (x *SearchResponse) GetTotalCount() int32 {
+func (x *SearchResponse) GetHasMore() bool {
 	if x != nil {
-		return x.TotalCount
+		return x.HasMore
+	}
+	return false
+}
+
+func (x *SearchResponse) GetNextOffset() int32 {
+	if x != nil {
+		return x.NextOffset
 	}
 	return 0
 }
@@ -1135,11 +1147,12 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x11name_matches_only\x18\f \x01(\bR\x0fnameMatchesOnly\x1aB\n" +
 	"\x14MetadataFiltersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"d\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x92\x01\n" +
 	"\x0eSearchResponse\x121\n" +
-	"\x05items\x18\x01 \x03(\v2\x1b.search.v1.SearchResultItemR\x05items\x12\x1f\n" +
-	"\vtotal_count\x18\x02 \x01(\x05R\n" +
-	"totalCount\"\xb3\x03\n" +
+	"\x05items\x18\x01 \x03(\v2\x1b.search.v1.SearchResultItemR\x05items\x12\x19\n" +
+	"\bhas_more\x18\x03 \x01(\bR\ahasMore\x12\x1f\n" +
+	"\vnext_offset\x18\x04 \x01(\x05R\n" +
+	"nextOffsetJ\x04\b\x02\x10\x03R\vtotal_count\"\xb3\x03\n" +
 	"\x10SearchResultItem\x12\x10\n" +
 	"\x03urn\x18\x01 \x01(\tR\x03urn\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -1227,7 +1240,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x12can_request_access\x183 \x01(\bR\x10canRequestAccess\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x8e\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xb6\x04\n" +
 	"\x10SearchResultType\x12\"\n" +
 	"\x1eSEARCH_RESULT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_NOTE\x10\x01\x12\x1b\n" +
@@ -1245,7 +1258,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x16SEARCH_RESULT_TYPE_TAG\x10\f\x12\x1d\n" +
 	"\x19SEARCH_RESULT_TYPE_FOLDER\x10\r\x12#\n" +
 	"\x1fSEARCH_RESULT_TYPE_AGENT_FOLDER\x10\x0e\x12\x1b\n" +
-	"\x17SEARCH_RESULT_TYPE_TEAM\x10\x0f*\xb4\x01\n" +
+	"\x17SEARCH_RESULT_TYPE_TEAM\x10\x0f\x12&\n" +
+	"\"SEARCH_RESULT_TYPE_AGENT_CRON_TASK\x10\x10*\xb4\x01\n" +
 	"\x0fUrnAvailability\x12 \n" +
 	"\x1cURN_AVAILABILITY_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aURN_AVAILABILITY_AVAILABLE\x10\x01\x12\x1f\n" +

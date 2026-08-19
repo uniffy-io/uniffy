@@ -92,6 +92,7 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.converters import (
     activity_to_proto,
@@ -480,9 +481,14 @@ class ProjectsHandlers:
                     organization_id,
                     ContentType.PROJECT,
                 )
+                decisions = await ResourceAccessResolver(session).resolve_page(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    keys=[ResourceKey(ContentType.PROJECT, project.id) for project in projects],
+                )
                 project_protos = []
                 for project in projects:
-                    user_role = await ops._resolve_role(user_id, organization_id, project)
+                    user_role = decisions[ResourceKey(ContentType.PROJECT, project.id)].role
                     fields = fields_map.get(str(project.id), [])
                     views = views_map.get(str(project.id), [])
                     eff_mode, eff_baseline = resolve_effective_policy(

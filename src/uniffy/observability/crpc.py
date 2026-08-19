@@ -6,6 +6,7 @@ from contextvars import ContextVar
 from typing import Any
 
 from connectrpc.code import Code
+from connectrpc.codec import Codec, proto_binary_codec, proto_json_codec
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
@@ -44,6 +45,43 @@ def code_for_domain_error(error: UNIFFYError) -> Code | None:
         if isinstance(error, error_type):
             return code
     return None
+
+
+class StrictDecodeCodec:
+    """Request decoding runs before the interceptor chain, so a malformed body
+    (bad JSON, unknown field, garbage bytes) would otherwise reach the wire as
+    UNKNOWN on a 500 with the raw parser text. Decode failures become a bare
+    INVALID_ARGUMENT instead; encoding is server-built and stays untouched."""
+
+    def __init__(self, inner: Codec, name: str | None = None) -> None:
+        self._inner = inner
+        self._name = name if name is not None else inner.name()
+
+    def name(self) -> str:
+        return self._name
+
+    def encode(self, message: Any) -> bytes:
+        return self._inner.encode(message)
+
+    def decode(self, data: bytes | bytearray, message: Any) -> Any:
+        try:
+            return self._inner.decode(data, message)
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.warning(f"malformed request body ({type(e).__name__})")
+            raise ConnectError(code=Code.INVALID_ARGUMENT, message="Malformed request body") from e
+
+
+def strict_request_codecs() -> list[Codec]:
+    json_codec = proto_json_codec()
+    return [
+        StrictDecodeCodec(proto_binary_codec()),
+        StrictDecodeCodec(json_codec),
+        # connect-go compatibility: the charset-suffixed content type is its
+        # own codec name in the registry.
+        StrictDecodeCodec(json_codec, name="json; charset=utf-8"),
+    ]
 
 
 def _rpc_labels(ctx: RequestContext) -> tuple[str, str]:

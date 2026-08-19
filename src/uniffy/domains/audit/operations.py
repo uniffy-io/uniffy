@@ -1,7 +1,4 @@
-"""Read-only operations over the central `audit_events` table.
-
-Writes go through `uniffy.core.audit.write_audit_event` at mutation sites.
-"""
+"""Read-only operations over the central audit-event table."""
 
 from __future__ import annotations
 
@@ -14,17 +11,12 @@ from uuid import UUID
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.membership import get_active_membership
+from uniffy.core.auth.permissions.support import get_active_support_access
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.json_codec import dumps_bytes, loads
 from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
-from uniffy.core.models.login.organization_member import (
-    OrganizationMember,
-    OrganizationRole,
-)
-from uniffy.core.models.login.user import User
-from uniffy.domains.platform.support_session.operations import (
-    SupportSessionOperations,
-)
+from uniffy.core.models.login.organization_member import OrganizationRole
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 500
@@ -66,7 +58,6 @@ class AuditOperations:
         actor_user_id: UUID,
         filters: ListEventsFilter,
     ) -> ListEventsPage:
-        """List audit events for one organization; requires OWNER/ADMIN or system admin."""
         await self.require_audit_view(actor_user_id, filters.organization_id)
 
         page_size = max(1, min(filters.page_size or DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE))
@@ -131,48 +122,29 @@ class AuditOperations:
         actor_user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Require org OWNER/ADMIN, or a non-member operator holding a SupportSession.
-
-        A tenant's audit trail is tenant data: it carries login IPs, resource
-        ids and free-form ``details``. Membership is therefore evaluated first,
-        so a system admin who is also an org member (the self-hosted operator)
-        reaches it through their org role like anyone else. Only a system admin
-        outside the org takes the SupportSession path, mirroring step 1 of
-        ``PermissionChecker.effective_role``.
-        """
-        membership = await self.session.execute(
-            select(OrganizationMember.role).where(
-                OrganizationMember.user_id == actor_user_id,
-                OrganizationMember.organization_id == organization_id,
-                OrganizationMember.is_active.is_(True),
-            )
+        """Require org ownership/admin or audited non-member support access."""
+        membership = await get_active_membership(
+            self.session,
+            actor_user_id,
+            organization_id,
         )
-        role = membership.scalar_one_or_none()
-        if role in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
+        if membership is not None and membership.role in (
+            OrganizationRole.OWNER,
+            OrganizationRole.ADMIN,
+        ):
             return
-        if role is not None:
+        if membership is not None:
             raise PermissionDeniedError("view", "audit_events")
 
-        if not await self._is_system_admin(actor_user_id):
+        if (
+            await get_active_support_access(
+                self.session,
+                actor_user_id,
+                organization_id,
+            )
+            is None
+        ):
             raise PermissionDeniedError("view", "audit_events")
-        if not await self._has_active_support_session(actor_user_id, organization_id):
-            raise PermissionDeniedError("view", "audit_events")
-
-    async def _is_system_admin(self, actor_user_id: UUID) -> bool:
-        result = await self.session.execute(
-            select(User.is_system_admin).where(User.id == actor_user_id)
-        )
-        return bool(result.scalar_one_or_none())
-
-    async def _has_active_support_session(
-        self,
-        actor_user_id: UUID,
-        organization_id: UUID,
-    ) -> bool:
-        session = await SupportSessionOperations(self.session).active_session_for(
-            user_id=actor_user_id, organization_id=organization_id
-        )
-        return session is not None
 
 
 def _encode_cursor(created_at: datetime, event_id: UUID) -> str:

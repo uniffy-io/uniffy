@@ -26,7 +26,7 @@ from uniffy.core.valkey.streams import get_chat_active_run, request_run_cancel
 from uniffy.db import open_session
 from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
 from uniffy.domains.agents.runtime.approvals import get_approval_store
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.feature_flags import is_chat_agents_enabled
 
@@ -58,7 +58,7 @@ class AgentConfirmationHandlers:
         """Resolve a destructive-tool approval raised by an agent."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
             request_id = UUID(request.request_id)
@@ -109,7 +109,7 @@ class AgentConfirmationHandlers:
         """Cancel the in-flight agent run for a (channel, agent) pair."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             agent_id = UUID(request.agent_id)
         except ValueError:
@@ -147,7 +147,7 @@ class AgentConfirmationHandlers:
         """Return open destructive-tool approvals awaiting a decision."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")

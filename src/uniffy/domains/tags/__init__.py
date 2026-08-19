@@ -10,7 +10,6 @@ from uniffy.domains.tags.operations import (
     TagOperations,
     TagSlugCollisionError,
 )
-from uniffy.domains.tags.service import TagsServiceImpl
 from uniffy.domains.tags.sync import sync_inline_tags
 
 __all__ = [
@@ -22,7 +21,6 @@ __all__ = [
     "TagLimitExceededError",
     "TagOperations",
     "TagSlugCollisionError",
-    "TagsServiceImpl",
     "slugify_tag",
     "sync_inline_tags",
 ]

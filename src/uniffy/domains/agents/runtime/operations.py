@@ -2383,9 +2383,12 @@ class RuntimeOperations:
                 return MemoryScopeRef.session(destination.session_id)
             return MemoryScopeRef.user(user_id)
 
-        from uniffy.domains.chat.cache import get_or_load_channel
+        from uniffy.domains.chat.access import ChatAccessChecker
 
-        channel = await get_or_load_channel(self._session, destination.channel_id, organization_id)
+        channel = await ChatAccessChecker(self._session).get_channel(
+            destination.channel_id,
+            organization_id,
+        )
         if (
             channel is not None
             and channel.is_agent_dm

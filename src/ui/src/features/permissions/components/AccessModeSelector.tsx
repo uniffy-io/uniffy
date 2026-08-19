@@ -16,6 +16,8 @@ interface AccessModeSelectorProps {
   defaultBaselineRole?: ContentRole;
   /** Clears per-item override (writes UNSPECIFIED -> NULL) so the row inherits the org default. */
   showInheritOption?: boolean;
+  /** Modes the content type never allows (the backend rejects them too). */
+  hiddenModes?: readonly (AccessMode | number)[];
 }
 
 const OPTIONS = [
@@ -30,7 +32,12 @@ export function AccessModeSelector({
   disabled,
   defaultBaselineRole = ContentRole.VIEWER,
   showInheritOption = false,
+  hiddenModes,
 }: AccessModeSelectorProps) {
+  const visibleOptions = hiddenModes?.length
+    ? OPTIONS.filter(({ mode }) => !hiddenModes.includes(mode))
+    : OPTIONS;
+
   const handleModeChange = (mode: AccessMode) => {
     if (mode === AccessMode.OPEN_TO_ORG) {
       onChange({
@@ -70,7 +77,7 @@ export function AccessModeSelector({
           </div>
         </button>
       )}
-      {OPTIONS.map(({ mode, icon: Icon }) => {
+      {visibleOptions.map(({ mode, icon: Icon }) => {
         const selected = value.accessMode === mode;
         return (
           <button

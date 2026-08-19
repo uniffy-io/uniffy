@@ -50,7 +50,7 @@ export function RequestAccessDialog({ target, onClose }: RequestAccessDialogProp
   const isPending = status?.state === AccessRequestState.PENDING;
   const isDenied = status?.state === AccessRequestState.DENIED;
   const isCanceled = status?.state === AccessRequestState.CANCELED;
-  const isApproved = status?.state === AccessRequestState.APPROVED || status?.requesterHasAccess;
+  const isApproved = status?.requesterHasAccess ?? false;
   const cooldownActive = isDenied && cooldownIsActive(status.canRequestAgainAt);
   const isBusy = isRequesting || isCanceling;
 

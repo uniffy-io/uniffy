@@ -240,6 +240,7 @@ def tree_node_from_file(
         child_count=0,
         size_bytes=file.size_bytes,
         mime_type=file.mime_type,
+        owner_id=str(file.owner_id),
     )
 
     if file.folder_id:
@@ -253,6 +254,7 @@ def tree_node_from_folder(
     child_count: int = 0,
     size_bytes: int | None = None,
     effective_access_mode: AccessMode | None = None,
+    present_as_root: bool = False,
 ) -> ProtoTreeNode:
     resolved_mode = (
         effective_access_mode if effective_access_mode is not None else folder.access_mode
@@ -263,9 +265,13 @@ def tree_node_from_folder(
         is_folder=True,
         access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         child_count=child_count,
+        owner_id=str(folder.owner_id),
     )
 
-    if folder.parent_id:
+    # A shared folder whose real parent the viewer cannot see is presented as
+    # a root: echoing the hidden parent id would both leak it and detach the
+    # node from every parent-keyed frontend lookup.
+    if folder.parent_id and not present_as_root:
         node.parent_id = str(folder.parent_id)
 
     if size_bytes is not None:

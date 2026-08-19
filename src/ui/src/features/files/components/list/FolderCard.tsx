@@ -23,6 +23,8 @@ export interface FolderCardProps {
   isChecked: boolean;
   onToggleCheck: (id: string, shiftKey: boolean) => void;
   canShare?: boolean;
+  canDelete?: boolean;
+  canEdit?: boolean;
   trashMode?: boolean;
   onRestore?: (id: string) => void;
   canRestore?: boolean;
@@ -47,6 +49,8 @@ export function FolderCard({
   isChecked,
   onToggleCheck,
   canShare = true,
+  canDelete = true,
+  canEdit = true,
   trashMode = false,
   onRestore,
   canRestore = true,
@@ -215,6 +219,8 @@ export function FolderCard({
             bookmarkToggling={bookmarkToggling}
             onMove={() => onMove(folder.id)}
             canShare={canShare}
+            canDelete={canDelete}
+            canEdit={canEdit}
             trashMode={trashMode}
             onRestore={onRestore ? () => onRestore(folder.id) : undefined}
             canRestore={canRestore}
@@ -314,6 +320,8 @@ export function FolderCard({
           bookmarkToggling={bookmarkToggling}
           onMove={() => onMove(folder.id)}
           canShare={canShare}
+          canDelete={canDelete}
+          canEdit={canEdit}
           trashMode={trashMode}
           onRestore={onRestore ? () => onRestore(folder.id) : undefined}
           canRestore={canRestore}

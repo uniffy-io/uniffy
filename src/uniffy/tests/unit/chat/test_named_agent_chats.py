@@ -130,7 +130,7 @@ class TestRenameAgentChatValidation:
                 custom_name=too_long,
             )
 
-    async def test_clears_custom_name_when_blank(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_clears_custom_name_when_blank(self) -> None:
         channel = ChatChannel(
             organization_id=generate_id(),
             owner_id=generate_id(),
@@ -139,10 +139,6 @@ class TestRenameAgentChatValidation:
             channel_type=ChannelType.DIRECT,
             is_agent_dm=True,
             custom_name="Old override",
-        )
-        monkeypatch.setattr(
-            "uniffy.domains.chat.channels.operations.invalidate_cached_channel",
-            AsyncMock(return_value=None),
         )
         ops = self._build_ops(channel, membership=MagicMock(subject_type=SubjectType.USER))
         await ops.rename_agent_chat(

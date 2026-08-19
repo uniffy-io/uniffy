@@ -202,8 +202,10 @@ type Room struct {
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	BaselineRole   *v1.ContentRole        `protobuf:"varint,17,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Caller's effective role on this room.
+	UserRole      v1.ContentRole `protobuf:"varint,18,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Room) Reset() {
@@ -351,6 +353,13 @@ func (x *Room) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *Room) GetBaselineRole() v1.ContentRole {
 	if x != nil && x.BaselineRole != nil {
 		return *x.BaselineRole
+	}
+	return v1.ContentRole(0)
+}
+
+func (x *Room) GetUserRole() v1.ContentRole {
+	if x != nil {
+		return x.UserRole
 	}
 	return v1.ContentRole(0)
 }
@@ -2123,7 +2132,7 @@ var File_rooms_v1_rooms_proto protoreflect.FileDescriptor
 
 const file_rooms_v1_rooms_proto_rawDesc = "" +
 	"\n" +
-	"\x14rooms/v1/rooms.proto\x12\brooms.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb4\x05\n" +
+	"\x14rooms/v1/rooms.proto\x12\brooms.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe9\x05\n" +
 	"\x04Room\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -2145,7 +2154,8 @@ const file_rooms_v1_rooms_proto_rawDesc = "" +
 	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12@\n" +
-	"\rbaseline_role\x18\x11 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01B\x10\n" +
+	"\rbaseline_role\x18\x11 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01\x123\n" +
+	"\tuser_role\x18\x12 \x01(\x0e2\x16.common.v1.ContentRoleR\buserRoleB\x10\n" +
 	"\x0e_image_file_idB\x10\n" +
 	"\x0e_baseline_role\"\xa8\x04\n" +
 	"\vRoomBooking\x12\x0e\n" +
@@ -2437,69 +2447,70 @@ var file_rooms_v1_rooms_proto_depIdxs = []int32{
 	29, // 3: rooms.v1.Room.created_at:type_name -> google.protobuf.Timestamp
 	29, // 4: rooms.v1.Room.updated_at:type_name -> google.protobuf.Timestamp
 	30, // 5: rooms.v1.Room.baseline_role:type_name -> common.v1.ContentRole
-	29, // 6: rooms.v1.RoomBooking.start_time:type_name -> google.protobuf.Timestamp
-	29, // 7: rooms.v1.RoomBooking.end_time:type_name -> google.protobuf.Timestamp
-	2,  // 8: rooms.v1.RoomBooking.status:type_name -> rooms.v1.BookingStatus
-	29, // 9: rooms.v1.RoomBooking.created_at:type_name -> google.protobuf.Timestamp
-	29, // 10: rooms.v1.RoomBooking.updated_at:type_name -> google.protobuf.Timestamp
-	29, // 11: rooms.v1.TimeSlot.start_time:type_name -> google.protobuf.Timestamp
-	29, // 12: rooms.v1.TimeSlot.end_time:type_name -> google.protobuf.Timestamp
-	0,  // 13: rooms.v1.CreateRoomRequest.room_type:type_name -> rooms.v1.RoomType
-	28, // 14: rooms.v1.CreateRoomRequest.access_mode:type_name -> common.v1.AccessMode
-	30, // 15: rooms.v1.CreateRoomRequest.baseline_role:type_name -> common.v1.ContentRole
-	0,  // 16: rooms.v1.UpdateRoomRequest.room_type:type_name -> rooms.v1.RoomType
-	1,  // 17: rooms.v1.UpdateRoomRequest.status:type_name -> rooms.v1.RoomStatus
-	28, // 18: rooms.v1.UpdateRoomRequest.access_mode:type_name -> common.v1.AccessMode
-	30, // 19: rooms.v1.UpdateRoomRequest.baseline_role:type_name -> common.v1.ContentRole
-	3,  // 20: rooms.v1.CreateRoomResponse.room:type_name -> rooms.v1.Room
-	3,  // 21: rooms.v1.GetRoomResponse.room:type_name -> rooms.v1.Room
-	3,  // 22: rooms.v1.UpdateRoomResponse.room:type_name -> rooms.v1.Room
-	0,  // 23: rooms.v1.ListRoomsRequest.room_type:type_name -> rooms.v1.RoomType
-	1,  // 24: rooms.v1.ListRoomsRequest.status:type_name -> rooms.v1.RoomStatus
-	3,  // 25: rooms.v1.ListRoomsResponse.rooms:type_name -> rooms.v1.Room
-	29, // 26: rooms.v1.CreateBookingRequest.start_time:type_name -> google.protobuf.Timestamp
-	29, // 27: rooms.v1.CreateBookingRequest.end_time:type_name -> google.protobuf.Timestamp
-	4,  // 28: rooms.v1.CreateBookingResponse.booking:type_name -> rooms.v1.RoomBooking
-	4,  // 29: rooms.v1.GetBookingResponse.booking:type_name -> rooms.v1.RoomBooking
-	4,  // 30: rooms.v1.CancelBookingResponse.booking:type_name -> rooms.v1.RoomBooking
-	29, // 31: rooms.v1.ListBookingsRequest.start_date:type_name -> google.protobuf.Timestamp
-	29, // 32: rooms.v1.ListBookingsRequest.end_date:type_name -> google.protobuf.Timestamp
-	2,  // 33: rooms.v1.ListBookingsRequest.status:type_name -> rooms.v1.BookingStatus
-	4,  // 34: rooms.v1.ListBookingsResponse.bookings:type_name -> rooms.v1.RoomBooking
-	29, // 35: rooms.v1.CheckAvailabilityRequest.start_date:type_name -> google.protobuf.Timestamp
-	29, // 36: rooms.v1.CheckAvailabilityRequest.end_date:type_name -> google.protobuf.Timestamp
-	5,  // 37: rooms.v1.CheckAvailabilityResponse.slots:type_name -> rooms.v1.TimeSlot
-	29, // 38: rooms.v1.FindAvailableRoomsRequest.start_time:type_name -> google.protobuf.Timestamp
-	29, // 39: rooms.v1.FindAvailableRoomsRequest.end_time:type_name -> google.protobuf.Timestamp
-	0,  // 40: rooms.v1.FindAvailableRoomsRequest.room_type:type_name -> rooms.v1.RoomType
-	3,  // 41: rooms.v1.FindAvailableRoomsResponse.rooms:type_name -> rooms.v1.Room
-	6,  // 42: rooms.v1.RoomsService.CreateRoom:input_type -> rooms.v1.CreateRoomRequest
-	7,  // 43: rooms.v1.RoomsService.GetRoom:input_type -> rooms.v1.GetRoomRequest
-	8,  // 44: rooms.v1.RoomsService.UpdateRoom:input_type -> rooms.v1.UpdateRoomRequest
-	9,  // 45: rooms.v1.RoomsService.DeleteRoom:input_type -> rooms.v1.DeleteRoomRequest
-	14, // 46: rooms.v1.RoomsService.ListRooms:input_type -> rooms.v1.ListRoomsRequest
-	16, // 47: rooms.v1.RoomsService.CreateBooking:input_type -> rooms.v1.CreateBookingRequest
-	17, // 48: rooms.v1.RoomsService.GetBooking:input_type -> rooms.v1.GetBookingRequest
-	18, // 49: rooms.v1.RoomsService.CancelBooking:input_type -> rooms.v1.CancelBookingRequest
-	22, // 50: rooms.v1.RoomsService.ListBookings:input_type -> rooms.v1.ListBookingsRequest
-	24, // 51: rooms.v1.RoomsService.CheckAvailability:input_type -> rooms.v1.CheckAvailabilityRequest
-	26, // 52: rooms.v1.RoomsService.FindAvailableRooms:input_type -> rooms.v1.FindAvailableRoomsRequest
-	11, // 53: rooms.v1.RoomsService.CreateRoom:output_type -> rooms.v1.CreateRoomResponse
-	12, // 54: rooms.v1.RoomsService.GetRoom:output_type -> rooms.v1.GetRoomResponse
-	13, // 55: rooms.v1.RoomsService.UpdateRoom:output_type -> rooms.v1.UpdateRoomResponse
-	10, // 56: rooms.v1.RoomsService.DeleteRoom:output_type -> rooms.v1.DeleteRoomResponse
-	15, // 57: rooms.v1.RoomsService.ListRooms:output_type -> rooms.v1.ListRoomsResponse
-	19, // 58: rooms.v1.RoomsService.CreateBooking:output_type -> rooms.v1.CreateBookingResponse
-	20, // 59: rooms.v1.RoomsService.GetBooking:output_type -> rooms.v1.GetBookingResponse
-	21, // 60: rooms.v1.RoomsService.CancelBooking:output_type -> rooms.v1.CancelBookingResponse
-	23, // 61: rooms.v1.RoomsService.ListBookings:output_type -> rooms.v1.ListBookingsResponse
-	25, // 62: rooms.v1.RoomsService.CheckAvailability:output_type -> rooms.v1.CheckAvailabilityResponse
-	27, // 63: rooms.v1.RoomsService.FindAvailableRooms:output_type -> rooms.v1.FindAvailableRoomsResponse
-	53, // [53:64] is the sub-list for method output_type
-	42, // [42:53] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	30, // 6: rooms.v1.Room.user_role:type_name -> common.v1.ContentRole
+	29, // 7: rooms.v1.RoomBooking.start_time:type_name -> google.protobuf.Timestamp
+	29, // 8: rooms.v1.RoomBooking.end_time:type_name -> google.protobuf.Timestamp
+	2,  // 9: rooms.v1.RoomBooking.status:type_name -> rooms.v1.BookingStatus
+	29, // 10: rooms.v1.RoomBooking.created_at:type_name -> google.protobuf.Timestamp
+	29, // 11: rooms.v1.RoomBooking.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 12: rooms.v1.TimeSlot.start_time:type_name -> google.protobuf.Timestamp
+	29, // 13: rooms.v1.TimeSlot.end_time:type_name -> google.protobuf.Timestamp
+	0,  // 14: rooms.v1.CreateRoomRequest.room_type:type_name -> rooms.v1.RoomType
+	28, // 15: rooms.v1.CreateRoomRequest.access_mode:type_name -> common.v1.AccessMode
+	30, // 16: rooms.v1.CreateRoomRequest.baseline_role:type_name -> common.v1.ContentRole
+	0,  // 17: rooms.v1.UpdateRoomRequest.room_type:type_name -> rooms.v1.RoomType
+	1,  // 18: rooms.v1.UpdateRoomRequest.status:type_name -> rooms.v1.RoomStatus
+	28, // 19: rooms.v1.UpdateRoomRequest.access_mode:type_name -> common.v1.AccessMode
+	30, // 20: rooms.v1.UpdateRoomRequest.baseline_role:type_name -> common.v1.ContentRole
+	3,  // 21: rooms.v1.CreateRoomResponse.room:type_name -> rooms.v1.Room
+	3,  // 22: rooms.v1.GetRoomResponse.room:type_name -> rooms.v1.Room
+	3,  // 23: rooms.v1.UpdateRoomResponse.room:type_name -> rooms.v1.Room
+	0,  // 24: rooms.v1.ListRoomsRequest.room_type:type_name -> rooms.v1.RoomType
+	1,  // 25: rooms.v1.ListRoomsRequest.status:type_name -> rooms.v1.RoomStatus
+	3,  // 26: rooms.v1.ListRoomsResponse.rooms:type_name -> rooms.v1.Room
+	29, // 27: rooms.v1.CreateBookingRequest.start_time:type_name -> google.protobuf.Timestamp
+	29, // 28: rooms.v1.CreateBookingRequest.end_time:type_name -> google.protobuf.Timestamp
+	4,  // 29: rooms.v1.CreateBookingResponse.booking:type_name -> rooms.v1.RoomBooking
+	4,  // 30: rooms.v1.GetBookingResponse.booking:type_name -> rooms.v1.RoomBooking
+	4,  // 31: rooms.v1.CancelBookingResponse.booking:type_name -> rooms.v1.RoomBooking
+	29, // 32: rooms.v1.ListBookingsRequest.start_date:type_name -> google.protobuf.Timestamp
+	29, // 33: rooms.v1.ListBookingsRequest.end_date:type_name -> google.protobuf.Timestamp
+	2,  // 34: rooms.v1.ListBookingsRequest.status:type_name -> rooms.v1.BookingStatus
+	4,  // 35: rooms.v1.ListBookingsResponse.bookings:type_name -> rooms.v1.RoomBooking
+	29, // 36: rooms.v1.CheckAvailabilityRequest.start_date:type_name -> google.protobuf.Timestamp
+	29, // 37: rooms.v1.CheckAvailabilityRequest.end_date:type_name -> google.protobuf.Timestamp
+	5,  // 38: rooms.v1.CheckAvailabilityResponse.slots:type_name -> rooms.v1.TimeSlot
+	29, // 39: rooms.v1.FindAvailableRoomsRequest.start_time:type_name -> google.protobuf.Timestamp
+	29, // 40: rooms.v1.FindAvailableRoomsRequest.end_time:type_name -> google.protobuf.Timestamp
+	0,  // 41: rooms.v1.FindAvailableRoomsRequest.room_type:type_name -> rooms.v1.RoomType
+	3,  // 42: rooms.v1.FindAvailableRoomsResponse.rooms:type_name -> rooms.v1.Room
+	6,  // 43: rooms.v1.RoomsService.CreateRoom:input_type -> rooms.v1.CreateRoomRequest
+	7,  // 44: rooms.v1.RoomsService.GetRoom:input_type -> rooms.v1.GetRoomRequest
+	8,  // 45: rooms.v1.RoomsService.UpdateRoom:input_type -> rooms.v1.UpdateRoomRequest
+	9,  // 46: rooms.v1.RoomsService.DeleteRoom:input_type -> rooms.v1.DeleteRoomRequest
+	14, // 47: rooms.v1.RoomsService.ListRooms:input_type -> rooms.v1.ListRoomsRequest
+	16, // 48: rooms.v1.RoomsService.CreateBooking:input_type -> rooms.v1.CreateBookingRequest
+	17, // 49: rooms.v1.RoomsService.GetBooking:input_type -> rooms.v1.GetBookingRequest
+	18, // 50: rooms.v1.RoomsService.CancelBooking:input_type -> rooms.v1.CancelBookingRequest
+	22, // 51: rooms.v1.RoomsService.ListBookings:input_type -> rooms.v1.ListBookingsRequest
+	24, // 52: rooms.v1.RoomsService.CheckAvailability:input_type -> rooms.v1.CheckAvailabilityRequest
+	26, // 53: rooms.v1.RoomsService.FindAvailableRooms:input_type -> rooms.v1.FindAvailableRoomsRequest
+	11, // 54: rooms.v1.RoomsService.CreateRoom:output_type -> rooms.v1.CreateRoomResponse
+	12, // 55: rooms.v1.RoomsService.GetRoom:output_type -> rooms.v1.GetRoomResponse
+	13, // 56: rooms.v1.RoomsService.UpdateRoom:output_type -> rooms.v1.UpdateRoomResponse
+	10, // 57: rooms.v1.RoomsService.DeleteRoom:output_type -> rooms.v1.DeleteRoomResponse
+	15, // 58: rooms.v1.RoomsService.ListRooms:output_type -> rooms.v1.ListRoomsResponse
+	19, // 59: rooms.v1.RoomsService.CreateBooking:output_type -> rooms.v1.CreateBookingResponse
+	20, // 60: rooms.v1.RoomsService.GetBooking:output_type -> rooms.v1.GetBookingResponse
+	21, // 61: rooms.v1.RoomsService.CancelBooking:output_type -> rooms.v1.CancelBookingResponse
+	23, // 62: rooms.v1.RoomsService.ListBookings:output_type -> rooms.v1.ListBookingsResponse
+	25, // 63: rooms.v1.RoomsService.CheckAvailability:output_type -> rooms.v1.CheckAvailabilityResponse
+	27, // 64: rooms.v1.RoomsService.FindAvailableRooms:output_type -> rooms.v1.FindAvailableRoomsResponse
+	54, // [54:65] is the sub-list for method output_type
+	43, // [43:54] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_rooms_v1_rooms_proto_init() }

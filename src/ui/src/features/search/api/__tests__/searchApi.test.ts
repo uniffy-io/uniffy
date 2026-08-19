@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const searchSpy = vi.fn().mockResolvedValue({ items: [], totalCount: 0 });
+const searchSpy = vi.fn().mockResolvedValue({ items: [], hasMore: false, nextOffset: 0 });
 
 vi.mock("@connectrpc/connect", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@connectrpc/connect")>()),

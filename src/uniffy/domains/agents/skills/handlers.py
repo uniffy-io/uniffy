@@ -52,7 +52,7 @@ from uniffy.domains.agents.skills.converters import (
     skill_version_to_proto,
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 
 logger = logger.bind(component="agents.skills.handlers")
 
@@ -83,7 +83,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -136,7 +136,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -187,7 +187,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -254,7 +254,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -306,7 +306,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             agent_id = UUID(request.agent_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -342,7 +342,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -394,7 +394,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             draft_id = UUID(request.draft_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -428,7 +428,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -480,7 +480,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             draft_id = UUID(request.draft_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -530,7 +530,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             draft_id = UUID(request.draft_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -566,7 +566,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -624,7 +624,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -659,7 +659,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -702,7 +702,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -743,7 +743,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -802,7 +802,7 @@ class SkillsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")

@@ -80,7 +80,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.storage import get_s3_client
 from uniffy.core.types import AccessMode, ContentType, ParentSelection, SortOrder
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.files.converters import (
     file_to_proto,
     file_version_to_proto,
@@ -173,7 +173,7 @@ class FilesHandlers:
         ctx: RequestContext,
     ) -> InitiateUploadResponse:
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -498,7 +498,7 @@ class FilesHandlers:
         """
         try:
             file_id = UUID(request.file_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -547,7 +547,7 @@ class FilesHandlers:
     ) -> GetFileResponse:
         try:
             file_id = UUID(request.file_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -594,7 +594,7 @@ class FilesHandlers:
         """
         try:
             file_id = UUID(request.file_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -676,7 +676,7 @@ class FilesHandlers:
         """Delete a file."""
         try:
             file_id = UUID(request.file_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -713,7 +713,7 @@ class FilesHandlers:
         """Restore a soft-deleted file."""
         try:
             file_id = UUID(request.file_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -759,7 +759,7 @@ class FilesHandlers:
     ) -> ListFilesResponse:
         """List files with filters and pagination."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -871,7 +871,7 @@ class FilesHandlers:
     ) -> CreateFolderResponse:
         """Create a new folder."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -931,7 +931,7 @@ class FilesHandlers:
         """Update a folder."""
         try:
             folder_id = UUID(request.folder_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -1015,7 +1015,7 @@ class FilesHandlers:
         """Delete a folder."""
         try:
             folder_id = UUID(request.folder_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -1056,7 +1056,7 @@ class FilesHandlers:
     ) -> GetFilesTreeResponse:
         """Get the file/folder tree."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -1154,7 +1154,63 @@ class FilesHandlers:
 
                     return nodes, parent_total_size
 
+                async def folder_subtree(folder: Folder, present_as_root: bool) -> TreeNode:
+                    child_nodes, children_size = await build_folder_tree(folder.id)
+                    child_files, _ = await file_ops.list_files(
+                        user_id=user_id,
+                        organization_id=organization_id,
+                        folder_id=folder.id,
+                        personal_only=request.personal_only,
+                    )
+                    folder_total_size = sum(f.size_bytes for f in child_files) + children_size
+                    if request.include_files:
+                        for file in child_files:
+                            child_nodes.append(
+                                tree_node_from_file(
+                                    file,
+                                    effective_access_mode=_file_eff_mode(file),
+                                )
+                            )
+                    file_count = 0 if request.include_files else len(child_files)
+                    node = tree_node_from_folder(
+                        folder,
+                        len(child_nodes) + file_count,
+                        folder_total_size,
+                        effective_access_mode=_folder_eff_mode(folder),
+                        present_as_root=present_as_root,
+                    )
+                    node.children.extend(child_nodes)
+                    return node
+
                 nodes, _ = await build_folder_tree(root_folder_id)
+
+                # The top-down recursion never reaches a shared folder nested
+                # under an inaccessible parent; graft those as extra roots
+                # without echoing the hidden parent.
+                if root_folder_id is None and not request.personal_only:
+                    accessible = await folder_ops.list_accessible_folders(
+                        user_id=user_id,
+                        organization_id=organization_id,
+                    )
+                    accessible_ids = {f.id for f in accessible}
+                    included: set[UUID] = set()
+
+                    def collect_folder_ids(tree_nodes: list[TreeNode]) -> None:
+                        for tree_node in tree_nodes:
+                            if tree_node.is_folder:
+                                included.add(UUID(tree_node.id))
+                                collect_folder_ids(list(tree_node.children))
+
+                    collect_folder_ids(nodes)
+                    for folder in accessible:
+                        if folder.id in included:
+                            continue
+                        # An accessible parent grafts (or already carries) it.
+                        if folder.parent_id is not None and folder.parent_id in accessible_ids:
+                            continue
+                        orphan_node = await folder_subtree(folder, present_as_root=True)
+                        collect_folder_ids([orphan_node])
+                        nodes.append(orphan_node)
 
                 if request.include_files:
                     files, _ = await file_ops.list_files(
@@ -1186,7 +1242,7 @@ class FilesHandlers:
     ) -> EmptyTrashResponse:
         """Empty trash for the current user."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -1220,7 +1276,7 @@ class FilesHandlers:
     ) -> ListTrashResponse:
         """List the authenticated user's soft-deleted files and folders."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -1290,7 +1346,7 @@ class FilesHandlers:
         """Restore a soft-deleted folder (and its soft-deleted contents)."""
         try:
             folder_id = UUID(request.folder_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -1335,7 +1391,7 @@ class FilesHandlers:
         """List version history for a file."""
         try:
             file_id = UUID(request.file_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -1372,7 +1428,7 @@ class FilesHandlers:
     ) -> CreateFolderTreeResponse:
         """Create a folder tree in a single transaction for recursive upload."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -1443,7 +1499,7 @@ class FilesHandlers:
     ) -> EnsureRecordingsFolderResponse:
         """Lazily create or fetch the per-user "Recordings" system folder."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -1482,7 +1538,7 @@ class FilesHandlers:
     ) -> MoveItemsResponse:
         """Move files / folders to a new parent and/or change their access mode."""
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -1671,7 +1727,7 @@ class FilesHandlers:
         """Restore a previous version of a file as a new current version."""
         try:
             file_id = UUID(request.file_id)
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
             version_id = UUID(request.version_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")

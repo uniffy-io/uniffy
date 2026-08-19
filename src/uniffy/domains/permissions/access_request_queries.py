@@ -14,7 +14,11 @@ from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequestState,
 )
 from uniffy.core.types import ContentType
-from uniffy.domains.permissions.access_request_targets import (
+from uniffy.domains.permissions.resource_access import (
+    AccessGrantKind,
+    ResourceAudienceResolver,
+)
+from uniffy.domains.permissions.resource_access.targets import (
     AccessRequestTarget,
     AccessRequestTargetResolver,
 )
@@ -73,11 +77,16 @@ class AccessRequestQueries:
             )
 
         unique_urns = list(dict.fromkeys(requested_urns))
-        canonical_by_urn = await self.targets.canonical_keys_for_urns(
+        target_states = await self.targets.states_for_urns(
             organization_id,
             unique_urns,
+            actor_id=requester_id,
         )
-        canonical_keys = set(canonical_by_urn.values())
+        canonical_keys = {
+            state.canonical_key
+            for state in target_states.values()
+            if state.canonical_key is not None
+        }
         requests: list[ContentAccessRequest] = []
         if canonical_keys:
             requests = list(
@@ -105,30 +114,19 @@ class AccessRequestQueries:
             latest_by_target.setdefault(key, request)
 
         statuses: list[AccessRequestStatusView] = []
-        access_by_request: dict[UUID, bool] = {}
         for urn in unique_urns:
-            canonical_key = canonical_by_urn.get(urn)
+            target_state = target_states.get(urn)
+            canonical_key = target_state.canonical_key if target_state is not None else None
             request = latest_by_target.get(canonical_key) if canonical_key else None
-            has_access = False
-            if request is not None:
-                if request.id not in access_by_request:
-                    try:
-                        target = await self.targets.resolve_request(request)
-                        access_by_request[request.id] = await self.targets.requester_has_access(
-                            requester_id,
-                            organization_id,
-                            target,
-                        )
-                    except NotFoundError:
-                        access_by_request[request.id] = False
-                has_access = access_by_request[request.id]
             statuses.append(
                 AccessRequestStatusView(
                     requested_urn=urn,
                     state=request.state if request else None,
                     request_id=request.id if request else None,
                     can_request_again_at=self.can_request_again_at(request),
-                    requester_has_access=has_access,
+                    requester_has_access=(
+                        target_state.requester_has_access if target_state is not None else False
+                    ),
                 )
             )
         return statuses
@@ -172,7 +170,11 @@ class AccessRequestQueries:
                 "A canonical content type and id are required",
             )
         canonical_urn = f"urn:uniffy:content:{canonical_content_type.value}:{canonical_content_id}"
-        target = await self.targets.resolve(organization_id, canonical_urn)
+        target = await self.targets.resolve(
+            organization_id,
+            canonical_urn,
+            actor_id=actor_user_id,
+        )
         if not await self.targets.reviewer_can_manage(
             actor_user_id,
             organization_id,
@@ -207,7 +209,42 @@ class AccessRequestQueries:
             .scalars()
             .all()
         )
-        views = [await self.view(request, target) for request in requests]
+        requester_ids = {request.requester_id for request in requests}
+        user_rows = (
+            await self.session.execute(select(User).where(User.id.in_(requester_ids)))
+        ).scalars()
+        display_names = {user.id: user.full_name or user.username for user in user_rows}
+        audience = ResourceAudienceResolver(self.session)
+        if target.grant_kind == AccessGrantKind.CHAT:
+            allowed = set(
+                await audience.filter_chat(
+                    organization_id=organization_id,
+                    channel=target.canonical_row,
+                    candidate_user_ids=requester_ids,
+                )
+            )
+        else:
+            row = target.canonical_row
+            allowed = set(
+                await audience.filter_standard(
+                    organization_id=organization_id,
+                    content_type=target.canonical_content_type,
+                    content_id=target.canonical_content_id,
+                    owner_id=row.owner_id,
+                    access_mode=row.access_mode,
+                    baseline_role=row.baseline_role,
+                    candidate_user_ids=requester_ids,
+                )
+            )
+        views = [
+            await self.view(
+                request,
+                target,
+                requester_has_access=request.requester_id in allowed,
+                requester_display_name=display_names.get(request.requester_id),
+            )
+            for request in requests
+        ]
         return AccessRequestPage(
             requests=views,
             page=page,
@@ -277,12 +314,15 @@ class AccessRequestQueries:
         target: AccessRequestTarget,
         *,
         requester_has_access: bool | None = None,
+        requester_display_name: str | None = None,
     ) -> AccessRequestView:
-        user = (
-            await self.session.execute(select(User).where(User.id == request.requester_id))
-        ).scalar_one_or_none()
-        if user is None:
-            raise NotFoundError("user", request.requester_id)
+        if requester_display_name is None:
+            user = (
+                await self.session.execute(select(User).where(User.id == request.requester_id))
+            ).scalar_one_or_none()
+            if user is None:
+                raise NotFoundError("user", request.requester_id)
+            requester_display_name = user.full_name or user.username
         if requester_has_access is None:
             requester_has_access = await self.targets.requester_has_access(
                 request.requester_id,
@@ -291,7 +331,7 @@ class AccessRequestQueries:
             )
         return AccessRequestView(
             request=request,
-            requester_display_name=user.full_name or user.username,
+            requester_display_name=requester_display_name,
             requester_has_access=requester_has_access,
             can_request_again_at=self.can_request_again_at(request),
         )

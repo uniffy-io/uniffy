@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ContentRole, AccessMode } from "@uniffy/proto/common/v1/common_pb";
+import { ContentRole, AccessMode, ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ShieldCheck, ArrowRight } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
@@ -93,9 +93,10 @@ export function AccessPolicyPanel({
     accessMode: AccessMode | number;
     baselineRole: ContentRole | number | null;
   }) => {
-    // Narrowing to OWNER_ONLY orphans existing members; the backend refuses
-    // unless we opt into removing them. Confirm first, then remove on narrow.
-    if (next.accessMode === AccessMode.OWNER_ONLY && active.length > 0) {
+    // Narrowing to OWNER_ONLY orphans existing member rows - blocked ones
+    // included (OWNER_ONLY denies everyone, so dropping a block is safe); the
+    // backend refuses unless we opt into removing them. Confirm, then remove.
+    if (next.accessMode === AccessMode.OWNER_ONLY && members.length > 0) {
       setConfirmPersonal(true);
       return;
     }
@@ -186,6 +187,9 @@ export function AccessPolicyPanel({
           onChange={handleModeChange}
           disabled={!canManage}
           showInheritOption
+          hiddenModes={
+            contentType === ContentType.CALENDAR_EVENT ? [AccessMode.OPEN_TO_ORG] : undefined
+          }
         />
       </div>
 
@@ -262,7 +266,7 @@ export function AccessPolicyPanel({
         onClose={() => setConfirmPersonal(false)}
         onConfirm={confirmMakePersonal}
         title="Make personal?"
-        message={`Only you will have access. This removes ${active.length} member${active.length !== 1 ? "s" : ""} from this item.`}
+        message={`Only you will have access. This removes ${members.length} member${members.length !== 1 ? "s" : ""} (blocked entries included) from this item.`}
         confirmLabel="Make personal"
         variant="danger"
         loading={narrowing}

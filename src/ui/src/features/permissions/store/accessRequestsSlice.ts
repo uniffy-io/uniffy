@@ -114,7 +114,7 @@ const accessRequestsSlice = createSlice({
           state: action.payload.state,
           requestId: action.payload.requestId ?? null,
           canRequestAgainAt: action.payload.canRequestAgainAt ?? null,
-          requesterHasAccess: action.payload.state === AccessRequestState.APPROVED,
+          requesterHasAccess: false,
         };
       }
     },

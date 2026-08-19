@@ -11,7 +11,9 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
+from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.models.login.user import User
 from uniffy.core.models.shared import AttendeeStatus, RecurrencePattern
 from uniffy.domains.calendar.recurrence import expand_recurrence
 
@@ -27,10 +29,16 @@ async def _require_active_members(
     user_ids: list[UUID],
 ) -> None:
     result = await session.execute(
-        select(OrganizationMember.user_id).where(
+        select(OrganizationMember.user_id)
+        .join(User, User.id == OrganizationMember.user_id)
+        .join(Organization, Organization.id == OrganizationMember.organization_id)
+        .where(
             OrganizationMember.organization_id == organization_id,
             OrganizationMember.user_id.in_(user_ids),
-            OrganizationMember.is_active == True,  # noqa: E712
+            OrganizationMember.is_active.is_(True),
+            User.is_active.is_(True),
+            Organization.deleted_at.is_(None),
+            Organization.is_suspended.is_(False),
         )
     )
     active = {row[0] for row in result.all()}

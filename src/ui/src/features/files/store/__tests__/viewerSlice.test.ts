@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { removeFile } from "../filesSlice";
 import {
   viewerReducer,
   openViewer,
@@ -198,5 +199,18 @@ describe("viewerSlice PDF state", () => {
       openViewer({ fileId: "b" }),
     );
     expect(state.pdfDocumentInfo).toBeNull();
+  });
+});
+
+describe("viewerSlice access revocation", () => {
+  it("closes the viewer when the open file's row is removed", () => {
+    const state = viewerReducer(openedState(), removeFile("a"));
+    expect(state.isOpen).toBe(false);
+    expect(state.isFullscreen).toBe(false);
+  });
+
+  it("stays open when a different file is removed", () => {
+    const state = viewerReducer(openedState(), removeFile("b"));
+    expect(state.isOpen).toBe(true);
   });
 });

@@ -29,7 +29,7 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.chat.messages.converters import SENDER_TYPE_TO_PROTO, message_to_proto
 from uniffy.domains.chat.sender_resolver import SenderResolver
 from uniffy.domains.chat.threads.operations import ChatThreadOperations, ThreadInboxRow
@@ -58,7 +58,7 @@ class ThreadHandlers:
     ) -> GetThreadResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             root_id = UUID(request.root_message_id)
         except ValueError:
@@ -101,7 +101,7 @@ class ThreadHandlers:
     ) -> GetThreadMessagesResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             root_id = UUID(request.root_message_id)
         except ValueError:
@@ -178,7 +178,7 @@ class ThreadHandlers:
     ) -> GetThreadsInboxResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -244,7 +244,7 @@ class ThreadHandlers:
     ) -> FollowThreadResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             root_id = UUID(request.root_message_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -264,7 +264,7 @@ class ThreadHandlers:
     ) -> UnfollowThreadResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             root_id = UUID(request.root_message_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")

@@ -22,7 +22,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.draft import ChatDraft
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.chat.drafts.operations import ChatDraftOperations
 
 logger = logger.bind(component="chat.drafts.handlers")
@@ -70,7 +70,7 @@ class DraftHandlers:
     ) -> SaveDraftResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -99,7 +99,7 @@ class DraftHandlers:
         user_id = get_user_id_from_context(ctx)
         try:
             channel_id = UUID(request.channel_id)
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
         root_message_id = _parse_root_message_id(request)
@@ -125,7 +125,7 @@ class DraftHandlers:
     ) -> ListDraftsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 

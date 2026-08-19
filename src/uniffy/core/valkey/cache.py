@@ -16,7 +16,7 @@ import os
 import time
 from collections.abc import Awaitable, Callable
 from enum import Enum, auto
-from typing import Any, TypeVar
+from typing import Any
 
 from loguru import logger
 
@@ -31,18 +31,15 @@ from uniffy.observability.metrics import (
     CACHE_STAMPEDE_LOCK_WAIT_TOTAL,
 )
 
-logger = logger.bind(component="cache")
+logger = logger.bind(component="core.valkey.cache")
 
 _SENTINEL = "__none__"
 _DEFAULT_TTL_SECONDS = 900
 _LOCK_TTL_SECONDS = 5
 _LOCK_POLL_INTERVAL_SECONDS = 0.1
-
 _DISABLED_NAMESPACES: frozenset[str] = frozenset(
     ns.strip() for ns in os.getenv("CACHE_DISABLED_NAMESPACES", "").split(",") if ns.strip()
 )
-
-T = TypeVar("T", bound=dict[str, Any] | None)
 
 
 class _CacheMiss(Enum):
@@ -93,7 +90,7 @@ async def cache_get(key: str) -> dict[str, Any] | None | _CacheMiss:
     except TimeoutError:
         return CACHE_MISS
     except Exception:
-        logger.warning(f"Cache GET failed for key {key}", component="cache")
+        logger.warning(f"Cache GET failed for key {key}")
         CACHE_MISS_TOTAL.labels(namespace=namespace).inc()
         return CACHE_MISS
 
@@ -108,7 +105,7 @@ async def cache_get(key: str) -> dict[str, Any] | None | _CacheMiss:
     try:
         decoded = loads(raw)
     except JSONDecodeError, TypeError:
-        logger.warning(f"Cache decode failed for key {key}", component="cache")
+        logger.warning(f"Cache decode failed for key {key}")
         CACHE_MISS_TOTAL.labels(namespace=namespace).inc()
         return CACHE_MISS
 
@@ -154,7 +151,7 @@ async def cache_get_many(
             misses.append(key)
         return hits, misses
     except Exception:
-        logger.warning(f"Cache MGET failed for {len(enabled_keys)} keys", component="cache")
+        logger.warning(f"Cache MGET failed for {len(enabled_keys)} keys")
         for key in enabled_keys:
             CACHE_MISS_TOTAL.labels(namespace=_namespace_for_key(key)).inc()
             misses.append(key)
@@ -173,7 +170,7 @@ async def cache_get_many(
         try:
             decoded = loads(raw)
         except JSONDecodeError, TypeError:
-            logger.warning(f"Cache decode failed for key {key}", component="cache")
+            logger.warning(f"Cache decode failed for key {key}")
             CACHE_MISS_TOTAL.labels(namespace=ns).inc()
             misses.append(key)
             continue
@@ -220,7 +217,7 @@ async def cache_set(
     except TimeoutError:
         return
     except Exception:
-        logger.warning(f"Cache SET failed for key {key}", component="cache")
+        logger.warning(f"Cache SET failed for key {key}")
 
 
 async def cache_delete(key: str) -> None:
@@ -233,11 +230,11 @@ async def cache_delete(key: str) -> None:
         async with ops_call(namespace, "delete"):
             await client.delete(key)
         CACHE_INVALIDATE_TOTAL.labels(namespace=namespace).inc()
-        logger.debug(f"Cache invalidated key {key}", component="cache")
+        logger.debug(f"Cache invalidated key {key}")
     except TimeoutError:
         return
     except Exception:
-        logger.warning(f"Cache DEL failed for key {key}", component="cache")
+        logger.warning(f"Cache DEL failed for key {key}")
 
 
 async def cache_invalidate_many(*keys: str) -> None:
@@ -258,7 +255,7 @@ async def cache_invalidate_many(*keys: str) -> None:
     except TimeoutError:
         return
     except Exception:
-        logger.warning(f"Cache DEL many failed for {len(keys)} keys", component="cache")
+        logger.warning(f"Cache DEL many failed for {len(keys)} keys")
 
 
 async def cache_invalidate_by_tag(tag: str) -> None:
@@ -276,7 +273,7 @@ async def cache_invalidate_by_tag(tag: str) -> None:
     except TimeoutError:
         return
     except Exception:
-        logger.warning(f"Cache tag SMEMBERS failed for {tag_key}", component="cache")
+        logger.warning(f"Cache tag SMEMBERS failed for {tag_key}")
         return
 
     if not members:
@@ -286,7 +283,7 @@ async def cache_invalidate_by_tag(tag: str) -> None:
         except TimeoutError:
             return
         except Exception:
-            logger.warning(f"Cache tag DEL failed for {tag_key}", component="cache")
+            logger.warning(f"Cache tag DEL failed for {tag_key}")
         return
 
     keys = list(members)
@@ -298,7 +295,7 @@ async def cache_invalidate_by_tag(tag: str) -> None:
     except TimeoutError:
         return
     except Exception:
-        logger.warning(f"Cache tag invalidate DEL failed for {tag_key}", component="cache")
+        logger.warning(f"Cache tag invalidate DEL failed for {tag_key}")
 
 
 async def cache_get_or_set(
@@ -350,7 +347,7 @@ async def cache_get_or_set_locked(
     except TimeoutError:
         acquired = False
     except Exception:
-        logger.warning(f"Cache lock SET NX failed for {lock_key}", component="cache")
+        logger.warning(f"Cache lock SET NX failed for {lock_key}")
         acquired = False
 
     if acquired:
@@ -363,7 +360,7 @@ async def cache_get_or_set_locked(
             except TimeoutError:
                 pass
             except Exception:
-                logger.warning(f"Cache lock DEL failed for {lock_key}", component="cache")
+                logger.warning(f"Cache lock DEL failed for {lock_key}")
 
     CACHE_STAMPEDE_LOCK_WAIT_TOTAL.labels(namespace=namespace).inc()
     deadline = time.monotonic() + _LOCK_TTL_SECONDS

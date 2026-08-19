@@ -14,10 +14,10 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 async def test_room_update_publishes_cleared_fields(session, env, monkeypatch) -> None:
     monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
-    published: list[tuple[str, dict, bool]] = []
+    published: list[tuple[str, dict]] = []
 
-    async def capture(organization_id, urn, changes, restricted=False):
-        published.append((urn, dict(changes), restricted))
+    async def capture(organization_id, urn, changes):
+        published.append((urn, dict(changes)))
 
     monkeypatch.setattr("uniffy.domains.rooms.operations.publish_mention_state", capture)
 
@@ -35,14 +35,12 @@ async def test_room_update_publishes_cleared_fields(session, env, monkeypatch) -
         await room_ops.update_room(env.admin_id, env.org_id, room.id, building="")
 
         assert len(published) == 1
-        _, changes, restricted = published[0]
+        _, changes = published[0]
         # Blanked field arrives as an explicit empty string so open chips clear it.
         assert changes["building"] == ""
         assert changes["capacity"] == "8"
         assert changes["room_type"] == room.room_type.value
         assert changes["floor"] == ""
-        # Rooms default to OPEN_TO_ORG, so the broadcast stays org-wide.
-        assert restricted is False
     finally:
         await session.rollback()
         await session.execute(delete(Room).where(Room.organization_id == env.org_id))

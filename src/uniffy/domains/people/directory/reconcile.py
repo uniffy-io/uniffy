@@ -18,7 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.auth.membership import invalidate_membership_cache
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group
@@ -34,7 +33,6 @@ from uniffy.domains.groups.naming import dedupe_name, resolve_slug
 from uniffy.domains.groups.search import TeamSearchIndexer
 from uniffy.domains.organizations.operations import (
     OrganizationOperations,
-    _drop_user_perm_cache,
 )
 from uniffy.domains.people.cache import invalidate_org_people, invalidate_person
 from uniffy.domains.people.directory.base import DirectorySyncProvider
@@ -412,8 +410,6 @@ async def deprovision_user(
     await session.commit()
 
     active_owner_ids.discard(user_id)
-    await _drop_user_perm_cache(user_id)
-    await invalidate_membership_cache(user_id, org_id)
     await invalidate_person(org_id, user_id)
 
     urn = f"urn:uniffy:content:USER:{user_id}"

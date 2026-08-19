@@ -9,7 +9,6 @@ import {
   updateNoteIcon,
   deleteNote,
   restoreNote,
-  searchNotes,
   moveNote,
   copyNote,
   initializeNotesData,
@@ -41,8 +40,6 @@ interface NotesState {
   creatingNote: boolean;
   savingNote: boolean;
   error: string | null;
-  searchResults: string[];
-  searchLoading: boolean;
   filters: {
     searchQuery: string;
     sortBy: "title" | "updated" | "created";
@@ -69,8 +66,6 @@ const initialState: NotesState = {
   creatingNote: false,
   savingNote: false,
   error: null,
-  searchResults: [],
-  searchLoading: false,
   filters: {
     searchQuery: "",
     sortBy: "updated",
@@ -172,7 +167,6 @@ export const notesSlice = createSlice({
       state.currentNoteId = null;
       state.openTabs = [];
       state.activeTabIndex = 0;
-      state.searchResults = [];
       state.backlinks = {};
     },
 
@@ -286,27 +280,11 @@ export const notesSlice = createSlice({
       state.deletedNoteIds = state.deletedNoteIds.filter((id) => id !== action.payload.id);
     });
 
-    builder
-      .addCase(searchNotes.pending, (state) => {
-        state.searchLoading = true;
-      })
-      .addCase(searchNotes.fulfilled, (state, action) => {
-        state.searchLoading = false;
-        state.searchResults = action.payload.notes.map((n) => n.id);
-        action.payload.notes.forEach((note) => {
-          state.notes[note.id] = normalizeNote(note);
-        });
-      })
-      .addCase(searchNotes.rejected, (state) => {
-        state.searchLoading = false;
-        state.searchResults = [];
-      });
-
     builder.addCase(moveNote.fulfilled, (state, action) => {
       state.notes[action.payload.id] = normalizeNote(action.payload);
     });
 
-    // Keep the in-memory note row in sync with new policy so accessMode-driven UI updates without refetch.
+    // Keep the in-memory note row aligned with the selected policy so access-mode UI updates without a refetch.
     builder.addCase(setContentAccessMode.fulfilled, (state, action) => {
       if (action.meta.arg.contentType !== ContentType.NOTE) return;
       const note = state.notes[action.meta.arg.contentId];
@@ -333,6 +311,19 @@ export const notesSlice = createSlice({
       })
       .addCase(initializeNotesData.fulfilled, (state, action) => {
         state.loading = false;
+        if (action.meta.arg?.forceRefresh) {
+          const accessibleIds = new Set(action.payload.notes.map((note) => note.id));
+          for (const noteId of Object.keys(state.notes)) {
+            if (!accessibleIds.has(noteId)) delete state.notes[noteId];
+          }
+          if (state.currentNoteId && !accessibleIds.has(state.currentNoteId)) {
+            state.currentNoteId = null;
+          }
+          state.openTabs = state.openTabs.filter((noteId) => accessibleIds.has(noteId));
+          if (state.activeTabIndex >= state.openTabs.length) {
+            state.activeTabIndex = Math.max(0, state.openTabs.length - 1);
+          }
+        }
         action.payload.notes.forEach((note) => {
           state.notes[note.id] = mergeNote(state.notes[note.id], note);
         });
@@ -395,7 +386,6 @@ export {
   updateNote,
   deleteNote,
   restoreNote,
-  searchNotes,
   moveNote,
   copyNote,
   initializeNotesData,

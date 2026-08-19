@@ -28,10 +28,12 @@ from uniffy.core.models.agents.budget_alert import (
     AgentBudgetAlertScope,
 )
 from uniffy.core.models.agents.run_log import AgentRunLog
+from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
     OrganizationRole,
 )
+from uniffy.core.models.login.user import User
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import DomainType, NotificationType
@@ -113,10 +115,16 @@ async def _resolve_recipients(
     ``agents`` DomainAdmin row for this org.
     """
     members = await session.execute(
-        select(OrganizationMember.user_id).where(
+        select(OrganizationMember.user_id)
+        .join(User, User.id == OrganizationMember.user_id)
+        .join(Organization, Organization.id == OrganizationMember.organization_id)
+        .where(
             OrganizationMember.organization_id == organization_id,
             OrganizationMember.is_active.is_(True),
             OrganizationMember.role.in_((OrganizationRole.ADMIN, OrganizationRole.OWNER)),
+            User.is_active.is_(True),
+            Organization.deleted_at.is_(None),
+            Organization.is_suspended.is_(False),
         )
     )
     recipients: set[UUID] = set(members.scalars().all())
@@ -125,13 +133,19 @@ async def _resolve_recipients(
         select(DomainAdmin.user_id)
         .join(
             OrganizationMember,
-            OrganizationMember.user_id == DomainAdmin.user_id,
+            (OrganizationMember.user_id == DomainAdmin.user_id)
+            & (OrganizationMember.organization_id == DomainAdmin.organization_id),
         )
+        .join(User, User.id == OrganizationMember.user_id)
+        .join(Organization, Organization.id == OrganizationMember.organization_id)
         .where(
             OrganizationMember.organization_id == organization_id,
             OrganizationMember.is_active.is_(True),
             DomainAdmin.organization_id == organization_id,
             DomainAdmin.domain == DomainType.AGENTS,
+            User.is_active.is_(True),
+            Organization.deleted_at.is_(None),
+            Organization.is_suspended.is_(False),
         )
     )
     recipients.update(domain_admins.scalars().all())

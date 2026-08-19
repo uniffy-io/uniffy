@@ -19,22 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	NotesService_CreateNote_FullMethodName           = "/notes.v1.NotesService/CreateNote"
-	NotesService_GetNote_FullMethodName              = "/notes.v1.NotesService/GetNote"
-	NotesService_UpdateNote_FullMethodName           = "/notes.v1.NotesService/UpdateNote"
-	NotesService_DeleteNote_FullMethodName           = "/notes.v1.NotesService/DeleteNote"
-	NotesService_ListNotes_FullMethodName            = "/notes.v1.NotesService/ListNotes"
-	NotesService_SearchNotes_FullMethodName          = "/notes.v1.NotesService/SearchNotes"
-	NotesService_GetBacklinks_FullMethodName         = "/notes.v1.NotesService/GetBacklinks"
-	NotesService_RestoreNote_FullMethodName          = "/notes.v1.NotesService/RestoreNote"
-	NotesService_EmptyTrash_FullMethodName           = "/notes.v1.NotesService/EmptyTrash"
-	NotesService_MoveNote_FullMethodName             = "/notes.v1.NotesService/MoveNote"
-	NotesService_CopyNote_FullMethodName             = "/notes.v1.NotesService/CopyNote"
-	NotesService_ShareNoteWithGroup_FullMethodName   = "/notes.v1.NotesService/ShareNoteWithGroup"
-	NotesService_UnshareNoteFromGroup_FullMethodName = "/notes.v1.NotesService/UnshareNoteFromGroup"
-	NotesService_GetNoteSharing_FullMethodName       = "/notes.v1.NotesService/GetNoteSharing"
-	NotesService_GrantPermission_FullMethodName      = "/notes.v1.NotesService/GrantPermission"
-	NotesService_RevokePermission_FullMethodName     = "/notes.v1.NotesService/RevokePermission"
+	NotesService_CreateNote_FullMethodName   = "/notes.v1.NotesService/CreateNote"
+	NotesService_GetNote_FullMethodName      = "/notes.v1.NotesService/GetNote"
+	NotesService_UpdateNote_FullMethodName   = "/notes.v1.NotesService/UpdateNote"
+	NotesService_DeleteNote_FullMethodName   = "/notes.v1.NotesService/DeleteNote"
+	NotesService_ListNotes_FullMethodName    = "/notes.v1.NotesService/ListNotes"
+	NotesService_GetBacklinks_FullMethodName = "/notes.v1.NotesService/GetBacklinks"
+	NotesService_RestoreNote_FullMethodName  = "/notes.v1.NotesService/RestoreNote"
+	NotesService_EmptyTrash_FullMethodName   = "/notes.v1.NotesService/EmptyTrash"
+	NotesService_MoveNote_FullMethodName     = "/notes.v1.NotesService/MoveNote"
+	NotesService_CopyNote_FullMethodName     = "/notes.v1.NotesService/CopyNote"
 )
 
 // NotesServiceClient is the client API for NotesService service.
@@ -53,8 +47,6 @@ type NotesServiceClient interface {
 	DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error)
 	// List notes in organization with pagination and filters
 	ListNotes(ctx context.Context, in *ListNotesRequest, opts ...grpc.CallOption) (*ListNotesResponse, error)
-	// Search notes using full-text search
-	SearchNotes(ctx context.Context, in *SearchNotesRequest, opts ...grpc.CallOption) (*SearchNotesResponse, error)
 	// Get backlinks for a note (other notes that reference this note)
 	GetBacklinks(ctx context.Context, in *GetBacklinksRequest, opts ...grpc.CallOption) (*GetBacklinksResponse, error)
 	// Restore a deleted note
@@ -65,16 +57,6 @@ type NotesServiceClient interface {
 	MoveNote(ctx context.Context, in *MoveNoteRequest, opts ...grpc.CallOption) (*MoveNoteResponse, error)
 	// Copy note to another space
 	CopyNote(ctx context.Context, in *CopyNoteRequest, opts ...grpc.CallOption) (*CopyNoteResponse, error)
-	// Share note with group(s)
-	ShareNoteWithGroup(ctx context.Context, in *ShareNoteWithGroupRequest, opts ...grpc.CallOption) (*ShareNoteWithGroupResponse, error)
-	// Unshare note from group
-	UnshareNoteFromGroup(ctx context.Context, in *UnshareNoteFromGroupRequest, opts ...grpc.CallOption) (*UnshareNoteFromGroupResponse, error)
-	// Get sharing info for a note
-	GetNoteSharing(ctx context.Context, in *GetNoteSharingRequest, opts ...grpc.CallOption) (*GetNoteSharingResponse, error)
-	// Grant permission to user/group for a note
-	GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error)
-	// Revoke permission from user/group for a note
-	RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error)
 }
 
 type notesServiceClient struct {
@@ -135,16 +117,6 @@ func (c *notesServiceClient) ListNotes(ctx context.Context, in *ListNotesRequest
 	return out, nil
 }
 
-func (c *notesServiceClient) SearchNotes(ctx context.Context, in *SearchNotesRequest, opts ...grpc.CallOption) (*SearchNotesResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SearchNotesResponse)
-	err := c.cc.Invoke(ctx, NotesService_SearchNotes_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *notesServiceClient) GetBacklinks(ctx context.Context, in *GetBacklinksRequest, opts ...grpc.CallOption) (*GetBacklinksResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetBacklinksResponse)
@@ -195,56 +167,6 @@ func (c *notesServiceClient) CopyNote(ctx context.Context, in *CopyNoteRequest, 
 	return out, nil
 }
 
-func (c *notesServiceClient) ShareNoteWithGroup(ctx context.Context, in *ShareNoteWithGroupRequest, opts ...grpc.CallOption) (*ShareNoteWithGroupResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ShareNoteWithGroupResponse)
-	err := c.cc.Invoke(ctx, NotesService_ShareNoteWithGroup_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *notesServiceClient) UnshareNoteFromGroup(ctx context.Context, in *UnshareNoteFromGroupRequest, opts ...grpc.CallOption) (*UnshareNoteFromGroupResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UnshareNoteFromGroupResponse)
-	err := c.cc.Invoke(ctx, NotesService_UnshareNoteFromGroup_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *notesServiceClient) GetNoteSharing(ctx context.Context, in *GetNoteSharingRequest, opts ...grpc.CallOption) (*GetNoteSharingResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetNoteSharingResponse)
-	err := c.cc.Invoke(ctx, NotesService_GetNoteSharing_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *notesServiceClient) GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GrantPermissionResponse)
-	err := c.cc.Invoke(ctx, NotesService_GrantPermission_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *notesServiceClient) RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RevokePermissionResponse)
-	err := c.cc.Invoke(ctx, NotesService_RevokePermission_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // NotesServiceServer is the server API for NotesService service.
 // All implementations must embed UnimplementedNotesServiceServer
 // for forward compatibility.
@@ -261,8 +183,6 @@ type NotesServiceServer interface {
 	DeleteNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error)
 	// List notes in organization with pagination and filters
 	ListNotes(context.Context, *ListNotesRequest) (*ListNotesResponse, error)
-	// Search notes using full-text search
-	SearchNotes(context.Context, *SearchNotesRequest) (*SearchNotesResponse, error)
 	// Get backlinks for a note (other notes that reference this note)
 	GetBacklinks(context.Context, *GetBacklinksRequest) (*GetBacklinksResponse, error)
 	// Restore a deleted note
@@ -273,16 +193,6 @@ type NotesServiceServer interface {
 	MoveNote(context.Context, *MoveNoteRequest) (*MoveNoteResponse, error)
 	// Copy note to another space
 	CopyNote(context.Context, *CopyNoteRequest) (*CopyNoteResponse, error)
-	// Share note with group(s)
-	ShareNoteWithGroup(context.Context, *ShareNoteWithGroupRequest) (*ShareNoteWithGroupResponse, error)
-	// Unshare note from group
-	UnshareNoteFromGroup(context.Context, *UnshareNoteFromGroupRequest) (*UnshareNoteFromGroupResponse, error)
-	// Get sharing info for a note
-	GetNoteSharing(context.Context, *GetNoteSharingRequest) (*GetNoteSharingResponse, error)
-	// Grant permission to user/group for a note
-	GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error)
-	// Revoke permission from user/group for a note
-	RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error)
 	mustEmbedUnimplementedNotesServiceServer()
 }
 
@@ -308,9 +218,6 @@ func (UnimplementedNotesServiceServer) DeleteNote(context.Context, *DeleteNoteRe
 func (UnimplementedNotesServiceServer) ListNotes(context.Context, *ListNotesRequest) (*ListNotesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListNotes not implemented")
 }
-func (UnimplementedNotesServiceServer) SearchNotes(context.Context, *SearchNotesRequest) (*SearchNotesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SearchNotes not implemented")
-}
 func (UnimplementedNotesServiceServer) GetBacklinks(context.Context, *GetBacklinksRequest) (*GetBacklinksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetBacklinks not implemented")
 }
@@ -325,21 +232,6 @@ func (UnimplementedNotesServiceServer) MoveNote(context.Context, *MoveNoteReques
 }
 func (UnimplementedNotesServiceServer) CopyNote(context.Context, *CopyNoteRequest) (*CopyNoteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CopyNote not implemented")
-}
-func (UnimplementedNotesServiceServer) ShareNoteWithGroup(context.Context, *ShareNoteWithGroupRequest) (*ShareNoteWithGroupResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ShareNoteWithGroup not implemented")
-}
-func (UnimplementedNotesServiceServer) UnshareNoteFromGroup(context.Context, *UnshareNoteFromGroupRequest) (*UnshareNoteFromGroupResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UnshareNoteFromGroup not implemented")
-}
-func (UnimplementedNotesServiceServer) GetNoteSharing(context.Context, *GetNoteSharingRequest) (*GetNoteSharingResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetNoteSharing not implemented")
-}
-func (UnimplementedNotesServiceServer) GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GrantPermission not implemented")
-}
-func (UnimplementedNotesServiceServer) RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RevokePermission not implemented")
 }
 func (UnimplementedNotesServiceServer) mustEmbedUnimplementedNotesServiceServer() {}
 func (UnimplementedNotesServiceServer) testEmbeddedByValue()                      {}
@@ -452,24 +344,6 @@ func _NotesService_ListNotes_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NotesService_SearchNotes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SearchNotesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NotesServiceServer).SearchNotes(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NotesService_SearchNotes_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotesServiceServer).SearchNotes(ctx, req.(*SearchNotesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _NotesService_GetBacklinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetBacklinksRequest)
 	if err := dec(in); err != nil {
@@ -560,96 +434,6 @@ func _NotesService_CopyNote_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NotesService_ShareNoteWithGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ShareNoteWithGroupRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NotesServiceServer).ShareNoteWithGroup(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NotesService_ShareNoteWithGroup_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotesServiceServer).ShareNoteWithGroup(ctx, req.(*ShareNoteWithGroupRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _NotesService_UnshareNoteFromGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UnshareNoteFromGroupRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NotesServiceServer).UnshareNoteFromGroup(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NotesService_UnshareNoteFromGroup_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotesServiceServer).UnshareNoteFromGroup(ctx, req.(*UnshareNoteFromGroupRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _NotesService_GetNoteSharing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetNoteSharingRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NotesServiceServer).GetNoteSharing(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NotesService_GetNoteSharing_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotesServiceServer).GetNoteSharing(ctx, req.(*GetNoteSharingRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _NotesService_GrantPermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GrantPermissionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NotesServiceServer).GrantPermission(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NotesService_GrantPermission_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotesServiceServer).GrantPermission(ctx, req.(*GrantPermissionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _NotesService_RevokePermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RevokePermissionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NotesServiceServer).RevokePermission(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NotesService_RevokePermission_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotesServiceServer).RevokePermission(ctx, req.(*RevokePermissionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // NotesService_ServiceDesc is the grpc.ServiceDesc for NotesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -678,10 +462,6 @@ var NotesService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _NotesService_ListNotes_Handler,
 		},
 		{
-			MethodName: "SearchNotes",
-			Handler:    _NotesService_SearchNotes_Handler,
-		},
-		{
 			MethodName: "GetBacklinks",
 			Handler:    _NotesService_GetBacklinks_Handler,
 		},
@@ -700,26 +480,6 @@ var NotesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CopyNote",
 			Handler:    _NotesService_CopyNote_Handler,
-		},
-		{
-			MethodName: "ShareNoteWithGroup",
-			Handler:    _NotesService_ShareNoteWithGroup_Handler,
-		},
-		{
-			MethodName: "UnshareNoteFromGroup",
-			Handler:    _NotesService_UnshareNoteFromGroup_Handler,
-		},
-		{
-			MethodName: "GetNoteSharing",
-			Handler:    _NotesService_GetNoteSharing_Handler,
-		},
-		{
-			MethodName: "GrantPermission",
-			Handler:    _NotesService_GrantPermission_Handler,
-		},
-		{
-			MethodName: "RevokePermission",
-			Handler:    _NotesService_RevokePermission_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -45,7 +45,7 @@ from uniffy.domains.agents.memories.converters import (
 from uniffy.domains.agents.memories.operations import MemoryOperations
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.runtime.settings import get_runtime_settings
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 
 logger = logger.bind(component="agents.memories.handlers")
 
@@ -142,7 +142,7 @@ class MemoriesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -192,7 +192,7 @@ class MemoriesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -254,7 +254,7 @@ class MemoriesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             memory_id = UUID(request.memory_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -294,7 +294,7 @@ class MemoriesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             memory_id = UUID(request.memory_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -320,7 +320,7 @@ class MemoriesHandlers:
     ) -> GetMemorySharingResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -348,7 +348,7 @@ class MemoriesHandlers:
     ) -> SetMemorySharingResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -385,7 +385,7 @@ class MemoriesHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             memory_id = UUID(request.memory_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")

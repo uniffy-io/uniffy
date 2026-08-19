@@ -16,7 +16,11 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
+from uniffy.domains.auth.context import (
+    get_sender_info_from_context,
+    get_user_id_from_context,
+    resolve_organization_id,
+)
 from uniffy.domains.chat.reactions.operations import ChatReactionOperations
 
 logger = logger.bind(component="chat.reactions.handlers")
@@ -40,7 +44,7 @@ class ReactionHandlers:
         user_id = get_user_id_from_context(ctx)
         jwt_name, _ = get_sender_info_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:
@@ -88,7 +92,7 @@ class ReactionHandlers:
         user_id = get_user_id_from_context(ctx)
         jwt_name, _ = get_sender_info_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:

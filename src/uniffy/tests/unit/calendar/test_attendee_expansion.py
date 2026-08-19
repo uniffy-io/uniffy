@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
 from uniffy.domains.calendar.operations import CalendarEventOperations
 
@@ -72,7 +73,7 @@ async def test_private_group_expands_for_org_admin() -> None:
     a = generate_id()
     ops = _ops([
         _result(rows=[(group_id, True)]),
-        _result(scalar=generate_id()),  # active org admin row
+        _result(scalar=MagicMock(role=OrganizationRole.ADMIN)),
         _result(rows=[(group_id, a)]),
         _result(rows=[(a,)]),
     ])

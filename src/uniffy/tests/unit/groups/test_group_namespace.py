@@ -16,7 +16,6 @@ from uniffy.domains.groups.naming import (
     slugify,
 )
 from uniffy.domains.groups.operations import GroupOperations
-from uniffy.domains.organizations.operations import OrganizationOperations
 
 ORG = generate_id()
 ACTOR = generate_id()
@@ -45,7 +44,10 @@ def _as_admin():
     row = OrganizationMember(
         user_id=ACTOR, organization_id=ORG, role=OrganizationRole.ADMIN, is_active=True
     )
-    return patch.object(OrganizationOperations, "get_membership", AsyncMock(return_value=row))
+    return patch(
+        "uniffy.domains.organizations.operations.get_active_membership",
+        AsyncMock(return_value=row),
+    )
 
 
 def _group(**overrides) -> Group:

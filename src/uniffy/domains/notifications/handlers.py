@@ -52,12 +52,14 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
     Notification as ProtoNotification,
 )
 
+from uniffy.core.auth.membership import is_active_member
 from uniffy.core.config.push import get_vapid_config
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.models.login.user import User
+from uniffy.core.realtime.reauth import REAUTH_INTERVAL_SECONDS
 from uniffy.core.valkey import NotificationPayloadType, subscribe_channels
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.notifications.converters import (
     notification_to_proto,
     notification_type_from_proto,
@@ -70,7 +72,7 @@ from uniffy.domains.notifications.operations import (
 )
 from uniffy.domains.notifications.tag_relay import TagEventRelay
 
-logger = logger.bind(component="notifications handler")
+logger = logger.bind(component="domains.notifications.handlers")
 
 
 class NotificationsHandlers:
@@ -84,7 +86,7 @@ class NotificationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -151,7 +153,7 @@ class NotificationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -205,7 +207,7 @@ class NotificationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -325,7 +327,7 @@ class NotificationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -411,7 +413,7 @@ class NotificationsHandlers:
         user_id = get_user_id_from_context(ctx)
 
         try:
-            organization_id = UUID(request.organization_id)
+            organization_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -526,43 +528,56 @@ class NotificationsHandlers:
     ) -> AsyncIterator[StreamNotificationsResponse]:
         """Stream notification events plus periodic heartbeats for the user."""
         user_id = get_user_id_from_context(ctx)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
-        try:
-            UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
+        # The org channels below broadcast org-wide presence, mention, tag,
+        # and content events - not personal-content reads - so active
+        # membership is the only key that opens them. Neither is_system_admin
+        # nor a SupportSession may substitute for it.
+        if not await is_active_member(user_id, organization_id):
+            raise ConnectError(Code.PERMISSION_DENIED, "Not a member of this organization")
 
         logger.info(
             f"starting notification stream for user {user_id}",
-            component="notifications handler",
         )
         heartbeat_interval = 30  # seconds
         disconnect = get_disconnect_event()
 
-        organization_uuid = UUID(request.organization_id)
-        relay = TagEventRelay(user_id, organization_uuid)
+        relay = TagEventRelay(user_id, organization_id)
 
         try:
             async with aclosing(
                 subscribe_channels(
                     f"notifications:{user_id}",
-                    f"presence:{request.organization_id}",
-                    f"mentions:{request.organization_id}",
-                    f"tags:{request.organization_id}",
-                    f"content:{request.organization_id}",
+                    f"presence:{organization_id}",
+                    f"mentions:{organization_id}",
+                    f"tags:{organization_id}",
+                    f"content:{organization_id}",
                 )
             ) as subscriber:
                 last_send = time.monotonic()
+                last_reauth = time.monotonic()
 
                 async for payload in subscriber:
                     if disconnect and disconnect.is_set():
                         logger.info(
                             f"stream client disconnected, stopping for {user_id}",
-                            component="notifications handler",
                         )
                         break
 
                     now = time.monotonic()
+
+                    # The stream outlives the gate above; member removal
+                    # publishes no realtime signal (see reauth.py), so the
+                    # cached membership decision is re-read on the realtime
+                    # cadence - Valkey-first, PG only on cache miss.
+                    if now - last_reauth >= REAUTH_INTERVAL_SECONDS:
+                        last_reauth = now
+                        if not await is_active_member(user_id, organization_id):
+                            raise ConnectError(
+                                Code.PERMISSION_DENIED,
+                                "Not a member of this organization",
+                            )
 
                     if payload is None:
                         # Poll timeout tick - send heartbeat if interval elapsed.
@@ -651,11 +666,7 @@ class NotificationsHandlers:
                         continue
 
                     if payload.get("_type") == NotificationPayloadType.MENTION_STATE_CHANGED:
-                        # Restricted content broadcasts org-wide but is only
-                        # forwarded to recipients who can view it.
-                        if payload.get("restricted") and not await relay.allows_mention_state(
-                            payload
-                        ):
+                        if not await relay.allows_mention_state(payload):
                             continue
                         mention_payload = MentionStateChangedPayload(
                             urn=payload.get("urn", ""),
@@ -688,7 +699,6 @@ class NotificationsHandlers:
 
                     logger.debug(
                         f"delivering notification {payload.get('id', '?')} to user {user_id}",
-                        component="notifications handler",
                     )
                     proto_notification = ProtoNotification(
                         id=payload.get("id", ""),
@@ -718,13 +728,13 @@ class NotificationsHandlers:
         except asyncio.CancelledError, GeneratorExit:
             logger.info(
                 f"cancelled for user {user_id} (client disconnect)",
-                component="notifications handler",
             )
+        except ConnectError:
+            raise
         except Exception as e:
             if not isinstance(e, StopAsyncIteration):
                 logger.exception(
                     f"error for user {user_id}: {e}",
-                    component="notifications handler",
                 )
         finally:
-            logger.info(f"ended for user {user_id}", component="notifications handler")
+            logger.info(f"ended for user {user_id}")

@@ -107,6 +107,11 @@ async def test_permanent_delete_emits_note_permanently_deleted() -> None:
             "uniffy.domains.notes.operations.TagOperations",
             MagicMock(return_value=tag_ops_mock),
         ),
+        patch(
+            "uniffy.domains.files.attachments.operations."
+            "AttachmentOperations.purge_attachments_for_content",
+            AsyncMock(return_value=0),
+        ),
     ):
         await ops.delete(generate_id(), note.organization_id, note.id, permanent=True)
 

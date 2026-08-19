@@ -40,6 +40,13 @@ class NotificationPayloadType(StrEnum):
     ACCESS_REQUEST_CHANGED = "access_request_changed"
 
 
+class ContentAccessAction(StrEnum):
+    GRANTED = "granted"
+    REVOKED = "revoked"
+    ACCESS_MODE_CHANGED = "access_mode_changed"
+    CHILD_ADDED = "child_added"
+
+
 def _build_client(url: str) -> aioredis.Redis:
     return aioredis.from_url(url, **ValkeyConfig.from_env().to_pubsub_kwargs())
 
@@ -145,7 +152,7 @@ async def publish_content_access_changed(
     *,
     content_type: int,
     content_id: UUID,
-    action: str,
+    action: ContentAccessAction,
     organization_id: UUID,
     target_user_ids: list[UUID] | None = None,
 ) -> None:

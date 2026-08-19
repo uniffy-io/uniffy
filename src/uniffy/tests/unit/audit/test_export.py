@@ -1,21 +1,9 @@
-"""Tests for the streaming audit-event export.
-
-DB calls are mocked. We assert:
-
-- CSV output starts with the documented header row and the column order
-  is RFC 4180-stable.
-- NDJSON output emits one JSON object per line containing the same
-  fields as the CSV.
-- Filter parity: every ListEvents filter field flows into the SELECT
-  bound parameters.
-- Row cap: filters projecting more than MAX_EXPORT_ROWS raise
-  ValidationError before any rows stream.
-- Authorization: a regular member is denied before pre-flight runs.
-"""
+"""Streaming audit-event export tests."""
 
 import csv
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -71,18 +59,8 @@ def _emails(pairs):
 
 
 def _admin_session(*, count: int, batches: list[list[AuditEvent]]):
-    """Session that lets an org ADMIN through with the given row batches.
-
-    Sequence per stream_export call (when first batch is non-empty):
-
-    1. OrganizationMember role -> ADMIN
-    2. COUNT(*) row-cap check  -> count
-    3. SELECT rows batch       -> batch
-    4. SELECT emails batch     -> []   (no IDs to resolve -> still issued)
-    5. (repeat 3 + 4 until a SELECT rows batch comes back empty)
-    """
     session = MagicMock()
-    side_effects: list = [_scalar(OrganizationRole.ADMIN), _scalar(count)]
+    side_effects: list = [_scalar(count)]
     for batch in batches:
         side_effects.append(_rows(batch))
         if batch:
@@ -90,6 +68,15 @@ def _admin_session(*, count: int, batches: list[list[AuditEvent]]):
     side_effects.append(_rows([]))
     session.execute = AsyncMock(side_effect=side_effects)
     return session
+
+
+def _auth(role: OrganizationRole | None = None, *, support: bool = False):
+    membership = SimpleNamespace(role=role) if role is not None else None
+    return patch.multiple(
+        "uniffy.domains.audit.operations",
+        get_active_membership=AsyncMock(return_value=membership),
+        get_active_support_access=AsyncMock(return_value=MagicMock() if support else None),
+    )
 
 
 async def _collect_csv(ops: ExportOperations, filter_: ListEventsFilter) -> bytes:
@@ -111,7 +98,8 @@ async def _collect_ndjson(ops: ExportOperations, filter_: ListEventsFilter) -> b
 async def test_csv_starts_with_header_row_in_canonical_order() -> None:
     session = _admin_session(count=0, batches=[[]])
     ops = ExportOperations(session)
-    output = await _collect_csv(ops, ListEventsFilter(organization_id=generate_id()))
+    with _auth(OrganizationRole.ADMIN):
+        output = await _collect_csv(ops, ListEventsFilter(organization_id=generate_id()))
     # Empty result: a header row is still emitted.
     first_line = output.decode("utf-8").splitlines()[0]
     reader = csv.reader([first_line])
@@ -122,10 +110,8 @@ async def test_csv_serialises_an_event_row_into_the_expected_columns() -> None:
     event = _make_event()
     session = _admin_session(count=1, batches=[[event]])
     ops = ExportOperations(session)
-    output = await _collect_csv(
-        ops,
-        ListEventsFilter(organization_id=event.organization_id),
-    )
+    with _auth(OrganizationRole.ADMIN):
+        output = await _collect_csv(ops, ListEventsFilter(organization_id=event.organization_id))
 
     lines = output.decode("utf-8").splitlines()
     assert lines[0].split(",")[0] == "timestamp_utc"
@@ -146,10 +132,8 @@ async def test_ndjson_emits_one_json_object_per_line_with_parsed_details() -> No
     event = _make_event()
     session = _admin_session(count=1, batches=[[event]])
     ops = ExportOperations(session)
-    output = await _collect_ndjson(
-        ops,
-        ListEventsFilter(organization_id=event.organization_id),
-    )
+    with _auth(OrganizationRole.ADMIN):
+        output = await _collect_ndjson(ops, ListEventsFilter(organization_id=event.organization_id))
 
     lines = [line for line in output.decode("utf-8").splitlines() if line]
     assert len(lines) == 1
@@ -164,7 +148,6 @@ async def test_row_cap_blocks_filters_that_would_dump_too_many_rows() -> None:
     session = MagicMock()
     session.execute = AsyncMock(
         side_effect=[
-            _scalar(OrganizationRole.ADMIN),
             _scalar(MAX_EXPORT_ROWS + 1),
         ]
     )
@@ -180,13 +163,13 @@ async def test_row_cap_blocks_filters_that_would_dump_too_many_rows() -> None:
         ):
             return
 
-    with pytest.raises(ValidationError):
+    with _auth(OrganizationRole.ADMIN), pytest.raises(ValidationError):
         await _run()
 
 
 async def test_regular_member_denied_before_export_begins() -> None:
     session = MagicMock()
-    session.execute = AsyncMock(side_effect=[_scalar(OrganizationRole.MEMBER)])
+    session.execute = AsyncMock()
     ops = ExportOperations(session)
 
     async def _run() -> None:
@@ -199,17 +182,14 @@ async def test_regular_member_denied_before_export_begins() -> None:
         ):
             return
 
-    with pytest.raises(PermissionDeniedError):
+    with _auth(OrganizationRole.MEMBER), pytest.raises(PermissionDeniedError):
         await _run()
 
 
 async def test_system_admin_cannot_export_without_a_support_session() -> None:
     session = MagicMock()
-    session.execute = AsyncMock(
-        side_effect=[_scalar(None), _scalar(True)]  # no membership, is_system_admin
-    )
+    session.execute = AsyncMock()
     ops = ExportOperations(session)
-    ops._read_ops._has_active_support_session = AsyncMock(return_value=False)
 
     async def _run() -> None:
         async for _ in ops.stream_export(
@@ -221,7 +201,7 @@ async def test_system_admin_cannot_export_without_a_support_session() -> None:
         ):
             return
 
-    with pytest.raises(PermissionDeniedError):
+    with _auth(), pytest.raises(PermissionDeniedError):
         await _run()
 
 
@@ -230,8 +210,6 @@ async def test_system_admin_exports_through_an_active_support_session() -> None:
     session = MagicMock()
     session.execute = AsyncMock(
         side_effect=[
-            _scalar(None),  # not a member of the org
-            _scalar(True),  # is_system_admin
             _scalar(1),  # row count
             _rows([event]),
             _emails([]),
@@ -239,10 +217,7 @@ async def test_system_admin_exports_through_an_active_support_session() -> None:
         ]
     )
     ops = ExportOperations(session)
-    ops._read_ops._has_active_support_session = AsyncMock(return_value=True)
 
-    output = await _collect_csv(
-        ops,
-        ListEventsFilter(organization_id=event.organization_id),
-    )
+    with _auth(support=True):
+        output = await _collect_csv(ops, ListEventsFilter(organization_id=event.organization_id))
     assert "note.deleted" in output.decode("utf-8")

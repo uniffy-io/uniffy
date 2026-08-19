@@ -11,9 +11,13 @@ import {
   CheckCircle,
   Plus,
   Robot,
+  ShareNetwork,
   XCircle,
 } from "@phosphor-icons/react";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { useAccessPolicyDialog } from "@/features/permissions";
+import { roleCanManage } from "@/shared/utils/contentRoles";
 import { cn } from "@/shared/utils/cn";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { Button } from "@/components/ui/button";
@@ -151,6 +155,9 @@ function TaskDetailPanel({
   const [togglingEnabled, setTogglingEnabled] = useState(false);
   const [triggering, setTriggering] = useState(false);
   const dispatch = useAppDispatch();
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
+  const canShareTask = roleCanManage(task.userRole) || task.ownerId === currentUserId;
 
   const handleToggle = async () => {
     setTogglingEnabled(true);
@@ -222,6 +229,25 @@ function TaskDetailPanel({
               onChange={handleToggle}
               disabled={togglingEnabled}
             />
+            {canShareTask && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() =>
+                  openAccessPolicyDialog(
+                    ContentType.AGENT_CRON_TASK,
+                    task.id,
+                    task.name || task.prompt.slice(0, 60),
+                    task.userRole,
+                  )
+                }
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Share task"
+                title="Share"
+              >
+                <ShareNetwork size={18} />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"

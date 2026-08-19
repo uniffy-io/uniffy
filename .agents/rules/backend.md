@@ -147,7 +147,7 @@ Do not duplicate shipped content in the frontend. Expose it over an RPC (`ListAg
 
 | Rule | Why |
 |---|---|
-| Hot reads go through Valkey before PG. | Cache helpers live in `domains/{x}/cache.py` / `core/{x}/cache.py`; reach for the helper, not raw PG. |
+| Hot non-authoritative reads go through Valkey before PG. | Authorization decisions are the measured exception: use the PostgreSQL scalar/batch permission resolvers and request-local reuse. Other cache helpers live in `domains/{x}/cache.py` / `core/{x}/cache.py`. |
 | Mutations invalidate caches in the same commit. | Stale cache beats no cache. |
 | Fan-out callers fetch dependencies once and thread them through. | A downstream helper that re-fetches doubles the load. |
 | No `LIKE` on text columns for indexed lookups. | e.g. mention counting uses `mentioned_urns @> ARRAY[...]` against a partial GIN index. |

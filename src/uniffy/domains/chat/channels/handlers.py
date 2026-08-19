@@ -71,7 +71,11 @@ from uniffy.core.models.chat.channel_member import ChatChannelMember as ChatChan
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, SubjectType
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
+from uniffy.domains.auth.context import (
+    get_sender_info_from_context,
+    get_user_id_from_context,
+    resolve_organization_id,
+)
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
     fetch_channel_members,
@@ -89,6 +93,8 @@ from uniffy.domains.chat.channels.converters import (
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 from uniffy.domains.chat.subjects import ChatSubject
 from uniffy.domains.notifications.operations import NotificationOperations
+from uniffy.domains.search.operations import SearchOperations
+from uniffy.domains.search.queries import UrnAvailability
 from uniffy.domains.tags import Tag, TagOperations
 
 logger = logger.bind(component="chat.channels.handlers")
@@ -197,7 +203,7 @@ class ChannelHandlers:
     ) -> CreateChannelResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -278,7 +284,7 @@ class ChannelHandlers:
     ) -> GetChannelResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -340,7 +346,7 @@ class ChannelHandlers:
     ) -> UpdateChannelResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -386,7 +392,7 @@ class ChannelHandlers:
     ) -> CreateAgentChatResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             agent_id = UUID(request.agent_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -431,7 +437,7 @@ class ChannelHandlers:
     ) -> RenameAgentChatResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -466,7 +472,7 @@ class ChannelHandlers:
     ) -> ListAgentChatsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -539,7 +545,7 @@ class ChannelHandlers:
 
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -573,7 +579,7 @@ class ChannelHandlers:
     ) -> ArchiveChannelResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -594,7 +600,7 @@ class ChannelHandlers:
         """Soft-delete a channel."""
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -614,7 +620,7 @@ class ChannelHandlers:
     ) -> ListChannelsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -722,7 +728,7 @@ class ChannelHandlers:
     ) -> JoinChannelResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -761,7 +767,7 @@ class ChannelHandlers:
     ) -> LeaveChannelResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -781,7 +787,7 @@ class ChannelHandlers:
     ) -> AddMembersResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -803,7 +809,7 @@ class ChannelHandlers:
     ) -> RemoveMembersResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -825,7 +831,7 @@ class ChannelHandlers:
     ) -> GetMembersResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -869,7 +875,7 @@ class ChannelHandlers:
     ) -> UpdateChannelMemberResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
@@ -924,7 +930,7 @@ class ChannelHandlers:
     ) -> UpdateMemberRoleResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             target_user_id = UUID(request.user_id)
         except ValueError:
@@ -956,7 +962,7 @@ class ChannelHandlers:
         user_id = get_user_id_from_context(ctx)
         jwt_name, _ = get_sender_info_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -1006,7 +1012,7 @@ class ChannelHandlers:
     ) -> MarkChannelReadResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.last_read_message_id)
         except ValueError:
@@ -1053,7 +1059,7 @@ class ChannelHandlers:
     ) -> GetUnreadCountsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -1120,7 +1126,7 @@ class ChannelHandlers:
     ) -> GetChannelResourcesResponse:
         user_id = get_user_id_from_context(ctx)
         try:
-            org_id = UUID(request.organization_id)
+            org_id = resolve_organization_id(ctx, request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -1151,6 +1157,7 @@ class ChannelHandlers:
                     session,
                     resources,
                     org_id,
+                    user_id,
                 )
 
                 from uniffy_proto.chat.v1.chat_pb2 import ChatResource as ProtoChatResource
@@ -1256,47 +1263,19 @@ class ChannelHandlers:
         session: AsyncSession,
         resources: list,
         organization_id: UUID,
+        user_id: UUID,
     ) -> dict[str, str]:
-        """Resolve display titles via one Meilisearch batch; falls back to PG for USER urns."""
         if not resources:
             return {}
 
         urns = [r.urn for r in resources]
-
-        title_map: dict[str, str] = {}
-
-        try:
-            from uniffy.core.search.meilisearch import MeilisearchClient
-
-            async with MeilisearchClient() as ms_client:
-                lookup = await ms_client.get_documents_by_urns(urns, organization_id)
-                for urn, doc in lookup.documents.items():
-                    title_map[urn] = doc.get("title", "")
-        except Exception:
-            logger.warning("Meilisearch title resolve failed, skipping")
-
-        user_urns = [
-            r.urn for r in resources if r.content_type == ContentType.USER and r.urn not in title_map
-        ]
-        if user_urns:
-            from uniffy.core.models.login.user import User
-
-            user_ids = []
-            urn_id_map: dict[UUID, str] = {}
-            for urn in user_urns:
-                parts = urn.split(":")
-                if len(parts) >= 5:
-                    uid = UUID(parts[-1])
-                    user_ids.append(uid)
-                    urn_id_map[uid] = urn
-
-            if user_ids:
-                result = await session.execute(
-                    select(User.id, User.full_name).where(User.id.in_(user_ids))
-                )
-                for row in result.all():
-                    urn = urn_id_map.get(row[0])
-                    if urn:
-                        title_map[urn] = row[1] or "Unknown User"
-
-        return title_map
+        resolved = await SearchOperations(session).resolve_urns(
+            user_id,
+            organization_id,
+            urns,
+        )
+        return {
+            urn: item.title
+            for urn, item in resolved.items()
+            if item.availability == UrnAvailability.AVAILABLE
+        }

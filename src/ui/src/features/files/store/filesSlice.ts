@@ -557,6 +557,25 @@ export const filesSlice = createSlice({
       })
       .addCase(initializeFilesData.fulfilled, (state, action) => {
         state.loading = false;
+        if (action.meta.arg?.forceRefresh) {
+          const accessibleIds = new Set(action.payload.files.map((file) => file.id));
+          for (const fileId of Object.keys(state.files)) {
+            if (!accessibleIds.has(fileId)) delete state.files[fileId];
+          }
+          if (state.currentFileId && !accessibleIds.has(state.currentFileId)) {
+            state.currentFileId = null;
+          }
+          state.selectedFileIds = state.selectedFileIds.filter((id) => accessibleIds.has(id));
+          state.deletedFileIds = state.deletedFileIds.filter((id) => accessibleIds.has(id));
+          if (
+            state.lastSelectedId &&
+            state.lastSelectedType === "file" &&
+            !accessibleIds.has(state.lastSelectedId)
+          ) {
+            state.lastSelectedId = null;
+            state.lastSelectedType = null;
+          }
+        }
         action.payload.files.forEach((file) => {
           state.files[file.id] = file;
         });

@@ -45,7 +45,7 @@ BOOKING_STATUS_CONFIRMED: BookingStatus
 BOOKING_STATUS_CANCELLED: BookingStatus
 
 class Room(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "room_type", "status", "capacity", "floor", "building", "location", "amenities", "image_file_id", "access_mode", "created_at", "updated_at", "baseline_role")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "room_type", "status", "capacity", "floor", "building", "location", "amenities", "image_file_id", "access_mode", "created_at", "updated_at", "baseline_role", "user_role")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -63,6 +63,7 @@ class Room(_message.Message):
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    USER_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -80,7 +81,8 @@ class Room(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., room_type: _Optional[_Union[RoomType, str]] = ..., status: _Optional[_Union[RoomStatus, str]] = ..., capacity: _Optional[int] = ..., floor: _Optional[str] = ..., building: _Optional[str] = ..., location: _Optional[str] = ..., amenities: _Optional[_Iterable[str]] = ..., image_file_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    user_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., room_type: _Optional[_Union[RoomType, str]] = ..., status: _Optional[_Union[RoomStatus, str]] = ..., capacity: _Optional[int] = ..., floor: _Optional[str] = ..., building: _Optional[str] = ..., location: _Optional[str] = ..., amenities: _Optional[_Iterable[str]] = ..., image_file_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class RoomBooking(_message.Message):
     __slots__ = ("id", "room_id", "organization_id", "user_id", "event_id", "title", "start_time", "end_time", "status", "notes", "booker_name", "room_name", "created_at", "updated_at")

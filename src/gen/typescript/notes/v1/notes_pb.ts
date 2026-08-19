@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file notes/v1/notes.proto.
  */
 export const file_notes_v1_notes: GenFile = /*@__PURE__*/
-  fileDesc("ChRub3Rlcy92MS9ub3Rlcy5wcm90bxIIbm90ZXMudjEikQQKEUNyZWF0ZU5vdGVSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRINCgV0aXRsZRgCIAEoCRIPCgdjb250ZW50GAMgASgJEhEKBHNsdWcYBCABKAlIAIgBARIWCglwYXJlbnRfaWQYBSABKAlIAYgBARI7CghtZXRhZGF0YRgGIAMoCzIpLm5vdGVzLnYxLkNyZWF0ZU5vdGVSZXF1ZXN0Lk1ldGFkYXRhRW50cnkSLwoLYWNjZXNzX21vZGUYByABKA4yFS5jb21tb24udjEuQWNjZXNzTW9kZUgCiAEBEhEKCWdyb3VwX2lkcxgIIAMoCRIqCglub2RlX3R5cGUYCSABKA4yEi5ub3Rlcy52MS5Ob2RlVHlwZUgDiAEBEiUKBGljb24YCiABKAsyEi5ub3Rlcy52MS5Ob3RlSWNvbkgEiAEBEjIKDWJhc2VsaW5lX3JvbGUYCyABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIBYgBARIPCgd0YWdfaWRzGAwgAygJGi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIHCgVfc2x1Z0IMCgpfcGFyZW50X2lkQg4KDF9hY2Nlc3NfbW9kZUIMCgpfbm9kZV90eXBlQgcKBV9pY29uQhAKDl9iYXNlbGluZV9yb2xlIjoKDkdldE5vdGVSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIpUDChFVcGRhdGVOb3RlUmVxdWVzdBIPCgdub3RlX2lkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRISCgV0aXRsZRgDIAEoCUgAiAEBEhQKB2NvbnRlbnQYBCABKAlIAYgBARIRCgRzbHVnGAUgASgJSAKIAQESFgoJcGFyZW50X2lkGAYgASgJSAOIAQESOwoIbWV0YWRhdGEYByADKAsyKS5ub3Rlcy52MS5VcGRhdGVOb3RlUmVxdWVzdC5NZXRhZGF0YUVudHJ5EiUKBGljb24YCCABKAsyEi5ub3Rlcy52MS5Ob3RlSWNvbkgEiAEBEioKB3RhZ19pZHMYCSABKAsyFC5ub3Rlcy52MS5Ob3RlVGFnSWRzSAWIAQEaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQggKBl90aXRsZUIKCghfY29udGVudEIHCgVfc2x1Z0IMCgpfcGFyZW50X2lkQgcKBV9pY29uQgoKCF90YWdfaWRzIhkKCk5vdGVUYWdJZHMSCwoDaWRzGAEgAygJIlAKEURlbGV0ZU5vdGVSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhEKCXBlcm1hbmVudBgDIAEoCCI2ChJEZWxldGVOb3RlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIPCgdtZXNzYWdlGAIgASgJIjIKEkNyZWF0ZU5vdGVSZXNwb25zZRIcCgRub3RlGAEgASgLMg4ubm90ZXMudjEuTm90ZSIvCg9HZXROb3RlUmVzcG9uc2USHAoEbm90ZRgBIAEoCzIOLm5vdGVzLnYxLk5vdGUiMgoSVXBkYXRlTm90ZVJlc3BvbnNlEhwKBG5vdGUYASABKAsyDi5ub3Rlcy52MS5Ob3RlIjMKE1Jlc3RvcmVOb3RlUmVzcG9uc2USHAoEbm90ZRgBIAEoCzIOLm5vdGVzLnYxLk5vdGUiMAoQTW92ZU5vdGVSZXNwb25zZRIcCgRub3RlGAEgASgLMg4ubm90ZXMudjEuTm90ZSIwChBDb3B5Tm90ZVJlc3BvbnNlEhwKBG5vdGUYASABKAsyDi5ub3Rlcy52MS5Ob3RlItYCChBMaXN0Tm90ZXNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIWCglwYXJlbnRfaWQYAiABKAlIAIgBARIXCg9pbmNsdWRlX2RlbGV0ZWQYAyABKAgSDAoEcGFnZRgEIAEoBRIRCglwYWdlX3NpemUYBSABKAUSDwoHc29ydF9ieRgGIAEoCRISCgpzb3J0X29yZGVyGAcgASgJEi8KC2FjY2Vzc19tb2RlGAggASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGVIAYgBARIVCghncm91cF9pZBgJIAEoCUgCiAEBEhUKDXBlcnNvbmFsX29ubHkYCiABKAgSFwoPZXhjbHVkZV9jb250ZW50GAsgASgIEg8KB3RhZ19pZHMYDCADKAlCDAoKX3BhcmVudF9pZEIOCgxfYWNjZXNzX21vZGVCCwoJX2dyb3VwX2lkIn0KEUxpc3ROb3Rlc1Jlc3BvbnNlEh0KBW5vdGVzGAEgAygLMg4ubm90ZXMudjEuTm90ZRITCgt0b3RhbF9jb3VudBgCIAEoBRIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBRITCgt0b3RhbF9wYWdlcxgFIAEoBSJ2ChJTZWFyY2hOb3Rlc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg0KBXF1ZXJ5GAIgASgJEhcKD2luY2x1ZGVfZGVsZXRlZBgDIAEoCBIMCgRwYWdlGAQgASgFEhEKCXBhZ2Vfc2l6ZRgFIAEoBSJqChNTZWFyY2hOb3Rlc1Jlc3BvbnNlEh0KBW5vdGVzGAEgAygLMg4ubm90ZXMudjEuTm90ZRITCgt0b3RhbF9jb3VudBgCIAEoBRIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBSI/ChNHZXRCYWNrbGlua3NSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIlcKFEdldEJhY2tsaW5rc1Jlc3BvbnNlEioKCWJhY2tsaW5rcxgBIAMoCzIXLm5vdGVzLnYxLk5vdGVSZWZlcmVuY2USEwoLdG90YWxfY291bnQYAiABKAUiPgoSUmVzdG9yZU5vdGVSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIiwKEUVtcHR5VHJhc2hSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCSJNChJFbXB0eVRyYXNoUmVzcG9uc2USFQoNZGVsZXRlZF9jb3VudBgBIAEoBRIPCgdzdWNjZXNzGAIgASgIEg8KB21lc3NhZ2UYAyABKAkiLAoITm90ZUljb24SEQoJaWNvbl90eXBlGAEgASgJEg0KBXZhbHVlGAIgASgJIugGCgROb3RlEgoKAmlkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRIQCghvd25lcl9pZBgDIAEoCRIqCgthY2Nlc3NfbW9kZRgEIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlEiUKCW5vZGVfdHlwZRgFIAEoDjISLm5vdGVzLnYxLk5vZGVUeXBlEg0KBXRpdGxlGAYgASgJEg8KB2NvbnRlbnQYByABKAkSDAoEc2x1ZxgIIAEoCRISCgppc19kZWxldGVkGAkgASgIEg8KB3ZlcnNpb24YCiABKAMSFgoJcGFyZW50X2lkGAsgASgJSACIAQESLgoIbWV0YWRhdGEYDCADKAsyHC5ub3Rlcy52MS5Ob3RlLk1ldGFkYXRhRW50cnkSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMwoKZGVsZXRlZF9hdBgPIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAYgBARIRCglncm91cF9pZHMYECADKAkSKQoJdXNlcl9yb2xlGBEgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlEhsKE291dGdvaW5nX3JlZmVyZW5jZXMYEiADKAkSJQoEaWNvbhgTIAEoCzISLm5vdGVzLnYxLk5vdGVJY29uSAKIAQESLAoKb3duZXJfaW5mbxgUIAEoCzITLm5vdGVzLnYxLk5vdGVPd25lckgDiAEBEi4KC3NoYXJlZF93aXRoGBUgAygLMhkubm90ZXMudjEuTm90ZVNoYXJlVGFyZ2V0EjIKDWJhc2VsaW5lX3JvbGUYFiABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIBIgBARIaCgR0YWdzGBcgAygLMgwudGFncy52MS5UYWcaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQgwKCl9wYXJlbnRfaWRCDQoLX2RlbGV0ZWRfYXRCBwoFX2ljb25CDQoLX293bmVyX2luZm9CEAoOX2Jhc2VsaW5lX3JvbGUikwIKDU5vdGVSZWZlcmVuY2USCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDAoEc2x1ZxgDIAEoCRIQCghvd25lcl9pZBgEIAEoCRIuCgp1cGRhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIqCgthY2Nlc3NfbW9kZRgGIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlEiUKCW5vZGVfdHlwZRgHIAEoDjISLm5vdGVzLnYxLk5vZGVUeXBlEjIKDWJhc2VsaW5lX3JvbGUYCCABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAIgBAUIQCg5fYmFzZWxpbmVfcm9sZSLcAQoPTW92ZU5vdGVSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEjEKEnRhcmdldF9hY2Nlc3NfbW9kZRgDIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlEhgKEHRhcmdldF9ncm91cF9pZHMYBCADKAkSOQoUdGFyZ2V0X2Jhc2VsaW5lX3JvbGUYBSABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAIgBAUIXChVfdGFyZ2V0X2Jhc2VsaW5lX3JvbGUi+gEKD0NvcHlOb3RlUmVxdWVzdBIPCgdub3RlX2lkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRIxChJ0YXJnZXRfYWNjZXNzX21vZGUYAyABKA4yFS5jb21tb24udjEuQWNjZXNzTW9kZRIYChB0YXJnZXRfZ3JvdXBfaWRzGAQgAygJEhIKBXRpdGxlGAUgASgJSACIAQESOQoUdGFyZ2V0X2Jhc2VsaW5lX3JvbGUYBiABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAYgBAUIICgZfdGl0bGVCFwoVX3RhcmdldF9iYXNlbGluZV9yb2xlIlcKGVNoYXJlTm90ZVdpdGhHcm91cFJlcXVlc3QSDwoHbm90ZV9pZBgBIAEoCRIXCg9vcmdhbml6YXRpb25faWQYAiABKAkSEAoIZ3JvdXBfaWQYAyABKAkiWQobVW5zaGFyZU5vdGVGcm9tR3JvdXBSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhAKCGdyb3VwX2lkGAMgASgJIlEKGlNoYXJlTm90ZVdpdGhHcm91cFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCRIRCglncm91cF9pZHMYAyADKAkiUwocVW5zaGFyZU5vdGVGcm9tR3JvdXBSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg8KB21lc3NhZ2UYAiABKAkSEQoJZ3JvdXBfaWRzGAMgAygJIkEKFUdldE5vdGVTaGFyaW5nUmVxdWVzdBIPCgdub3RlX2lkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCSLhAQoWR2V0Tm90ZVNoYXJpbmdSZXNwb25zZRIqCgthY2Nlc3NfbW9kZRgBIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlEhAKCG93bmVyX2lkGAIgASgJEhEKCWdyb3VwX2lkcxgDIAMoCRIwCgtwZXJtaXNzaW9ucxgEIAMoCzIbLm5vdGVzLnYxLkNvbnRlbnRQZXJtaXNzaW9uEjIKDWJhc2VsaW5lX3JvbGUYBSABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAIgBAUIQCg5fYmFzZWxpbmVfcm9sZSLMAgoWR3JhbnRQZXJtaXNzaW9uUmVxdWVzdBIPCgdub3RlX2lkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRIUCgxzdWJqZWN0X3R5cGUYAyABKAkSEgoKc3ViamVjdF9pZBgEIAEoCRIkCgRyb2xlGAUgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlEhUKCGNhbl92aWV3GAYgASgISACIAQESFQoIY2FuX2VkaXQYByABKAhIAYgBARIXCgpjYW5fZGVsZXRlGAggASgISAKIAQESFgoJY2FuX3NoYXJlGAkgASgISAOIAQESFQoIY2FuX21vdmUYCiABKAhIBIgBAUILCglfY2FuX3ZpZXdCCwoJX2Nhbl9lZGl0Qg0KC19jYW5fZGVsZXRlQgwKCl9jYW5fc2hhcmVCCwoJX2Nhbl9tb3ZlIm0KF1Jldm9rZVBlcm1pc3Npb25SZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhQKDHN1YmplY3RfdHlwZRgDIAEoCRISCgpzdWJqZWN0X2lkGAQgASgJIjsKF0dyYW50UGVybWlzc2lvblJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCSI8ChhSZXZva2VQZXJtaXNzaW9uUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIPCgdtZXNzYWdlGAIgASgJItwCChFDb250ZW50UGVybWlzc2lvbhIKCgJpZBgBIAEoCRIUCgxzdWJqZWN0X3R5cGUYAiABKAkSEgoKc3ViamVjdF9pZBgDIAEoCRIkCgRyb2xlGAQgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlEhAKCGNhbl92aWV3GAUgASgIEhAKCGNhbl9lZGl0GAYgASgIEhIKCmNhbl9kZWxldGUYByABKAgSEQoJY2FuX3NoYXJlGAggASgIEhAKCGNhbl9tb3ZlGAkgASgIEhoKEmdyYW50ZWRfYnlfdXNlcl9pZBgKIAEoCRIuCgpncmFudGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIzCgpleHBpcmVzX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBQg0KC19leHBpcmVzX2F0IjQKCU5vdGVPd25lchIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEg0KBWVtYWlsGAMgASgJIoQBCg9Ob3RlU2hhcmVUYXJnZXQSCgoCaWQYASABKAkSDAoEdHlwZRgCIAEoCRIMCgRuYW1lGAMgASgJEg0KBWVtYWlsGAQgASgJEhQKDG1lbWJlcl9jb3VudBgFIAEoBRIkCgRyb2xlGAYgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlKn0KCE5vZGVUeXBlEhkKFU5PREVfVFlQRV9VTlNQRUNJRklFRBAAEhIKDk5PREVfVFlQRV9OT1RFEAESFAoQTk9ERV9UWVBFX0ZPTERFUhACEhYKEk5PREVfVFlQRV9URU1QTEFURRADEhQKEE5PREVfVFlQRV9DQU5WQVMQBDKVCgoMTm90ZXNTZXJ2aWNlEkkKCkNyZWF0ZU5vdGUSGy5ub3Rlcy52MS5DcmVhdGVOb3RlUmVxdWVzdBocLm5vdGVzLnYxLkNyZWF0ZU5vdGVSZXNwb25zZSIAEkAKB0dldE5vdGUSGC5ub3Rlcy52MS5HZXROb3RlUmVxdWVzdBoZLm5vdGVzLnYxLkdldE5vdGVSZXNwb25zZSIAEkkKClVwZGF0ZU5vdGUSGy5ub3Rlcy52MS5VcGRhdGVOb3RlUmVxdWVzdBocLm5vdGVzLnYxLlVwZGF0ZU5vdGVSZXNwb25zZSIAEkkKCkRlbGV0ZU5vdGUSGy5ub3Rlcy52MS5EZWxldGVOb3RlUmVxdWVzdBocLm5vdGVzLnYxLkRlbGV0ZU5vdGVSZXNwb25zZSIAEkYKCUxpc3ROb3RlcxIaLm5vdGVzLnYxLkxpc3ROb3Rlc1JlcXVlc3QaGy5ub3Rlcy52MS5MaXN0Tm90ZXNSZXNwb25zZSIAEkwKC1NlYXJjaE5vdGVzEhwubm90ZXMudjEuU2VhcmNoTm90ZXNSZXF1ZXN0Gh0ubm90ZXMudjEuU2VhcmNoTm90ZXNSZXNwb25zZSIAEk8KDEdldEJhY2tsaW5rcxIdLm5vdGVzLnYxLkdldEJhY2tsaW5rc1JlcXVlc3QaHi5ub3Rlcy52MS5HZXRCYWNrbGlua3NSZXNwb25zZSIAEkwKC1Jlc3RvcmVOb3RlEhwubm90ZXMudjEuUmVzdG9yZU5vdGVSZXF1ZXN0Gh0ubm90ZXMudjEuUmVzdG9yZU5vdGVSZXNwb25zZSIAEkkKCkVtcHR5VHJhc2gSGy5ub3Rlcy52MS5FbXB0eVRyYXNoUmVxdWVzdBocLm5vdGVzLnYxLkVtcHR5VHJhc2hSZXNwb25zZSIAEkMKCE1vdmVOb3RlEhkubm90ZXMudjEuTW92ZU5vdGVSZXF1ZXN0Ghoubm90ZXMudjEuTW92ZU5vdGVSZXNwb25zZSIAEkMKCENvcHlOb3RlEhkubm90ZXMudjEuQ29weU5vdGVSZXF1ZXN0Ghoubm90ZXMudjEuQ29weU5vdGVSZXNwb25zZSIAEmEKElNoYXJlTm90ZVdpdGhHcm91cBIjLm5vdGVzLnYxLlNoYXJlTm90ZVdpdGhHcm91cFJlcXVlc3QaJC5ub3Rlcy52MS5TaGFyZU5vdGVXaXRoR3JvdXBSZXNwb25zZSIAEmcKFFVuc2hhcmVOb3RlRnJvbUdyb3VwEiUubm90ZXMudjEuVW5zaGFyZU5vdGVGcm9tR3JvdXBSZXF1ZXN0GiYubm90ZXMudjEuVW5zaGFyZU5vdGVGcm9tR3JvdXBSZXNwb25zZSIAElUKDkdldE5vdGVTaGFyaW5nEh8ubm90ZXMudjEuR2V0Tm90ZVNoYXJpbmdSZXF1ZXN0GiAubm90ZXMudjEuR2V0Tm90ZVNoYXJpbmdSZXNwb25zZSIAElgKD0dyYW50UGVybWlzc2lvbhIgLm5vdGVzLnYxLkdyYW50UGVybWlzc2lvblJlcXVlc3QaIS5ub3Rlcy52MS5HcmFudFBlcm1pc3Npb25SZXNwb25zZSIAElsKEFJldm9rZVBlcm1pc3Npb24SIS5ub3Rlcy52MS5SZXZva2VQZXJtaXNzaW9uUmVxdWVzdBoiLm5vdGVzLnYxLlJldm9rZVBlcm1pc3Npb25SZXNwb25zZSIAQjdaNWdpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9ub3Rlcy92MTtub3Rlc3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp, file_tags_v1_tags]);
+  fileDesc("ChRub3Rlcy92MS9ub3Rlcy5wcm90bxIIbm90ZXMudjEikQQKEUNyZWF0ZU5vdGVSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRINCgV0aXRsZRgCIAEoCRIPCgdjb250ZW50GAMgASgJEhEKBHNsdWcYBCABKAlIAIgBARIWCglwYXJlbnRfaWQYBSABKAlIAYgBARI7CghtZXRhZGF0YRgGIAMoCzIpLm5vdGVzLnYxLkNyZWF0ZU5vdGVSZXF1ZXN0Lk1ldGFkYXRhRW50cnkSLwoLYWNjZXNzX21vZGUYByABKA4yFS5jb21tb24udjEuQWNjZXNzTW9kZUgCiAEBEhEKCWdyb3VwX2lkcxgIIAMoCRIqCglub2RlX3R5cGUYCSABKA4yEi5ub3Rlcy52MS5Ob2RlVHlwZUgDiAEBEiUKBGljb24YCiABKAsyEi5ub3Rlcy52MS5Ob3RlSWNvbkgEiAEBEjIKDWJhc2VsaW5lX3JvbGUYCyABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIBYgBARIPCgd0YWdfaWRzGAwgAygJGi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIHCgVfc2x1Z0IMCgpfcGFyZW50X2lkQg4KDF9hY2Nlc3NfbW9kZUIMCgpfbm9kZV90eXBlQgcKBV9pY29uQhAKDl9iYXNlbGluZV9yb2xlIjoKDkdldE5vdGVSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIpUDChFVcGRhdGVOb3RlUmVxdWVzdBIPCgdub3RlX2lkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRISCgV0aXRsZRgDIAEoCUgAiAEBEhQKB2NvbnRlbnQYBCABKAlIAYgBARIRCgRzbHVnGAUgASgJSAKIAQESFgoJcGFyZW50X2lkGAYgASgJSAOIAQESOwoIbWV0YWRhdGEYByADKAsyKS5ub3Rlcy52MS5VcGRhdGVOb3RlUmVxdWVzdC5NZXRhZGF0YUVudHJ5EiUKBGljb24YCCABKAsyEi5ub3Rlcy52MS5Ob3RlSWNvbkgEiAEBEioKB3RhZ19pZHMYCSABKAsyFC5ub3Rlcy52MS5Ob3RlVGFnSWRzSAWIAQEaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQggKBl90aXRsZUIKCghfY29udGVudEIHCgVfc2x1Z0IMCgpfcGFyZW50X2lkQgcKBV9pY29uQgoKCF90YWdfaWRzIhkKCk5vdGVUYWdJZHMSCwoDaWRzGAEgAygJIlAKEURlbGV0ZU5vdGVSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhEKCXBlcm1hbmVudBgDIAEoCCI2ChJEZWxldGVOb3RlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIPCgdtZXNzYWdlGAIgASgJIjIKEkNyZWF0ZU5vdGVSZXNwb25zZRIcCgRub3RlGAEgASgLMg4ubm90ZXMudjEuTm90ZSIvCg9HZXROb3RlUmVzcG9uc2USHAoEbm90ZRgBIAEoCzIOLm5vdGVzLnYxLk5vdGUiMgoSVXBkYXRlTm90ZVJlc3BvbnNlEhwKBG5vdGUYASABKAsyDi5ub3Rlcy52MS5Ob3RlIjMKE1Jlc3RvcmVOb3RlUmVzcG9uc2USHAoEbm90ZRgBIAEoCzIOLm5vdGVzLnYxLk5vdGUiMAoQTW92ZU5vdGVSZXNwb25zZRIcCgRub3RlGAEgASgLMg4ubm90ZXMudjEuTm90ZSIwChBDb3B5Tm90ZVJlc3BvbnNlEhwKBG5vdGUYASABKAsyDi5ub3Rlcy52MS5Ob3RlItYCChBMaXN0Tm90ZXNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIWCglwYXJlbnRfaWQYAiABKAlIAIgBARIXCg9pbmNsdWRlX2RlbGV0ZWQYAyABKAgSDAoEcGFnZRgEIAEoBRIRCglwYWdlX3NpemUYBSABKAUSDwoHc29ydF9ieRgGIAEoCRISCgpzb3J0X29yZGVyGAcgASgJEi8KC2FjY2Vzc19tb2RlGAggASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGVIAYgBARIVCghncm91cF9pZBgJIAEoCUgCiAEBEhUKDXBlcnNvbmFsX29ubHkYCiABKAgSFwoPZXhjbHVkZV9jb250ZW50GAsgASgIEg8KB3RhZ19pZHMYDCADKAlCDAoKX3BhcmVudF9pZEIOCgxfYWNjZXNzX21vZGVCCwoJX2dyb3VwX2lkIn0KEUxpc3ROb3Rlc1Jlc3BvbnNlEh0KBW5vdGVzGAEgAygLMg4ubm90ZXMudjEuTm90ZRITCgt0b3RhbF9jb3VudBgCIAEoBRIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBRITCgt0b3RhbF9wYWdlcxgFIAEoBSI/ChNHZXRCYWNrbGlua3NSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIlcKFEdldEJhY2tsaW5rc1Jlc3BvbnNlEioKCWJhY2tsaW5rcxgBIAMoCzIXLm5vdGVzLnYxLk5vdGVSZWZlcmVuY2USEwoLdG90YWxfY291bnQYAiABKAUiPgoSUmVzdG9yZU5vdGVSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIiwKEUVtcHR5VHJhc2hSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCSJNChJFbXB0eVRyYXNoUmVzcG9uc2USFQoNZGVsZXRlZF9jb3VudBgBIAEoBRIPCgdzdWNjZXNzGAIgASgIEg8KB21lc3NhZ2UYAyABKAkiLAoITm90ZUljb24SEQoJaWNvbl90eXBlGAEgASgJEg0KBXZhbHVlGAIgASgJIugGCgROb3RlEgoKAmlkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRIQCghvd25lcl9pZBgDIAEoCRIqCgthY2Nlc3NfbW9kZRgEIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlEiUKCW5vZGVfdHlwZRgFIAEoDjISLm5vdGVzLnYxLk5vZGVUeXBlEg0KBXRpdGxlGAYgASgJEg8KB2NvbnRlbnQYByABKAkSDAoEc2x1ZxgIIAEoCRISCgppc19kZWxldGVkGAkgASgIEg8KB3ZlcnNpb24YCiABKAMSFgoJcGFyZW50X2lkGAsgASgJSACIAQESLgoIbWV0YWRhdGEYDCADKAsyHC5ub3Rlcy52MS5Ob3RlLk1ldGFkYXRhRW50cnkSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMwoKZGVsZXRlZF9hdBgPIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAYgBARIRCglncm91cF9pZHMYECADKAkSKQoJdXNlcl9yb2xlGBEgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlEhsKE291dGdvaW5nX3JlZmVyZW5jZXMYEiADKAkSJQoEaWNvbhgTIAEoCzISLm5vdGVzLnYxLk5vdGVJY29uSAKIAQESLAoKb3duZXJfaW5mbxgUIAEoCzITLm5vdGVzLnYxLk5vdGVPd25lckgDiAEBEi4KC3NoYXJlZF93aXRoGBUgAygLMhkubm90ZXMudjEuTm90ZVNoYXJlVGFyZ2V0EjIKDWJhc2VsaW5lX3JvbGUYFiABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIBIgBARIaCgR0YWdzGBcgAygLMgwudGFncy52MS5UYWcaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQgwKCl9wYXJlbnRfaWRCDQoLX2RlbGV0ZWRfYXRCBwoFX2ljb25CDQoLX293bmVyX2luZm9CEAoOX2Jhc2VsaW5lX3JvbGUikwIKDU5vdGVSZWZlcmVuY2USCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDAoEc2x1ZxgDIAEoCRIQCghvd25lcl9pZBgEIAEoCRIuCgp1cGRhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIqCgthY2Nlc3NfbW9kZRgGIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlEiUKCW5vZGVfdHlwZRgHIAEoDjISLm5vdGVzLnYxLk5vZGVUeXBlEjIKDWJhc2VsaW5lX3JvbGUYCCABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAIgBAUIQCg5fYmFzZWxpbmVfcm9sZSLcAQoPTW92ZU5vdGVSZXF1ZXN0Eg8KB25vdGVfaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEjEKEnRhcmdldF9hY2Nlc3NfbW9kZRgDIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlEhgKEHRhcmdldF9ncm91cF9pZHMYBCADKAkSOQoUdGFyZ2V0X2Jhc2VsaW5lX3JvbGUYBSABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAIgBAUIXChVfdGFyZ2V0X2Jhc2VsaW5lX3JvbGUi+gEKD0NvcHlOb3RlUmVxdWVzdBIPCgdub3RlX2lkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRIxChJ0YXJnZXRfYWNjZXNzX21vZGUYAyABKA4yFS5jb21tb24udjEuQWNjZXNzTW9kZRIYChB0YXJnZXRfZ3JvdXBfaWRzGAQgAygJEhIKBXRpdGxlGAUgASgJSACIAQESOQoUdGFyZ2V0X2Jhc2VsaW5lX3JvbGUYBiABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAYgBAUIICgZfdGl0bGVCFwoVX3RhcmdldF9iYXNlbGluZV9yb2xlIjQKCU5vdGVPd25lchIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEg0KBWVtYWlsGAMgASgJIoQBCg9Ob3RlU2hhcmVUYXJnZXQSCgoCaWQYASABKAkSDAoEdHlwZRgCIAEoCRIMCgRuYW1lGAMgASgJEg0KBWVtYWlsGAQgASgJEhQKDG1lbWJlcl9jb3VudBgFIAEoBRIkCgRyb2xlGAYgASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlKn0KCE5vZGVUeXBlEhkKFU5PREVfVFlQRV9VTlNQRUNJRklFRBAAEhIKDk5PREVfVFlQRV9OT1RFEAESFAoQTk9ERV9UWVBFX0ZPTERFUhACEhYKEk5PREVfVFlQRV9URU1QTEFURRADEhQKEE5PREVfVFlQRV9DQU5WQVMQBDLtBQoMTm90ZXNTZXJ2aWNlEkkKCkNyZWF0ZU5vdGUSGy5ub3Rlcy52MS5DcmVhdGVOb3RlUmVxdWVzdBocLm5vdGVzLnYxLkNyZWF0ZU5vdGVSZXNwb25zZSIAEkAKB0dldE5vdGUSGC5ub3Rlcy52MS5HZXROb3RlUmVxdWVzdBoZLm5vdGVzLnYxLkdldE5vdGVSZXNwb25zZSIAEkkKClVwZGF0ZU5vdGUSGy5ub3Rlcy52MS5VcGRhdGVOb3RlUmVxdWVzdBocLm5vdGVzLnYxLlVwZGF0ZU5vdGVSZXNwb25zZSIAEkkKCkRlbGV0ZU5vdGUSGy5ub3Rlcy52MS5EZWxldGVOb3RlUmVxdWVzdBocLm5vdGVzLnYxLkRlbGV0ZU5vdGVSZXNwb25zZSIAEkYKCUxpc3ROb3RlcxIaLm5vdGVzLnYxLkxpc3ROb3Rlc1JlcXVlc3QaGy5ub3Rlcy52MS5MaXN0Tm90ZXNSZXNwb25zZSIAEk8KDEdldEJhY2tsaW5rcxIdLm5vdGVzLnYxLkdldEJhY2tsaW5rc1JlcXVlc3QaHi5ub3Rlcy52MS5HZXRCYWNrbGlua3NSZXNwb25zZSIAEkwKC1Jlc3RvcmVOb3RlEhwubm90ZXMudjEuUmVzdG9yZU5vdGVSZXF1ZXN0Gh0ubm90ZXMudjEuUmVzdG9yZU5vdGVSZXNwb25zZSIAEkkKCkVtcHR5VHJhc2gSGy5ub3Rlcy52MS5FbXB0eVRyYXNoUmVxdWVzdBocLm5vdGVzLnYxLkVtcHR5VHJhc2hSZXNwb25zZSIAEkMKCE1vdmVOb3RlEhkubm90ZXMudjEuTW92ZU5vdGVSZXF1ZXN0Ghoubm90ZXMudjEuTW92ZU5vdGVSZXNwb25zZSIAEkMKCENvcHlOb3RlEhkubm90ZXMudjEuQ29weU5vdGVSZXF1ZXN0Ghoubm90ZXMudjEuQ29weU5vdGVSZXNwb25zZSIAQjdaNWdpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9ub3Rlcy92MTtub3Rlc3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp, file_tags_v1_tags]);
 
 /**
  * Request to create a new note
@@ -581,97 +581,6 @@ export const ListNotesResponseSchema: GenMessage<ListNotesResponse> = /*@__PURE_
   messageDesc(file_notes_v1_notes, 13);
 
 /**
- * Request to search notes
- *
- * @generated from message notes.v1.SearchNotesRequest
- */
-export type SearchNotesRequest = Message<"notes.v1.SearchNotesRequest"> & {
-  /**
-   * Organization ID
-   *
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * Search query (full-text search)
-   *
-   * @generated from field: string query = 2;
-   */
-  query: string;
-
-  /**
-   * Include deleted notes
-   *
-   * @generated from field: bool include_deleted = 3;
-   */
-  includeDeleted: boolean;
-
-  /**
-   * Pagination: page number (1-indexed)
-   *
-   * @generated from field: int32 page = 4;
-   */
-  page: number;
-
-  /**
-   * Pagination: page size (default: 50, max: 100)
-   *
-   * @generated from field: int32 page_size = 5;
-   */
-  pageSize: number;
-};
-
-/**
- * Describes the message notes.v1.SearchNotesRequest.
- * Use `create(SearchNotesRequestSchema)` to create a new message.
- */
-export const SearchNotesRequestSchema: GenMessage<SearchNotesRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 14);
-
-/**
- * Response for searching notes
- *
- * @generated from message notes.v1.SearchNotesResponse
- */
-export type SearchNotesResponse = Message<"notes.v1.SearchNotesResponse"> & {
-  /**
-   * List of notes matching search
-   *
-   * @generated from field: repeated notes.v1.Note notes = 1;
-   */
-  notes: Note[];
-
-  /**
-   * Total count of notes matching search
-   *
-   * @generated from field: int32 total_count = 2;
-   */
-  totalCount: number;
-
-  /**
-   * Current page
-   *
-   * @generated from field: int32 page = 3;
-   */
-  page: number;
-
-  /**
-   * Page size
-   *
-   * @generated from field: int32 page_size = 4;
-   */
-  pageSize: number;
-};
-
-/**
- * Describes the message notes.v1.SearchNotesResponse.
- * Use `create(SearchNotesResponseSchema)` to create a new message.
- */
-export const SearchNotesResponseSchema: GenMessage<SearchNotesResponse> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 15);
-
-/**
  * Request to get backlinks
  *
  * @generated from message notes.v1.GetBacklinksRequest
@@ -697,7 +606,7 @@ export type GetBacklinksRequest = Message<"notes.v1.GetBacklinksRequest"> & {
  * Use `create(GetBacklinksRequestSchema)` to create a new message.
  */
 export const GetBacklinksRequestSchema: GenMessage<GetBacklinksRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 16);
+  messageDesc(file_notes_v1_notes, 14);
 
 /**
  * Response with backlinks
@@ -725,7 +634,7 @@ export type GetBacklinksResponse = Message<"notes.v1.GetBacklinksResponse"> & {
  * Use `create(GetBacklinksResponseSchema)` to create a new message.
  */
 export const GetBacklinksResponseSchema: GenMessage<GetBacklinksResponse> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 17);
+  messageDesc(file_notes_v1_notes, 15);
 
 /**
  * Request to restore a deleted note
@@ -753,7 +662,7 @@ export type RestoreNoteRequest = Message<"notes.v1.RestoreNoteRequest"> & {
  * Use `create(RestoreNoteRequestSchema)` to create a new message.
  */
 export const RestoreNoteRequestSchema: GenMessage<RestoreNoteRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 18);
+  messageDesc(file_notes_v1_notes, 16);
 
 /**
  * Request to empty trash
@@ -774,7 +683,7 @@ export type EmptyTrashRequest = Message<"notes.v1.EmptyTrashRequest"> & {
  * Use `create(EmptyTrashRequestSchema)` to create a new message.
  */
 export const EmptyTrashRequestSchema: GenMessage<EmptyTrashRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 19);
+  messageDesc(file_notes_v1_notes, 17);
 
 /**
  * Response for empty trash operation
@@ -809,7 +718,7 @@ export type EmptyTrashResponse = Message<"notes.v1.EmptyTrashResponse"> & {
  * Use `create(EmptyTrashResponseSchema)` to create a new message.
  */
 export const EmptyTrashResponseSchema: GenMessage<EmptyTrashResponse> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 20);
+  messageDesc(file_notes_v1_notes, 18);
 
 /**
  * Note icon - can be a heroicon name or emoji
@@ -837,7 +746,7 @@ export type NoteIcon = Message<"notes.v1.NoteIcon"> & {
  * Use `create(NoteIconSchema)` to create a new message.
  */
 export const NoteIconSchema: GenMessage<NoteIcon> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 21);
+  messageDesc(file_notes_v1_notes, 19);
 
 /**
  * Note message
@@ -1012,7 +921,7 @@ export type Note = Message<"notes.v1.Note"> & {
  * Use `create(NoteSchema)` to create a new message.
  */
 export const NoteSchema: GenMessage<Note> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 22);
+  messageDesc(file_notes_v1_notes, 20);
 
 /**
  * Note reference (lightweight representation for backlinks)
@@ -1082,7 +991,7 @@ export type NoteReference = Message<"notes.v1.NoteReference"> & {
  * Use `create(NoteReferenceSchema)` to create a new message.
  */
 export const NoteReferenceSchema: GenMessage<NoteReference> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 23);
+  messageDesc(file_notes_v1_notes, 21);
 
 /**
  * Request to move note between spaces
@@ -1131,7 +1040,7 @@ export type MoveNoteRequest = Message<"notes.v1.MoveNoteRequest"> & {
  * Use `create(MoveNoteRequestSchema)` to create a new message.
  */
 export const MoveNoteRequestSchema: GenMessage<MoveNoteRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 24);
+  messageDesc(file_notes_v1_notes, 22);
 
 /**
  * Request to copy note to another space
@@ -1187,488 +1096,7 @@ export type CopyNoteRequest = Message<"notes.v1.CopyNoteRequest"> & {
  * Use `create(CopyNoteRequestSchema)` to create a new message.
  */
 export const CopyNoteRequestSchema: GenMessage<CopyNoteRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 25);
-
-/**
- * Request to share note with group
- *
- * @generated from message notes.v1.ShareNoteWithGroupRequest
- */
-export type ShareNoteWithGroupRequest = Message<"notes.v1.ShareNoteWithGroupRequest"> & {
-  /**
-   * Note ID
-   *
-   * @generated from field: string note_id = 1;
-   */
-  noteId: string;
-
-  /**
-   * Organization ID for access control
-   *
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId: string;
-
-  /**
-   * Group ID to share with
-   *
-   * @generated from field: string group_id = 3;
-   */
-  groupId: string;
-};
-
-/**
- * Describes the message notes.v1.ShareNoteWithGroupRequest.
- * Use `create(ShareNoteWithGroupRequestSchema)` to create a new message.
- */
-export const ShareNoteWithGroupRequestSchema: GenMessage<ShareNoteWithGroupRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 26);
-
-/**
- * Request to unshare note from group
- *
- * @generated from message notes.v1.UnshareNoteFromGroupRequest
- */
-export type UnshareNoteFromGroupRequest = Message<"notes.v1.UnshareNoteFromGroupRequest"> & {
-  /**
-   * Note ID
-   *
-   * @generated from field: string note_id = 1;
-   */
-  noteId: string;
-
-  /**
-   * Organization ID for access control
-   *
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId: string;
-
-  /**
-   * Group ID to unshare from
-   *
-   * @generated from field: string group_id = 3;
-   */
-  groupId: string;
-};
-
-/**
- * Describes the message notes.v1.UnshareNoteFromGroupRequest.
- * Use `create(UnshareNoteFromGroupRequestSchema)` to create a new message.
- */
-export const UnshareNoteFromGroupRequestSchema: GenMessage<UnshareNoteFromGroupRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 27);
-
-/**
- * Response for share operation
- *
- * @generated from message notes.v1.ShareNoteWithGroupResponse
- */
-export type ShareNoteWithGroupResponse = Message<"notes.v1.ShareNoteWithGroupResponse"> & {
-  /**
-   * Success flag
-   *
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-
-  /**
-   * Message
-   *
-   * @generated from field: string message = 2;
-   */
-  message: string;
-
-  /**
-   * Updated list of group IDs
-   *
-   * @generated from field: repeated string group_ids = 3;
-   */
-  groupIds: string[];
-};
-
-/**
- * Describes the message notes.v1.ShareNoteWithGroupResponse.
- * Use `create(ShareNoteWithGroupResponseSchema)` to create a new message.
- */
-export const ShareNoteWithGroupResponseSchema: GenMessage<ShareNoteWithGroupResponse> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 28);
-
-/**
- * Response for unshare operation
- *
- * @generated from message notes.v1.UnshareNoteFromGroupResponse
- */
-export type UnshareNoteFromGroupResponse = Message<"notes.v1.UnshareNoteFromGroupResponse"> & {
-  /**
-   * Success flag
-   *
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-
-  /**
-   * Message
-   *
-   * @generated from field: string message = 2;
-   */
-  message: string;
-
-  /**
-   * Updated list of group IDs
-   *
-   * @generated from field: repeated string group_ids = 3;
-   */
-  groupIds: string[];
-};
-
-/**
- * Describes the message notes.v1.UnshareNoteFromGroupResponse.
- * Use `create(UnshareNoteFromGroupResponseSchema)` to create a new message.
- */
-export const UnshareNoteFromGroupResponseSchema: GenMessage<UnshareNoteFromGroupResponse> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 29);
-
-/**
- * Request to get note sharing info
- *
- * @generated from message notes.v1.GetNoteSharingRequest
- */
-export type GetNoteSharingRequest = Message<"notes.v1.GetNoteSharingRequest"> & {
-  /**
-   * Note ID
-   *
-   * @generated from field: string note_id = 1;
-   */
-  noteId: string;
-
-  /**
-   * Organization ID for access control
-   *
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId: string;
-};
-
-/**
- * Describes the message notes.v1.GetNoteSharingRequest.
- * Use `create(GetNoteSharingRequestSchema)` to create a new message.
- */
-export const GetNoteSharingRequestSchema: GenMessage<GetNoteSharingRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 30);
-
-/**
- * Response with note sharing information
- *
- * @generated from message notes.v1.GetNoteSharingResponse
- */
-export type GetNoteSharingResponse = Message<"notes.v1.GetNoteSharingResponse"> & {
-  /**
-   * Note access mode
-   *
-   * @generated from field: common.v1.AccessMode access_mode = 1;
-   */
-  accessMode: AccessMode;
-
-  /**
-   * Owner user ID
-   *
-   * @generated from field: string owner_id = 2;
-   */
-  ownerId: string;
-
-  /**
-   * Group IDs if shared with groups
-   *
-   * @generated from field: repeated string group_ids = 3;
-   */
-  groupIds: string[];
-
-  /**
-   * Explicit permissions granted
-   *
-   * @generated from field: repeated notes.v1.ContentPermission permissions = 4;
-   */
-  permissions: ContentPermission[];
-
-  /**
-   * Baseline role granted by access mode (when applicable)
-   *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 5;
-   */
-  baselineRole?: ContentRole | undefined;
-};
-
-/**
- * Describes the message notes.v1.GetNoteSharingResponse.
- * Use `create(GetNoteSharingResponseSchema)` to create a new message.
- */
-export const GetNoteSharingResponseSchema: GenMessage<GetNoteSharingResponse> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 31);
-
-/**
- * Request to grant permission
- *
- * @generated from message notes.v1.GrantPermissionRequest
- */
-export type GrantPermissionRequest = Message<"notes.v1.GrantPermissionRequest"> & {
-  /**
-   * Note ID
-   *
-   * @generated from field: string note_id = 1;
-   */
-  noteId: string;
-
-  /**
-   * Organization ID for access control
-   *
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId: string;
-
-  /**
-   * Subject type (user or group)
-   *
-   * @generated from field: string subject_type = 3;
-   */
-  subjectType: string;
-
-  /**
-   * Subject ID (user or group ID)
-   *
-   * @generated from field: string subject_id = 4;
-   */
-  subjectId: string;
-
-  /**
-   * Role to grant
-   *
-   * @generated from field: common.v1.ContentRole role = 5;
-   */
-  role: ContentRole;
-
-  /**
-   * Optional: fine-grained permissions
-   *
-   * @generated from field: optional bool can_view = 6;
-   */
-  canView?: boolean | undefined;
-
-  /**
-   * @generated from field: optional bool can_edit = 7;
-   */
-  canEdit?: boolean | undefined;
-
-  /**
-   * @generated from field: optional bool can_delete = 8;
-   */
-  canDelete?: boolean | undefined;
-
-  /**
-   * @generated from field: optional bool can_share = 9;
-   */
-  canShare?: boolean | undefined;
-
-  /**
-   * @generated from field: optional bool can_move = 10;
-   */
-  canMove?: boolean | undefined;
-};
-
-/**
- * Describes the message notes.v1.GrantPermissionRequest.
- * Use `create(GrantPermissionRequestSchema)` to create a new message.
- */
-export const GrantPermissionRequestSchema: GenMessage<GrantPermissionRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 32);
-
-/**
- * Request to revoke permission
- *
- * @generated from message notes.v1.RevokePermissionRequest
- */
-export type RevokePermissionRequest = Message<"notes.v1.RevokePermissionRequest"> & {
-  /**
-   * Note ID
-   *
-   * @generated from field: string note_id = 1;
-   */
-  noteId: string;
-
-  /**
-   * Organization ID for access control
-   *
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId: string;
-
-  /**
-   * Subject type (user or group)
-   *
-   * @generated from field: string subject_type = 3;
-   */
-  subjectType: string;
-
-  /**
-   * Subject ID (user or group ID)
-   *
-   * @generated from field: string subject_id = 4;
-   */
-  subjectId: string;
-};
-
-/**
- * Describes the message notes.v1.RevokePermissionRequest.
- * Use `create(RevokePermissionRequestSchema)` to create a new message.
- */
-export const RevokePermissionRequestSchema: GenMessage<RevokePermissionRequest> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 33);
-
-/**
- * Response for grant permission
- *
- * @generated from message notes.v1.GrantPermissionResponse
- */
-export type GrantPermissionResponse = Message<"notes.v1.GrantPermissionResponse"> & {
-  /**
-   * Success flag
-   *
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-
-  /**
-   * Message
-   *
-   * @generated from field: string message = 2;
-   */
-  message: string;
-};
-
-/**
- * Describes the message notes.v1.GrantPermissionResponse.
- * Use `create(GrantPermissionResponseSchema)` to create a new message.
- */
-export const GrantPermissionResponseSchema: GenMessage<GrantPermissionResponse> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 34);
-
-/**
- * Response for revoke permission
- *
- * @generated from message notes.v1.RevokePermissionResponse
- */
-export type RevokePermissionResponse = Message<"notes.v1.RevokePermissionResponse"> & {
-  /**
-   * Success flag
-   *
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-
-  /**
-   * Message
-   *
-   * @generated from field: string message = 2;
-   */
-  message: string;
-};
-
-/**
- * Describes the message notes.v1.RevokePermissionResponse.
- * Use `create(RevokePermissionResponseSchema)` to create a new message.
- */
-export const RevokePermissionResponseSchema: GenMessage<RevokePermissionResponse> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 35);
-
-/**
- * Content permission details
- *
- * @generated from message notes.v1.ContentPermission
- */
-export type ContentPermission = Message<"notes.v1.ContentPermission"> & {
-  /**
-   * Permission ID
-   *
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * Subject type (user, group, organization)
-   *
-   * @generated from field: string subject_type = 2;
-   */
-  subjectType: string;
-
-  /**
-   * Subject ID
-   *
-   * @generated from field: string subject_id = 3;
-   */
-  subjectId: string;
-
-  /**
-   * Role granted
-   *
-   * @generated from field: common.v1.ContentRole role = 4;
-   */
-  role: ContentRole;
-
-  /**
-   * Fine-grained permissions
-   *
-   * @generated from field: bool can_view = 5;
-   */
-  canView: boolean;
-
-  /**
-   * @generated from field: bool can_edit = 6;
-   */
-  canEdit: boolean;
-
-  /**
-   * @generated from field: bool can_delete = 7;
-   */
-  canDelete: boolean;
-
-  /**
-   * @generated from field: bool can_share = 8;
-   */
-  canShare: boolean;
-
-  /**
-   * @generated from field: bool can_move = 9;
-   */
-  canMove: boolean;
-
-  /**
-   * Granted by user ID
-   *
-   * @generated from field: string granted_by_user_id = 10;
-   */
-  grantedByUserId: string;
-
-  /**
-   * Granted timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp granted_at = 11;
-   */
-  grantedAt?: Timestamp | undefined;
-
-  /**
-   * Optional expiration
-   *
-   * @generated from field: optional google.protobuf.Timestamp expires_at = 12;
-   */
-  expiresAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message notes.v1.ContentPermission.
- * Use `create(ContentPermissionSchema)` to create a new message.
- */
-export const ContentPermissionSchema: GenMessage<ContentPermission> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 36);
+  messageDesc(file_notes_v1_notes, 23);
 
 /**
  * Lightweight owner information for shared notes
@@ -1703,7 +1131,7 @@ export type NoteOwner = Message<"notes.v1.NoteOwner"> & {
  * Use `create(NoteOwnerSchema)` to create a new message.
  */
 export const NoteOwnerSchema: GenMessage<NoteOwner> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 37);
+  messageDesc(file_notes_v1_notes, 24);
 
 /**
  * Share target for display (user or group this note is shared with)
@@ -1759,7 +1187,7 @@ export type NoteShareTarget = Message<"notes.v1.NoteShareTarget"> & {
  * Use `create(NoteShareTargetSchema)` to create a new message.
  */
 export const NoteShareTargetSchema: GenMessage<NoteShareTarget> = /*@__PURE__*/
-  messageDesc(file_notes_v1_notes, 38);
+  messageDesc(file_notes_v1_notes, 25);
 
 /**
  * Node type for notes hierarchy
@@ -1864,16 +1292,6 @@ export const NotesService: GenService<{
     output: typeof ListNotesResponseSchema;
   },
   /**
-   * Search notes using full-text search
-   *
-   * @generated from rpc notes.v1.NotesService.SearchNotes
-   */
-  searchNotes: {
-    methodKind: "unary";
-    input: typeof SearchNotesRequestSchema;
-    output: typeof SearchNotesResponseSchema;
-  },
-  /**
    * Get backlinks for a note (other notes that reference this note)
    *
    * @generated from rpc notes.v1.NotesService.GetBacklinks
@@ -1922,56 +1340,6 @@ export const NotesService: GenService<{
     methodKind: "unary";
     input: typeof CopyNoteRequestSchema;
     output: typeof CopyNoteResponseSchema;
-  },
-  /**
-   * Share note with group(s)
-   *
-   * @generated from rpc notes.v1.NotesService.ShareNoteWithGroup
-   */
-  shareNoteWithGroup: {
-    methodKind: "unary";
-    input: typeof ShareNoteWithGroupRequestSchema;
-    output: typeof ShareNoteWithGroupResponseSchema;
-  },
-  /**
-   * Unshare note from group
-   *
-   * @generated from rpc notes.v1.NotesService.UnshareNoteFromGroup
-   */
-  unshareNoteFromGroup: {
-    methodKind: "unary";
-    input: typeof UnshareNoteFromGroupRequestSchema;
-    output: typeof UnshareNoteFromGroupResponseSchema;
-  },
-  /**
-   * Get sharing info for a note
-   *
-   * @generated from rpc notes.v1.NotesService.GetNoteSharing
-   */
-  getNoteSharing: {
-    methodKind: "unary";
-    input: typeof GetNoteSharingRequestSchema;
-    output: typeof GetNoteSharingResponseSchema;
-  },
-  /**
-   * Grant permission to user/group for a note
-   *
-   * @generated from rpc notes.v1.NotesService.GrantPermission
-   */
-  grantPermission: {
-    methodKind: "unary";
-    input: typeof GrantPermissionRequestSchema;
-    output: typeof GrantPermissionResponseSchema;
-  },
-  /**
-   * Revoke permission from user/group for a note
-   *
-   * @generated from rpc notes.v1.NotesService.RevokePermission
-   */
-  revokePermission: {
-    methodKind: "unary";
-    input: typeof RevokePermissionRequestSchema;
-    output: typeof RevokePermissionResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_notes_v1_notes, 0);

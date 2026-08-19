@@ -121,15 +121,18 @@ export const filesTreeSlice = createSlice({
       .addCase(fetchFilesTree.fulfilled, (state, action) => {
         state.loading = false;
 
+        // Rebuild the index from the fresh payload so folders the user lost
+        // access to drop out.
+        const folders: Record<string, SerializedFolder> = {};
         const indexFolders = (nodes: SerializedTreeNode[]) => {
           for (const node of nodes) {
             if (node.isFolder) {
-              state.folders[node.id] = {
+              folders[node.id] = {
                 id: node.id,
                 name: node.name,
                 parentId: node.parentId,
                 accessMode: node.accessMode,
-                ownerId: "",
+                ownerId: node.ownerId || (state.folders[node.id]?.ownerId ?? ""),
                 isDeleted: false,
               };
             }
@@ -139,6 +142,11 @@ export const filesTreeSlice = createSlice({
           }
         };
         indexFolders(action.payload.nodes);
+        state.folders = folders;
+
+        if (state.selectedFolderId && !folders[state.selectedFolderId]) {
+          state.selectedFolderId = null;
+        }
 
         const personal: SerializedTreeNode[] = [];
         const shared: SerializedTreeNode[] = [];

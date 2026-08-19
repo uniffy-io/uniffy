@@ -35,6 +35,7 @@ from uniffy.core.realtime.state import (
     doc_name_for,
 )
 from uniffy.core.realtime.wire import create_update_message
+from uniffy.core.types import ContentRole
 from uniffy.db.session import open_session
 from uniffy.observability.metrics import (
     REALTIME_ACTIVE_CLIENTS,
@@ -50,7 +51,6 @@ __all__ = ["ClientHandle", "DocKey", "WSSession", "YDocManager", "YDocSession", 
 IDLE_EVICTION_SECONDS = 15 * 60
 
 _ROLES_REQUIRING_CLOSE: frozenset[str | None] = frozenset({None, "BLOCKED"})
-_ROLES_VIEW_ONLY: frozenset[str] = frozenset({"VIEWER"})
 
 LOGGER_COMPONENT = "realtime.manager"
 
@@ -326,10 +326,14 @@ class YDocManager:
                 ).inc()
             await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
             return
-        if new_role in _ROLES_VIEW_ONLY:
-            handle.can_edit = False
+        # Same EDITOR floor as attach-time and reauthorize: COMMENTER and below
+        # are read-only on the doc. Unknown role values fail closed.
+        try:
+            role = new_role if isinstance(new_role, ContentRole) else ContentRole(str(new_role))
+        except ValueError:
+            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
             return
-        handle.can_edit = True
+        handle.can_edit = role_can_edit(role)
 
     async def _reauthorize_doc_by_key(self, key: DocKey) -> None:
         """Re-run authorize for every attached client; downgrade or close per result."""

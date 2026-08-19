@@ -6,6 +6,8 @@ operator reading org-wide usage from a plain member seat.
 """
 
 from contextlib import asynccontextmanager
+import ast
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -19,6 +21,38 @@ from uniffy.domains.chat.categories.operations import ChatCategoryOperations
 
 ORG = generate_id()
 ACTOR = generate_id()
+
+
+def test_rpc_handlers_do_not_parse_request_organization_scope_directly() -> None:
+    domains = Path(__file__).parents[3] / "domains"
+    offenders: list[str] = []
+    for path in domains.rglob("*handlers.py"):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not node.args:
+                continue
+            if not isinstance(node.func, ast.Name) or node.func.id != "UUID":
+                continue
+            argument = node.args[0]
+            if (
+                isinstance(argument, ast.Attribute)
+                and argument.attr == "organization_id"
+                and isinstance(argument.value, ast.Name)
+                and argument.value.id == "request"
+            ):
+                offenders.append(f"{path}:{node.lineno}")
+    assert offenders == []
+
+
+def test_request_organization_must_match_authenticated_scope() -> None:
+    from uniffy.domains.auth import context
+
+    other_org = generate_id()
+    with patch.object(context, "get_organization_id_from_context", return_value=ORG):
+        with pytest.raises(ConnectError) as exc_info:
+            context.resolve_organization_id(MagicMock(), str(other_org))
+
+    assert exc_info.value.code == Code.PERMISSION_DENIED
 
 
 @pytest.mark.parametrize(

@@ -1,15 +1,8 @@
-"""Unit tests for ``TagEventRelay``.
-
-The relay sits between the org-wide ``tags:{org_id}`` Valkey channel
-and the per-recipient ``MENTION_STATE_CHANGED`` stream. It is the only
-place the privacy filter for tag-assignment events lives.
-
-Tests cover the projection contract: which events become how many
-relay outputs, with what visibility decision. Database / Valkey
-interactions are stubbed via ``AsyncMock``.
-"""
+"""Tag and mention-state recipient projection tests."""
 
 from unittest.mock import AsyncMock
+
+import pytest
 
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.notifications.tag_relay import (
@@ -22,6 +15,7 @@ def _make_relay() -> TagEventRelay:
     relay = TagEventRelay(generate_id(), generate_id())
     relay._can_view_content = AsyncMock(return_value=True)
     relay._tag_visible = AsyncMock(return_value=True)
+    relay._is_active_recipient = AsyncMock(return_value=True)
     return relay
 
 
@@ -115,7 +109,7 @@ class TestMentionStateGate:
     async def test_forwards_when_recipient_can_view(self) -> None:
         relay = _make_relay()
         urn = f"urn:uniffy:content:FOLDER:{generate_id()}"
-        assert await relay.allows_mention_state({"urn": urn, "restricted": True}) is True
+        assert await relay.allows_mention_state({"urn": urn}) is True
         relay._can_view_content.assert_awaited_once_with(
             ContentType.FOLDER, relay._can_view_content.await_args.args[1]
         )
@@ -138,3 +132,49 @@ class TestMentionStateGate:
         relay._can_view_content = AsyncMock(side_effect=RuntimeError("valkey down"))
         urn = f"urn:uniffy:content:ROOM:{generate_id()}"
         assert await relay.allows_mention_state({"urn": urn}) is False
+
+    async def test_drops_directory_event_without_current_access(self) -> None:
+        relay = _make_relay()
+        relay._can_view_content = AsyncMock(return_value=False)
+        urn = f"urn:uniffy:content:USER:{generate_id()}"
+
+        assert await relay.allows_mention_state({"urn": urn}) is False
+        relay._can_view_content.assert_awaited_once()
+
+    async def test_user_and_team_state_is_visible_to_active_members(self) -> None:
+        relay = _make_relay()
+
+        for content_type in (ContentType.USER, ContentType.TEAM):
+            urn = f"urn:uniffy:content:{content_type.value}:{generate_id()}"
+            assert await relay.allows_mention_state({"urn": urn}) is True
+
+        assert relay._can_view_content.await_count == 2
+
+    async def test_type_only_tombstone_does_not_require_current_access(self) -> None:
+        relay = _make_relay()
+        relay._can_view_content = AsyncMock(return_value=False)
+        urn = f"urn:uniffy:content:NOTE:{generate_id()}"
+
+        assert (
+            await relay.allows_mention_state(
+                {"urn": urn, "changes": {"urn_status": "DELETED"}}
+            )
+            is True
+        )
+        relay._can_view_content.assert_not_awaited()
+        relay._is_active_recipient.assert_awaited_once()
+
+    async def test_tombstone_with_extra_metadata_still_requires_access(self) -> None:
+        relay = _make_relay()
+        relay._can_view_content = AsyncMock(return_value=False)
+        urn = f"urn:uniffy:content:NOTE:{generate_id()}"
+
+        assert (
+            await relay.allows_mention_state(
+                {
+                    "urn": urn,
+                    "changes": {"urn_status": "DELETED", "name": "private"},
+                }
+            )
+            is False
+        )

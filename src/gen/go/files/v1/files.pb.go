@@ -2972,6 +2972,7 @@ type TreeNode struct {
 	MimeType      *string                `protobuf:"bytes,8,opt,name=mime_type,json=mimeType,proto3,oneof" json:"mime_type,omitempty"`     // For files: MIME type
 	Children      []*TreeNode            `protobuf:"bytes,9,rep,name=children,proto3" json:"children,omitempty"`                           // Nested children (if requested)
 	BaselineRole  *v1.ContentRole        `protobuf:"varint,10,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	OwnerId       string                 `protobuf:"bytes,11,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"` // Owner of the folder/file this node represents
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3074,6 +3075,13 @@ func (x *TreeNode) GetBaselineRole() v1.ContentRole {
 		return *x.BaselineRole
 	}
 	return v1.ContentRole(0)
+}
+
+func (x *TreeNode) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
 }
 
 type MoveItemsRequest struct {
@@ -7833,7 +7841,7 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\rpersonal_only\x18\x04 \x01(\bR\fpersonalOnlyB\x11\n" +
 	"\x0f_root_folder_id\"@\n" +
 	"\x14GetFilesTreeResponse\x12(\n" +
-	"\x05nodes\x18\x01 \x03(\v2\x12.files.v1.TreeNodeR\x05nodes\"\xbb\x03\n" +
+	"\x05nodes\x18\x01 \x03(\v2\x12.files.v1.TreeNodeR\x05nodes\"\xd6\x03\n" +
 	"\bTreeNode\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
@@ -7848,7 +7856,8 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\tmime_type\x18\b \x01(\tH\x02R\bmimeType\x88\x01\x01\x12.\n" +
 	"\bchildren\x18\t \x03(\v2\x12.files.v1.TreeNodeR\bchildren\x12@\n" +
 	"\rbaseline_role\x18\n" +
-	" \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\fbaselineRole\x88\x01\x01B\f\n" +
+	" \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\fbaselineRole\x88\x01\x01\x12\x19\n" +
+	"\bowner_id\x18\v \x01(\tR\aownerIdB\f\n" +
 	"\n" +
 	"_parent_idB\r\n" +
 	"\v_size_bytesB\f\n" +
