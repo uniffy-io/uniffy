@@ -24,6 +24,12 @@ from uniffy.core.valkey import (
     init_queue,
 )
 from uniffy.db.session import init_db, open_session
+from uniffy.domains.chat.rate_limits import (
+    CHANNEL_CREATE,
+    MEMBER_ADD,
+    REACTION_ADD,
+    SEND,
+)
 from uniffy.scripts.demo_company.context import ResolutionError
 from uniffy.scripts.demo_company.loader import DEFAULT_PERSON_PASSWORD, ContentError
 from uniffy.scripts.demo_company.seeder import DOMAINS, DemoDomain, seed_demo_company
@@ -31,6 +37,7 @@ from uniffy.scripts.demo_company.seeder import DOMAINS, DemoDomain, seed_demo_co
 SENTINEL_NAMESPACE = "seed"
 SENTINEL_KEY = "demo_company"
 BOOTSTRAP_TIMEOUT_SECONDS = 600
+SEED_CHAT_RATE_LIMIT = 1_000_000
 
 # Production is never seedable. Staging is, behind --allow-non-development,
 # because the content ships real logins into a deployment other people reach.
@@ -95,6 +102,7 @@ async def main() -> None:
 
     environment = os.getenv("ENVIRONMENT", "production").strip().lower()
     _check_environment(environment, args)
+    _lift_chat_rate_limits()
 
     requested_domains = tuple(part.strip() for part in args.only.split(",") if part.strip())
     unknown = sorted(set(requested_domains) - set(DOMAINS))
@@ -160,6 +168,18 @@ def _check_environment(environment: str, args: argparse.Namespace) -> None:
         )
 
     logger.warning(f"Seeding demo content and demo logins into a live {environment} deployment")
+
+
+def _lift_chat_rate_limits() -> None:
+    """Years of company chat land in seconds, which is the exact burst the
+    per-user chat limits exist to stop.
+
+    The limits read the environment on every call, so raising them here binds
+    the change to this process and leaves the running backend untouched. The
+    environment gate above has already refused production by this point.
+    """
+    for limit in (SEND, CHANNEL_CREATE, MEMBER_ADD, REACTION_ADD):
+        os.environ[limit.env_name] = str(SEED_CHAT_RATE_LIMIT)
 
 
 async def _wait_for_bootstrap() -> None:
