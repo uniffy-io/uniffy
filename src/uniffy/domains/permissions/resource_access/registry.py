@@ -14,6 +14,7 @@ DIRECTORY_CONTENT_TYPES = frozenset({
     ContentType.AGENT_FOLDER,
 })
 TAG_CONTENT_TYPES = frozenset({ContentType.TAG})
+AUTOMATION_CONTENT_TYPES = frozenset({ContentType.AGENT_CRON_TASK})
 
 SEARCHABLE_CONTENT_TYPES = frozenset().union(
     DIRECT_CONTENT_TYPES,
@@ -22,12 +23,10 @@ SEARCHABLE_CONTENT_TYPES = frozenset().union(
     CHAT_CONTENT_TYPES,
     DIRECTORY_CONTENT_TYPES,
     TAG_CONTENT_TYPES,
+    AUTOMATION_CONTENT_TYPES,
 )
 
-NON_SEARCHABLE_CONTENT_TYPES = frozenset({
-    ContentType.PROVIDER_KEY,
-    ContentType.AGENT_CRON_TASK,
-})
+NON_SEARCHABLE_CONTENT_TYPES = frozenset({ContentType.PROVIDER_KEY})
 
 if SEARCHABLE_CONTENT_TYPES & NON_SEARCHABLE_CONTENT_TYPES:
     raise RuntimeError("Resource access registry contains conflicting content types")

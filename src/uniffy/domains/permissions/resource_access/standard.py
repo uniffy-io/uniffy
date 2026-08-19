@@ -234,9 +234,8 @@ async def resolve_cron_tasks(
     subject: AccessSubject,
     content_ids: Collection[UUID],
 ) -> dict[ResourceKey, ResourceAccessDecision]:
-    """Cron tasks are ordinary content rows for access (share dialog, access
-    requests) but stay out of the searchable direct set - they carry no
-    search entity type."""
+    """Cron tasks are ordinary content rows for access, resolved apart from the
+    direct set because their policy columns live on their own model."""
     result = await session.execute(
         select(
             AgentCronTask.id,
