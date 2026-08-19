@@ -38,6 +38,7 @@ const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.AGENT]: UrnType.AGENT,
   [SearchResultType.ROOM]: UrnType.ROOM,
   [SearchResultType.TAG]: UrnType.TAG,
+  [SearchResultType.AGENT_CRON_TASK]: UrnType.AGENT_CRON_TASK,
 };
 
 interface ResultTheme extends UrnTypeTheme {

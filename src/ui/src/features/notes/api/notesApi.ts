@@ -11,7 +11,6 @@ import {
   ListNotesRequestSchema,
   MoveNoteRequestSchema,
   RestoreNoteRequestSchema,
-  SearchNotesRequestSchema,
   UpdateNoteRequestSchema,
 } from "@uniffy/proto/notes/v1/notes_pb";
 import type { MessageInitShape } from "@bufbuild/protobuf";
@@ -37,10 +36,6 @@ export const notesApi = {
 
   listNotes: async (request: MessageInitShape<typeof ListNotesRequestSchema>) => {
     return notesClient.listNotes(request);
-  },
-
-  searchNotes: async (request: MessageInitShape<typeof SearchNotesRequestSchema>) => {
-    return notesClient.searchNotes(request);
   },
 
   getBacklinks: async (request: MessageInitShape<typeof GetBacklinksRequestSchema>) => {

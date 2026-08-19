@@ -24,22 +24,23 @@ const (
 type SearchResultType int32
 
 const (
-	SearchResultType_SEARCH_RESULT_TYPE_UNSPECIFIED    SearchResultType = 0
-	SearchResultType_SEARCH_RESULT_TYPE_NOTE           SearchResultType = 1
-	SearchResultType_SEARCH_RESULT_TYPE_FILE           SearchResultType = 2
-	SearchResultType_SEARCH_RESULT_TYPE_CHAT           SearchResultType = 3
-	SearchResultType_SEARCH_RESULT_TYPE_USER           SearchResultType = 4
-	SearchResultType_SEARCH_RESULT_TYPE_CALENDAR_EVENT SearchResultType = 5
-	SearchResultType_SEARCH_RESULT_TYPE_PROJECT        SearchResultType = 6
-	SearchResultType_SEARCH_RESULT_TYPE_TASK           SearchResultType = 7
-	SearchResultType_SEARCH_RESULT_TYPE_AGENT          SearchResultType = 8
-	SearchResultType_SEARCH_RESULT_TYPE_CHAT_MESSAGE   SearchResultType = 9
-	SearchResultType_SEARCH_RESULT_TYPE_ROOM           SearchResultType = 10
-	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CHAT     SearchResultType = 11
-	SearchResultType_SEARCH_RESULT_TYPE_TAG            SearchResultType = 12
-	SearchResultType_SEARCH_RESULT_TYPE_FOLDER         SearchResultType = 13
-	SearchResultType_SEARCH_RESULT_TYPE_AGENT_FOLDER   SearchResultType = 14
-	SearchResultType_SEARCH_RESULT_TYPE_TEAM           SearchResultType = 15
+	SearchResultType_SEARCH_RESULT_TYPE_UNSPECIFIED     SearchResultType = 0
+	SearchResultType_SEARCH_RESULT_TYPE_NOTE            SearchResultType = 1
+	SearchResultType_SEARCH_RESULT_TYPE_FILE            SearchResultType = 2
+	SearchResultType_SEARCH_RESULT_TYPE_CHAT            SearchResultType = 3
+	SearchResultType_SEARCH_RESULT_TYPE_USER            SearchResultType = 4
+	SearchResultType_SEARCH_RESULT_TYPE_CALENDAR_EVENT  SearchResultType = 5
+	SearchResultType_SEARCH_RESULT_TYPE_PROJECT         SearchResultType = 6
+	SearchResultType_SEARCH_RESULT_TYPE_TASK            SearchResultType = 7
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT           SearchResultType = 8
+	SearchResultType_SEARCH_RESULT_TYPE_CHAT_MESSAGE    SearchResultType = 9
+	SearchResultType_SEARCH_RESULT_TYPE_ROOM            SearchResultType = 10
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CHAT      SearchResultType = 11
+	SearchResultType_SEARCH_RESULT_TYPE_TAG             SearchResultType = 12
+	SearchResultType_SEARCH_RESULT_TYPE_FOLDER          SearchResultType = 13
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_FOLDER    SearchResultType = 14
+	SearchResultType_SEARCH_RESULT_TYPE_TEAM            SearchResultType = 15
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CRON_TASK SearchResultType = 16
 )
 
 // Enum value maps for SearchResultType.
@@ -61,24 +62,26 @@ var (
 		13: "SEARCH_RESULT_TYPE_FOLDER",
 		14: "SEARCH_RESULT_TYPE_AGENT_FOLDER",
 		15: "SEARCH_RESULT_TYPE_TEAM",
+		16: "SEARCH_RESULT_TYPE_AGENT_CRON_TASK",
 	}
 	SearchResultType_value = map[string]int32{
-		"SEARCH_RESULT_TYPE_UNSPECIFIED":    0,
-		"SEARCH_RESULT_TYPE_NOTE":           1,
-		"SEARCH_RESULT_TYPE_FILE":           2,
-		"SEARCH_RESULT_TYPE_CHAT":           3,
-		"SEARCH_RESULT_TYPE_USER":           4,
-		"SEARCH_RESULT_TYPE_CALENDAR_EVENT": 5,
-		"SEARCH_RESULT_TYPE_PROJECT":        6,
-		"SEARCH_RESULT_TYPE_TASK":           7,
-		"SEARCH_RESULT_TYPE_AGENT":          8,
-		"SEARCH_RESULT_TYPE_CHAT_MESSAGE":   9,
-		"SEARCH_RESULT_TYPE_ROOM":           10,
-		"SEARCH_RESULT_TYPE_AGENT_CHAT":     11,
-		"SEARCH_RESULT_TYPE_TAG":            12,
-		"SEARCH_RESULT_TYPE_FOLDER":         13,
-		"SEARCH_RESULT_TYPE_AGENT_FOLDER":   14,
-		"SEARCH_RESULT_TYPE_TEAM":           15,
+		"SEARCH_RESULT_TYPE_UNSPECIFIED":     0,
+		"SEARCH_RESULT_TYPE_NOTE":            1,
+		"SEARCH_RESULT_TYPE_FILE":            2,
+		"SEARCH_RESULT_TYPE_CHAT":            3,
+		"SEARCH_RESULT_TYPE_USER":            4,
+		"SEARCH_RESULT_TYPE_CALENDAR_EVENT":  5,
+		"SEARCH_RESULT_TYPE_PROJECT":         6,
+		"SEARCH_RESULT_TYPE_TASK":            7,
+		"SEARCH_RESULT_TYPE_AGENT":           8,
+		"SEARCH_RESULT_TYPE_CHAT_MESSAGE":    9,
+		"SEARCH_RESULT_TYPE_ROOM":            10,
+		"SEARCH_RESULT_TYPE_AGENT_CHAT":      11,
+		"SEARCH_RESULT_TYPE_TAG":             12,
+		"SEARCH_RESULT_TYPE_FOLDER":          13,
+		"SEARCH_RESULT_TYPE_AGENT_FOLDER":    14,
+		"SEARCH_RESULT_TYPE_TEAM":            15,
+		"SEARCH_RESULT_TYPE_AGENT_CRON_TASK": 16,
 	}
 )
 
@@ -1237,7 +1240,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x12can_request_access\x183 \x01(\bR\x10canRequestAccess\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x8e\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xb6\x04\n" +
 	"\x10SearchResultType\x12\"\n" +
 	"\x1eSEARCH_RESULT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_NOTE\x10\x01\x12\x1b\n" +
@@ -1255,7 +1258,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x16SEARCH_RESULT_TYPE_TAG\x10\f\x12\x1d\n" +
 	"\x19SEARCH_RESULT_TYPE_FOLDER\x10\r\x12#\n" +
 	"\x1fSEARCH_RESULT_TYPE_AGENT_FOLDER\x10\x0e\x12\x1b\n" +
-	"\x17SEARCH_RESULT_TYPE_TEAM\x10\x0f*\xb4\x01\n" +
+	"\x17SEARCH_RESULT_TYPE_TEAM\x10\x0f\x12&\n" +
+	"\"SEARCH_RESULT_TYPE_AGENT_CRON_TASK\x10\x10*\xb4\x01\n" +
 	"\x0fUrnAvailability\x12 \n" +
 	"\x1cURN_AVAILABILITY_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aURN_AVAILABILITY_AVAILABLE\x10\x01\x12\x1f\n" +

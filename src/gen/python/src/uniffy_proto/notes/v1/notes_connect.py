@@ -33,9 +33,6 @@ class NotesService(Protocol):
     async def list_notes(self, request: notes_dot_v1_dot_notes__pb2.ListNotesRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ListNotesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def search_notes(self, request: notes_dot_v1_dot_notes__pb2.SearchNotesRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.SearchNotesResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def get_backlinks(self, request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetBacklinksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -49,21 +46,6 @@ class NotesService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def copy_note(self, request: notes_dot_v1_dot_notes__pb2.CopyNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.CopyNoteResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def share_note_with_group(self, request: notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def unshare_note_from_group(self, request: notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def get_note_sharing(self, request: notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def grant_permission(self, request: notes_dot_v1_dot_notes__pb2.GrantPermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GrantPermissionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def revoke_permission(self, request: notes_dot_v1_dot_notes__pb2.RevokePermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.RevokePermissionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -122,16 +104,6 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                     ),
                     function=svc.list_notes,
                 ),
-                "/notes.v1.NotesService/SearchNotes": Endpoint.unary(
-                    method=MethodInfo(
-                        name="SearchNotes",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.SearchNotesRequest,
-                        output=notes_dot_v1_dot_notes__pb2.SearchNotesResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.search_notes,
-                ),
                 "/notes.v1.NotesService/GetBacklinks": Endpoint.unary(
                     method=MethodInfo(
                         name="GetBacklinks",
@@ -181,56 +153,6 @@ class NotesServiceASGIApplication(ConnectASGIApplication[NotesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.copy_note,
-                ),
-                "/notes.v1.NotesService/ShareNoteWithGroup": Endpoint.unary(
-                    method=MethodInfo(
-                        name="ShareNoteWithGroup",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-                        output=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.share_note_with_group,
-                ),
-                "/notes.v1.NotesService/UnshareNoteFromGroup": Endpoint.unary(
-                    method=MethodInfo(
-                        name="UnshareNoteFromGroup",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-                        output=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.unshare_note_from_group,
-                ),
-                "/notes.v1.NotesService/GetNoteSharing": Endpoint.unary(
-                    method=MethodInfo(
-                        name="GetNoteSharing",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-                        output=notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.get_note_sharing,
-                ),
-                "/notes.v1.NotesService/GrantPermission": Endpoint.unary(
-                    method=MethodInfo(
-                        name="GrantPermission",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-                        output=notes_dot_v1_dot_notes__pb2.GrantPermissionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.grant_permission,
-                ),
-                "/notes.v1.NotesService/RevokePermission": Endpoint.unary(
-                    method=MethodInfo(
-                        name="RevokePermission",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-                        output=notes_dot_v1_dot_notes__pb2.RevokePermissionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.revoke_permission,
                 ),
             },
             interceptors=interceptors,
@@ -346,26 +268,6 @@ class NotesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def search_notes(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.SearchNotesRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.SearchNotesResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SearchNotes",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.SearchNotesRequest,
-                output=notes_dot_v1_dot_notes__pb2.SearchNotesResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def get_backlinks(
         self,
         request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest,
@@ -466,106 +368,6 @@ class NotesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def share_note_with_group(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ShareNoteWithGroup",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-                output=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def unshare_note_from_group(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="UnshareNoteFromGroup",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-                output=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def get_note_sharing(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetNoteSharing",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-                output=notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def grant_permission(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.GrantPermissionResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GrantPermission",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-                output=notes_dot_v1_dot_notes__pb2.GrantPermissionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def revoke_permission(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.RevokePermissionResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="RevokePermission",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-                output=notes_dot_v1_dot_notes__pb2.RevokePermissionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
 
 
 
@@ -581,8 +383,6 @@ class NotesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_notes(self, request: notes_dot_v1_dot_notes__pb2.ListNotesRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ListNotesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def search_notes(self, request: notes_dot_v1_dot_notes__pb2.SearchNotesRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.SearchNotesResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_backlinks(self, request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetBacklinksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def restore_note(self, request: notes_dot_v1_dot_notes__pb2.RestoreNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.RestoreNoteResponse:
@@ -592,16 +392,6 @@ class NotesServiceSync(Protocol):
     def move_note(self, request: notes_dot_v1_dot_notes__pb2.MoveNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.MoveNoteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def copy_note(self, request: notes_dot_v1_dot_notes__pb2.CopyNoteRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.CopyNoteResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def share_note_with_group(self, request: notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def unshare_note_from_group(self, request: notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_note_sharing(self, request: notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def grant_permission(self, request: notes_dot_v1_dot_notes__pb2.GrantPermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.GrantPermissionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def revoke_permission(self, request: notes_dot_v1_dot_notes__pb2.RevokePermissionRequest, ctx: RequestContext) -> notes_dot_v1_dot_notes__pb2.RevokePermissionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -659,16 +449,6 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.list_notes,
                 ),
-                "/notes.v1.NotesService/SearchNotes": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="SearchNotes",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.SearchNotesRequest,
-                        output=notes_dot_v1_dot_notes__pb2.SearchNotesResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.search_notes,
-                ),
                 "/notes.v1.NotesService/GetBacklinks": EndpointSync.unary(
                     method=MethodInfo(
                         name="GetBacklinks",
@@ -718,56 +498,6 @@ class NotesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.copy_note,
-                ),
-                "/notes.v1.NotesService/ShareNoteWithGroup": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="ShareNoteWithGroup",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-                        output=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.share_note_with_group,
-                ),
-                "/notes.v1.NotesService/UnshareNoteFromGroup": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="UnshareNoteFromGroup",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-                        output=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.unshare_note_from_group,
-                ),
-                "/notes.v1.NotesService/GetNoteSharing": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="GetNoteSharing",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-                        output=notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.get_note_sharing,
-                ),
-                "/notes.v1.NotesService/GrantPermission": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="GrantPermission",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-                        output=notes_dot_v1_dot_notes__pb2.GrantPermissionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.grant_permission,
-                ),
-                "/notes.v1.NotesService/RevokePermission": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="RevokePermission",
-                        service_name="notes.v1.NotesService",
-                        input=notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-                        output=notes_dot_v1_dot_notes__pb2.RevokePermissionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.revoke_permission,
                 ),
             },
             interceptors=interceptors,
@@ -883,26 +613,6 @@ class NotesServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
-    def search_notes(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.SearchNotesRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.SearchNotesResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SearchNotes",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.SearchNotesRequest,
-                output=notes_dot_v1_dot_notes__pb2.SearchNotesResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     def get_backlinks(
         self,
         request: notes_dot_v1_dot_notes__pb2.GetBacklinksRequest,
@@ -997,106 +707,6 @@ class NotesServiceClientSync(ConnectClientSync):
                 service_name="notes.v1.NotesService",
                 input=notes_dot_v1_dot_notes__pb2.CopyNoteRequest,
                 output=notes_dot_v1_dot_notes__pb2.CopyNoteResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def share_note_with_group(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ShareNoteWithGroup",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupRequest,
-                output=notes_dot_v1_dot_notes__pb2.ShareNoteWithGroupResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def unshare_note_from_group(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="UnshareNoteFromGroup",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupRequest,
-                output=notes_dot_v1_dot_notes__pb2.UnshareNoteFromGroupResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def get_note_sharing(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetNoteSharing",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.GetNoteSharingRequest,
-                output=notes_dot_v1_dot_notes__pb2.GetNoteSharingResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def grant_permission(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.GrantPermissionResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GrantPermission",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.GrantPermissionRequest,
-                output=notes_dot_v1_dot_notes__pb2.GrantPermissionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def revoke_permission(
-        self,
-        request: notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> notes_dot_v1_dot_notes__pb2.RevokePermissionResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="RevokePermission",
-                service_name="notes.v1.NotesService",
-                input=notes_dot_v1_dot_notes__pb2.RevokePermissionRequest,
-                output=notes_dot_v1_dot_notes__pb2.RevokePermissionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -36,7 +36,7 @@ def _comment_snippet(body: str, limit: int = 140) -> str:
 
 
 class CommentOperations:
-    """Comments require VIEW on parent to add, EDIT to resolve/reopen."""
+    """Comments require COMMENTER on parent to add, VIEW to read, EDIT to resolve/reopen."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -53,8 +53,8 @@ class CommentOperations:
         anchor_data: dict | None = None,
         parent_comment_id: UUID | None = None,
     ) -> tuple[Comment, str, str | None]:
-        """Create a comment; requires VIEW on the parent content."""
-        await self._verify_content_access(user_id, organization_id, content_type, content_id)
+        """Create a comment; requires COMMENTER on the parent content."""
+        await self._verify_content_comment(user_id, organization_id, content_type, content_id)
 
         parent_author_id: UUID | None = None
         if parent_comment_id:
@@ -334,12 +334,13 @@ class CommentOperations:
         comment_id: UUID,
         emoji: str,
     ) -> bool:
-        """Add a reaction; idempotent. Requires VIEW on parent."""
+        """Add a reaction; idempotent. Requires COMMENTER on parent; removal
+        stays at VIEW so a demoted user can still take their own reaction back."""
         comment = await self._get_comment(comment_id, organization_id)
         if not comment:
             raise NotFoundError("Comment", str(comment_id))
 
-        await self._verify_content_access(
+        await self._verify_content_comment(
             user_id, organization_id, comment.content_type, comment.content_id
         )
 
@@ -547,6 +548,20 @@ class CommentOperations:
         content_id: UUID,
     ) -> None:
         await self._target_access.require_view(
+            user_id,
+            organization_id,
+            content_type,
+            content_id,
+        )
+
+    async def _verify_content_comment(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> None:
+        await self._target_access.require_comment(
             user_id,
             organization_id,
             content_type,

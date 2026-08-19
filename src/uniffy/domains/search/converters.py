@@ -25,6 +25,7 @@ ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
     "folder": SearchResultType.SEARCH_RESULT_TYPE_FOLDER,
     "agent_folder": SearchResultType.SEARCH_RESULT_TYPE_AGENT_FOLDER,
     "team": SearchResultType.SEARCH_RESULT_TYPE_TEAM,
+    "agent_cron_task": SearchResultType.SEARCH_RESULT_TYPE_AGENT_CRON_TASK,
 }
 
 PROTO_TO_ENTITY_TYPE: dict[SearchResultType, str] = {v: k for k, v in ENTITY_TYPE_TO_PROTO.items()}

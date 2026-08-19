@@ -25,6 +25,7 @@ class SearchResultType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SEARCH_RESULT_TYPE_FOLDER: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_AGENT_FOLDER: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_TEAM: _ClassVar[SearchResultType]
+    SEARCH_RESULT_TYPE_AGENT_CRON_TASK: _ClassVar[SearchResultType]
 
 class UrnAvailability(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -49,6 +50,7 @@ SEARCH_RESULT_TYPE_TAG: SearchResultType
 SEARCH_RESULT_TYPE_FOLDER: SearchResultType
 SEARCH_RESULT_TYPE_AGENT_FOLDER: SearchResultType
 SEARCH_RESULT_TYPE_TEAM: SearchResultType
+SEARCH_RESULT_TYPE_AGENT_CRON_TASK: SearchResultType
 URN_AVAILABILITY_UNSPECIFIED: UrnAvailability
 URN_AVAILABILITY_AVAILABLE: UrnAvailability
 URN_AVAILABILITY_RESTRICTED: UrnAvailability

@@ -9,7 +9,6 @@ import {
   updateNoteIcon,
   deleteNote,
   restoreNote,
-  searchNotes,
   moveNote,
   copyNote,
   initializeNotesData,
@@ -41,8 +40,6 @@ interface NotesState {
   creatingNote: boolean;
   savingNote: boolean;
   error: string | null;
-  searchResults: string[];
-  searchLoading: boolean;
   filters: {
     searchQuery: string;
     sortBy: "title" | "updated" | "created";
@@ -69,8 +66,6 @@ const initialState: NotesState = {
   creatingNote: false,
   savingNote: false,
   error: null,
-  searchResults: [],
-  searchLoading: false,
   filters: {
     searchQuery: "",
     sortBy: "updated",
@@ -172,7 +167,6 @@ export const notesSlice = createSlice({
       state.currentNoteId = null;
       state.openTabs = [];
       state.activeTabIndex = 0;
-      state.searchResults = [];
       state.backlinks = {};
     },
 
@@ -286,22 +280,6 @@ export const notesSlice = createSlice({
       state.deletedNoteIds = state.deletedNoteIds.filter((id) => id !== action.payload.id);
     });
 
-    builder
-      .addCase(searchNotes.pending, (state) => {
-        state.searchLoading = true;
-      })
-      .addCase(searchNotes.fulfilled, (state, action) => {
-        state.searchLoading = false;
-        state.searchResults = action.payload.notes.map((n) => n.id);
-        action.payload.notes.forEach((note) => {
-          state.notes[note.id] = normalizeNote(note);
-        });
-      })
-      .addCase(searchNotes.rejected, (state) => {
-        state.searchLoading = false;
-        state.searchResults = [];
-      });
-
     builder.addCase(moveNote.fulfilled, (state, action) => {
       state.notes[action.payload.id] = normalizeNote(action.payload);
     });
@@ -408,7 +386,6 @@ export {
   updateNote,
   deleteNote,
   restoreNote,
-  searchNotes,
   moveNote,
   copyNote,
   initializeNotesData,

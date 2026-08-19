@@ -21,6 +21,7 @@ from uniffy.core.auth.permissions import (
     PermissionChecker,
     resolve_access_policy,
     resolve_effective_policy,
+    role_can_comment,
     role_can_delete,
     role_can_edit,
     role_can_manage,
@@ -107,6 +108,18 @@ class BaseContentOperations[TModel](ABC):
         if not content or getattr(content, "is_deleted", False):
             raise NotFoundError(self.content_type.value, content_id)
         await self._require_edit(user_id, organization_id, content)
+        return content
+
+    async def get_for_comment(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_id: UUID,
+    ) -> TModel:
+        content = await self._fetch_by_id(content_id, organization_id)
+        if not content or getattr(content, "is_deleted", False):
+            raise NotFoundError(self.content_type.value, content_id)
+        await self._require_comment(user_id, organization_id, content)
         return content
 
     async def list_accessible(
@@ -237,6 +250,14 @@ class BaseContentOperations[TModel](ABC):
         content: TModel,
     ) -> None:
         await self._require_role(user_id, organization_id, content, role_can_view, "access")
+
+    async def _require_comment(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content: TModel,
+    ) -> None:
+        await self._require_role(user_id, organization_id, content, role_can_comment, "comment")
 
     async def _require_edit(
         self,

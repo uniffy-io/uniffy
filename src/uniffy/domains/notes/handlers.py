@@ -23,7 +23,6 @@ from uniffy_proto.notes.v1.notes_pb2 import (
     MoveNoteResponse,
     RestoreNoteRequest,
     RestoreNoteResponse,
-    SearchNotesRequest,
     UpdateNoteRequest,
     UpdateNoteResponse,
 )
@@ -578,30 +577,6 @@ class NotesHandlers:
         except Exception as exc:
             raise _map_domain_error("move_note", exc) from exc
 
-    async def search_notes(self, request: SearchNotesRequest, ctx: RequestContext):
-        """Use ``search.v1.SearchService`` instead."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use SearchService for note search")
-
     async def copy_note(self, request, ctx: RequestContext):
         """Not yet implemented."""
         raise ConnectError(Code.UNIMPLEMENTED, "CopyNote not yet implemented")
-
-    async def share_note_with_group(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.AddMember``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.AddMember instead")
-
-    async def unshare_note_from_group(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.RemoveMember``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.RemoveMember instead")
-
-    async def get_note_sharing(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.ListMembers``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.ListMembers instead")
-
-    async def grant_permission(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.AddMember``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.AddMember instead")
-
-    async def revoke_permission(self, request, ctx: RequestContext):
-        """Replaced by ``permissions.v1.MembersService.RemoveMember``."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Use MembersService.RemoveMember instead")

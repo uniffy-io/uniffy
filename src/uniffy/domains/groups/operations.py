@@ -38,8 +38,9 @@ class GroupOperations:
     Groups are permission subjects: ``ContentMember`` rows key on
     ``subject_type=GROUP`` and ``effective_role`` resolves grants through
     group membership. Writing a membership row therefore hands the target
-    every content grant the group holds, so mutations here gate on org
-    admin and reads gate on active org membership.
+    every content grant the group holds, so group lifecycle gates on org
+    admin, membership rows gate on org admin or that group's own ADMIN,
+    and reads gate on active org membership.
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -415,6 +416,29 @@ class GroupOperations:
 
         return groups_with_counts, total
 
+    async def _require_group_manager(
+        self,
+        actor_user_id: UUID,
+        organization_id: UUID,
+        group_id: UUID,
+    ) -> None:
+        """Org admins manage every group's membership; a group ADMIN manages
+        only their own group's. Both ride on an active org membership."""
+        try:
+            await self._org_ops.require_org_admin(actor_user_id, organization_id)
+        except PermissionDeniedError:
+            await self._org_ops.require_org_member(actor_user_id, organization_id)
+            result = await self._session.execute(
+                select(GroupMember).where(
+                    GroupMember.group_id == group_id,
+                    GroupMember.user_id == actor_user_id,
+                    GroupMember.role == GroupRole.ADMIN,
+                    GroupMember.is_active.is_(True),
+                )
+            )
+            if result.scalar_one_or_none() is None:
+                raise PermissionDeniedError("manage members", "group") from None
+
     async def add_member(
         self,
         group_id: UUID,
@@ -423,7 +447,7 @@ class GroupOperations:
         actor_user_id: UUID,
         role: GroupRole = GroupRole.MEMBER,
     ) -> GroupMember:
-        await self._org_ops.require_org_admin(actor_user_id, organization_id)
+        await self._require_group_manager(actor_user_id, organization_id, group_id)
         group = await self._fetch(group_id, organization_id)
         # The target inherits the group's content grants, so they must
         # already be an active member of the same org.
@@ -480,7 +504,7 @@ class GroupOperations:
         role: GroupRole,
         actor_user_id: UUID,
     ) -> GroupMember:
-        await self._org_ops.require_org_admin(actor_user_id, organization_id)
+        await self._require_group_manager(actor_user_id, organization_id, group_id)
         group = await self._fetch(group_id, organization_id)
 
         result = await self._session.execute(
@@ -522,7 +546,7 @@ class GroupOperations:
         user_id: UUID,
         actor_user_id: UUID,
     ) -> None:
-        await self._org_ops.require_org_admin(actor_user_id, organization_id)
+        await self._require_group_manager(actor_user_id, organization_id, group_id)
         group = await self._fetch(group_id, organization_id)
 
         result = await self._session.execute(
