@@ -8,6 +8,7 @@ from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.content.references import BROADCAST_URNS
 from uniffy.core.models.chat.read_cursor import ChatReadCursor, ChatThreadReadCursor
 from uniffy.domains.people.teams import user_team_ids
 
@@ -194,7 +195,9 @@ class ChatReadStateOperations:
         # moves the badge for history the user already has. SYSTEM rows are
         # excluded from the mention count only: the urn in "X added Y to the
         # channel" is copy, not a ping, but the row is still unread.
-        mention_urns = [f"urn:uniffy:content:USER:{user_id}"]
+        # Broadcast mentions (@channel/@here) badge every member,
+        # @here included: presence only narrowed who was *notified* at send.
+        mention_urns = [f"urn:uniffy:content:USER:{user_id}", *BROADCAST_URNS]
         mention_urns += [
             f"urn:uniffy:content:TEAM:{team_id}"
             for team_id in await user_team_ids(self.session, organization_id, user_id)

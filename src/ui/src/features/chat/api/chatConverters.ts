@@ -87,6 +87,8 @@ export function channelToPlain(proto: ProtoChatChannel): ChatChannel {
     agentIsRetired: proto.agentIsRetired,
     agentFolderId: proto.agentFolderId ?? null,
     tagIds: proto.tags.map((t) => t.id),
+    currentUserRole:
+      proto.currentUserRole !== undefined ? CHANNEL_ROLE_MAP[proto.currentUserRole] : undefined,
   };
 }
 

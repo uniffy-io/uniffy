@@ -120,9 +120,19 @@ def _capture_notifications():
 
 
 def _emit_patches(emit_mock, stream_mock):
+    # The batch publisher fans out per recipient so every assertion keeps
+    # counting individual deliveries through stream_mock.
+    async def _fan_out(events):
+        for user_id, event_type, payload in events:
+            await stream_mock(user_id, event_type, payload)
+
     return (
         patch("uniffy.core.events.bus.emit_notification", emit_mock),
         patch("uniffy.domains.chat.streaming.publisher.publish_user_chat_event", stream_mock),
+        patch(
+            "uniffy.domains.chat.streaming.publisher.publish_user_chat_events",
+            AsyncMock(side_effect=_fan_out),
+        ),
     )
 
 
@@ -132,8 +142,8 @@ class TestEmitSendNotifications:
         stream_mock = AsyncMock()
         ops = ops or _ops()
         message = _message(channel.id, sender)
-        emit_patch, stream_patch = _emit_patches(emit_mock, stream_mock)
-        with emit_patch, stream_patch:
+        emit_patch, stream_patch, batch_patch = _emit_patches(emit_mock, stream_mock)
+        with emit_patch, stream_patch, batch_patch:
             await ops._emit_send_notifications(
                 message,
                 channel,
@@ -228,6 +238,29 @@ class TestEmitSendNotifications:
         emitted, _ = await self._emit(channel, sender, [sender, peer], set(), [(expansion, [peer])])
 
         assert [e.notification_type for e in emitted] == [NotificationType.CHAT_MENTION]
+
+
+class TestPublishUnreadNotifications:
+    async def test_events_reach_every_member_but_the_sender(self) -> None:
+        sender, mentioned, quiet = generate_id(), generate_id(), generate_id()
+        ops = _ops()
+        batch = AsyncMock()
+        with patch(
+            "uniffy.domains.chat.streaming.publisher.publish_user_chat_events", batch
+        ):
+            await ops._publish_unread_notifications(
+                _channel(ChannelType.PRIVATE),
+                sender,
+                [sender, mentioned, quiet],
+                {mentioned},
+            )
+        events = batch.call_args.args[0]
+        # Preference-blind: muted/NONE/MENTIONS-only members still get the
+        # state event, or their badge diverges from the read-time aggregate.
+        assert [event[0] for event in events] == [mentioned, quiet]
+        payloads = {event[0]: event[2] for event in events}
+        assert payloads[mentioned]["mention_count"] == 1
+        assert payloads[quiet]["mention_count"] == 0
 
 
 class TestBackgroundPostSendFanout:

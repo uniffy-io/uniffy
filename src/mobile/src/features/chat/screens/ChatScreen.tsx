@@ -73,6 +73,7 @@ import {
   useChannelPendingApprovals,
   usePinnedMessages,
   useCategories,
+  useChatPolicy,
 } from "@features/chat/useChat";
 import {
   useSendMessage,
@@ -126,6 +127,12 @@ import { sanitizeMentionLabel } from "@shared/mentions/mentionLabel";
 import { MentionSuggestionsBar } from "@features/mentions/MentionSuggestionsBar";
 import { useMentionTypeahead } from "@features/mentions/useMentionTypeahead";
 import { applyMentionPick } from "@features/mentions/applyMentionPick";
+import { buildBroadcastSuggestions } from "@features/mentions/broadcastSuggestions";
+import {
+  DEFAULT_BROADCAST_CONFIRM_THRESHOLD,
+  broadcastMentionsIn,
+  effectiveBroadcastKind,
+} from "@shared/mentions/broadcastMentions";
 import type { SerializedSearchResult } from "@features/search/searchSerializer";
 import { resolveChannelTitle, type SerializedMessage } from "@features/chat/chatSerializer";
 
@@ -248,7 +255,20 @@ export function ChatConversationScreen() {
   // Cursor mirrored into state so the @-typeahead recomputes per keystroke;
   // the ref alone would never re-render the suggestion bar.
   const [cursor, setCursor] = useState(0);
-  const mentionTypeahead = useMentionTypeahead(draft, cursor);
+  const chatPolicy = useChatPolicy().data;
+  // The server enforces the same gate on send; hiding the suggestions is UX.
+  const canBroadcast = useMemo(() => {
+    const c = channelQuery.data;
+    if (!c || c.channelType === "DIRECT" || c.isAgentDm) return false;
+    if (!chatPolicy || chatPolicy.minRole === "member") return true;
+    if (canManageChat) return true;
+    return c.currentUserRole === "OWNER" || c.currentUserRole === "ADMIN";
+  }, [channelQuery.data, chatPolicy, canManageChat]);
+  const broadcastSuggestions = useMemo(
+    () => (canBroadcast ? buildBroadcastSuggestions() : undefined),
+    [canBroadcast],
+  );
+  const mentionTypeahead = useMentionTypeahead(draft, cursor, broadcastSuggestions);
   const [actionMessage, setActionMessage] = useState<SerializedMessage | null>(null);
   const [replyTo, setReplyTo] = useState<SerializedMessage | null>(null);
   const [editing, setEditing] = useState<SerializedMessage | null>(null);
@@ -580,6 +600,22 @@ export function ChatConversationScreen() {
     setEditing(null);
   }, [restorePreEditCompose]);
 
+  const dispatchSend = useCallback(
+    (content: string, replyId: string | undefined, attachmentFileIds: string[]) => {
+      flushOnSend();
+      resetCompose();
+      attachments.clear();
+      sendMessage.mutate({ content, replyToId: replyId, attachmentFileIds });
+      // Sending from a scrolled-up position should snap back to the newest
+      // message (offset 0 in the inverted list); defer a frame so the optimistic
+      // row is inserted before we scroll.
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      });
+    },
+    [flushOnSend, resetCompose, attachments, sendMessage],
+  );
+
   const handleSend = useCallback(() => {
     const text = draft.trim();
     if (editing) {
@@ -593,17 +629,39 @@ export function ChatConversationScreen() {
     if (!text && attachmentFileIds.length === 0) return;
     const content = toCanonical(draft, mentionsRef.current);
     const replyId = replyTo?.id;
-    flushOnSend();
-    resetCompose();
-    attachments.clear();
-    sendMessage.mutate({ content, replyToId: replyId, attachmentFileIds });
-    // Sending from a scrolled-up position should snap back to the newest
-    // message (offset 0 in the inverted list); defer a frame so the optimistic
-    // row is inserted before we scroll.
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: true });
-    });
-  }, [draft, editing, replyTo, attachments, sendMessage, editMessage, resetCompose, flushOnSend]);
+
+    // Nothing is cleared before the user confirms, so cancelling leaves the
+    // composer exactly as it was.
+    const broadcastKinds = broadcastMentionsIn(content);
+    const memberCount = channel?.memberCount ?? 0;
+    const threshold = chatPolicy?.confirmThreshold ?? DEFAULT_BROADCAST_CONFIRM_THRESHOLD;
+    if (broadcastKinds.length > 0 && memberCount > threshold) {
+      const kind = effectiveBroadcastKind(broadcastKinds);
+      Alert.alert(
+        "Notify the whole channel?",
+        kind === "here"
+          ? `This mentions @here. Members online right now, out of ${memberCount} in the channel, will be notified.`
+          : `This mentions @channel. Up to ${memberCount} people will be notified.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Send", onPress: () => dispatchSend(content, replyId, attachmentFileIds) },
+        ],
+      );
+      return;
+    }
+
+    dispatchSend(content, replyId, attachmentFileIds);
+  }, [
+    draft,
+    editing,
+    replyTo,
+    attachments,
+    editMessage,
+    resetCompose,
+    dispatchSend,
+    channel?.memberCount,
+    chatPolicy?.confirmThreshold,
+  ]);
 
   const handleReact = useCallback(
     (message: SerializedMessage, emoji: string) => {

@@ -32,13 +32,27 @@ export function findMentionToken(text: string, cursor: number): MentionToken | n
   return { query, start: atIndex, end };
 }
 
-export function useMentionTypeahead(text: string, cursor: number) {
+export function useMentionTypeahead(
+  text: string,
+  cursor: number,
+  staticEntries?: SerializedSearchResult[],
+) {
   const { organizationId } = useAuth();
   const [results, setResults] = useState<SerializedSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const token = findMentionToken(text, cursor);
   const tokenQuery = token ? token.query : null;
+
+  // Broadcast rows are local and instant: they prefix-match the token (a bare
+  // `@` shows them all) and sit above the search-backed suggestions.
+  let staticMatches: SerializedSearchResult[] = [];
+  if (tokenQuery !== null && staticEntries && staticEntries.length > 0) {
+    const q = tokenQuery.toLowerCase().replace(/^@/, "");
+    staticMatches = staticEntries.filter((entry) =>
+      entry.title.toLowerCase().replace(/^@+/, "").startsWith(q),
+    );
+  }
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestSeq = useRef(0);
@@ -101,5 +115,9 @@ export function useMentionTypeahead(text: string, cursor: number) {
     };
   }, [tokenQuery, organizationId]);
 
-  return { token, results, isLoading };
+  return {
+    token,
+    results: staticMatches.length > 0 ? [...staticMatches, ...results] : results,
+    isLoading,
+  };
 }

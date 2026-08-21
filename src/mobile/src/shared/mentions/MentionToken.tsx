@@ -2,6 +2,7 @@ import React from "react";
 import { Text } from "react-native";
 import { useAuth } from "@core/providers/AuthContext";
 import { useTheme } from "@shared/hooks/useTheme";
+import { isBroadcastUrn } from "@shared/mentions/broadcastMentions";
 import { FONT } from "@theme/typography";
 
 export const PEOPLE_TOKEN_URN_TYPES: ReadonlySet<string> = new Set(["USER", "AGENT", "TEAM"]);
@@ -25,7 +26,10 @@ type MentionTokenProps = {
 export function MentionToken({ urn, label, textStyle, onPress }: MentionTokenProps) {
   const T = useTheme();
   const { user } = useAuth();
-  const selfMention = !!user && urn === `urn:uniffy:content:USER:${user.id}`;
+  // A broadcast pings the viewer, so every reader gets the self-mention wash.
+  const broadcast = isBroadcastUrn(urn);
+  const selfMention = broadcast || (!!user && urn === `urn:uniffy:content:USER:${user.id}`);
+  const display = broadcast ? label.replace(/^@+/, "") : label;
   return (
     <Text
       style={[
@@ -36,10 +40,10 @@ export function MentionToken({ urn, label, textStyle, onPress }: MentionTokenPro
           backgroundColor: T.accent + (selfMention ? "40" : "1A"),
         },
       ]}
-      onPress={onPress}
+      onPress={broadcast ? undefined : onPress}
       suppressHighlighting
     >
-      {"\u2009@" + label + "\u2009"}
+      {"\u2009@" + display + "\u2009"}
     </Text>
   );
 }

@@ -16,6 +16,9 @@ _PRESENCE_TTL = 120
 _MAX_BULK_IDS = 200
 _NAMESPACE = "presence"
 
+# Stored status vocabulary; the proto mapping lives in domains/presence/converters.py.
+PRESENCE_STATUS_ONLINE = "online"
+
 LOGGER_COMPONENT = "presence"
 
 

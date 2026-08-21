@@ -199,6 +199,12 @@ const (
 	// ChatServiceStopAgentRunProcedure is the fully-qualified name of the ChatService's StopAgentRun
 	// RPC.
 	ChatServiceStopAgentRunProcedure = "/chat.v1.ChatService/StopAgentRun"
+	// ChatServiceGetChatPolicyProcedure is the fully-qualified name of the ChatService's GetChatPolicy
+	// RPC.
+	ChatServiceGetChatPolicyProcedure = "/chat.v1.ChatService/GetChatPolicy"
+	// ChatServiceUpdateChatPolicyProcedure is the fully-qualified name of the ChatService's
+	// UpdateChatPolicy RPC.
+	ChatServiceUpdateChatPolicyProcedure = "/chat.v1.ChatService/UpdateChatPolicy"
 )
 
 // ChatServiceClient is a client for the chat.v1.ChatService service.
@@ -309,6 +315,10 @@ type ChatServiceClient interface {
 	// given agent - whether it is mid tool call, image generation, or text
 	// generation - via the run-state cancel flag the egress task observes.
 	StopAgentRun(context.Context, *connect.Request[v1.StopAgentRunRequest]) (*connect.Response[v1.StopAgentRunResponse], error)
+	// Org-level chat policy. Every member may read it (the composer gates the
+	// broadcast typeahead and confirm dialog on it); updates are org-admin only.
+	GetChatPolicy(context.Context, *connect.Request[v1.GetChatPolicyRequest]) (*connect.Response[v1.GetChatPolicyResponse], error)
+	UpdateChatPolicy(context.Context, *connect.Request[v1.UpdateChatPolicyRequest]) (*connect.Response[v1.UpdateChatPolicyResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the chat.v1.ChatService service. By default, it uses
@@ -682,6 +692,18 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("StopAgentRun")),
 			connect.WithClientOptions(opts...),
 		),
+		getChatPolicy: connect.NewClient[v1.GetChatPolicyRequest, v1.GetChatPolicyResponse](
+			httpClient,
+			baseURL+ChatServiceGetChatPolicyProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetChatPolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		updateChatPolicy: connect.NewClient[v1.UpdateChatPolicyRequest, v1.UpdateChatPolicyResponse](
+			httpClient,
+			baseURL+ChatServiceUpdateChatPolicyProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("UpdateChatPolicy")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -747,6 +769,8 @@ type chatServiceClient struct {
 	getChannelAgentConfig            *connect.Client[v1.GetChannelAgentConfigRequest, v1.GetChannelAgentConfigResponse]
 	updateChannelAgentConfig         *connect.Client[v1.UpdateChannelAgentConfigRequest, v1.UpdateChannelAgentConfigResponse]
 	stopAgentRun                     *connect.Client[v1.StopAgentRunRequest, v1.StopAgentRunResponse]
+	getChatPolicy                    *connect.Client[v1.GetChatPolicyRequest, v1.GetChatPolicyResponse]
+	updateChatPolicy                 *connect.Client[v1.UpdateChatPolicyRequest, v1.UpdateChatPolicyResponse]
 }
 
 // CreateChannel calls chat.v1.ChatService.CreateChannel.
@@ -1049,6 +1073,16 @@ func (c *chatServiceClient) StopAgentRun(ctx context.Context, req *connect.Reque
 	return c.stopAgentRun.CallUnary(ctx, req)
 }
 
+// GetChatPolicy calls chat.v1.ChatService.GetChatPolicy.
+func (c *chatServiceClient) GetChatPolicy(ctx context.Context, req *connect.Request[v1.GetChatPolicyRequest]) (*connect.Response[v1.GetChatPolicyResponse], error) {
+	return c.getChatPolicy.CallUnary(ctx, req)
+}
+
+// UpdateChatPolicy calls chat.v1.ChatService.UpdateChatPolicy.
+func (c *chatServiceClient) UpdateChatPolicy(ctx context.Context, req *connect.Request[v1.UpdateChatPolicyRequest]) (*connect.Response[v1.UpdateChatPolicyResponse], error) {
+	return c.updateChatPolicy.CallUnary(ctx, req)
+}
+
 // ChatServiceHandler is an implementation of the chat.v1.ChatService service.
 type ChatServiceHandler interface {
 	// Channel CRUD
@@ -1157,6 +1191,10 @@ type ChatServiceHandler interface {
 	// given agent - whether it is mid tool call, image generation, or text
 	// generation - via the run-state cancel flag the egress task observes.
 	StopAgentRun(context.Context, *connect.Request[v1.StopAgentRunRequest]) (*connect.Response[v1.StopAgentRunResponse], error)
+	// Org-level chat policy. Every member may read it (the composer gates the
+	// broadcast typeahead and confirm dialog on it); updates are org-admin only.
+	GetChatPolicy(context.Context, *connect.Request[v1.GetChatPolicyRequest]) (*connect.Response[v1.GetChatPolicyResponse], error)
+	UpdateChatPolicy(context.Context, *connect.Request[v1.UpdateChatPolicyRequest]) (*connect.Response[v1.UpdateChatPolicyResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -1526,6 +1564,18 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("StopAgentRun")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceGetChatPolicyHandler := connect.NewUnaryHandler(
+		ChatServiceGetChatPolicyProcedure,
+		svc.GetChatPolicy,
+		connect.WithSchema(chatServiceMethods.ByName("GetChatPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceUpdateChatPolicyHandler := connect.NewUnaryHandler(
+		ChatServiceUpdateChatPolicyProcedure,
+		svc.UpdateChatPolicy,
+		connect.WithSchema(chatServiceMethods.ByName("UpdateChatPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/chat.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ChatServiceCreateChannelProcedure:
@@ -1648,6 +1698,10 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceUpdateChannelAgentConfigHandler.ServeHTTP(w, r)
 		case ChatServiceStopAgentRunProcedure:
 			chatServiceStopAgentRunHandler.ServeHTTP(w, r)
+		case ChatServiceGetChatPolicyProcedure:
+			chatServiceGetChatPolicyHandler.ServeHTTP(w, r)
+		case ChatServiceUpdateChatPolicyProcedure:
+			chatServiceUpdateChatPolicyHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1895,4 +1949,12 @@ func (UnimplementedChatServiceHandler) UpdateChannelAgentConfig(context.Context,
 
 func (UnimplementedChatServiceHandler) StopAgentRun(context.Context, *connect.Request[v1.StopAgentRunRequest]) (*connect.Response[v1.StopAgentRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.StopAgentRun is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetChatPolicy(context.Context, *connect.Request[v1.GetChatPolicyRequest]) (*connect.Response[v1.GetChatPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetChatPolicy is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) UpdateChatPolicy(context.Context, *connect.Request[v1.UpdateChatPolicyRequest]) (*connect.Response[v1.UpdateChatPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.UpdateChatPolicy is not implemented"))
 }

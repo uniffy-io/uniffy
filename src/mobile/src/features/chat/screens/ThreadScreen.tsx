@@ -28,7 +28,14 @@ import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/AuthContext";
 import { useUniffy } from "@core/providers/UniffyContext";
 import { useAgents } from "@features/agents/useAgents";
-import { useThread, useThreadMessages } from "@features/chat/useChat";
+import { useChannel, useChatPolicy, useThread, useThreadMessages } from "@features/chat/useChat";
+import { useChatPermissions } from "@features/chat/useChatPermissions";
+import { buildBroadcastSuggestions } from "@features/mentions/broadcastSuggestions";
+import {
+  DEFAULT_BROADCAST_CONFIRM_THRESHOLD,
+  broadcastMentionsIn,
+  effectiveBroadcastKind,
+} from "@shared/mentions/broadcastMentions";
 import {
   useSendThreadReply,
   useMarkThreadRead,
@@ -80,7 +87,22 @@ export function ChatThreadScreen() {
   const inputRef = useRef<TextInput>(null);
   // Cursor mirrored into state so the @-typeahead recomputes per keystroke.
   const [cursor, setCursor] = useState(0);
-  const mentionTypeahead = useMentionTypeahead(draft, cursor);
+  const channelQuery = useChannel(channelId);
+  const chatPolicy = useChatPolicy().data;
+  const { canManageChat } = useChatPermissions();
+  // The server enforces the same gate on send; hiding the suggestions is UX.
+  const canBroadcast = useMemo(() => {
+    const c = channelQuery.data;
+    if (!c || c.channelType === "DIRECT" || c.isAgentDm) return false;
+    if (!chatPolicy || chatPolicy.minRole === "member") return true;
+    if (canManageChat) return true;
+    return c.currentUserRole === "OWNER" || c.currentUserRole === "ADMIN";
+  }, [channelQuery.data, chatPolicy, canManageChat]);
+  const broadcastSuggestions = useMemo(
+    () => (canBroadcast ? buildBroadcastSuggestions() : undefined),
+    [canBroadcast],
+  );
+  const mentionTypeahead = useMentionTypeahead(draft, cursor, broadcastSuggestions);
   const attachments = useComposerAttachments();
   const screenFocused = useScreenFocusRef();
 
@@ -154,17 +176,51 @@ export function ChatThreadScreen() {
     [agentsQuery.data],
   );
 
+  const dispatchSend = useCallback(
+    (content: string, attachmentFileIds: string[]) => {
+      flushOnSend();
+      setDraft("");
+      mentionsRef.current = [];
+      attachments.clear();
+      sendReply.mutate({ content, attachmentFileIds });
+    },
+    [attachments, sendReply, flushOnSend],
+  );
+
   const handleSend = useCallback(() => {
     const text = draft.trim();
     const attachmentFileIds = attachments.readyFileIds;
     if (!text && attachmentFileIds.length === 0) return;
     const content = toCanonical(draft, mentionsRef.current);
-    flushOnSend();
-    setDraft("");
-    mentionsRef.current = [];
-    attachments.clear();
-    sendReply.mutate({ content, attachmentFileIds });
-  }, [draft, attachments, sendReply, flushOnSend]);
+
+    // Nothing is cleared before the user confirms, so cancelling leaves the
+    // composer exactly as it was.
+    const broadcastKinds = broadcastMentionsIn(content);
+    const memberCount = channelQuery.data?.memberCount ?? 0;
+    const threshold = chatPolicy?.confirmThreshold ?? DEFAULT_BROADCAST_CONFIRM_THRESHOLD;
+    if (broadcastKinds.length > 0 && memberCount > threshold) {
+      const kind = effectiveBroadcastKind(broadcastKinds);
+      Alert.alert(
+        "Notify the whole channel?",
+        kind === "here"
+          ? `This mentions @here. Members online right now, out of ${memberCount} in the channel, will be notified.`
+          : `This mentions @channel. Up to ${memberCount} people will be notified.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Send", onPress: () => dispatchSend(content, attachmentFileIds) },
+        ],
+      );
+      return;
+    }
+
+    dispatchSend(content, attachmentFileIds);
+  }, [
+    draft,
+    attachments,
+    dispatchSend,
+    channelQuery.data?.memberCount,
+    chatPolicy?.confirmThreshold,
+  ]);
 
   const handleLongPress = useCallback(
     (message: SerializedMessage) => {

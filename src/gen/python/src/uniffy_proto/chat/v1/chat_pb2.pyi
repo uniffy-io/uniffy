@@ -12,6 +12,12 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class ChatBroadcastMinRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    CHAT_BROADCAST_MIN_ROLE_UNSPECIFIED: _ClassVar[ChatBroadcastMinRole]
+    CHAT_BROADCAST_MIN_ROLE_MEMBER: _ClassVar[ChatBroadcastMinRole]
+    CHAT_BROADCAST_MIN_ROLE_ADMIN: _ClassVar[ChatBroadcastMinRole]
+
 class ChannelType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     CHANNEL_TYPE_UNSPECIFIED: _ClassVar[ChannelType]
@@ -47,6 +53,9 @@ class AgentConfirmationDecision(int, metaclass=_enum_type_wrapper.EnumTypeWrappe
     AGENT_CONFIRMATION_DECISION_UNSPECIFIED: _ClassVar[AgentConfirmationDecision]
     AGENT_CONFIRMATION_DECISION_APPROVE: _ClassVar[AgentConfirmationDecision]
     AGENT_CONFIRMATION_DECISION_DENY: _ClassVar[AgentConfirmationDecision]
+CHAT_BROADCAST_MIN_ROLE_UNSPECIFIED: ChatBroadcastMinRole
+CHAT_BROADCAST_MIN_ROLE_MEMBER: ChatBroadcastMinRole
+CHAT_BROADCAST_MIN_ROLE_ADMIN: ChatBroadcastMinRole
 CHANNEL_TYPE_UNSPECIFIED: ChannelType
 CHANNEL_TYPE_PUBLIC: ChannelType
 CHANNEL_TYPE_PRIVATE: ChannelType
@@ -68,6 +77,44 @@ CHAT_NOTIFICATION_LEVEL_NONE: ChatNotificationLevel
 AGENT_CONFIRMATION_DECISION_UNSPECIFIED: AgentConfirmationDecision
 AGENT_CONFIRMATION_DECISION_APPROVE: AgentConfirmationDecision
 AGENT_CONFIRMATION_DECISION_DENY: AgentConfirmationDecision
+
+class ChatPolicy(_message.Message):
+    __slots__ = ("organization_id", "broadcast_min_role", "broadcast_confirm_threshold")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    BROADCAST_MIN_ROLE_FIELD_NUMBER: _ClassVar[int]
+    BROADCAST_CONFIRM_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    broadcast_min_role: ChatBroadcastMinRole
+    broadcast_confirm_threshold: int
+    def __init__(self, organization_id: _Optional[str] = ..., broadcast_min_role: _Optional[_Union[ChatBroadcastMinRole, str]] = ..., broadcast_confirm_threshold: _Optional[int] = ...) -> None: ...
+
+class GetChatPolicyRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class GetChatPolicyResponse(_message.Message):
+    __slots__ = ("policy",)
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    policy: ChatPolicy
+    def __init__(self, policy: _Optional[_Union[ChatPolicy, _Mapping]] = ...) -> None: ...
+
+class UpdateChatPolicyRequest(_message.Message):
+    __slots__ = ("organization_id", "broadcast_min_role", "broadcast_confirm_threshold")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    BROADCAST_MIN_ROLE_FIELD_NUMBER: _ClassVar[int]
+    BROADCAST_CONFIRM_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    broadcast_min_role: ChatBroadcastMinRole
+    broadcast_confirm_threshold: int
+    def __init__(self, organization_id: _Optional[str] = ..., broadcast_min_role: _Optional[_Union[ChatBroadcastMinRole, str]] = ..., broadcast_confirm_threshold: _Optional[int] = ...) -> None: ...
+
+class UpdateChatPolicyResponse(_message.Message):
+    __slots__ = ("policy",)
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    policy: ChatPolicy
+    def __init__(self, policy: _Optional[_Union[ChatPolicy, _Mapping]] = ...) -> None: ...
 
 class ChatSubject(_message.Message):
     __slots__ = ("type", "id")

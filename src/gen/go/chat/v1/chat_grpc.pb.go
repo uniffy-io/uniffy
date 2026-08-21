@@ -79,6 +79,8 @@ const (
 	ChatService_GetChannelAgentConfig_FullMethodName            = "/chat.v1.ChatService/GetChannelAgentConfig"
 	ChatService_UpdateChannelAgentConfig_FullMethodName         = "/chat.v1.ChatService/UpdateChannelAgentConfig"
 	ChatService_StopAgentRun_FullMethodName                     = "/chat.v1.ChatService/StopAgentRun"
+	ChatService_GetChatPolicy_FullMethodName                    = "/chat.v1.ChatService/GetChatPolicy"
+	ChatService_UpdateChatPolicy_FullMethodName                 = "/chat.v1.ChatService/UpdateChatPolicy"
 )
 
 // ChatServiceClient is the client API for ChatService service.
@@ -193,6 +195,10 @@ type ChatServiceClient interface {
 	// given agent - whether it is mid tool call, image generation, or text
 	// generation - via the run-state cancel flag the egress task observes.
 	StopAgentRun(ctx context.Context, in *StopAgentRunRequest, opts ...grpc.CallOption) (*StopAgentRunResponse, error)
+	// Org-level chat policy. Every member may read it (the composer gates the
+	// broadcast typeahead and confirm dialog on it); updates are org-admin only.
+	GetChatPolicy(ctx context.Context, in *GetChatPolicyRequest, opts ...grpc.CallOption) (*GetChatPolicyResponse, error)
+	UpdateChatPolicy(ctx context.Context, in *UpdateChatPolicyRequest, opts ...grpc.CallOption) (*UpdateChatPolicyResponse, error)
 }
 
 type chatServiceClient struct {
@@ -803,6 +809,26 @@ func (c *chatServiceClient) StopAgentRun(ctx context.Context, in *StopAgentRunRe
 	return out, nil
 }
 
+func (c *chatServiceClient) GetChatPolicy(ctx context.Context, in *GetChatPolicyRequest, opts ...grpc.CallOption) (*GetChatPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetChatPolicyResponse)
+	err := c.cc.Invoke(ctx, ChatService_GetChatPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) UpdateChatPolicy(ctx context.Context, in *UpdateChatPolicyRequest, opts ...grpc.CallOption) (*UpdateChatPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateChatPolicyResponse)
+	err := c.cc.Invoke(ctx, ChatService_UpdateChatPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServiceServer is the server API for ChatService service.
 // All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility.
@@ -915,6 +941,10 @@ type ChatServiceServer interface {
 	// given agent - whether it is mid tool call, image generation, or text
 	// generation - via the run-state cancel flag the egress task observes.
 	StopAgentRun(context.Context, *StopAgentRunRequest) (*StopAgentRunResponse, error)
+	// Org-level chat policy. Every member may read it (the composer gates the
+	// broadcast typeahead and confirm dialog on it); updates are org-admin only.
+	GetChatPolicy(context.Context, *GetChatPolicyRequest) (*GetChatPolicyResponse, error)
+	UpdateChatPolicy(context.Context, *UpdateChatPolicyRequest) (*UpdateChatPolicyResponse, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
 
@@ -1104,6 +1134,12 @@ func (UnimplementedChatServiceServer) UpdateChannelAgentConfig(context.Context, 
 }
 func (UnimplementedChatServiceServer) StopAgentRun(context.Context, *StopAgentRunRequest) (*StopAgentRunResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method StopAgentRun not implemented")
+}
+func (UnimplementedChatServiceServer) GetChatPolicy(context.Context, *GetChatPolicyRequest) (*GetChatPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetChatPolicy not implemented")
+}
+func (UnimplementedChatServiceServer) UpdateChatPolicy(context.Context, *UpdateChatPolicyRequest) (*UpdateChatPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateChatPolicy not implemented")
 }
 func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
 func (UnimplementedChatServiceServer) testEmbeddedByValue()                     {}
@@ -2206,6 +2242,42 @@ func _ChatService_StopAgentRun_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_GetChatPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChatPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetChatPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_GetChatPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetChatPolicy(ctx, req.(*GetChatPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_UpdateChatPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateChatPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).UpdateChatPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_UpdateChatPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).UpdateChatPolicy(ctx, req.(*UpdateChatPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChatService_ServiceDesc is the grpc.ServiceDesc for ChatService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2452,6 +2524,14 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StopAgentRun",
 			Handler:    _ChatService_StopAgentRun_Handler,
+		},
+		{
+			MethodName: "GetChatPolicy",
+			Handler:    _ChatService_GetChatPolicy_Handler,
+		},
+		{
+			MethodName: "UpdateChatPolicy",
+			Handler:    _ChatService_UpdateChatPolicy_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

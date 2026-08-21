@@ -62,6 +62,8 @@ import {
   GetChannelAgentConfigRequestSchema,
   UpdateChannelAgentConfigRequestSchema,
   StopAgentRunRequestSchema,
+  GetChatPolicyRequestSchema,
+  UpdateChatPolicyRequestSchema,
 } from "@uniffy/proto/chat/v1/chat_pb";
 import {
   ChatStreamService,
@@ -104,6 +106,11 @@ export const chatApi = {
     chatClient.updateChannelMember(req),
   updateMemberRole: (req: MessageInitShape<typeof UpdateMemberRoleRequestSchema>) =>
     chatClient.updateMemberRole(req),
+
+  getChatPolicy: (req: MessageInitShape<typeof GetChatPolicyRequestSchema>) =>
+    chatClient.getChatPolicy(req),
+  updateChatPolicy: (req: MessageInitShape<typeof UpdateChatPolicyRequestSchema>) =>
+    chatClient.updateChatPolicy(req),
 
   sendMessage: (req: MessageInitShape<typeof SendMessageRequestSchema>) =>
     chatClient.sendMessage(req),

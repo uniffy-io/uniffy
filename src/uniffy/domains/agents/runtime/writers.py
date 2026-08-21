@@ -8,7 +8,10 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import or_, select, update
 
-from uniffy.core.content.references import extract_all_outgoing_references
+from uniffy.core.content.references import (
+    extract_all_outgoing_references,
+    strip_broadcast_urns,
+)
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
 from uniffy.core.models.chat.message import (
@@ -416,11 +419,15 @@ class ChatChannelMessageWriter:
         if thinking:
             meta["thinking"] = thinking
 
+        # Agent replies bypass the send_message broadcast gate, so echoed
+        # @channel/@here markup must not reach mentioned_urns (badge fan-out).
         urn_mentions = (
             sorted(
-                extract_all_outgoing_references(
-                    content,
-                    organization_id=self._organization_id,
+                strip_broadcast_urns(
+                    extract_all_outgoing_references(
+                        content,
+                        organization_id=self._organization_id,
+                    )
                 )
             )
             if content
@@ -543,11 +550,14 @@ class ChatChannelMessageWriter:
             )
 
         chat_msg.content = content or ""
+        # Same broadcast strip as the insert path: finalize rewrites the row.
         urn_mentions = (
             sorted(
-                extract_all_outgoing_references(
-                    content,
-                    organization_id=self._organization_id,
+                strip_broadcast_urns(
+                    extract_all_outgoing_references(
+                        content,
+                        organization_id=self._organization_id,
+                    )
                 )
             )
             if content

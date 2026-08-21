@@ -8,6 +8,11 @@ import type {
 } from "@/features/chat/types";
 import type { RootState } from "@/app/store";
 
+export interface BroadcastPolicy {
+  minRole: "member" | "admin";
+  confirmThreshold: number;
+}
+
 // Channels are normalized (byId + ids) so per-channel mutations - unread
 // bumps, activity touches - invalidate only that channel's subscribers.
 // A flat array made every message org-wide re-render every consumer.
@@ -20,6 +25,7 @@ interface ChatChannelsState {
   channelPreferences: Record<string, ChannelPreferences>;
   categories: ChatChannelCategory[];
   agentFolders: ChatAgentFolder[];
+  broadcastPolicy: BroadcastPolicy | null;
   isLoading: boolean;
 }
 
@@ -32,6 +38,7 @@ const initialState: ChatChannelsState = {
   channelPreferences: {},
   categories: [],
   agentFolders: [],
+  broadcastPolicy: null,
   isLoading: false,
 };
 
@@ -132,6 +139,9 @@ export const chatChannelsSlice = createSlice({
       if (channel && channel.memberCount !== action.payload.members.length) {
         channel.memberCount = action.payload.members.length;
       }
+    },
+    setBroadcastPolicy: (state, action: PayloadAction<BroadcastPolicy>) => {
+      state.broadcastPolicy = action.payload;
     },
     setMemberRole: (
       state,
@@ -238,6 +248,7 @@ export const {
   setSplitChannel,
   clearSplitChannel,
   clearChatChannels,
+  setBroadcastPolicy,
 } = chatChannelsSlice.actions;
 
 export const selectChannels = createSelector(
@@ -297,6 +308,9 @@ export const selectAgentFolders = (state: RootState): ChatAgentFolder[] =>
   state.chatChannels.agentFolders;
 
 export const selectIsLoading = (state: RootState): boolean => state.chatChannels.isLoading;
+
+export const selectBroadcastPolicy = (state: RootState): BroadcastPolicy | null =>
+  state.chatChannels.broadcastPolicy;
 
 export const selectChannelPreferences = (state: RootState): Record<string, ChannelPreferences> =>
   state.chatChannels.channelPreferences;

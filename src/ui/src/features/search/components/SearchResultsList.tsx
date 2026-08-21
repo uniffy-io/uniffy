@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   MagnifyingGlass,
+  Megaphone,
   Tag,
   Hash,
   ChatCircle,
@@ -11,7 +12,7 @@ import type { Icon } from "@phosphor-icons/react";
 import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
 import { cn } from "@/shared/utils/cn";
-import { parseUrn, UrnType } from "@/shared/utils/urn";
+import { BROADCAST_URN_PREFIX, parseUrn, UrnType } from "@/shared/utils/urn";
 import { type UrnTypeTheme } from "@/config/theme/urnColors";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
 import { stripMarkdown } from "@/features/search/utils/stripMarkdown";
@@ -47,6 +48,13 @@ interface ResultTheme extends UrnTypeTheme {
 }
 
 function getResultTheme(result: SearchResultItem): ResultTheme {
+  // Broadcast entries are synthetic typeahead rows (chat mention popup), never
+  // real index hits; they read as a people gesture.
+  if (result.urn.startsWith(BROADCAST_URN_PREFIX)) {
+    const config = getContentTypeConfig(UrnType.USER);
+    return { ...config.theme, icon: Megaphone, label: "Broadcast" };
+  }
+
   const urnType = SEARCH_RESULT_TYPE_TO_URN_TYPE[result.type] || UrnType.UNKNOWN;
   const config = getContentTypeConfig(urnType);
 

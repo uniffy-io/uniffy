@@ -551,6 +551,31 @@ metadata. Needs two users, one channel, one thread.
 - [ ] Mobile: a thread-reply notification opens the thread screen for the right root; mention and
       DM notifications open the channel.
 
+## Chat broadcast mentions
+
+@channel/@here ping a whole channel at once. Needs two users in a private channel
+(one of them online in a second browser), plus an org admin for the policy checks.
+
+- [ ] Type `@cha` in the channel composer: the popup offers `@channel` with a Broadcast badge;
+      selecting inserts a violet token, and the sent message shows the washed token for every
+      member (no hover card, no navigation).
+- [ ] User B has notification level MENTIONS on the channel: an `@channel` send still notifies B
+      and lights the mention badge. A muted member gets the badge but no notification.
+- [ ] `@here`: only the member with an open session gets the "Mentioned everyone active" bell
+      notification; the offline member still sees the mention badge after coming back.
+- [ ] In a channel with more members than the confirm threshold (admin page value, default 25) the
+      composer asks for confirmation before sending; cancel leaves the composer intact.
+- [ ] Admin sets "Who can send broadcast mentions" to admins only (`/admin/chat`): the broadcast
+      entries disappear from a plain member's typeahead, and a hand-typed
+      `[[[@channel|urn:uniffy:broadcast:channel]]]` markup send is rejected server-side. A channel
+      admin and an org admin can still send.
+- [ ] Mobile: typing `@` in a channel composer offers `@channel`/`@here` rows (Broadcast badge);
+      sending inserts the token and other members are notified. The received message renders the
+      washed token. In a 1:1 DM and an agent DM the rows do not appear.
+- [ ] Mobile: broadcast into a channel larger than the confirm threshold asks via a native alert;
+      cancel leaves the composer intact. With the admin-only policy a plain member gets no
+      broadcast rows.
+
 ## Agents in threads
 
 An agent answering inside a thread is a first-class reply: it moves the thread's counters, can be

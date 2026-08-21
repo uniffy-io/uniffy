@@ -3,6 +3,9 @@ export { UrnType } from "@/shared/utils/urnTypes";
 
 import { UrnType } from "@/shared/utils/urnTypes";
 
+/** Channel-wide broadcast mentions (@channel/@here) ride this non-content scheme. */
+export const BROADCAST_URN_PREFIX = "urn:uniffy:broadcast:";
+
 export interface ParsedUrn {
   urn: string;
   type: UrnType;

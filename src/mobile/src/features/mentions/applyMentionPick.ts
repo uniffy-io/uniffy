@@ -17,7 +17,8 @@ export function applyMentionPick(
 ): MentionPick {
   // Sanitized once here so the composer text and the mention entry agree; a
   // raw title would let `toCanonical` emit markup the author never wrote.
-  const label = sanitizeMentionLabel(item.title);
+  // Broadcast suggestions display as "@channel"; the insert adds its own "@".
+  const label = sanitizeMentionLabel(item.title.replace(/^@+/, ""));
   const before = draft.slice(0, token.start);
   const after = draft.slice(token.end);
   const insert = `@${label} `;

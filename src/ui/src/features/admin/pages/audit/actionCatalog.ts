@@ -227,6 +227,7 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
       { value: "chat_channel.member_kicked", label: "Channel member kicked" },
       { value: "chat_channel.member_role_changed", label: "Channel member role changed" },
       { value: "chat_message.deleted_by_admin", label: "Message deleted by admin" },
+      { value: "chat.policy_updated", label: "Chat policy updated" },
     ],
   },
   {

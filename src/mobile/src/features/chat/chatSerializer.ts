@@ -5,6 +5,7 @@ import {
   ChannelRole as ProtoChannelRole,
   SenderType as ProtoSenderType,
   ChatNotificationLevel as ProtoNotificationLevel,
+  ChatBroadcastMinRole as ProtoChatBroadcastMinRole,
 } from "@uniffy/proto/chat/v1/chat_pb";
 import { SubjectType as ProtoSubjectType } from "@uniffy/proto/common/v1/common_pb";
 import type {
@@ -385,6 +386,21 @@ export function notificationLevelToProto(level: NotificationLevel): ProtoNotific
     default:
       return ProtoNotificationLevel.ALL;
   }
+}
+
+export interface SerializedChatPolicy {
+  minRole: "member" | "admin";
+  confirmThreshold: number;
+}
+
+export function chatPolicyToPlain(proto: {
+  broadcastMinRole: ProtoChatBroadcastMinRole;
+  broadcastConfirmThreshold: number;
+}): SerializedChatPolicy {
+  return {
+    minRole: proto.broadcastMinRole === ProtoChatBroadcastMinRole.ADMIN ? "admin" : "member",
+    confirmThreshold: proto.broadcastConfirmThreshold,
+  };
 }
 
 /** Resolve the human-facing title for a channel given the viewer + members. */

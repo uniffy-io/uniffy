@@ -4,7 +4,9 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Copy, Check } from "@phosphor-icons/react";
 import { MentionChip, MentionChipCompact } from "@/components/mention";
+import { peopleTokenClasses } from "@/components/mention/mentionConstants";
 import { getMentionUrl } from "@/components/mention/mentionStateEmitter";
+import { BROADCAST_URN_PREFIX } from "@/features/chat/utils/broadcastMentions";
 import { parseUrn, urnToPath, UrnType } from "@/shared/utils/urn";
 import { navigateTo, openInNewTab } from "@/shared/utils/navigation";
 import { cn } from "@/shared/utils/cn";
@@ -117,9 +119,19 @@ function MentionLink({
   return <Chip urn={href} label={label} onClick={handleClick} />;
 }
 
+// A broadcast pings the viewer, so every reader gets the self-mention wash.
+// No hover card, no navigation: the token is the whole story.
+function BroadcastToken({ children }: { children: ReactNode }) {
+  const label = String(children ?? "").replace(/^@+/, "");
+  return <span className={peopleTokenClasses(true, false)}>@{label}</span>;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function MarkdownLink(props: any) {
   const { href, children } = props;
+  if (href?.startsWith(BROADCAST_URN_PREFIX)) {
+    return <BroadcastToken>{children}</BroadcastToken>;
+  }
   if (href?.startsWith("urn:uniffy:content:")) {
     return (
       <MentionLink href={href} compact={false}>
@@ -142,6 +154,9 @@ function MarkdownLink(props: any) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function MarkdownLinkCompact(props: any) {
   const { href, children } = props;
+  if (href?.startsWith(BROADCAST_URN_PREFIX)) {
+    return <BroadcastToken>{children}</BroadcastToken>;
+  }
   if (href?.startsWith("urn:uniffy:content:")) {
     return (
       <MentionLink href={href} compact>

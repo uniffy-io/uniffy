@@ -35,8 +35,49 @@ INLINE_FILE_URL_PATTERN = re.compile(
 )
 
 CONTENT_URN_PREFIX = "urn:uniffy:content:"
+BROADCAST_URN_PREFIX = "urn:uniffy:broadcast:"
 
 _URN_TYPE_MAP: dict[str, ContentType] = {ct.value: ct for ct in ContentType}
+
+
+class BroadcastMention(StrEnum):
+    """Channel-wide mention kinds carried as ``urn:uniffy:broadcast:{kind}``."""
+
+    CHANNEL = "channel"
+    HERE = "here"
+
+
+def broadcast_urn(kind: BroadcastMention) -> str:
+    return f"{BROADCAST_URN_PREFIX}{kind.value}"
+
+
+BROADCAST_URNS: tuple[str, ...] = tuple(broadcast_urn(kind) for kind in BroadcastMention)
+
+_BROADCAST_URN_TO_KIND: dict[str, BroadcastMention] = {
+    broadcast_urn(kind): kind for kind in BroadcastMention
+}
+
+
+def strip_broadcast_urns(urns: list[str]) -> list[str]:
+    """Drop broadcast URNs; only the gated user send path may mint them.
+
+    A writer that skips ``send_message`` (agent replies) must never let echoed
+    or injected ``[[[@channel|...]]]`` markup badge a whole roster.
+    """
+    return [urn for urn in urns if not urn.startswith(BROADCAST_URN_PREFIX)]
+
+
+def extract_broadcast_mentions_from_content(content: str) -> set[BroadcastMention]:
+    """Broadcast kinds mentioned in the content, from ``[[[label|urn]]]`` markup only."""
+    if not content:
+        return set()
+
+    result: set[BroadcastMention] = set()
+    for match in MENTION_PATTERN.finditer(content):
+        kind = _BROADCAST_URN_TO_KIND.get(match.group(2) or "")
+        if kind is not None:
+            result.add(kind)
+    return result
 
 
 class CanvasNodeType(StrEnum):

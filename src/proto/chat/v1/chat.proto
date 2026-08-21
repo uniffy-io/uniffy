@@ -136,6 +136,44 @@ service ChatService {
   // given agent - whether it is mid tool call, image generation, or text
   // generation - via the run-state cancel flag the egress task observes.
   rpc StopAgentRun(StopAgentRunRequest) returns (StopAgentRunResponse) {}
+
+  // Org-level chat policy. Every member may read it (the composer gates the
+  // broadcast typeahead and confirm dialog on it); updates are org-admin only.
+  rpc GetChatPolicy(GetChatPolicyRequest) returns (GetChatPolicyResponse) {}
+  rpc UpdateChatPolicy(UpdateChatPolicyRequest) returns (UpdateChatPolicyResponse) {}
+}
+
+// Who may send channel-wide broadcast mentions (@channel/@here).
+enum ChatBroadcastMinRole {
+  CHAT_BROADCAST_MIN_ROLE_UNSPECIFIED = 0;
+  CHAT_BROADCAST_MIN_ROLE_MEMBER = 1;
+  CHAT_BROADCAST_MIN_ROLE_ADMIN = 2;
+}
+
+message ChatPolicy {
+  string organization_id = 1;
+  ChatBroadcastMinRole broadcast_min_role = 2;
+  // Member count above which the composer asks for confirmation before a
+  // broadcast mention is sent.
+  int32 broadcast_confirm_threshold = 3;
+}
+
+message GetChatPolicyRequest {
+  string organization_id = 1;
+}
+
+message GetChatPolicyResponse {
+  ChatPolicy policy = 1;
+}
+
+message UpdateChatPolicyRequest {
+  string organization_id = 1;
+  ChatBroadcastMinRole broadcast_min_role = 2;
+  int32 broadcast_confirm_threshold = 3;
+}
+
+message UpdateChatPolicyResponse {
+  ChatPolicy policy = 1;
 }
 
 // ChatSubject is a polymorphic channel/thread participant.

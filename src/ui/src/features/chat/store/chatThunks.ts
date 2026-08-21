@@ -5,7 +5,7 @@ import { chatApi } from "@/features/chat/api/chatApi";
 import { attachmentsApi } from "@/features/files/api/attachmentsApi";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import type { ChatChannel as ProtoChatChannel } from "@uniffy/proto/chat/v1/chat_pb";
-import { ChannelRole } from "@uniffy/proto/chat/v1/chat_pb";
+import { ChannelRole, ChatBroadcastMinRole } from "@uniffy/proto/chat/v1/chat_pb";
 import {
   channelToPlain,
   messageToPlain,
@@ -33,6 +33,8 @@ import {
   setLoading,
   updateUnreadCounts,
   setActiveChannel,
+  setBroadcastPolicy,
+  type BroadcastPolicy,
 } from "@/features/chat/store/chatChannelsSlice";
 import {
   setMessages,
@@ -1260,6 +1262,53 @@ export const deleteCategoryThunk = createAsyncThunk<
     dispatch(fetchCategories());
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to delete category");
+  }
+});
+
+function broadcastPolicyToPlain(policy: {
+  broadcastMinRole: ChatBroadcastMinRole;
+  broadcastConfirmThreshold: number;
+}): BroadcastPolicy {
+  return {
+    minRole: policy.broadcastMinRole === ChatBroadcastMinRole.ADMIN ? "admin" : "member",
+    confirmThreshold: policy.broadcastConfirmThreshold,
+  };
+}
+
+export const fetchChatPolicy = createAsyncThunk<
+  void,
+  void,
+  { state: RootState; rejectValue: string }
+>("chat/fetchChatPolicy", async (_, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.getChatPolicy({ organizationId });
+    if (response.policy) {
+      dispatch(setBroadcastPolicy(broadcastPolicyToPlain(response.policy)));
+    }
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch chat policy");
+  }
+});
+
+export const updateChatPolicyThunk = createAsyncThunk<
+  void,
+  BroadcastPolicy,
+  { state: RootState; rejectValue: string }
+>("chat/updateChatPolicy", async (policy, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.updateChatPolicy({
+      organizationId,
+      broadcastMinRole:
+        policy.minRole === "admin" ? ChatBroadcastMinRole.ADMIN : ChatBroadcastMinRole.MEMBER,
+      broadcastConfirmThreshold: policy.confirmThreshold,
+    });
+    if (response.policy) {
+      dispatch(setBroadcastPolicy(broadcastPolicyToPlain(response.policy)));
+    }
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to update chat policy");
   }
 });
 

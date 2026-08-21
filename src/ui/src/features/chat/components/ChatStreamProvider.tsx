@@ -22,6 +22,7 @@ import {
   fetchMembers,
   fetchThreadsInbox,
   fetchDrafts,
+  fetchChatPolicy,
   markChannelRead,
   clearActiveChannelUnread,
 } from "@/features/chat/store/chatThunks";
@@ -513,6 +514,12 @@ function usePersistentChatStream() {
     };
   }, [dispatch]);
 
+  // Org chat policy gates the composer's broadcast typeahead; one fetch per org.
+  useEffect(() => {
+    if (!organizationId) return;
+    dispatch(fetchChatPolicy());
+  }, [organizationId, dispatch]);
+
   useEffect(() => {
     if (!organizationId) return;
 
@@ -629,27 +636,9 @@ function usePersistentChatStream() {
                 break;
               }
               case UserChatEventType.MENTION_RECEIVED: {
-                if (event.payload.case === "mentionReceived" && event.payload.value) {
-                  const p = event.payload.value;
-                  if (p.channelId === channelIdRef.current && isDocumentVisible()) {
-                    dispatch(
-                      updateUnreadCounts([
-                        {
-                          channelId: p.channelId,
-                          unreadCount: 0,
-                          mentionCount: 0,
-                        },
-                      ]),
-                    );
-                    break;
-                  }
-                  dispatch(
-                    incrementUnreadCount({
-                      channelId: p.channelId,
-                      mentionCount: 1,
-                    }),
-                  );
-                }
+                // Badge counting is owned by UNREAD_COUNT_CHANGED, which the
+                // server sends alongside with the mention flag set; counting
+                // here too double-badged every mention.
                 break;
               }
               case UserChatEventType.DRAFT_CHANGED: {

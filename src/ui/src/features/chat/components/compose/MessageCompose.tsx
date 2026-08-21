@@ -1,6 +1,6 @@
 /** ContentEditable compose; mention chips serialize back to `[[[label|urn]]]` on send. */
 
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import {
   Plus,
   Smiley,
@@ -39,6 +39,16 @@ import {
   resolveTeamMentionTotal,
   teamMentionsIn,
 } from "@/features/chat/utils/teamMentionGuard";
+import {
+  BROADCAST_URN_PREFIX,
+  DEFAULT_BROADCAST_CONFIRM_THRESHOLD,
+  broadcastMentionsIn,
+  buildBroadcastEntries,
+  effectiveBroadcastKind,
+  type BroadcastKind,
+} from "@/features/chat/utils/broadcastMentions";
+import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
+import { selectBroadcastPolicy } from "@/features/chat/store/chatChannelsSlice";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { uploadService } from "@/features/files/upload";
 import { attachmentsApi } from "@/features/files/api/attachmentsApi";
@@ -60,6 +70,14 @@ interface PendingTeamSend {
   metadata?: Record<string, string>;
   total: number;
   labels: string[];
+}
+
+interface PendingBroadcastSend {
+  content: string;
+  fileIds: string[];
+  metadata?: Record<string, string>;
+  kind: BroadcastKind;
+  memberCount: number;
 }
 
 interface MessageComposeProps {
@@ -150,6 +168,10 @@ function serializeToMarkdown(container: HTMLDivElement): string {
 function ComposeMentionChipStatic({ urn, label }: { urn: string; label: string }) {
   const parsed = parseUrn(urn);
 
+  if (urn.startsWith(BROADCAST_URN_PREFIX)) {
+    return <span className={peopleTokenClasses(false, false)}>@{label.replace(/^@+/, "")}</span>;
+  }
+
   // Same Slack-style token the sent message renders; static markup has no
   // viewer context, so the self-mention wash never applies here.
   if (isPeopleTokenType(parsed.type)) {
@@ -187,9 +209,10 @@ function createMentionElement(label: string, urn: string): HTMLSpanElement {
   wrapper.setAttribute(MENTION_LABEL_ATTR, label);
   wrapper.contentEditable = "false";
   // Tokens flow with the text baseline; boxed chips keep the inline-block wrapper.
-  wrapper.className = isPeopleTokenType(parseUrn(urn).type)
-    ? "inline align-baseline"
-    : "inline-block align-middle";
+  wrapper.className =
+    isPeopleTokenType(parseUrn(urn).type) || urn.startsWith(BROADCAST_URN_PREFIX)
+      ? "inline align-baseline"
+      : "inline-block align-middle";
   wrapper.innerHTML = renderToStaticMarkup(<ComposeMentionChipStatic urn={urn} label={label} />);
   return wrapper;
 }
@@ -254,6 +277,45 @@ export function MessageCompose({
   const mentionStartOffsetRef = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [pendingTeamSend, setPendingTeamSend] = useState<PendingTeamSend | null>(null);
+  const [pendingBroadcastSend, setPendingBroadcastSend] = useState<PendingBroadcastSend | null>(
+    null,
+  );
+  const { canManageChat } = useChatPermissions();
+  const currentUserId = useAppSelector((s) => s.auth.user?.id);
+  const channelMembers = useAppSelector((s) =>
+    channelId ? s.chatChannels.channelMembers[channelId] : undefined,
+  );
+  const broadcastPolicy = useAppSelector(selectBroadcastPolicy);
+
+  // The server enforces the same gate on send and edit; hiding the typeahead
+  // entries is UX, not the boundary.
+  const canBroadcast = useMemo(() => {
+    if (!channelId) return false;
+    if (!broadcastPolicy || broadcastPolicy.minRole === "member") return true;
+    if (canManageChat) return true;
+    // The channel payload carries the viewer's role, so this works before the
+    // members roster is ever fetched; the roster row is the fallback.
+    if (channel?.currentUserRole === "ADMIN" || channel?.currentUserRole === "OWNER") return true;
+    const mine = channelMembers?.find(
+      (m) => m.subjectType === "USER" && m.userId === currentUserId,
+    );
+    return mine?.role === "ADMIN" || mine?.role === "OWNER";
+  }, [
+    channelId,
+    broadcastPolicy,
+    canManageChat,
+    channel?.currentUserRole,
+    channelMembers,
+    currentUserId,
+  ]);
+
+  const broadcastEntries = useMemo(
+    () =>
+      canBroadcast && channel && channel.channelType !== "DIRECT" && !channel.isAgentDm
+        ? buildBroadcastEntries()
+        : [],
+    [canBroadcast, channel],
+  );
   const editLastBinding = useKeybinding("chat.editLast");
   // "/skill" typeahead, agent DMs only. The composer is a contentEditable, so
   // the token is tracked against the caret's text node like @-mentions rather
@@ -557,7 +619,12 @@ export function MessageCompose({
         }
       }
 
-      const chip = createMentionElement(result.title, result.urn);
+      // Broadcast rows display as "@channel" but store the bare kind as the
+      // label, matching what mobile persists for the same chip.
+      const chipLabel = result.urn.startsWith(BROADCAST_URN_PREFIX)
+        ? result.title.replace(/^@+/, "")
+        : result.title;
+      const chip = createMentionElement(chipLabel, result.urn);
 
       // Split text into [before @] [chip] [after cursor].
       const before = text.slice(0, atOffset);
@@ -696,6 +763,17 @@ export function MessageCompose({
 
     // Nothing is cleared before the user confirms: the host's draft flush only
     // runs on `onSend`, so cancelling leaves the composer exactly as it was.
+    const broadcastKinds = broadcastMentionsIn(content);
+    if (broadcastKinds.length > 0) {
+      const kind = effectiveBroadcastKind(broadcastKinds);
+      const memberCount = channel?.memberCount ?? 0;
+      const threshold = broadcastPolicy?.confirmThreshold ?? DEFAULT_BROADCAST_CONFIRM_THRESHOLD;
+      if (kind && memberCount > threshold) {
+        setPendingBroadcastSend({ content, fileIds, metadata, kind, memberCount });
+        return;
+      }
+    }
+
     const mentionedTeams = teamMentionsIn(content);
     if (mentionedTeams.length > 0 && organizationId) {
       const { total, labels } = await resolveTeamMentionTotal(mentionedTeams, organizationId);
@@ -716,6 +794,8 @@ export function MessageCompose({
     pendingInvokedSkill,
     runnableSkills,
     organizationId,
+    channel?.memberCount,
+    broadcastPolicy?.confirmThreshold,
   ]);
 
   const handleTeamSendConfirm = useCallback(() => {
@@ -727,6 +807,18 @@ export function MessageCompose({
 
   const handleTeamSendCancel = useCallback(() => {
     setPendingTeamSend(null);
+    editorRef.current?.focus();
+  }, []);
+
+  const handleBroadcastSendConfirm = useCallback(() => {
+    if (!pendingBroadcastSend) return;
+    const { content, fileIds, metadata } = pendingBroadcastSend;
+    setPendingBroadcastSend(null);
+    performSend(content, fileIds, metadata);
+  }, [pendingBroadcastSend, performSend]);
+
+  const handleBroadcastSendCancel = useCallback(() => {
+    setPendingBroadcastSend(null);
     editorRef.current?.focus();
   }, []);
 
@@ -1230,6 +1322,7 @@ export function MessageCompose({
           initialQuery={mentionQuery}
           onSelect={handleMentionSelect}
           onClose={handleMentionClose}
+          staticEntries={broadcastEntries}
         />
       )}
 
@@ -1240,6 +1333,22 @@ export function MessageCompose({
           onConfirm={handleTeamSendConfirm}
           title="Notify team members?"
           message={`This mentions ${pendingTeamSend.labels.join(", ")}. Up to ${pendingTeamSend.total} people will be notified.`}
+          confirmLabel="Send"
+          variant="default"
+        />
+      )}
+
+      {pendingBroadcastSend && (
+        <ConfirmDialog
+          isOpen
+          onClose={handleBroadcastSendCancel}
+          onConfirm={handleBroadcastSendConfirm}
+          title="Notify the whole channel?"
+          message={
+            pendingBroadcastSend.kind === "here"
+              ? `This mentions @here. Members online right now, out of ${pendingBroadcastSend.memberCount} in the channel, will be notified.`
+              : `This mentions @${pendingBroadcastSend.kind}. Up to ${pendingBroadcastSend.memberCount} people will be notified.`
+          }
           confirmLabel="Send"
           variant="default"
         />

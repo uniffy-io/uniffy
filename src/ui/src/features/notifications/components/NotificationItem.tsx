@@ -25,7 +25,8 @@ import {
 import type { Icon } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { parseUrn } from "@/shared/utils/urn";
+import { BROADCAST_URN_PREFIX, parseUrn } from "@/shared/utils/urn";
+import { peopleTokenClasses } from "@/components/mention/mentionConstants";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
 import { getUrnTypeTheme } from "@/config/theme/urnColors";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
@@ -177,7 +178,16 @@ function NotificationBody({ text }: { text: string }) {
     }
     const label = match[1];
     const urn = match[2];
-    parts.push(<MentionChipCompact key={`${urn}-${match.index}`} urn={urn} label={label} />);
+    if (urn.startsWith(BROADCAST_URN_PREFIX)) {
+      // Broadcast labels store the bare kind; the preview re-adds the sigil.
+      parts.push(
+        <span key={`${urn}-${match.index}`} className={peopleTokenClasses(false, false)}>
+          @{label.replace(/^@+/, "")}
+        </span>,
+      );
+    } else {
+      parts.push(<MentionChipCompact key={`${urn}-${match.index}`} urn={urn} label={label} />);
+    }
     lastIndex = regex.lastIndex;
   }
 

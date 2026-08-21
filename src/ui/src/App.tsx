@@ -111,6 +111,7 @@ const AuditLogsPage = lazyImport(
 const AdminAgentsPage = lazyImport(() => import("@/features/admin/pages/AgentsPage"), "AgentsPage");
 const StoragePage = lazyImport(() => import("@/features/admin/pages/StoragePage"), "StoragePage");
 const CallsAdminPage = lazyImport(() => import("@/features/admin/pages/CallsPage"), "CallsPage");
+const ChatAdminPage = lazyImport(() => import("@/features/admin/pages/ChatPage"), "ChatPage");
 const IntegrationsPage = lazyImport(
   () => import("@/features/admin/pages/IntegrationsPage"),
   "IntegrationsPage",
@@ -598,6 +599,14 @@ export function App() {
                       element={
                         <LazyRoute>
                           <CallsAdminPage />
+                        </LazyRoute>
+                      }
+                    />
+                    <Route
+                      path="chat"
+                      element={
+                        <LazyRoute>
+                          <ChatAdminPage />
                         </LazyRoute>
                       }
                     />

@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { ReferenceChip } from "@shared/mentions/ReferenceChip";
+import { isBroadcastUrn } from "@shared/mentions/broadcastMentions";
 import { MentionToken, isPeopleTokenUrnType } from "@shared/mentions/MentionToken";
 import type { Domain } from "@core/types";
 
@@ -119,10 +120,15 @@ function mentionUrnType(urn: string): string | null {
   return match ? match[1] : null;
 }
 
-// People tokens are nested Text and flow with the line; only boxed chips
-// need the flex-wrap row layout that breaks natural text wrapping.
+// People and broadcast tokens are nested Text and flow with the line; only
+// boxed chips need the flex-wrap row layout that breaks natural text wrapping.
 function hasChipMentions(parts: InlinePart[]): boolean {
-  return parts.some((p) => p.type === "mention" && !isPeopleTokenUrnType(mentionUrnType(p.urn)));
+  return parts.some(
+    (p) =>
+      p.type === "mention" &&
+      !isPeopleTokenUrnType(mentionUrnType(p.urn)) &&
+      !isBroadcastUrn(p.urn),
+  );
 }
 
 function renderTextParts(
@@ -217,7 +223,7 @@ function renderMixedParts(
     if (part.type === "mention") {
       const urnMatch = part.urn.match(/urn:uniffy:content:([^:]+):(.+)/);
       const urnType = urnMatch ? urnMatch[1] : null;
-      if (isPeopleTokenUrnType(urnType)) {
+      if (isPeopleTokenUrnType(urnType) || isBroadcastUrn(part.urn)) {
         return (
           <MentionToken
             key={`${kp}-m${i}`}

@@ -7,9 +7,10 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { User, UsersThree, Robot } from "phosphor-react-native";
+import { User, UsersThree, Robot, Megaphone } from "phosphor-react-native";
 import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 import { DOMAIN_ICON } from "@shared/mentions/ReferenceChip";
+import { isBroadcastUrn } from "@shared/mentions/broadcastMentions";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import type { Domain } from "@core/types";
@@ -27,6 +28,7 @@ const PEOPLE_META: Partial<
 };
 
 function typeLabel(item: SerializedSearchResult): string {
+  if (isBroadcastUrn(item.urn)) return "Broadcast";
   const people = PEOPLE_META[item.type];
   if (people) return people.label;
   return item.domain ? item.domain.charAt(0).toUpperCase() + item.domain.slice(1) : "";
@@ -62,10 +64,13 @@ export function MentionSuggestionsBar({
           keyboardShouldPersistTaps="always"
         >
           {results.map((item) => {
+            const broadcast = isBroadcastUrn(item.urn);
             const people = PEOPLE_META[item.type];
-            const IconComponent =
-              people?.Icon ?? (item.domain ? DOMAIN_ICON[item.domain as Domain] : User);
-            const iconColor = people ? T.accent : T.textDim;
+            const IconComponent = broadcast
+              ? Megaphone
+              : (people?.Icon ?? (item.domain ? DOMAIN_ICON[item.domain as Domain] : User));
+            const accented = broadcast || !!people;
+            const iconColor = accented ? T.accent : T.textDim;
             return (
               <TouchableOpacity
                 key={item.urn}
@@ -78,10 +83,10 @@ export function MentionSuggestionsBar({
                 <View
                   style={[
                     styles.icon,
-                    { backgroundColor: people ? T.accentSoft : T.bg, borderColor: T.border },
+                    { backgroundColor: accented ? T.accentSoft : T.bg, borderColor: T.border },
                   ]}
                 >
-                  <IconComponent size={15} color={iconColor} weight={people ? "fill" : "bold"} />
+                  <IconComponent size={15} color={iconColor} weight={accented ? "fill" : "bold"} />
                 </View>
                 <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
                   {item.title}

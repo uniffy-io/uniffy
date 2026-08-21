@@ -52,6 +52,9 @@ export interface ChatChannel {
   agentIsRetired?: boolean;
   agentFolderId: string | null;
   tagIds: string[];
+  /** The viewer's own channel role, carried on the channel payload so role
+   *  checks never depend on the members roster having been fetched. */
+  currentUserRole?: ChannelRole;
   unreadCount?: number;
   mentionCount?: number;
 }

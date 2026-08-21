@@ -198,6 +198,12 @@ class ChatService(Protocol):
     async def stop_agent_run(self, request: chat_dot_v1_dot_chat__pb2.StopAgentRunRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.StopAgentRunResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_chat_policy(self, request: chat_dot_v1_dot_chat__pb2.GetChatPolicyRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChatPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def update_chat_policy(self, request: chat_dot_v1_dot_chat__pb2.UpdateChatPolicyRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateChatPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
     def __init__(self, service: ChatService | AsyncGenerator[ChatService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -803,6 +809,26 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.stop_agent_run,
+                ),
+                "/chat.v1.ChatService/GetChatPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetChatPolicy",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.GetChatPolicyRequest,
+                        output=chat_dot_v1_dot_chat__pb2.GetChatPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_chat_policy,
+                ),
+                "/chat.v1.ChatService/UpdateChatPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateChatPolicy",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.UpdateChatPolicyRequest,
+                        output=chat_dot_v1_dot_chat__pb2.UpdateChatPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_chat_policy,
                 ),
             },
             interceptors=interceptors,
@@ -2018,6 +2044,46 @@ class ChatServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_chat_policy(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.GetChatPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.GetChatPolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetChatPolicy",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.GetChatPolicyRequest,
+                output=chat_dot_v1_dot_chat__pb2.GetChatPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_chat_policy(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.UpdateChatPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.UpdateChatPolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateChatPolicy",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.UpdateChatPolicyRequest,
+                output=chat_dot_v1_dot_chat__pb2.UpdateChatPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -2142,6 +2208,10 @@ class ChatServiceSync(Protocol):
     def update_channel_agent_config(self, request: chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def stop_agent_run(self, request: chat_dot_v1_dot_chat__pb2.StopAgentRunRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.StopAgentRunResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_chat_policy(self, request: chat_dot_v1_dot_chat__pb2.GetChatPolicyRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChatPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_chat_policy(self, request: chat_dot_v1_dot_chat__pb2.UpdateChatPolicyRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateChatPolicyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -2748,6 +2818,26 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.stop_agent_run,
+                ),
+                "/chat.v1.ChatService/GetChatPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetChatPolicy",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.GetChatPolicyRequest,
+                        output=chat_dot_v1_dot_chat__pb2.GetChatPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_chat_policy,
+                ),
+                "/chat.v1.ChatService/UpdateChatPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateChatPolicy",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.UpdateChatPolicyRequest,
+                        output=chat_dot_v1_dot_chat__pb2.UpdateChatPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_chat_policy,
                 ),
             },
             interceptors=interceptors,
@@ -3957,6 +4047,46 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.StopAgentRunRequest,
                 output=chat_dot_v1_dot_chat__pb2.StopAgentRunResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_chat_policy(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.GetChatPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.GetChatPolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetChatPolicy",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.GetChatPolicyRequest,
+                output=chat_dot_v1_dot_chat__pb2.GetChatPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_chat_policy(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.UpdateChatPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.UpdateChatPolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateChatPolicy",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.UpdateChatPolicyRequest,
+                output=chat_dot_v1_dot_chat__pb2.UpdateChatPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

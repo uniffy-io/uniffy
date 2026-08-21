@@ -18,6 +18,7 @@ import {
   Key,
   Envelope,
   Phone,
+  ChatCircle,
   LockKey,
   Lifebuoy,
   Plugs,
@@ -65,6 +66,7 @@ const orgGroups: NavGroup[] = [
     title: "Workspace",
     items: [
       { name: "Agents", path: "/admin/agents", icon: Robot },
+      { name: "Chat", path: "/admin/chat", icon: ChatCircle },
       { name: "Integrations", path: "/admin/integrations", icon: Plugs },
       { name: "Rooms", path: "/admin/rooms", icon: Door },
       { name: "Storage", path: "/admin/storage", icon: Database },

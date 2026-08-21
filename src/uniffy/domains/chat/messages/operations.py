@@ -12,7 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.content.references import (
+    BroadcastMention,
     extract_all_outgoing_references,
+    extract_broadcast_mentions_from_content,
     extract_mentioned_agent_ids_from_content,
     extract_mentioned_team_ids_from_content,
 )
@@ -21,11 +23,17 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
+from uniffy.core.models.chat.channel_member import (
+    ChannelRole,
+    ChatChannelMember,
+    ChatNotificationLevel,
+)
 from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKind, SenderType
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.valkey.mentions import publish_mention_state
+from uniffy.core.valkey.presence import PRESENCE_STATUS_ONLINE, presence_get_bulk
 from uniffy.db import open_session
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
@@ -33,6 +41,7 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_pinned_messages,
     set_cached_pinned_message_ids,
 )
+from uniffy.domains.chat.policy import BroadcastMinRole, resolve_chat_policy
 from uniffy.domains.chat.rate_limits import SEND, check_chat_mutation_limit
 from uniffy.workers.tasks import JobName
 
@@ -236,13 +245,15 @@ class ChatMessageOperations:
             raise ValidationError("content", f"Message exceeds {MAX_MESSAGE_LENGTH} characters")
 
         channel = await self.access.get_channel(channel_id, organization_id)
-        await self.access.require_send(user_id, channel)
+        member = await self.access.require_send(user_id, channel)
         if sender_type == SenderType.USER:
             await check_chat_mutation_limit(
                 SEND,
                 user_id=user_id,
                 organization_id=organization_id,
             )
+            if extract_broadcast_mentions_from_content(content):
+                await self._require_broadcast_allowed(user_id, channel, member)
 
         # An agent DM whose agent was deleted is frozen: the history stays
         # readable, but nothing new can be said to an agent that cannot answer.
@@ -341,6 +352,58 @@ class ChatMessageOperations:
         )
 
         return message, sender_name, sender_avatar
+
+    async def _require_broadcast_allowed(
+        self,
+        user_id: UUID,
+        channel: ChatChannel,
+        member: ChatChannelMember | None,
+    ) -> None:
+        """Gate channel-wide mentions behind the org broadcast policy."""
+        policy = await resolve_chat_policy(self.session, channel.organization_id)
+        if policy.broadcast_min_role == BroadcastMinRole.MEMBER:
+            return
+        if member is not None and member.role in (ChannelRole.ADMIN, ChannelRole.OWNER):
+            return
+        if await self.access.is_org_admin(user_id, channel.organization_id):
+            return
+        if await self.access.is_chat_domain_admin(user_id, channel.organization_id):
+            return
+        raise PermissionDeniedError(
+            "broadcast", "Channel-wide mentions are limited to admins in this organization"
+        )
+
+    @staticmethod
+    def _effective_broadcast_kind(kinds: set[BroadcastMention]) -> BroadcastMention:
+        """Widest kind wins: @channel reaches the whole roster, @here only online members."""
+        if BroadcastMention.CHANNEL in kinds:
+            return BroadcastMention.CHANNEL
+        return BroadcastMention.HERE
+
+    async def _online_member_ids(
+        self,
+        channel: ChatChannel,
+        candidate_ids: set[UUID],
+    ) -> set[UUID]:
+        """Members whose presence is online right now; absent-from-Valkey means offline."""
+        online: set[UUID] = set()
+        ids = list(candidate_ids)
+        chunk_size = 200
+        for start in range(0, len(ids), chunk_size):
+            chunk = ids[start : start + chunk_size]
+            try:
+                data = await presence_get_bulk(channel.organization_id, chunk)
+            except Exception:
+                logger.warning(f"presence lookup failed for channel {channel.id}")
+                continue
+            for uid_str, info in data.items():
+                if info.get("status") != PRESENCE_STATUS_ONLINE:
+                    continue
+                try:
+                    online.add(UUID(uid_str))
+                except ValueError:
+                    continue
+        return online
 
     async def _post_commit_send(
         self,
@@ -477,19 +540,32 @@ class ChatMessageOperations:
         for _, recipients in team_mentions:
             team_recipient_ids.update(recipients)
 
+        # Broadcast recipients are the channel roster, so the viewer filter is
+        # moot; @here narrows the notification set to online members while the
+        # badge set stays the whole roster (read-time counting matches all
+        # members against the broadcast urn).
+        broadcast_kind: BroadcastMention | None = None
+        broadcast_badge_ids: set[UUID] = set()
+        broadcast_notify_ids: set[UUID] = set()
+        if message.sender_type != SenderType.SYSTEM:
+            broadcast_kinds = extract_broadcast_mentions_from_content(message.content)
+            if broadcast_kinds:
+                broadcast_kind = self._effective_broadcast_kind(broadcast_kinds)
+                broadcast_badge_ids = {uid for uid in member_ids if uid != user_id}
+                if broadcast_kind is BroadcastMention.HERE:
+                    broadcast_notify_ids = await self._online_member_ids(
+                        channel, broadcast_badge_ids
+                    )
+                else:
+                    broadcast_notify_ids = set(broadcast_badge_ids)
+
         await self._index_message(message, channel, member_ids, sender_name=sender_name)
 
         await self._update_resources(channel.id, message.content, user_id)
 
         muted_user_ids: set[UUID] = set()
         none_notification_ids: set[UUID] = set()
-        mentions_only_ids: set[UUID] = set()
         try:
-            from uniffy.core.models.chat.channel_member import (
-                ChatChannelMember,
-                ChatNotificationLevel,
-            )
-
             pref_result = await self.session.execute(
                 select(
                     ChatChannelMember.subject_id,
@@ -507,8 +583,6 @@ class ChatMessageOperations:
                     muted_user_ids.add(row[0])
                 if row[2] == ChatNotificationLevel.NONE:
                     none_notification_ids.add(row[0])
-                elif row[2] == ChatNotificationLevel.MENTIONS:
-                    mentions_only_ids.add(row[0])
         except Exception:
             logger.warning(f"Failed to fetch notification preferences for channel {channel.id}")
 
@@ -516,10 +590,12 @@ class ChatMessageOperations:
             channel,
             user_id,
             member_ids,
-            visible_mentioned | team_recipient_ids,
-            muted_user_ids | none_notification_ids,
-            mentions_only_ids,
+            visible_mentioned | team_recipient_ids | broadcast_badge_ids,
         )
+
+        # A broadcast is a mention for badge purposes, but muted and
+        # notification-level NONE members opted out of being pinged by it.
+        broadcast_notify_ids -= muted_user_ids | none_notification_ids
 
         await self._emit_send_notifications(
             message,
@@ -530,6 +606,8 @@ class ChatMessageOperations:
             member_ids,
             visible_mentioned,
             team_mentions,
+            broadcast_kind=broadcast_kind,
+            broadcast_target_ids=broadcast_notify_ids,
         )
 
         if message.sender_type == SenderType.USER:
@@ -757,25 +835,23 @@ class ChatMessageOperations:
         sender_id: UUID,
         member_ids: list[UUID],
         mentioned_user_ids: set[UUID] | None = None,
-        skip_user_ids: set[UUID] | None = None,
-        mentions_only_ids: set[UUID] | None = None,
     ) -> None:
-        """Publish unread count change; skip muted/NONE; MENTIONS-only users only on @mention."""
+        """Publish the unread/mention count change to every member but the sender.
+
+        Deliberately preference-blind: the read-time aggregate counts unread and
+        mention rows for muted, NONE, and MENTIONS-only members too, so the live
+        event must match or the badge diverges until the next reload. Muting
+        gates notifications, never unread state.
+        """
         try:
             from uniffy.domains.chat.streaming.events import UNREAD_COUNT_CHANGED
             from uniffy.domains.chat.streaming.publisher import publish_user_chat_events
 
             mentioned = mentioned_user_ids or set()
-            skip = skip_user_ids or set()
-            mentions_only = mentions_only_ids or set()
 
             events: list[tuple[UUID, str, dict]] = []
             for uid in member_ids:
                 if uid == sender_id:
-                    continue
-                if uid in skip:
-                    continue
-                if uid in mentions_only and uid not in mentioned:
                     continue
                 events.append((
                     uid,
@@ -800,8 +876,11 @@ class ChatMessageOperations:
         member_ids: list[UUID],
         mentioned_user_ids: set[UUID] | None = None,
         team_mentions: list[tuple[TeamExpansion, list[UUID]]] | None = None,
+        *,
+        broadcast_kind: BroadcastMention | None = None,
+        broadcast_target_ids: set[UUID] | None = None,
     ) -> None:
-        """Emit notifications + stream events for mentions, DMs, and thread replies."""
+        """Emit notifications + stream events for mentions, broadcasts, DMs, and thread replies."""
         try:
             from uniffy.core.events.bus import emit_notification
             from uniffy.core.events.types import NotificationEvent
@@ -863,6 +942,34 @@ class ChatMessageOperations:
                 notified_ids.update(targets)
                 team_targets.extend(targets)
 
+            # Directly mentioned users keep the personal "Mentioned you" copy;
+            # the broadcast event covers everyone the roster fan-out reaches.
+            broadcast_targets: list[UUID] = []
+            if broadcast_kind is not None and broadcast_target_ids:
+                broadcast_targets = [
+                    uid for uid in broadcast_target_ids if uid != user_id and uid not in notified_ids
+                ]
+            if broadcast_targets:
+                where = f"#{channel.name}" if channel.name else "the conversation"
+                title = (
+                    f"Mentioned everyone active in {where}"
+                    if broadcast_kind is BroadcastMention.HERE
+                    else f"Mentioned everyone in {where}"
+                )
+                await emit_notification(
+                    NotificationEvent(
+                        notification_type=NotificationType.CHAT_MENTION,
+                        organization_id=channel.organization_id,
+                        actor_id=user_id,
+                        title=title,
+                        body=preview,
+                        source_urn=channel_urn,
+                        target_user_ids=broadcast_targets,
+                        metadata={**notif_metadata, "broadcast": broadcast_kind.value},
+                    )
+                )
+                notified_ids.update(broadcast_targets)
+
             if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
                 dm_recipients = [
                     mid for mid in member_ids if mid != user_id and mid not in notified_ids
@@ -921,11 +1028,13 @@ class ChatMessageOperations:
                         thread_payload,
                     )
 
-            mention_stream_targets = mention_targets + team_targets
+            # A broadcast widens this set to the whole roster, so the fan-out
+            # must stay one pipelined round trip, never a PUBLISH per member.
+            mention_stream_targets = mention_targets + team_targets + broadcast_targets
             if mention_stream_targets:
                 from uniffy.domains.chat.streaming.events import MENTION_RECEIVED
                 from uniffy.domains.chat.streaming.publisher import (
-                    publish_user_chat_event as pub_user,
+                    publish_user_chat_events,
                 )
 
                 mention_payload = {
@@ -934,8 +1043,9 @@ class ChatMessageOperations:
                     "sender_id": str(user_id),
                     "content_preview": message.content[:150],
                 }
-                for mid in mention_stream_targets:
-                    await pub_user(mid, MENTION_RECEIVED, mention_payload)
+                await publish_user_chat_events([
+                    (mid, MENTION_RECEIVED, mention_payload) for mid in mention_stream_targets
+                ])
         except Exception:
             logger.warning(f"Notification emit failed for message {message.id}")
 
@@ -1088,7 +1198,7 @@ class ChatMessageOperations:
         if len(content) > MAX_MESSAGE_LENGTH:
             raise ValidationError("content", f"Message exceeds {MAX_MESSAGE_LENGTH} characters")
 
-        await self.access.get_channel(channel_id, organization_id)
+        channel = await self.access.get_channel(channel_id, organization_id)
         msg = await self._get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
             raise NotFoundError("message", message_id)
@@ -1096,6 +1206,11 @@ class ChatMessageOperations:
         await self._require_message_action(
             user_id, organization_id, channel_id, msg, ChatMessageAction.EDIT
         )
+
+        # Editing in a broadcast must clear the same bar as sending one.
+        if extract_broadcast_mentions_from_content(content):
+            editor_member = await self.access.get_membership(channel_id, user_id)
+            await self._require_broadcast_allowed(user_id, channel, editor_member)
 
         now = datetime.now(UTC)
         msg.content = content
@@ -1141,7 +1256,6 @@ class ChatMessageOperations:
         except Exception:
             logger.warning(f"Valkey publish failed for message update {msg.id}")
 
-        channel = await self.access.get_channel(channel_id, organization_id)
         await self._index_message(msg, channel, member_ids)
 
         await self._update_resources(channel_id, msg.content, msg.sender_id)

@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from uniffy.core.content.references import BROADCAST_URNS
 from uniffy.core.types import generate_id
 from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
 
@@ -49,16 +50,17 @@ class TestMentionMatch:
         params = ops.session.execute.call_args_list[1].args[1]
         assert params["mention_urns"] == [
             f"urn:uniffy:content:USER:{USER}",
+            *BROADCAST_URNS,
             f"urn:uniffy:content:TEAM:{first}",
             f"urn:uniffy:content:TEAM:{second}",
         ]
 
-    async def test_user_without_teams_binds_a_single_urn(self) -> None:
+    async def test_user_without_teams_binds_user_and_broadcast_urns(self) -> None:
         ops = _ops()
         await _run(ops, [generate_id()])
 
         params = ops.session.execute.call_args_list[1].args[1]
-        assert params["mention_urns"] == [f"urn:uniffy:content:USER:{USER}"]
+        assert params["mention_urns"] == [f"urn:uniffy:content:USER:{USER}", *BROADCAST_URNS]
 
     async def test_counts_returned_per_channel_without_valkey(self) -> None:
         channel = generate_id()

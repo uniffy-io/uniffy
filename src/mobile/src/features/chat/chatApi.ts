@@ -4,6 +4,7 @@ import {
   ChatService,
   ListChannelsRequestSchema,
   GetChannelRequestSchema,
+  GetChatPolicyRequestSchema,
   CreateChannelRequestSchema,
   UpdateChannelRequestSchema,
   ArchiveChannelRequestSchema,
@@ -70,6 +71,8 @@ export const chatApi = {
   listChannels: (req: MessageInitShape<typeof ListChannelsRequestSchema>) =>
     client.listChannels(req),
   getChannel: (req: MessageInitShape<typeof GetChannelRequestSchema>) => client.getChannel(req),
+  getChatPolicy: (req: MessageInitShape<typeof GetChatPolicyRequestSchema>) =>
+    client.getChatPolicy(req),
   createChannel: (req: MessageInitShape<typeof CreateChannelRequestSchema>) =>
     client.createChannel(req),
   updateChannel: (req: MessageInitShape<typeof UpdateChannelRequestSchema>) =>

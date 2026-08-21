@@ -16,6 +16,8 @@ import {
   approvalToPlain,
   draftToPlain,
   draftKey,
+  chatPolicyToPlain,
+  type SerializedChatPolicy,
   type SerializedChannel,
   type SerializedMessage,
   type SerializedMember,
@@ -234,6 +236,19 @@ export function useChannel(channelId: string | undefined) {
         channelId: channelId!,
       });
       return res.channel ? channelToPlain(res.channel) : null;
+    },
+  });
+}
+
+/** Org broadcast-mention policy; gates the composer's @channel/@here suggestions. */
+export function useChatPolicy() {
+  const { organizationId } = useAuth();
+  return useQuery({
+    queryKey: ["chat", "policy", organizationId],
+    enabled: !!organizationId,
+    queryFn: async (): Promise<SerializedChatPolicy | null> => {
+      const res = await chatApi.getChatPolicy({ organizationId: organizationId! });
+      return res.policy ? chatPolicyToPlain(res.policy) : null;
     },
   });
 }

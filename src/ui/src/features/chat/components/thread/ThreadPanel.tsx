@@ -40,6 +40,7 @@ export function ThreadPanel() {
     const channel = state.chatChannels.byId[rootMessage.channelId];
     return channel ? `#${channel.name}` : "";
   });
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   useEffect(() => {
     if (activeThreadId && rootMessage) {
@@ -240,6 +241,11 @@ export function ThreadPanel() {
         // Remount per thread so one thread's text never leaks into another.
         key={activeThreadId}
         channelName=""
+        // Channel + org context feed the broadcast/team-mention guards and
+        // attachment uploads; without them the thread composer silently
+        // skipped all three.
+        channelId={rootMessage?.channelId}
+        organizationId={organizationId ?? undefined}
         placeholder="Reply..."
         onSend={handleSend}
         replyTo={replyToMessage}

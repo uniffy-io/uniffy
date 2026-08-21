@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo } from "react";
-import { X, At } from "@phosphor-icons/react";
+import { X, At, Megaphone } from "@phosphor-icons/react";
 import { SearchResultsList, useSearch } from "@/features/search";
 import { FilterChip } from "@/features/search/components/FilterChip";
 import { FilterHints } from "@/features/search/components/FilterHints";
@@ -38,6 +38,8 @@ interface ChatMentionPopupProps {
   onSelect: (result: SearchResultItem) => void;
   onClose: () => void;
   onQuerySync?: (query: string) => void;
+  /** Non-search entries (broadcast mentions) prepended when the query prefix-matches. */
+  staticEntries?: SearchResultItem[];
 }
 
 export function ChatMentionPopup({
@@ -45,6 +47,7 @@ export function ChatMentionPopup({
   onSelect,
   onClose,
   onQuerySync,
+  staticEntries,
 }: ChatMentionPopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -82,12 +85,18 @@ export function ChatMentionPopup({
   const isLoading = contentLoading || peopleLoading;
 
   // An explicitly typed type filter (note:, file:, ...) is the user narrowing
-  // on purpose; the people group steps aside for it.
+  // on purpose; the people group and static entries step aside for it.
   const orderedResults = useMemo(() => {
     if (parsedQuery.filters.types.length > 0) return results;
+    const q = searchQuery.trim().toLowerCase().replace(/^@/, "");
+    const staticMatches = q
+      ? (staticEntries ?? []).filter((entry) =>
+          entry.title.toLowerCase().replace(/^@/, "").startsWith(q),
+        )
+      : [];
     const peopleUrns = new Set(peopleResults.map((r) => r.urn));
-    return [...peopleResults, ...results.filter((r) => !peopleUrns.has(r.urn))];
-  }, [parsedQuery.filters.types.length, peopleResults, results]);
+    return [...staticMatches, ...peopleResults, ...results.filter((r) => !peopleUrns.has(r.urn))];
+  }, [parsedQuery.filters.types.length, peopleResults, results, searchQuery, staticEntries]);
 
   useEffect(() => {
     if (initialQuery) {
@@ -276,14 +285,36 @@ export function ChatMentionPopup({
                 emptyMessage="No content found"
               />
             ) : (
-              <div className="py-8 px-4 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Type to search for content to mention
-                </p>
-                <p className="text-xs text-muted-foreground/60 mt-2 mb-4">
-                  Search for notes, files, users, and more
-                </p>
-                <FilterHints onHintClick={handleFilterHintClick} />
+              <div className="pb-2">
+                {staticEntries && staticEntries.length > 0 && (
+                  <div className="px-4 pt-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/60 mb-2">
+                      Notify channel
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {staticEntries.map((entry) => (
+                        <button
+                          key={entry.urn}
+                          onClick={() => onSelect(entry)}
+                          title={entry.description}
+                          className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+                        >
+                          <Megaphone size={14} weight="duotone" className="text-primary" />
+                          <span className="text-sm font-medium text-primary">{entry.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="py-8 px-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Type to search for content to mention
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 mt-2 mb-4">
+                    Search for notes, files, users, and more
+                  </p>
+                  <FilterHints onHintClick={handleFilterHintClick} />
+                </div>
               </div>
             )}
           </div>
