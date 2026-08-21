@@ -1,8 +1,19 @@
-import { cn } from "@/shared/utils/cn";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useSettings, useNotificationSettings } from "@/features/settings/hooks/useSettings";
+import {
+  DEFAULT_QUIET_HOURS_END,
+  DEFAULT_QUIET_HOURS_START,
+  clockTimeToDecimalHours,
+  decimalHoursToClockTime,
+  quietHoursToggleUpdate,
+  quietHoursValidationError,
+} from "@/features/settings/utils/quietHours";
 import { usePushSubscription } from "@/features/notifications/hooks/usePushSubscription";
 import { ReminderSelector } from "@/features/calendar/components/modals/ReminderSelector";
+import { TimeSelect } from "@/features/calendar/components/modals/TimeSelect";
 
 const NOTIFICATION_TYPE_ROWS = [
   { type: "CONTENT_SHARED", label: "Content Shared" },
@@ -32,71 +43,45 @@ const DEFAULT_CHANNELS: Record<string, Record<string, boolean>> = {
   SYSTEM_ANNOUNCEMENT: { in_app: true, browser: true, email: true },
 };
 
-interface ChannelCheckboxProps {
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (checked: boolean) => void;
-}
-
-function ChannelCheckbox({ checked, disabled, onChange }: ChannelCheckboxProps) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      className={cn(
-        "w-5 h-5 rounded border-2 transition-colors flex items-center justify-center",
-        checked && !disabled ? "bg-primary border-primary" : "border-border",
-        disabled && "opacity-40 cursor-not-allowed",
-        !disabled && "cursor-pointer hover:border-primary/60",
-      )}
-      onClick={() => !disabled && onChange(!checked)}
-    >
-      {checked && (
-        <svg className="w-3 h-3 text-primary-foreground" viewBox="0 0 12 12" fill="none">
-          <path
-            d="M2 6l3 3 5-5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      )}
-    </button>
-  );
-}
-
-interface ToggleSwitchProps {
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
-  disabled?: boolean;
-}
-
-function ToggleSwitch({ enabled, onChange, disabled }: ToggleSwitchProps) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      disabled={disabled}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-        enabled ? "bg-primary" : "bg-muted"
-      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-      onClick={() => !disabled && onChange(!enabled)}
-    >
-      <span
-        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-          enabled ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
-  );
-}
+const CHANNEL_LABELS: Record<string, string> = {
+  in_app: "in-app",
+  browser: "browser",
+  email: "email",
+};
 
 export function NotificationsSection() {
   const { updateSettings, saving } = useSettings();
   const notifications = useNotificationSettings();
   const { subscribe, unsubscribe, permissionState, isSupported } = usePushSubscription();
+
+  const [quietHoursDraft, setQuietHoursDraft] = useState<{ start: string; end: string } | null>(
+    null,
+  );
+  const [quietHoursError, setQuietHoursError] = useState<string | null>(null);
+
+  const quietHoursEnabled = Boolean(notifications.quietHoursStart && notifications.quietHoursEnd);
+  const quietHoursStart = quietHoursDraft?.start ?? notifications.quietHoursStart ?? "";
+  const quietHoursEnd = quietHoursDraft?.end ?? notifications.quietHoursEnd ?? "";
+
+  const handleQuietHoursToggle = (enabled: boolean) => {
+    setQuietHoursDraft(null);
+    setQuietHoursError(null);
+    updateSettings({ notifications: quietHoursToggleUpdate(enabled) });
+  };
+
+  const handleQuietHoursTimeChange = (field: "start" | "end", value: string) => {
+    const start = field === "start" ? value : quietHoursStart;
+    const end = field === "end" ? value : quietHoursEnd;
+    const error = quietHoursValidationError(start, end);
+    if (error) {
+      setQuietHoursDraft({ start, end });
+      setQuietHoursError(error);
+      return;
+    }
+    setQuietHoursDraft(null);
+    setQuietHoursError(null);
+    updateSettings({ notifications: { quietHoursStart: start, quietHoursEnd: end } });
+  };
 
   const handleToggle = async (field: string, value: boolean) => {
     // Browser channel needs a live push subscription; persist only after subscribe() succeeds.
@@ -169,6 +154,21 @@ export function NotificationsSection() {
               disabled={saving}
             />
           </div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            <div>
+              <div className="font-medium text-foreground">Play Notification Sounds</div>
+              <div className="text-sm text-muted-foreground">
+                Play a short chime when a notification arrives. Sounds pause while your status is Do
+                Not Disturb and during quiet hours.
+              </div>
+            </div>
+            <ToggleSwitch
+              enabled={notifications.soundEnabled}
+              onChange={(v) => handleToggle("soundEnabled", v)}
+              disabled={saving}
+            />
+          </div>
         </div>
       </section>
 
@@ -204,6 +204,64 @@ export function NotificationsSection() {
               disabled={saving || !isSupported || permissionState === "denied"}
             />
           </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Quiet Hours</h2>
+        <p className="text-sm text-muted-foreground">
+          Pause browser push and notification sounds during a daily window. In-app notifications
+          still arrive. Times follow your profile timezone (UTC when unset).
+        </p>
+
+        <div className="space-y-4 bg-card rounded-lg border border-border p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium text-foreground">Enable Quiet Hours</div>
+              <div className="text-sm text-muted-foreground">
+                An end time earlier than the start spans midnight, like 22:00 to 08:00.
+              </div>
+            </div>
+            <ToggleSwitch
+              enabled={quietHoursEnabled}
+              onChange={handleQuietHoursToggle}
+              disabled={saving}
+            />
+          </div>
+
+          {quietHoursEnabled && (
+            <div className="pt-4 border-t border-border space-y-3">
+              <div className="flex flex-wrap items-end gap-6">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-foreground">Start</span>
+                  <TimeSelect
+                    value={clockTimeToDecimalHours(quietHoursStart || DEFAULT_QUIET_HOURS_START)}
+                    disabled={saving}
+                    ariaLabel="Quiet hours start time"
+                    onChange={(v) =>
+                      handleQuietHoursTimeChange("start", decimalHoursToClockTime(v))
+                    }
+                    className="w-36"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-foreground">End</span>
+                  <TimeSelect
+                    value={clockTimeToDecimalHours(quietHoursEnd || DEFAULT_QUIET_HOURS_END)}
+                    disabled={saving}
+                    ariaLabel="Quiet hours end time"
+                    onChange={(v) => handleQuietHoursTimeChange("end", decimalHoursToClockTime(v))}
+                    className="w-36"
+                  />
+                </div>
+              </div>
+              {quietHoursError && (
+                <div className="text-xs" role="alert" style={{ color: "var(--status-error)" }}>
+                  {quietHoursError}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -315,10 +373,11 @@ export function NotificationsSection() {
 
                   return (
                     <div key={channel} className="flex justify-center">
-                      <ChannelCheckbox
+                      <Checkbox
                         checked={isEnabled}
                         disabled={saving || isMasterDisabled}
-                        onChange={(v) => handleChannelToggle(type, channel, v)}
+                        aria-label={`${label} ${CHANNEL_LABELS[channel]} notifications`}
+                        onChange={(e) => handleChannelToggle(type, channel, e.target.checked)}
                       />
                     </div>
                   );
@@ -347,17 +406,6 @@ export function NotificationsSection() {
               });
             }}
           />
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Quiet Hours</h2>
-        <p className="text-sm text-muted-foreground">
-          Pause notifications during specific times. Coming soon.
-        </p>
-
-        <div className="bg-muted/50 rounded-lg border border-border p-4 text-center text-muted-foreground">
-          Quiet hours configuration will be available in a future update.
         </div>
       </section>
     </div>

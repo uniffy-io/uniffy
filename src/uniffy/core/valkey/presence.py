@@ -18,6 +18,7 @@ _NAMESPACE = "presence"
 
 # Stored status vocabulary; the proto mapping lives in domains/presence/converters.py.
 PRESENCE_STATUS_ONLINE = "online"
+PRESENCE_STATUS_DND = "dnd"
 
 LOGGER_COMPONENT = "presence"
 

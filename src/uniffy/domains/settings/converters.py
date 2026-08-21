@@ -229,10 +229,10 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
         result["email_frequency"] = proto.email_frequency
 
     if proto.HasField("quiet_hours_start"):
-        result["quiet_hours_start"] = proto.quiet_hours_start
+        result["quiet_hours_start"] = proto.quiet_hours_start or None
 
     if proto.HasField("quiet_hours_end"):
-        result["quiet_hours_end"] = proto.quiet_hours_end
+        result["quiet_hours_end"] = proto.quiet_hours_end or None
 
     if proto.HasField("toast_enabled"):
         result["toast_enabled"] = proto.toast_enabled

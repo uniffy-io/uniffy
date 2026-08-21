@@ -1,6 +1,7 @@
 """Web Push (VAPID) delivery adapter."""
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -14,6 +15,10 @@ from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.domains.notifications.converters import notification_type_to_proto
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter, NotificationChannel
+from uniffy.domains.notifications.delivery.suppression import (
+    InterruptiveDeliveryContext,
+    should_suppress_interruptive_delivery,
+)
 
 logger = logger.bind(component="notifications.delivery.push")
 
@@ -39,8 +44,18 @@ class PushAdapter(DeliveryAdapter):
         session: AsyncSession,
         user_id: UUID,
         event: NotificationEvent,
+        *,
+        notification_overrides: dict[str, Any] | None = None,
+        suppression_context: InterruptiveDeliveryContext | None = None,
     ) -> bool:
         """Send push to every registered endpoint and prune stale (410) rows."""
+        if suppression_context is not None and should_suppress_interruptive_delivery(
+            notification_overrides,
+            suppression_context,
+        ):
+            logger.debug(f"Push suppressed by quiet hours or DND for user {user_id}")
+            return False
+
         vapid_config = get_vapid_config()
         if not vapid_config:
             logger.debug("Push skipped: VAPID not configured")

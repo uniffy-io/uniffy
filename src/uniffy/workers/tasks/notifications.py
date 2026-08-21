@@ -17,6 +17,10 @@ from uniffy.db import open_session
 from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS, NotificationChannel
 from uniffy.domains.notifications.delivery.in_app import InAppAdapter
 from uniffy.domains.notifications.delivery.push import PushAdapter
+from uniffy.domains.notifications.delivery.suppression import (
+    InterruptiveDeliveryContext,
+    load_interruptive_delivery_contexts,
+)
 from uniffy.domains.permissions.resource_access import ResourceAudienceResolver, ResourceKey
 from uniffy.observability.metrics import (
     NOTIFICATION_DELIVERIES_TOTAL,
@@ -77,9 +81,14 @@ async def process_notification_event(
 
         in_app_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.IN_APP)
         pending_notifications: list[Notification] = []
+        suppression_contexts: dict[UUID, InterruptiveDeliveryContext] | None = None
 
         for user_id in recipient_ids:
-            channels = await _get_delivery_channels(session, user_id, event.notification_type)
+            channels, notification_overrides = await _get_delivery_preferences(
+                session,
+                user_id,
+                event.notification_type,
+            )
 
             if NotificationChannel.IN_APP in channels and isinstance(in_app_adapter, InAppAdapter):
                 notification = await in_app_adapter.deliver_with_session(session, user_id, event)
@@ -89,7 +98,19 @@ async def process_notification_event(
             if NotificationChannel.BROWSER in channels:
                 push_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.BROWSER)
                 if isinstance(push_adapter, PushAdapter):
-                    await push_adapter.deliver_with_session(session, user_id, push_event)
+                    if suppression_contexts is None:
+                        suppression_contexts = await load_interruptive_delivery_contexts(
+                            session,
+                            event.organization_id,
+                            recipient_ids,
+                        )
+                    await push_adapter.deliver_with_session(
+                        session,
+                        user_id,
+                        push_event,
+                        notification_overrides=notification_overrides,
+                        suppression_context=suppression_contexts[user_id],
+                    )
                 elif push_adapter:
                     await push_adapter.deliver(user_id, push_event)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="browser").inc()
@@ -283,12 +304,12 @@ async def _resolve_recipients(
     return await _filter_to_viewers(session, event, resolved)
 
 
-async def _get_delivery_channels(
+async def _get_delivery_preferences(
     session: AsyncSession,
     user_id: UUID,
     notification_type: NotificationType,
-) -> set[str]:
-    """Return the enabled delivery channels for `user_id` + `notification_type`.
+) -> tuple[set[str], dict[str, Any] | None]:
+    """Return enabled channels and raw notification overrides for one user.
 
     Reads `settings_profile.notifications` via the Valkey settings cache (15-min TTL).
     """
@@ -315,4 +336,4 @@ async def _get_delivery_channels(
 
     channels = get_effective_notification_channels(notification_type, overrides)
 
-    return {ch for ch, enabled in channels.items() if enabled}
+    return ({ch for ch, enabled in channels.items() if enabled}, overrides)

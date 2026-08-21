@@ -551,6 +551,37 @@ metadata. Needs two users, one channel, one thread.
 - [ ] Mobile: a thread-reply notification opens the thread screen for the right root; mention and
       DM notifications open the channel.
 
+## Notification DND, quiet hours, sound, and toasts
+
+DND and quiet hours suppress browser push and the web chime; in-app notification rows always
+arrive. Needs two users, browser push granted for the receiver, and a second browser for the
+sender.
+
+- [x] With sounds enabled (Settings -> Notifications -> Play Notification Sounds) and the app
+      window unfocused or on another channel, an incoming mention plays the chime once and shows
+      the toast.
+- [x] Sitting in the channel with the window focused: no chime, no toast, no bell row for a new
+      message notification in that channel.
+- [x] Turn the sound toggle off: the toast still appears, no chime. Turn toasts off and sound on:
+      chime without toast (the two settings act independently).
+- [x] Receiver sets status to Do Not Disturb: no chime; the bell badge and notification row still
+      appear. Back to Online restores sound.
+- [ ] On a secure origin with browser push subscribed, Do Not Disturb suppresses browser push while
+      the bell badge and notification row still appear.
+- [x] Enable Quiet Hours: the toggle seeds 22:00 to 08:00. Set a window covering the current time
+      in the receiver's profile timezone: no chime and bell rows still arrive. Unit coverage proves
+      same-day and overnight boundaries.
+- [ ] On a secure origin with browser push subscribed, a quiet-hours window covering the current
+      profile-local time suppresses browser push while the bell row still arrives.
+- [x] Set start equal to end: the settings page shows a validation error and does not save.
+      Clearing a time field shows an error instead of submitting a half pair.
+- [x] Disable Quiet Hours: sound resumes immediately, both fields clear server-side, and a reload
+      keeps the toggle off.
+- [ ] On a secure origin with browser push subscribed, disabling Quiet Hours restores push.
+- [x] Add the receiver to a private channel: an "Added you to" notification reaches the bell and
+      toast. Remove the receiver: a "Removed you from" notification reaches both surfaces. Delete
+      the temporary channel afterward.
+
 ## Chat broadcast mentions
 
 @channel/@here ping a whole channel at once. Needs two users in a private channel

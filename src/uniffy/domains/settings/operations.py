@@ -1,5 +1,6 @@
 """Settings profile CRUD + effective-settings computation."""
 
+import re
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -21,6 +22,7 @@ from uniffy.domains.settings.defaults import (
 )
 
 _WEEK_START_VALUES = {"monday", "saturday", "sunday"}
+_CLOCK_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
 
 def _validate_appearance(appearance: dict[str, Any] | None) -> None:
@@ -35,6 +37,26 @@ def _validate_appearance(appearance: dict[str, Any] | None) -> None:
     week_start = appearance.get("week_start")
     if week_start and week_start not in _WEEK_START_VALUES:
         raise ValidationError("week_start", f"Unknown week start '{week_start}'")
+
+
+def _validate_notifications(notifications: dict[str, Any] | None) -> None:
+    if not notifications:
+        return
+    start = notifications.get("quiet_hours_start") or None
+    end = notifications.get("quiet_hours_end") or None
+    if (start is None) != (end is None):
+        raise ValidationError(
+            "quiet_hours",
+            "Quiet hours require both a start and an end time",
+        )
+    if start is None:
+        return
+    if not isinstance(start, str) or not _CLOCK_RE.fullmatch(start):
+        raise ValidationError("quiet_hours_start", "Quiet-hours start must use HH:MM")
+    if not isinstance(end, str) or not _CLOCK_RE.fullmatch(end):
+        raise ValidationError("quiet_hours_end", "Quiet-hours end must use HH:MM")
+    if start == end:
+        raise ValidationError("quiet_hours", "Quiet-hours start and end must differ")
 
 
 async def get_user_timezone(session: AsyncSession, user_id: UUID) -> str | None:
@@ -65,6 +87,7 @@ class SettingsOperations:
             raise ValidationError("name", f"Profile with name '{name}' already exists")
 
         _validate_appearance(appearance)
+        _validate_notifications(notifications)
 
         if is_default:
             await self._unset_default_profiles(user_id)
@@ -154,7 +177,9 @@ class SettingsOperations:
             )
 
         if notifications is not None:
-            profile.notifications = self._merge_settings(profile.notifications, notifications)
+            merged_notifications = self._merge_settings(profile.notifications, notifications)
+            _validate_notifications(merged_notifications)
+            profile.notifications = merged_notifications
 
         if is_default is not None:
             if is_default and not profile.is_default:

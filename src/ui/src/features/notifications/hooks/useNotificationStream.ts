@@ -21,9 +21,15 @@ import {
   markNotificationAsRead,
   markNotificationsReadBySource,
 } from "@/features/notifications/store/notificationsSlice";
+import {
+  playNotificationSound,
+  shouldPlayNotificationSound,
+} from "@/features/notifications/utils/notificationSound";
 import { isDocumentVisible } from "@/shared/utils/documentVisibility";
 import type { SerializedNotification } from "@/features/notifications/store/notificationsSlice";
 import { updatePresenceWithCustomStatus } from "@/features/presence/store/presenceSlice";
+import { usePresence } from "@/features/presence/hooks/usePresence";
+import { fetchPersonThunk } from "@/features/people/store/peopleThunks";
 import { setDomainAdminDomains } from "@/features/auth/store/authSlice";
 import { adminApi } from "@/features/admin/api/adminApi";
 import { emitMentionStateChange, mergeMentionState } from "@/components/mention";
@@ -50,6 +56,13 @@ export function useNotificationStream() {
   const userId = useAppSelector((s) => s.auth.user?.id);
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const abortRef = useRef<AbortController | null>(null);
+
+  usePresence(userId ?? "");
+
+  useEffect(() => {
+    if (!organizationId || !userId || !isAuthenticated) return;
+    void dispatch(fetchPersonThunk({ userId }));
+  }, [dispatch, organizationId, userId, isAuthenticated]);
 
   useEffect(() => {
     if (!organizationId || !isAuthenticated) return;
@@ -169,6 +182,21 @@ export function useNotificationStream() {
                       duration: 5000,
                     },
                   );
+                }
+              }
+
+              if (currentState) {
+                const prefs = currentState.settings.effectiveSettings?.notifications;
+                const shouldPlay = shouldPlayNotificationSound({
+                  soundEnabled: prefs?.soundEnabled ?? true,
+                  activelyViewingChat,
+                  presenceStatus: userId ? currentState.presence.statuses[userId] : undefined,
+                  quietHoursStart: prefs?.quietHoursStart,
+                  quietHoursEnd: prefs?.quietHoursEnd,
+                  timezone: userId ? currentState.people.profilesById[userId]?.timezone : undefined,
+                });
+                if (shouldPlay) {
+                  playNotificationSound();
                 }
               }
             }
