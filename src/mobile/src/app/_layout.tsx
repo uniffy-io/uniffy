@@ -102,6 +102,10 @@ function RootLayoutNav() {
   useNotificationStream();
 
   const showAppChrome = isAuthenticated && !!organizationId;
+  // The graph is a canvas with its own controls in the corners, and the
+  // floating bar sits on top of them. A screen that owns the full surface says
+  // so here rather than each one drawing around a bar it cannot see.
+  const immersive = pathname === "/notes/graph";
 
   // Android runs edge-to-edge, so the system nav bar is transparent with
   // content drawn behind it and its color/style setters are unsupported and
@@ -123,13 +127,15 @@ function RootLayoutNav() {
     }
   }, [T.isDark]);
 
-  // Hardware back button: minimize the call overlay or close the @ overlay
-  // before letting navigation handle it.
   const callExpanded =
     !callMinimized &&
     (callSession.status === "connecting" ||
       callSession.status === "connected" ||
       callSession.status === "reconnecting");
+  const showBar = showAppChrome && !callExpanded && !immersive;
+
+  // Hardware back button: minimize the call overlay or close the @ overlay
+  // before letting navigation handle it.
   useEffect(() => {
     if (Platform.OS === "web") return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -168,7 +174,7 @@ function RootLayoutNav() {
       <View
         style={[
           styles.content,
-          showAppChrome && { marginBottom: -bottomBarBlockHeight(insets.bottom) },
+          showAppChrome && !immersive && { marginBottom: -bottomBarBlockHeight(insets.bottom) },
           callExpanded && styles.contentHidden,
         ]}
       >
@@ -218,8 +224,8 @@ function RootLayoutNav() {
           same flow-layout bug. */}
       {showAppChrome && callExpanded && <CallScreen />}
       {showAppChrome && !callExpanded && <CallIndicator />}
-      {showAppChrome && !callExpanded && <AppBottomNav />}
-      {showAppChrome && !callExpanded && <KeyboardSpacer />}
+      {showBar && <AppBottomNav />}
+      {showBar && <KeyboardSpacer />}
       {showAppChrome && <AtOverlay />}
       {showAppChrome && <IncomingCallBanner />}
       {showAppChrome && <CallEndedNotice />}

@@ -12,6 +12,8 @@ import {
   ScrollView,
   Keyboard,
   Platform,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import {
@@ -39,6 +41,8 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { Avatar } from "@shared/components/Avatar";
@@ -94,6 +98,7 @@ import {
   useMoveChannelToCategory,
   useLeaveChannel,
 } from "@features/chat/useChatMutations";
+import { useChatLayout, type ChatLayout } from "@features/chat/chatPrefs";
 import { useDirectory } from "@shared/directory/useDirectory";
 import {
   useAgents,
@@ -142,6 +147,13 @@ const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "👀", "🙏"];
 // quote can only ever show that much of a longer original.
 const REPLY_PREVIEW_MAX_CHARS = 150;
 const REPLY_BODY_GAP = 5;
+// Offset 0 is the newest message in the inverted list. Within this much of it
+// the reader counts as "at the bottom" and new rows are followed automatically,
+// so sending needs no scroll of its own.
+const NEAR_BOTTOM_PX = 120;
+// Shared by the bubble's padding and by the width derived from measured text,
+// so the two cannot drift apart and leave the last word clipped.
+const BUBBLE_PAD_X = 11;
 type SelectionRange = { start: number; end: number };
 
 /** One transcript row: a message, or a folded run of that agent's tool calls. */
@@ -192,6 +204,7 @@ export function ChatConversationScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const barSpace = bottomBarBlockHeight(insets.bottom);
+  const chatLayout = useChatLayout();
 
   // The RESTING height of the composer block, and deliberately only that.
   //
@@ -207,10 +220,53 @@ export function ChatConversationScreen() {
   // fires an onLayout for each, which is why a long transcript stuttered where
   // a short one looked fine. Growth is a viewport change, not a content change.
   const [restingFooterHeight, setRestingFooterHeight] = useState(0);
-  const noteFooterHeight = useCallback((height: number) => {
+  const restingFooterRef = useRef(0);
+  // Composer growth rides the UI thread. It changes on the same layout pass
+  // that collapses the composer as the keyboard dismisses, and routing that
+  // through React state re-rendered this whole screen - list props included -
+  // in the middle of the close animation, which is the hitch on the way down.
+  const composerGrowth = useSharedValue(0);
+  // Both writes below happen in a layout callback, never while rendering: the
+  // ref holds the resting height across renders, and assigning a shared value
+  // is the documented way to drive a Reanimated animation from JS.
+  const noteFooterHeight = useCallback(
+    // eslint-disable-next-line react/react-compiler
+    (height: number) => {
+      const rounded = Math.round(height);
+      // eslint-disable-next-line react/react-compiler
+      if (restingFooterRef.current === 0 || rounded < restingFooterRef.current) {
+        // eslint-disable-next-line react/react-compiler
+        restingFooterRef.current = rounded;
+        setRestingFooterHeight(rounded);
+      }
+      // eslint-disable-next-line react/react-compiler
+      composerGrowth.value = Math.max(0, rounded - restingFooterRef.current);
+    },
+    [composerGrowth],
+  );
+  // The keyboard lift reaches the transcript as a transform, never as a height
+  // change. The shell's spacer shrinks this screen on every frame of the
+  // keyboard animation, and resizing a VirtualizedList that often re-runs Yoga
+  // across every mounted row - which is the stutter. Holding the resting height
+  // and sliding instead costs a composite and no layout pass at all.
+  const { height: keyboardOffset, progress: keyboardProgress } = useReanimatedKeyboardAnimation();
+  const [transcriptHeight, setTranscriptHeight] = useState(0);
+  const noteTranscriptHeight = useCallback((height: number) => {
     const rounded = Math.round(height);
-    setRestingFooterHeight((prev) => (prev === 0 || rounded < prev ? rounded : prev));
+    setTranscriptHeight((prev) => (rounded > prev ? rounded : prev));
   }, []);
+  // The content inset reserves the RESTING composer only, so anything the
+  // composer grows by - the focused action row, a reply banner, a draft wrapping
+  // onto another line - would otherwise sit over the newest message. Folding
+  // that growth into the same transform clears it without touching the inset,
+  // which is the one thing that would relayout every mounted cell.
+  const transcriptLift = useAnimatedStyle(() => {
+    // The bar collapses as the keyboard rises, so the slot gives up only the
+    // difference between the two, not the whole keyboard.
+    const shrink = Math.max(0, -keyboardOffset.value - keyboardProgress.value * barSpace);
+    return { transform: [{ translateY: -(shrink + composerGrowth.value) }] };
+  });
+
   const { user, organizationId } = useAuth();
   const { pendingReference, clearPendingReference, openAt } = useUniffy();
   const queryClient = useQueryClient();
@@ -606,12 +662,16 @@ export function ChatConversationScreen() {
       resetCompose();
       attachments.clear();
       sendMessage.mutate({ content, replyToId: replyId, attachmentFileIds });
-      // Sending from a scrolled-up position should snap back to the newest
-      // message (offset 0 in the inverted list); defer a frame so the optimistic
-      // row is inserted before we scroll.
-      requestAnimationFrame(() => {
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
-      });
+      // Only a scrolled-up sender needs snapping back to the newest message
+      // (offset 0 in the inverted list). Firing it unconditionally animates the
+      // list while it is already pinned there, which fights the insert the
+      // anchor is busy absorbing. Deferred a frame so the optimistic row lands
+      // first.
+      if (scrollOffsetRef.current > NEAR_BOTTOM_PX) {
+        requestAnimationFrame(() => {
+          listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        });
+      }
     },
     [flushOnSend, resetCompose, attachments, sendMessage],
   );
@@ -734,20 +794,8 @@ export function ChatConversationScreen() {
     [channelId],
   );
 
-  // In the inverted list an item grows and shrinks from its TOP edge (the
-  // older side), so an expanding tool payload explodes upward and a collapse
-  // strands the viewport. Shifting the offset by the payload height keeps the
-  // card header anchored: expand unfolds downward, collapse folds back up.
   const listRef = useRef<FlatList<MessageRowItem>>(null);
   const scrollOffsetRef = useRef(0);
-  const adjustScrollForDetails = useCallback((delta: number) => {
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({
-        offset: Math.max(0, scrollOffsetRef.current + delta),
-        animated: false,
-      });
-    });
-  }, []);
 
   // Scroll a quoted message into view. Silently a no-op when the target sits in
   // a page the transcript has not loaded yet - there is no id-addressable fetch
@@ -798,6 +846,14 @@ export function ChatConversationScreen() {
         newDay ||
         older.senderId !== message.senderId ||
         message.createdAtSeconds - older.createdAtSeconds > GROUP_WINDOW_SECONDS;
+      // The list is inverted, so a run's last message is the one whose NEWER
+      // neighbour breaks the run - or which has no newer neighbour at all.
+      const newer = rows[index - 1]?.message;
+      const isGroupTail =
+        !newer ||
+        newer.senderId !== message.senderId ||
+        !isSameDay(newer.createdAtSeconds, message.createdAtSeconds) ||
+        newer.createdAtSeconds - message.createdAtSeconds > GROUP_WINDOW_SECONDS;
       // System notices have nothing to quote, and a message still in flight has
       // no server id for the reply to point at.
       const canSwipeReply = message.senderType !== "SYSTEM" && message.metadata?.optimistic !== "1";
@@ -819,8 +875,10 @@ export function ChatConversationScreen() {
               T={T}
               organizationId={organizationId ?? ""}
               showHeader={showHeader}
+              isGroupTail={isGroupTail}
               hideReplyContext={hideReplyContext}
               isOwn={message.senderId === user?.id}
+              layout={chatLayout}
               senderPresence={
                 message.senderType === "USER"
                   ? (presenceByUser[message.senderId] ?? "offline")
@@ -847,7 +905,6 @@ export function ChatConversationScreen() {
               onPressThread={openThreadFor}
               onPressReplyContext={jumpToReplyContext}
               onToggleReaction={handleReact}
-              onDetailsToggled={adjustScrollForDetails}
               onRateReply={rateReply}
             />
           </SwipeToReply>
@@ -858,6 +915,7 @@ export function ChatConversationScreen() {
       rows,
       T,
       user?.id,
+      chatLayout,
       organizationId,
       handleReact,
       firstUnreadId,
@@ -869,7 +927,6 @@ export function ChatConversationScreen() {
       resolveUserName,
       openActions,
       openThreadFor,
-      adjustScrollForDetails,
       presenceByUser,
       hideReplyContext,
       startReply,
@@ -986,48 +1043,71 @@ export function ChatConversationScreen() {
           </View>
         )
       ) : (
-        <FlatList
-          ref={listRef}
-          style={[styles.list, { marginBottom: -(restingFooterHeight + barSpace) }]}
-          data={rows}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.message.id}
-          onScroll={(e) => (scrollOffsetRef.current = e.nativeEvent.contentOffset.y)}
-          scrollEventThrottle={16}
-          inverted
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingTop: restingFooterHeight + barSpace + 12, paddingBottom: insets.top + 12 },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          // interactive is iOS-only and degrades to no dismissal at all on
-          // Android, where dragging the transcript has to close the keyboard too.
-          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
-          // Rows are variable height and there is no getItemLayout, so a jump to
-          // an unrendered index has to fall back to an estimate.
-          onScrollToIndexFailed={(info) =>
-            listRef.current?.scrollToOffset({
-              offset: info.averageItemLength * info.index,
-              animated: true,
-            })
-          }
-          onEndReached={() => void messagesQuery.loadOlder()}
-          onEndReachedThreshold={0.4}
-          // Messages are markdown, so a mounted row is expensive to build.
-          // Holding ten screens of them either way (the default) makes every
-          // relayout - the keyboard's most of all - drag a crowd along.
-          windowSize={11}
-          initialNumToRender={14}
-          maxToRenderPerBatch={8}
-          ListFooterComponent={
-            messagesQuery.isLoadingOlder ? (
-              <View style={styles.loadOlderWrap}>
-                <ActivityIndicator size="small" color={T.accent} />
-              </View>
-            ) : null
-          }
-        />
+        <View
+          style={[styles.transcriptSlot, { marginBottom: -(restingFooterHeight + barSpace) }]}
+          onLayout={(e) => noteTranscriptHeight(e.nativeEvent.layout.height)}
+        >
+          <Animated.View
+            style={[
+              transcriptHeight > 0 ? { height: transcriptHeight } : styles.fill,
+              transcriptLift,
+            ]}
+          >
+            <FlatList
+              ref={listRef}
+              style={styles.list}
+              data={rows}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.message.id}
+              // Written from the scroll event, not from render.
+              // eslint-disable-next-line react/react-compiler
+              onScroll={(e) => (scrollOffsetRef.current = e.nativeEvent.contentOffset.y)}
+              scrollEventThrottle={16}
+              inverted
+              showsVerticalScrollIndicator={false}
+              // Anchors the visible rows so nothing above jumps when a row is
+              // inserted or changes height - a sent message, a tool pane unfolding,
+              // markdown reflowing, an older page landing. autoscrollToTopThreshold
+              // is what still carries the reader to a new message while they sit at
+              // the newest end (offset 0 here, since the list is inverted).
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+                autoscrollToTopThreshold: NEAR_BOTTOM_PX,
+              }}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingTop: restingFooterHeight + barSpace + 12, paddingBottom: insets.top + 12 },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              // interactive is iOS-only and degrades to no dismissal at all on
+              // Android, where dragging the transcript has to close the keyboard too.
+              keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+              // Rows are variable height and there is no getItemLayout, so a jump to
+              // an unrendered index has to fall back to an estimate.
+              onScrollToIndexFailed={(info) =>
+                listRef.current?.scrollToOffset({
+                  offset: info.averageItemLength * info.index,
+                  animated: true,
+                })
+              }
+              onEndReached={() => void messagesQuery.loadOlder()}
+              onEndReachedThreshold={0.4}
+              // Messages are markdown, so a mounted row is expensive to build.
+              // Holding ten screens of them either way (the default) makes every
+              // relayout - the keyboard's most of all - drag a crowd along.
+              windowSize={11}
+              initialNumToRender={14}
+              maxToRenderPerBatch={8}
+              ListFooterComponent={
+                messagesQuery.isLoadingOlder ? (
+                  <View style={styles.loadOlderWrap}>
+                    <ActivityIndicator size="small" color={T.accent} />
+                  </View>
+                ) : null
+              }
+            />
+          </Animated.View>
+        </View>
       )}
 
       <View
@@ -1453,14 +1533,34 @@ function ReplyFeedbackRow({
  * Every callback prop is stable and takes the message, so the memo actually
  * holds.
  */
+/**
+ * Wraps its children in a bubble, or passes them through untouched. Renders no
+ * view at all when off, so the single-column layout keeps the node count it had
+ * before bubbles existed - a transcript mounts a screenful of these.
+ */
+function Bubble({
+  on,
+  style,
+  children,
+}: {
+  on: boolean;
+  style: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  if (!on) return <>{children}</>;
+  return <View style={style}>{children}</View>;
+}
+
 const MessageRow = React.memo(function MessageRow({
   message,
   toolRun,
   T,
   organizationId,
   showHeader,
+  isGroupTail,
   hideReplyContext,
   isOwn,
+  layout,
   agentActive,
   thinking,
   agentEmoji,
@@ -1472,7 +1572,6 @@ const MessageRow = React.memo(function MessageRow({
   onPressThread,
   onPressReplyContext,
   onToggleReaction,
-  onDetailsToggled,
   onRateReply,
   senderPresence,
 }: {
@@ -1481,8 +1580,11 @@ const MessageRow = React.memo(function MessageRow({
   T: ThemeColors;
   organizationId: string;
   showHeader: boolean;
+  /** Last message of a same-sender run, so the one that carries the timestamp. */
+  isGroupTail: boolean;
   hideReplyContext: boolean;
   isOwn: boolean;
+  layout: ChatLayout;
   agentActive: boolean;
   thinking?: AgentThinkingBlock[];
   agentEmoji?: string | null;
@@ -1494,7 +1596,6 @@ const MessageRow = React.memo(function MessageRow({
   onPressThread: (message: SerializedMessage) => void;
   onPressReplyContext: (message: SerializedMessage) => void;
   onToggleReaction: (message: SerializedMessage, emoji: string) => void;
-  onDetailsToggled?: (heightDelta: number) => void;
   onRateReply: (message: SerializedMessage, rating: "up" | "down") => void;
   senderPresence?: string | null;
 }) {
@@ -1510,21 +1611,9 @@ const MessageRow = React.memo(function MessageRow({
     return preview.length >= REPLY_PREVIEW_MAX_CHARS ? `${display}...` : display;
   }, [message.replyContext?.contentPreview]);
   const [replyExpanded, setReplyExpanded] = useState(false);
-  const replyBodyHeightRef = useRef(0);
   const isAgent = message.senderType === "AGENT";
 
-  // Inverted list: the row grows from its top edge, so hand the height change to
-  // the screen and let it hold the viewport still.
-  const toggleReplyExpanded = useCallback(() => {
-    setReplyExpanded((open) => {
-      if (open) {
-        const height = replyBodyHeightRef.current;
-        replyBodyHeightRef.current = 0;
-        if (height > 0) onDetailsToggled?.(-(height + REPLY_BODY_GAP));
-      }
-      return !open;
-    });
-  }, [onDetailsToggled]);
+  const toggleReplyExpanded = useCallback(() => setReplyExpanded((open) => !open), []);
   const senderName = (isAgent && agentName) || message.senderName;
   const isSystem = message.senderType === "SYSTEM";
   const failed = message.metadata?.failed === "1";
@@ -1534,6 +1623,36 @@ const MessageRow = React.memo(function MessageRow({
   // what marks a reply as finished and rateable.
   const streamingReply = !!message.metadata?.streaming;
   const jumbo = useMemo(() => !agentSpecial && isEmojiOnly(display), [agentSpecial, display]);
+
+  // Agents take a side too - a reply is a message like any other, and a
+  // transcript that bubbles one sender but not the other reads as broken.
+  // System notices are the exception: they come from nobody and have no side.
+  const sided = layout === "bubbles" && message.senderType !== "SYSTEM";
+  // A lone emoji is already its own shape; wrapping it mostly draws a box
+  // around empty space.
+  const bubbled = sided && !jumbo;
+  const ownSide = sided && isOwn;
+
+  // A shrink-wrapped box is as wide as its text would be on one line, clamped
+  // to the cap - so a wrapped message keeps the cap's width and wears the whole
+  // ragged right edge of the wrap as dead space. The renderer reports what the
+  // text actually occupies and the bubble takes that instead. Only prose can be
+  // measured, so anything sharing the bubble with it keeps the bubble at its
+  // natural width rather than risk squeezing that content.
+  const [textWidth, setTextWidth] = useState(0);
+  const canHug =
+    bubbled &&
+    // An agent bubble also holds a thinking pane, a tool timeline or a feedback
+    // row, and only the prose can be measured - shrinking to it would squeeze
+    // everything else.
+    !isAgent &&
+    message.attachments.length === 0 &&
+    !(!hideReplyContext && message.replyContext) &&
+    !message.editedAtSeconds &&
+    !failed;
+  const noteTextWidth = useCallback((width: number) => {
+    setTextWidth((prev) => (Math.abs(prev - width) < 1 ? prev : width));
+  }, []);
 
   // The runtime persists reasoning onto the row, so a reply keeps its pane after
   // a reload; the stream cache only holds replies watched as they arrived, and
@@ -1558,142 +1677,188 @@ const MessageRow = React.memo(function MessageRow({
       // no gap to hit.
       onPress={failed ? () => onPressFailed(message) : () => Keyboard.dismiss()}
       delayLongPress={250}
-      style={[styles.msgRow, !showHeader && styles.msgRowGrouped]}
+      style={[
+        styles.msgRow,
+        !showHeader && styles.msgRowGrouped,
+        sided && !showHeader && styles.msgRowSidedGrouped,
+        ownSide && styles.msgRowOwn,
+      ]}
     >
-      <View style={styles.msgAvatar}>
-        {showHeader ? (
-          <Avatar
-            name={senderName}
-            avatarUrl={message.senderAvatarUrl ?? undefined}
-            size={36}
-            accentColor={isAgent ? T.accent : undefined}
-            emoji={isAgent ? (agentEmoji ?? undefined) : undefined}
-            presence={senderPresence}
-            presenceRingColor={T.pageBg}
-          />
-        ) : null}
-      </View>
-      <View style={styles.msgBody}>
-        {showHeader ? (
-          <View style={styles.msgHeader}>
-            <Text style={[styles.msgSender, { color: T.textBright }]} numberOfLines={1}>
-              {senderName}
-            </Text>
-            {isAgent ? (
-              <View style={[styles.agentTag, { backgroundColor: T.accentSoft }]}>
-                <Text style={[styles.agentTagText, { color: T.accent }]}>AGENT</Text>
-              </View>
-            ) : null}
-            <Text style={[styles.msgTime, { color: T.textDim }]}>{message.timeLabel}</Text>
-            {message.isPinned ? <PushPin size={11} color={T.accent} weight="fill" /> : null}
-          </View>
-        ) : null}
-        {!hideReplyContext && message.replyContext ? (
-          <View
-            style={[
-              styles.replyContext,
-              replyExpanded && styles.replyContextOpen,
-              { backgroundColor: T.surfaceHover },
-            ]}
-          >
-            <View style={styles.replyContextHead}>
-              <TouchableOpacity
-                style={styles.replyContextJump}
-                onPress={() => onPressReplyContext(message)}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={`Go to the message from ${message.replyContext.senderName}`}
-              >
-                <Avatar name={message.replyContext.senderName} size={18} circle />
-                <Text style={[styles.replyContextName, { color: T.textBright }]} numberOfLines={1}>
-                  {message.replyContext.senderName}
-                </Text>
-                {replyExpanded ? null : (
-                  <Text style={[styles.replyContextText, { color: T.textDim }]} numberOfLines={1}>
-                    {replyPreview}
-                  </Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={toggleReplyExpanded}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                accessibilityRole="button"
-                accessibilityLabel={replyExpanded ? "Collapse quoted message" : "Read it here"}
-              >
-                {replyExpanded ? (
-                  <CaretUp size={12} color={T.textDim} weight="bold" />
-                ) : (
-                  <CaretDown size={12} color={T.textDim} weight="bold" />
-                )}
-              </TouchableOpacity>
-            </View>
-            {replyExpanded ? (
-              <Text
-                style={[styles.replyContextBody, { color: T.textDim }]}
-                onLayout={(e) => {
-                  const height = e.nativeEvent.layout.height;
-                  if (replyBodyHeightRef.current === 0 && height > 0) {
-                    onDetailsToggled?.(height + REPLY_BODY_GAP);
-                  }
-                  replyBodyHeightRef.current = height;
-                }}
-              >
-                {replyPreview}
+      {/* The reader's own side needs no avatar: every message there is theirs,
+          so the column would only push the bubbles off the edge. */}
+      {ownSide ? null : (
+        <View style={styles.msgAvatar}>
+          {showHeader ? (
+            <Avatar
+              name={senderName}
+              avatarUrl={message.senderAvatarUrl ?? undefined}
+              size={36}
+              accentColor={isAgent ? T.accent : undefined}
+              emoji={isAgent ? (agentEmoji ?? undefined) : undefined}
+              presence={senderPresence}
+              presenceRingColor={T.pageBg}
+            />
+          ) : null}
+        </View>
+      )}
+      <View
+        style={[
+          styles.msgBody,
+          sided && styles.msgBodySided,
+          // Both sides must pin their children to an edge. Left to stretch, the
+          // bubble grows to the width of the widest thing under it - which is
+          // the timestamp - so a one-word message wears a bubble sized for the
+          // clock instead of for the word.
+          sided && (ownSide ? styles.itemsEnd : styles.itemsStart),
+        ]}
+      >
+        <Bubble
+          on={bubbled}
+          style={[
+            styles.bubble,
+            { backgroundColor: isOwn ? T.accentSoft : T.surface },
+            canHug && textWidth > 0 && { width: Math.ceil(textWidth) + BUBBLE_PAD_X * 2 },
+          ]}
+        >
+          {/* Sided messages name nobody: the avatar beside the bubble already
+              identifies the sender, and the reader's own side needs no label at
+              all, so a name line would just push the text down a row. Agents
+              keep theirs - the AGENT badge rides on it, and which side a message
+              sits on is not enough to tell a person from a machine. */}
+          {showHeader && (!sided || isAgent) ? (
+            <View style={styles.msgHeader}>
+              <Text style={[styles.msgSender, { color: T.textBright }]} numberOfLines={1}>
+                {senderName}
               </Text>
-            ) : null}
-          </View>
-        ) : null}
-        {isAgent && !agentSpecial && thinkingBlocks.length > 0 ? (
-          <ThinkingPane
-            blocks={thinkingBlocks}
-            live={agentActive && thinkingBlocks.some((b) => !b.done)}
-            answerStarted={message.content.length > 0 || !agentActive}
-            T={T}
-          />
-        ) : null}
-        {agentSpecial ? (
-          <AgentMessageBody
-            message={message}
-            toolRun={toolRun}
-            T={T}
-            agentActive={agentActive}
-            toolResultFor={toolResultFor}
-            resolveUserName={resolveUserName}
-            onDetailsToggled={onDetailsToggled}
-          />
-        ) : jumbo ? (
-          <Text style={[styles.jumboEmoji, pending && styles.pendingBody]}>{display.trim()}</Text>
-        ) : display.length > 0 ? (
-          <View style={pending ? styles.pendingBody : undefined}>
-            <MarkdownRenderer content={message.content} />
-          </View>
-        ) : null}
-        {isAgent && !agentSpecial && !streamingReply && message.content.length > 0 ? (
-          <ReplyFeedbackRow
-            T={T}
-            rating={message.feedbackRating}
-            onRate={(rating) => onRateReply(message, rating)}
-          />
-        ) : null}
-        {message.attachments.length > 0 ? (
-          <MessageAttachments
-            attachments={message.attachments}
-            organizationId={organizationId}
-            T={T}
-          />
-        ) : null}
-        {message.editedAtSeconds ? (
-          <Text style={[styles.editedTag, { color: T.textDim }]}>(edited)</Text>
-        ) : null}
-        {failed ? (
-          <View style={styles.failedRow}>
-            <WarningCircle size={13} color={T.red} weight="fill" />
-            <Text style={[styles.failedText, { color: T.red }]}>Not sent - tap for options</Text>
+              {isAgent ? (
+                <View style={[styles.agentTag, { backgroundColor: T.accentSoft }]}>
+                  <Text style={[styles.agentTagText, { color: T.accent }]}>AGENT</Text>
+                </View>
+              ) : null}
+              {/* A sided message is stamped under its bubble, so the header
+                  carries the name and the badge only. */}
+              {sided ? null : (
+                <Text style={[styles.msgTime, { color: T.textDim }]}>{message.timeLabel}</Text>
+              )}
+              {message.isPinned && !sided ? (
+                <PushPin size={11} color={T.accent} weight="fill" />
+              ) : null}
+            </View>
+          ) : null}
+          {!hideReplyContext && message.replyContext ? (
+            <View
+              style={[
+                styles.replyContext,
+                replyExpanded && styles.replyContextOpen,
+                { backgroundColor: T.surfaceHover },
+              ]}
+            >
+              <View style={styles.replyContextHead}>
+                <TouchableOpacity
+                  style={styles.replyContextJump}
+                  onPress={() => onPressReplyContext(message)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Go to the message from ${message.replyContext.senderName}`}
+                >
+                  <Avatar name={message.replyContext.senderName} size={18} circle />
+                  <Text
+                    style={[styles.replyContextName, { color: T.textBright }]}
+                    numberOfLines={1}
+                  >
+                    {message.replyContext.senderName}
+                  </Text>
+                  {replyExpanded ? null : (
+                    <Text style={[styles.replyContextText, { color: T.textDim }]} numberOfLines={1}>
+                      {replyPreview}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={toggleReplyExpanded}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={replyExpanded ? "Collapse quoted message" : "Read it here"}
+                >
+                  {replyExpanded ? (
+                    <CaretUp size={12} color={T.textDim} weight="bold" />
+                  ) : (
+                    <CaretDown size={12} color={T.textDim} weight="bold" />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {replyExpanded ? (
+                <Text style={[styles.replyContextBody, { color: T.textDim }]}>{replyPreview}</Text>
+              ) : null}
+            </View>
+          ) : null}
+          {isAgent && !agentSpecial && thinkingBlocks.length > 0 ? (
+            <ThinkingPane
+              blocks={thinkingBlocks}
+              live={agentActive && thinkingBlocks.some((b) => !b.done)}
+              answerStarted={message.content.length > 0 || !agentActive}
+              T={T}
+            />
+          ) : null}
+          {agentSpecial ? (
+            <AgentMessageBody
+              message={message}
+              toolRun={toolRun}
+              T={T}
+              agentActive={agentActive}
+              toolResultFor={toolResultFor}
+              resolveUserName={resolveUserName}
+            />
+          ) : jumbo ? (
+            <Text style={styles.jumboEmoji}>{display.trim()}</Text>
+          ) : display.length > 0 ? (
+            <MarkdownRenderer
+              content={message.content}
+              onMeasureWidth={canHug ? noteTextWidth : undefined}
+            />
+          ) : null}
+          {isAgent && !agentSpecial && !streamingReply && message.content.length > 0 ? (
+            <ReplyFeedbackRow
+              T={T}
+              rating={message.feedbackRating}
+              onRate={(rating) => onRateReply(message, rating)}
+            />
+          ) : null}
+          {message.attachments.length > 0 ? (
+            <MessageAttachments
+              attachments={message.attachments}
+              organizationId={organizationId}
+              T={T}
+            />
+          ) : null}
+          {message.editedAtSeconds ? (
+            <Text style={[styles.editedTag, { color: T.textDim }]}>(edited)</Text>
+          ) : null}
+          {failed ? (
+            <View style={styles.failedRow}>
+              <WarningCircle size={13} color={T.red} weight="fill" />
+              <Text style={[styles.failedText, { color: T.red }]}>Not sent - tap for options</Text>
+            </View>
+          ) : null}
+        </Bubble>
+        {/* Outside the bubble, and only on a run's last message: stamping each
+            one puts a line longer than "Hi" under every "Hi", which widens the
+            bubble to fit the clock rather than the message. */}
+        {sided && isGroupTail ? (
+          <View style={styles.msgFooter}>
+            {/* The pin rides here because the header that normally carries it is
+                not rendered on a sided message. */}
+            {message.isPinned ? <PushPin size={10} color={T.accent} weight="fill" /> : null}
+            <Text style={[styles.msgTime, { color: T.textDim }]}>{message.timeLabel}</Text>
           </View>
         ) : null}
         {message.replyCount > 0 ? (
           <TouchableOpacity
-            style={[styles.threadChip, { backgroundColor: T.accentSoft }]}
+            style={[
+              styles.threadChip,
+              { backgroundColor: T.accentSoft },
+              ownSide && styles.alignEnd,
+            ]}
             onPress={() => onPressThread(message)}
             activeOpacity={0.7}
           >
@@ -1704,7 +1869,7 @@ const MessageRow = React.memo(function MessageRow({
           </TouchableOpacity>
         ) : null}
         {message.reactions.length > 0 ? (
-          <View style={styles.reactionsRow}>
+          <View style={[styles.reactionsRow, ownSide && styles.reactionsRowOwn]}>
             {message.reactions.map((r) => (
               <TouchableOpacity
                 key={r.emoji}
@@ -1873,12 +2038,32 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontFamily: FONT.semibold, marginTop: 4 },
   emptySub: { fontSize: 13, fontFamily: FONT.regular, textAlign: "center" },
   list: { flex: 1 },
+  fill: { flex: 1 },
+  // Clips the transcript that rides up under the header while lifted. The
+  // negative margin lives here now, so the bottom edge it clips sits behind the
+  // composer glass where nothing is visible anyway.
+  transcriptSlot: { flex: 1, overflow: "hidden" },
   listContent: { paddingVertical: 12 },
   loadOlderWrap: { paddingVertical: 14, alignItems: "center" },
   msgRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingTop: 10 },
   msgRowGrouped: { paddingTop: 1 },
+  // Bubbles need air between them that a shared column does not: at 1px the
+  // rounded edges of two consecutive ones read as a single lumpy shape.
+  msgRowSidedGrouped: { paddingTop: 3 },
+  msgRowOwn: { justifyContent: "flex-end" },
   msgAvatar: { width: 36 },
   msgBody: { flex: 1, gap: 1 },
+  // Overrides msgBody's flex:1 so the bubble hugs its text instead of filling
+  // the row, while still wrapping before it reaches the far margin.
+  msgBodySided: { flex: 0, flexShrink: 1, maxWidth: "78%" },
+  bubble: { borderRadius: 16, paddingHorizontal: BUBBLE_PAD_X, paddingVertical: 7, gap: 1 },
+  // The row is a flex row, so its own alignSelf would only move the body up or
+  // down; pushing the stamp and the chips to the reader's side is the cross-axis
+  // job of the body itself.
+  itemsEnd: { alignItems: "flex-end" },
+  itemsStart: { alignItems: "flex-start" },
+  alignEnd: { alignSelf: "flex-end" },
+  msgFooter: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   msgHeader: { flexDirection: "row", alignItems: "center", gap: 7 },
   msgSender: { fontSize: 14, lineHeight: 16, fontFamily: FONT.semibold, flexShrink: 1 },
   agentTag: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
@@ -1887,7 +2072,6 @@ const styles = StyleSheet.create({
   editedTag: { fontSize: 11, fontFamily: FONT.regular },
   feedbackRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 6 },
   jumboEmoji: { fontSize: 40, lineHeight: 48, paddingVertical: 2 },
-  pendingBody: { opacity: 0.55 },
   failedRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 },
   failedText: { fontSize: 12, fontFamily: FONT.medium },
   separatorRow: {
@@ -1929,6 +2113,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   reactionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
+  reactionsRowOwn: { justifyContent: "flex-end" },
   reactionChip: {
     flexDirection: "row",
     alignItems: "center",

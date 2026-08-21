@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import {
   CheckCircle,
@@ -16,12 +16,7 @@ import type { SerializedMessage } from "@features/chat/chatSerializer";
 import { parseImageMeta } from "@features/agents/imageMeta";
 import { internalToolName, toolActionLabel, useToolLabels } from "@features/agents/toolLabels";
 import { GeneratedImageCard } from "@features/agents/components/GeneratedImageCard";
-import {
-  DetailsCaret,
-  MonoBlock,
-  MONO_FONT,
-  DETAILS_GAP,
-} from "@features/agents/components/AgentDetailsBlock";
+import { DetailsCaret, MonoBlock, MONO_FONT } from "@features/agents/components/AgentDetailsBlock";
 import { ToolActivityPane, type ToolStep } from "@features/agents/components/ToolActivityPane";
 
 const ERROR_RESULT_RE = /^(Error|Permission denied|Not found|Validation error)/i;
@@ -46,7 +41,6 @@ export function AgentMessageBody({
   toolRun,
   toolResultFor,
   resolveUserName,
-  onDetailsToggled,
 }: {
   message: SerializedMessage;
   T: ThemeColors;
@@ -55,7 +49,6 @@ export function AgentMessageBody({
   toolRun?: SerializedMessage[];
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
   resolveUserName?: (userId: string) => string | undefined;
-  onDetailsToggled?: (heightDelta: number) => void;
 }) {
   // Every label below resolves through the catalog cache, which fills after a
   // cached transcript has already rendered.
@@ -70,19 +63,18 @@ export function AgentMessageBody({
           T={T}
           agentActive={agentActive}
           toolResultFor={toolResultFor}
-          onDetailsToggled={onDetailsToggled}
         />
       );
     case "tool_result":
       // A result whose call row is present is absorbed into the run pane (the
       // list drops it); this only renders an orphan.
-      return <ToolResultRow message={message} T={T} onDetailsToggled={onDetailsToggled} />;
+      return <ToolResultRow message={message} T={T} />;
     case "summary":
       return <SummaryRow message={message} T={T} />;
     case "context_reset":
       return <ContextResetRow message={message} T={T} resolveUserName={resolveUserName} />;
     case "agent_error":
-      return <AgentErrorRow message={message} T={T} onDetailsToggled={onDetailsToggled} />;
+      return <AgentErrorRow message={message} T={T} />;
     case "confirmation_resolved":
       return <ConfirmationResolvedRow message={message} T={T} />;
     case "confirmation_request":
@@ -106,13 +98,11 @@ function AgentToolActivityPane({
   T,
   agentActive,
   toolResultFor,
-  onDetailsToggled,
 }: {
   toolMessages: SerializedMessage[];
   T: ThemeColors;
   agentActive: boolean;
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
-  onDetailsToggled?: (heightDelta: number) => void;
 }) {
   const steps = useMemo<ToolStep[]>(
     () =>
@@ -166,13 +156,7 @@ function AgentToolActivityPane({
 
   return (
     <View style={styles.toolPane}>
-      <ToolActivityPane
-        T={T}
-        steps={steps}
-        live={live}
-        answerStarted={!live}
-        onDetailsToggled={onDetailsToggled}
-      />
+      <ToolActivityPane T={T} steps={steps} live={live} answerStarted={!live} />
       {imageResults.map(({ messageId, meta: imageMeta }) => (
         <GeneratedImageCard
           key={messageId}
@@ -187,15 +171,7 @@ function AgentToolActivityPane({
 }
 
 /** An orphan tool result whose call row never arrived; a single settled step. */
-function ToolResultRow({
-  message,
-  T,
-  onDetailsToggled,
-}: {
-  message: SerializedMessage;
-  T: ThemeColors;
-  onDetailsToggled?: (heightDelta: number) => void;
-}) {
+function ToolResultRow({ message, T }: { message: SerializedMessage; T: ThemeColors }) {
   const toolName = meta(message, "tool_name") ?? "tool";
   const result = message.content || meta(message, "tool_result") || "";
   const steps: ToolStep[] = [
@@ -210,13 +186,7 @@ function ToolResultRow({
 
   return (
     <View style={styles.toolPane}>
-      <ToolActivityPane
-        T={T}
-        steps={steps}
-        live={false}
-        answerStarted
-        onDetailsToggled={onDetailsToggled}
-      />
+      <ToolActivityPane T={T} steps={steps} live={false} answerStarted />
     </View>
   );
 }
@@ -287,17 +257,8 @@ function ContextResetRow({
   );
 }
 
-function AgentErrorRow({
-  message,
-  T,
-  onDetailsToggled,
-}: {
-  message: SerializedMessage;
-  T: ThemeColors;
-  onDetailsToggled?: (heightDelta: number) => void;
-}) {
+function AgentErrorRow({ message, T }: { message: SerializedMessage; T: ThemeColors }) {
   const [showRaw, setShowRaw] = useState(false);
-  const detailsHeightRef = useRef(0);
   const display = message.content || "Unknown error";
   const raw = meta(message, "raw_error");
   const hasMore = !!raw && raw !== display;
@@ -306,14 +267,7 @@ function AgentErrorRow({
     <View style={[styles.card, { backgroundColor: T.red + "14", borderColor: T.red + "50" }]}>
       <TouchableOpacity
         style={styles.cardHeader}
-        onPress={() => {
-          if (showRaw) {
-            const height = detailsHeightRef.current;
-            detailsHeightRef.current = 0;
-            if (height > 0) onDetailsToggled?.(-(height + DETAILS_GAP));
-          }
-          setShowRaw(!showRaw);
-        }}
+        onPress={() => setShowRaw(!showRaw)}
         disabled={!hasMore}
         activeOpacity={0.6}
       >
@@ -324,19 +278,7 @@ function AgentErrorRow({
         </View>
         {hasMore ? <DetailsCaret T={T} open={showRaw} /> : null}
       </TouchableOpacity>
-      {showRaw && raw ? (
-        <View
-          onLayout={(e) => {
-            const height = e.nativeEvent.layout.height;
-            if (detailsHeightRef.current === 0 && height > 0) {
-              onDetailsToggled?.(height + DETAILS_GAP);
-            }
-            detailsHeightRef.current = height;
-          }}
-        >
-          <MonoBlock T={T} text={raw} />
-        </View>
-      ) : null}
+      {showRaw && raw ? <MonoBlock T={T} text={raw} /> : null}
     </View>
   );
 }

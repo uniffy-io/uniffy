@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,6 @@ import Animated, {
   useAnimatedProps,
   useAnimatedStyle,
   withTiming,
-  withRepeat,
-  cancelAnimation,
-  interpolate,
-  Easing,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
@@ -27,6 +23,7 @@ import {
   X,
 } from "phosphor-react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
 import type { ThemeColors } from "@theme/theme";
@@ -34,7 +31,7 @@ import { FONT } from "@theme/typography";
 import { useNotesGraph } from "@features/notes/useNotesGraph";
 import type { SimNode } from "@features/notes/useNotesGraph";
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedG = Animated.createAnimatedComponent(G);
 
 const NODE_HIT_RADIUS = 28;
 const NODE_BASE_RADIUS = 8;
@@ -42,9 +39,9 @@ const NODE_MAX_BONUS = 8;
 const MAX_TICKS = 130;
 const TICKS_PER_FRAME = 3;
 
-const ARROW_SPACING = 36; // px between arrow heads
 const ARROW_SIZE = 3.5; // half-width of arrowhead triangle
-const EDGE_SPEED_SELECTED = 20; // px/s
+const ARROW_MAX = 4; // arrowheads drawn along one highlighted edge
+const ARROW_MIN_GAP = 90; // px of edge each arrowhead wants to itself
 
 const REPULSION = 2800;
 const SPRING_LENGTH = 110;
@@ -52,12 +49,16 @@ const SPRING_K = 0.1;
 const CENTER_K = 0.022;
 const DAMPING = 0.76;
 
-function flowingArrows(
+// Arrowheads pointing away from the selected node, at rest. They used to crawl
+// along the edge, which meant re-rendering and re-rasterising the whole drawing
+// on every frame for as long as anything was selected - some 700ms a frame with
+// the couple of hundred arrowheads a well-connected node produced. Direction is
+// what the arrows are actually for, and standing still they say it just as well.
+function directionArrows(
   x1: number,
   y1: number,
   x2: number,
   y2: number,
-  phase: number,
   color: string,
 ): React.ReactElement[] {
   const dx = x2 - x1;
@@ -66,26 +67,19 @@ function flowingArrows(
   if (len < 12) return [];
 
   const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+  const count = Math.max(1, Math.min(ARROW_MAX, Math.floor(len / ARROW_MIN_GAP)));
   const result: React.ReactElement[] = [];
-
-  // Offset starting position by phase so arrows flow continuously
-  let dist = phase % ARROW_SPACING;
-  while (dist < len) {
-    const t = dist / len;
-    const ax = x1 + dx * t;
-    const ay = y1 + dy * t;
-    // Fade near both endpoints so arrows don't pop in/out abruptly
-    const fade = Math.min(dist / 20, (len - dist) / 20, 1);
+  for (let i = 0; i < count; i++) {
+    const t = (i + 0.5) / count;
     result.push(
-      <G key={dist} transform={`translate(${ax},${ay}) rotate(${angleDeg})`}>
+      <G key={i} transform={`translate(${x1 + dx * t},${y1 + dy * t}) rotate(${angleDeg})`}>
         <Polygon
           points={`${ARROW_SIZE * 1.4},0 ${-ARROW_SIZE * 0.7},${ARROW_SIZE * 0.8} ${-ARROW_SIZE * 0.7},${-ARROW_SIZE * 0.8}`}
           fill={color}
-          fillOpacity={0.55 * fade}
+          fillOpacity={0.55}
         />
       </G>,
     );
-    dist += ARROW_SPACING;
   }
   return result;
 }
@@ -138,6 +132,10 @@ function simulationTick(nodes: SimNode[], linkPairs: { si: number; ti: number }[
 export function NotesGraphScreen() {
   const T = useTheme();
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // The screen hides the app's floating bar (see `immersive` in the root
+  // layout), so its own controls are what has to clear the system nav bar.
+  const controlsBottom = insets.bottom + 16;
   const graph = useNotesGraph();
 
   // Live simulation state
@@ -145,60 +143,84 @@ export function NotesGraphScreen() {
   const linkPairsRef = useRef<{ si: number; ti: number }[]>([]);
   const tickCountRef = useRef(0);
   const rafRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number | null>(null);
-
-  // Edge animation phase ref — advanced each frame for selected edges
-  const edgePhaseSelectedRef = useRef(0);
 
   // The physics loop mutates node objects in place inside refs. Render must not
   // read those refs, so each frame publishes an immutable snapshot of what the
   // SVG draws; that snapshot is also what triggers the re-render.
-  const [frame, setFrame] = useState<{ nodes: SimNode[]; edgePhase: number }>({
-    nodes: [],
-    edgePhase: 0,
-  });
+  const [frame, setFrame] = useState<{ nodes: SimNode[] }>({ nodes: [] });
 
-  // Pan/zoom state via refs to avoid re-renders during gesture
-  const translateX = useRef(0);
-  const translateY = useRef(0);
-  const scale = useRef(2);
-  const startTranslateX = useRef(0);
-  const startTranslateY = useRef(0);
-  const startScale = useRef(1);
-  const [transform, setTransform] = useState({ x: 0, y: 0, s: 2 });
+  // Pan and zoom live on the UI thread. Held in React state they re-rendered
+  // every node and edge on every finger movement, which is what made dragging
+  // the graph crawl; as shared values the gesture only rewrites one transform
+  // and never enters JS. The tap handler still reads them - a shared value is
+  // readable from either side.
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const scale = useSharedValue(2);
+  const startTranslateX = useSharedValue(0);
+  const startTranslateY = useSharedValue(0);
+  const startScale = useSharedValue(1);
+  // The live gesture, held apart from the committed transform above. It moves
+  // the view that holds the drawing rather than the drawing itself, which is
+  // the whole point: react-native-svg caches its canvas as a bitmap and only
+  // re-rasterises when a child invalidates, so sliding the parent view costs a
+  // composite and nothing else. The gesture folds into the committed transform
+  // when the finger lifts - one redraw per gesture instead of one per frame.
+  const dX = useSharedValue(0);
+  const dY = useSharedValue(0);
+  const dS = useSharedValue(1);
 
-  const commitTransform = useCallback(() => {
-    setTransform({ x: translateX.current, y: translateY.current, s: scale.current });
-  }, []);
+  // The drawing stays where it is and the group inside it moves. A view
+  // transform would be cheaper - it composites instead of redrawing - but
+  // react-native-svg rasterises the whole SvgView into a bitmap of its own
+  // size, so a canvas big enough to pan across is a bitmap big enough to
+  // exhaust the heap. Animated props at least keep the gesture off the JS
+  // thread: only this transform is rewritten, no React render runs.
+  const rootProps = useAnimatedProps(() => ({
+    transform: `translate(${width / 2 + translateX.value}, ${(height - 60) / 2 + translateY.value}) scale(${scale.value})`,
+  }));
+
+  const surfaceStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: dX.value }, { translateY: dY.value }, { scale: dS.value }],
+  }));
+
+  // Committed on the UI thread, so the drawing's new transform and the view's
+  // reset to neutral are applied in the same frame. Split across threads they
+  // would land a frame apart and the graph would jump.
+  const commitGesture = () => {
+    "worklet";
+    translateX.value = translateX.value * dS.value + dX.value;
+    translateY.value = translateY.value * dS.value + dY.value;
+    scale.value = scale.value * dS.value;
+    dX.value = 0;
+    dY.value = 0;
+    dS.value = 1;
+  };
 
   // Graph fade-in animation
   const graphOpacity = useSharedValue(0);
   const graphAnimStyle = useAnimatedStyle(() => ({ opacity: graphOpacity.value }));
 
-  // Pulse ring for selected node
-  const pulseAnim = useSharedValue(0);
-  const pulseR = useSharedValue(NODE_BASE_RADIUS);
   const [selectedNode, setSelectedNode] = useState<SimNode | null>(null);
 
-  useEffect(() => {
-    if (selectedNode) {
-      pulseR.value = getNodeRadius(selectedNode.connections);
-      pulseAnim.value = 0;
-      pulseAnim.value = withRepeat(
-        withTiming(1, { duration: 1600, easing: Easing.out(Easing.ease) }),
-        -1,
-        false,
-      );
-    } else {
-      cancelAnimation(pulseAnim);
-      pulseAnim.value = 0;
+  // Every published frame re-renders the whole drawing - several elements per
+  // node, one per edge - and react-native-svg re-rasterises its canvas whenever
+  // a child changes. That is worth paying while the layout is settling and not
+  // one frame longer, so the loop stops dead when the positions come to rest.
+  const animateRef = useRef<() => void>(() => {});
+  animateRef.current = () => {
+    for (let t = 0; t < TICKS_PER_FRAME && tickCountRef.current < MAX_TICKS; t++) {
+      simulationTick(nodesRef.current, linkPairsRef.current);
+      tickCountRef.current++;
     }
-  }, [selectedNode, pulseAnim, pulseR]);
+    const settling = tickCountRef.current < MAX_TICKS;
 
-  const pulseProps = useAnimatedProps(() => ({
-    r: pulseR.value + interpolate(pulseAnim.value, [0, 1], [4, 24]),
-    fillOpacity: interpolate(pulseAnim.value, [0, 1], [0.3, 0]),
-  }));
+    // Cloned only while the positions are still moving; once settled the same
+    // array is handed back, so the last frame allocates nothing.
+    setFrame({ nodes: settling ? nodesRef.current.map((n) => ({ ...n })) : nodesRef.current });
+
+    rafRef.current = settling ? requestAnimationFrame(animateRef.current) : null;
+  };
 
   // Combined simulation + edge animation loop — runs continuously
   useEffect(() => {
@@ -218,36 +240,11 @@ export function NotesGraphScreen() {
     nodesRef.current = nodes;
     linkPairsRef.current = linkPairs;
     tickCountRef.current = 0;
-    lastTimeRef.current = null;
-    edgePhaseSelectedRef.current = 0;
 
     graphOpacity.value = 0;
     graphOpacity.value = withTiming(1, { duration: 500 });
 
-    const animate = () => {
-      // Advance simulation for the first MAX_TICKS frames
-      for (let t = 0; t < TICKS_PER_FRAME && tickCountRef.current < MAX_TICKS; t++) {
-        simulationTick(nodesRef.current, linkPairsRef.current);
-        tickCountRef.current++;
-      }
-
-      // Advance edge animation phases using wall-clock time
-      const now = Date.now();
-      if (lastTimeRef.current !== null) {
-        const dt = (now - lastTimeRef.current) / 1000; // seconds
-        edgePhaseSelectedRef.current =
-          (edgePhaseSelectedRef.current + dt * EDGE_SPEED_SELECTED) % ARROW_SPACING;
-      }
-      lastTimeRef.current = now;
-
-      setFrame({
-        nodes: nodesRef.current.map((n) => ({ ...n })),
-        edgePhase: edgePhaseSelectedRef.current,
-      });
-      rafRef.current = requestAnimationFrame(animate);
-    };
-
-    rafRef.current = requestAnimationFrame(animate);
+    rafRef.current = requestAnimationFrame(animateRef.current);
 
     return () => {
       if (rafRef.current !== null) {
@@ -260,25 +257,27 @@ export function NotesGraphScreen() {
   const pan = Gesture.Pan()
     .minDistance(2)
     .onBegin(() => {
-      startTranslateX.current = translateX.current;
-      startTranslateY.current = translateY.current;
+      startTranslateX.value = dX.value;
+      startTranslateY.value = dY.value;
     })
     .onUpdate((e) => {
-      translateX.current = startTranslateX.current + e.translationX;
-      translateY.current = startTranslateY.current + e.translationY;
-      setTransform({ x: translateX.current, y: translateY.current, s: scale.current });
+      dX.value = startTranslateX.value + e.translationX;
+      dY.value = startTranslateY.value + e.translationY;
     })
-    .runOnJS(true);
+    .onEnd(commitGesture);
 
   const pinch = Gesture.Pinch()
     .onBegin(() => {
-      startScale.current = scale.current;
+      startScale.value = dS.value;
     })
     .onUpdate((e) => {
-      scale.current = Math.max(0.15, Math.min(5, startScale.current * e.scale));
-      setTransform({ x: translateX.current, y: translateY.current, s: scale.current });
+      // Clamped on the composite, not on the gesture's own factor, so the limit
+      // means the same thing whatever zoom the gesture started from.
+      const target = scale.value * startScale.value * e.scale;
+      const clamped = Math.max(0.15, Math.min(5, target));
+      dS.value = clamped / scale.value;
     })
-    .runOnJS(true);
+    .onEnd(commitGesture);
 
   const tap = Gesture.Tap()
     .maxDuration(250)
@@ -286,10 +285,13 @@ export function NotesGraphScreen() {
     .onEnd((e) => {
       const nodes = nodesRef.current;
       if (nodes.length === 0) return;
-      const cx = width / 2 + translateX.current;
-      const cy = (height - 60) / 2 + translateY.current;
-      const gx = (e.x - cx) / scale.current;
-      const gy = (e.y - cy) / scale.current;
+      // Composite of what is drawn and what the view is still holding, so a tap
+      // hits the node under the finger even mid-gesture.
+      const s = scale.value * dS.value;
+      const cx = width / 2 + translateX.value * dS.value + dX.value;
+      const cy = (height - 60) / 2 + translateY.value * dS.value + dY.value;
+      const gx = (e.x - cx) / s;
+      const gy = (e.y - cy) / s;
 
       let closest: SimNode | null = null;
       let closestDist = NODE_HIT_RADIUS;
@@ -329,37 +331,35 @@ export function NotesGraphScreen() {
     const newScale = Math.min(canvasW / graphW, canvasH / graphH, 3);
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
-    scale.current = newScale;
-    translateX.current = -centerX * newScale;
-    translateY.current = -centerY * newScale;
-    commitTransform();
-  }, [width, height, commitTransform]);
+    scale.value = newScale;
+    translateX.value = -centerX * newScale;
+    translateY.value = -centerY * newScale;
+  }, [width, height, scale, translateX, translateY]);
 
   const handleZoom = useCallback(
     (factor: number) => {
-      scale.current = Math.max(0.15, Math.min(5, scale.current * factor));
-      commitTransform();
+      scale.value = Math.max(0.15, Math.min(5, scale.value * factor));
     },
-    [commitTransform],
+    [scale],
   );
 
   const nodes = frame.nodes;
-  const links = graph.data?.links ?? [];
-  const nodePosMap = new Map(nodes.map((n) => [n.id, n]));
+  const links = useMemo(() => graph.data?.links ?? [], [graph.data]);
+  const nodePosMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
   // Build the "neighbourhood" of the selected node — used to dim everything else
-  const focusedIds: Set<string> | null = selectedNode
-    ? (() => {
-        const ids = new Set<string>([selectedNode.id]);
-        for (const l of links) {
-          if (l.source === selectedNode.id) ids.add(l.target);
-          if (l.target === selectedNode.id) ids.add(l.source);
-        }
-        return ids;
-      })()
-    : null;
-
-  const svgTransform = `translate(${width / 2 + transform.x}, ${(height - 60) / 2 + transform.y}) scale(${transform.s})`;
+  // Rebuilt only when the selection or the link set changes - it used to be
+  // recomputed on every published frame, which meant walking every link 60
+  // times a second while a node was selected.
+  const focusedIds = useMemo<Set<string> | null>(() => {
+    if (!selectedNode) return null;
+    const ids = new Set<string>([selectedNode.id]);
+    for (const l of links) {
+      if (l.source === selectedNode.id) ids.add(l.target);
+      if (l.target === selectedNode.id) ids.add(l.source);
+    }
+    return ids;
+  }, [selectedNode, links]);
 
   const stats = graph.data
     ? `${graph.data.nodes.length} notes · ${links.filter((l) => l.source !== l.target).length} links`
@@ -386,144 +386,144 @@ export function NotesGraphScreen() {
         <Animated.View style={[styles.canvas, graphAnimStyle]}>
           <GestureDetector gesture={composed}>
             <View style={StyleSheet.absoluteFill}>
-              <Svg width={width} height={height - 60} style={styles.svg}>
-                <G transform={svgTransform}>
-                  {/* Edges — rendered in two passes so glows are under all main lines */}
-                  {links
-                    .filter((l) => l.source !== l.target)
-                    .map((l, i) => {
-                      const s = nodePosMap.get(l.source);
-                      const t = nodePosMap.get(l.target);
-                      if (!s || !t) return null;
+              {/* Screen-sized on purpose: the canvas size IS the bitmap size,
+                  and a canvas big enough to pan across is a bitmap big enough
+                  to exhaust the heap. Panning past its edge shows empty space
+                  until the finger lifts and the drawing is re-issued. */}
+              <Animated.View style={[StyleSheet.absoluteFill, surfaceStyle]}>
+                <Svg width={width} height={height - 60}>
+                  <AnimatedG animatedProps={rootProps}>
+                    {/* Edges — rendered in two passes so glows are under all main lines */}
+                    {links
+                      .filter((l) => l.source !== l.target)
+                      .map((l, i) => {
+                        const s = nodePosMap.get(l.source);
+                        const t = nodePosMap.get(l.target);
+                        if (!s || !t) return null;
 
-                      const isHighlighted =
-                        !!selectedNode &&
-                        (selectedNode.id === l.source || selectedNode.id === l.target);
+                        const isHighlighted =
+                          !!selectedNode &&
+                          (selectedNode.id === l.source || selectedNode.id === l.target);
 
-                      if (!isHighlighted) {
-                        const isDimmed = !!focusedIds;
+                        if (!isHighlighted) {
+                          const isDimmed = !!focusedIds;
+                          return (
+                            <Line
+                              key={i}
+                              x1={s.x}
+                              y1={s.y}
+                              x2={t.x}
+                              y2={t.y}
+                              stroke={edgeDimColor}
+                              strokeWidth={1}
+                              strokeOpacity={isDimmed ? 0.25 : 1}
+                            />
+                          );
+                        }
+
+                        // Selected edge: glow + flowing directional arrows
+                        // Arrows always flow outward FROM the selected node
+                        const isOutgoing = selectedNode.id === l.source;
+                        const [ax1, ay1, ax2, ay2] = isOutgoing
+                          ? [s.x, s.y, t.x, t.y]
+                          : [t.x, t.y, s.x, s.y];
                         return (
-                          <Line
-                            key={i}
-                            x1={s.x}
-                            y1={s.y}
-                            x2={t.x}
-                            y2={t.y}
-                            stroke={edgeDimColor}
-                            strokeWidth={1}
-                            strokeOpacity={isDimmed ? 0.25 : 1}
-                          />
+                          <G key={i}>
+                            {/* Outer soft glow */}
+                            <Line
+                              x1={s.x}
+                              y1={s.y}
+                              x2={t.x}
+                              y2={t.y}
+                              stroke={T.accent}
+                              strokeWidth={8}
+                              strokeOpacity={0.12}
+                              strokeLinecap="round"
+                            />
+                            {/* Base line */}
+                            <Line
+                              x1={s.x}
+                              y1={s.y}
+                              x2={t.x}
+                              y2={t.y}
+                              stroke={T.accent}
+                              strokeWidth={2}
+                              strokeOpacity={0.5}
+                              strokeLinecap="round"
+                            />
+                            {directionArrows(ax1, ay1, ax2, ay2, T.accent)}
+                          </G>
                         );
-                      }
+                      })}
 
-                      // Selected edge: glow + flowing directional arrows
-                      // Arrows always flow outward FROM the selected node
-                      const isOutgoing = selectedNode.id === l.source;
-                      const [ax1, ay1, ax2, ay2] = isOutgoing
-                        ? [s.x, s.y, t.x, t.y]
-                        : [t.x, t.y, s.x, s.y];
+                    {/* A still halo, not the ring that used to pulse here. An
+                        animated prop on an SVG child invalidates the canvas
+                        bitmap on every frame of it, so one decorative ring was
+                        re-rasterising the entire graph sixty times a second for
+                        as long as anything was selected. */}
+                    {selectedNode && (
+                      <Circle
+                        cx={selectedNode.x}
+                        cy={selectedNode.y}
+                        r={getNodeRadius(selectedNode.connections) + 14}
+                        fill={selectedNode.color}
+                        fillOpacity={0.18}
+                      />
+                    )}
+
+                    {/* Nodes */}
+                    {nodes.map((node) => {
+                      const r = getNodeRadius(node.connections);
+                      const isSelected = selectedNode?.id === node.id;
+                      const isDimmed = focusedIds !== null && !focusedIds.has(node.id);
+                      const dimOpacity = isDimmed ? 0.15 : 1;
                       return (
-                        <G key={i}>
-                          {/* Outer soft glow */}
-                          <Line
-                            x1={s.x}
-                            y1={s.y}
-                            x2={t.x}
-                            y2={t.y}
-                            stroke={T.accent}
-                            strokeWidth={8}
-                            strokeOpacity={0.12}
-                            strokeLinecap="round"
+                        // Dimming is folded into each element's own opacity
+                        // rather than set on the group: a group opacity below 1
+                        // makes Android render that group through an offscreen
+                        // layer, and with one group per node a selection turned
+                        // every redraw into sixty layer allocations.
+                        <G key={node.id}>
+                          {/* Layered glow rings */}
+                          {/* One halo, where three stacked rings and a
+                              specular dot used to be. Each is redrawn for every
+                              node on every redraw, and the two faintest of them
+                              were invisible against the one that reads. */}
+                          <Circle
+                            cx={node.x}
+                            cy={node.y}
+                            r={r * 2}
+                            fill={node.color}
+                            fillOpacity={0.1 * dimOpacity}
                           />
-                          {/* Base line */}
-                          <Line
-                            x1={s.x}
-                            y1={s.y}
-                            x2={t.x}
-                            y2={t.y}
-                            stroke={T.accent}
-                            strokeWidth={2}
-                            strokeOpacity={0.5}
-                            strokeLinecap="round"
+                          <Circle
+                            cx={node.x}
+                            cy={node.y}
+                            r={r}
+                            fill={node.color}
+                            fillOpacity={dimOpacity}
+                            stroke={isSelected ? "#fff" : node.color}
+                            strokeWidth={isSelected ? 2 : 0}
                           />
-                          {/* Flowing arrow particles — always outward from selected */}
-                          {flowingArrows(ax1, ay1, ax2, ay2, frame.edgePhase, T.accent)}
+                          <SvgText
+                            x={node.x}
+                            y={node.y + r + 10}
+                            textAnchor="middle"
+                            fontSize={9}
+                            fontFamily={FONT.regular}
+                            fill={T.isDark ? "rgba(255,255,255,0.75)" : "rgba(30,30,40,0.8)"}
+                            fillOpacity={dimOpacity}
+                          >
+                            {node.label.length > 16
+                              ? node.label.slice(0, 14) + "\u2026"
+                              : node.label}
+                          </SvgText>
                         </G>
                       );
                     })}
-
-                  {/* Animated pulse ring for selected node */}
-                  {selectedNode && (
-                    <AnimatedCircle
-                      cx={selectedNode.x}
-                      cy={selectedNode.y}
-                      fill={selectedNode.color}
-                      animatedProps={pulseProps}
-                    />
-                  )}
-
-                  {/* Nodes */}
-                  {nodes.map((node) => {
-                    const r = getNodeRadius(node.connections);
-                    const isSelected = selectedNode?.id === node.id;
-                    const isDimmed = focusedIds !== null && !focusedIds.has(node.id);
-                    const dimOpacity = isDimmed ? 0.15 : 1;
-                    return (
-                      <G key={node.id} opacity={dimOpacity}>
-                        {/* Layered glow rings */}
-                        <Circle
-                          cx={node.x}
-                          cy={node.y}
-                          r={r * 3}
-                          fill={node.color}
-                          fillOpacity={0.04}
-                        />
-                        <Circle
-                          cx={node.x}
-                          cy={node.y}
-                          r={r * 2}
-                          fill={node.color}
-                          fillOpacity={0.08}
-                        />
-                        <Circle
-                          cx={node.x}
-                          cy={node.y}
-                          r={r * 1.4}
-                          fill={node.color}
-                          fillOpacity={0.15}
-                        />
-                        {/* Main fill */}
-                        <Circle
-                          cx={node.x}
-                          cy={node.y}
-                          r={r}
-                          fill={node.color}
-                          fillOpacity={node.isNote ? 1 : 0.75}
-                          stroke={isSelected ? "#fff" : node.color}
-                          strokeWidth={isSelected ? 2 : 0}
-                        />
-                        {/* Specular highlight */}
-                        <Circle
-                          cx={node.x - r * 0.22}
-                          cy={node.y - r * 0.28}
-                          r={r * 0.45}
-                          fill="rgba(255,255,255,0.22)"
-                        />
-                        <SvgText
-                          x={node.x}
-                          y={node.y + r + 10}
-                          textAnchor="middle"
-                          fontSize={9}
-                          fontFamily={FONT.regular}
-                          fill={T.isDark ? "rgba(255,255,255,0.75)" : "rgba(30,30,40,0.8)"}
-                        >
-                          {node.label.length > 16 ? node.label.slice(0, 14) + "\u2026" : node.label}
-                        </SvgText>
-                      </G>
-                    );
-                  })}
-                </G>
-              </Svg>
+                  </AnimatedG>
+                </Svg>
+              </Animated.View>
             </View>
           </GestureDetector>
 
@@ -533,7 +533,7 @@ export function NotesGraphScreen() {
           </View>
 
           {/* Zoom controls */}
-          <View style={styles.zoomControls}>
+          <View style={[styles.zoomControls, { bottom: controlsBottom }]}>
             <TouchableOpacity
               style={[styles.zoomBtn, { backgroundColor: T.surface, borderColor: T.border }]}
               onPress={() => handleZoom(1.4)}
@@ -559,7 +559,12 @@ export function NotesGraphScreen() {
 
           {/* Selected node card */}
           {selectedNode && (
-            <View style={[styles.nodeCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <View
+              style={[
+                styles.nodeCard,
+                { backgroundColor: T.surface, borderColor: T.border, bottom: controlsBottom },
+              ]}
+            >
               <View style={styles.nodeCardHeader}>
                 <View style={[styles.nodeCardIcon, { backgroundColor: selectedNode.color + "20" }]}>
                   <NotePencil size={18} color={selectedNode.color} weight="fill" />
@@ -570,7 +575,6 @@ export function NotesGraphScreen() {
                   </Text>
                   <Text style={[styles.nodeCardMeta, { color: T.textDim }]}>
                     {selectedNode.connections} connection{selectedNode.connections !== 1 ? "s" : ""}
-                    {!selectedNode.isNote && " · external"}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -580,7 +584,7 @@ export function NotesGraphScreen() {
                   <X size={16} color={T.textDim} weight="duotone" />
                 </TouchableOpacity>
               </View>
-              {selectedNode.isNote && (
+              {
                 <TouchableOpacity
                   style={[styles.nodeCardBtn, { backgroundColor: T.accent }]}
                   onPress={() => {
@@ -591,7 +595,7 @@ export function NotesGraphScreen() {
                 >
                   <Text style={styles.nodeCardBtnText}>Open note</Text>
                 </TouchableOpacity>
-              )}
+              }
             </View>
           )}
         </Animated.View>
@@ -616,8 +620,8 @@ function EmptyGraph({ T }: { T: ThemeColors & { isDark: boolean } }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  canvas: { flex: 1 },
-  svg: { flex: 1 },
+  canvas: { flex: 1, overflow: "hidden" },
+  surface: { position: "absolute" },
   center: {
     flex: 1,
     alignItems: "center",

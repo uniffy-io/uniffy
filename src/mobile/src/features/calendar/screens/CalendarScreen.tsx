@@ -34,6 +34,45 @@ const HITSLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 const HOUR_START = 0; // midnight
 const HOUR_END = 24;
 const HOUR_HEIGHT = 60; // px per hour
+
+// A block is sized by the event's DURATION, never by its text, so a short event
+// has to be told how much prose actually fits. The unit is a whole line: half a
+// line of sliced glyphs reads as a rendering fault, where one honest line reads
+// as a summary. Line heights are declared rather than left to the font so the
+// arithmetic here and the rendered text cannot disagree.
+const BLOCK_BORDER = 3;
+const BLOCK_PAD_Y = 7;
+const BLOCK_TIGHT_PAD_Y = 3;
+const TITLE_LINE = 16;
+const DETAIL_LINE = 15;
+const WEEK_PAD_Y = 2;
+const WEEK_BORDER = 2;
+const WEEK_LINE = 12;
+
+type BlockText = { padY: number; rows: 1 | 2; title: number; detail: number };
+
+// Padding is spent last: squeezing it buys a second line, and a block dense
+// with text still beats a roomy one that hides who is attending.
+function fitBlockText(height: number, fontScale: number): BlockText {
+  const title = Math.round(TITLE_LINE * fontScale);
+  const detail = Math.round(DETAIL_LINE * fontScale);
+  const room = (pad: number) => height - BLOCK_BORDER - pad * 2;
+  const pads = [BLOCK_PAD_Y, BLOCK_TIGHT_PAD_Y];
+  for (const padY of pads) {
+    if (room(padY) >= title + detail) return { padY, rows: 2, title, detail };
+  }
+  for (const padY of pads) {
+    if (room(padY) >= title) return { padY, rows: 1, title, detail };
+  }
+  return { padY: BLOCK_TIGHT_PAD_Y, rows: 1, title, detail };
+}
+
+// Floor for a block's height: enough for its title at the reader's text size.
+// Without it the shortest events are boxes too small for the one line they must
+// show, and no amount of padding arithmetic downstream can rescue that.
+function minBlockHeight(fontScale: number) {
+  return BLOCK_BORDER + BLOCK_TIGHT_PAD_Y * 2 + Math.round(TITLE_LINE * fontScale);
+}
 const GRID_HEIGHT = (HOUR_END - HOUR_START) * HOUR_HEIGHT;
 const TIME_COL_WIDTH = 56;
 
@@ -397,7 +436,10 @@ function WeekGrid({
           allDay: false,
           left: dayLeft + p.colIndex * w,
           top: (startMin / 60) * HOUR_HEIGHT,
-          height: Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 22),
+          height: Math.max(
+            ((endMin - startMin) / 60) * HOUR_HEIGHT,
+            WEEK_BORDER + WEEK_PAD_Y * 2 + WEEK_LINE,
+          ),
           width: w - 1,
         });
       });
@@ -577,8 +619,12 @@ function WeekGrid({
                 activeOpacity={0.85}
               >
                 <Text
-                  style={[styles.weekEventText, { color: T.textBright }]}
-                  numberOfLines={b.allDay ? 1 : 2}
+                  style={[styles.weekEventText, { color: T.textBright, lineHeight: WEEK_LINE }]}
+                  // Whole lines only: a second line is offered when the block
+                  // has room for one, never squeezed in to be sliced in half.
+                  numberOfLines={
+                    b.allDay || b.height - WEEK_BORDER - WEEK_PAD_Y * 2 < WEEK_LINE * 2 ? 1 : 2
+                  }
                 >
                   {b.event.title}
                 </Text>
@@ -594,7 +640,7 @@ function WeekGrid({
 export function CalendarScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
-  const topPad = (Platform.OS === "web" ? 20 : insets.top) + 12;
+  const topPad = (Platform.OS === "web" ? 20 : insets.top) + 6;
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const today = useMemo(() => new Date(), []);
@@ -672,7 +718,7 @@ export function CalendarScreen() {
       });
   }, [eventsQuery.data, selectedDate, matchesFilter]);
 
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, fontScale } = useWindowDimensions();
 
   // Box + side-by-side column placement for each event, so overlaps sit next
   // to each other instead of stacking. All-day events span the full grid
@@ -706,13 +752,13 @@ export function CalendarScreen() {
       return {
         event,
         top: (startMin / 60) * HOUR_HEIGHT,
-        height: Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28),
+        height: Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, minBlockHeight(fontScale)),
         left: TIME_COL_WIDTH + 4 + place.colIndex * colWidth,
         width: colWidth - (place.colCount > 1 ? 3 : 0),
         conflict: event.isAllDay ? false : (timedConflict.get(event.id)?.conflict ?? false),
       };
     });
-  }, [dayEvents, windowWidth]);
+  }, [dayEvents, windowWidth, fontScale]);
 
   const rangeEvents = useMemo(() => {
     if (!eventsQuery.data) return [];
@@ -1048,7 +1094,8 @@ export function CalendarScreen() {
                     const color = getEventColor(event, categoriesMap, T.accent);
                     const attendeeLabel = event.attendees.map((a) => a.name).join(", ");
                     const isAllDay = event.isAllDay;
-                    const showSecondRow = !isAllDay && height >= 44;
+                    const fit = fitBlockText(height, fontScale);
+                    const showSecondRow = !isAllDay && fit.rows === 2;
 
                     return (
                       <TouchableOpacity
@@ -1063,6 +1110,7 @@ export function CalendarScreen() {
                             height,
                             left,
                             width,
+                            paddingVertical: fit.padY,
                             backgroundColor: color + "33",
                             borderColor: conflict ? T.red : color,
                           },
@@ -1074,19 +1122,30 @@ export function CalendarScreen() {
                           <View style={styles.gridEventTitleWrap}>
                             {conflict ? <Warning size={12} color={T.red} weight="fill" /> : null}
                             <Text
-                              style={[styles.gridEventTitle, { color: T.textBright }]}
+                              style={[
+                                styles.gridEventTitle,
+                                { color: T.textBright, lineHeight: fit.title },
+                              ]}
                               numberOfLines={1}
                             >
                               {event.title}
                             </Text>
                           </View>
-                          <Text style={[styles.gridEventTime, { color: T.textBright }]}>
+                          <Text
+                            style={[
+                              styles.gridEventTime,
+                              { color: T.textBright, lineHeight: fit.title },
+                            ]}
+                          >
                             {isAllDay ? "All day" : event.startTimeFormatted}
                           </Text>
                         </View>
                         {isAllDay && attendeeLabel ? (
                           <Text
-                            style={[styles.gridEventDetail, { color: T.textDim }]}
+                            style={[
+                              styles.gridEventDetail,
+                              { color: T.textDim, lineHeight: fit.detail },
+                            ]}
                             numberOfLines={1}
                           >
                             {attendeeLabel}
@@ -1095,12 +1154,20 @@ export function CalendarScreen() {
                         {showSecondRow ? (
                           <View style={styles.gridEventRow}>
                             <Text
-                              style={[styles.gridEventDetail, { color: T.textDim }]}
+                              style={[
+                                styles.gridEventDetail,
+                                { color: T.textDim, lineHeight: fit.detail },
+                              ]}
                               numberOfLines={1}
                             >
                               {attendeeLabel}
                             </Text>
-                            <Text style={[styles.gridEventEndTime, { color: T.textDim }]}>
+                            <Text
+                              style={[
+                                styles.gridEventEndTime,
+                                { color: T.textDim, lineHeight: fit.detail },
+                              ]}
+                            >
                               {event.endTimeFormatted}
                             </Text>
                           </View>
@@ -1230,7 +1297,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingBottom: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: { fontSize: 18, fontFamily: FONT.bold },
@@ -1240,8 +1307,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   iconBtn: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1259,7 +1326,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   periodNav: {
@@ -1284,16 +1351,16 @@ const styles = StyleSheet.create({
   monthText: { fontSize: 16, fontFamily: FONT.semibold },
   weekStrip: {
     flexDirection: "row",
-    paddingVertical: 10,
+    paddingVertical: 6,
     paddingHorizontal: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  dayItem: { flex: 1, alignItems: "center", gap: 4 },
+  dayItem: { flex: 1, alignItems: "center", gap: 3 },
   dayLabel: { fontSize: 11, fontFamily: FONT.medium },
   dayCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1302,22 +1369,22 @@ const styles = StyleSheet.create({
   weekHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  weekHeaderCell: { flex: 1, alignItems: "center", gap: 3, paddingVertical: 2 },
+  weekHeaderCell: { flex: 1, alignItems: "center", gap: 2, paddingVertical: 1 },
   weekHeaderLabel: { fontSize: 10, fontFamily: FONT.medium },
   weekHeaderCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   weekHeaderNum: { fontSize: 13, fontFamily: FONT.semibold },
   weekGridBody: {
     position: "relative",
-    marginTop: 10,
+    marginTop: 6,
   },
   weekDaySep: {
     position: "absolute",
@@ -1344,7 +1411,7 @@ const styles = StyleSheet.create({
   // bottom of the day) land inside the grid's hit area.
   timeGrid: {
     position: "relative",
-    marginTop: 10,
+    marginTop: 6,
     height: GRID_HEIGHT,
   },
   hourLabel: {
@@ -1401,7 +1468,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1.5,
     paddingHorizontal: 11,
-    paddingVertical: 7,
     overflow: "hidden",
     zIndex: 10,
     // Title/start ride the top edge, participants/end the bottom edge.

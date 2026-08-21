@@ -1105,7 +1105,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 virtual._occurrence_date = occ.occurrence_date.isoformat()  # type: ignore[attr-defined]
                 result.append(virtual)
 
-        result.extend(override_events)
+        # An override is an ordinary row that overlaps the range, so the caller's
+        # own query has usually returned it already; re-adding it blindly gives
+        # the client two entries under one id.
+        seen_ids = {e.id for e in result}
+        result.extend(e for e in override_events if e.id not in seen_ids)
         result.sort(key=lambda e: e.start_time)
         return result
 

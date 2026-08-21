@@ -89,6 +89,11 @@ services:
       MEILI_HTTP_PAYLOAD_SIZE_LIMIT: 104857600
       MEILI_LOG_LEVEL: INFO
       MEILI_EXPERIMENTAL_LOGS_MODE: human
+      # The data volume outlives the image, and Meilisearch refuses to start
+      # against a database written by an older engine. Without this it is not a
+      # degraded search box but a crash loop on every version bump, so the
+      # upgrade has to be opted into once here rather than remembered by hand.
+      MEILI_UPGRADE_DB: true
     ports:
       - "7700:7700"
     volumes:

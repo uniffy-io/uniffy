@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import {
   NotePencil,
@@ -30,11 +31,16 @@ import { Avatar } from "@shared/components/Avatar";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 
+// Chosen just above each line's font size: enough to clear the descenders of
+// "Good morning," without opening a paragraph break under it.
+const GREETING_LINE = 26;
+const GREETING_NAME_LINE = 31;
+
 export function HomeScreen() {
   const { user } = useAuth();
   const T = useTheme();
   const insets = useSafeAreaInsets();
-  const topPad = (Platform.OS === "web" ? 8 : insets.top) + 4;
+  const topPad = (Platform.OS === "web" ? 8 : insets.top) + 2;
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
@@ -60,6 +66,13 @@ export function HomeScreen() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const userName = user?.fullName || user?.username || "there";
+  // The greeting and the name are one sentence broken over two lines, so they
+  // are set with a heading's tight leading instead of the roomy default a font
+  // picks for body text - and scaled, because a lineHeight in a stylesheet is
+  // the one thing the reader's text-size setting never touches.
+  const { fontScale } = useWindowDimensions();
+  const greetingLine = Math.round(GREETING_LINE * fontScale);
+  const greetingNameLine = Math.round(GREETING_NAME_LINE * fontScale);
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
@@ -78,7 +91,7 @@ export function HomeScreen() {
               activeOpacity={0.7}
               accessibilityLabel="Bookmarks"
             >
-              <BookmarkSimple size={18} color={T.text} weight="bold" />
+              <BookmarkSimple size={16} color={T.text} weight="bold" />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: T.surfaceHover, borderColor: T.border }]}
@@ -86,7 +99,7 @@ export function HomeScreen() {
               activeOpacity={0.7}
               accessibilityLabel="Notifications"
             >
-              <BellSimple size={18} color={T.text} weight="bold" />
+              <BellSimple size={16} color={T.text} weight="bold" />
               {unreadNotifications > 0 && (
                 <View style={[styles.actionBadge, { backgroundColor: T.red, borderColor: T.bg }]}>
                   <Text style={styles.actionBadgeText}>
@@ -103,7 +116,7 @@ export function HomeScreen() {
               <Avatar
                 name={user?.fullName || user?.username || "?"}
                 avatarUrl={user?.avatarUrl}
-                size={34}
+                size={30}
                 accentColor={T.accent}
               />
             </TouchableOpacity>
@@ -119,8 +132,13 @@ export function HomeScreen() {
         overScrollMode="never"
       >
         <View style={styles.greetingBlock}>
-          <Text style={[styles.greeting, { color: T.textBright }]}>{greeting},</Text>
-          <Text style={[styles.greetingName, { color: T.accent }]} numberOfLines={1}>
+          <Text style={[styles.greeting, { color: T.textBright, lineHeight: greetingLine }]}>
+            {greeting},
+          </Text>
+          <Text
+            style={[styles.greetingName, { color: T.accent, lineHeight: greetingNameLine }]}
+            numberOfLines={1}
+          >
             {userName}
           </Text>
         </View>
@@ -332,13 +350,12 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   header: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   greetingBlock: {
     paddingHorizontal: 16,
-    paddingTop: 20,
-    gap: 2,
+    paddingTop: 10,
   },
   greeting: {
     fontSize: 22,
@@ -354,19 +371,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   wordmark: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: FONT.bold,
     letterSpacing: -0.5,
   },
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
+  // The row's height is the buttons', so this size is what the header bar
+  // costs beyond its padding.
   actionBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",

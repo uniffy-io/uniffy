@@ -7,7 +7,6 @@ import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 export interface GraphNode {
   id: string;
   label: string;
-  isNote: boolean;
   connections: number;
   color: string;
   x: number;
@@ -31,14 +30,6 @@ export interface NotesGraphData {
 
 const NOTE_COLOR = "#8b5cf6";
 
-const URN_TYPE_COLORS: Record<string, string> = {
-  NOTE: NOTE_COLOR,
-  FILE: "#3b82f6",
-  CHAT: "#8b5cf6",
-  USER: "#10b981",
-  CALENDAR_EVENT: "#f43f5e",
-};
-
 function parseUrn(urn: string): { type: string; id: string } | null {
   const m = urn.match(/^urn:uniffy:content:(\w+):([a-f0-9-]+)$/);
   if (!m) return null;
@@ -52,62 +43,40 @@ function spiralPos(index: number): { x: number; y: number } {
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }
 
+// Notes and the links between them, and nothing else. A note that mentions a
+// file or a meeting is pointing outside this graph, so that reference is not a
+// node here - it used to be, which filled the view with "File" and
+// "Calendar_event" blobs that connect to one note each and say nothing about
+// how the writing hangs together.
 function buildGraph(rawNotes: ReturnType<typeof noteToPlain>[]): NotesGraphData {
   const contentNotes = rawNotes.filter((n) => n.nodeType !== NodeType.FOLDER && !n.isDeleted);
+  const noteIds = new Set(contentNotes.map((n) => n.id));
 
   const connectionCount = new Map<string, number>();
+  const links: GraphLink[] = [];
 
   for (const note of contentNotes) {
     for (const urn of note.outgoingReferences) {
       const parsed = parseUrn(urn);
-      if (!parsed) continue;
+      if (!parsed || parsed.type !== "NOTE") continue;
+      if (parsed.id === note.id || !noteIds.has(parsed.id)) continue;
+      links.push({ source: note.id, target: parsed.id });
       connectionCount.set(note.id, (connectionCount.get(note.id) ?? 0) + 1);
       connectionCount.set(parsed.id, (connectionCount.get(parsed.id) ?? 0) + 1);
     }
   }
 
-  const nodes: GraphNode[] = [];
-  const links: GraphLink[] = [];
-  const seenIds = new Set<string>();
-
-  for (let i = 0; i < contentNotes.length; i++) {
-    const note = contentNotes[i];
+  const nodes: GraphNode[] = contentNotes.map((note, i) => {
     const pos = spiralPos(i);
-    nodes.push({
+    return {
       id: note.id,
       label: note.title || "Untitled",
-      isNote: true,
       connections: connectionCount.get(note.id) ?? 0,
       color: NOTE_COLOR,
       x: pos.x,
       y: pos.y,
-    });
-    seenIds.add(note.id);
-  }
-
-  for (const note of contentNotes) {
-    for (const urn of note.outgoingReferences) {
-      const parsed = parseUrn(urn);
-      if (!parsed) continue;
-
-      if (!seenIds.has(parsed.id)) {
-        const pos = spiralPos(nodes.length);
-        const color = URN_TYPE_COLORS[parsed.type] ?? "#909296";
-        nodes.push({
-          id: parsed.id,
-          label: parsed.type.charAt(0) + parsed.type.slice(1).toLowerCase(),
-          isNote: false,
-          connections: connectionCount.get(parsed.id) ?? 0,
-          color,
-          x: pos.x,
-          y: pos.y,
-        });
-        seenIds.add(parsed.id);
-      }
-
-      links.push({ source: note.id, target: parsed.id });
-    }
-  }
+    };
+  });
 
   return { nodes, links };
 }

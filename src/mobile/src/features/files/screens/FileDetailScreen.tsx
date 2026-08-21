@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Modal,
   TextInput,
   Platform,
-  KeyboardAvoidingView,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import {
@@ -27,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
+import { SheetHeader } from "@shared/components/SheetHeader";
 import { CommentButton } from "@shared/comments/CommentsSheet";
 import { ShareButton } from "@shared/permissions/ShareSheet";
 import { FilePreview } from "@features/files/components/FilePreview";
@@ -346,7 +345,7 @@ export function FileDetailScreen() {
         busy={updateFile.isPending}
       />
 
-      <DescriptionModal
+      <DescriptionSheet
         visible={descOpen}
         value={descValue}
         onChange={setDescValue}
@@ -398,7 +397,7 @@ function DetailCard({ rows }: { rows: { label: string; value: string }[] }) {
   );
 }
 
-function DescriptionModal({
+function DescriptionSheet({
   visible,
   value,
   onChange,
@@ -414,48 +413,42 @@ function DescriptionModal({
   saving: boolean;
 }) {
   const T = useTheme();
+  const inputRef = useRef<TextInput>(null);
+
+  // Android hands focus to the sheet's own window only once it has presented, so
+  // a multiline input that autofocuses on mount gets the caret but no keyboard.
+  // Re-asserting focus after the present raises it.
+  useEffect(() => {
+    if (!visible) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 150);
+    return () => clearTimeout(t);
+  }, [visible]);
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.modalOverlay}
-      >
-        <View style={[styles.modalCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-          <Text style={[styles.modalTitle, { color: T.textBright }]}>Description</Text>
-          <TextInput
-            style={[
-              styles.modalInput,
-              { backgroundColor: T.pageBg, color: T.textBright, borderColor: T.border },
-            ]}
-            value={value}
-            onChangeText={onChange}
-            placeholder="Describe this file"
-            placeholderTextColor={T.textDim}
-            multiline
-            autoFocus
-          />
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: T.pageBg }]}
-              onPress={onCancel}
-            >
-              <Text style={[styles.modalBtnText, { color: T.text }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: T.accent }]}
-              onPress={onSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={[styles.modalBtnText, { color: "#fff" }]}>Save</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    <BottomSheet visible={visible} onClose={onCancel} fill>
+      <SheetHeader
+        title="Description"
+        busy={saving}
+        actions={[
+          { label: "Cancel", onPress: onCancel, tone: "muted" },
+          { label: "Save", onPress: onSave, disabled: saving },
+        ]}
+      />
+      <TextInput
+        ref={inputRef}
+        style={[
+          styles.descInput,
+          { backgroundColor: T.pageBg, color: T.textBright, borderColor: T.border },
+        ]}
+        value={value}
+        onChangeText={onChange}
+        placeholder="Describe this file"
+        placeholderTextColor={T.textDim}
+        multiline
+        autoFocus
+        textAlignVertical="top"
+      />
+    </BottomSheet>
   );
 }
 
@@ -596,40 +589,20 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   tagAddText: { fontSize: 12, fontFamily: FONT.medium },
-  modalOverlay: {
+  // `flex` rather than a height: the sheet is already sized to the space above
+  // the keyboard, so the input's job is to take whatever the header leaves.
+  descInput: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  modalCard: {
-    width: "100%",
-    borderRadius: 16,
-    padding: 24,
-    gap: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  modalTitle: { fontSize: 18, fontFamily: FONT.bold },
-  modalInput: {
+    marginHorizontal: 16,
+    marginTop: 4,
     fontSize: 15,
     fontFamily: FONT.regular,
-    borderRadius: 10,
+    lineHeight: 22,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    minHeight: 90,
-    textAlignVertical: "top",
   },
-  modalButtons: { flexDirection: "row", gap: 10, justifyContent: "flex-end" },
-  modalBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  modalBtnText: { fontSize: 14, fontFamily: FONT.semibold },
   versionsSheet: { maxHeight: "70%" },
   moveTitle: {
     fontSize: 15,

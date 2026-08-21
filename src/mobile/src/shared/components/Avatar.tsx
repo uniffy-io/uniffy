@@ -128,11 +128,18 @@ export function Avatar({
             width: size,
             height: size,
             borderRadius,
-            backgroundColor: accentColor ? accentColor + "22" : "rgba(128,128,128,0.15)",
+            // Enough tint to read as a tile of its own next to a fully filled
+            // avatar; at half this it sank into the page on a dark theme.
+            backgroundColor: accentColor ? accentColor + "44" : "rgba(128,128,128,0.28)",
           },
         ]}
       >
-        <Text style={{ fontSize: size * 0.55, lineHeight: size }}>{emoji}</Text>
+        {/* A real emoji carries its own colour and ignores this, but the slot
+            also accepts plain characters - an agent whose avatar is set to a
+            letter draws in the platform default, which is black and vanishes
+            against the tile. The same white the initials use, so a lettered
+            avatar reads as brightly as an initialled one beside it. */}
+        <Text style={[styles.initials, { fontSize: size * 0.55, lineHeight: size }]}>{emoji}</Text>
       </View>
     );
   }

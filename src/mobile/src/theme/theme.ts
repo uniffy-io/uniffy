@@ -56,7 +56,7 @@ export const DARK: ThemeColors = {
   surface: "#1a2138",
   surfaceHover: "#222a46",
   border: "#2d3654",
-  text: "#b8bfd4",
+  text: "#e8ecf7",
   textBright: "#eaedf6",
   textDim: "#808aa8",
   accent: BRAND.violet,

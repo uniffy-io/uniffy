@@ -190,6 +190,11 @@ function CommentsSheet({
             data={comments}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
+            // Without a flex of its own the list sizes to its content and
+            // refuses to give ground, so when the keyboard shrinks the sheet it
+            // is the composer - the last child - that gets pushed out of the
+            // clipped box, exactly when it is the thing being typed into.
+            style={styles.fill}
             contentContainerStyle={comments.length === 0 ? styles.emptyContent : styles.listContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}

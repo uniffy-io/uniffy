@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,15 +8,10 @@ import {
   Platform,
   ActivityIndicator,
   Linking,
+  Alert,
 } from "react-native";
-import {
-  PencilSimple,
-  DotsThree,
-  Clock,
-  MapPin,
-  Video,
-  ArrowsClockwise,
-} from "phosphor-react-native";
+import * as Clipboard from "expo-clipboard";
+import { DotsThree, Clock, MapPin, Video, ArrowsClockwise } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
@@ -28,8 +23,17 @@ import { ActionSheet } from "@shared/components/ActionSheet";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
+import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
+import { RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
+import { RecurrenceScopeSheet } from "@features/calendar/components/RecurrenceScopeSheet";
 import { useEvent, useCategories } from "@features/calendar/useCalendar";
-import { useDeleteEvent } from "@features/calendar/useCalendarMutations";
+import { formatCalendarDate } from "@features/calendar/calendarSerializer";
+import {
+  useAddAttendees,
+  useDeleteEvent,
+  useRemoveAttendees,
+} from "@features/calendar/useCalendarMutations";
+import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
 import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
 import { useActiveCall } from "@features/calls/useCallsState";
 
@@ -40,6 +44,13 @@ const RSVP_COLORS: Record<string, string> = {
   declined: "#E64980",
 };
 
+// An occurrence of a recurring event is addressed as
+// `{masterId}__occurrence__{date}` - a virtual id the calendar domain expands
+// from the one row that actually exists. Anything naming the event AS CONTENT
+// (its URN, a bookmark, a mention pasted into a note) has to name that row, or
+// it points at a key nothing will ever resolve.
+const OCCURRENCE_SEPARATOR = "__occurrence__";
+
 export function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
@@ -48,10 +59,46 @@ export function EventDetailScreen() {
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [sheetOpen, setSheetOpen] = useState(false);
   const [prejoinOpen, setPrejoinOpen] = useState(false);
+  const [invitePickerOpen, setInvitePickerOpen] = useState(false);
+  const [scopeAction, setScopeAction] = useState<"edit" | "delete" | null>(null);
   const eventQuery = useEvent(id);
   const categoriesQuery = useCategories();
   const deleteEvent = useDeleteEvent();
+  const addAttendees = useAddAttendees();
+  const removeAttendees = useRemoveAttendees();
   const activeMeetingCall = useActiveCall(eventQuery.data?.channelId ?? undefined);
+
+  // The route param is the only place the occurrence survives: GetEvent parses
+  // the suffix off and answers with the series row, so nothing in the response
+  // knows which day was tapped.
+  const [masterId, occurrenceDate] = (id ?? "").split(OCCURRENCE_SEPARATOR);
+  const eventUrn = `urn:uniffy:content:CALENDAR_EVENT:${masterId}`;
+  const bookmarked = useIsBookmarked(eventUrn).data ?? false;
+  const toggleBookmark = useToggleBookmark();
+
+  const copyReferenceLink = useCallback(async () => {
+    await Clipboard.setStringAsync(eventUrn);
+    Alert.alert("Copied", "Reference link copied to clipboard.");
+  }, [eventUrn]);
+
+  const organizerId = eventQuery.data?.organizerId;
+  const eventId = eventQuery.data?.id;
+  const toggleAttendee = useCallback(
+    (userId: string, isAttendee: boolean) => {
+      if (!eventId) return;
+      // The organizer is an attendee row like any other, so the picker offers
+      // it as deselectable. Removing it would leave the event without the
+      // person who owns it.
+      if (userId === organizerId) {
+        Alert.alert("Organizer", "The organizer cannot be removed from the event.");
+        return;
+      }
+      const args = { eventId, userIds: [userId] };
+      if (isAttendee) removeAttendees.mutate(args);
+      else addAttendees.mutate(args);
+    },
+    [eventId, organizerId, addAttendees, removeAttendees],
+  );
 
   if (eventQuery.isLoading) {
     return (
@@ -71,10 +118,44 @@ export function EventDetailScreen() {
   const category = categoriesQuery.data?.find((c) => c.id === event.categoryId);
   const eventColor = category?.color || T.accent;
 
+  // Attendee ids ARE user ids (proto `Attendee.id`), so they feed the picker's
+  // selection and the add/remove calls without a lookup.
+  const attendeeIds = event.attendees.map((a) => a.id);
+
   const hasMeetingUrl = !!event.meetingUrl;
   const hasChannel = !!event.channelId;
   const isRecurring = !!event.recurrence;
   const recurrenceLabel = event.recurrence ? `Recurring ${event.recurrence.pattern}` : "";
+
+  // Only an expanded occurrence can be narrowed - it is the one that knows
+  // which date it stands for. Acting on the series row itself has no "this
+  // one" to mean, so it keeps going straight through.
+  const needsScope = isRecurring && !!occurrenceDate;
+
+  // The series row carries the date the recurrence STARTED, so an occurrence
+  // opened from any later day would otherwise be labelled with the first one -
+  // and "This event" in the scope sheet would name a day that is not on screen.
+  const dateLabel = occurrenceDate ? formatCalendarDate(occurrenceDate) : event.dateFormatted;
+
+  const editEvent = (scope?: RecurrenceEditScope) =>
+    router.push({
+      pathname: "/calendar/create",
+      params: {
+        eventId: id,
+        ...(scope !== undefined && occurrenceDate
+          ? { recurrenceEditScope: String(scope), occurrenceDate }
+          : {}),
+      },
+    });
+
+  const removeEvent = (scope?: RecurrenceEditScope) => {
+    deleteEvent.mutate({
+      eventId: id,
+      recurrenceEditScope: scope,
+      occurrenceDate: scope === undefined ? undefined : occurrenceDate,
+    });
+    router.back();
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
@@ -94,14 +175,6 @@ export function EventDetailScreen() {
               contentId={event.id}
               color={T.accent}
             />
-            <TouchableOpacity
-              onPress={() =>
-                router.push({ pathname: "/calendar/create", params: { eventId: event.id } })
-              }
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <PencilSimple size={18} color={T.text} weight="duotone" />
-            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setSheetOpen(true)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -157,7 +230,7 @@ export function EventDetailScreen() {
                 {event.startTimeFormatted} – {event.endTimeFormatted}
               </Text>
               <Text style={[styles.infoSub, { color: T.textDim }]}>
-                {event.dateFormatted} · {event.duration}
+                {dateLabel} · {event.duration}
               </Text>
             </View>
           </View>
@@ -278,11 +351,18 @@ export function EventDetailScreen() {
           {
             icon: "edit-2",
             label: "Edit event",
-            onPress: () =>
-              router.push({ pathname: "/calendar/create", params: { eventId: event.id } }),
+            onPress: () => (needsScope ? setScopeAction("edit") : editEvent()),
           },
-          { icon: "at-sign", label: "Copy reference link", onPress: () => {} },
-          { icon: "user-plus", label: "Invite more people", onPress: () => {} },
+          {
+            icon: "at-sign",
+            label: "Copy reference link",
+            onPress: () => void copyReferenceLink(),
+          },
+          {
+            icon: "user-plus",
+            label: "Invite more people",
+            onPress: () => setInvitePickerOpen(true),
+          },
           ...(hasMeetingUrl
             ? [
                 {
@@ -310,20 +390,55 @@ export function EventDetailScreen() {
             icon: "edit-3",
             label: "Create meeting notes",
             color: T.accent,
-            onPress: () => router.push("/notes/edit" as any),
+            onPress: () =>
+              router.push({
+                pathname: "/notes/edit",
+                params: {
+                  initialTitle: `${event.title} - meeting notes`,
+                  // Canonical mention form, which the editor parses back into a
+                  // chip: the note stays linked to the event rather than merely
+                  // repeating its name.
+                  initialContent: `[[[${event.title}|${eventUrn}]]]\n${dateLabel} · ${event.startTimeFormatted}\n\n`,
+                },
+              }),
           },
-          { icon: "star", label: "Add to favorites", onPress: () => {} },
+          {
+            icon: "star",
+            label: bookmarked ? "Remove from favorites" : "Add to favorites",
+            color: bookmarked ? T.accent : undefined,
+            onPress: () => toggleBookmark.mutate(eventUrn),
+          },
           {
             icon: "trash-2" as const,
             label: "Delete event",
             isDanger: true,
-            onPress: () => {
-              deleteEvent.mutate(event.id);
-              setSheetOpen(false);
-              router.back();
-            },
+            onPress: () => (needsScope ? setScopeAction("delete") : removeEvent()),
           },
         ]}
+      />
+
+      <RecurrenceScopeSheet
+        visible={scopeAction !== null}
+        action={scopeAction ?? "edit"}
+        accentColor={eventColor}
+        busy={deleteEvent.isPending}
+        onClose={() => setScopeAction(null)}
+        onSelect={(scope) => {
+          const pending = scopeAction;
+          setScopeAction(null);
+          if (pending === "delete") removeEvent(scope);
+          else editEvent(scope);
+        }}
+      />
+
+      <SubjectPickerSheet
+        visible={invitePickerOpen}
+        onClose={() => setInvitePickerOpen(false)}
+        title="Invite people"
+        accentColor={eventColor}
+        selectedIds={attendeeIds}
+        busy={addAttendees.isPending || removeAttendees.isPending}
+        onToggle={(userId) => toggleAttendee(userId, attendeeIds.includes(userId))}
       />
 
       {event.channelId ? (

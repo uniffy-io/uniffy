@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { formatCompactAge } from "@shared/lib/dateFormatting";
 import {
   View,
@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  BackHandler,
 } from "react-native";
 import {
   Plus,
@@ -37,6 +38,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { Avatar } from "@shared/components/Avatar";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { NamePromptSheet } from "@shared/components/NamePromptSheet";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
@@ -286,11 +288,25 @@ export function ChatListScreen() {
     [joinChannel, openChannel],
   );
 
+  // Browsing is a mode of this screen, not a route of its own, so going back
+  // from it has to leave the mode. Left to the header's default that back would
+  // pop the chat list entirely and land on whatever came before it.
+  const exitBrowse = useCallback(() => setBrowsing(false), []);
+  useEffect(() => {
+    if (!browsing) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setBrowsing(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [browsing]);
+
   const header = (
     <DomainHeader
       title="Chat"
       color={T.accent}
       icon="chat"
+      onBack={browsing ? exitBrowse : undefined}
       rightActions={
         <>
           <TouchableOpacity
@@ -538,9 +554,9 @@ export function ChatListScreen() {
         </ScrollView>
       )}
 
-      <CategoryNameModal
+      <NamePromptSheet
         visible={newCategoryOpen}
-        T={T}
+        icon={FolderPlus}
         pending={createCategory.isPending}
         title="New category"
         cta="Create category"
@@ -550,10 +566,10 @@ export function ChatListScreen() {
         }
       />
 
-      <CategoryNameModal
+      <NamePromptSheet
         key={renameCategoryTarget?.id ?? "rename"}
         visible={!!renameCategoryTarget}
-        T={T}
+        icon={FolderPlus}
         pending={updateCategory.isPending}
         title="Rename category"
         cta="Rename"
@@ -568,9 +584,9 @@ export function ChatListScreen() {
         }}
       />
 
-      <CategoryNameModal
+      <NamePromptSheet
         visible={newAgentFolderOpen}
-        T={T}
+        icon={FolderPlus}
         pending={createAgentFolder.isPending}
         title="New agent folder"
         cta="Create folder"
@@ -581,10 +597,10 @@ export function ChatListScreen() {
         }
       />
 
-      <CategoryNameModal
+      <NamePromptSheet
         key={renameFolderTarget?.id ?? "rename-folder"}
         visible={!!renameFolderTarget}
-        T={T}
+        icon={FolderPlus}
         pending={renameAgentFolder.isPending}
         title="Rename folder"
         cta="Rename"
@@ -651,63 +667,6 @@ export function ChatListScreen() {
         }
       />
     </View>
-  );
-}
-
-function CategoryNameModal({
-  visible,
-  T,
-  pending,
-  title,
-  cta,
-  initialName,
-  placeholder = "Category name",
-  onClose,
-  onSubmit,
-}: {
-  visible: boolean;
-  T: ThemeColors;
-  pending: boolean;
-  title: string;
-  cta: string;
-  initialName?: string;
-  placeholder?: string;
-  onClose: () => void;
-  onSubmit: (name: string) => void;
-}) {
-  const [name, setName] = useState(initialName ?? "");
-  const trimmed = name.trim();
-  return (
-    <BottomSheet visible={visible} onClose={onClose} style={styles.sheet}>
-      <View style={styles.sheetHeader}>
-        <FolderPlus size={20} color={T.accent} weight="duotone" />
-        <Text style={[styles.sheetTitle, { color: T.textBright }]}>{title}</Text>
-      </View>
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder={placeholder}
-        placeholderTextColor={T.textDim}
-        autoFocus
-        style={[
-          styles.modalInput,
-          { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
-        ]}
-      />
-      <TouchableOpacity
-        style={[styles.modalCta, { backgroundColor: trimmed ? T.accent : T.surfaceHover }]}
-        disabled={!trimmed || pending}
-        onPress={() => {
-          onSubmit(trimmed);
-          setName("");
-        }}
-        activeOpacity={0.8}
-      >
-        <Text style={[styles.modalCtaText, { color: trimmed ? "#fff" : T.textDim }]}>
-          {pending ? "Saving..." : cta}
-        </Text>
-      </TouchableOpacity>
-    </BottomSheet>
   );
 }
 
@@ -1471,14 +1430,6 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   sheetTitle: { fontSize: 16, fontFamily: FONT.semibold, flex: 1 },
-  modalInput: {
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    fontFamily: FONT.regular,
-  },
   modalCta: {
     marginTop: 14,
     paddingVertical: 13,

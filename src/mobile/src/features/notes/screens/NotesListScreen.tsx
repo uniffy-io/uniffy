@@ -12,7 +12,6 @@ import {
   Alert,
 } from "react-native";
 import {
-  MagnifyingGlass,
   Plus,
   DotsThree,
   NotePencil,
@@ -242,12 +241,6 @@ function NotesListBody() {
         icon="notes"
         rightActions={
           <>
-            <TouchableOpacity
-              onPress={() => router.push("/search" as any)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <MagnifyingGlass size={19} color={T.text} weight="bold" />
-            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push("/notes/graph" as any)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

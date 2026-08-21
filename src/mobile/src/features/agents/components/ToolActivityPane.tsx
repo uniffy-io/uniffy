@@ -1,9 +1,9 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { CheckCircle, Stop, XCircle } from "phosphor-react-native";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
-import { DetailsCaret, DETAILS_GAP } from "@features/agents/components/AgentDetailsBlock";
+import { DetailsCaret } from "@features/agents/components/AgentDetailsBlock";
 import { ToolPayloadCard } from "@features/agents/components/ToolPayloadCard";
 import { readableToolPayload, type ReadablePayload } from "@features/agents/toolPayload";
 
@@ -42,20 +42,13 @@ export function ToolActivityPane({
   steps,
   live,
   answerStarted,
-  onDetailsToggled,
 }: {
   T: ThemeColors;
   steps: readonly ToolStep[];
   live: boolean;
   answerStarted: boolean;
-  onDetailsToggled?: (heightDelta: number) => void;
 }) {
   const [userToggle, setUserToggle] = useState<boolean | null>(null);
-  const bodyHeightRef = useRef(0);
-  // Only a tap moves the viewport: auto-expanding a live run happens while the
-  // reader sits at the bottom of the inverted list, where growth is already
-  // anchored and a compensating scroll would fight it.
-  const reportNextLayoutRef = useRef(false);
 
   if (steps.length === 0) return null;
 
@@ -73,16 +66,9 @@ export function ToolActivityPane({
   const totalSecs = steps.reduce((sum, step) => sum + (step.durationSecs ?? 0), 0);
   const headerNote = !live && totalSecs > 0 ? `Took ${formatStepDuration(totalSecs)}` : "";
 
-  const toggle = () => {
-    if (expanded) {
-      const height = bodyHeightRef.current;
-      bodyHeightRef.current = 0;
-      if (height > 0) onDetailsToggled?.(-(height + DETAILS_GAP));
-    } else {
-      reportNextLayoutRef.current = true;
-    }
-    setUserToggle(!expanded);
-  };
+  // No scroll compensation here: the list anchors visible content itself, so
+  // the pane simply grows and the rows above it stay where they are.
+  const toggle = () => setUserToggle(!expanded);
 
   return (
     <View style={[styles.pane, expanded && styles.paneOpen, { backgroundColor: T.surfaceHover }]}>
@@ -103,17 +89,7 @@ export function ToolActivityPane({
         <DetailsCaret T={T} open={expanded} />
       </TouchableOpacity>
       {expanded ? (
-        <View
-          style={styles.body}
-          onLayout={(e) => {
-            const height = e.nativeEvent.layout.height;
-            if (reportNextLayoutRef.current && height > 0) {
-              reportNextLayoutRef.current = false;
-              onDetailsToggled?.(height + DETAILS_GAP);
-            }
-            bodyHeightRef.current = height;
-          }}
-        >
+        <View style={styles.body}>
           {/* A lone action is fully described by the pill header, so opening it
               goes straight to the payloads instead of through a one-row
               timeline that would only repeat the title and the timing. */}
@@ -121,13 +97,7 @@ export function ToolActivityPane({
             <LoneStep T={T} step={steps[0]} />
           ) : (
             steps.map((step, idx) => (
-              <StepRow
-                key={step.id}
-                T={T}
-                step={step}
-                last={idx === steps.length - 1}
-                onDetailsToggled={onDetailsToggled}
-              />
+              <StepRow key={step.id} T={T} step={step} last={idx === steps.length - 1} />
             ))
           )}
         </View>
@@ -198,19 +168,8 @@ function StepHint({ T, step }: { T: ThemeColors; step: ToolStep }) {
   return <Text style={[styles.stepHint, { color: T.textDim }]}>{step.hint}</Text>;
 }
 
-function StepRow({
-  T,
-  step,
-  last,
-  onDetailsToggled,
-}: {
-  T: ThemeColors;
-  step: ToolStep;
-  last: boolean;
-  onDetailsToggled?: (heightDelta: number) => void;
-}) {
+function StepRow({ T, step, last }: { T: ThemeColors; step: ToolStep; last: boolean }) {
   const [showDetails, setShowDetails] = useState(false);
-  const detailsHeightRef = useRef(0);
 
   const { args, result } = useStepPayloads(step);
   const hasDetails = args.kind !== "empty" || result.kind !== "empty";
@@ -234,14 +193,7 @@ function StepRow({
       <View style={styles.stepBody}>
         <TouchableOpacity
           style={styles.stepHeader}
-          onPress={() => {
-            if (showDetails) {
-              const height = detailsHeightRef.current;
-              detailsHeightRef.current = 0;
-              if (height > 0) onDetailsToggled?.(-(height + DETAILS_GAP));
-            }
-            setShowDetails(!showDetails);
-          }}
+          onPress={() => setShowDetails(!showDetails)}
           disabled={!hasDetails}
           activeOpacity={0.6}
         >
@@ -256,19 +208,7 @@ function StepRow({
           {hasDetails ? <DetailsCaret T={T} open={showDetails} /> : null}
         </TouchableOpacity>
         <StepHint T={T} step={step} />
-        {showDetails ? (
-          <View
-            onLayout={(e) => {
-              const height = e.nativeEvent.layout.height;
-              if (detailsHeightRef.current === 0 && height > 0) {
-                onDetailsToggled?.(height + DETAILS_GAP);
-              }
-              detailsHeightRef.current = height;
-            }}
-          >
-            <StepPayloads T={T} args={args} result={result} />
-          </View>
-        ) : null}
+        {showDetails ? <StepPayloads T={T} args={args} result={result} /> : null}
       </View>
     </View>
   );

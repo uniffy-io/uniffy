@@ -59,6 +59,9 @@ import type { SerializedSearchResult } from "@features/search/searchSerializer";
 import type { SerializedMessage } from "@features/chat/chatSerializer";
 
 const GROUP_WINDOW_SECONDS = 300;
+// How close to the newest reply (offset 0, the list is inverted) still counts
+// as reading the end, and so still follows an arriving reply.
+const NEAR_BOTTOM_PX = 120;
 
 export function ChatThreadScreen() {
   const { id, channelId: channelIdParam } = useLocalSearchParams<{
@@ -293,6 +296,12 @@ export function ChatThreadScreen() {
           keyExtractor={(item) => item.id}
           inverted
           showsVerticalScrollIndicator={false}
+          // Same anchoring as the channel transcript: a new reply must not
+          // shove the replies above it out from under the reader.
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: NEAR_BOTTOM_PX,
+          }}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}

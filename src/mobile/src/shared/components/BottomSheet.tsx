@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Keyboard,
   Modal,
   Pressable,
   StyleSheet,
@@ -20,6 +19,7 @@ import Animated, {
   withTiming,
   Extrapolation,
 } from "react-native-reanimated";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@shared/hooks/useTheme";
 
@@ -31,6 +31,12 @@ type BottomSheetProps = {
   style?: StyleProp<ViewStyle>;
   /** Safe-area bottom padding is applied unless the content owns its own. */
   padBottom?: boolean;
+  /**
+   * Claims every pixel between the status bar and the keyboard, instead of
+   * sizing to the content under an 80% cap. For sheets whose content is one
+   * editable body (a description, a note) where the room to type IS the point.
+   */
+  fill?: boolean;
 };
 
 const ENTER_MS = 260;
@@ -38,6 +44,14 @@ const EXIT_MS = 200;
 // Past a quarter of the sheet, or on a fast flick, the drag reads as dismiss.
 const DISMISS_RATIO = 0.25;
 const DISMISS_VELOCITY = 800;
+// Floor for the keyboard-shrunk cap, so an unusually tall keyboard leaves a
+// scrollable sheet rather than a sliver or a negative height.
+const MIN_SHEET_HEIGHT = 160;
+// Breathing room under the sheet's last control, on top of any safe-area inset.
+const SHEET_PAD_BOTTOM = 8;
+// What a `fill` sheet leaves below the status bar: enough backdrop to still be
+// tappable, and enough to read as a sheet rather than a second screen.
+const FILL_TOP_GAP = 12;
 
 // Shared drawer shell: the modal, the backdrop, the grabber, and the drag that
 // grabber implies. The animation is ours rather than Modal's animationType,
@@ -48,6 +62,7 @@ export function BottomSheet({
   children,
   style,
   padBottom = true,
+  fill = false,
 }: BottomSheetProps) {
   const T = useTheme();
   const insets = useSafeAreaInsets();
@@ -59,21 +74,12 @@ export function BottomSheet({
   const [mounted, setMounted] = useState(visible);
   const [sheetHeight, setSheetHeight] = useState(windowHeight);
   const translateY = useSharedValue(windowHeight);
-  // Keyboard height comes from the core Keyboard module and lands in plain
-  // state rather than a shared value: a sheet needs no frame-by-frame keyboard
-  // tracking, and this keeps keyboard-controller out of the modal window
-  // entirely (it already rebuilds its own animation callback per modal).
-  const [keyboardInset, setKeyboardInset] = useState(0);
-  useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", (e) =>
-      setKeyboardInset(e.endCoordinates.height),
-    );
-    const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardInset(0));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  // Same source as KeyboardSpacer and the chat composer. RN's own
+  // `Keyboard.endCoordinates.height` is NOT interchangeable here: on Android it
+  // reports the ime inset without the toolbar/suggestion strip some keyboards
+  // draw above it, which left the sheet lifted some 50dp short - exactly enough
+  // to bury the composer it was lifting for.
+  const keyboard = useReanimatedKeyboardAnimation();
 
   useEffect(() => {
     if (visible) {
@@ -122,9 +128,35 @@ export function BottomSheet({
       }
     });
 
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
+  // A Modal is its own window, so the shell's KeyboardSpacer cannot reach it and
+  // KeyboardProvider has turned off Android's native resize - lifting the sheet
+  // by the keyboard is what keeps a focused input visible. The cap has to shrink
+  // by the same amount or the sheet is merely pushed, and a sheet that sets its
+  // own height (see dmSheet, commentsSheet) would slide its header off the top.
+  const sheetStyle = useAnimatedStyle(() => {
+    const inset = -keyboard.height.value;
+    const ceiling = fill ? windowHeight - insets.top - FILL_TOP_GAP : windowHeight * 0.8;
+    const cap = Math.max(MIN_SHEET_HEIGHT, ceiling - inset);
+    const base = {
+      transform: [{ translateY: translateY.value }],
+      bottom: inset,
+      maxHeight: cap,
+      // A cap alone only stops a sheet growing; the content still decides how
+      // tall it is. Filling the space has to be stated as a height, or a short
+      // body would sit in a small sheet with the room it asked for left empty.
+      ...(fill ? { height: cap } : null),
+    };
+    if (!padBottom) return base;
+    // The safe-area padding exists to clear the system nav bar at the bottom of
+    // the screen. Lifted above the keyboard the sheet no longer touches that
+    // edge, so the very same padding turns into a band of dead space between
+    // the sheet's last control and the keys - on a three-button nav bar, some
+    // 48dp of it.
+    return {
+      ...base,
+      paddingBottom: (inset > 0 ? 0 : insets.bottom) + SHEET_PAD_BOTTOM,
+    };
+  });
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateY.value, [0, sheetHeight], [1, 0], Extrapolation.CLAMP),
   }));
@@ -143,19 +175,10 @@ export function BottomSheet({
         <Animated.View
           style={[
             styles.sheet,
-            {
-              backgroundColor: T.surface,
-              // A Modal is its own window, so the shell's KeyboardSpacer cannot
-              // reach it and KeyboardProvider has turned off Android's native
-              // resize. Lifting the sheet by the keyboard height is what keeps a
-              // focused input visible here.
-              bottom: keyboardInset,
-              // Shrinking the cap alongside the lift keeps a tall sheet
-              // scrollable instead of running off the top of the screen.
-              maxHeight: windowHeight * 0.8 - keyboardInset,
-            },
-            padBottom && { paddingBottom: insets.bottom + 8 },
+            { backgroundColor: T.surface },
             style,
+            // After the caller's style, never before: a sheet that sets its own
+            // height must not out-rank the keyboard clamp inside sheetStyle.
             sheetStyle,
           ]}
           onLayout={(e) => onSheetLayout(e.nativeEvent.layout.height)}

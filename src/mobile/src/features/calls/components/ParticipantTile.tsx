@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, type ViewStyle } from "react-native";
+import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import { MicrophoneSlash, CellSignalLow } from "phosphor-react-native";
 import type { Participant, Track } from "livekit-client";
 import { Avatar } from "@shared/components/Avatar";
@@ -25,7 +25,7 @@ export function ParticipantTile({
   participant: Participant;
   T: ThemeColors;
   source?: Track.Source;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   compact?: boolean;
 }) {
   // Reads mutable livekit state (publications, mute flags, speaking) during

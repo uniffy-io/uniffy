@@ -7,9 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Modal,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
   Alert,
   BackHandler,
@@ -29,12 +27,15 @@ import {
   FolderOpen,
   DownloadSimple,
   Trash,
+  FolderPlus,
+  PencilSimple,
 } from "phosphor-react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { BottomSheet } from "@shared/components/BottomSheet";
+import { NamePromptSheet } from "@shared/components/NamePromptSheet";
 import { FileThumb } from "@features/files/components/FileThumb";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useAuth } from "@core/providers/AuthContext";
@@ -129,9 +130,12 @@ export function FilesListScreen() {
   const [sheetItem, setSheetItem] = useState<SheetItem>(null);
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [createFolderVisible, setCreateFolderVisible] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
   const [renameTarget, setRenameTarget] = useState<SheetItem>(null);
-  const [renameValue, setRenameValue] = useState("");
+  // The item's action sheet is where rename and move were launched from, so
+  // both finishing and abandoning one land back there. Without it a rename
+  // drops the reader on a bare list and a follow-up action means hunting the
+  // same row down again.
+  const [sheetReturn, setSheetReturn] = useState<SheetItem>(null);
   const [moveTarget, setMoveTarget] = useState<SheetItem>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -172,20 +176,31 @@ export function FilesListScreen() {
 
   const startRename = useCallback((item: NonNullable<SheetItem>) => {
     setSheetItem(null);
-    setRenameValue(item.name);
+    setSheetReturn(item);
     setRenameTarget(item);
   }, []);
 
-  const submitRename = useCallback(() => {
-    const name = renameValue.trim();
-    if (!renameTarget || !name) return;
-    const onSettled = () => setRenameTarget(null);
-    if (renameTarget.isFolder) {
-      updateFolder.mutate({ folderId: renameTarget.id, name }, { onSettled });
-    } else {
-      updateFile.mutate({ fileId: renameTarget.id, filename: name }, { onSettled });
-    }
-  }, [renameTarget, renameValue, updateFile, updateFolder]);
+  // Reopens the action sheet a sub-flow came from, if it came from one.
+  const returnToItemSheet = useCallback(() => {
+    setSheetItem(sheetReturn);
+    setSheetReturn(null);
+  }, [sheetReturn]);
+
+  const submitRename = useCallback(
+    (name: string) => {
+      if (!renameTarget || !name) return;
+      const onSettled = () => {
+        setRenameTarget(null);
+        returnToItemSheet();
+      };
+      if (renameTarget.isFolder) {
+        updateFolder.mutate({ folderId: renameTarget.id, name }, { onSettled });
+      } else {
+        updateFile.mutate({ fileId: renameTarget.id, filename: name }, { onSettled });
+      }
+    },
+    [renameTarget, updateFile, updateFolder, returnToItemSheet],
+  );
 
   const doMove = useCallback(
     (targetFolderId: string | undefined) => {
@@ -196,10 +211,15 @@ export function FilesListScreen() {
           folderIds: moveTarget.isFolder ? [moveTarget.id] : [],
           targetFolderId,
         },
-        { onSettled: () => setMoveTarget(null) },
+        {
+          onSettled: () => {
+            setMoveTarget(null);
+            returnToItemSheet();
+          },
+        },
       );
     },
-    [moveTarget, moveItems],
+    [moveTarget, moveItems, returnToItemSheet],
   );
 
   const copyReferenceLink = useCallback(async (item: NonNullable<SheetItem>) => {
@@ -327,7 +347,8 @@ export function FilesListScreen() {
   const closeMove = useCallback(() => {
     setMoveTarget(null);
     setBulkMoveOpen(false);
-  }, []);
+    returnToItemSheet();
+  }, [returnToItemSheet]);
   const moveTitle = bulkMoveOpen
     ? `Move ${selected.size} ${selected.size === 1 ? "item" : "items"} to`
     : `Move "${moveTarget?.name ?? ""}" to`;
@@ -761,7 +782,7 @@ export function FilesListScreen() {
               {files.length > 0 && <View style={styles.gridWrap}>{files.map(renderFileGrid)}</View>}
             </View>
           ) : (
-            <View style={styles.listContent}>
+            <View>
               {folders.map(renderFolderRow)}
               {files.map(renderFileRow)}
             </View>
@@ -793,7 +814,6 @@ export function FilesListScreen() {
             label: "Create folder",
             onPress: () => {
               setAddSheetOpen(false);
-              setNewFolderName("");
               setCreateFolderVisible(true);
             },
           },
@@ -801,125 +821,35 @@ export function FilesListScreen() {
         ]}
       />
 
-      {/* Create folder modal */}
-      <Modal
+      <NamePromptSheet
         visible={createFolderVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCreateFolderVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.modalOverlay}
-        >
-          <View style={[styles.modalCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-            <Text style={[styles.modalTitle, { color: T.textBright }]}>New Folder</Text>
-            <TextInput
-              style={[
-                styles.modalInput,
-                { backgroundColor: T.pageBg, color: T.textBright, borderColor: T.border },
-              ]}
-              value={newFolderName}
-              onChangeText={setNewFolderName}
-              placeholder="Folder name"
-              placeholderTextColor={T.textDim}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={() => {
-                const name = newFolderName.trim();
-                if (!name) return;
-                createFolder.mutate(
-                  { name, parentId: currentFolderId ?? undefined },
-                  { onSettled: () => setCreateFolderVisible(false) },
-                );
-              }}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: T.pageBg }]}
-                onPress={() => setCreateFolderVisible(false)}
-              >
-                <Text style={[styles.modalBtnText, { color: T.text }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalBtn,
-                  { backgroundColor: T.accent, opacity: newFolderName.trim() ? 1 : 0.4 },
-                ]}
-                disabled={!newFolderName.trim() || createFolder.isPending}
-                onPress={() => {
-                  const name = newFolderName.trim();
-                  if (!name) return;
-                  createFolder.mutate(
-                    { name, parentId: currentFolderId ?? undefined },
-                    { onSettled: () => setCreateFolderVisible(false) },
-                  );
-                }}
-              >
-                {createFolder.isPending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={[styles.modalBtnText, { color: "#fff" }]}>Create</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        title="New folder"
+        cta="Create folder"
+        placeholder="Folder name"
+        icon={FolderPlus}
+        pending={createFolder.isPending}
+        onClose={() => setCreateFolderVisible(false)}
+        onSubmit={(name) =>
+          createFolder.mutate(
+            { name, parentId: currentFolderId ?? undefined },
+            { onSettled: () => setCreateFolderVisible(false) },
+          )
+        }
+      />
 
-      {/* Rename modal */}
-      <Modal
+      <NamePromptSheet
         visible={!!renameTarget}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRenameTarget(null)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.modalOverlay}
-        >
-          <View style={[styles.modalCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-            <Text style={[styles.modalTitle, { color: T.textBright }]}>
-              {renameTarget?.isFolder ? "Rename Folder" : "Rename File"}
-            </Text>
-            <TextInput
-              style={[
-                styles.modalInput,
-                { backgroundColor: T.pageBg, color: T.textBright, borderColor: T.border },
-              ]}
-              value={renameValue}
-              onChangeText={setRenameValue}
-              placeholder="Name"
-              placeholderTextColor={T.textDim}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={submitRename}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: T.pageBg }]}
-                onPress={() => setRenameTarget(null)}
-              >
-                <Text style={[styles.modalBtnText, { color: T.text }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalBtn,
-                  { backgroundColor: T.accent, opacity: renameValue.trim() ? 1 : 0.4 },
-                ]}
-                disabled={!renameValue.trim() || updateFile.isPending || updateFolder.isPending}
-                onPress={submitRename}
-              >
-                {updateFile.isPending || updateFolder.isPending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={[styles.modalBtnText, { color: "#fff" }]}>Rename</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        title={renameTarget?.isFolder ? "Rename folder" : "Rename file"}
+        cta="Rename"
+        icon={PencilSimple}
+        initialName={renameTarget?.name}
+        pending={updateFile.isPending || updateFolder.isPending}
+        onClose={() => {
+          setRenameTarget(null);
+          returnToItemSheet();
+        }}
+        onSubmit={(name) => submitRename(name)}
+      />
 
       {/* Move-to-folder modal (single item or bulk selection) */}
       <BottomSheet
@@ -980,6 +910,7 @@ export function FilesListScreen() {
                     if (sheetItem) {
                       const it = sheetItem;
                       setSheetItem(null);
+                      setSheetReturn(it);
                       setMoveTarget(it);
                     }
                   },
@@ -987,11 +918,13 @@ export function FilesListScreen() {
                 {
                   icon: "bookmark",
                   label: "Bookmark",
+                  keepOpen: true,
                   onPress: () => sheetItem && bookmarkItem(sheetItem),
                 },
                 {
                   icon: "at-sign",
                   label: "Copy reference link",
+                  keepOpen: true,
                   onPress: () => sheetItem && copyReferenceLink(sheetItem),
                 },
                 {
@@ -1019,6 +952,7 @@ export function FilesListScreen() {
                 {
                   icon: "download",
                   label: "Save to device",
+                  keepOpen: true,
                   onPress: () => {
                     if (sheetItem)
                       download.saveToDevice(sheetItem.id, sheetItem.name, sheetItem.mimeType);
@@ -1027,6 +961,7 @@ export function FilesListScreen() {
                 {
                   icon: "share-2",
                   label: "Share",
+                  keepOpen: true,
                   onPress: () => {
                     if (sheetItem)
                       download.saveOrShare(sheetItem.id, sheetItem.name, sheetItem.mimeType);
@@ -1035,6 +970,7 @@ export function FilesListScreen() {
                 {
                   icon: "bookmark",
                   label: "Bookmark",
+                  keepOpen: true,
                   onPress: () => sheetItem && bookmarkItem(sheetItem),
                 },
                 {
@@ -1049,6 +985,7 @@ export function FilesListScreen() {
                     if (sheetItem) {
                       const it = sheetItem;
                       setSheetItem(null);
+                      setSheetReturn(it);
                       setMoveTarget(it);
                     }
                   },
@@ -1056,6 +993,7 @@ export function FilesListScreen() {
                 {
                   icon: "at-sign",
                   label: "Copy reference link",
+                  keepOpen: true,
                   onPress: () => sheetItem && copyReferenceLink(sheetItem),
                 },
                 {
@@ -1291,7 +1229,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sortText: { fontSize: 13, fontFamily: FONT.medium },
-  listContent: { paddingHorizontal: 16 },
   gridContent: { padding: 16, gap: 16 },
   gridWrap: {
     flexDirection: "row",
@@ -1304,6 +1241,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   folderIcon: {
@@ -1319,6 +1257,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   fileIcon: {
@@ -1397,34 +1336,6 @@ const styles = StyleSheet.create({
   },
   uploadText: { fontSize: 13, fontFamily: FONT.medium },
   // ---- Create folder modal ----
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  modalCard: {
-    width: "100%",
-    borderRadius: 16,
-    padding: 24,
-    gap: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  modalTitle: { fontSize: 18, fontFamily: FONT.bold },
-  modalInput: {
-    fontSize: 15,
-    fontFamily: FONT.regular,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 10,
-    justifyContent: "flex-end",
-  },
   moveSheet: { maxHeight: "70%" },
   moveTitle: {
     fontSize: 15,
@@ -1441,12 +1352,4 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   moveRowText: { fontSize: 15, fontFamily: FONT.medium, flex: 1 },
-  modalBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  modalBtnText: { fontSize: 14, fontFamily: FONT.semibold },
 });

@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Keyboard,
+  useWindowDimensions,
   type NativeSyntheticEvent,
   type TextInputSelectionChangeEventData,
 } from "react-native";
@@ -52,14 +53,38 @@ export type ComposerModel = {
 // Vertical space the action row claims when the composer is open: the round
 // buttons plus the padding that separates them from the input and the card
 // edge. Collapsing animates this to zero, so it has to be a constant.
-const ACTIONS_HEIGHT = 38 + 4 + 6;
+const ACTIONS_PAD_TOP = 4;
+const ACTIONS_PAD_BOTTOM = 6;
+const ACTIONS_HEIGHT = 38 + ACTIONS_PAD_TOP + ACTIONS_PAD_BOTTOM;
+// Applied per state rather than in the stylesheet: the collapsed row must take
+// no room at all, and padding is the one thing a zero height cannot remove.
+const ACTIONS_PADDING = {
+  height: ACTIONS_HEIGHT,
+  paddingTop: ACTIONS_PAD_TOP,
+  paddingBottom: ACTIONS_PAD_BOTTOM,
+} as const;
+const ACTIONS_COLLAPSED = { height: 0, paddingTop: 0, paddingBottom: 0 } as const;
 const COLLAPSE_MS = 160;
 const LINE_HEIGHT = 21;
-const COLLAPSED_INPUT_HEIGHT = 30;
 // Height the 15pt face actually draws on with no leading and no font padding.
 // The collapsed field centres its single line against this, so it is the knob
 // to turn if the placeholder sits high or low in the pill.
 const NATURAL_LINE_HEIGHT = 18;
+// Slack around that single line. Splitting it evenly is what centres the text,
+// so the field is this much taller than the line it holds - no more, or the
+// resting pill stops being slim.
+const COLLAPSED_SLACK = 4;
+
+/**
+ * The one-line metrics at the reader's text size. Every number here is authored
+ * for the unscaled face, and React Native scales fontSize with the OS text-size
+ * setting but never a lineHeight or a height given in a style - so leaving these
+ * fixed would let the glyphs outgrow the field and crop the draft.
+ */
+function collapsedMetrics(fontScale: number) {
+  const line = Math.round(NATURAL_LINE_HEIGHT * fontScale);
+  return { line, height: line + COLLAPSED_SLACK, padTop: COLLAPSED_SLACK / 2 };
+}
 
 // Rounded composer card: input on top, action row below. The + button
 // holds the formatting tools; the input grows to 7 rows, then scrolls.
@@ -98,6 +123,8 @@ export function ChatComposer({
   const [toolsOpen, setToolsOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const reducedMotion = useReducedMotion();
+  const { fontScale } = useWindowDimensions();
+  const collapsed = collapsedMetrics(fontScale);
 
   // Anything the action row could still act on keeps it open. toolsOpen matters
   // most: reaching the emoji picker, the @ overlay or the attach sheet blurs the
@@ -210,14 +237,23 @@ export function ChatComposer({
         placeholderTextColor={T.textDim}
         style={[
           styles.input,
-          expanded ? styles.inputExpanded : styles.inputCollapsed,
+          expanded
+            ? [styles.inputExpanded, { lineHeight: Math.round(LINE_HEIGHT * fontScale) }]
+            : [styles.inputCollapsed, { height: collapsed.height, paddingTop: collapsed.padTop }],
           { color: T.textBright },
         ]}
         multiline
       />
 
       <Animated.View
-        style={[styles.actions, { height: expanded ? ACTIONS_HEIGHT : 0 }, actionsStyle]}
+        style={[
+          styles.actions,
+          // Padding survives a height of 0 - a box is never shorter than its own
+          // padding - so a collapsed row still stood 10 tall under the field,
+          // heightening the pill and hanging its placeholder above centre.
+          expanded ? ACTIONS_PADDING : ACTIONS_COLLAPSED,
+          actionsStyle,
+        ]}
         pointerEvents={expanded ? "auto" : "none"}
         accessibilityElementsHidden={!expanded}
         importantForAccessibility={expanded ? "auto" : "no-hide-descendants"}
@@ -305,22 +341,23 @@ function ToolButton({ onPress, children }: { onPress: () => void; children: Reac
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 10,
-    marginTop: 4,
-    marginBottom: 8,
+    // Matches the bottom bar's inset so the two floating pills share an edge.
+    marginHorizontal: 18,
+    marginTop: 3,
+    marginBottom: 5,
     borderRadius: 24,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
     paddingHorizontal: 12,
-    paddingTop: 4,
-    paddingBottom: 4,
+    // Even top and bottom: the resting pill holds a single line, so any
+    // imbalance here shows up directly as an off-centre placeholder.
+    paddingTop: 6,
+    paddingBottom: 6,
   },
   actions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingTop: 4,
-    paddingBottom: 6,
     // The buttons keep their intrinsic size while the row's height animates to
     // zero, so the collapse has to clip them rather than squash them.
     overflow: "hidden",
@@ -360,8 +397,8 @@ const styles = StyleSheet.create({
     maxHeight: LINE_HEIGHT * 7 + 16,
     paddingHorizontal: 6,
   },
+  // lineHeight is supplied per render, scaled by the reader's text size.
   inputExpanded: {
-    lineHeight: LINE_HEIGHT,
     minHeight: LINE_HEIGHT + 16,
     paddingTop: 8,
     paddingBottom: 8,
@@ -378,10 +415,9 @@ const styles = StyleSheet.create({
   // hangs the text above centre however the box is aligned. No textAlignVertical
   // either - top alignment plus an explicit padding puts the glyphs at a known
   // offset, where centre alignment would only re-centre whatever box the font
-  // reports. What is left is arithmetic: an even split of the slack.
+  // reports. What is left is arithmetic: an even split of the slack, supplied
+  // per render by collapsedMetrics so it tracks the reader's text size.
   inputCollapsed: {
-    height: COLLAPSED_INPUT_HEIGHT,
-    paddingTop: (COLLAPSED_INPUT_HEIGHT - NATURAL_LINE_HEIGHT) / 2,
     paddingBottom: 0,
     textAlignVertical: "top",
     // Android otherwise pads the glyph box out to the font's full ascender and

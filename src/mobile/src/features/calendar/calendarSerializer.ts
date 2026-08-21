@@ -73,6 +73,17 @@ function tsToDate(ts?: { seconds: bigint; nanos: number }): Date {
   return new Date(Number(ts.seconds) * 1000 + Math.floor(ts.nanos / 1e6));
 }
 
+/**
+ * Formats a bare YYYY-MM-DD the way `dateFormatted` renders an instant, for
+ * callers holding an occurrence date rather than an event. Built from the parts
+ * rather than `new Date(iso)`, which reads the string as UTC midnight and lands
+ * on the previous day for anyone west of Greenwich.
+ */
+export function formatCalendarDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return formatDate(new Date(y, m - 1, d));
+}
+
 function formatDate(d: Date): string {
   return d.toLocaleDateString(undefined, {
     weekday: "short",

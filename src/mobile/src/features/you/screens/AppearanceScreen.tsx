@@ -6,6 +6,7 @@ import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useThemeContext } from "@core/providers/ThemeContext";
 import type { ThemeMode } from "@core/providers/ThemeContext";
+import { useChatLayout, setChatLayout, type ChatLayout } from "@features/chat/chatPrefs";
 import { hslToHex } from "@theme/colorUtils";
 import { BOTTOM_NAV_HEIGHT, DEFAULT_ACCENT_HSL, ACCENT_PRESETS } from "@theme/theme";
 import { FONT } from "@theme/typography";
@@ -16,9 +17,15 @@ const THEME_MODES: { key: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { key: "system", label: "System", Icon: DeviceMobile },
 ];
 
+const CHAT_LAYOUTS: { key: ChatLayout; label: string; hint: string }[] = [
+  { key: "compact", label: "Compact", hint: "One column, everyone the same" },
+  { key: "bubbles", label: "Bubbles", hint: "Your messages on the right" },
+];
+
 export function AppearanceScreen() {
   const T = useTheme();
   const { themeMode, accentColorHsl, setThemeMode, setAccentColor } = useThemeContext();
+  const chatLayout = useChatLayout();
   const insets = useSafeAreaInsets();
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
@@ -123,7 +130,68 @@ export function AppearanceScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Chat Layout */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: T.textDim }]}>CHAT LAYOUT</Text>
+          <View style={styles.modeRow}>
+            {CHAT_LAYOUTS.map(({ key, label, hint }) => {
+              const active = chatLayout === key;
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[
+                    styles.layoutCard,
+                    {
+                      backgroundColor: T.surface,
+                      borderColor: active ? T.accent : T.border,
+                      borderWidth: active ? 2 : StyleSheet.hairlineWidth,
+                    },
+                  ]}
+                  onPress={() => setChatLayout(key)}
+                  activeOpacity={0.7}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                >
+                  <LayoutSketch sided={key === "bubbles"} T={T} />
+                  <Text style={[styles.modeLabel, { color: active ? T.accent : T.textBright }]}>
+                    {label}
+                  </Text>
+                  <Text style={[styles.layoutHint, { color: T.textDim }]}>{hint}</Text>
+                  {active && (
+                    <View style={[styles.checkCircle, { backgroundColor: T.accent }]}>
+                      <Check size={10} color="#fff" weight="bold" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
       </ScrollView>
+    </View>
+  );
+}
+
+/**
+ * Three wordless message rows standing in for a transcript, so the choice reads
+ * as a shape rather than as two labels the reader has to imagine.
+ */
+function LayoutSketch({ sided, T }: { sided: boolean; T: ReturnType<typeof useTheme> }) {
+  const rows = sided ? [false, true, false] : [false, false, false];
+  return (
+    <View style={styles.sketch}>
+      {rows.map((own, i) => (
+        <View key={i} style={[styles.sketchRow, own && styles.sketchRowOwn]}>
+          {own ? null : <View style={[styles.sketchDot, { backgroundColor: T.border }]} />}
+          <View
+            style={[
+              styles.sketchBar,
+              { backgroundColor: own ? T.accentSoft : T.surfaceHover, width: own ? 46 : 54 },
+            ]}
+          />
+        </View>
+      ))}
     </View>
   );
 }
@@ -156,6 +224,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: FONT.medium,
   },
+  layoutCard: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    gap: 8,
+  },
+  layoutHint: {
+    fontSize: 11,
+    fontFamily: FONT.regular,
+    textAlign: "center",
+  },
+  sketch: { gap: 4, width: 72 },
+  sketchRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  sketchRowOwn: { justifyContent: "flex-end" },
+  sketchDot: { width: 12, height: 12, borderRadius: 6 },
+  sketchBar: { height: 12, borderRadius: 6 },
   checkCircle: {
     position: "absolute",
     top: 8,

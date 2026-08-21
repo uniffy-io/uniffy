@@ -359,11 +359,24 @@ function renderLineContent(
   textStyle: any,
   wrapperStyle?: any,
   onMentionPress?: (urn: string, label: string) => void,
+  onParagraphLayout?: (maxLineWidth: number) => void,
 ) {
   const parts = parseInlineWithMentions(content);
   if (!hasChipMentions(parts)) {
     return (
-      <Text key={index} style={textStyle}>
+      <Text
+        key={index}
+        style={textStyle}
+        onTextLayout={
+          onParagraphLayout
+            ? (e) => {
+                let widest = 0;
+                for (const line of e.nativeEvent.lines) widest = Math.max(widest, line.width);
+                if (widest > 0) onParagraphLayout(widest);
+              }
+            : undefined
+        }
+      >
         {renderTextParts(parts, T, index, onMentionPress)}
       </Text>
     );
@@ -490,6 +503,7 @@ function renderMarkdownLine(
   T: ThemeColors,
   index: number,
   onMentionPress?: (urn: string, label: string) => void,
+  onParagraphLayout?: (maxLineWidth: number) => void,
 ): React.ReactNode {
   const render = (content: string, textStyle: any, wrapperStyle?: any) =>
     renderLineContent(content, T, index, textStyle, wrapperStyle, onMentionPress);
@@ -597,7 +611,18 @@ function renderMarkdownLine(
   if (line === "") {
     return <View key={index} style={styles.mdEmptyLine} />;
   }
-  return render(line, [styles.bodyText, { color: T.text }]);
+  // Only the plain-paragraph shape reports its width. A heading, a list item or
+  // a quote sits beside a bullet, a rule or an indent, so the text's own extent
+  // is narrower than the block that has to hold it.
+  return renderLineContent(
+    line,
+    T,
+    index,
+    [styles.bodyText, { color: T.text }],
+    undefined,
+    onMentionPress,
+    onParagraphLayout,
+  );
 }
 
 type MentionLineProps = {
@@ -632,6 +657,18 @@ type MarkdownRendererProps = {
   /** Reports each heading's y within this renderer's parent, in the same order
    * parseHeadings returns them, so an outline can scroll to one. */
   onHeadingLayout?: (headingIndex: number, y: number) => void;
+  /**
+   * Reports the widest line the text actually occupies once wrapped, so a
+   * caller can size a container to the text rather than to the width the text
+   * was offered - a box that shrink-wraps prose is otherwise as wide as the
+   * prose would be on ONE line, clamped to whatever cap it was given, which
+   * leaves the ragged right edge of the wrap as dead space.
+   *
+   * Fires only for content that is a single plain paragraph. Anything else -
+   * several lines, a heading, a list, a quote, code, a table, a mention chip -
+   * stays silent, and the caller keeps whatever width it would have used.
+   */
+  onMeasureWidth?: (maxLineWidth: number) => void;
 };
 
 // Memoized: parsing runs on every render and a chat transcript mounts a
@@ -641,12 +678,17 @@ export const MarkdownRenderer = React.memo(function MarkdownRenderer({
   content,
   onMentionPress,
   onHeadingLayout,
+  onMeasureWidth,
 }: MarkdownRendererProps) {
   const T = useTheme();
   const lines = content.split("\n");
   const elements: React.ReactNode[] = [];
   let i = 0;
   let headingIndex = 0;
+  // A multi-line body reports nothing: each line would report its own extent
+  // and the caller has no way to know it heard from all of them, so a body that
+  // ends in a code fence could be sized to the prose above it.
+  const measureParagraph = lines.length === 1 ? onMeasureWidth : undefined;
 
   while (i < lines.length) {
     const line = lines[i];
@@ -677,7 +719,7 @@ export const MarkdownRenderer = React.memo(function MarkdownRenderer({
       continue;
     }
 
-    const rendered = renderMarkdownLine(line, T, i, onMentionPress);
+    const rendered = renderMarkdownLine(line, T, i, onMentionPress, measureParagraph);
 
     // Headings are counted here, after the code-fence and table branches have
     // consumed their lines, so the ordinals line up with parseHeadings.

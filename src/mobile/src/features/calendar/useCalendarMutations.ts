@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
+import { AttendeeRole, RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
 import { useAuth } from "@core/providers/AuthContext";
 import { calendarApi } from "@features/calendar/calendarApi";
 
@@ -71,10 +72,16 @@ export function useUpdateEvent() {
       channelId?: string;
       channelAutoCreated?: boolean;
       categoryId?: string;
+      recurrenceEditScope?: RecurrenceEditScope;
+      occurrenceDate?: string;
     }) =>
       calendarApi.updateEvent({
         organizationId: organizationId!,
         eventId: args.eventId,
+        // The backend applies a scope only when it is told WHICH occurrence the
+        // edit started from, so the pair travels together or not at all.
+        recurrenceEditScope: args.occurrenceDate ? args.recurrenceEditScope : undefined,
+        occurrenceDate: args.recurrenceEditScope ? args.occurrenceDate : undefined,
         title: args.title,
         description: args.description,
         startTime: args.startTime ? isoToTimestamp(args.startTime) : undefined,
@@ -98,13 +105,63 @@ export function useDeleteEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (eventId: string) =>
+    mutationFn: (args: {
+      eventId: string;
+      recurrenceEditScope?: RecurrenceEditScope;
+      occurrenceDate?: string;
+    }) =>
       calendarApi.deleteEvent({
-        eventId,
+        eventId: args.eventId,
         organizationId: organizationId!,
+        recurrenceEditScope: args.occurrenceDate ? args.recurrenceEditScope : undefined,
+        occurrenceDate: args.recurrenceEditScope ? args.occurrenceDate : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events-range"] });
+      // A scoped delete leaves the series alive, so the cached detail entries
+      // have to be dropped rather than assumed gone with the screen.
+      queryClient.invalidateQueries({ queryKey: ["event", organizationId] });
+    },
+  });
+}
+
+export function useAddAttendees() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { eventId: string; userIds: string[] }) =>
+      calendarApi.addAttendees({
+        organizationId: organizationId!,
+        eventId: args.eventId,
+        userIds: args.userIds,
+        role: AttendeeRole.REQUIRED,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events-range"] });
+      // Prefix match, not the exact key: an occurrence of a recurring event is
+      // cached under its synthetic `{masterId}__occurrence__{date}` id, so the
+      // entry the user is looking at need not be the one keyed by the id the
+      // mutation was given.
+      queryClient.invalidateQueries({ queryKey: ["event", organizationId] });
+    },
+  });
+}
+
+export function useRemoveAttendees() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { eventId: string; userIds: string[] }) =>
+      calendarApi.removeAttendees({
+        organizationId: organizationId!,
+        eventId: args.eventId,
+        userIds: args.userIds,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events-range"] });
+      queryClient.invalidateQueries({ queryKey: ["event", organizationId] });
     },
   });
 }

@@ -125,7 +125,9 @@ export function YouScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.settingLabel, { color: T.textBright }]}>Appearance</Text>
-                <Text style={[styles.settingSub, { color: T.textDim }]}>Theme & colors</Text>
+                <Text style={[styles.settingSub, { color: T.textDim }]}>
+                  Theme, colors & chat layout
+                </Text>
               </View>
               <CaretRight size={15} color={T.textDim} weight="regular" />
             </TouchableOpacity>

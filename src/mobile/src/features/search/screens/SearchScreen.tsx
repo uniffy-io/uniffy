@@ -146,6 +146,10 @@ export function SearchScreen() {
   );
 
   const showFilterHint = parsed.tags.length > 0 || parsed.myContentOnly;
+  // The field and the empty state name whatever the chips are currently set to,
+  // so a search opened from notes never claims to be searching everything.
+  const scope = FILTERS.find((f) => f.key === filter);
+  const scopeLabel = filter === "all" ? "everything" : (scope?.label ?? "").toLowerCase();
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
@@ -169,7 +173,12 @@ export function SearchScreen() {
           <TextInput
             ref={inputRef}
             style={[styles.input, { color: T.textBright }]}
-            placeholder="Search everything... (try type:note tag:design)"
+            // Android wraps a placeholder that outruns the field even on a
+            // single-line input, and the row is a fixed 44 high - the second
+            // line was being sliced through the middle. The query syntax the
+            // old placeholder advertised now lives in the empty state, which
+            // has the room to show it.
+            placeholder={`Search ${scopeLabel}...`}
             placeholderTextColor={T.textDim}
             value={query}
             onChangeText={setQuery}
@@ -251,8 +260,15 @@ export function SearchScreen() {
           ) : (
             <View style={styles.empty}>
               <Text style={[styles.emptyText, { color: T.textDim }]}>
-                {query.trim() ? "No results found" : "Type to search across everything"}
+                {query.trim() ? "No results found" : `Type to search across ${scopeLabel}`}
               </Text>
+              {!query.trim() && (
+                <Text style={[styles.emptyHint, { color: T.textDim }]}>
+                  {filter === "all"
+                    ? "Narrow it with type:note, tag:design or is:mine"
+                    : "Narrow it with tag:design or is:mine"}
+                </Text>
+              )}
             </View>
           )
         }
@@ -379,4 +395,5 @@ const styles = StyleSheet.create({
   bookmarkBtn: { padding: 4 },
   empty: { flex: 1, padding: 40, alignItems: "center", justifyContent: "center" },
   emptyText: { fontSize: 15, fontFamily: FONT.regular, textAlign: "center" },
+  emptyHint: { fontSize: 13, fontFamily: FONT.regular, textAlign: "center", marginTop: 6 },
 });

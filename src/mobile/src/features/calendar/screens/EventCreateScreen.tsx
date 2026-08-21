@@ -31,6 +31,7 @@ import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
+import { RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
 import { useCategories, useEvent } from "@features/calendar/useCalendar";
 import { useCreateEvent, useUpdateEvent } from "@features/calendar/useCalendarMutations";
 
@@ -41,6 +42,13 @@ const MEETING_MODES = [
   { mode: "link", label: "Link", Icon: Link },
   { mode: "channel", label: "Uniffy meeting", Icon: VideoCamera },
 ] as const;
+
+// Keyed by the raw route param, which carries the proto enum's numeric value.
+const SCOPE_LABEL: Record<string, string | undefined> = {
+  [RecurrenceEditScope.THIS_EVENT]: "This occurrence only",
+  [RecurrenceEditScope.ALL_EVENTS]: "The entire series",
+  [RecurrenceEditScope.THIS_AND_FOLLOWING]: "This and following events",
+};
 
 function roundToNext30(date: Date): Date {
   const d = new Date(date);
@@ -72,11 +80,15 @@ export function CreateEventScreen() {
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   // date/start/end arrive from the day-view drag-to-create gesture.
-  const { eventId, date, start, end } = useLocalSearchParams<{
+  // recurrenceEditScope/occurrenceDate arrive when the edit was started from a
+  // single occurrence of a series and the user already chose how far it reaches.
+  const { eventId, date, start, end, recurrenceEditScope, occurrenceDate } = useLocalSearchParams<{
     eventId?: string;
     date?: string;
     start?: string;
     end?: string;
+    recurrenceEditScope?: string;
+    occurrenceDate?: string;
   }>();
   const isEditing = !!eventId;
 
@@ -108,13 +120,19 @@ export function CreateEventScreen() {
   // render (guarded to run once) avoids an effect that would cascade a second render.
   const event = eventQuery.data;
   const [prefilled, setPrefilled] = useState(false);
+  // GetEvent answers with the series row even when the id names an occurrence,
+  // so its date is where the recurrence STARTED. The field has to show the day
+  // that was opened instead, or a "this occurrence" save would stamp the
+  // series' first date onto a later one.
+  const [seriesDate, setSeriesDate] = useState<string | null>(null);
   if (event && !prefilled) {
     setPrefilled(true);
     const start = new Date(event.startTime);
     const end = new Date(event.endTime);
+    setSeriesDate(formatDateForInput(start));
     setTitle(event.title);
     setInitialDescription(event.description || undefined);
-    setDateStr(formatDateForInput(start));
+    setDateStr(occurrenceDate || formatDateForInput(start));
     setStartTime(formatTimeForInput(start));
     setEndTime(formatTimeForInput(end));
     setLocation(event.location ?? "");
@@ -157,12 +175,23 @@ export function CreateEventScreen() {
   const handleSave = async () => {
     if (!canSave) return;
 
-    let start = parseDateTime(dateStr, startTime);
-    let end = parseDateTime(dateStr, endTime);
+    const scope = recurrenceEditScope
+      ? (Number(recurrenceEditScope) as RecurrenceEditScope)
+      : undefined;
+    // "All events" writes to the series row, so a date field the user never
+    // touched must not drag the anchor forward onto whichever occurrence
+    // happened to be open - that would strand every occurrence before it.
+    const effectiveDate =
+      scope === RecurrenceEditScope.ALL_EVENTS && dateStr === occurrenceDate && seriesDate
+        ? seriesDate
+        : dateStr;
+
+    let start = parseDateTime(effectiveDate, startTime);
+    let end = parseDateTime(effectiveDate, endTime);
     if (isAllDay) {
       // All-day spans the whole day (12:00 AM through 11:59 PM).
-      start = parseDateTime(dateStr, "00:00");
-      end = parseDateTime(dateStr, "23:59");
+      start = parseDateTime(effectiveDate, "00:00");
+      end = parseDateTime(effectiveDate, "23:59");
     } else if (end.getTime() <= start.getTime()) {
       // An end at or before the start runs into the next day (e.g. 8 PM - 12 AM).
       end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
@@ -191,6 +220,8 @@ export function CreateEventScreen() {
           meetingUrl: meetingMode === "link" ? trimmedUrl : "",
           channelId: desiredChannel !== prevChannelId ? desiredChannel : undefined,
           channelAutoCreated: channelOut ? channelAutoCreated : undefined,
+          recurrenceEditScope: scope,
+          occurrenceDate,
         });
       } else {
         // calendarId is omitted - the backend resolves the user's default
@@ -219,6 +250,9 @@ export function CreateEventScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={isEditing ? "Edit Event" : "New Event"}
+        // The scope was chosen on the sheet that led here, so without this the
+        // editor gives no sign of how far the save is about to reach.
+        subtitle={SCOPE_LABEL[recurrenceEditScope ?? ""]}
         color={T.accent}
         icon="calendar"
         rightActions={

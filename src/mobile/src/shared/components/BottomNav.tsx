@@ -39,7 +39,7 @@ import {
 } from "@shared/components/HubCarousel";
 import { GlassSurface } from "@shared/components/GlassSurface";
 
-export const BOTTOM_BAR_CONTENT_HEIGHT = 48;
+export const BOTTOM_BAR_CONTENT_HEIGHT = 36;
 
 const PX_PER_STEP = 70;
 const CANCEL_DRAG_Y = 80;
@@ -398,7 +398,7 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
               accessibilityRole="button"
               accessibilityLabel="References"
             >
-              <At size={27} color={atOpen ? T.accent : T.textDim} weight="bold" />
+              <At size={23} color={atOpen ? T.accent : T.textDim} weight="bold" />
             </Pressable>
 
             {withGesture ? <GestureDetector gesture={hubGesture}>{logo}</GestureDetector> : logo}
@@ -417,7 +417,7 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
                   paints it black. */}
                 <House
                   key={isHome ? "fill" : "duotone"}
-                  size={27}
+                  size={23}
                   color={isHome ? T.accent : T.textDim}
                   weight={isHome ? "fill" : "duotone"}
                 />
@@ -467,7 +467,8 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   barContainer: {
-    marginHorizontal: 14,
+    // Shares an edge with the chat composer pill, which uses the same inset.
+    marginHorizontal: 18,
     borderRadius: BOTTOM_BAR_CONTENT_HEIGHT / 2 + 4,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
@@ -477,27 +478,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     minHeight: BOTTOM_BAR_CONTENT_HEIGHT + 8,
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
   },
   sideButton: {
-    width: 64,
+    width: 58,
     height: BOTTOM_BAR_CONTENT_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
   },
   hubButton: {
-    width: 64,
+    width: 58,
     height: BOTTOM_BAR_CONTENT_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
   },
   hubLogo: {
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
   },
   homeWrap: {
-    width: 44,
-    height: 44,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
   },

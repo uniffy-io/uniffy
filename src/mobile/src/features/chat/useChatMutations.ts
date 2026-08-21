@@ -60,12 +60,21 @@ export function useSendMessage(channelId: string) {
         attachmentFileIds: args.attachmentFileIds ?? [],
         replyToId: args.replyToId,
       }),
-    onMutate: async (args) => {
+    onMutate: async () => {
+      // Nothing is inserted here on purpose. An optimistic row and the server
+      // echo of the same message are both in the cache for a beat - the refetch
+      // carries optimistic rows across (see useMessages) while the mutation has
+      // not settled yet - so the transcript showed the message twice and it read
+      // as a ghost resolving into the real thing. The row is built only if the
+      // send actually fails, which is the only case that still needs one.
       await queryClient.cancelQueries({ queryKey: key });
+    },
+    // A failed send keeps its text on screen, flagged for retry or discard;
+    // without this the composer has already been cleared and the message is gone.
+    onError: (_err, args) => {
       const nowSeconds = Math.floor(Date.now() / 1000);
-      const optimisticId = `optimistic-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-      const optimistic: SerializedMessage = {
-        id: optimisticId,
+      const failed: SerializedMessage = {
+        id: `optimistic-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
         channelId,
         senderId: user?.id ?? "",
         senderType: "USER",
@@ -79,13 +88,14 @@ export function useSendMessage(channelId: string) {
         // attachmentIds ride along so a failed send can be retried intact.
         metadata: {
           optimistic: "1",
+          failed: "1",
           ...(args.attachmentFileIds?.length
             ? { attachmentIds: args.attachmentFileIds.join(",") }
             : {}),
         },
         createdAtSeconds: nowSeconds,
         createdAtIso: new Date(nowSeconds * 1000).toISOString(),
-        timeLabel: "Sending...",
+        timeLabel: "Not sent",
         replyCount: 0,
         reactions: [],
         senderName: user?.fullName || user?.username || "You",
@@ -93,32 +103,15 @@ export function useSendMessage(channelId: string) {
         feedbackRating: "",
         attachments: [],
       };
-      queryClient.setQueryData<SerializedMessage[]>(key, (old) => [optimistic, ...(old ?? [])]);
-      return { optimisticId };
+      queryClient.setQueryData<SerializedMessage[]>(key, (old) => [failed, ...(old ?? [])]);
     },
-    // Failed sends stay in the list flagged for retry/discard instead of vanishing.
-    // useMessages carries the flagged rows across poll refetches.
-    onError: (_err, _args, ctx) => {
-      if (!ctx) return;
-      queryClient.setQueryData<SerializedMessage[]>(key, (old) =>
-        (old ?? []).map((m) =>
-          m.id === ctx.optimisticId
-            ? { ...m, metadata: { ...m.metadata, failed: "1" }, timeLabel: "Not sent" }
-            : m,
-        ),
-      );
-    },
-    // Swap the optimistic row for the server message in place. Removing it and
-    // refetching the whole list makes the just-sent bubble blink out and the
-    // list reflow; replacing by position keeps the row stable. The live stream
-    // echoes the same message and backfills attachments, so no refetch here.
-    onSuccess: (res, _args, ctx) => {
+    // The live stream echoes the same message, so it may already be here.
+    onSuccess: (res) => {
       const real = res.message ? messageToPlain(res.message) : null;
+      if (!real) return;
       queryClient.setQueryData<SerializedMessage[]>(key, (old) => {
-        if (!old) return real ? [real] : old;
-        if (!real) return ctx ? old.filter((m) => m.id !== ctx.optimisticId) : old;
-        const rest = old.filter((m) => m.id !== ctx?.optimisticId && m.id !== real.id);
-        return [real, ...rest];
+        if (!old) return [real];
+        return old.some((m) => m.id === real.id) ? old : [real, ...old];
       });
     },
   });

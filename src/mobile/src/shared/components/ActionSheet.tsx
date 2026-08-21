@@ -71,6 +71,12 @@ export type ActionItem = {
   color?: string;
   onPress: () => void;
   isDanger?: boolean;
+  /**
+   * Keeps the sheet up after the press. For actions that complete in place -
+   * bookmarking, copying a link - where dismissing loses the list of things the
+   * reader may still want to do to the same item.
+   */
+  keepOpen?: boolean;
 };
 
 type ActionSheetProps = {
@@ -131,7 +137,7 @@ export function ActionSheet({
                 style={[styles.actionRow, { borderBottomColor: T.border }]}
                 onPress={() => {
                   action.onPress();
-                  onClose();
+                  if (!action.keepOpen) onClose();
                 }}
                 activeOpacity={0.7}
               >

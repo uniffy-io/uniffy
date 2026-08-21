@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import {
   ArrowLeft,
@@ -37,7 +38,7 @@ import type { TextStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@shared/hooks/useTheme";
-import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
+import { bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { FONT } from "@theme/typography";
 import { useNote } from "@features/notes/useNotes";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
@@ -105,14 +106,15 @@ function styleForKind(kind: InlineKind, T: ThemeColors): TextStyle | null {
   }
 }
 
-function renderLineNodes(
-  line: string,
-  li: number,
-  T: ThemeColors,
-  caretInLine: number,
-): React.ReactNode[] {
-  const nodes: React.ReactNode[] = [];
-  let base: TextStyle | null = null;
+type Span = { key: string; text: string; style?: TextStyle[] };
+
+function renderLineNodes(line: string, li: number, T: ThemeColors, caretInLine: number): Span[] {
+  const nodes: Span[] = [];
+  // Every span states its own colour. Android does not inherit the TextInput's
+  // `color` into styled children, so a span that sets none renders in the
+  // platform's secondary grey - which left plain prose dim while the spans that
+  // do name a colour (headings, bold, code) stayed bright.
+  let base: TextStyle | null = { color: T.textBright };
   let prefixLen = 0;
   const heading = line.match(HEADING_PREFIX_RE);
   if (heading) {
@@ -127,11 +129,7 @@ function renderLineNodes(
   }
 
   if (prefixLen > 0) {
-    nodes.push(
-      <Text key={`l${li}p`} style={{ color: T.textDim }}>
-        {line.slice(0, prefixLen)}
-      </Text>,
-    );
+    nodes.push({ key: `l${li}p`, text: line.slice(0, prefixLen), style: [{ color: T.textDim }] });
   }
 
   const content = line.slice(prefixLen);
@@ -160,11 +158,7 @@ function renderLineNodes(
       ? { color: "transparent" }
       : styleForKind(seg.kind, T);
     const merged = [base, kindStyle].filter(Boolean) as TextStyle[];
-    nodes.push(
-      <Text key={`l${li}s${si}`} style={merged.length ? merged : undefined}>
-        {seg.text}
-      </Text>,
-    );
+    nodes.push({ key: `l${li}s${si}`, text: seg.text, style: merged.length ? merged : undefined });
   });
   return nodes;
 }
@@ -174,15 +168,41 @@ function renderLineNodes(
 // `caret` is the collapsed cursor position (or -1) so the active span's markers
 // can be hidden as it moves.
 function renderStyledBody(body: string, T: ThemeColors, caret: number): React.ReactNode[] {
-  const out: React.ReactNode[] = [];
+  const spans: Span[] = [];
   let offset = 0;
   body.split("\n").forEach((line, li) => {
-    if (li > 0) out.push(<Text key={`nl${li}`}>{"\n"}</Text>);
+    if (li > 0) spans.push({ key: `nl${li}`, text: "\n" });
     const caretInLine = caret >= offset && caret <= offset + line.length ? caret - offset : -1;
-    for (const node of renderLineNodes(line, li, T, caretInLine)) out.push(node);
+    for (const span of renderLineNodes(line, li, T, caretInLine)) spans.push(span);
     offset += line.length + 1;
   });
-  return out;
+
+  // While the input has focus, Android paints EVERY character with the
+  // attributes of the first span and ignores the rest, so whatever leads the
+  // body decides the colour of the whole thing as soon as the keyboard opens. A
+  // note that starts with a heading led with the dim `#` marker and turned the
+  // page grey on the first tap. Splitting one character off the front to carry
+  // the body colour hands Android a sane paint to fall back to. It has to be a
+  // real character - an empty span is dropped before it reaches the native
+  // side - and the text is only re-split, never changed, so the caret offsets
+  // the editor derives from it are untouched.
+  const first = spans[0];
+  if (first && first.text.length > 0) {
+    spans.splice(
+      0,
+      1,
+      { key: `${first.key}b`, text: first.text[0], style: [{ color: T.textBright }] },
+      { key: first.key, text: first.text.slice(1), style: first.style },
+    );
+  }
+
+  return spans
+    .filter((span) => span.text.length > 0)
+    .map((span) => (
+      <Text key={span.key} style={span.style}>
+        {span.text}
+      </Text>
+    ));
 }
 
 export function NoteEditorScreen() {
@@ -230,6 +250,14 @@ export function NoteEditorScreen() {
   const previewScrollY = useRef(0);
   const previewContentH = useRef(0);
   const viewportH = useRef(0);
+  // Taking focus, the body input asks to be revealed. It is as tall as the whole
+  // note, so Android resolves that to its end and the line just tapped is
+  // carried off-screen - and it re-asks as the keyboard insets settle, so a
+  // single corrective scroll loses the race. Instead the offset is pinned for
+  // the length of that settling: any scroll the reader did not ask for is
+  // undone as it arrives. A real drag clears the pin immediately.
+  const scrollPin = useRef<{ y: number; until: number } | null>(null);
+  const touchStartY = useRef(0);
   const previewFraction = useRef(0);
   const previewSyncPending = useRef(false);
 
@@ -405,9 +433,27 @@ export function NoteEditorScreen() {
   });
   useEffect(() => () => unmountFlushRef.current(), []);
 
+  // Dismissing the keyboard with the back gesture leaves the input focused, so
+  // the tap that brings it back fires no focus event - but the reveal comes
+  // again with the keyboard. Pinning on the keyboard itself covers that second
+  // route in; the offset is the one recorded when the finger went down.
+  useEffect(() => {
+    const sub = Keyboard.addListener("keyboardDidShow", () => {
+      if (!bodyFocusedRef.current) return;
+      const y = touchStartY.current;
+      scrollPin.current = { y, until: Date.now() + 1500 };
+      editorScrollRef.current?.scrollTo({ y, animated: false });
+    });
+    return () => sub.remove();
+  }, []);
+
   const headerTopPad = (Platform.OS === "web" ? 20 : insets.top) + 12;
-  const bottomPad =
-    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
+  // The last child here is a fixed toolbar, not scrolling content, so this
+  // padding has to be the bar block's exact height rather than the generous
+  // `BOTTOM_NAV_HEIGHT` scroll allowance: every pixel of overshoot shows as a
+  // band of dead space under the toolbar - against the keyboard while typing,
+  // against the bar itself when it is down.
+  const bottomPad = bottomBarBlockHeight(insets.bottom);
 
   // Persist on any content change. Typing, formatting, and @-reference
   // insertion all funnel through body/title, so watching them here covers the
@@ -836,8 +882,28 @@ export function NoteEditorScreen() {
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="none"
           scrollEventThrottle={16}
+          onTouchStart={() => {
+            touchStartY.current = editorScrollY.current;
+          }}
+          onScrollBeginDrag={() => {
+            scrollPin.current = null;
+          }}
+          onTouchMove={() => {
+            // A finger that moves is a drag, and a drag is always the reader's
+            // own scroll - it outranks any pin still waiting on the keyboard.
+            scrollPin.current = null;
+          }}
           onScroll={(e) => {
             editorScrollY.current = e.nativeEvent.contentOffset.y;
+            const pin = scrollPin.current;
+            if (!pin) return;
+            if (Date.now() > pin.until) {
+              scrollPin.current = null;
+              return;
+            }
+            if (Math.abs(editorScrollY.current - pin.y) > 4) {
+              editorScrollRef.current?.scrollTo({ y: pin.y, animated: false });
+            }
           }}
           onContentSizeChange={(_w, h) => {
             editorContentH.current = h;
@@ -865,6 +931,13 @@ export function NoteEditorScreen() {
             onSelectionChange={onMentionSelectionChange}
             onFocus={() => {
               bodyFocusedRef.current = true;
+              // Armed here rather than on touch, so that only a tap that lands
+              // in the body pins the view - a plain drag never focuses, and must
+              // keep scrolling freely. The offset is the one from before the
+              // finger went down, since the reveal may already have moved us.
+              const y = touchStartY.current;
+              scrollPin.current = { y, until: Date.now() + 1500 };
+              editorScrollRef.current?.scrollTo({ y, animated: false });
             }}
             onBlur={() => {
               bodyFocusedRef.current = false;
@@ -872,7 +945,7 @@ export function NoteEditorScreen() {
               // the idle gate.
               coEdit.applyPendingRemote();
             }}
-            style={[styles.bodyInput, { color: T.text }]}
+            style={[styles.bodyInput, { color: T.textBright }]}
             placeholder="Start writing..."
             placeholderTextColor={T.textDim}
             multiline
