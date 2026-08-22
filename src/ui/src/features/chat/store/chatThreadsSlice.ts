@@ -61,6 +61,26 @@ export const chatThreadsSlice = createSlice({
     clearThreadMessages: (state, action: PayloadAction<string>) => {
       delete state.threadMessages[action.payload];
     },
+    restrictThreadForwardsFromChannel: (state, action: PayloadAction<string>) => {
+      for (const messages of Object.values(state.threadMessages)) {
+        for (const message of messages) {
+          if (message.forwardContext?.sourceChannelId === action.payload) {
+            message.forwardContext = undefined;
+            message.isForwarded = true;
+          }
+        }
+      }
+    },
+    restrictThreadForwardsFromMessage: (state, action: PayloadAction<string>) => {
+      for (const messages of Object.values(state.threadMessages)) {
+        for (const message of messages) {
+          if (message.forwardContext?.sourceMessageId === action.payload) {
+            message.forwardContext = undefined;
+            message.isForwarded = true;
+          }
+        }
+      }
+    },
     addReactionToThreadMessage: (
       state,
       action: PayloadAction<{
@@ -175,6 +195,8 @@ export const {
   setThreadsInbox,
   setLoadingThread,
   clearThreadMessages,
+  restrictThreadForwardsFromChannel,
+  restrictThreadForwardsFromMessage,
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
   setThreadMessageFeedback,

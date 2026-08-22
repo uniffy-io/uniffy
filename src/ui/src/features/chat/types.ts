@@ -78,6 +78,25 @@ export interface ReplyContext {
   contentPreview: string;
 }
 
+export interface ForwardedAttachment {
+  fileId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+export interface ForwardContext {
+  sourceMessageId: string;
+  sourceChannelId: string;
+  sourceChannelName: string;
+  senderId: string;
+  senderType: SenderType;
+  senderName: string;
+  content: string;
+  createdAt: string;
+  attachments: ForwardedAttachment[];
+}
+
 export interface ChatMessage {
   id: string;
   channelId: string;
@@ -87,6 +106,8 @@ export interface ChatMessage {
   rootId: string | null;
   replyToId: string | null;
   replyContext?: ReplyContext;
+  isForwarded: boolean;
+  forwardContext?: ForwardContext;
   editedAt: string | null;
   isDeleted: boolean;
   isPinned: boolean;

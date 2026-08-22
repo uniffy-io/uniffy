@@ -14,6 +14,7 @@ import type {
   ChatDraft as ProtoChatDraft,
   ThreadInboxItem as ProtoThreadInboxItem,
   ReactionGroup as ProtoReactionGroup,
+  ForwardContext as ProtoForwardContext,
 } from "@uniffy/proto/chat/v1/chat_pb";
 import type {
   ChatChannel,
@@ -25,6 +26,7 @@ import type {
   ChannelRole,
   SenderType,
   NotificationLevel,
+  ForwardContext,
 } from "@/features/chat/types";
 
 export function timestampToIso(ts: Timestamp | undefined): string | null {
@@ -101,6 +103,25 @@ export function reactionGroupToPlain(rg: ProtoReactionGroup) {
   };
 }
 
+function forwardContextToPlain(proto: ProtoForwardContext): ForwardContext {
+  return {
+    sourceMessageId: proto.sourceMessageId,
+    sourceChannelId: proto.sourceChannelId,
+    sourceChannelName: proto.sourceChannelName,
+    senderId: proto.senderId,
+    senderType: SENDER_TYPE_MAP[proto.senderType] ?? "USER",
+    senderName: proto.senderName,
+    content: proto.content,
+    createdAt: timestampToIso(proto.createdAt) ?? new Date().toISOString(),
+    attachments: proto.attachments.map((a) => ({
+      fileId: a.fileId,
+      filename: a.filename,
+      mimeType: a.mimeType,
+      sizeBytes: Number(a.sizeBytes),
+    })),
+  };
+}
+
 export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
   return {
     id: proto.id,
@@ -117,6 +138,8 @@ export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
           contentPreview: proto.replyContext.contentPreview,
         }
       : undefined,
+    isForwarded: proto.isForwarded,
+    forwardContext: proto.forwardContext ? forwardContextToPlain(proto.forwardContext) : undefined,
     editedAt: timestampToIso(proto.editedAt),
     isDeleted: proto.isDeleted,
     isPinned: proto.isPinned,

@@ -17,6 +17,8 @@ import {
   removeReactionFromMessage,
   appendDelta,
   appendAgentThinking,
+  restrictForwardsFromChannel,
+  restrictForwardsFromMessage,
 } from "@/features/chat/store/chatMessagesSlice";
 import {
   fetchMembers,
@@ -33,6 +35,8 @@ import {
   removeReactionFromThreadMessage,
   appendThreadMessage,
   appendDeltaToThreadMessage,
+  restrictThreadForwardsFromChannel,
+  restrictThreadForwardsFromMessage,
 } from "@/features/chat/store/chatThreadsSlice";
 import {
   updateChannel,
@@ -105,6 +109,8 @@ function handleChannelEvent(
 
   if (ce.eventType === ChatEventType.CHANNEL_UPDATED) {
     if (ce.payload.case === "channelUpdated" && ce.payload.value?.isArchived) {
+      dispatch(restrictForwardsFromChannel(channelId));
+      dispatch(restrictThreadForwardsFromChannel(channelId));
       dispatch(removeChannel(channelId));
       return;
     }
@@ -139,6 +145,8 @@ function handleChannelEvent(
     if (ce.payload.case === "member" && ce.payload.value) {
       const leftUserId = ce.payload.value.userId;
       if (leftUserId === currentUserId) {
+        dispatch(restrictForwardsFromChannel(channelId));
+        dispatch(restrictThreadForwardsFromChannel(channelId));
         dispatch(removeChannel(channelId));
         return;
       }
@@ -194,6 +202,8 @@ function handleChannelEvent(
     if (ce.payload.case === "membersChanged" && ce.payload.value) {
       const ids = ce.payload.value.userIds || [];
       if (ids.includes(currentUserId)) {
+        dispatch(restrictForwardsFromChannel(channelId));
+        dispatch(restrictThreadForwardsFromChannel(channelId));
         dispatch(removeChannel(channelId));
         return;
       }
@@ -222,6 +232,15 @@ function handleChannelEvent(
         }),
       );
     }
+  }
+
+  if (
+    ce.eventType === ChatEventType.MESSAGE_DELETED &&
+    ce.payload.case === "messageDeleted" &&
+    ce.payload.value
+  ) {
+    dispatch(restrictForwardsFromMessage(ce.payload.value.messageId));
+    dispatch(restrictThreadForwardsFromMessage(ce.payload.value.messageId));
   }
 
   if (!activeChannelId || channelId !== activeChannelId) return;
@@ -447,6 +466,7 @@ function handleChannelEvent(
           editedAt: null,
           isDeleted: false,
           isPinned: false,
+          isForwarded: false,
           metadata: {
             kind: "confirmation_request",
             agent_id: p.agentId,

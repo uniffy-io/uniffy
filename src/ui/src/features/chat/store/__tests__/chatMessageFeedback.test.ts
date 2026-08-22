@@ -23,6 +23,7 @@ function buildMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
     editedAt: null,
     isDeleted: false,
     isPinned: false,
+    isForwarded: false,
     metadata: {},
     createdAt: "2026-07-24T00:00:00.000Z",
     updatedAt: "2026-07-24T00:00:00.000Z",
