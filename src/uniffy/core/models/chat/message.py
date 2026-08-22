@@ -37,6 +37,10 @@ class ChatMessageVisibility(StrEnum):
     AGENT_INTERNAL = "agent_internal"
 
 
+class ChatMessageMetadataKey(StrEnum):
+    FORWARD = "forward"
+
+
 class ChatMessage(SQLModel, table=True):
     """A chat message in a channel; root_id IS NULL marks a root message,
     otherwise it is a thread reply.

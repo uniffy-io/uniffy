@@ -17,6 +17,7 @@ import {
   RemoveMembersRequestSchema,
   GetMembersRequestSchema,
   SendMessageRequestSchema,
+  ForwardMessageRequestSchema,
   GetMessagesRequestSchema,
   GetMessageRequestSchema,
   UpdateMessageRequestSchema,
@@ -114,6 +115,8 @@ export const chatApi = {
 
   sendMessage: (req: MessageInitShape<typeof SendMessageRequestSchema>) =>
     chatClient.sendMessage(req),
+  forwardMessage: (req: MessageInitShape<typeof ForwardMessageRequestSchema>) =>
+    chatClient.forwardMessage(req),
   getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>) =>
     chatClient.getMessages(req),
   getMessage: (req: MessageInitShape<typeof GetMessageRequestSchema>) => chatClient.getMessage(req),

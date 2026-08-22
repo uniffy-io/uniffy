@@ -1,5 +1,6 @@
 import { memo, useState, useCallback, useRef, useEffect } from "react";
 import {
+  ArrowBendDoubleUpRight,
   ArrowBendUpLeft,
   ChatText,
   Copy,
@@ -31,6 +32,7 @@ interface HoverActionsToolbarProps {
   content: string;
   onQuoteReply?: () => void;
   onEdit?: () => void;
+  onForward?: () => void;
 }
 
 function HoverActionsToolbarInner({
@@ -41,6 +43,7 @@ function HoverActionsToolbarInner({
   content,
   onQuoteReply,
   onEdit,
+  onForward,
 }: HoverActionsToolbarProps) {
   const dispatch = useAppDispatch();
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
@@ -201,6 +204,17 @@ function HoverActionsToolbarInner({
       >
         <ArrowBendUpLeft size={16} />
       </button>
+
+      {onForward && (
+        <button
+          className={buttonClass}
+          title="Forward"
+          onClick={onForward}
+          data-testid={`chat-message-forward-button-${messageId}`}
+        >
+          <ArrowBendDoubleUpRight size={16} />
+        </button>
+      )}
 
       <div className="relative" ref={moreMenuRef}>
         <button

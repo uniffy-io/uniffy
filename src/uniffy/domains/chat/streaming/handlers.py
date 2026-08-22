@@ -62,8 +62,10 @@ from uniffy_proto.chat.v1.chat_stream_pb2 import (
 )
 
 from uniffy.core.json_codec import dumps_str
+from uniffy.core.models.chat.message import ChatMessageMetadataKey
 from uniffy.core.valkey import subscribe_channels
 from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.chat.messages.converters import forward_context_to_proto
 from uniffy.domains.chat.streaming import events as evt
 from uniffy.domains.notifications.middleware import get_disconnect_event
 
@@ -510,6 +512,7 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
         content=payload.get("content", ""),
         is_pinned=payload.get("is_pinned", False),
         is_deleted=False,
+        is_forwarded=payload.get("is_forwarded", False),
     )
     if payload.get("root_id"):
         msg.root_id = payload["root_id"]
@@ -544,6 +547,14 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
     if isinstance(meta, dict):
         for k, v in meta.items():
             msg.metadata[str(k)] = v if isinstance(v, str) else dumps_str(v, default=str)
+
+    raw_forward_context = payload.get("forward_context")
+    if isinstance(raw_forward_context, dict):
+        forward_context = forward_context_to_proto({
+            ChatMessageMetadataKey.FORWARD.value: raw_forward_context
+        })
+        if forward_context is not None:
+            msg.forward_context.CopyFrom(forward_context)
 
     return msg
 

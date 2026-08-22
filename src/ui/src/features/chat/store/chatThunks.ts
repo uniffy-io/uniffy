@@ -48,6 +48,8 @@ import {
   addReactionToMessage,
   removeReactionFromMessage,
   setMessageFeedback,
+  restrictForwardsFromChannel,
+  restrictForwardsFromMessage,
 } from "@/features/chat/store/chatMessagesSlice";
 import {
   setDrafts,
@@ -64,6 +66,8 @@ import {
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
   setThreadMessageFeedback,
+  restrictThreadForwardsFromChannel,
+  restrictThreadForwardsFromMessage,
 } from "@/features/chat/store/chatThreadsSlice";
 import { jumpToMessage, clearJumpToMessage } from "@/features/chat/store/chatUiSlice";
 import { fetchAgents } from "@/features/agents/store/agentsThunks";
@@ -278,6 +282,8 @@ export const leaveChannel = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.leaveChannel({ organizationId, channelId });
+    dispatch(restrictForwardsFromChannel(channelId));
+    dispatch(restrictThreadForwardsFromChannel(channelId));
     dispatch(removeChannel(channelId));
     return channelId;
   } catch (error) {
@@ -293,6 +299,8 @@ export const archiveChannel = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.archiveChannel({ organizationId, channelId });
+    dispatch(restrictForwardsFromChannel(channelId));
+    dispatch(restrictThreadForwardsFromChannel(channelId));
     dispatch(removeChannel(channelId));
     return channelId;
   } catch (error) {
@@ -308,6 +316,8 @@ export const deleteChannel = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.deleteChannel({ organizationId, channelId });
+    dispatch(restrictForwardsFromChannel(channelId));
+    dispatch(restrictThreadForwardsFromChannel(channelId));
     dispatch(removeChannel(channelId));
     return channelId;
   } catch (error) {
@@ -464,6 +474,31 @@ export const sendMessage = createAsyncThunk<
   }
 });
 
+export const forwardMessage = createAsyncThunk<
+  ChatMessage,
+  { sourceMessageId: string; targetChannelId: string; comment?: string },
+  { state: RootState; rejectValue: string }
+>("chat/forwardMessage", async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.forwardMessage({
+      organizationId,
+      sourceMessageId: params.sourceMessageId,
+      targetChannelId: params.targetChannelId,
+      comment: params.comment ?? "",
+    });
+    if (!response.message) {
+      return rejectWithValue("Failed to forward message");
+    }
+    const plain = messageToPlain(response.message);
+    // Append eagerly for immediate display; the stream will also deliver it.
+    dispatch(appendMessage({ channelId: params.targetChannelId, message: plain }));
+    return plain;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to forward message");
+  }
+});
+
 export const editMessage = createAsyncThunk<
   ChatMessage,
   { channelId: string; messageId: string; content: string },
@@ -500,6 +535,8 @@ export const removeMessage = createAsyncThunk<
       channelId: params.channelId,
       messageId: params.messageId,
     });
+    dispatch(restrictForwardsFromMessage(params.messageId));
+    dispatch(restrictThreadForwardsFromMessage(params.messageId));
     dispatch(deleteMessage({ channelId: params.channelId, messageId: params.messageId }));
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to delete message");
@@ -1715,6 +1752,7 @@ export const fetchChannelPendingApprovals = createAsyncThunk<
         editedAt: null,
         isDeleted: false,
         isPinned: false,
+        isForwarded: false,
         metadata: {
           kind: "confirmation_request",
           agent_id: a.agentId,

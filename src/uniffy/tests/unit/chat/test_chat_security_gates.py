@@ -144,6 +144,118 @@ async def test_batch_viewers_keep_candidate_order_for_public_channels() -> None:
     assert allowed == [first, second]
 
 
+async def test_forward_source_viewers_require_personal_membership_for_moderators() -> None:
+    member_id, admin_id, chat_admin_id = (generate_id() for _ in range(3))
+    rows = [
+        SimpleNamespace(
+            user_id=member_id,
+            role=OrganizationRole.MEMBER,
+            channel_member=True,
+            chat_admin=False,
+        ),
+        SimpleNamespace(
+            user_id=admin_id,
+            role=OrganizationRole.ADMIN,
+            channel_member=False,
+            chat_admin=False,
+        ),
+        SimpleNamespace(
+            user_id=chat_admin_id,
+            role=OrganizationRole.MEMBER,
+            channel_member=False,
+            chat_admin=True,
+        ),
+    ]
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=MagicMock(all=lambda: rows))
+    channel = _channel(ChannelType.DIRECT)
+
+    allowed = await ChatAccessChecker(session).filter_forward_source_viewers(
+        channel.organization_id,
+        channel,
+        [member_id, admin_id, chat_admin_id],
+    )
+
+    assert allowed == [member_id]
+
+
+async def test_batch_forward_source_access_combines_public_and_private_membership() -> None:
+    user_id = generate_id()
+    public_channel = _channel(ChannelType.PUBLIC)
+    private_member_channel = _channel(ChannelType.PRIVATE)
+    private_denied_channel = _channel(ChannelType.PRIVATE)
+    private_member_channel.organization_id = public_channel.organization_id
+    private_denied_channel.organization_id = public_channel.organization_id
+    channel_result = MagicMock()
+    channel_result.scalars.return_value.all.return_value = [
+        public_channel,
+        private_member_channel,
+        private_denied_channel,
+    ]
+    membership_result = MagicMock()
+    membership_result.scalars.return_value = [private_member_channel.id]
+    session = MagicMock()
+    session.execute = AsyncMock(side_effect=[channel_result, membership_result])
+    checker = ChatAccessChecker(session)
+    checker.is_org_member = AsyncMock(return_value=True)
+    checker.is_org_admin = AsyncMock(return_value=False)
+    checker.is_chat_domain_admin = AsyncMock(return_value=False)
+
+    allowed = await checker.filter_forward_source_channel_ids(
+        user_id,
+        public_channel.organization_id,
+        [public_channel.id, private_member_channel.id, private_denied_channel.id],
+    )
+
+    assert allowed == {public_channel.id, private_member_channel.id}
+
+
+async def test_batch_forward_source_access_requires_dm_membership_for_moderators() -> None:
+    user_id = generate_id()
+    private_channel = _channel(ChannelType.PRIVATE)
+    direct_member_channel = _channel(ChannelType.DIRECT)
+    direct_denied_channel = _channel(ChannelType.DIRECT)
+    direct_member_channel.organization_id = private_channel.organization_id
+    direct_denied_channel.organization_id = private_channel.organization_id
+    channel_result = MagicMock()
+    channel_result.scalars.return_value.all.return_value = [
+        private_channel,
+        direct_member_channel,
+        direct_denied_channel,
+    ]
+    membership_result = MagicMock()
+    membership_result.scalars.return_value = [direct_member_channel.id]
+    session = MagicMock()
+    session.execute = AsyncMock(side_effect=[channel_result, membership_result])
+    checker = ChatAccessChecker(session)
+    checker.is_org_member = AsyncMock(return_value=True)
+    checker.is_org_admin = AsyncMock(return_value=True)
+    checker.is_chat_domain_admin = AsyncMock(return_value=False)
+
+    allowed = await checker.filter_forward_source_channel_ids(
+        user_id,
+        private_channel.organization_id,
+        [private_channel.id, direct_member_channel.id, direct_denied_channel.id],
+    )
+
+    assert allowed == {private_channel.id, direct_member_channel.id}
+
+
+async def test_batch_forward_source_access_denies_inactive_org_member_without_queries() -> None:
+    checker = ChatAccessChecker(MagicMock())
+    checker.session.execute = AsyncMock()
+    checker.is_org_member = AsyncMock(return_value=False)
+
+    allowed = await checker.filter_forward_source_channel_ids(
+        generate_id(),
+        generate_id(),
+        [generate_id()],
+    )
+
+    assert allowed == set()
+    checker.session.execute.assert_not_awaited()
+
+
 def _denied_operations() -> tuple[ChatChannelOperations, tuple[UUID, UUID]]:
     user_id = generate_id()
     organization_id = generate_id()

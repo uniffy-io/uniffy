@@ -30,42 +30,9 @@ import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
 import { navigateTo } from "@/shared/utils/navigation";
 import { setReplyToMessage, setEditingMessage } from "@/features/chat/store/chatUiSlice";
 import { stripMarkdown } from "@/features/search/utils/stripMarkdown";
-import { effectiveDayKey, parseCalendarDate } from "@/shared/utils/dateFormatting";
-import { getPreferredTimeZone } from "@/shared/utils/timezone";
-
-function formatMessageTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: getPreferredTimeZone() ?? undefined,
-  });
-}
-
-function formatMessageTimestamp(dateStr: string): string {
-  const date = new Date(dateStr);
-  const dayDiff = Math.round(
-    (parseCalendarDate(effectiveDayKey(new Date())).getTime() -
-      parseCalendarDate(effectiveDayKey(date)).getTime()) /
-      86400000,
-  );
-
-  const time = formatMessageTime(dateStr);
-
-  if (dayDiff <= 0) {
-    return time;
-  }
-  if (dayDiff === 1) {
-    return `Yesterday ${time}`;
-  }
-  const dateLabel = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: getPreferredTimeZone() ?? undefined,
-  });
-  return `${dateLabel} ${time}`;
-}
+import { formatMessageTime, formatMessageTimestamp } from "@/features/chat/utils/messageTime";
+import { ForwardedMessageCard } from "@/features/chat/components/channel/ForwardedMessageCard";
+import { ForwardMessageDialog } from "@/features/chat/components/modals/ForwardMessageDialog";
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -88,7 +55,8 @@ function messageRev(m: ChatMessage): string {
   const threadRev = m.thread
     ? `${m.thread.replyCount}:${m.thread.lastReplyAt ?? ""}:${m.thread.hasUnread ? 1 : 0}`
     : "";
-  return `${m.id}|${m.updatedAt ?? ""}|${m.editedAt ?? ""}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${stopped}|${reactionsHash}|${attachmentCount}|${threadRev}|${m.feedbackRating ?? ""}`;
+  const forwardRev = m.forwardContext ? 2 : m.isForwarded ? 1 : 0;
+  return `${m.id}|${m.updatedAt ?? ""}|${m.editedAt ?? ""}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${stopped}|${reactionsHash}|${attachmentCount}|${threadRev}|${m.feedbackRating ?? ""}|${forwardRev}`;
 }
 
 function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps): boolean {
@@ -153,6 +121,7 @@ function MessageItemInner({
   const hasThread = message.thread && message.thread.replyCount > 0;
 
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [showForwardDialog, setShowForwardDialog] = useState(false);
   const addReactionRef = useRef<HTMLDivElement>(null);
 
   const [hoverCardVisible, setHoverCardVisible] = useState(false);
@@ -288,6 +257,10 @@ function MessageItemInner({
     );
   }, [dispatch, message.id, message.channelId, message.content]);
 
+  const handleForward = useCallback(() => {
+    setShowForwardDialog(true);
+  }, []);
+
   // Full-width context_reset dividers skip the bubble + avatar shell.
   if (message.senderType === "AGENT" && message.metadata?.["kind"] === "context_reset") {
     return (
@@ -391,6 +364,7 @@ function MessageItemInner({
         content={message.content}
         onQuoteReply={handleQuoteReply}
         onEdit={handleStartEdit}
+        onForward={handleForward}
       />
 
       <div className="flex items-start gap-3">
@@ -517,6 +491,15 @@ function MessageItemInner({
           <div data-testid={`chat-message-body-${message.id}`}>
             {isAgent ? (
               <AgentMessageBody message={message} />
+            ) : message.isForwarded ? (
+              <>
+                {message.content.trim().length > 0 && <MessageContent content={message.content} />}
+                <ForwardedMessageCard
+                  context={message.forwardContext}
+                  messageId={message.id}
+                  organizationId={organizationId ?? null}
+                />
+              </>
             ) : (
               <MessageContent content={message.content} />
             )}
@@ -581,6 +564,14 @@ function MessageItemInner({
           onClose={() => setHoverCardVisible(false)}
           onMouseEnter={handleCardMouseEnter}
           onMouseLeave={handleCardMouseLeave}
+        />
+      )}
+
+      {showForwardDialog && (
+        <ForwardMessageDialog
+          message={message}
+          senderName={senderName}
+          onClose={() => setShowForwardDialog(false)}
         />
       )}
     </div>

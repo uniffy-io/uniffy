@@ -1,9 +1,17 @@
 """Proto <-> domain converters for chat messages."""
 
+from contextlib import suppress
+from datetime import datetime
 from uuid import UUID
 
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChatMessage as ProtoChatMessage,
+)
+from uniffy_proto.chat.v1.chat_pb2 import (
+    ForwardContext as ProtoForwardContext,
+)
+from uniffy_proto.chat.v1.chat_pb2 import (
+    ForwardedAttachment as ProtoForwardedAttachment,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
     ReactionGroup as ProtoReactionGroup,
@@ -20,7 +28,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.json_codec import dumps_str
-from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKey, SenderType
 from uniffy.core.models.chat.thread import ChatThreadStats
 
 SENDER_TYPE_TO_PROTO = {
@@ -29,6 +37,72 @@ SENDER_TYPE_TO_PROTO = {
     SenderType.SYSTEM: ProtoSenderType.SENDER_TYPE_SYSTEM,
     SenderType.GUEST: ProtoSenderType.SENDER_TYPE_GUEST,
 }
+
+
+def get_forward_metadata(metadata: dict | None) -> dict | None:
+    raw = (metadata or {}).get(ChatMessageMetadataKey.FORWARD.value)
+    if not isinstance(raw, dict):
+        return None
+    if not isinstance(raw.get("snapshot"), dict):
+        return None
+    if not raw.get("message_id") or not raw.get("channel_id"):
+        return None
+    return raw
+
+
+def public_message_metadata(metadata: dict | None) -> dict:
+    return {
+        str(key): value
+        for key, value in (metadata or {}).items()
+        if str(key) != ChatMessageMetadataKey.FORWARD.value
+    }
+
+
+def forward_context_to_proto(metadata: dict | None) -> ProtoForwardContext | None:
+    raw = get_forward_metadata(metadata)
+    if raw is None:
+        return None
+    snapshot = raw.get("snapshot")
+    assert isinstance(snapshot, dict)
+
+    sender_type = ProtoSenderType.SENDER_TYPE_UNSPECIFIED
+    with suppress(KeyError, TypeError, ValueError):
+        sender_type = SENDER_TYPE_TO_PROTO[SenderType(snapshot.get("sender_type"))]
+
+    attachments: list[ProtoForwardedAttachment] = []
+    raw_attachments = snapshot.get("attachments")
+    if isinstance(raw_attachments, list):
+        for item in raw_attachments:
+            if not isinstance(item, dict):
+                continue
+            try:
+                size_bytes = int(item.get("size_bytes", 0))
+            except TypeError, ValueError:
+                size_bytes = 0
+            attachments.append(
+                ProtoForwardedAttachment(
+                    file_id=str(item.get("file_id", "")),
+                    filename=str(item.get("filename", "")),
+                    mime_type=str(item.get("mime_type", "")),
+                    size_bytes=max(size_bytes, 0),
+                )
+            )
+
+    proto = ProtoForwardContext(
+        source_message_id=str(raw.get("message_id", "")),
+        source_channel_id=str(raw.get("channel_id", "")),
+        source_channel_name=str(raw.get("channel_name", "")),
+        sender_id=str(snapshot.get("sender_id", "")),
+        sender_type=sender_type,
+        sender_name=str(snapshot.get("sender_name", "")),
+        content=str(snapshot.get("content", "")),
+        attachments=attachments,
+    )
+    created_at = snapshot.get("created_at")
+    if isinstance(created_at, str):
+        with suppress(ValueError):
+            proto.created_at.CopyFrom(datetime_to_timestamp(datetime.fromisoformat(created_at)))
+    return proto
 
 
 def message_to_proto(
@@ -42,6 +116,7 @@ def message_to_proto(
     reply_context_id: str | None = None,
     reply_context_sender_name: str | None = None,
     reply_context_content_preview: str | None = None,
+    forward_context: ProtoForwardContext | None = None,
 ) -> ProtoChatMessage:
     proto = ProtoChatMessage(
         id=str(message.id),
@@ -51,6 +126,7 @@ def message_to_proto(
         content=message.content,
         is_deleted=message.is_deleted,
         is_pinned=message.is_pinned,
+        is_forwarded=get_forward_metadata(message.message_metadata) is not None,
     )
 
     if message.root_id:
@@ -70,8 +146,10 @@ def message_to_proto(
     if message.message_metadata:
         # The proto metadata map is string-valued; structured values must
         # cross as JSON (str() would emit Python repr, unparseable client-side).
-        for k, v in message.message_metadata.items():
+        for k, v in public_message_metadata(message.message_metadata).items():
             proto.metadata[k] = dumps_str(v) if isinstance(v, (dict, list)) else str(v)
+    if forward_context is not None:
+        proto.forward_context.CopyFrom(forward_context)
     if message.created_at:
         proto.created_at.CopyFrom(datetime_to_timestamp(message.created_at))
 

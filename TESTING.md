@@ -608,6 +608,28 @@ sender.
       cancel leaves the composer intact. With the admin-only policy a plain member gets no
       broadcast rows.
 
+## Chat message forwarding
+
+Run with two users in isolated browsers. User A belongs to a private source channel and both users
+can read the target channel.
+
+- [ ] User A forwards a source message with an optional comment. The target shows the comment,
+      source channel link, source sender and timestamp, Markdown body, and attachment links.
+- [ ] User B sees the comment and a restricted-forward placeholder in the target. The source
+      channel name, source message id, sender, timestamp, content, filenames, and file ids are not
+      present in the page or `GetMessages` response.
+- [ ] User B cannot open the private source channel after the forward. Forwarding did not add a
+      source membership or change any source access setting.
+- [ ] From a 1:1 or group DM, a participant forwards a message into a shared channel. An org owner
+      or chat admin who is not a participant sees only the restricted placeholder; moderator status
+      does not expose the DM name, participants, content, timestamps, or attachments in the card.
+- [ ] Reload both browsers. User A still sees the snapshot and User B still sees only the
+      restricted placeholder.
+- [ ] Add User B to the source channel and reload the target: the full snapshot is visible. Remove
+      User B from the source while the target remains open: the loaded card becomes restricted.
+- [ ] Delete the source message: authorized target cards become restricted live and remain so
+      after reload. Delete the verification forwards and channels afterward.
+
 ## Agents in threads
 
 An agent answering inside a thread is a first-class reply: it moves the thread's counters, can be

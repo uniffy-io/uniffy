@@ -41,6 +41,10 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_pinned_messages,
     set_cached_pinned_message_ids,
 )
+from uniffy.domains.chat.messages.converters import (
+    get_forward_metadata,
+    public_message_metadata,
+)
 from uniffy.domains.chat.policy import BroadcastMinRole, resolve_chat_policy
 from uniffy.domains.chat.rate_limits import SEND, check_chat_mutation_limit
 from uniffy.workers.tasks import JobName
@@ -680,25 +684,46 @@ class ChatMessageOperations:
             )
             from uniffy.domains.chat.streaming.publisher import (
                 publish_channel_event_to_members,
+                publish_user_chat_events,
             )
 
-            await publish_channel_event_to_members(
-                member_ids,
-                MESSAGE_CREATED,
-                build_message_payload(
-                    message_id=message.id,
-                    channel_id=channel.id,
-                    sender_id=user_id,
-                    sender_type=message.sender_type.value,
-                    content=message.content,
-                    root_id=root_id,
-                    created_at=now,
-                    sender_name=sender_name,
-                    sender_avatar_url=sender_avatar,
-                    reply_to_id=message.reply_to_id,
-                    reply_context=reply_context,
-                ),
+            forward_metadata = get_forward_metadata(message.message_metadata)
+            base_payload = build_message_payload(
+                message_id=message.id,
+                channel_id=channel.id,
+                sender_id=user_id,
+                sender_type=message.sender_type.value,
+                content=message.content,
+                root_id=root_id,
+                created_at=now,
+                sender_name=sender_name,
+                sender_avatar_url=sender_avatar,
+                metadata=public_message_metadata(message.message_metadata),
+                reply_to_id=message.reply_to_id,
+                reply_context=reply_context,
+                is_forwarded=forward_metadata is not None,
             )
+            if forward_metadata is None:
+                await publish_channel_event_to_members(
+                    member_ids,
+                    MESSAGE_CREATED,
+                    base_payload,
+                )
+            else:
+                source_viewers = set(
+                    await self._resolve_forward_viewers(
+                        channel.organization_id,
+                        forward_metadata,
+                        member_ids,
+                    )
+                )
+                events = []
+                for member_id in member_ids:
+                    payload = dict(base_payload)
+                    if member_id in source_viewers:
+                        payload["forward_context"] = forward_metadata
+                    events.append((member_id, MESSAGE_CREATED, payload))
+                await publish_user_chat_events(events)
 
             if root_id:
                 stats_result = await self.session.execute(
@@ -719,6 +744,40 @@ class ChatMessageOperations:
                     )
         except Exception:
             logger.warning(f"Valkey publish failed for message {message.id}")
+
+    async def _resolve_forward_viewers(
+        self,
+        organization_id: UUID,
+        forward_metadata: dict,
+        member_ids: list[UUID],
+    ) -> list[UUID]:
+        try:
+            source_message_id = UUID(str(forward_metadata["message_id"]))
+            source_channel_id = UUID(str(forward_metadata["channel_id"]))
+        except KeyError, TypeError, ValueError:
+            return []
+
+        source_channel = (
+            await self.session.execute(
+                select(ChatChannel)
+                .join(ChatMessage, ChatMessage.channel_id == ChatChannel.id)
+                .where(
+                    ChatMessage.id == source_message_id,
+                    ChatMessage.channel_id == source_channel_id,
+                    ChatMessage.is_deleted.is_(False),
+                    ChatChannel.id == source_channel_id,
+                    ChatChannel.organization_id == organization_id,
+                    ChatChannel.is_deleted.is_(False),
+                )
+            )
+        ).scalar_one_or_none()
+        if source_channel is None:
+            return []
+        return await self.access.filter_forward_source_viewers(
+            organization_id,
+            source_channel,
+            member_ids,
+        )
 
     async def _index_message(
         self,

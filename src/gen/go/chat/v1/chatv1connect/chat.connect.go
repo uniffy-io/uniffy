@@ -205,6 +205,9 @@ const (
 	// ChatServiceUpdateChatPolicyProcedure is the fully-qualified name of the ChatService's
 	// UpdateChatPolicy RPC.
 	ChatServiceUpdateChatPolicyProcedure = "/chat.v1.ChatService/UpdateChatPolicy"
+	// ChatServiceForwardMessageProcedure is the fully-qualified name of the ChatService's
+	// ForwardMessage RPC.
+	ChatServiceForwardMessageProcedure = "/chat.v1.ChatService/ForwardMessage"
 )
 
 // ChatServiceClient is a client for the chat.v1.ChatService service.
@@ -319,6 +322,7 @@ type ChatServiceClient interface {
 	// broadcast typeahead and confirm dialog on it); updates are org-admin only.
 	GetChatPolicy(context.Context, *connect.Request[v1.GetChatPolicyRequest]) (*connect.Response[v1.GetChatPolicyResponse], error)
 	UpdateChatPolicy(context.Context, *connect.Request[v1.UpdateChatPolicyRequest]) (*connect.Response[v1.UpdateChatPolicyResponse], error)
+	ForwardMessage(context.Context, *connect.Request[v1.ForwardMessageRequest]) (*connect.Response[v1.ForwardMessageResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the chat.v1.ChatService service. By default, it uses
@@ -704,6 +708,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("UpdateChatPolicy")),
 			connect.WithClientOptions(opts...),
 		),
+		forwardMessage: connect.NewClient[v1.ForwardMessageRequest, v1.ForwardMessageResponse](
+			httpClient,
+			baseURL+ChatServiceForwardMessageProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ForwardMessage")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -771,6 +781,7 @@ type chatServiceClient struct {
 	stopAgentRun                     *connect.Client[v1.StopAgentRunRequest, v1.StopAgentRunResponse]
 	getChatPolicy                    *connect.Client[v1.GetChatPolicyRequest, v1.GetChatPolicyResponse]
 	updateChatPolicy                 *connect.Client[v1.UpdateChatPolicyRequest, v1.UpdateChatPolicyResponse]
+	forwardMessage                   *connect.Client[v1.ForwardMessageRequest, v1.ForwardMessageResponse]
 }
 
 // CreateChannel calls chat.v1.ChatService.CreateChannel.
@@ -1083,6 +1094,11 @@ func (c *chatServiceClient) UpdateChatPolicy(ctx context.Context, req *connect.R
 	return c.updateChatPolicy.CallUnary(ctx, req)
 }
 
+// ForwardMessage calls chat.v1.ChatService.ForwardMessage.
+func (c *chatServiceClient) ForwardMessage(ctx context.Context, req *connect.Request[v1.ForwardMessageRequest]) (*connect.Response[v1.ForwardMessageResponse], error) {
+	return c.forwardMessage.CallUnary(ctx, req)
+}
+
 // ChatServiceHandler is an implementation of the chat.v1.ChatService service.
 type ChatServiceHandler interface {
 	// Channel CRUD
@@ -1195,6 +1211,7 @@ type ChatServiceHandler interface {
 	// broadcast typeahead and confirm dialog on it); updates are org-admin only.
 	GetChatPolicy(context.Context, *connect.Request[v1.GetChatPolicyRequest]) (*connect.Response[v1.GetChatPolicyResponse], error)
 	UpdateChatPolicy(context.Context, *connect.Request[v1.UpdateChatPolicyRequest]) (*connect.Response[v1.UpdateChatPolicyResponse], error)
+	ForwardMessage(context.Context, *connect.Request[v1.ForwardMessageRequest]) (*connect.Response[v1.ForwardMessageResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -1576,6 +1593,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("UpdateChatPolicy")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceForwardMessageHandler := connect.NewUnaryHandler(
+		ChatServiceForwardMessageProcedure,
+		svc.ForwardMessage,
+		connect.WithSchema(chatServiceMethods.ByName("ForwardMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/chat.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ChatServiceCreateChannelProcedure:
@@ -1702,6 +1725,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceGetChatPolicyHandler.ServeHTTP(w, r)
 		case ChatServiceUpdateChatPolicyProcedure:
 			chatServiceUpdateChatPolicyHandler.ServeHTTP(w, r)
+		case ChatServiceForwardMessageProcedure:
+			chatServiceForwardMessageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1957,4 +1982,8 @@ func (UnimplementedChatServiceHandler) GetChatPolicy(context.Context, *connect.R
 
 func (UnimplementedChatServiceHandler) UpdateChatPolicy(context.Context, *connect.Request[v1.UpdateChatPolicyRequest]) (*connect.Response[v1.UpdateChatPolicyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.UpdateChatPolicy is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ForwardMessage(context.Context, *connect.Request[v1.ForwardMessageRequest]) (*connect.Response[v1.ForwardMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ForwardMessage is not implemented"))
 }

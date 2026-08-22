@@ -232,6 +232,22 @@ export const chatMessagesSlice = createSlice({
       delete state.isLoadingByChannel[channelId];
       delete state.typingByChannel[channelId];
     },
+    restrictForwardsFromChannel: (state, action: PayloadAction<string>) => {
+      for (const message of Object.values(state.byId)) {
+        if (message.forwardContext?.sourceChannelId === action.payload) {
+          message.forwardContext = undefined;
+          message.isForwarded = true;
+        }
+      }
+    },
+    restrictForwardsFromMessage: (state, action: PayloadAction<string>) => {
+      for (const message of Object.values(state.byId)) {
+        if (message.forwardContext?.sourceMessageId === action.payload) {
+          message.forwardContext = undefined;
+          message.isForwarded = true;
+        }
+      }
+    },
     setTypingUser: (
       state,
       action: PayloadAction<{ channelId: string; userId: string; displayName: string }>,
@@ -468,6 +484,8 @@ export const {
   clearUnreadSeparator,
   setChannelLoading,
   clearChannelMessages,
+  restrictForwardsFromChannel,
+  restrictForwardsFromMessage,
   setTypingUser,
   clearTypingUser,
   setAgentTyping,

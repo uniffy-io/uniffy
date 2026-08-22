@@ -16,6 +16,8 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import DomainType, SubjectType
 
+PERSONAL_CHANNEL_TYPES = frozenset({ChannelType.DIRECT, ChannelType.GROUP_DM})
+
 
 class ChatAccessChecker:
     """Request-scoped access checker with single-request caching."""
@@ -131,6 +133,35 @@ class ChatAccessChecker:
         channel: ChatChannel,
         candidate_user_ids: Collection[UUID],
     ) -> list[UUID]:
+        return await self._filter_viewers(
+            organization_id,
+            channel,
+            candidate_user_ids,
+            personal_membership_only=False,
+        )
+
+    async def filter_forward_source_viewers(
+        self,
+        organization_id: UUID,
+        channel: ChatChannel,
+        candidate_user_ids: Collection[UUID],
+    ) -> list[UUID]:
+        """Keep personal-conversation snapshots participant-only when forwarded elsewhere."""
+        return await self._filter_viewers(
+            organization_id,
+            channel,
+            candidate_user_ids,
+            personal_membership_only=True,
+        )
+
+    async def _filter_viewers(
+        self,
+        organization_id: UUID,
+        channel: ChatChannel,
+        candidate_user_ids: Collection[UUID],
+        *,
+        personal_membership_only: bool,
+    ) -> list[UUID]:
         candidates = tuple(dict.fromkeys(candidate_user_ids))
         if not candidates:
             return []
@@ -171,12 +202,65 @@ class ChatAccessChecker:
         allowed = {
             row.user_id
             for row in rows
-            if row.role in (OrganizationRole.OWNER, OrganizationRole.ADMIN)
-            or row.chat_admin
+            if row.channel_member
             or channel.channel_type == ChannelType.PUBLIC
-            or row.channel_member
+            or (
+                not (personal_membership_only and channel.channel_type in PERSONAL_CHANNEL_TYPES)
+                and (row.role in (OrganizationRole.OWNER, OrganizationRole.ADMIN) or row.chat_admin)
+            )
         }
         return [user_id for user_id in candidates if user_id in allowed]
+
+    async def filter_forward_source_channel_ids(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_ids: Collection[UUID],
+    ) -> set[UUID]:
+        candidates = tuple(dict.fromkeys(channel_ids))
+        if not candidates or not await self.is_org_member(user_id, organization_id):
+            return set()
+
+        channels = list(
+            (
+                await self.session.execute(
+                    select(ChatChannel).where(
+                        ChatChannel.id.in_(candidates),
+                        ChatChannel.organization_id == organization_id,
+                        ChatChannel.is_deleted.is_(False),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for channel in channels:
+            self._channel_cache[channel.id] = channel
+
+        allowed = {channel.id for channel in channels if channel.channel_type == ChannelType.PUBLIC}
+        moderation_access = await self.is_org_admin(
+            user_id, organization_id
+        ) or await self.is_chat_domain_admin(user_id, organization_id)
+        if moderation_access:
+            allowed.update(
+                channel.id
+                for channel in channels
+                if channel.channel_type not in PERSONAL_CHANNEL_TYPES
+            )
+
+        membership_required_ids = [channel.id for channel in channels if channel.id not in allowed]
+        if membership_required_ids:
+            member_ids = (
+                await self.session.execute(
+                    select(ChatChannelMember.channel_id).where(
+                        ChatChannelMember.channel_id.in_(membership_required_ids),
+                        ChatChannelMember.subject_type == SubjectType.USER,
+                        ChatChannelMember.subject_id == user_id,
+                    )
+                )
+            ).scalars()
+            allowed.update(member_ids)
+        return allowed
 
     async def require_send(
         self,
