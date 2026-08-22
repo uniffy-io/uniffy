@@ -1,11 +1,13 @@
 """Fire-and-forget notification event bus over ARQ; never raises on a missing queue."""
 
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
 
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.json_codec import dumps_str, loads
+from uniffy.core.types import ContentType, NotificationType, generate_id
 from uniffy.core.valkey import QueueName, get_queue
 from uniffy.workers.tasks import JobName
 
@@ -14,13 +16,15 @@ logger = logger.bind(component="events.bus")
 
 def _event_to_json(event: NotificationEvent) -> str:
     data: dict[str, Any] = {
+        "event_id": str(event.event_id),
         "notification_type": event.notification_type.value,
         "organization_id": str(event.organization_id),
-        "actor_id": str(event.actor_id),
         "title": event.title,
         "body": event.body,
     }
 
+    if event.actor_id is not None:
+        data["actor_id"] = str(event.actor_id)
     if event.source_urn is not None:
         data["source_urn"] = event.source_urn
     if event.target_user_ids is not None:
@@ -36,10 +40,6 @@ def _event_to_json(event: NotificationEvent) -> str:
 
 
 def event_from_json(json_str: str) -> NotificationEvent:
-    from uuid import UUID
-
-    from uniffy.core.types import ContentType, NotificationType
-
     data = loads(json_str)
 
     target_user_ids = None
@@ -55,9 +55,10 @@ def event_from_json(json_str: str) -> NotificationEvent:
         content_id = UUID(data["content_id"])
 
     return NotificationEvent(
+        event_id=UUID(data["event_id"]) if data.get("event_id") else generate_id(),
         notification_type=NotificationType(data["notification_type"]),
         organization_id=UUID(data["organization_id"]),
-        actor_id=UUID(data["actor_id"]),
+        actor_id=UUID(data["actor_id"]) if data.get("actor_id") else None,
         title=data["title"],
         body=data.get("body", ""),
         source_urn=data.get("source_urn"),
