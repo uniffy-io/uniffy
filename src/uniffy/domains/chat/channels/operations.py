@@ -1700,7 +1700,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                     if added
                     else f"Removed you from {channel.effective_name}"
                 ),
-                source_urn=f"urn:uniffy:content:CHAT:{channel.id}",
+                source_urn=(f"urn:uniffy:content:CHAT:{channel.id}" if added else None),
                 target_user_ids=recipients,
                 metadata={
                     "channel_id": str(channel.id),

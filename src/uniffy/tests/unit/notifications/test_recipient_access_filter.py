@@ -112,6 +112,20 @@ async def test_access_request_denial_metadata_does_not_trigger_source_filter() -
     assert out == [KEPT]
 
 
+async def test_access_revocation_reaches_the_former_viewer() -> None:
+    event = _event(
+        notification_type=NotificationType.PERMISSION_REVOKED,
+        source_urn=None,
+        target_user_ids=[KEPT],
+        title="Your access was removed",
+    )
+
+    with _active(KEPT):
+        out = await task._resolve_recipients(MagicMock(), event)
+
+    assert out == [KEPT]
+
+
 async def test_an_unsupported_content_type_is_dropped() -> None:
     session = MagicMock()
     event = _event(
