@@ -75,7 +75,7 @@ function Field({
         {managed && <ManagedHint />}
       </div>
       {children}
-      {hint && <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs font-medium text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -98,7 +98,7 @@ function ReadOnlyFacts({ person }: { person: SerializedPersonProfile }) {
       <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
         {facts.map((fact) => (
           <div key={fact.label} className="flex items-baseline justify-between gap-3">
-            <dt className="text-xs text-muted-foreground">{fact.label}</dt>
+            <dt className="text-xs font-medium text-muted-foreground">{fact.label}</dt>
             <dd className="truncate text-sm font-medium text-foreground">{fact.value}</dd>
           </div>
         ))}
@@ -383,7 +383,7 @@ function ProfileForm({ person, initialPronouns }: ProfileFormProps) {
             placeholder="A few words about what you work on..."
             className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
-          <p className="mt-1.5 text-right text-xs text-muted-foreground">
+          <p className="mt-1.5 text-right text-xs font-medium text-muted-foreground">
             {bio.length} / {BIO_MAX}
           </p>
         </Field>
@@ -441,7 +441,7 @@ export function ProfileFieldsSection() {
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold text-foreground">Profile</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm font-medium text-muted-foreground">
           Shown to everyone in your organization on your People profile. Job title, department,
           office and start date are set by your administrator.
         </p>

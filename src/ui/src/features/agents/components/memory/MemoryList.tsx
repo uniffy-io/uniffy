@@ -227,7 +227,7 @@ export function MemoryList({
           onChange={(val) => setCategoryFilter(val)}
           options={CATEGORY_FILTER_OPTIONS}
         />
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm font-medium text-muted-foreground">
           {filteredMemories.length} {filteredMemories.length === 1 ? "memory" : "memories"}
         </span>
         {canCreate && (
@@ -258,7 +258,7 @@ export function MemoryList({
               <PushPin size={12} weight="fill" />
               Always in context
             </h4>
-            <span className="text-xs text-muted-foreground tabular-nums">
+            <span className="text-xs font-medium text-muted-foreground tabular-nums">
               {pinnedBudget.count}/{PINNED_MAX_ENTRIES} pinned -{" "}
               {pinnedBudget.chars.toLocaleString()}/{PINNED_MAX_CHARS.toLocaleString()} chars
             </span>
@@ -273,7 +273,7 @@ export function MemoryList({
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Brain size={48} weight="duotone" className="text-muted-foreground/50 mb-4" />
           <p className="text-muted-foreground font-medium">No memories found</p>
-          <p className="text-sm text-muted-foreground/70 mt-1 max-w-sm">
+          <p className="text-sm font-medium text-muted-foreground/70 mt-1 max-w-sm">
             {emptyStateCopy(descriptor)}
           </p>
         </div>

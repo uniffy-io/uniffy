@@ -42,7 +42,7 @@ export function RegenerateCodesDialog({ onClose, onRegenerated }: RegenerateCode
       <div className="space-y-4 p-6">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Regenerate recovery codes</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm font-medium text-muted-foreground">
             Your old recovery codes will stop working. Confirm with a current authenticator code and
             save the new ones somewhere only you can reach.
           </p>

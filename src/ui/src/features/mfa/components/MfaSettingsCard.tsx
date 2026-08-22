@@ -71,8 +71,8 @@ export function MfaSettingsCard() {
               Protect your account with an authenticator app. We ask for a 6 digit code on every
               sign in once enrollment is complete.
             </p>
-            <p className="text-xs text-muted-foreground">
-              Works with 1Password, Bitwarden, Aegis, Google Authenticator, and any RFC 6238 app.
+            <p className="text-sm font-medium text-muted-foreground">
+              Works with Proton Pass, Proton Authenticator, Ente Auth, Aegis, and any RFC 6238 app.
             </p>
           </div>
         </div>
@@ -90,7 +90,7 @@ export function MfaSettingsCard() {
           <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">Not yet enrolled</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm font-medium text-muted-foreground">
                 Strongly recommended for any account that holds production data.
               </p>
             </div>
@@ -125,7 +125,7 @@ export function MfaSettingsCard() {
             />
 
             {status.remainingRecoveryCodes <= LOW_RECOVERY_THRESHOLD && (
-              <div className="flex items-start gap-2 rounded-md border border-yellow-500/40 bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
+              <div className="flex items-start gap-2 rounded-md border border-yellow-500/40 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
                 <Warning size={14} className="mt-0.5 shrink-0" />
                 You are running low on recovery codes. Regenerate before you lose your
                 authenticator.

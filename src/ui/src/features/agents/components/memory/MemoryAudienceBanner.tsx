@@ -45,7 +45,7 @@ export function MemoryAudienceBanner({
       data-testid="memory-audience-banner"
     >
       <ScopeIcon size={14} className="text-muted-foreground shrink-0 mt-0.5" />
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm font-medium text-muted-foreground">
         {audienceCopy(descriptor, agentName, subjectLabel)}
       </p>
     </div>

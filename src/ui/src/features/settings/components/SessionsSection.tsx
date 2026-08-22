@@ -84,7 +84,7 @@ export function SessionsSection() {
         </div>
       ) : sessions.length === 0 ? (
         <div className="bg-card rounded-lg border border-border p-4">
-          <p className="text-sm text-muted-foreground">No active sessions found.</p>
+          <p className="text-sm font-medium text-muted-foreground">No active sessions found.</p>
         </div>
       ) : (
         <div className="bg-card rounded-lg border border-border overflow-hidden">
@@ -108,7 +108,7 @@ export function SessionsSection() {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs font-medium text-muted-foreground">
                       Active {formatRelativeTime(session.lastActivity)}
                     </div>
                   </div>

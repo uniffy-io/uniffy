@@ -96,7 +96,7 @@ export function LoginMfaStep({ challengeToken, onVerified, onCancel }: LoginMfaS
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           Two factor authentication
         </h2>
-        <p className="mt-1.5 text-sm text-muted-foreground">{helper}</p>
+        <p className="mt-1.5 text-sm font-medium text-muted-foreground">{helper}</p>
       </div>
 
       {error && (

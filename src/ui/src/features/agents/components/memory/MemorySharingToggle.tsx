@@ -24,7 +24,7 @@ export function MemorySharingToggle() {
           <p className="text-sm font-medium text-foreground">
             Use my personal memory in shared spaces
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-sm font-medium text-muted-foreground mt-1">
             {sharing.orgAllows
               ? "When on, agents you trigger in channels and shared sessions can read these memories. Replies others see may draw on them. Agents still never save personal memory from shared spaces."
               : "Disabled by your organization."}

@@ -109,7 +109,7 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
 
   if (loading && !material) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-border bg-card p-6 text-sm font-medium text-muted-foreground">
         Preparing your enrollment...
       </div>
     );
@@ -137,8 +137,8 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
             <h3 className="text-lg font-semibold text-foreground">
               Scan with your authenticator app
             </h3>
-            <p className="text-sm text-muted-foreground">
-              Use 1Password, Bitwarden, Aegis, Google Authenticator, or any RFC 6238 app. If your
+            <p className="text-sm font-medium text-muted-foreground">
+              Use Proton Pass, Proton Authenticator, Ente Auth, Aegis, or any RFC 6238 app. If your
               camera is unavailable, copy the secret below and paste it into your app instead.
             </p>
           </div>
@@ -198,7 +198,7 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
         <form onSubmit={handleConfirm} className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold text-foreground">Verify the connection</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm font-medium text-muted-foreground">
               Enter the 6 digit code your authenticator is showing right now.
             </p>
           </div>
@@ -253,7 +253,7 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
         <section className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold text-foreground">Save your recovery codes</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm font-medium text-muted-foreground">
               Each code works once and we only show them now. Save them somewhere only you can
               reach. If you lose your authenticator, one of these gets you back in.
             </p>

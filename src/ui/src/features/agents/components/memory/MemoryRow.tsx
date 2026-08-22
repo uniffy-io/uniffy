@@ -164,7 +164,7 @@ export function MemoryRow({
               {memory.content}
             </p>
           </div>
-          <div className="px-4 py-2 border-t border-border flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+          <div className="px-4 py-2 border-t border-border flex items-center gap-3 text-xs font-medium text-muted-foreground flex-wrap">
             <Badge className="bg-muted text-muted-foreground border-transparent">
               {memory.source === MemorySource.MANUAL ? "Manual" : "Auto-saved"}
             </Badge>

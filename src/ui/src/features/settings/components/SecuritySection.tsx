@@ -54,7 +54,7 @@ export function SecuritySection() {
     <div className="space-y-8">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Security</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground">
           Manage client-side data encryption and cached content.
         </p>
       </div>
@@ -75,7 +75,7 @@ export function SecuritySection() {
                 Uniffy caches content locally on your devices for faster access. All cached data is
                 encrypted at rest using AES-256-GCM.
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm font-medium text-muted-foreground">
                 {encryptionReady
                   ? "Encryption is active on this device."
                   : "Encryption is not initialized on this device."}
@@ -87,7 +87,7 @@ export function SecuritySection() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-foreground">Clear This Device</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm font-medium text-muted-foreground">
                   Removes cached data from this browser. Data will reload from the server.
                 </p>
               </div>
@@ -106,7 +106,7 @@ export function SecuritySection() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-foreground">Clear All Devices</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm font-medium text-muted-foreground">
                   Rotates your encryption key, making cached data on all devices unreadable on next
                   login.
                 </p>

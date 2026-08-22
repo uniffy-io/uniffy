@@ -289,9 +289,7 @@ export function KeyboardShortcutsSection() {
     <div className="space-y-8">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Keyboard Shortcuts</h1>
-        <p className="text-sm text-muted-foreground">
-          Customize keyboard shortcuts for common actions.
-        </p>
+        <p className="text-muted-foreground">Customize keyboard shortcuts for common actions.</p>
       </div>
 
       {SHORTCUT_CATEGORIES.map(({ id, label, shortcuts }) => (
@@ -313,7 +311,7 @@ export function KeyboardShortcutsSection() {
         </section>
       ))}
 
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm font-medium text-muted-foreground">
         <p>Click on a shortcut to edit it. Press the new key combination and click Save.</p>
       </div>
     </div>
