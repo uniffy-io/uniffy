@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.exc import IntegrityError
 
 from uniffy.core.models.agents.budget import AgentBudget
-from uniffy.core.types import generate_id
+from uniffy.core.types import NotificationType, generate_id
 from uniffy.domains.agents import budget_alerts as mod
 from uniffy.domains.agents.budget_alerts import (
     _compute_crossings,
@@ -157,6 +157,8 @@ class TestCheckAndFireAlertsFires:
             reset_day=1,
         )
         session = self._ops_with_budget(budget)
+        recipients = [generate_id(), generate_id()]
+        emit = AsyncMock()
 
         async def run() -> None:
             with (
@@ -164,8 +166,9 @@ class TestCheckAndFireAlertsFires:
                 patch.object(
                     mod,
                     "_resolve_recipients",
-                    AsyncMock(return_value=[generate_id(), generate_id()]),
+                    AsyncMock(return_value=recipients),
                 ),
+                patch.object(mod, "emit_notification", emit),
             ):
                 await check_and_fire_alerts(
                     session,
@@ -175,8 +178,11 @@ class TestCheckAndFireAlertsFires:
                 )
 
         await run()
-        # Alert dedupe row + 2 notifications = 3 session.add calls.
-        assert session.add.call_count == 3
+        assert session.add.call_count == 1
+        event = emit.await_args.args[0]
+        assert event.notification_type is NotificationType.AGENTS_BUDGET_ALERT
+        assert event.organization_id == org_id
+        assert event.target_user_ids == recipients
 
     async def test_skips_already_fired_threshold(self) -> None:
         org_id = generate_id()

@@ -1,16 +1,4 @@
-"""Budget alert threshold detection and notification fanout.
-
-Called after every ``AgentRunLog`` row with a non-null ``cost_usd``
-(or non-zero ``image_count``) lands. Computes current-period totals,
-finds thresholds crossed on this run, dedupes against
-``agents_budget_alerts`` via its unique constraint, and creates a
-``Notification`` for every org admin + agents-domain admin.
-
-The 100% threshold always fires even when absent from
-``alert_thresholds`` because it is the point at which hard enforcement
-engages. Image-count alerts only fire at 90% and 100% because the
-volume is typically low and intermediate thresholds are noise.
-"""
+"""Budget alert threshold detection and notification fanout."""
 
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -21,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.models.agents.budget_alert import (
     AgentBudgetAlert,
@@ -34,7 +23,6 @@ from uniffy.core.models.login.organization_member import (
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
-from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import DomainType, NotificationType
 from uniffy.domains.agents.budgets.period import month_window
@@ -50,14 +38,7 @@ def _compute_crossings(
     cap: Decimal,
     thresholds: list[int],
 ) -> list[int]:
-    """Return the subset of ``thresholds`` crossed between prev and curr.
-
-    Crossing means ``prev_pct < T <= curr_pct`` where ``prev_pct`` and
-    ``curr_pct`` are each ``100 * total / cap``. A threshold that is
-    already passed before this run is not re-fired even when the dedupe
-    table is empty; the whole point of the check is to detect just the
-    transition.
-    """
+    """Return thresholds crossed by this run, excluding thresholds passed earlier."""
     if cap <= 0:
         return []
     fire: list[int] = []
@@ -76,7 +57,6 @@ async def _sum_cost(
     period_start: datetime,
     period_end: datetime,
 ) -> Decimal:
-    """Return total ``cost_usd`` for the org in the period (inclusive of now)."""
     result = await session.execute(
         select(func.coalesce(func.sum(AgentRunLog.cost), 0)).where(
             AgentRunLog.organization_id == organization_id,
@@ -94,7 +74,6 @@ async def _sum_image_count(
     period_start: datetime,
     period_end: datetime,
 ) -> int:
-    """Return total ``image_count`` for the org in the period."""
     result = await session.execute(
         select(func.coalesce(func.sum(AgentRunLog.image_count), 0)).where(
             AgentRunLog.organization_id == organization_id,
@@ -109,11 +88,6 @@ async def _resolve_recipients(
     session: AsyncSession,
     organization_id: UUID,
 ) -> list[UUID]:
-    """Return the set of user_ids that should receive agent budget alerts.
-
-    Deduplicated. Includes org admins and owners plus all users with an
-    ``agents`` DomainAdmin row for this org.
-    """
     members = await session.execute(
         select(OrganizationMember.user_id)
         .join(User, User.id == OrganizationMember.user_id)
@@ -162,13 +136,7 @@ async def _try_claim_alert(
     threshold: int,
     kind: AgentBudgetAlertKind,
 ) -> bool:
-    """Insert a dedupe row and return True when we were first.
-
-    Uses a SAVEPOINT (``session.begin_nested()``) so the IntegrityError
-    on the unique constraint does not poison the outer transaction. A
-    False return means another worker already fired this alert for the
-    same period.
-    """
+    """Use a savepoint so a concurrent dedupe conflict leaves the outer transaction usable."""
     try:
         async with session.begin_nested():
             session.add(
@@ -196,7 +164,6 @@ def _render_alert(
     limit: str,
     period_start: datetime,
 ) -> tuple[str, str]:
-    """Build (title, body) for a budget alert notification."""
     scope_label = "Organization" if scope is AgentBudgetAlertScope.ORGANIZATION else "User"
     if kind is AgentBudgetAlertKind.SPEND:
         unit = "USD"
@@ -220,22 +187,21 @@ async def _fan_out(
     body: str,
     metadata: dict,
 ) -> None:
-    """Create one notification per recipient and commit."""
     recipients = await _resolve_recipients(session, organization_id)
     if not recipients:
         return
-    for user_id in recipients:
-        session.add(
-            Notification(
-                organization_id=organization_id,
-                user_id=user_id,
-                notification_type=NotificationType.AGENTS_BUDGET_ALERT,
-                title=title,
-                body=body,
-                notification_metadata=metadata,
-            )
-        )
     await session.commit()
+    await emit_notification(
+        NotificationEvent(
+            notification_type=NotificationType.AGENTS_BUDGET_ALERT,
+            organization_id=organization_id,
+            actor_id=None,
+            title=title,
+            body=body,
+            target_user_ids=recipients,
+            metadata=metadata,
+        )
+    )
 
 
 async def check_and_fire_alerts(
@@ -246,16 +212,7 @@ async def check_and_fire_alerts(
     run_image_count: int,
     run_at: datetime | None = None,
 ) -> None:
-    """Detect threshold crossings for the just-written run and fan out alerts.
-
-    Must be called after the run log is committed so the ``SUM`` queries
-    include the new row. ``run_cost`` and ``run_image_count`` describe
-    the run that just landed; the helper subtracts them to reconstruct
-    the pre-run total when evaluating threshold crossings.
-
-    Failures (DB errors, missing budget) are logged and swallowed - an
-    alert miss is never a reason to reject a run.
-    """
+    """Detect crossings after the run is committed without letting alert failure reject it."""
     try:
         run_at = run_at or datetime.now(UTC)
         run_cost = run_cost or Decimal(0)
