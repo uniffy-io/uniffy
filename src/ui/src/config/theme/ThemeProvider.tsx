@@ -10,7 +10,7 @@ import {
 } from "@/config/theme/themeSlice";
 import {
   updateEffectiveSettingsLocal,
-  updateProfile,
+  updateSettings,
 } from "@/features/settings/store/settingsSlice";
 
 interface ThemeContextType {
@@ -75,7 +75,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const settingsInitialized = useAppSelector((state) => state.settings?.initialized);
   const effectiveSettings = useAppSelector((state) => state.settings?.effectiveSettings);
-  const activeProfileId = useAppSelector((state) => state.settings?.activeProfileId);
 
   const user = useAppSelector((state) => state.auth?.user);
 
@@ -169,12 +168,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       dispatch(setThemeMode(mode));
       if (settingsInitialized) {
         dispatch(updateEffectiveSettingsLocal({ appearance: { theme: mode } }));
-        if (activeProfileId) {
-          dispatch(updateProfile({ profileId: activeProfileId, appearance: { theme: mode } }));
-        }
+        dispatch(updateSettings({ appearance: { theme: mode } }));
       }
     },
-    [dispatch, settingsInitialized, activeProfileId],
+    [dispatch, settingsInitialized],
   );
 
   useEffect(() => {

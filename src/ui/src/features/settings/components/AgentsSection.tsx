@@ -3,11 +3,11 @@ import { UsageView } from "@/features/agents/components/views/UsageView";
 import { MemorySharingToggle } from "@/features/agents/components/memory/MemorySharingToggle";
 import { PersonalMemorySection } from "@/features/agents/components/memory/PersonalMemorySection";
 
-export function AiSection() {
+export function AgentsSection() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">AI</h1>
+        <h1 className="text-2xl font-bold text-foreground">Agents</h1>
         <p className="text-muted-foreground">
           Your own agent usage and personal memory preferences. Organization-wide keys, budgets, and
           defaults live under Admin.

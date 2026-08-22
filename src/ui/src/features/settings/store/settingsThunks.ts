@@ -1,9 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
-import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { settingsApi } from "@/features/settings/api/settingsApi";
 import type {
-  SettingsProfile,
   EffectiveSettings,
   AppearanceSettings,
   KeyboardShortcutsSettings,
@@ -34,7 +32,6 @@ const keyboardShortcutsToPlain = (shortcuts?: KeyboardShortcutsSettings) => {
   };
 };
 
-// Channel-override matrix: per notif-type, which delivery channels (in_app/browser/email) the user opts into.
 const notificationsToPlain = (notifications?: NotificationsSettings) => {
   if (!notifications) return undefined;
 
@@ -56,6 +53,7 @@ const notificationsToPlain = (notifications?: NotificationsSettings) => {
     emailEnabled: notifications.emailEnabled,
     soundEnabled: notifications.soundEnabled,
     emailFrequency: notifications.emailFrequency || undefined,
+    emailDigestTime: notifications.emailDigestTime || undefined,
     quietHoursStart: notifications.quietHoursStart || undefined,
     quietHoursEnd: notifications.quietHoursEnd || undefined,
     channelOverrides,
@@ -65,18 +63,6 @@ const notificationsToPlain = (notifications?: NotificationsSettings) => {
     toastEnabled: notifications.toastEnabled,
   };
 };
-
-const profileToPlain = (profile: SettingsProfile) => ({
-  id: profile.id,
-  userId: profile.userId,
-  name: profile.name,
-  isDefault: profile.isDefault,
-  appearance: appearanceToPlain(profile.appearance),
-  keyboardShortcuts: keyboardShortcutsToPlain(profile.keyboardShortcuts),
-  notifications: notificationsToPlain(profile.notifications),
-  createdAt: profile.createdAt ? timestampDate(profile.createdAt).toISOString() : undefined,
-  updatedAt: profile.updatedAt ? timestampDate(profile.updatedAt).toISOString() : undefined,
-});
 
 const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
   appearance: appearanceToPlain(settings.appearance) ?? {
@@ -100,6 +86,7 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
     emailEnabled: true,
     soundEnabled: true,
     emailFrequency: "instant",
+    emailDigestTime: "08:00",
     quietHoursStart: undefined,
     quietHoursEnd: undefined,
     channelOverrides: {} as Record<string, Record<string, boolean>>,
@@ -108,38 +95,28 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
   },
 });
 
-export type SerializedProfile = ReturnType<typeof profileToPlain>;
 export type SerializedEffectiveSettings = ReturnType<typeof effectiveSettingsToPlain>;
 
-export const fetchProfiles = createAsyncThunk<
-  SerializedProfile[],
-  void,
-  { state: RootState; rejectValue: string }
->("settings/fetchProfiles", async (_, { rejectWithValue }) => {
-  try {
-    const response = await settingsApi.listProfiles({});
-    return response.profiles.map(profileToPlain);
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch profiles");
-  }
-});
+export interface SettingsUpdates {
+  appearance?: Partial<SerializedEffectiveSettings["appearance"]>;
+  keyboardShortcuts?: Partial<SerializedEffectiveSettings["keyboardShortcuts"]>;
+  notifications?: Partial<SerializedEffectiveSettings["notifications"]>;
+}
 
 export const fetchEffectiveSettings = createAsyncThunk<
-  { profile: SerializedProfile; effectiveSettings: SerializedEffectiveSettings },
-  string | undefined,
+  { profileId: string; effectiveSettings: SerializedEffectiveSettings },
+  void,
   { state: RootState; rejectValue: string }
->("settings/fetchEffectiveSettings", async (profileId, { rejectWithValue }) => {
+>("settings/fetchEffectiveSettings", async (_, { rejectWithValue }) => {
   try {
-    const response = await settingsApi.getEffectiveSettings({
-      profileId: profileId,
-    });
+    const response = await settingsApi.getEffectiveSettings({});
 
     if (!response.profile || !response.effectiveSettings) {
       return rejectWithValue("Invalid response from server");
     }
 
     return {
-      profile: profileToPlain(response.profile),
+      profileId: response.profile.id,
       effectiveSettings: effectiveSettingsToPlain(response.effectiveSettings),
     };
   } catch (error) {
@@ -147,110 +124,32 @@ export const fetchEffectiveSettings = createAsyncThunk<
   }
 });
 
-export const createProfile = createAsyncThunk<
-  SerializedProfile,
-  {
-    name: string;
-    appearance?: Partial<SerializedEffectiveSettings["appearance"]>;
-    keyboardShortcuts?: Partial<SerializedEffectiveSettings["keyboardShortcuts"]>;
-    notifications?: Partial<SerializedEffectiveSettings["notifications"]>;
-    isDefault?: boolean;
-  },
+export const updateSettings = createAsyncThunk<
+  void,
+  SettingsUpdates,
   { state: RootState; rejectValue: string }
->("settings/createProfile", async (params, { rejectWithValue }) => {
-  try {
-    const response = await settingsApi.createProfile({
-      name: params.name,
-      appearance: params.appearance,
-      keyboardShortcuts: params.keyboardShortcuts
-        ? {
-            bindings: params.keyboardShortcuts.bindings,
-          }
-        : undefined,
-      notifications: params.notifications,
-      isDefault: params.isDefault ?? false,
-    });
-
-    if (!response.profile) {
-      return rejectWithValue("Failed to create profile");
-    }
-
-    return profileToPlain(response.profile);
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to create profile");
+>("settings/updateSettings", async (updates, { getState, rejectWithValue }) => {
+  const profileId = getState().settings.profileId;
+  if (!profileId) {
+    return rejectWithValue("Settings are not loaded yet");
   }
-});
 
-export const updateProfile = createAsyncThunk<
-  SerializedProfile,
-  {
-    profileId: string;
-    name?: string;
-    appearance?: Partial<SerializedEffectiveSettings["appearance"]>;
-    keyboardShortcuts?: Partial<SerializedEffectiveSettings["keyboardShortcuts"]>;
-    notifications?: Partial<SerializedEffectiveSettings["notifications"]>;
-    isDefault?: boolean;
-  },
-  { state: RootState; rejectValue: string }
->("settings/updateProfile", async (params, { rejectWithValue }) => {
   try {
     const response = await settingsApi.updateProfile({
-      profileId: params.profileId,
-      name: params.name,
-      appearance: params.appearance,
-      keyboardShortcuts: params.keyboardShortcuts
+      profileId,
+      appearance: updates.appearance,
+      keyboardShortcuts: updates.keyboardShortcuts
         ? {
-            bindings: params.keyboardShortcuts.bindings,
+            bindings: updates.keyboardShortcuts.bindings,
           }
         : undefined,
-      notifications: params.notifications,
-      isDefault: params.isDefault,
+      notifications: updates.notifications,
     });
 
     if (!response.profile) {
-      return rejectWithValue("Failed to update profile");
+      return rejectWithValue("Failed to update settings");
     }
-
-    return profileToPlain(response.profile);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to update profile");
-  }
-});
-
-export const deleteProfile = createAsyncThunk<
-  string,
-  string,
-  { state: RootState; rejectValue: string }
->("settings/deleteProfile", async (profileId, { rejectWithValue }) => {
-  try {
-    const response = await settingsApi.deleteProfile({ profileId });
-
-    if (!response.success) {
-      return rejectWithValue(response.message || "Failed to delete profile");
-    }
-
-    return profileId;
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to delete profile");
-  }
-});
-
-export const setDefaultProfile = createAsyncThunk<
-  SerializedProfile,
-  string,
-  { state: RootState; rejectValue: string }
->("settings/setDefaultProfile", async (profileId, { rejectWithValue }) => {
-  try {
-    const response = await settingsApi.setDefaultProfile({ profileId });
-
-    if (!response.profile) {
-      return rejectWithValue("Failed to set default profile");
-    }
-
-    return profileToPlain(response.profile);
-  } catch (error) {
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to set default profile",
-    );
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to update settings");
   }
 });
