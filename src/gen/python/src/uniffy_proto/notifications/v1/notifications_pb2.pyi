@@ -34,6 +34,15 @@ class NotificationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     NOTIFICATION_TYPE_CHAT_THREAD_REPLY: _ClassVar[NotificationType]
     NOTIFICATION_TYPE_ACCESS_REQUESTED: _ClassVar[NotificationType]
     NOTIFICATION_TYPE_ACCESS_REQUEST_DENIED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_COMMENT_ADDED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_COMMENT_REPLY: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_COMMENT_MENTIONED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_COMMENT_RESOLVED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_AGENTS_BUDGET_ALERT: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_SUPPORT_SESSION_REQUESTED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED: _ClassVar[NotificationType]
 NOTIFICATION_TYPE_UNSPECIFIED: NotificationType
 NOTIFICATION_TYPE_CONTENT_SHARED: NotificationType
 NOTIFICATION_TYPE_CONTENT_MENTIONED: NotificationType
@@ -54,6 +63,15 @@ NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED: NotificationType
 NOTIFICATION_TYPE_CHAT_THREAD_REPLY: NotificationType
 NOTIFICATION_TYPE_ACCESS_REQUESTED: NotificationType
 NOTIFICATION_TYPE_ACCESS_REQUEST_DENIED: NotificationType
+NOTIFICATION_TYPE_COMMENT_ADDED: NotificationType
+NOTIFICATION_TYPE_COMMENT_REPLY: NotificationType
+NOTIFICATION_TYPE_COMMENT_MENTIONED: NotificationType
+NOTIFICATION_TYPE_COMMENT_RESOLVED: NotificationType
+NOTIFICATION_TYPE_AGENTS_BUDGET_ALERT: NotificationType
+NOTIFICATION_TYPE_SUPPORT_SESSION_REQUESTED: NotificationType
+NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED: NotificationType
+NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED: NotificationType
+NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED: NotificationType
 
 class Notification(_message.Message):
     __slots__ = ("id", "organization_id", "user_id", "notification_type", "title", "body", "source_urn", "actor_id", "is_read", "read_at", "created_at", "expires_at", "actor_name", "actor_avatar_url", "metadata")

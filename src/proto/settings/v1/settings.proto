@@ -242,6 +242,8 @@ message NotificationsSettings {
   repeated int32 default_reminder_intervals = 8;
   // Enable in-app toast notifications for real-time alerts
   optional bool toast_enabled = 9;
+  // Local clock time for daily email digests (24h HH:MM)
+  optional string email_digest_time = 10;
 }
 
 // Per-channel preference for a notification type

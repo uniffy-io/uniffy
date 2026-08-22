@@ -1253,9 +1253,11 @@ type NotificationsSettings struct {
 	// Default reminder intervals in minutes for new calendar events
 	DefaultReminderIntervals []int32 `protobuf:"varint,8,rep,packed,name=default_reminder_intervals,json=defaultReminderIntervals,proto3" json:"default_reminder_intervals,omitempty"`
 	// Enable in-app toast notifications for real-time alerts
-	ToastEnabled  *bool `protobuf:"varint,9,opt,name=toast_enabled,json=toastEnabled,proto3,oneof" json:"toast_enabled,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ToastEnabled *bool `protobuf:"varint,9,opt,name=toast_enabled,json=toastEnabled,proto3,oneof" json:"toast_enabled,omitempty"`
+	// Local clock time for daily email digests (24h HH:MM)
+	EmailDigestTime *string `protobuf:"bytes,10,opt,name=email_digest_time,json=emailDigestTime,proto3,oneof" json:"email_digest_time,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *NotificationsSettings) Reset() {
@@ -1349,6 +1351,13 @@ func (x *NotificationsSettings) GetToastEnabled() bool {
 		return *x.ToastEnabled
 	}
 	return false
+}
+
+func (x *NotificationsSettings) GetEmailDigestTime() string {
+	if x != nil && x.EmailDigestTime != nil {
+		return *x.EmailDigestTime
+	}
+	return ""
 }
 
 // Per-channel preference for a notification type
@@ -1531,7 +1540,7 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\bbindings\x18\x01 \x03(\v24.settings.v1.KeyboardShortcutsSettings.BindingsEntryR\bbindings\x1a;\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xed\x05\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb4\x06\n" +
 	"\x15NotificationsSettings\x12,\n" +
 	"\x0fbrowser_enabled\x18\x01 \x01(\bH\x00R\x0ebrowserEnabled\x88\x01\x01\x12(\n" +
 	"\remail_enabled\x18\x02 \x01(\bH\x01R\femailEnabled\x88\x01\x01\x12(\n" +
@@ -1541,7 +1550,9 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x0fquiet_hours_end\x18\x06 \x01(\tH\x05R\rquietHoursEnd\x88\x01\x01\x12e\n" +
 	"\x11channel_overrides\x18\a \x03(\v28.settings.v1.NotificationsSettings.ChannelOverridesEntryR\x10channelOverrides\x12<\n" +
 	"\x1adefault_reminder_intervals\x18\b \x03(\x05R\x18defaultReminderIntervals\x12(\n" +
-	"\rtoast_enabled\x18\t \x01(\bH\x06R\ftoastEnabled\x88\x01\x01\x1ao\n" +
+	"\rtoast_enabled\x18\t \x01(\bH\x06R\ftoastEnabled\x88\x01\x01\x12/\n" +
+	"\x11email_digest_time\x18\n" +
+	" \x01(\tH\aR\x0femailDigestTime\x88\x01\x01\x1ao\n" +
 	"\x15ChannelOverridesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12@\n" +
 	"\x05value\x18\x02 \x01(\v2*.settings.v1.NotificationChannelPreferenceR\x05value:\x028\x01B\x12\n" +
@@ -1551,7 +1562,8 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x10_email_frequencyB\x14\n" +
 	"\x12_quiet_hours_startB\x12\n" +
 	"\x10_quiet_hours_endB\x10\n" +
-	"\x0e_toast_enabled\"\x96\x01\n" +
+	"\x0e_toast_enabledB\x14\n" +
+	"\x12_email_digest_time\"\x96\x01\n" +
 	"\x1dNotificationChannelPreference\x12\x1a\n" +
 	"\x06in_app\x18\x01 \x01(\bH\x00R\x05inApp\x88\x01\x01\x12\x1d\n" +
 	"\abrowser\x18\x02 \x01(\bH\x01R\abrowser\x88\x01\x01\x12\x19\n" +
