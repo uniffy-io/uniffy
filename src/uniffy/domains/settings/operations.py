@@ -6,13 +6,16 @@ from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.settings.settings_profile import SettingsProfile
+from uniffy.core.types import NotificationType
+from uniffy.domains.notifications.cache import invalidate_cached_settings
 from uniffy.domains.settings.defaults import (
+    EmailFrequency,
     get_appearance_defaults_dict,
     get_effective_appearance,
     get_effective_keyboard_shortcuts,
@@ -23,6 +26,7 @@ from uniffy.domains.settings.defaults import (
 
 _WEEK_START_VALUES = {"monday", "saturday", "sunday"}
 _CLOCK_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+_NOTIFICATION_CHANNELS = {"in_app", "browser", "email"}
 
 
 def _validate_appearance(appearance: dict[str, Any] | None) -> None:
@@ -49,14 +53,47 @@ def _validate_notifications(notifications: dict[str, Any] | None) -> None:
             "quiet_hours",
             "Quiet hours require both a start and an end time",
         )
-    if start is None:
+    if start is not None:
+        if not isinstance(start, str) or not _CLOCK_RE.fullmatch(start):
+            raise ValidationError("quiet_hours_start", "Quiet-hours start must use HH:MM")
+        if not isinstance(end, str) or not _CLOCK_RE.fullmatch(end):
+            raise ValidationError("quiet_hours_end", "Quiet-hours end must use HH:MM")
+        if start == end:
+            raise ValidationError("quiet_hours", "Quiet-hours start and end must differ")
+
+    frequency = notifications.get("email_frequency")
+    if frequency is not None and frequency not in {item.value for item in EmailFrequency}:
+        raise ValidationError("email_frequency", f"Unknown email frequency '{frequency}'")
+
+    digest_time = notifications.get("email_digest_time")
+    if digest_time is not None and (
+        not isinstance(digest_time, str) or not _CLOCK_RE.fullmatch(digest_time)
+    ):
+        raise ValidationError("email_digest_time", "Daily digest time must use HH:MM")
+
+    channel_overrides = notifications.get("channel_overrides")
+    if channel_overrides is None:
         return
-    if not isinstance(start, str) or not _CLOCK_RE.fullmatch(start):
-        raise ValidationError("quiet_hours_start", "Quiet-hours start must use HH:MM")
-    if not isinstance(end, str) or not _CLOCK_RE.fullmatch(end):
-        raise ValidationError("quiet_hours_end", "Quiet-hours end must use HH:MM")
-    if start == end:
-        raise ValidationError("quiet_hours", "Quiet-hours start and end must differ")
+    if not isinstance(channel_overrides, dict):
+        raise ValidationError("channel_overrides", "Notification channel overrides must be a map")
+    known_types = {item.value for item in NotificationType}
+    for notification_type, channels in channel_overrides.items():
+        if notification_type not in known_types:
+            raise ValidationError(
+                "channel_overrides",
+                f"Unknown notification type '{notification_type}'",
+            )
+        if not isinstance(channels, dict):
+            raise ValidationError(
+                "channel_overrides",
+                f"Channels for '{notification_type}' must be a map",
+            )
+        for channel, enabled in channels.items():
+            if channel not in _NOTIFICATION_CHANNELS or not isinstance(enabled, bool):
+                raise ValidationError(
+                    "channel_overrides",
+                    f"Invalid channel preference '{channel}' for '{notification_type}'",
+                )
 
 
 async def get_user_timezone(session: AsyncSession, user_id: UUID) -> str | None:
@@ -105,6 +142,9 @@ class SettingsOperations:
         await self.session.commit()
         await self.session.refresh(profile)
 
+        if is_default:
+            await invalidate_cached_settings(user_id)
+
         return profile
 
     async def get_profile(
@@ -112,27 +152,6 @@ class SettingsOperations:
         user_id: UUID,
         profile_id: UUID,
     ) -> SettingsProfile:
-        """
-        Get a settings profile by ID.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID (for authorization).
-        profile_id : UUID
-            The profile ID.
-
-        Returns
-        -------
-        SettingsProfile
-            The requested profile.
-
-        Raises
-        ------
-        NotFoundError
-            If the profile doesn't exist or doesn't belong to the user.
-
-        """
         result = await self.session.execute(
             select(SettingsProfile).where(
                 and_(
@@ -191,9 +210,7 @@ class SettingsOperations:
         await self.session.commit()
         await self.session.refresh(profile)
 
-        if notifications is not None:
-            from uniffy.domains.notifications.cache import invalidate_cached_settings
-
+        if notifications is not None or is_default:
             await invalidate_cached_settings(user_id)
 
         return profile
@@ -214,8 +231,6 @@ class SettingsOperations:
 
         await self.session.delete(profile)
         await self.session.commit()
-
-        from uniffy.domains.notifications.cache import invalidate_cached_settings
 
         await invalidate_cached_settings(user_id)
 
@@ -259,6 +274,7 @@ class SettingsOperations:
             profiles[0].is_default = True
             await self.session.commit()
             await self.session.refresh(profiles[0])
+            await invalidate_cached_settings(user_id)
             return profiles[0]
 
         # Concurrent callers can race here; rollback and return the winner's profile.
@@ -288,6 +304,7 @@ class SettingsOperations:
             profile.updated_at = datetime.now(UTC)
             await self.session.commit()
             await self.session.refresh(profile)
+            await invalidate_cached_settings(user_id)
 
         return profile
 
@@ -331,8 +348,6 @@ class SettingsOperations:
         )
 
     async def _count_user_profiles(self, user_id: UUID) -> int:
-        from sqlalchemy import func
-
         result = await self.session.execute(
             select(func.count())
             .select_from(SettingsProfile)

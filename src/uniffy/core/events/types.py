@@ -1,22 +1,18 @@
 """Notification event types for the event bus."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
-from uniffy.core.types import ContentType, NotificationType
+from uniffy.core.types import ContentType, NotificationType, generate_id
 
 
 @dataclass(frozen=True)
 class NotificationEvent:
-    """Notification event emitted by domain operations.
-
-    Provide either ``target_user_ids`` (explicit recipients) or
-    ``content_type`` + ``content_id`` (auto-resolved recipients).
-    """
+    """Event with explicit recipients or a content target for automatic resolution."""
 
     notification_type: NotificationType
     organization_id: UUID
-    actor_id: UUID
+    actor_id: UUID | None
     title: str
     body: str = ""
     source_urn: str | None = None
@@ -24,3 +20,4 @@ class NotificationEvent:
     content_type: ContentType | None = None
     content_id: UUID | None = None
     metadata: dict | None = None
+    event_id: UUID = field(default_factory=generate_id)

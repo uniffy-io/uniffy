@@ -1,0 +1,22 @@
+{% extends "base.html.j2" %}
+{% block title %}Your {{ organization_name }} notification digest{% endblock %}
+{% block content %}
+<p style="margin:0 0 8px 0;font-size:13px;color:#6b7280;">{{ organization_name }}</p>
+<p style="margin:0 0 20px 0;font-size:18px;font-weight:600;color:#111111;">You have {{ item_count }} new notification{% if item_count != 1 %}s{% endif %}</p>
+{% for item in items %}
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top:1px solid #e5e7eb;">
+  <tr>
+    <td style="padding:16px 0;">
+      <p style="margin:0 0 4px 0;font-size:12px;color:#6b7280;">{{ item.created_at }}{% if item.actor_name %} · {{ item.actor_name }}{% endif %}</p>
+      <p style="margin:0 0 6px 0;font-weight:600;color:#111111;"><a href="{{ item.action_url }}" style="color:#111111;text-decoration:none;">{{ item.title }}</a></p>
+      {% if item.body %}<p style="margin:0;color:#4b5563;">{{ item.body }}</p>{% endif %}
+    </td>
+  </tr>
+</table>
+{% endfor %}
+{% if additional_count %}<p style="margin:8px 0 20px 0;color:#6b7280;">And {{ additional_count }} more notification{% if additional_count != 1 %}s{% endif %}.</p>{% endif %}
+<p style="margin:20px 0 24px 0;">
+  <a href="{{ notifications_url }}" style="display:inline-block;background-color:#111111;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:6px;">View notifications</a>
+</p>
+<p style="margin:0;font-size:12px;color:#6b7280;">Change the types and frequency of these emails in <a href="{{ preferences_url }}" style="color:#4f46e5;">notification preferences</a>.</p>
+{% endblock %}

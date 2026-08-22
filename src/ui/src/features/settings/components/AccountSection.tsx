@@ -43,7 +43,7 @@ export function AccountSection() {
     <div className="space-y-8">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Account</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground">
           View your account information and edit your profile. Name and email are managed by your
           administrator.
         </p>

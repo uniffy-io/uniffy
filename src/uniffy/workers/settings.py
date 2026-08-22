@@ -38,6 +38,7 @@ from uniffy.workers.tasks.registered import (
     cleanup_orphan_call_rooms,
     core_on_shutdown,
     core_on_startup,
+    dispatch_notification_emails,
     egress_on_shutdown,
     egress_on_startup,
     execute_agent_cron_tasks,
@@ -73,6 +74,7 @@ class CoreWorkerSettings:
     cron_jobs = [
         cron(check_calendar_reminders, minute=None),
         cron(check_task_due_dates, minute=None),
+        cron(dispatch_notification_emails, minute=None, second={10}),
         cron(flush_chat_read_cursors, second={0, 30}),
         cron(flush_chat_search_acl_refreshes, minute=None, second={15}),
         cron(flush_project_search_acl_refreshes, minute=None, second={25}),

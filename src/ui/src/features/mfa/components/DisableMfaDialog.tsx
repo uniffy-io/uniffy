@@ -39,7 +39,7 @@ export function DisableMfaDialog({ onClose, onDisabled }: DisableMfaDialogProps)
           <h2 className="text-lg font-semibold text-foreground">
             Disable two factor authentication
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm font-medium text-muted-foreground">
             Anyone who gets your password will be able to sign in. Enter a current authenticator
             code to confirm.
           </p>

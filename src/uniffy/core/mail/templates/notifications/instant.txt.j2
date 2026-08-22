@@ -1,0 +1,15 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+{{ organization_name }}
+
+{{ title }}
+{% if actor_name %}From {{ actor_name }}
+{% endif %}{% if body %}
+{{ body }}
+{% endif %}
+Open in Uniffy:
+  {{ action_url }}
+
+Notification preferences:
+  {{ preferences_url }}
+{% endblock %}

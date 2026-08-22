@@ -64,7 +64,7 @@ export function EnrollmentPage() {
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center px-4 py-12">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-semibold text-foreground">Set up two factor authentication</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm font-medium text-muted-foreground">
           This account requires two factor authentication. Finish enrolling and we will sign you in.
         </p>
       </div>

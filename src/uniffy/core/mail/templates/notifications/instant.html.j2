@@ -1,0 +1,12 @@
+{% extends "base.html.j2" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 8px 0;font-size:13px;color:#6b7280;">{{ organization_name }}</p>
+<p style="margin:0 0 12px 0;font-size:18px;font-weight:600;color:#111111;">{{ title }}</p>
+{% if actor_name %}<p style="margin:0 0 12px 0;color:#4b5563;">From {{ actor_name }}</p>{% endif %}
+{% if body %}<p style="margin:0 0 24px 0;white-space:pre-wrap;">{{ body }}</p>{% endif %}
+<p style="margin:0 0 24px 0;">
+  <a href="{{ action_url }}" style="display:inline-block;background-color:#111111;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:6px;">Open in Uniffy</a>
+</p>
+<p style="margin:0;font-size:12px;color:#6b7280;">You can change which updates are emailed in <a href="{{ preferences_url }}" style="color:#4f46e5;">notification preferences</a>.</p>
+{% endblock %}

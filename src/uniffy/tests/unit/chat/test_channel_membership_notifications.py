@@ -64,6 +64,7 @@ async def test_removed_members_receive_a_removal_notification() -> None:
     event = emit.await_args.args[0]
     assert event.notification_type == NotificationType.CHAT_CHANNEL_REMOVED
     assert event.target_user_ids == [target_id]
+    assert event.source_urn is None
 
 
 async def test_actor_only_membership_change_emits_nothing() -> None:

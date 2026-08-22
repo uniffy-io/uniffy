@@ -10,7 +10,7 @@ import { KeyboardShortcutsSection } from "@/features/settings/components/Keyboar
 import { NotificationsSection } from "@/features/settings/components/NotificationsSection";
 import { AccountSection } from "@/features/settings/components/AccountSection";
 import { SecuritySection } from "@/features/settings/components/SecuritySection";
-import { AiSection } from "@/features/settings/components/AiSection";
+import { AgentsSection } from "@/features/settings/components/AgentsSection";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 
 export function SettingsPage() {
@@ -29,8 +29,6 @@ export function SettingsPage() {
       initializeSettings();
     }
   }, [initialized, initializeSettings]);
-
-  const handleCreateProfile = () => {};
 
   if (loading && !initialized) {
     return (
@@ -55,8 +53,8 @@ export function SettingsPage() {
         return <AccountSection />;
       case "security":
         return <SecuritySection />;
-      case "ai":
-        return <AiSection />;
+      case "agents":
+        return <AgentsSection />;
       case "general":
         return (
           <div className="space-y-4">
@@ -89,11 +87,7 @@ export function SettingsPage() {
         </div>
       )}
 
-      <SettingsLayout
-        activeSection={activeSection}
-        onSectionChange={handleSectionChange}
-        onCreateProfile={handleCreateProfile}
-      >
+      <SettingsLayout activeSection={activeSection} onSectionChange={handleSectionChange}>
         {renderContent()}
       </SettingsLayout>
     </>

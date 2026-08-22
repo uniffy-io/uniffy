@@ -71,7 +71,7 @@ def test_same_day_quiet_hours_use_start_inclusive_end_exclusive() -> None:
     )
 
 
-def test_quiet_hours_use_the_org_scoped_people_timezone() -> None:
+def test_quiet_hours_use_the_settings_profile_timezone() -> None:
     assert should_suppress_interruptive_delivery(
         _quiet_hours(),
         InterruptiveDeliveryContext(timezone="Europe/Sofia"),
@@ -96,13 +96,18 @@ def test_missing_or_malformed_quiet_hours_fail_open() -> None:
     )
 
 
-async def test_context_loader_batches_presence_and_scopes_timezones_to_the_org() -> None:
+async def test_context_loader_batches_presence_and_loads_settings_timezone() -> None:
     organization_id = generate_id()
     user_ids = [generate_id() for _ in range(201)]
     session = AsyncMock()
     session.execute.return_value = MagicMock(
         all=MagicMock(
-            return_value=[SimpleNamespace(user_id=user_ids[0], timezone="Pacific/Auckland")]
+            return_value=[
+                SimpleNamespace(
+                    user_id=user_ids[0],
+                    appearance={"timezone": "Pacific/Auckland"},
+                )
+            ]
         )
     )
 
@@ -127,6 +132,27 @@ async def test_context_loader_batches_presence_and_scopes_timezones_to_the_org()
     assert contexts[user_ids[0]].timezone == "Pacific/Auckland"
     assert contexts[user_ids[-1]].presence_status == PRESENCE_STATUS_DND
     assert [len(call.args[1]) for call in presence_get.await_args_list] == [200, 1]
+
+
+async def test_context_loader_can_skip_presence_lookup() -> None:
+    organization_id = generate_id()
+    user_id = generate_id()
+    session = AsyncMock()
+    session.execute.return_value = MagicMock(all=MagicMock(return_value=[]))
+
+    with patch(
+        "uniffy.domains.notifications.delivery.suppression.presence_get_bulk",
+        new=AsyncMock(),
+    ) as presence_get:
+        contexts = await load_interruptive_delivery_contexts(
+            session,
+            organization_id,
+            [user_id],
+            include_presence=False,
+        )
+
+    presence_get.assert_not_awaited()
+    assert contexts[user_id] == InterruptiveDeliveryContext()
 
 
 async def test_push_adapter_stops_before_subscription_lookup_when_suppressed() -> None:
@@ -182,12 +208,14 @@ async def test_worker_keeps_in_app_delivery_when_push_context_is_suppressed() ->
         ),
         patch.object(
             notification_tasks,
-            "_get_delivery_preferences",
+            "get_delivery_preferences_bulk",
             new=AsyncMock(
-                return_value=(
-                    {NotificationChannel.IN_APP, NotificationChannel.BROWSER},
-                    {"quiet_hours_start": "22:00", "quiet_hours_end": "08:00"},
-                )
+                return_value={
+                    user_id: (
+                        {NotificationChannel.IN_APP, NotificationChannel.BROWSER},
+                        {"quiet_hours_start": "22:00", "quiet_hours_end": "08:00"},
+                    )
+                }
             ),
         ),
         patch.object(

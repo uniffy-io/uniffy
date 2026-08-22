@@ -1113,7 +1113,6 @@ class ContentMembersOperations:
                     organization_id=organization_id,
                     actor_id=actor_user_id,
                     title="Your access was removed",
-                    source_urn=build_content_urn(content_type, content_id),
                     target_user_ids=target_ids,
                 )
             )

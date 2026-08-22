@@ -15,12 +15,14 @@ from uniffy.core.models.shared import NotificationType
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS, NotificationChannel
+from uniffy.domains.notifications.delivery.email import EmailAdapter, StagedEmailDelivery
 from uniffy.domains.notifications.delivery.in_app import InAppAdapter
 from uniffy.domains.notifications.delivery.push import PushAdapter
 from uniffy.domains.notifications.delivery.suppression import (
     InterruptiveDeliveryContext,
     load_interruptive_delivery_contexts,
 )
+from uniffy.domains.notifications.preferences import get_delivery_preferences_bulk
 from uniffy.domains.permissions.resource_access import ResourceAudienceResolver, ResourceKey
 from uniffy.observability.metrics import (
     NOTIFICATION_DELIVERIES_TOTAL,
@@ -80,15 +82,33 @@ async def process_notification_event(
         )
 
         in_app_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.IN_APP)
+        email_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.EMAIL)
         pending_notifications: list[Notification] = []
+        pending_email_deliveries: list[StagedEmailDelivery] = []
         suppression_contexts: dict[UUID, InterruptiveDeliveryContext] | None = None
 
-        for user_id in recipient_ids:
-            channels, notification_overrides = await _get_delivery_preferences(
+        delivery_preferences = await get_delivery_preferences_bulk(
+            session,
+            recipient_ids,
+            event.notification_type,
+        )
+        has_browser_delivery = any(
+            NotificationChannel.BROWSER in channels
+            for channels, _overrides in delivery_preferences.values()
+        )
+        if has_browser_delivery or any(
+            NotificationChannel.EMAIL in channels
+            for channels, _overrides in delivery_preferences.values()
+        ):
+            suppression_contexts = await load_interruptive_delivery_contexts(
                 session,
-                user_id,
-                event.notification_type,
+                event.organization_id,
+                recipient_ids,
+                include_presence=has_browser_delivery,
             )
+
+        for user_id in recipient_ids:
+            channels, notification_overrides = delivery_preferences[user_id]
 
             if NotificationChannel.IN_APP in channels and isinstance(in_app_adapter, InAppAdapter):
                 notification = await in_app_adapter.deliver_with_session(session, user_id, event)
@@ -98,35 +118,40 @@ async def process_notification_event(
             if NotificationChannel.BROWSER in channels:
                 push_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.BROWSER)
                 if isinstance(push_adapter, PushAdapter):
-                    if suppression_contexts is None:
-                        suppression_contexts = await load_interruptive_delivery_contexts(
-                            session,
-                            event.organization_id,
-                            recipient_ids,
-                        )
                     await push_adapter.deliver_with_session(
                         session,
                         user_id,
                         push_event,
                         notification_overrides=notification_overrides,
-                        suppression_context=suppression_contexts[user_id],
+                        suppression_context=(suppression_contexts or {})[user_id],
                     )
                 elif push_adapter:
                     await push_adapter.deliver(user_id, push_event)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="browser").inc()
 
             if NotificationChannel.EMAIL in channels:
-                email_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.EMAIL)
-                if email_adapter:
-                    await email_adapter.deliver(user_id, event)
-                NOTIFICATION_DELIVERIES_TOTAL.labels(channel="email").inc()
+                if isinstance(email_adapter, EmailAdapter):
+                    staged = await email_adapter.stage_with_session(
+                        session,
+                        user_id,
+                        event,
+                        notification_overrides,
+                        timezone=(suppression_contexts or {})[user_id].timezone,
+                    )
+                    if staged is not None:
+                        pending_email_deliveries.append(staged)
+                        NOTIFICATION_DELIVERIES_TOTAL.labels(channel="email").inc()
 
-        if pending_notifications:
+        if pending_notifications or pending_email_deliveries:
             await session.commit()
 
         if isinstance(in_app_adapter, InAppAdapter):
             for notification in pending_notifications:
                 await in_app_adapter.publish_realtime(notification, actor_name=actor_name)
+
+        if isinstance(email_adapter, EmailAdapter):
+            for delivery in pending_email_deliveries:
+                await email_adapter.enqueue_if_due(delivery)
 
         NOTIFICATION_EVENTS_TOTAL.labels(status="success").inc()
         logger.info(
@@ -173,19 +198,7 @@ async def deliver_push_notification(
     return {"status": "success" if ok else "skipped"}
 
 
-async def send_email_digest(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Aggregate unread notifications and send per-user email digests."""
-    logger.debug("Email digest cron triggered (not yet implemented)")
-    return {"status": "deferred", "reason": "digest_not_configured"}
-
-
 def _content_target(event: NotificationEvent) -> tuple[ContentType, UUID] | None:
-    """Identify the content a notification is about.
-
-    Most producers set only ``source_urn``; the two notes producers also set
-    the explicit pair. The URN is the universal carrier, so it is the
-    fallback.
-    """
     if event.content_type and event.content_id:
         return event.content_type, event.content_id
     if event.source_urn:
@@ -200,14 +213,7 @@ async def _filter_to_viewers(
     event: NotificationEvent,
     recipient_ids: list[UUID],
 ) -> list[UUID]:
-    """Drop recipients who cannot view the content the notification is about.
-
-    Both recipient paths run through here. A resolved set is built from
-    ownership and bookmarks, neither of which tracks revocation; an explicit
-    set is only as gated as its producer, and the notes mention producer
-    does no check at all. Titles carry content, so delivering to a user who
-    lost access is a disclosure.
-    """
+    """Prevent notification copy from disclosing content after access is revoked."""
     if not recipient_ids or event.organization_id is None:
         return recipient_ids
 
@@ -302,38 +308,3 @@ async def _resolve_recipients(
 
     resolved = [uid for uid in recipients if uid != event.actor_id]
     return await _filter_to_viewers(session, event, resolved)
-
-
-async def _get_delivery_preferences(
-    session: AsyncSession,
-    user_id: UUID,
-    notification_type: NotificationType,
-) -> tuple[set[str], dict[str, Any] | None]:
-    """Return enabled channels and raw notification overrides for one user.
-
-    Reads `settings_profile.notifications` via the Valkey settings cache (15-min TTL).
-    """
-    from uniffy.core.valkey.cache import CACHE_MISS
-    from uniffy.domains.notifications.cache import get_cached_settings, set_cached_settings
-    from uniffy.domains.settings.defaults import get_effective_notification_channels
-
-    cached = await get_cached_settings(user_id)
-
-    if cached is not CACHE_MISS:
-        overrides = cached
-    else:
-        from uniffy.core.models.settings.settings_profile import SettingsProfile
-
-        result = await session.execute(
-            select(SettingsProfile).where(
-                SettingsProfile.user_id == user_id,
-                SettingsProfile.is_default == True,  # noqa: E712
-            )
-        )
-        profile = result.scalars().first()
-        overrides = profile.notifications if profile else None
-        await set_cached_settings(user_id, overrides)
-
-    channels = get_effective_notification_channels(notification_type, overrides)
-
-    return ({ch for ch, enabled in channels.items() if enabled}, overrides)

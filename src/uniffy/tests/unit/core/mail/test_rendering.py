@@ -3,6 +3,7 @@
 import pytest
 
 from uniffy.core.mail import RenderedMail, TemplateNotFoundError, render_template
+from uniffy.core.mail.templates import get_template
 
 
 class TestRenderTemplate:
@@ -43,3 +44,21 @@ class TestRenderTemplate:
 
         with pytest.raises(UndefinedError):
             await render_template("admin/test", {})
+
+    async def test_notification_templates_render_safe_user_content(self) -> None:
+        get_template("notifications/instant")
+        result = await render_template(
+            "notifications/instant",
+            {
+                "organization_name": "Acme",
+                "actor_name": "Alex",
+                "title": "A <script> title",
+                "body": "Body <b>copy</b>",
+                "action_url": "https://cloud.uniffy.io/notes/1",
+                "preferences_url": "https://cloud.uniffy.io/settings?section=notifications",
+            },
+        )
+
+        assert "A <script> title" in result.text
+        assert "<script>" not in result.html
+        assert "&lt;script&gt;" in result.html

@@ -135,7 +135,9 @@ export function AvatarUpload({
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">JPEG, PNG, WebP, or GIF. Max 5 MB.</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            JPEG, PNG, WebP, or GIF. Max 5 MB.
+          </p>
         </div>
       </div>
 

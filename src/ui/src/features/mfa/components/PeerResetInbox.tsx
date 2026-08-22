@@ -102,7 +102,7 @@ export function PeerResetInbox({ selfId, onApproved }: PeerResetInboxProps) {
                 <p className="text-sm font-medium text-foreground">
                   Reset MFA on {req.targetEmail}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Requested by {req.requesterEmail}
                   {" · "}
                   {formatRelativeTime(protoSecondsToIso(req.createdAt))}
@@ -110,12 +110,14 @@ export function PeerResetInbox({ selfId, onApproved }: PeerResetInboxProps) {
                   expires in {minutesUntil(req.expiresAt)}
                 </p>
                 {req.reason && (
-                  <p className="mt-1 text-xs text-muted-foreground">Reason: {req.reason}</p>
+                  <p className="mt-1 text-xs font-medium text-muted-foreground">
+                    Reason: {req.reason}
+                  </p>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 {isOwn ? (
-                  <span className="text-xs text-muted-foreground italic">
+                  <span className="text-xs font-medium text-muted-foreground italic">
                     Awaiting another admin
                   </span>
                 ) : (

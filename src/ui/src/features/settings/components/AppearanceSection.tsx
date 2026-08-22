@@ -161,13 +161,15 @@ export function AppearanceSection() {
     <div className="space-y-8">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Appearance</h1>
-        <p className="text-sm text-muted-foreground">Customize the look and feel of your Uniffy.</p>
+        <p className="text-muted-foreground">Customize the look and feel of your Uniffy.</p>
       </div>
 
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Theme</h2>
-          <p className="text-sm text-muted-foreground">Choose how the interface looks.</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Choose how the interface looks.
+          </p>
         </div>
 
         <div className="grid grid-cols-3 gap-2 md:gap-4">
@@ -197,7 +199,7 @@ export function AppearanceSection() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Date &amp; time</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm font-medium text-muted-foreground">
             Times, dates and calendar weeks across the app follow these settings.
           </p>
         </div>
@@ -243,7 +245,7 @@ export function AppearanceSection() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Mention Display</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm font-medium text-muted-foreground">
             Choose how mentions appear in chat, notes, and other content.
           </p>
         </div>
@@ -276,7 +278,7 @@ export function AppearanceSection() {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-medium text-foreground">{label}</div>
-                  <div className="text-xs text-muted-foreground">{description}</div>
+                  <div className="text-xs font-medium text-muted-foreground">{description}</div>
                 </div>
                 {appearance.mentionDisplay === id && (
                   <Check size={18} weight="bold" className="text-primary shrink-0" />
@@ -294,7 +296,9 @@ export function AppearanceSection() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Accent Color</h2>
-          <p className="text-sm text-muted-foreground">Pick a color that represents you.</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Pick a color that represents you.
+          </p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -310,7 +314,7 @@ export function AppearanceSection() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground mb-1">Custom Color</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Click to open the color picker, or choose a preset below.
             </p>
           </div>
@@ -325,7 +329,7 @@ export function AppearanceSection() {
         </div>
 
         <div>
-          <p className="text-xs text-muted-foreground mb-2">Quick picks</p>
+          <p className="text-xs font-medium text-muted-foreground mb-2">Quick picks</p>
           <div className="flex flex-wrap gap-2">
             {ACCENT_COLORS.map(({ name, value }) => (
               <button
@@ -351,7 +355,9 @@ export function AppearanceSection() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Font</h2>
-          <p className="text-sm text-muted-foreground">Choose the typeface for the interface.</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Choose the typeface for the interface.
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -377,7 +383,7 @@ export function AppearanceSection() {
                 </span>
                 <div className="min-w-0">
                   <div className="font-medium text-foreground">{name}</div>
-                  <div className="text-sm text-muted-foreground">{description}</div>
+                  <div className="text-sm font-medium text-muted-foreground">{description}</div>
                   <div className="text-sm text-muted-foreground/80 truncate">
                     The quick brown fox jumps over the lazy dog 0123456789
                   </div>
@@ -394,7 +400,7 @@ export function AppearanceSection() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Notes</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm font-medium text-muted-foreground">
             Configure the default editor for your notes.
           </p>
         </div>
@@ -416,7 +422,7 @@ export function AppearanceSection() {
                 >
                   <div className="text-left">
                     <div className="font-medium text-foreground">{name}</div>
-                    <div className="text-sm text-muted-foreground">{description}</div>
+                    <div className="text-sm font-medium text-muted-foreground">{description}</div>
                   </div>
                   {isSelected && <Check size={20} weight="bold" className="text-primary" />}
                 </button>
@@ -427,7 +433,7 @@ export function AppearanceSection() {
                         <div className="text-sm font-medium text-foreground">
                           Show preview by default
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs font-medium text-muted-foreground">
                           Open Markdown notes with the live preview pane visible.
                         </div>
                       </div>
@@ -440,7 +446,7 @@ export function AppearanceSection() {
                     <div className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/40">
                       <div>
                         <div className="text-sm font-medium text-foreground">Show line numbers</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs font-medium text-muted-foreground">
                           Display line numbers in the Markdown editor gutter.
                         </div>
                       </div>

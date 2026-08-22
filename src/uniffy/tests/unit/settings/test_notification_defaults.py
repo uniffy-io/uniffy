@@ -45,3 +45,16 @@ def test_notification_master_switches_override_type_preferences() -> None:
     )
 
     assert channels == {"in_app": True, "browser": False, "email": False}
+
+
+def test_support_security_email_is_not_duplicated_by_notification_delivery() -> None:
+    channels = get_effective_notification_channels(
+        NotificationType.SUPPORT_SESSION_STARTED,
+        {
+            "channel_overrides": {
+                NotificationType.SUPPORT_SESSION_STARTED.value: {"email": True}
+            }
+        },
+    )
+
+    assert channels["email"] is False

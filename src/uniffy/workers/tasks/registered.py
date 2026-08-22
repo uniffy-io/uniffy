@@ -30,10 +30,14 @@ from uniffy.workers.tasks.directory import sync_identity_source
 from uniffy.workers.tasks.extraction import extract_audio_metadata, extract_image_metadata
 from uniffy.workers.tasks.mail import send_email
 from uniffy.workers.tasks.multipart_reaper import reap_expired_multipart_uploads
+from uniffy.workers.tasks.notification_email import (
+    dispatch_notification_emails,
+    send_notification_digest,
+    send_notification_email,
+)
 from uniffy.workers.tasks.notifications import (
     deliver_push_notification,
     process_notification_event,
-    send_email_digest,
 )
 from uniffy.workers.tasks.permissions_reindex import reindex_org_content_for_defaults
 from uniffy.workers.tasks.platform_org_purge import notify_pending_org_purges
@@ -70,7 +74,9 @@ CORE_TASKS = (
     process_notification_event,
     deliver_push_notification,
     send_email,
-    send_email_digest,
+    send_notification_email,
+    send_notification_digest,
+    dispatch_notification_emails,
     reindex_tag_urns,
     reindex_tag_doc,
     reap_expired_multipart_uploads,
@@ -112,6 +118,7 @@ __all__ = [
     "delete_run_stream",
     "delete_s3_object",
     "deliver_push_notification",
+    "dispatch_notification_emails",
     "egress_on_shutdown",
     "egress_on_startup",
     "execute_agent_cron_tasks",
@@ -144,7 +151,8 @@ __all__ = [
     "run_agent_session",
     "save_realtime_snapshot",
     "send_email",
-    "send_email_digest",
+    "send_notification_digest",
+    "send_notification_email",
     "sync_identity_source",
     "transcode_video_to_mp4",
 ]

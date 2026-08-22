@@ -37,3 +37,15 @@ def test_notification_event_codec_keeps_arq_argument_as_string() -> None:
 
     assert isinstance(encoded, str)
     assert event_from_json(encoded) == event
+
+
+def test_notification_event_codec_accepts_pre_outbox_payloads() -> None:
+    organization_id = generate_id()
+    event = event_from_json(
+        '{"notification_type":"SYSTEM_ANNOUNCEMENT",'
+        f'"organization_id":"{organization_id}","title":"Maintenance"}}'
+    )
+
+    assert event.organization_id == organization_id
+    assert event.actor_id is None
+    assert event.event_id is not None

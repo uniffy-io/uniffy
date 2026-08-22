@@ -29,7 +29,6 @@ import { isDocumentVisible } from "@/shared/utils/documentVisibility";
 import type { SerializedNotification } from "@/features/notifications/store/notificationsSlice";
 import { updatePresenceWithCustomStatus } from "@/features/presence/store/presenceSlice";
 import { usePresence } from "@/features/presence/hooks/usePresence";
-import { fetchPersonThunk } from "@/features/people/store/peopleThunks";
 import { setDomainAdminDomains } from "@/features/auth/store/authSlice";
 import { adminApi } from "@/features/admin/api/adminApi";
 import { emitMentionStateChange, mergeMentionState } from "@/components/mention";
@@ -58,11 +57,6 @@ export function useNotificationStream() {
   const abortRef = useRef<AbortController | null>(null);
 
   usePresence(userId ?? "");
-
-  useEffect(() => {
-    if (!organizationId || !userId || !isAuthenticated) return;
-    void dispatch(fetchPersonThunk({ userId }));
-  }, [dispatch, organizationId, userId, isAuthenticated]);
 
   useEffect(() => {
     if (!organizationId || !isAuthenticated) return;
@@ -193,7 +187,7 @@ export function useNotificationStream() {
                   presenceStatus: userId ? currentState.presence.statuses[userId] : undefined,
                   quietHoursStart: prefs?.quietHoursStart,
                   quietHoursEnd: prefs?.quietHoursEnd,
-                  timezone: userId ? currentState.people.profilesById[userId]?.timezone : undefined,
+                  timezone: currentState.settings.effectiveSettings?.appearance.timezone,
                 });
                 if (shouldPlay) {
                   playNotificationSound();
