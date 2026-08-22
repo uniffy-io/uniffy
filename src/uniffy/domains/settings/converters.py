@@ -120,6 +120,9 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
     if settings.get("email_frequency") is not None:
         proto.email_frequency = settings["email_frequency"]
 
+    if settings.get("email_digest_time") is not None:
+        proto.email_digest_time = settings["email_digest_time"]
+
     if settings.get("quiet_hours_start") is not None:
         proto.quiet_hours_start = settings["quiet_hours_start"]
 
@@ -227,6 +230,9 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
 
     if proto.HasField("email_frequency"):
         result["email_frequency"] = proto.email_frequency
+
+    if proto.HasField("email_digest_time"):
+        result["email_digest_time"] = proto.email_digest_time
 
     if proto.HasField("quiet_hours_start"):
         result["quiet_hours_start"] = proto.quiet_hours_start or None

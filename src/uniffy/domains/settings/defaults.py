@@ -108,6 +108,7 @@ class NotificationsDefaults:
     email_enabled: bool = True
     sound_enabled: bool = True
     email_frequency: EmailFrequency = EmailFrequency.INSTANT
+    email_digest_time: str = "08:00"
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
     toast_enabled: bool = True
@@ -130,8 +131,8 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
     NotificationType.TASK_ASSIGNED: {"in_app": True, "browser": True, "email": True},
     NotificationType.TASK_DUE_SOON: {"in_app": True, "browser": True, "email": True},
     NotificationType.TASK_OVERDUE: {"in_app": True, "browser": True, "email": True},
-    NotificationType.CHAT_MENTION: {"in_app": True, "browser": True, "email": False},
-    NotificationType.CHAT_DM: {"in_app": True, "browser": True, "email": False},
+    NotificationType.CHAT_MENTION: {"in_app": True, "browser": True, "email": True},
+    NotificationType.CHAT_DM: {"in_app": True, "browser": True, "email": True},
     NotificationType.CHAT_CHANNEL_INVITE: {"in_app": True, "browser": False, "email": False},
     NotificationType.CHAT_CHANNEL_REMOVED: {"in_app": True, "browser": False, "email": False},
     NotificationType.CHAT_THREAD_REPLY: {"in_app": True, "browser": False, "email": False},
@@ -141,23 +142,29 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
     NotificationType.SUPPORT_SESSION_REQUESTED: {
         "in_app": True,
         "browser": True,
-        "email": True,
+        "email": False,
     },
     NotificationType.SUPPORT_SESSION_STARTED: {
         "in_app": True,
         "browser": True,
-        "email": True,
+        "email": False,
     },
     NotificationType.SUPPORT_SESSION_REVOKED: {
         "in_app": True,
         "browser": True,
-        "email": True,
+        "email": False,
     },
     NotificationType.SUPPORT_SESSION_EXPIRED: {
         "in_app": True,
         "browser": True,
-        "email": True,
+        "email": False,
     },
+}
+
+TRANSACTIONAL_EMAIL_NOTIFICATION_TYPES = {
+    NotificationType.SUPPORT_SESSION_REQUESTED,
+    NotificationType.SUPPORT_SESSION_STARTED,
+    NotificationType.SUPPORT_SESSION_REVOKED,
 }
 
 
@@ -187,6 +194,7 @@ def get_notifications_defaults_dict() -> dict[str, Any]:
         "email_enabled": NOTIFICATIONS_DEFAULTS.email_enabled,
         "sound_enabled": NOTIFICATIONS_DEFAULTS.sound_enabled,
         "email_frequency": NOTIFICATIONS_DEFAULTS.email_frequency,
+        "email_digest_time": NOTIFICATIONS_DEFAULTS.email_digest_time,
         "quiet_hours_start": NOTIFICATIONS_DEFAULTS.quiet_hours_start,
         "quiet_hours_end": NOTIFICATIONS_DEFAULTS.quiet_hours_end,
         "toast_enabled": NOTIFICATIONS_DEFAULTS.toast_enabled,
@@ -260,6 +268,8 @@ def get_effective_notification_channels(
     if not effective.get("browser_enabled", True):
         channels["browser"] = False
     if not effective.get("email_enabled", True):
+        channels["email"] = False
+    if notification_type in TRANSACTIONAL_EMAIL_NOTIFICATION_TYPES:
         channels["email"] = False
 
     return channels

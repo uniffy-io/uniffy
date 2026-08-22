@@ -68,6 +68,10 @@ from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
 from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.models.mail.suppression import EmailSuppression, EmailSuppressionReason
 from uniffy.core.models.notes.note import Note
+from uniffy.core.models.notifications.email_delivery import (
+    NotificationEmailDelivery,
+    NotificationEmailStatus,
+)
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.core.models.people.identity import IdentityLink, IdentitySource, IdentitySourceKind
@@ -179,6 +183,8 @@ __all__ = [
     "CommentAnchorType",
     "CommentReaction",
     "Notification",
+    "NotificationEmailDelivery",
+    "NotificationEmailStatus",
     "NotificationType",
     "PushSubscription",
     # Calendar models

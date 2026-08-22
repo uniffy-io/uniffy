@@ -1,6 +1,6 @@
 """Validation and clearing behavior for quiet-hours settings."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from uniffy_proto.settings.v1.settings_pb2 import NotificationsSettings
@@ -53,6 +53,24 @@ def test_empty_proto_values_clear_both_overrides() -> None:
     }
 
 
+def test_email_frequency_and_daily_time_are_validated() -> None:
+    _validate_notifications({"email_frequency": "daily", "email_digest_time": "08:30"})
+
+    with pytest.raises(ValidationError):
+        _validate_notifications({"email_frequency": "weekly"})
+    with pytest.raises(ValidationError):
+        _validate_notifications({"email_digest_time": "8:30"})
+
+
+def test_email_frequency_and_daily_time_round_trip_from_proto() -> None:
+    proto = NotificationsSettings(email_frequency="daily", email_digest_time="07:45")
+
+    assert notifications_from_proto(proto) == {
+        "email_frequency": "daily",
+        "email_digest_time": "07:45",
+    }
+
+
 async def test_sparse_profile_update_validates_the_merged_window() -> None:
     session = AsyncMock()
     operations = SettingsOperations(session)
@@ -72,3 +90,25 @@ async def test_sparse_profile_update_validates_the_merged_window() -> None:
         )
 
     session.commit.assert_not_awaited()
+
+
+async def test_changing_default_profile_invalidates_delivery_preferences() -> None:
+    session = AsyncMock()
+    operations = SettingsOperations(session)
+    profile = SettingsProfile(
+        user_id=generate_id(),
+        name="Focused",
+        notifications={"email_frequency": "daily"},
+        is_default=False,
+    )
+    operations.get_profile = AsyncMock(return_value=profile)
+    operations._unset_default_profiles = AsyncMock()
+
+    with patch(
+        "uniffy.domains.settings.operations.invalidate_cached_settings",
+        new=AsyncMock(),
+    ) as invalidate:
+        await operations.set_default_profile(profile.user_id, profile.id)
+
+    assert profile.is_default is True
+    invalidate.assert_awaited_once_with(profile.user_id)

@@ -39,6 +39,14 @@ TEMPLATES: dict[str, MailTemplate] = {
             "by an org admin, platform admin, or break-glass CLI."
         ),
     ),
+    "notifications/instant": MailTemplate(
+        name="notifications/instant",
+        description="Immediate delivery of one user notification.",
+    ),
+    "notifications/digest": MailTemplate(
+        name="notifications/digest",
+        description="Hourly or daily digest of user notifications.",
+    ),
     "platform/org_deleted": MailTemplate(
         name="platform/org_deleted",
         description=(

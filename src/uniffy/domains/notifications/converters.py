@@ -39,6 +39,25 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.ACCESS_REQUEST_DENIED: (
         ProtoNotificationType.NOTIFICATION_TYPE_ACCESS_REQUEST_DENIED
     ),
+    NotificationType.COMMENT_ADDED: ProtoNotificationType.NOTIFICATION_TYPE_COMMENT_ADDED,
+    NotificationType.COMMENT_REPLY: ProtoNotificationType.NOTIFICATION_TYPE_COMMENT_REPLY,
+    NotificationType.COMMENT_MENTIONED: ProtoNotificationType.NOTIFICATION_TYPE_COMMENT_MENTIONED,
+    NotificationType.COMMENT_RESOLVED: ProtoNotificationType.NOTIFICATION_TYPE_COMMENT_RESOLVED,
+    NotificationType.AGENTS_BUDGET_ALERT: (
+        ProtoNotificationType.NOTIFICATION_TYPE_AGENTS_BUDGET_ALERT
+    ),
+    NotificationType.SUPPORT_SESSION_REQUESTED: (
+        ProtoNotificationType.NOTIFICATION_TYPE_SUPPORT_SESSION_REQUESTED
+    ),
+    NotificationType.SUPPORT_SESSION_STARTED: (
+        ProtoNotificationType.NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED
+    ),
+    NotificationType.SUPPORT_SESSION_REVOKED: (
+        ProtoNotificationType.NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED
+    ),
+    NotificationType.SUPPORT_SESSION_EXPIRED: (
+        ProtoNotificationType.NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED
+    ),
 }
 
 NOTIFICATION_TYPE_FROM_PROTO: dict[int, NotificationType] = {
