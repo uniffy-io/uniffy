@@ -30,7 +30,9 @@ from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
+from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import SENDER_TYPE_TO_PROTO, message_to_proto
+from uniffy.domains.chat.messages.forward_projection import ForwardProjectionResolver
 from uniffy.domains.chat.sender_resolver import SenderResolver
 from uniffy.domains.chat.threads.operations import ChatThreadOperations, ThreadInboxRow
 
@@ -66,7 +68,8 @@ class ThreadHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatThreadOperations(session)
+                access = ChatAccessChecker(session)
+                ops = ChatThreadOperations(session, access)
                 (
                     root_msg,
                     stats,
@@ -77,11 +80,17 @@ class ThreadHandlers:
 
                 resolver = SenderResolver(session)
                 info = await resolver.resolve_one(root_msg.sender_type, root_msg.sender_id)
+                forward_contexts = await ForwardProjectionResolver(session, access).resolve(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    messages=[root_msg],
+                )
                 resp = GetThreadResponse(
                     root_message=message_to_proto(
                         root_msg,
                         sender_name=info.display_name,
                         sender_avatar_url=info.avatar_url or None,
+                        forward_context=forward_contexts.get(root_msg.id),
                     ),
                     reply_count=stats.reply_count if stats else 0,
                     participant_ids=[str(p) for p in participants],
@@ -116,7 +125,8 @@ class ThreadHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatThreadOperations(session)
+                access = ChatAccessChecker(session)
+                ops = ChatThreadOperations(session, access)
                 messages, has_more = await ops.get_thread_messages(
                     user_id,
                     org_id,
@@ -129,6 +139,11 @@ class ThreadHandlers:
 
                 resolver = SenderResolver(session)
                 sender_map = await resolver.resolve_many([_sender_ref(m) for m in messages])
+                forward_contexts = await ForwardProjectionResolver(session, access).resolve(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    messages=messages,
+                )
 
                 feedback_map: dict[UUID, str] = {}
                 agent_ids = [m.id for m in messages if m.sender_type == SenderType.AGENT]
@@ -158,6 +173,7 @@ class ThreadHandlers:
                             if m.sender_id in sender_map
                             else None
                         ),
+                        forward_context=forward_contexts.get(m.id),
                     )
                     rating = feedback_map.get(m.id)
                     if rating:

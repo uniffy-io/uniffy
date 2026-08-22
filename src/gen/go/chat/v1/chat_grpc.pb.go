@@ -81,6 +81,7 @@ const (
 	ChatService_StopAgentRun_FullMethodName                     = "/chat.v1.ChatService/StopAgentRun"
 	ChatService_GetChatPolicy_FullMethodName                    = "/chat.v1.ChatService/GetChatPolicy"
 	ChatService_UpdateChatPolicy_FullMethodName                 = "/chat.v1.ChatService/UpdateChatPolicy"
+	ChatService_ForwardMessage_FullMethodName                   = "/chat.v1.ChatService/ForwardMessage"
 )
 
 // ChatServiceClient is the client API for ChatService service.
@@ -199,6 +200,7 @@ type ChatServiceClient interface {
 	// broadcast typeahead and confirm dialog on it); updates are org-admin only.
 	GetChatPolicy(ctx context.Context, in *GetChatPolicyRequest, opts ...grpc.CallOption) (*GetChatPolicyResponse, error)
 	UpdateChatPolicy(ctx context.Context, in *UpdateChatPolicyRequest, opts ...grpc.CallOption) (*UpdateChatPolicyResponse, error)
+	ForwardMessage(ctx context.Context, in *ForwardMessageRequest, opts ...grpc.CallOption) (*ForwardMessageResponse, error)
 }
 
 type chatServiceClient struct {
@@ -829,6 +831,16 @@ func (c *chatServiceClient) UpdateChatPolicy(ctx context.Context, in *UpdateChat
 	return out, nil
 }
 
+func (c *chatServiceClient) ForwardMessage(ctx context.Context, in *ForwardMessageRequest, opts ...grpc.CallOption) (*ForwardMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ForwardMessageResponse)
+	err := c.cc.Invoke(ctx, ChatService_ForwardMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServiceServer is the server API for ChatService service.
 // All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility.
@@ -945,6 +957,7 @@ type ChatServiceServer interface {
 	// broadcast typeahead and confirm dialog on it); updates are org-admin only.
 	GetChatPolicy(context.Context, *GetChatPolicyRequest) (*GetChatPolicyResponse, error)
 	UpdateChatPolicy(context.Context, *UpdateChatPolicyRequest) (*UpdateChatPolicyResponse, error)
+	ForwardMessage(context.Context, *ForwardMessageRequest) (*ForwardMessageResponse, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
 
@@ -1140,6 +1153,9 @@ func (UnimplementedChatServiceServer) GetChatPolicy(context.Context, *GetChatPol
 }
 func (UnimplementedChatServiceServer) UpdateChatPolicy(context.Context, *UpdateChatPolicyRequest) (*UpdateChatPolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateChatPolicy not implemented")
+}
+func (UnimplementedChatServiceServer) ForwardMessage(context.Context, *ForwardMessageRequest) (*ForwardMessageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ForwardMessage not implemented")
 }
 func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
 func (UnimplementedChatServiceServer) testEmbeddedByValue()                     {}
@@ -2278,6 +2294,24 @@ func _ChatService_UpdateChatPolicy_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_ForwardMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ForwardMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).ForwardMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_ForwardMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).ForwardMessage(ctx, req.(*ForwardMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChatService_ServiceDesc is the grpc.ServiceDesc for ChatService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2532,6 +2566,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateChatPolicy",
 			Handler:    _ChatService_UpdateChatPolicy_Handler,
+		},
+		{
+			MethodName: "ForwardMessage",
+			Handler:    _ChatService_ForwardMessage_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

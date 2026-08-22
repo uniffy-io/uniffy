@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.chat.v1.chat_pb2 import (
     DeleteMessageRequest,
     DeleteMessageResponse,
+    ForwardMessageRequest,
+    ForwardMessageResponse,
     GetMessageRequest,
     GetMessageResponse,
     GetMessagesRequest,
@@ -28,6 +30,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.chat.message import ChatMessage
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
     get_sender_info_from_context,
@@ -36,6 +39,8 @@ from uniffy.domains.auth.context import (
 )
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import message_to_proto
+from uniffy.domains.chat.messages.forward_projection import ForwardProjectionResolver
+from uniffy.domains.chat.messages.forwarding import ChatMessageForwardingOperations
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
 from uniffy.domains.chat.sender_resolver import SenderResolver
 
@@ -120,6 +125,52 @@ class MessageHandlers:
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
+    async def forward_message(
+        self,
+        request: ForwardMessageRequest,
+        ctx: RequestContext,
+    ) -> ForwardMessageResponse:
+        user_id = get_user_id_from_context(ctx)
+        jwt_name, jwt_avatar_key = get_sender_info_from_context(ctx)
+        jwt_avatar = get_avatar_url(user_id, jwt_avatar_key or None)
+        try:
+            org_id = resolve_organization_id(ctx, request.organization_id)
+            source_message_id = UUID(request.source_message_id)
+            target_channel_id = UUID(request.target_channel_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        try:
+            async with open_session() as session:
+                access = ChatAccessChecker(session)
+                message, sender_name, sender_avatar = await ChatMessageForwardingOperations(
+                    session,
+                    access,
+                ).forward_message(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    source_message_id=source_message_id,
+                    target_channel_id=target_channel_id,
+                    comment=request.comment,
+                    sender_name=jwt_name,
+                    sender_avatar=jwt_avatar,
+                )
+                forward_contexts = await ForwardProjectionResolver(session, access).resolve(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    messages=[message],
+                )
+                return ForwardMessageResponse(
+                    message=message_to_proto(
+                        message,
+                        sender_name=sender_name,
+                        sender_avatar_url=sender_avatar,
+                        forward_context=forward_contexts.get(message.id),
+                    )
+                )
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
     async def get_messages(
         self,
         request: GetMessagesRequest,
@@ -144,7 +195,8 @@ class MessageHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatMessageOperations(session)
+                access = ChatAccessChecker(session)
+                ops = ChatMessageOperations(session, access)
                 messages, has_more = await ops.get_messages(
                     user_id=user_id,
                     organization_id=org_id,
@@ -156,7 +208,13 @@ class MessageHandlers:
                     root_only=request.root_only,
                 )
 
-                proto_messages = await self._enrich_messages(session, messages, user_id)
+                proto_messages = await self._enrich_messages(
+                    session,
+                    messages,
+                    user_id,
+                    org_id,
+                    access,
+                )
 
                 return GetMessagesResponse(
                     messages=proto_messages,
@@ -180,9 +238,20 @@ class MessageHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatMessageOperations(session)
+                access = ChatAccessChecker(session)
+                ops = ChatMessageOperations(session, access)
                 msg = await ops.get_message(user_id, org_id, channel_id, message_id)
-                return GetMessageResponse(message=message_to_proto(msg))
+                forward_contexts = await ForwardProjectionResolver(session, access).resolve(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    messages=[msg],
+                )
+                return GetMessageResponse(
+                    message=message_to_proto(
+                        msg,
+                        forward_context=forward_contexts.get(msg.id),
+                    )
+                )
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
@@ -201,11 +270,22 @@ class MessageHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatMessageOperations(session)
+                access = ChatAccessChecker(session)
+                ops = ChatMessageOperations(session, access)
                 msg = await ops.update_message(
                     user_id, org_id, channel_id, message_id, request.content
                 )
-                return UpdateMessageResponse(message=message_to_proto(msg))
+                forward_contexts = await ForwardProjectionResolver(session, access).resolve(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    messages=[msg],
+                )
+                return UpdateMessageResponse(
+                    message=message_to_proto(
+                        msg,
+                        forward_context=forward_contexts.get(msg.id),
+                    )
+                )
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
@@ -245,9 +325,20 @@ class MessageHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatMessageOperations(session)
+                access = ChatAccessChecker(session)
+                ops = ChatMessageOperations(session, access)
                 msg = await ops.pin_message(user_id, org_id, channel_id, message_id)
-                return PinMessageResponse(message=message_to_proto(msg))
+                forward_contexts = await ForwardProjectionResolver(session, access).resolve(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    messages=[msg],
+                )
+                return PinMessageResponse(
+                    message=message_to_proto(
+                        msg,
+                        forward_context=forward_contexts.get(msg.id),
+                    )
+                )
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
@@ -266,9 +357,20 @@ class MessageHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatMessageOperations(session)
+                access = ChatAccessChecker(session)
+                ops = ChatMessageOperations(session, access)
                 msg = await ops.unpin_message(user_id, org_id, channel_id, message_id)
-                return UnpinMessageResponse(message=message_to_proto(msg))
+                forward_contexts = await ForwardProjectionResolver(session, access).resolve(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    messages=[msg],
+                )
+                return UnpinMessageResponse(
+                    message=message_to_proto(
+                        msg,
+                        forward_context=forward_contexts.get(msg.id),
+                    )
+                )
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
@@ -286,9 +388,16 @@ class MessageHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatMessageOperations(session)
+                access = ChatAccessChecker(session)
+                ops = ChatMessageOperations(session, access)
                 messages = await ops.get_pinned_messages(user_id, org_id, channel_id)
-                proto_messages = await self._enrich_messages(session, messages, user_id)
+                proto_messages = await self._enrich_messages(
+                    session,
+                    messages,
+                    user_id,
+                    org_id,
+                    access,
+                )
                 return GetPinnedMessagesResponse(messages=proto_messages)
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
@@ -296,8 +405,10 @@ class MessageHandlers:
     async def _enrich_messages(
         self,
         session: AsyncSession,
-        messages: list,
+        messages: list[ChatMessage],
         user_id: UUID,
+        organization_id: UUID,
+        access: ChatAccessChecker,
     ) -> list:
         """Batch-enrich messages with thread stats, sender info, reactions, and reply context."""
         from collections import defaultdict
@@ -309,6 +420,12 @@ class MessageHandlers:
 
         if not messages:
             return []
+
+        forward_contexts = await ForwardProjectionResolver(session, access).resolve(
+            user_id=user_id,
+            organization_id=organization_id,
+            messages=messages,
+        )
 
         root_ids = [m.id for m in messages if m.root_id is None]
         message_ids = [m.id for m in messages]
@@ -450,6 +567,7 @@ class MessageHandlers:
                 reply_context_id=rc[0] if rc else None,
                 reply_context_sender_name=rc[1] if rc else None,
                 reply_context_content_preview=rc[2] if rc else None,
+                forward_context=forward_contexts.get(msg.id),
             )
             rating = feedback_map.get(msg.id)
             if rating:

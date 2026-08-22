@@ -55,6 +55,8 @@ def build_message_payload(
     metadata: dict | None = None,
     reply_to_id: UUID | None = None,
     reply_context: dict[str, str] | None = None,
+    is_forwarded: bool = False,
+    forward_context: dict | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "message_id": str(message_id),
@@ -67,6 +69,7 @@ def build_message_payload(
         "is_pinned": is_pinned,
         "sender_name": sender_name,
         "sender_avatar_url": sender_avatar_url,
+        "is_forwarded": is_forwarded,
     }
     if edited_at:
         payload["edited_at"] = edited_at.isoformat()
@@ -76,6 +79,8 @@ def build_message_payload(
         payload["reply_to_id"] = str(reply_to_id)
     if reply_context:
         payload["reply_context"] = reply_context
+    if forward_context:
+        payload["forward_context"] = forward_context
     return payload
 
 

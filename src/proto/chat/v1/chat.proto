@@ -141,6 +141,8 @@ service ChatService {
   // broadcast typeahead and confirm dialog on it); updates are org-admin only.
   rpc GetChatPolicy(GetChatPolicyRequest) returns (GetChatPolicyResponse) {}
   rpc UpdateChatPolicy(UpdateChatPolicyRequest) returns (UpdateChatPolicyResponse) {}
+
+  rpc ForwardMessage(ForwardMessageRequest) returns (ForwardMessageResponse) {}
 }
 
 // Who may send channel-wide broadcast mentions (@channel/@here).
@@ -307,6 +309,11 @@ message ChatMessage {
   optional string sender_avatar_url = 23;
   // Snapshot of the quoted message (populated when reply_to_id is set)
   optional ReplyContext reply_context = 24;
+  // Source snapshot, present only when the requesting viewer currently has
+  // access to the live source message and channel.
+  optional ForwardContext forward_context = 25;
+  // True for a forwarded row even when forward_context is withheld.
+  bool is_forwarded = 26;
 }
 
 // ReactionGroup represents a unique emoji with its reactors.
@@ -1200,4 +1207,34 @@ message UpdateChannelAgentConfigRequest {
 
 message UpdateChannelAgentConfigResponse {
   ChannelAgentConfig config = 1;
+}
+
+message ForwardedAttachment {
+  string file_id = 1;
+  string filename = 2;
+  string mime_type = 3;
+  int64 size_bytes = 4;
+}
+
+message ForwardContext {
+  string source_message_id = 1;
+  string source_channel_id = 2;
+  string source_channel_name = 3;
+  string sender_id = 4;
+  SenderType sender_type = 5;
+  string sender_name = 6;
+  string content = 7;
+  google.protobuf.Timestamp created_at = 8;
+  repeated ForwardedAttachment attachments = 9;
+}
+
+message ForwardMessageRequest {
+  string organization_id = 1;
+  string source_message_id = 2;
+  string target_channel_id = 3;
+  string comment = 4;
+}
+
+message ForwardMessageResponse {
+  ChatMessage message = 1;
 }
