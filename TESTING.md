@@ -362,8 +362,9 @@ Needs user A (organizer + channel member), user B (attendee to add), and user C 
       no error on the detail panel.
 - [ ] Send both a meeting URL and a channel_id on one event via the API: the backend rejects with
       a validation error (the detail panel already enforces one mode).
-- [ ] Mobile: open a channel-bound event. It shows a read-only "Online meeting" row with no join
-      affordance (native calls are not shipped).
+- [ ] Mobile: open a channel-bound event. The meeting row offers a join action that opens the
+      pre-join sheet, and reads "Join live meeting" while a call is running in that channel.
+      An external meeting URL opens in the browser instead.
 - [ ] In the editor's Uniffy-meeting mode, click "Create a meeting room from attendees". A PRIVATE
       channel named after the event is created with the attendees as members and auto-selected.
 - [ ] Add an attendee to that auto-created-room event and save: the attendee appears in the channel
