@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { CaretDown, CaretRight, UsersThree } from "@phosphor-icons/react";
+import { useAppDispatch } from "@/app/hooks";
 import type { CalendarEvent } from "@/features/calendar/types";
 import type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
+import { updateAttendeeRole } from "@/features/calendar/store/calendarThunks";
 import { SchedulingPanel } from "@/features/calendar/components/scheduling/SchedulingPanel";
 
 interface EventSchedulingSectionProps {
@@ -11,9 +13,22 @@ interface EventSchedulingSectionProps {
 }
 
 export function EventSchedulingSection({ event, canEdit, commit }: EventSchedulingSectionProps) {
+  const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
 
   if (event.attendees.length === 0) return null;
+
+  const handleToggleRequired = (userId: string) => {
+    const attendee = event.attendees.find((a) => a.id === userId);
+    if (!attendee || attendee.role === "organizer") return;
+    dispatch(
+      updateAttendeeRole({
+        eventId: event.id,
+        userId,
+        role: attendee.role === "optional" ? "required" : "optional",
+      }),
+    );
+  };
 
   return (
     <div>
@@ -40,6 +55,7 @@ export function EventSchedulingSection({ event, canEdit, commit }: EventScheduli
             roomName={event.roomName}
             disabled={!canEdit}
             onPick={(startTime, endTime) => commit({ startTime, endTime })}
+            onToggleRequired={canEdit ? handleToggleRequired : undefined}
           />
         </div>
       )}

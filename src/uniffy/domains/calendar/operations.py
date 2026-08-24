@@ -390,6 +390,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         meeting_url: str | None = None,
         category_id: UUID | None = None,
         attendee_ids: list[UUID] | None = None,
+        attendee_roles: dict[UUID, AttendeeRole] | None = None,
         recurrence_pattern: RecurrencePattern = RecurrencePattern.NONE,
         recurrence_config: dict | None = None,
         is_focus_time: bool = False,
@@ -502,11 +503,17 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if attendee_ids:
             for attendee_id in attendee_ids:
                 if attendee_id != user_id:
+                    # ORGANIZER is reserved for the creator's own row.
+                    requested_role = (attendee_roles or {}).get(attendee_id, AttendeeRole.REQUIRED)
                     attendee = EventAttendee(
                         event_id=event.id,
                         user_id=attendee_id,
                         status=AttendeeStatus.PENDING,
-                        role=AttendeeRole.REQUIRED,
+                        role=(
+                            AttendeeRole.OPTIONAL
+                            if requested_role == AttendeeRole.OPTIONAL
+                            else AttendeeRole.REQUIRED
+                        ),
                         invited_via_group_id=invited_via.get(attendee_id),
                     )
                     self.session.add(attendee)
@@ -1690,6 +1697,54 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
 
         await self._sync_auto_created_room_members(event, added=added_ids, removed=[])
+
+        return event
+
+    async def update_attendee_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        event_id: UUID,
+        target_user_id: UUID,
+        role: AttendeeRole,
+    ) -> CalendarEvent:
+        """Flip an attendee between REQUIRED and OPTIONAL; the organizer row is fixed."""
+        if role not in (AttendeeRole.REQUIRED, AttendeeRole.OPTIONAL):
+            raise ValidationError("role", "Attendee role must be required or optional")
+
+        event = await self._fetch_by_id(event_id, organization_id)
+        if not event:
+            raise NotFoundError("CalendarEvent", event_id)
+
+        await self._require_edit(user_id, organization_id, event)
+
+        attendee = (
+            await self.session.execute(
+                select(EventAttendee).where(
+                    EventAttendee.event_id == event.id,
+                    EventAttendee.user_id == target_user_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if not attendee:
+            raise NotFoundError("EventAttendee", target_user_id)
+        if attendee.role == AttendeeRole.ORGANIZER:
+            raise ValidationError("role", "The organizer's role cannot change")
+
+        if attendee.role != role:
+            previous = attendee.role
+            attendee.role = role
+            event.updated_at = datetime.now(UTC)
+            await self._log_activity(
+                event_id,
+                user_id,
+                "field_updated",
+                field_id="attendee_role",
+                previous_value=f"{target_user_id}:{previous.value}",
+                new_value=f"{target_user_id}:{role.value}",
+            )
+            await self.session.commit()
+            await self.session.refresh(event)
 
         return event
 

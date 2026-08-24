@@ -21,6 +21,7 @@ import {
   addAttendees,
   removeAttendees,
   updateAttendeeStatus,
+  updateAttendeeRole,
   createEventTemplate,
   updateEventTemplate,
   deleteEventTemplate,
@@ -353,6 +354,17 @@ const calendarSlice = createSlice({
         state.events[eventId] = {
           ...event,
           attendees: event.attendees.map((a) => (a.id === userId ? { ...a, status } : a)),
+        };
+      }
+    });
+
+    builder.addCase(updateAttendeeRole.fulfilled, (state, action) => {
+      const { eventId, userId, role } = action.payload;
+      const event = state.events[eventId];
+      if (event) {
+        state.events[eventId] = {
+          ...event,
+          attendees: event.attendees.map((a) => (a.id === userId ? { ...a, role } : a)),
         };
       }
     });

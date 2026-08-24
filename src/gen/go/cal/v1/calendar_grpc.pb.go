@@ -32,6 +32,7 @@ const (
 	CalendarService_ListCategories_FullMethodName       = "/cal.v1.CalendarService/ListCategories"
 	CalendarService_UpdateAttendeeStatus_FullMethodName = "/cal.v1.CalendarService/UpdateAttendeeStatus"
 	CalendarService_AddAttendees_FullMethodName         = "/cal.v1.CalendarService/AddAttendees"
+	CalendarService_UpdateAttendeeRole_FullMethodName   = "/cal.v1.CalendarService/UpdateAttendeeRole"
 	CalendarService_RemoveAttendees_FullMethodName      = "/cal.v1.CalendarService/RemoveAttendees"
 	CalendarService_GetFreeBusy_FullMethodName          = "/cal.v1.CalendarService/GetFreeBusy"
 	CalendarService_SuggestMeetingTimes_FullMethodName  = "/cal.v1.CalendarService/SuggestMeetingTimes"
@@ -75,6 +76,8 @@ type CalendarServiceClient interface {
 	UpdateAttendeeStatus(ctx context.Context, in *UpdateAttendeeStatusRequest, opts ...grpc.CallOption) (*UpdateAttendeeStatusResponse, error)
 	// Add attendees to an event
 	AddAttendees(ctx context.Context, in *AddAttendeesRequest, opts ...grpc.CallOption) (*AddAttendeesResponse, error)
+	// Change an existing attendee between required and optional
+	UpdateAttendeeRole(ctx context.Context, in *UpdateAttendeeRoleRequest, opts ...grpc.CallOption) (*UpdateAttendeeRoleResponse, error)
 	// Remove attendees from an event
 	RemoveAttendees(ctx context.Context, in *RemoveAttendeesRequest, opts ...grpc.CallOption) (*RemoveAttendeesResponse, error)
 	// Per-user busy intervals for the availability grid. Returns only
@@ -235,6 +238,16 @@ func (c *calendarServiceClient) AddAttendees(ctx context.Context, in *AddAttende
 	return out, nil
 }
 
+func (c *calendarServiceClient) UpdateAttendeeRole(ctx context.Context, in *UpdateAttendeeRoleRequest, opts ...grpc.CallOption) (*UpdateAttendeeRoleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateAttendeeRoleResponse)
+	err := c.cc.Invoke(ctx, CalendarService_UpdateAttendeeRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *calendarServiceClient) RemoveAttendees(ctx context.Context, in *RemoveAttendeesRequest, opts ...grpc.CallOption) (*RemoveAttendeesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RemoveAttendeesResponse)
@@ -357,6 +370,8 @@ type CalendarServiceServer interface {
 	UpdateAttendeeStatus(context.Context, *UpdateAttendeeStatusRequest) (*UpdateAttendeeStatusResponse, error)
 	// Add attendees to an event
 	AddAttendees(context.Context, *AddAttendeesRequest) (*AddAttendeesResponse, error)
+	// Change an existing attendee between required and optional
+	UpdateAttendeeRole(context.Context, *UpdateAttendeeRoleRequest) (*UpdateAttendeeRoleResponse, error)
 	// Remove attendees from an event
 	RemoveAttendees(context.Context, *RemoveAttendeesRequest) (*RemoveAttendeesResponse, error)
 	// Per-user busy intervals for the availability grid. Returns only
@@ -425,6 +440,9 @@ func (UnimplementedCalendarServiceServer) UpdateAttendeeStatus(context.Context, 
 }
 func (UnimplementedCalendarServiceServer) AddAttendees(context.Context, *AddAttendeesRequest) (*AddAttendeesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddAttendees not implemented")
+}
+func (UnimplementedCalendarServiceServer) UpdateAttendeeRole(context.Context, *UpdateAttendeeRoleRequest) (*UpdateAttendeeRoleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAttendeeRole not implemented")
 }
 func (UnimplementedCalendarServiceServer) RemoveAttendees(context.Context, *RemoveAttendeesRequest) (*RemoveAttendeesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveAttendees not implemented")
@@ -708,6 +726,24 @@ func _CalendarService_AddAttendees_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CalendarService_UpdateAttendeeRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAttendeeRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).UpdateAttendeeRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_UpdateAttendeeRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).UpdateAttendeeRole(ctx, req.(*UpdateAttendeeRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CalendarService_RemoveAttendees_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RemoveAttendeesRequest)
 	if err := dec(in); err != nil {
@@ -928,6 +964,10 @@ var CalendarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddAttendees",
 			Handler:    _CalendarService_AddAttendees_Handler,
+		},
+		{
+			MethodName: "UpdateAttendeeRole",
+			Handler:    _CalendarService_UpdateAttendeeRole_Handler,
 		},
 		{
 			MethodName: "RemoveAttendees",

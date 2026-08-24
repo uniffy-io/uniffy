@@ -277,6 +277,7 @@ export function QuickEventModal({
         categoryId: isValidUuid(selectedCategoryId) ? selectedCategoryId : undefined,
         isFocusTime: selectedCategoryId === "cat-deepwork",
         attendeeIds: attendees.map((a) => a.id),
+        attendees: attendees.map((a) => ({ userId: a.id, role: a.role })),
         recurrence,
         roomId: selectedRoomId || undefined,
         tagIds,
@@ -586,6 +587,16 @@ export function QuickEventModal({
                       startIso={startIso}
                       endIso={endIso}
                       roomId={selectedRoomId}
+                      onToggleRequired={(userId) => {
+                        if (userId === currentUser?.id) return;
+                        setAttendees((current) =>
+                          current.map((a) =>
+                            a.id === userId
+                              ? { ...a, role: a.role === "optional" ? "required" : "optional" }
+                              : a,
+                          ),
+                        );
+                      }}
                       onPick={(pickedStart, pickedEnd) => {
                         setStartDate(displayDayKey(pickedStart));
                         setEndDate(displayDayKey(pickedEnd));

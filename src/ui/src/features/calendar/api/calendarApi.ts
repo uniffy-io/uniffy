@@ -19,6 +19,7 @@ import {
   ListEventActivitiesRequestSchema,
   ListEventTemplatesRequestSchema,
   RemoveAttendeesRequestSchema,
+  UpdateAttendeeRoleRequestSchema,
   UpdateAttendeeStatusRequestSchema,
   UpdateCategoryRequestSchema,
   UpdateEventRequestSchema,
@@ -108,6 +109,10 @@ export const calendarApi = {
 
   addAttendees: async (request: MessageInitShape<typeof AddAttendeesRequestSchema>) => {
     return calendarClient.addAttendees(request);
+  },
+
+  updateAttendeeRole: async (request: MessageInitShape<typeof UpdateAttendeeRoleRequestSchema>) => {
+    return calendarClient.updateAttendeeRole(request);
   },
 
   removeAttendees: async (request: MessageInitShape<typeof RemoveAttendeesRequestSchema>) => {

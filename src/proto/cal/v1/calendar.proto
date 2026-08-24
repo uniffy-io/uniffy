@@ -156,6 +156,9 @@ service CalendarService {
   // Add attendees to an event
   rpc AddAttendees(AddAttendeesRequest) returns (AddAttendeesResponse) {}
 
+  // Change an existing attendee between required and optional
+  rpc UpdateAttendeeRole(UpdateAttendeeRoleRequest) returns (UpdateAttendeeRoleResponse) {}
+
   // Remove attendees from an event
   rpc RemoveAttendees(RemoveAttendeesRequest) returns (RemoveAttendeesResponse) {}
 
@@ -381,6 +384,14 @@ message CreateEventRequest {
   EventTransparency transparency = 25;
   // Marks the event as an out-of-office period
   bool is_out_of_office = 26;
+  // Attendees with explicit roles; merged with attendee_ids (which imply REQUIRED)
+  repeated AttendeeInput attendees = 27;
+}
+
+// An attendee to invite, with the role to invite them under
+message AttendeeInput {
+  string user_id = 1;
+  AttendeeRole role = 2;
 }
 
 // Request to get an event
@@ -496,6 +507,23 @@ message UpdateEventResponse {
 
 // Response containing an event (AddAttendees)
 message AddAttendeesResponse {
+  CalendarEvent event = 1;
+}
+
+// Request to change an attendee's role (REQUIRED <-> OPTIONAL only)
+message UpdateAttendeeRoleRequest {
+  // Event ID
+  string event_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // The attendee to change
+  string user_id = 3;
+  // The new role; ORGANIZER is not assignable
+  AttendeeRole role = 4;
+}
+
+// Response containing the event (UpdateAttendeeRole)
+message UpdateAttendeeRoleResponse {
   CalendarEvent event = 1;
 }
 

@@ -358,6 +358,7 @@ export const createEvent = createAsyncThunk<
     calendarId: string;
     categoryId?: string;
     attendeeIds?: string[];
+    attendees?: { userId: string; role: AttendeeRole }[];
     recurrence?: RecurrenceConfig;
     isFocusTime?: boolean;
     tagIds?: string[];
@@ -400,6 +401,10 @@ export const createEvent = createAsyncThunk<
       calendarId: params.calendarId,
       categoryId: params.categoryId,
       attendeeIds: params.attendeeIds || [],
+      attendees: (params.attendees || []).map((a) => ({
+        userId: a.userId,
+        role: ATTENDEE_ROLE_TO_PROTO[a.role],
+      })),
       recurrence: recurrenceConfig,
       isFocusTime: params.isFocusTime || false,
       tagIds: params.tagIds || [],
@@ -970,5 +975,26 @@ export const fetchMeetingSuggestions = createAsyncThunk<
     }));
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to suggest times");
+  }
+});
+
+export const updateAttendeeRole = createAsyncThunk<
+  { eventId: string; userId: string; role: AttendeeRole },
+  { eventId: string; userId: string; role: AttendeeRole },
+  { state: RootState; rejectValue: string }
+>("calendar/updateAttendeeRole", async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    await calendarApi.updateAttendeeRole({
+      eventId: params.eventId,
+      organizationId,
+      userId: params.userId,
+      role: ATTENDEE_ROLE_TO_PROTO[params.role],
+    });
+    return params;
+  } catch (error) {
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to update attendee role",
+    );
   }
 });

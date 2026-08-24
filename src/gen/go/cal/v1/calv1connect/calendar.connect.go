@@ -72,6 +72,9 @@ const (
 	// CalendarServiceAddAttendeesProcedure is the fully-qualified name of the CalendarService's
 	// AddAttendees RPC.
 	CalendarServiceAddAttendeesProcedure = "/cal.v1.CalendarService/AddAttendees"
+	// CalendarServiceUpdateAttendeeRoleProcedure is the fully-qualified name of the CalendarService's
+	// UpdateAttendeeRole RPC.
+	CalendarServiceUpdateAttendeeRoleProcedure = "/cal.v1.CalendarService/UpdateAttendeeRole"
 	// CalendarServiceRemoveAttendeesProcedure is the fully-qualified name of the CalendarService's
 	// RemoveAttendees RPC.
 	CalendarServiceRemoveAttendeesProcedure = "/cal.v1.CalendarService/RemoveAttendees"
@@ -129,6 +132,8 @@ type CalendarServiceClient interface {
 	UpdateAttendeeStatus(context.Context, *connect.Request[v1.UpdateAttendeeStatusRequest]) (*connect.Response[v1.UpdateAttendeeStatusResponse], error)
 	// Add attendees to an event
 	AddAttendees(context.Context, *connect.Request[v1.AddAttendeesRequest]) (*connect.Response[v1.AddAttendeesResponse], error)
+	// Change an existing attendee between required and optional
+	UpdateAttendeeRole(context.Context, *connect.Request[v1.UpdateAttendeeRoleRequest]) (*connect.Response[v1.UpdateAttendeeRoleResponse], error)
 	// Remove attendees from an event
 	RemoveAttendees(context.Context, *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error)
 	// Per-user busy intervals for the availability grid. Returns only
@@ -240,6 +245,12 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(calendarServiceMethods.ByName("AddAttendees")),
 			connect.WithClientOptions(opts...),
 		),
+		updateAttendeeRole: connect.NewClient[v1.UpdateAttendeeRoleRequest, v1.UpdateAttendeeRoleResponse](
+			httpClient,
+			baseURL+CalendarServiceUpdateAttendeeRoleProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("UpdateAttendeeRole")),
+			connect.WithClientOptions(opts...),
+		),
 		removeAttendees: connect.NewClient[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse](
 			httpClient,
 			baseURL+CalendarServiceRemoveAttendeesProcedure,
@@ -312,6 +323,7 @@ type calendarServiceClient struct {
 	listCategories       *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
 	updateAttendeeStatus *connect.Client[v1.UpdateAttendeeStatusRequest, v1.UpdateAttendeeStatusResponse]
 	addAttendees         *connect.Client[v1.AddAttendeesRequest, v1.AddAttendeesResponse]
+	updateAttendeeRole   *connect.Client[v1.UpdateAttendeeRoleRequest, v1.UpdateAttendeeRoleResponse]
 	removeAttendees      *connect.Client[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse]
 	getFreeBusy          *connect.Client[v1.GetFreeBusyRequest, v1.GetFreeBusyResponse]
 	suggestMeetingTimes  *connect.Client[v1.SuggestMeetingTimesRequest, v1.SuggestMeetingTimesResponse]
@@ -388,6 +400,11 @@ func (c *calendarServiceClient) AddAttendees(ctx context.Context, req *connect.R
 	return c.addAttendees.CallUnary(ctx, req)
 }
 
+// UpdateAttendeeRole calls cal.v1.CalendarService.UpdateAttendeeRole.
+func (c *calendarServiceClient) UpdateAttendeeRole(ctx context.Context, req *connect.Request[v1.UpdateAttendeeRoleRequest]) (*connect.Response[v1.UpdateAttendeeRoleResponse], error) {
+	return c.updateAttendeeRole.CallUnary(ctx, req)
+}
+
 // RemoveAttendees calls cal.v1.CalendarService.RemoveAttendees.
 func (c *calendarServiceClient) RemoveAttendees(ctx context.Context, req *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error) {
 	return c.removeAttendees.CallUnary(ctx, req)
@@ -461,6 +478,8 @@ type CalendarServiceHandler interface {
 	UpdateAttendeeStatus(context.Context, *connect.Request[v1.UpdateAttendeeStatusRequest]) (*connect.Response[v1.UpdateAttendeeStatusResponse], error)
 	// Add attendees to an event
 	AddAttendees(context.Context, *connect.Request[v1.AddAttendeesRequest]) (*connect.Response[v1.AddAttendeesResponse], error)
+	// Change an existing attendee between required and optional
+	UpdateAttendeeRole(context.Context, *connect.Request[v1.UpdateAttendeeRoleRequest]) (*connect.Response[v1.UpdateAttendeeRoleResponse], error)
 	// Remove attendees from an event
 	RemoveAttendees(context.Context, *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error)
 	// Per-user busy intervals for the availability grid. Returns only
@@ -568,6 +587,12 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 		connect.WithSchema(calendarServiceMethods.ByName("AddAttendees")),
 		connect.WithHandlerOptions(opts...),
 	)
+	calendarServiceUpdateAttendeeRoleHandler := connect.NewUnaryHandler(
+		CalendarServiceUpdateAttendeeRoleProcedure,
+		svc.UpdateAttendeeRole,
+		connect.WithSchema(calendarServiceMethods.ByName("UpdateAttendeeRole")),
+		connect.WithHandlerOptions(opts...),
+	)
 	calendarServiceRemoveAttendeesHandler := connect.NewUnaryHandler(
 		CalendarServiceRemoveAttendeesProcedure,
 		svc.RemoveAttendees,
@@ -650,6 +675,8 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 			calendarServiceUpdateAttendeeStatusHandler.ServeHTTP(w, r)
 		case CalendarServiceAddAttendeesProcedure:
 			calendarServiceAddAttendeesHandler.ServeHTTP(w, r)
+		case CalendarServiceUpdateAttendeeRoleProcedure:
+			calendarServiceUpdateAttendeeRoleHandler.ServeHTTP(w, r)
 		case CalendarServiceRemoveAttendeesProcedure:
 			calendarServiceRemoveAttendeesHandler.ServeHTTP(w, r)
 		case CalendarServiceGetFreeBusyProcedure:
@@ -727,6 +754,10 @@ func (UnimplementedCalendarServiceHandler) UpdateAttendeeStatus(context.Context,
 
 func (UnimplementedCalendarServiceHandler) AddAttendees(context.Context, *connect.Request[v1.AddAttendeesRequest]) (*connect.Response[v1.AddAttendeesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.AddAttendees is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) UpdateAttendeeRole(context.Context, *connect.Request[v1.UpdateAttendeeRoleRequest]) (*connect.Response[v1.UpdateAttendeeRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.UpdateAttendeeRole is not implemented"))
 }
 
 func (UnimplementedCalendarServiceHandler) RemoveAttendees(context.Context, *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error) {
