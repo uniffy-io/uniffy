@@ -141,7 +141,7 @@ Agents ship with tools across every core Uniffy domain:
 | Files | List, read content, update, delete |
 | Projects | Create, update, list, delete |
 | Tasks | Create, update, list, move, delete |
-| Calendar | List events, create, update, delete, RSVP, manage attendees, free/busy lookup, find meeting times |
+| Calendar | List events, create, update, delete, RSVP, manage attendees, free/busy lookup, find meeting times honoring each attendee's saved working hours and timezone |
 | Search | Universal search across all content |
 | People | List org members |
 | Memory | Save, recall, list, forget |
