@@ -14,7 +14,12 @@ from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
-from uniffy.core.models.shared import AttendeeStatus, RecurrencePattern
+from uniffy.core.models.shared import (
+    AttendeeStatus,
+    EventStatus,
+    EventTransparency,
+    RecurrencePattern,
+)
 from uniffy.domains.calendar.recurrence import expand_recurrence
 
 MAX_FREE_BUSY_USERS = 20
@@ -75,7 +80,8 @@ async def get_busy_intervals(
     This deliberately reads events the CALLER may not be allowed to view:
     only (start, end) intervals ever leave this function - no titles, no
     details - and only for active members of the caller's own org. Declined
-    invitations and all-day events do not count as busy.
+    invitations, transparent (free) events, and cancelled events do not
+    count as busy.
     """
     if not user_ids:
         return {}
@@ -98,7 +104,8 @@ async def get_busy_intervals(
         .where(
             CalendarEvent.organization_id == organization_id,
             CalendarEvent.is_deleted == False,  # noqa: E712
-            CalendarEvent.is_all_day == False,  # noqa: E712
+            CalendarEvent.transparency == EventTransparency.OPAQUE,
+            CalendarEvent.status != EventStatus.CANCELLED,
             EventAttendee.user_id.in_(user_ids),
             EventAttendee.status != AttendeeStatus.DECLINED,
             or_(

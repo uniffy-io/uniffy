@@ -2,6 +2,7 @@
 
 import copy
 from datetime import UTC, date, datetime, timedelta
+from enum import Enum
 from uuid import UUID
 
 from loguru import logger
@@ -14,6 +15,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.auth.permissions import resolve_access_policy
+from uniffy.core.auth.permissions.roles import role_can_edit
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
@@ -51,6 +53,9 @@ from uniffy.core.types import (
     AttendeeStatus,
     ContentRole,
     ContentType,
+    EventStatus,
+    EventTransparency,
+    EventVisibility,
     NotificationType,
     RecurrenceEditScope,
     RecurrencePattern,
@@ -98,6 +103,10 @@ _ACTIVITY_TRACKED_FIELDS: tuple[tuple[str, str, bool], ...] = (
     ("recurrence_config", "recurrence_changed", False),
     ("reminders", "reminders_changed", True),
     ("is_focus_time", "field_updated", True),
+    ("status", "field_updated", True),
+    ("visibility", "field_updated", True),
+    ("transparency", "field_updated", True),
+    ("is_out_of_office", "field_updated", True),
 )
 
 
@@ -107,9 +116,26 @@ def _activity_value(value: object) -> str | None:
         return None
     if isinstance(value, datetime):
         return value.isoformat()
+    if isinstance(value, Enum):
+        return value.value
     if isinstance(value, list):
         return ",".join(str(item) for item in value) or None
     return str(value)[:_ACTIVITY_VALUE_LIMIT]
+
+
+def event_details_hidden(
+    event: CalendarEvent,
+    viewer_id: UUID,
+    role: ContentRole | None,
+    is_attendee: bool,
+) -> bool:
+    """A private event shows its details only to the organizer, attendees, and
+    explicit editors; every other viewer gets a redacted busy block."""
+    if event.visibility != EventVisibility.PRIVATE:
+        return False
+    if event.organizer_id == viewer_id or is_attendee:
+        return False
+    return not role_can_edit(role)
 
 
 def _master_event_id(event: CalendarEvent) -> UUID:
@@ -177,6 +203,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if model.timezone:
             metadata["timezone"] = model.timezone
         metadata["is_all_day"] = str(model.is_all_day).lower()
+        metadata["event_status"] = model.status.value
+        # `metadata.visibility` is filterable: the permission filter hides
+        # PRIVATE documents from everyone but the organizer and attendees.
+        metadata["visibility"] = model.visibility.value
         return metadata if metadata else None
 
     def _get_owner_id_column(self) -> InstrumentedAttribute:
@@ -285,6 +315,32 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         except Exception:
             logger.opt(exception=True).warning("Failed to refresh attendee search sharing")
 
+    async def _emit_cancellation_notification(
+        self,
+        event: CalendarEvent,
+        actor_id: UUID,
+        organization_id: UUID,
+        occurrence_date: date | None = None,
+    ) -> None:
+        """Tell every attendee except the actor that the event was called off."""
+        result = await self.session.execute(
+            select(EventAttendee.user_id).where(EventAttendee.event_id == event.id)
+        )
+        recipients = [uid for uid in result.scalars().all() if uid != actor_id]
+        if not recipients:
+            return
+        suffix = f" ({occurrence_date.isoformat()})" if occurrence_date else ""
+        await emit_notification(
+            NotificationEvent(
+                notification_type=NotificationType.CALENDAR_CANCELLED,
+                organization_id=organization_id,
+                actor_id=actor_id,
+                title=f"Cancelled: {event.title}{suffix}",
+                source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                target_user_ids=recipients,
+            )
+        )
+
     async def _emit_team_mention_notifications(
         self,
         event: CalendarEvent,
@@ -343,12 +399,24 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         room_id: UUID | None = None,
         channel_id: UUID | None = None,
         channel_auto_created: bool = False,
+        status: EventStatus = EventStatus.CONFIRMED,
+        visibility: EventVisibility = EventVisibility.STANDARD,
+        transparency: EventTransparency | None = None,
+        is_out_of_office: bool = False,
     ) -> CalendarEvent:
         """Create a new calendar event.
 
         Events are invite-only: the row is always OWNER_ONLY and visibility
         for non-organizers comes from the attendee floor in `_resolve_role`.
         """
+        if transparency is None:
+            # All-day entries have never blocked time; an out-of-office period
+            # must, even when it spans whole days.
+            transparency = (
+                EventTransparency.TRANSPARENT
+                if is_all_day and not is_out_of_office
+                else EventTransparency.OPAQUE
+            )
         if room_id:
             # Detect the conflict before the event is committed so the
             # composite create_event(..., room_id=...) flow doesn't leave
@@ -409,6 +477,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             access_mode=AccessMode.OWNER_ONLY,
             baseline_role=None,
             is_focus_time=is_focus_time,
+            status=status,
+            visibility=visibility,
+            transparency=transparency,
+            is_out_of_office=is_out_of_office,
             recurrence_pattern=recurrence_pattern,
             recurrence_config=recurrence_config,
             linked_resources=linked_resources,
@@ -540,10 +612,17 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         room_id: str | None = None,
         channel_id: str | None = None,
         channel_auto_created: bool | None = None,
+        status: EventStatus | None = None,
+        visibility: EventVisibility | None = None,
+        transparency: EventTransparency | None = None,
+        is_out_of_office: bool | None = None,
     ) -> CalendarEvent:
         """Update an existing event.
 
         Access-policy changes go through `permissions.v1.MembersService`.
+        `status` is occurrence-scopable (a cancelled occurrence stays visible as
+        an override row); `visibility`, `transparency`, and `is_out_of_office`
+        apply to the whole series.
         """
         if recurrence_edit_scope and occurrence_date:
             scoped_to_occurrences = recurrence_edit_scope in (
@@ -564,6 +643,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     category_id=category_id,
                     is_focus_time=is_focus_time,
                     reminders=reminders,
+                    status=status,
                 )
                 # Anything else in the request would previously be dropped on
                 # the floor while the save reported success; refuse instead so
@@ -575,6 +655,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     attendee_ids=attendee_ids,
                     room_id=room_id,
                     channel_id=channel_id,
+                    visibility=visibility,
+                    transparency=transparency,
+                    is_out_of_office=is_out_of_office,
                 )
                 if recurrence_edit_scope == RecurrenceEditScope.THIS_AND_FOLLOWING:
                     if recurrence_config is not None:
@@ -666,6 +749,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 event.recurrence_pattern = RecurrencePattern(recurrence_config["pattern"])
         if is_focus_time is not None:
             event.is_focus_time = is_focus_time
+        old_status = event.status
+        if status is not None:
+            event.status = status
+        if visibility is not None:
+            event.visibility = visibility
+        if transparency is not None:
+            event.transparency = transparency
+        if is_out_of_office is not None:
+            event.is_out_of_office = is_out_of_office
         if linked_resources is not None:
             event.linked_resources = linked_resources
         if reminders is not None:
@@ -687,6 +779,32 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 active_user_ids = [row[0] for row in result.all()]
                 if active_user_ids:
                     await self._create_reminder_rows(event, active_user_ids, effective_reminders)
+
+        became_cancelled = old_status != EventStatus.CANCELLED and (
+            event.status == EventStatus.CANCELLED
+        )
+        became_active = old_status == EventStatus.CANCELLED and (
+            event.status != EventStatus.CANCELLED
+        )
+        if became_cancelled:
+            # A cancelled event must not remind anyone; mirrors the decline path.
+            await self._delete_reminder_rows(event.id)
+        elif became_active and event.reminders and not (reminders_changed or start_changed):
+            stmt = select(EventAttendee.user_id).where(
+                and_(
+                    EventAttendee.event_id == event.id,
+                    EventAttendee.status != AttendeeStatus.DECLINED,
+                )
+            )
+            result = await self.session.execute(stmt)
+            active_user_ids = [row[0] for row in result.all()]
+            if active_user_ids:
+                await self._create_reminder_rows(
+                    event_id=event.id,
+                    user_ids=active_user_ids,
+                    intervals=event.reminders,
+                    start_time=event.start_time,
+                )
 
         newly_invited_ids: list[UUID] = []
         removed_attendee_ids: list[UUID] = []
@@ -753,7 +871,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self._index_for_search(event)
         await self.session.commit()
 
-        if title_changed:
+        # Rename propagation rewrites mention labels inside other people's
+        # documents; a private event's title must not be written there.
+        if title_changed and event.visibility != EventVisibility.PRIVATE:
             try:
                 event_urn = build_content_urn(ContentType.CALENDAR_EVENT, event.id)
                 await propagate_rename(
@@ -779,6 +899,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     target_user_ids=newly_invited_ids,
                 )
             )
+
+        if became_cancelled:
+            await self._emit_cancellation_notification(event, user_id, organization_id)
 
         if description is not None:
             if attendee_ids is not None:
@@ -824,6 +947,13 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             mention_changes["start_time"] = event.start_time.isoformat()
         if event.end_time != old_end_time:
             mention_changes["end_time"] = event.end_time.isoformat()
+        if event.status != old_status:
+            mention_changes["event_status"] = event.status.value
+
+        # The mention-state pubsub payload is gated per recipient on can_view
+        # only; a private event's title must not ride it to share-grant viewers.
+        if event.visibility == EventVisibility.PRIVATE:
+            mention_changes.pop("title", None)
 
         if mention_changes:
             try:
@@ -1209,6 +1339,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             access_mode=master.access_mode,
             baseline_role=master.baseline_role,
             is_focus_time=master.is_focus_time,
+            status=master.status,
+            visibility=master.visibility,
+            transparency=master.transparency,
+            is_out_of_office=master.is_out_of_office,
             linked_resources=master.linked_resources,
             recurrence_pattern=RecurrencePattern.NONE,
             recurrence_id=master.id,
@@ -1270,6 +1404,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._index_for_search(override, skip_member_lookup=True)
         await self.session.commit()
+
+        if master.status != EventStatus.CANCELLED and override.status == EventStatus.CANCELLED:
+            await self._emit_cancellation_notification(
+                override, user_id, organization_id, occurrence_date=occurrence_date
+            )
 
         return override
 
@@ -1351,6 +1490,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             access_mode=master.access_mode,
             baseline_role=master.baseline_role,
             is_focus_time=master.is_focus_time,
+            status=master.status,
+            visibility=master.visibility,
+            transparency=master.transparency,
+            is_out_of_office=master.is_out_of_office,
             linked_resources=master.linked_resources,
             recurrence_pattern=new_pattern,
             recurrence_config=new_config,
@@ -1404,6 +1547,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._index_for_search(new_event, skip_member_lookup=True)
         await self.session.commit()
+
+        if master.status != EventStatus.CANCELLED and new_event.status == EventStatus.CANCELLED:
+            await self._emit_cancellation_notification(new_event, user_id, organization_id)
 
         return new_event
 
@@ -1616,6 +1762,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
 
+        if event.status == EventStatus.CANCELLED:
+            raise ValidationError("event", "Cannot respond to a cancelled event")
+
         result = await self.session.execute(
             select(EventAttendee).where(
                 and_(
@@ -1683,7 +1832,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if not event:
             raise NotFoundError("CalendarEvent", master_id)
 
-        await self._require_view(user_id, organization_id, event)
+        role = await self._resolve_role(user_id, organization_id, event)
+        if role is None:
+            raise PermissionDeniedError("view", "calendar event")
+        # The log carries before/after values of redacted fields, so a viewer
+        # who only sees the busy block gets no history either.
+        if event_details_hidden(
+            event, user_id, role, await self._is_attendee(user_id, organization_id, master_id)
+        ):
+            raise PermissionDeniedError("view", "calendar event activity")
 
         total = await self.session.scalar(
             select(func.count())

@@ -72,7 +72,10 @@ from uniffy.domains.calendar.converters import (
     attendee_role_from_proto,
     attendee_status_from_proto,
     category_to_proto,
+    event_status_from_proto,
     event_to_proto,
+    event_transparency_from_proto,
+    event_visibility_from_proto,
     recurrence_config_from_proto,
     recurrence_edit_scope_from_proto,
     recurrence_from_proto,
@@ -82,6 +85,7 @@ from uniffy.domains.calendar.operations import (
     CalendarEventOperations,
     CategoryOperations,
     EventTemplateOperations,
+    event_details_hidden,
 )
 from uniffy.domains.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
 from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
@@ -278,6 +282,10 @@ class CalendarHandlers:
                     room_id=room_id,
                     channel_id=channel_id,
                     channel_auto_created=request.channel_auto_created,
+                    status=event_status_from_proto(request.status),
+                    visibility=event_visibility_from_proto(request.visibility),
+                    transparency=event_transparency_from_proto(request.transparency),
+                    is_out_of_office=request.is_out_of_office,
                 )
 
                 attendees = await queries.get_event_attendees(session, event.id)
@@ -318,6 +326,7 @@ class CalendarHandlers:
                 )
                 room_info = await self._get_event_room_info(session, event_id)
                 tags_by_urn = await _hydrate_event_tags(session, organization_id, [event.id])
+                user_role = await ops._resolve_role(user_id, organization_id, event)
                 return GetEventResponse(
                     event=event_to_proto(
                         event,
@@ -326,7 +335,13 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
-                        user_role=await ops._resolve_role(user_id, organization_id, event),
+                        user_role=user_role,
+                        details_hidden=event_details_hidden(
+                            event,
+                            user_id,
+                            user_role,
+                            any(att.user_id == user_id for att, _ in attendees),
+                        ),
                         **room_info,
                     )
                 )
@@ -405,6 +420,14 @@ class CalendarHandlers:
             kwargs["channel_id"] = request.channel_id
         if request.HasField("channel_auto_created"):
             kwargs["channel_auto_created"] = request.channel_auto_created
+        if request.HasField("status"):
+            kwargs["status"] = event_status_from_proto(request.status)
+        if request.HasField("visibility"):
+            kwargs["visibility"] = event_visibility_from_proto(request.visibility)
+        if request.HasField("transparency"):
+            kwargs["transparency"] = event_transparency_from_proto(request.transparency)
+        if request.HasField("is_out_of_office"):
+            kwargs["is_out_of_office"] = request.is_out_of_office
 
         try:
             async with open_session() as session:
@@ -538,6 +561,7 @@ class CalendarHandlers:
                 for event in events:
                     attendees = await queries.get_event_attendees(session, event.id)
                     room_info = await self._get_event_room_info(session, event.id)
+                    user_role = decisions[ResourceKey(ContentType.CALENDAR_EVENT, event.id)].role
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -546,9 +570,13 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                                 [],
                             ),
-                            user_role=decisions[
-                                ResourceKey(ContentType.CALENDAR_EVENT, event.id)
-                            ].role,
+                            user_role=user_role,
+                            details_hidden=event_details_hidden(
+                                event,
+                                user_id,
+                                user_role,
+                                any(att.user_id == user_id for att, _ in attendees),
+                            ),
                             **room_info,
                         )
                     )
@@ -622,6 +650,7 @@ class CalendarHandlers:
                             session,
                             real_id,
                         )
+                    user_role = decisions[ResourceKey(ContentType.CALENDAR_EVENT, real_id)].role
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -630,9 +659,15 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, real_id),
                                 [],
                             ),
-                            user_role=decisions[
-                                ResourceKey(ContentType.CALENDAR_EVENT, real_id)
-                            ].role,
+                            user_role=user_role,
+                            details_hidden=event_details_hidden(
+                                event,
+                                user_id,
+                                user_role,
+                                any(
+                                    att.user_id == user_id for att, _ in attendees_cache[real_id_str]
+                                ),
+                            ),
                             **room_info_cache[real_id_str],
                         )
                     )
