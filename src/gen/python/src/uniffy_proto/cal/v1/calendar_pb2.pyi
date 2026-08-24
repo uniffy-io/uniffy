@@ -843,3 +843,87 @@ class ListEventTemplatesResponse(_message.Message):
     TEMPLATES_FIELD_NUMBER: _ClassVar[int]
     templates: _containers.RepeatedCompositeFieldContainer[EventTemplate]
     def __init__(self, templates: _Optional[_Iterable[_Union[EventTemplate, _Mapping]]] = ...) -> None: ...
+
+class BusyInterval(_message.Message):
+    __slots__ = ("start_time", "end_time", "is_out_of_office")
+    START_TIME_FIELD_NUMBER: _ClassVar[int]
+    END_TIME_FIELD_NUMBER: _ClassVar[int]
+    IS_OUT_OF_OFFICE_FIELD_NUMBER: _ClassVar[int]
+    start_time: _timestamp_pb2.Timestamp
+    end_time: _timestamp_pb2.Timestamp
+    is_out_of_office: bool
+    def __init__(self, start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_out_of_office: _Optional[bool] = ...) -> None: ...
+
+class UserFreeBusy(_message.Message):
+    __slots__ = ("user_id", "intervals", "timezone", "workday_start", "workday_end", "workdays")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    INTERVALS_FIELD_NUMBER: _ClassVar[int]
+    TIMEZONE_FIELD_NUMBER: _ClassVar[int]
+    WORKDAY_START_FIELD_NUMBER: _ClassVar[int]
+    WORKDAY_END_FIELD_NUMBER: _ClassVar[int]
+    WORKDAYS_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    intervals: _containers.RepeatedCompositeFieldContainer[BusyInterval]
+    timezone: str
+    workday_start: str
+    workday_end: str
+    workdays: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, user_id: _Optional[str] = ..., intervals: _Optional[_Iterable[_Union[BusyInterval, _Mapping]]] = ..., timezone: _Optional[str] = ..., workday_start: _Optional[str] = ..., workday_end: _Optional[str] = ..., workdays: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class GetFreeBusyRequest(_message.Message):
+    __slots__ = ("organization_id", "user_ids", "window_start", "window_end", "room_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_IDS_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_START_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_END_FIELD_NUMBER: _ClassVar[int]
+    ROOM_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    user_ids: _containers.RepeatedScalarFieldContainer[str]
+    window_start: _timestamp_pb2.Timestamp
+    window_end: _timestamp_pb2.Timestamp
+    room_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., user_ids: _Optional[_Iterable[str]] = ..., window_start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., window_end: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., room_id: _Optional[str] = ...) -> None: ...
+
+class GetFreeBusyResponse(_message.Message):
+    __slots__ = ("users", "room_busy")
+    USERS_FIELD_NUMBER: _ClassVar[int]
+    ROOM_BUSY_FIELD_NUMBER: _ClassVar[int]
+    users: _containers.RepeatedCompositeFieldContainer[UserFreeBusy]
+    room_busy: _containers.RepeatedCompositeFieldContainer[BusyInterval]
+    def __init__(self, users: _Optional[_Iterable[_Union[UserFreeBusy, _Mapping]]] = ..., room_busy: _Optional[_Iterable[_Union[BusyInterval, _Mapping]]] = ...) -> None: ...
+
+class SuggestMeetingTimesRequest(_message.Message):
+    __slots__ = ("organization_id", "required_user_ids", "optional_user_ids", "window_start", "window_end", "duration_minutes", "room_id", "max_results")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUIRED_USER_IDS_FIELD_NUMBER: _ClassVar[int]
+    OPTIONAL_USER_IDS_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_START_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_END_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    ROOM_ID_FIELD_NUMBER: _ClassVar[int]
+    MAX_RESULTS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    required_user_ids: _containers.RepeatedScalarFieldContainer[str]
+    optional_user_ids: _containers.RepeatedScalarFieldContainer[str]
+    window_start: _timestamp_pb2.Timestamp
+    window_end: _timestamp_pb2.Timestamp
+    duration_minutes: int
+    room_id: str
+    max_results: int
+    def __init__(self, organization_id: _Optional[str] = ..., required_user_ids: _Optional[_Iterable[str]] = ..., optional_user_ids: _Optional[_Iterable[str]] = ..., window_start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., window_end: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., duration_minutes: _Optional[int] = ..., room_id: _Optional[str] = ..., max_results: _Optional[int] = ...) -> None: ...
+
+class MeetingTimeSuggestion(_message.Message):
+    __slots__ = ("start_time", "end_time", "unavailable_optional_user_ids")
+    START_TIME_FIELD_NUMBER: _ClassVar[int]
+    END_TIME_FIELD_NUMBER: _ClassVar[int]
+    UNAVAILABLE_OPTIONAL_USER_IDS_FIELD_NUMBER: _ClassVar[int]
+    start_time: _timestamp_pb2.Timestamp
+    end_time: _timestamp_pb2.Timestamp
+    unavailable_optional_user_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., unavailable_optional_user_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class SuggestMeetingTimesResponse(_message.Message):
+    __slots__ = ("suggestions",)
+    SUGGESTIONS_FIELD_NUMBER: _ClassVar[int]
+    suggestions: _containers.RepeatedCompositeFieldContainer[MeetingTimeSuggestion]
+    def __init__(self, suggestions: _Optional[_Iterable[_Union[MeetingTimeSuggestion, _Mapping]]] = ...) -> None: ...

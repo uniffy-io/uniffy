@@ -75,6 +75,12 @@ const (
 	// CalendarServiceRemoveAttendeesProcedure is the fully-qualified name of the CalendarService's
 	// RemoveAttendees RPC.
 	CalendarServiceRemoveAttendeesProcedure = "/cal.v1.CalendarService/RemoveAttendees"
+	// CalendarServiceGetFreeBusyProcedure is the fully-qualified name of the CalendarService's
+	// GetFreeBusy RPC.
+	CalendarServiceGetFreeBusyProcedure = "/cal.v1.CalendarService/GetFreeBusy"
+	// CalendarServiceSuggestMeetingTimesProcedure is the fully-qualified name of the CalendarService's
+	// SuggestMeetingTimes RPC.
+	CalendarServiceSuggestMeetingTimesProcedure = "/cal.v1.CalendarService/SuggestMeetingTimes"
 	// CalendarServiceListEventActivitiesProcedure is the fully-qualified name of the CalendarService's
 	// ListEventActivities RPC.
 	CalendarServiceListEventActivitiesProcedure = "/cal.v1.CalendarService/ListEventActivities"
@@ -125,6 +131,12 @@ type CalendarServiceClient interface {
 	AddAttendees(context.Context, *connect.Request[v1.AddAttendeesRequest]) (*connect.Response[v1.AddAttendeesResponse], error)
 	// Remove attendees from an event
 	RemoveAttendees(context.Context, *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error)
+	// Per-user busy intervals for the availability grid. Returns only
+	// (start, end, out_of_office) spans - never titles or details.
+	GetFreeBusy(context.Context, *connect.Request[v1.GetFreeBusyRequest]) (*connect.Response[v1.GetFreeBusyResponse], error)
+	// Meeting-time suggestions honoring every required attendee's working
+	// hours and timezone, ranked by optional-attendee availability.
+	SuggestMeetingTimes(context.Context, *connect.Request[v1.SuggestMeetingTimesRequest]) (*connect.Response[v1.SuggestMeetingTimesResponse], error)
 	// List the activity log for an event, newest first
 	ListEventActivities(context.Context, *connect.Request[v1.ListEventActivitiesRequest]) (*connect.Response[v1.ListEventActivitiesResponse], error)
 	// Create a new event template
@@ -234,6 +246,18 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(calendarServiceMethods.ByName("RemoveAttendees")),
 			connect.WithClientOptions(opts...),
 		),
+		getFreeBusy: connect.NewClient[v1.GetFreeBusyRequest, v1.GetFreeBusyResponse](
+			httpClient,
+			baseURL+CalendarServiceGetFreeBusyProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("GetFreeBusy")),
+			connect.WithClientOptions(opts...),
+		),
+		suggestMeetingTimes: connect.NewClient[v1.SuggestMeetingTimesRequest, v1.SuggestMeetingTimesResponse](
+			httpClient,
+			baseURL+CalendarServiceSuggestMeetingTimesProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("SuggestMeetingTimes")),
+			connect.WithClientOptions(opts...),
+		),
 		listEventActivities: connect.NewClient[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse](
 			httpClient,
 			baseURL+CalendarServiceListEventActivitiesProcedure,
@@ -289,6 +313,8 @@ type calendarServiceClient struct {
 	updateAttendeeStatus *connect.Client[v1.UpdateAttendeeStatusRequest, v1.UpdateAttendeeStatusResponse]
 	addAttendees         *connect.Client[v1.AddAttendeesRequest, v1.AddAttendeesResponse]
 	removeAttendees      *connect.Client[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse]
+	getFreeBusy          *connect.Client[v1.GetFreeBusyRequest, v1.GetFreeBusyResponse]
+	suggestMeetingTimes  *connect.Client[v1.SuggestMeetingTimesRequest, v1.SuggestMeetingTimesResponse]
 	listEventActivities  *connect.Client[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse]
 	createEventTemplate  *connect.Client[v1.CreateEventTemplateRequest, v1.CreateEventTemplateResponse]
 	getEventTemplate     *connect.Client[v1.GetEventTemplateRequest, v1.GetEventTemplateResponse]
@@ -367,6 +393,16 @@ func (c *calendarServiceClient) RemoveAttendees(ctx context.Context, req *connec
 	return c.removeAttendees.CallUnary(ctx, req)
 }
 
+// GetFreeBusy calls cal.v1.CalendarService.GetFreeBusy.
+func (c *calendarServiceClient) GetFreeBusy(ctx context.Context, req *connect.Request[v1.GetFreeBusyRequest]) (*connect.Response[v1.GetFreeBusyResponse], error) {
+	return c.getFreeBusy.CallUnary(ctx, req)
+}
+
+// SuggestMeetingTimes calls cal.v1.CalendarService.SuggestMeetingTimes.
+func (c *calendarServiceClient) SuggestMeetingTimes(ctx context.Context, req *connect.Request[v1.SuggestMeetingTimesRequest]) (*connect.Response[v1.SuggestMeetingTimesResponse], error) {
+	return c.suggestMeetingTimes.CallUnary(ctx, req)
+}
+
 // ListEventActivities calls cal.v1.CalendarService.ListEventActivities.
 func (c *calendarServiceClient) ListEventActivities(ctx context.Context, req *connect.Request[v1.ListEventActivitiesRequest]) (*connect.Response[v1.ListEventActivitiesResponse], error) {
 	return c.listEventActivities.CallUnary(ctx, req)
@@ -427,6 +463,12 @@ type CalendarServiceHandler interface {
 	AddAttendees(context.Context, *connect.Request[v1.AddAttendeesRequest]) (*connect.Response[v1.AddAttendeesResponse], error)
 	// Remove attendees from an event
 	RemoveAttendees(context.Context, *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error)
+	// Per-user busy intervals for the availability grid. Returns only
+	// (start, end, out_of_office) spans - never titles or details.
+	GetFreeBusy(context.Context, *connect.Request[v1.GetFreeBusyRequest]) (*connect.Response[v1.GetFreeBusyResponse], error)
+	// Meeting-time suggestions honoring every required attendee's working
+	// hours and timezone, ranked by optional-attendee availability.
+	SuggestMeetingTimes(context.Context, *connect.Request[v1.SuggestMeetingTimesRequest]) (*connect.Response[v1.SuggestMeetingTimesResponse], error)
 	// List the activity log for an event, newest first
 	ListEventActivities(context.Context, *connect.Request[v1.ListEventActivitiesRequest]) (*connect.Response[v1.ListEventActivitiesResponse], error)
 	// Create a new event template
@@ -532,6 +574,18 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 		connect.WithSchema(calendarServiceMethods.ByName("RemoveAttendees")),
 		connect.WithHandlerOptions(opts...),
 	)
+	calendarServiceGetFreeBusyHandler := connect.NewUnaryHandler(
+		CalendarServiceGetFreeBusyProcedure,
+		svc.GetFreeBusy,
+		connect.WithSchema(calendarServiceMethods.ByName("GetFreeBusy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceSuggestMeetingTimesHandler := connect.NewUnaryHandler(
+		CalendarServiceSuggestMeetingTimesProcedure,
+		svc.SuggestMeetingTimes,
+		connect.WithSchema(calendarServiceMethods.ByName("SuggestMeetingTimes")),
+		connect.WithHandlerOptions(opts...),
+	)
 	calendarServiceListEventActivitiesHandler := connect.NewUnaryHandler(
 		CalendarServiceListEventActivitiesProcedure,
 		svc.ListEventActivities,
@@ -598,6 +652,10 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 			calendarServiceAddAttendeesHandler.ServeHTTP(w, r)
 		case CalendarServiceRemoveAttendeesProcedure:
 			calendarServiceRemoveAttendeesHandler.ServeHTTP(w, r)
+		case CalendarServiceGetFreeBusyProcedure:
+			calendarServiceGetFreeBusyHandler.ServeHTTP(w, r)
+		case CalendarServiceSuggestMeetingTimesProcedure:
+			calendarServiceSuggestMeetingTimesHandler.ServeHTTP(w, r)
 		case CalendarServiceListEventActivitiesProcedure:
 			calendarServiceListEventActivitiesHandler.ServeHTTP(w, r)
 		case CalendarServiceCreateEventTemplateProcedure:
@@ -673,6 +731,14 @@ func (UnimplementedCalendarServiceHandler) AddAttendees(context.Context, *connec
 
 func (UnimplementedCalendarServiceHandler) RemoveAttendees(context.Context, *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.RemoveAttendees is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) GetFreeBusy(context.Context, *connect.Request[v1.GetFreeBusyRequest]) (*connect.Response[v1.GetFreeBusyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.GetFreeBusy is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) SuggestMeetingTimes(context.Context, *connect.Request[v1.SuggestMeetingTimesRequest]) (*connect.Response[v1.SuggestMeetingTimesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.SuggestMeetingTimes is not implemented"))
 }
 
 func (UnimplementedCalendarServiceHandler) ListEventActivities(context.Context, *connect.Request[v1.ListEventActivitiesRequest]) (*connect.Response[v1.ListEventActivitiesResponse], error) {

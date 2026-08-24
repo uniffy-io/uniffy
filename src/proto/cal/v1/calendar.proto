@@ -159,6 +159,16 @@ service CalendarService {
   // Remove attendees from an event
   rpc RemoveAttendees(RemoveAttendeesRequest) returns (RemoveAttendeesResponse) {}
 
+  // === Scheduling Operations ===
+
+  // Per-user busy intervals for the availability grid. Returns only
+  // (start, end, out_of_office) spans - never titles or details.
+  rpc GetFreeBusy(GetFreeBusyRequest) returns (GetFreeBusyResponse) {}
+
+  // Meeting-time suggestions honoring every required attendee's working
+  // hours and timezone, ranked by optional-attendee availability.
+  rpc SuggestMeetingTimes(SuggestMeetingTimesRequest) returns (SuggestMeetingTimesResponse) {}
+
   // === Activity Operations ===
 
   // List the activity log for an event, newest first
@@ -822,4 +832,68 @@ message ListEventTemplatesRequest {
 
 message ListEventTemplatesResponse {
   repeated EventTemplate templates = 1;
+}
+
+// Scheduling Messages
+
+// A blocked span in someone's calendar; no details beyond the kind
+message BusyInterval {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  // The span comes from an out-of-office event
+  bool is_out_of_office = 3;
+}
+
+// One user's availability facts for the grid
+message UserFreeBusy {
+  string user_id = 1;
+  repeated BusyInterval intervals = 2;
+  // IANA zone the working hours below are expressed in
+  string timezone = 3;
+  // Workday bounds on that user's own clock (24h HH:MM)
+  string workday_start = 4;
+  string workday_end = 5;
+  // Lowercase day names ("monday".."sunday")
+  repeated string workdays = 6;
+}
+
+message GetFreeBusyRequest {
+  string organization_id = 1;
+  // At most 20 users per query
+  repeated string user_ids = 2;
+  google.protobuf.Timestamp window_start = 3;
+  google.protobuf.Timestamp window_end = 4;
+  // Include this room's booked spans in the response
+  optional string room_id = 5;
+}
+
+message GetFreeBusyResponse {
+  repeated UserFreeBusy users = 1;
+  // Booked spans for the requested room, empty when no room_id was sent
+  repeated BusyInterval room_busy = 2;
+}
+
+message SuggestMeetingTimesRequest {
+  string organization_id = 1;
+  repeated string required_user_ids = 2;
+  repeated string optional_user_ids = 3;
+  google.protobuf.Timestamp window_start = 4;
+  google.protobuf.Timestamp window_end = 5;
+  // Meeting length in minutes (5-480)
+  int32 duration_minutes = 6;
+  // A suggestion never overlaps this room's confirmed bookings
+  optional string room_id = 7;
+  // 1-10, default 5
+  int32 max_results = 8;
+}
+
+message MeetingTimeSuggestion {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  // Optional attendees who cannot make this slot (busy or outside their hours)
+  repeated string unavailable_optional_user_ids = 3;
+}
+
+message SuggestMeetingTimesResponse {
+  repeated MeetingTimeSuggestion suggestions = 1;
 }

@@ -60,6 +60,12 @@ class CalendarService(Protocol):
     async def remove_attendees(self, request: cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_free_busy(self, request: cal_dot_v1_dot_calendar__pb2.GetFreeBusyRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetFreeBusyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def suggest_meeting_times(self, request: cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def list_event_activities(self, request: cal_dot_v1_dot_calendar__pb2.ListEventActivitiesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ListEventActivitiesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -223,6 +229,26 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.remove_attendees,
+                ),
+                "/cal.v1.CalendarService/GetFreeBusy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetFreeBusy",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.GetFreeBusyRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.GetFreeBusyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_free_busy,
+                ),
+                "/cal.v1.CalendarService/SuggestMeetingTimes": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SuggestMeetingTimes",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.suggest_meeting_times,
                 ),
                 "/cal.v1.CalendarService/ListEventActivities": Endpoint.unary(
                     method=MethodInfo(
@@ -578,6 +604,46 @@ class CalendarServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_free_busy(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.GetFreeBusyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.GetFreeBusyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetFreeBusy",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.GetFreeBusyRequest,
+                output=cal_dot_v1_dot_calendar__pb2.GetFreeBusyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def suggest_meeting_times(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SuggestMeetingTimes",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesRequest,
+                output=cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def list_event_activities(
         self,
         request: cal_dot_v1_dot_calendar__pb2.ListEventActivitiesRequest,
@@ -730,6 +796,10 @@ class CalendarServiceSync(Protocol):
     def add_attendees(self, request: cal_dot_v1_dot_calendar__pb2.AddAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.AddAttendeesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def remove_attendees(self, request: cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_free_busy(self, request: cal_dot_v1_dot_calendar__pb2.GetFreeBusyRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetFreeBusyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def suggest_meeting_times(self, request: cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_event_activities(self, request: cal_dot_v1_dot_calendar__pb2.ListEventActivitiesRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ListEventActivitiesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -888,6 +958,26 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.remove_attendees,
+                ),
+                "/cal.v1.CalendarService/GetFreeBusy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetFreeBusy",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.GetFreeBusyRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.GetFreeBusyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_free_busy,
+                ),
+                "/cal.v1.CalendarService/SuggestMeetingTimes": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SuggestMeetingTimes",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.suggest_meeting_times,
                 ),
                 "/cal.v1.CalendarService/ListEventActivities": EndpointSync.unary(
                     method=MethodInfo(
@@ -1237,6 +1327,46 @@ class CalendarServiceClientSync(ConnectClientSync):
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesRequest,
                 output=cal_dot_v1_dot_calendar__pb2.RemoveAttendeesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_free_busy(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.GetFreeBusyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.GetFreeBusyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetFreeBusy",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.GetFreeBusyRequest,
+                output=cal_dot_v1_dot_calendar__pb2.GetFreeBusyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def suggest_meeting_times(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SuggestMeetingTimes",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesRequest,
+                output=cal_dot_v1_dot_calendar__pb2.SuggestMeetingTimesResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
