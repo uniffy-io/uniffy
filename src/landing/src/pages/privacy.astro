@@ -3,7 +3,7 @@ import LegalLayout from "@/layouts/LegalLayout.astro";
 
 const COMPANY = "Uniffy, Inc.";
 const CONTACT = "support@uniffy.io";
-const EFFECTIVE = "19 July 2026";
+const EFFECTIVE = "24 August 2026";
 ---
 
 <LegalLayout
@@ -43,6 +43,7 @@ const EFFECTIVE = "19 July 2026";
     <li><strong>Your content.</strong> The notes, files, messages, tasks, events, and other content you create, upload, or share in the Service.</li>
     <li><strong>Usage and device data.</strong> Basic technical information needed to run and secure the Service, such as app version, device type and operating system, IP address, and diagnostic logs.</li>
     <li><strong>Support and communications.</strong> Messages you send us, such as bug reports, feedback, and support requests.</li>
+    <li><strong>Cloud waitlist.</strong> If you leave your email address on our cloud page, we store it with Cloudflare, the provider that hosts this website, in an EU region. It exists for one purpose: a single announcement when the hosted service opens. Nothing else is ever sent to it.</li>
   </ul>
   <p>
     We do not collect advertising identifiers, and the app does not include third-party advertising or
@@ -69,10 +70,9 @@ const EFFECTIVE = "19 July 2026";
   <h2 id="ai" data-toc-label="6. AI features"><span class="legal-prose__num">06</span>AI features and your prompts</h2>
   <p>
     When you use an AI assistant, the content you send is processed to generate a response by the model
-    provider you choose, by a self-hosted model, or by Uniffy AI Cloud. We do not use your content or prompts
+    provider you choose or by a self-hosted model. We do not use your content or prompts
     to train AI models. If you route a request to a third-party model provider, that provider processes the
-    request under its own terms, so choose providers you trust for sensitive content. Uniffy AI Cloud runs
-    open models on infrastructure we operate and does not retain your prompts to train models.
+    request under its own terms, so choose providers you trust for sensitive content.
   </p>
 
   <h2 id="app-permissions" data-toc-label="7. App permissions"><span class="legal-prose__num">07</span>Mobile app permissions</h2>
@@ -81,7 +81,7 @@ const EFFECTIVE = "19 July 2026";
     them in your device settings. These include:
   </p>
   <ul>
-    <li><strong>Camera and microphone</strong>, for calls, rooms, screen or media capture, and attaching photos you take;</li>
+    <li><strong>Camera and microphone</strong>, for calls, screen or media capture, and attaching photos you take;</li>
     <li><strong>Photos and files</strong>, so you can upload and attach content;</li>
     <li><strong>Notifications</strong>, so we can deliver the push notifications you enable;</li>
     <li><strong>Network access</strong>, which the app needs to reach the Service.</li>
@@ -115,7 +115,8 @@ const EFFECTIVE = "19 July 2026";
     We keep your account data and content for as long as your account is active. When you delete content or
     your account, we delete it or anonymize it within a reasonable period, except where we must keep certain
     records to meet legal obligations, resolve disputes, or enforce our agreements. Backups are cycled out on a
-    rolling schedule.
+    rolling schedule. The cloud waitlist is deleted after the launch announcement is sent; write to us any time
+    before that and we will remove you immediately.
   </p>
 
   <h2 id="security" data-toc-label="11. Security"><span class="legal-prose__num">11</span>How we protect your data</h2>
@@ -146,9 +147,8 @@ const EFFECTIVE = "19 July 2026";
 
   <h2 id="cookies" data-toc-label="14. Cookies"><span class="legal-prose__num">14</span>Cookies and this website</h2>
   <p>
-    This marketing website uses only the cookies and local storage needed to make it work and to keep you
-    signed in when you visit the hosted service. We do not use advertising cookies or third-party tracking
-    cookies on it.
+    This marketing website uses only the cookies and local storage strictly needed to make it work. We do not
+    use advertising cookies or third-party tracking cookies on it.
   </p>
 
   <h2 id="self-hosted" data-toc-label="15. Self-hosted"><span class="legal-prose__num">15</span>Self-hosted deployments</h2>
@@ -156,7 +156,8 @@ const EFFECTIVE = "19 July 2026";
     Uniffy can be run as self-hosted software. If you use a Uniffy workspace that your own organization or a
     third party runs on their infrastructure, that operator controls the data and is responsible for its own
     privacy practices. This policy does not apply to those deployments. The software is designed to run fully
-    isolated from the internet. It has no phone home, no telemetry endpoint, and no license server to reach.
+    isolated from the internet. It has no phone home, no telemetry endpoint, no license keys, and no license
+    server to reach. There is nothing to activate, and a self-hosted deployment never contacts us.
   </p>
 
   <h2 id="changes" data-toc-label="16. Changes"><span class="legal-prose__num">16</span>Changes to this policy</h2>

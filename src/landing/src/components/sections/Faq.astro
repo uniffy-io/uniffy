@@ -1,0 +1,129 @@
+---
+const faqs = [
+  {
+    q: "Is Uniffy really free, or is there a catch?",
+    a: [
+      "Self hosted Uniffy is free. Full product, any number of users, forever. There is no seat cap, no feature gate, and no license key.",
+      "We make money when we host Uniffy for you and when you buy a support subscription. If you never want either, you never pay us.",
+    ],
+  },
+  {
+    q: "What does the license actually forbid?",
+    a: [
+      "One thing. You cannot sell Uniffy as a competing product or service.",
+      'Everything else stands. Run it internally at any scale, modify it, and a consultancy can charge you for operating it. <a href="/docs/deployment/licensing/">Read how licensing works</a>.',
+    ],
+  },
+  {
+    q: "Is it open source in the OSI sense?",
+    a: [
+      "The Functional Source License is not on the OSI list, because of the single restriction above. Two years after each release, that restriction expires and the release becomes plain Apache 2.0, irrevocably.",
+      'The license is one page. <a href="https://github.com/uniffy-io/uniffy/blob/main/LICENSE" target="_blank" rel="noreferrer">Read it</a> and judge for yourself.',
+    ],
+  },
+  {
+    q: "When does the cloud open?",
+    a: [
+      "We are building it now, and it is not open for signups yet. We would rather ship it right than ship it early.",
+      'Until then, self hosting gets you the full product today. <a href="/cloud">The cloud page</a> has the current state.',
+    ],
+  },
+  {
+    q: "Do paid plans unlock features?",
+    a: [
+      "No, and they never will. SSO, SCIM, guests, the audit log, every agent feature: in every plan, including the free tier and every self hosted install.",
+      "Paid tiers price hosting, storage, service levels, and support. Never features.",
+    ],
+  },
+  {
+    q: "Can I leave? What happens to my data?",
+    a: [
+      "Any time. Your whole organization exports to open formats: notes and calendar as Markdown, files in their original formats, chat and workflows as JSON.",
+      "Cloud and self host run the same code, so nothing about your data changes shape between them.",
+    ],
+  },
+  {
+    q: "Does AI read my workspace?",
+    a: [
+      "Only if your org turns AI on, and then only with the asking user's permissions. Uniffy ships with every AI feature switched off.",
+      "You bring your own provider keys or point it at a self hosted model. Nothing is ever used to train anyone's models.",
+    ],
+  },
+  {
+    q: "What does a support subscription buy?",
+    a: [
+      "A human who ships Uniffy, on a response clock. Tickets, upgrade guidance, remote troubleshooting, and on the top tier we join your incident call. Priced per deployment, per year.",
+      "The software is identical with or without it, and you never need one to run in production.",
+    ],
+  },
+  {
+    q: "Where does the cloud keep my data?",
+    a: [
+      "In EU regions, by default and by design. GDPR applies, and there is no US Cloud Act exposure.",
+      "Self host and the question never comes up. Your servers, your jurisdiction.",
+    ],
+  },
+];
+---
+
+<section id="faq" class="bg-night-gradient px-5 py-16 sm:px-6 sm:py-20 md:px-10 md:py-32">
+  <div class="mx-auto max-w-7xl">
+    <h2 class="section-heading">
+      Before you ask
+    </h2>
+    <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
+      The questions every evaluation lands on, answered the way we would answer
+      them in person.
+    </p>
+
+    <div class="mx-auto mt-12 max-w-3xl space-y-3 md:mt-16">
+      {
+        faqs.map((f) => (
+          <details class="faq-item group rounded-2xl border border-night-hairline bg-night-soft">
+            <summary class="faq-summary flex cursor-pointer items-center justify-between gap-4 px-6 py-5 font-sans text-base font-semibold tracking-tight text-night-text sm:text-lg">
+              {f.q}
+              <span class="faq-mark grid h-7 w-7 flex-shrink-0 place-items-center rounded-full border border-night-hairline-strong font-mono text-sm text-night-muted" aria-hidden>
+                +
+              </span>
+            </summary>
+            <div class="px-6 pb-6">
+              {f.a.map((p) => (
+                <p class="faq-answer mt-2 text-sm leading-relaxed text-night-soft-text sm:text-base" set:html={p} />
+              ))}
+            </div>
+          </details>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq-summary {
+    list-style: none;
+  }
+  .faq-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-mark {
+    transition: transform 0.2s ease;
+  }
+  .faq-item[open] .faq-mark {
+    transform: rotate(45deg);
+    border-color: rgba(105, 74, 255, 0.6);
+    color: var(--color-accent-strong);
+  }
+
+  .faq-item[open] {
+    border-color: var(--color-night-hairline-strong);
+  }
+
+  .faq-answer :global(a) {
+    color: var(--color-accent-strong);
+    font-weight: 500;
+  }
+  .faq-answer :global(a:hover) {
+    text-decoration: underline;
+  }
+</style>

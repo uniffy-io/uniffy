@@ -4,14 +4,15 @@
 
 ### License
 
-Uniffy is **source-available** software, free to use for teams of up to 10 users, using the [Business Source License 1.1 (BSL 1.1)](LICENSE). 
+Uniffy is **open source** software, free to self host with no user limit, using the [Functional Source License (FSL-1.1-Apache-2.0)](LICENSE).
 
 ### What This Means
 
-- **Source Available**: The complete source code is publicly accessible. You can read it, learn from it, verify and understand exactly how Uniffy works.
-- **Free for Small Teams**: Organizations with 10 or fewer users can use Uniffy at no cost.
+- **Open Code**: The complete source code is publicly accessible. You can read it, learn from it, verify and understand exactly how Uniffy works.
+- **Free to Self Host**: Any organization, at any size, can run Uniffy in production at no cost. There is no user limit and no license key.
 - **Public Development**: Development discussions, roadmaps, and issue tracking are all conducted in the open on GitHub.
-- **Commercial License Required**: Teams larger than 10 users require a commercial license.
+- **One Restriction**: You may not offer Uniffy to third parties as a competing commercial product or service. Internal use is always permitted.
+- **Delayed Open Source**: Every release automatically becomes Apache 2.0 two years after we publish it.
 
 ### Why we choose this License
 
@@ -19,17 +20,17 @@ Uniffy is an idea and a project which requires significant resources to maintain
 
 We strongly believe in open code and the principles of transparency. However, we also need to ensure the sustainability of the project, protect from big corporations taking advantage of our work, and continue investing in its growth and improvement.
 
-We are trying to build a cloud version of Uniffy that will be affordable for small teams and startups, while also providing a self-hosted version for organizations that require more control over their data. The BSL 1.1 allows us to strike a balance between open source principles and the need for a sustainable business model.
+We are trying to build a cloud version of Uniffy that will be affordable for small teams and startups, while also providing a self-hosted version for organizations that require more control over their data. The FSL allows us to strike that balance. Self hosting is free at any size, we make money from our cloud and from support contracts, and the one thing the license prevents is someone else selling Uniffy as a service. Every release becomes Apache 2.0 two years after publication, and that grant is irrevocable.
 
 ### Privacy
 
 Uniffy respects your privacy. We do not collect telemetry, usage, or personal data. You have full control over your data.
 
-When using the self-hosted Uniffy in your own environment. We **ONLY** phone home for update checks (**if enabled**) and license validation for paid plans. 
+When using the self-hosted Uniffy in your own environment, we **ONLY** phone home for update checks (**if enabled**). There is no license validation because there are no license keys.
 
-For Enterprise customers, we can offer air-gapped deployments with no external network access. This works by deploying additional software that acts as a license server within your air-gapped environment to validate your license keys without any external communication.
+Air-gapped deployments with no external network access are fully supported for everyone. Nothing in the product requires outbound connectivity.
 
-For the cloud version of Uniffy, we adhere to strict data protection standards and comply with relevant regulations to ensure your data is safe and secure. Uniffy is hosted in Europe and fully comply with GDPR. You can read more about our privacy practices in the [Privacy Policy](https://www.uniffy.io/privacy-policy).
+For the cloud version of Uniffy, we adhere to strict data protection standards and comply with relevant regulations to ensure your data is safe and secure. Uniffy is hosted in Europe and fully comply with GDPR. You can read more about our privacy practices in the [Privacy Policy](https://uniffy.io/privacy-policy).
 
 ### Don't just trust, verify
 
@@ -67,14 +68,14 @@ Uniffy don't force you to use proprietary formats. You can export your whole org
 
 ### Future License Change
 
-The Business Source License includes a "Change Date" (currently set to January 1, 2039) at which point the license will automatically convert to the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0). This means that after this date, Uniffy will be fully open source under the Apache 2.0 license.
+The Functional Source License includes an irrevocable grant of the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0) that takes effect two years after each release is published. The conversion runs per release. At any point in time, every Uniffy release older than two years is fully open source under Apache 2.0, and nothing we do can take that back.
 
 ### Third-Party Open Source
 
 Uniffy is built on the shoulders of hackers, developers, and contributors from around the world just like you. We use many open-source libraries and frameworks licensed under permissive licenses such as MIT, Apache 2.0, and BSD. We are grateful to the open-source community for their contributions.
 
-The uniffy-io Organization tries to donate as much as possible back to the open-source projects we depend on, either through code contributions, sponsorships, or other means. For a full list of third-party dependencies and their licenses, see [docs/THIRD_PARTY_LICENSES.md](docs/THIRD_PARTY_LICENSES.md).
+Uniffy, Inc. tries to donate as much as possible back to the open-source projects we depend on, either through code contributions, sponsorships, or other means. For a full list of third-party dependencies and their licenses, see [docs/LICENSES.md](LICENSES.md).
 
-This file can be regenerated by running `make licenses`.
+That file can be regenerated by running `./manage.py licenses`.
 
-For complete list of all the donations and sponsorships made by uniffy-io, please visit our [Open Source Contributions Page](https://www.uniffy.io/open-source-contributions).
+For complete list of all the donations and sponsorships made by Uniffy, Inc., please visit our [Open Source Contributions Page](https://uniffy.io/open-source-contributions).

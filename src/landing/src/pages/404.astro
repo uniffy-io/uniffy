@@ -1,0 +1,78 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Uniffy | Page not found"
+  description="This page does not exist. The rest of Uniffy does."
+>
+  <section class="notfound-section relative flex min-h-[86vh] flex-col items-center justify-center overflow-hidden px-5 py-20 text-center sm:px-6 sm:py-24 md:px-10">
+    <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+      <div class="notfound-grid absolute inset-0"></div>
+    </div>
+
+    <div class="relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center">
+      <p class="font-mono text-xs text-paper/45">urn:uniffy:content:PAGE:not-found</p>
+
+      <h1 class="mt-6 font-sans text-4xl font-semibold tracking-[-0.03em] text-paper/95 sm:text-5xl md:text-6xl">
+        This mention resolves to nothing
+      </h1>
+
+      <p class="mt-6 max-w-xl text-base leading-relaxed text-paper/90 sm:text-lg">
+        The page you followed does not exist. Maybe it moved, maybe the link was
+        wrong, maybe it never was. Everything that does exist is one click away.
+      </p>
+
+      <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+        <a
+          href="/"
+          class="inline-flex items-center gap-2 rounded-full bg-paper px-6 py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
+        >
+          Back to the start
+          <span aria-hidden>&rarr;</span>
+        </a>
+        <a
+          href="/docs/"
+          class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-6 py-3 text-sm font-medium text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1]"
+        >
+          Read the docs
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .notfound-section {
+    background-color: #0a0d1a;
+  }
+
+  .notfound-section::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(105, 74, 255, 0.7) 18%,
+      rgba(253, 126, 234, 0.7) 45%,
+      rgba(255, 85, 0, 0.7) 68%,
+      rgba(1, 183, 127, 0.8) 90%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
+  .notfound-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+    background-size: 60px 60px;
+    background-position: center;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 44%, #000 28%, transparent 78%);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 44%, #000 28%, transparent 78%);
+  }
+</style>

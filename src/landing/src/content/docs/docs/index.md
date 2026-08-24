@@ -30,7 +30,7 @@ Pick the path that matches you.
 
 **You just signed up and want to learn the product.** Open the app and click around. The app is the best place to learn how Uniffy feels. Come back here for the parts that are not self evident.
 
-**You are evaluating Uniffy for your team.** Read the [Principles](/docs/principles/) page. Then look at the comparison and pricing on [uniffy.io](/). You will know in five minutes whether we are aligned with how you want to work.
+**You are evaluating Uniffy for your team.** Read the [Principles](/docs/principles/) page. Then read the [FAQ](/faq) and the pricing on [uniffy.io](/). You will know in five minutes whether we are aligned with how you want to work.
 
 **You are about to run Uniffy on your own servers.** Start with the [Deployment Guide](/docs/deployment/). It covers the bring up from first install through day two operations.
 
