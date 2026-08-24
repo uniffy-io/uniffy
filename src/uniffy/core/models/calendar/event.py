@@ -8,7 +8,15 @@ from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from uniffy.core.types import AccessMode, ContentRole, RecurrencePattern, generate_id
+from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
+    EventStatus,
+    EventTransparency,
+    EventVisibility,
+    RecurrencePattern,
+    generate_id,
+)
 
 
 class CalendarEvent(SQLModel, table=True):
@@ -74,6 +82,40 @@ class CalendarEvent(SQLModel, table=True):
         ),
     )
     is_focus_time: bool = Field(default=False, nullable=False)
+    status: EventStatus = Field(
+        default=EventStatus.CONFIRMED,
+        sa_column=Column(
+            Enum(
+                EventStatus,
+                name="eventstatus",
+                values_callable=lambda x: [e.value for e in x],
+            ),
+            nullable=False,
+        ),
+    )
+    visibility: EventVisibility = Field(
+        default=EventVisibility.STANDARD,
+        sa_column=Column(
+            Enum(
+                EventVisibility,
+                name="eventvisibility",
+                values_callable=lambda x: [e.value for e in x],
+            ),
+            nullable=False,
+        ),
+    )
+    transparency: EventTransparency = Field(
+        default=EventTransparency.OPAQUE,
+        sa_column=Column(
+            Enum(
+                EventTransparency,
+                name="eventtransparency",
+                values_callable=lambda x: [e.value for e in x],
+            ),
+            nullable=False,
+        ),
+    )
+    is_out_of_office: bool = Field(default=False, nullable=False)
     is_deleted: bool = Field(default=False, nullable=False)
     linked_resources: list[dict[str, Any]] | None = Field(default=None, sa_column=Column(JSONB))
     outgoing_references: list[str] | None = Field(default=None, sa_column=Column(JSONB))

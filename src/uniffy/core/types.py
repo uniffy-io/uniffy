@@ -141,6 +141,28 @@ class DayOfWeek(str, Enum):
     SUNDAY = "SUNDAY"
 
 
+class EventStatus(str, Enum):
+    """Lifecycle status of a calendar event; cancelled events stay visible."""
+
+    CONFIRMED = "CONFIRMED"
+    TENTATIVE = "TENTATIVE"
+    CANCELLED = "CANCELLED"
+
+
+class EventVisibility(str, Enum):
+    """Detail visibility of an event to viewers who are not organizer or attendee."""
+
+    STANDARD = "STANDARD"
+    PRIVATE = "PRIVATE"
+
+
+class EventTransparency(str, Enum):
+    """Whether an event blocks the attendee's time in free/busy answers."""
+
+    OPAQUE = "OPAQUE"
+    TRANSPARENT = "TRANSPARENT"
+
+
 class AttendeeStatus(str, Enum):
     """Response status for event attendees."""
 
@@ -175,6 +197,7 @@ class NotificationType(str, Enum):
     CALENDAR_REMINDER = "CALENDAR_REMINDER"
     CALENDAR_INVITE = "CALENDAR_INVITE"
     CALENDAR_RESPONSE = "CALENDAR_RESPONSE"
+    CALENDAR_CANCELLED = "CALENDAR_CANCELLED"
     PERMISSION_GRANTED = "PERMISSION_GRANTED"
     PERMISSION_REVOKED = "PERMISSION_REVOKED"
     SYSTEM_ANNOUNCEMENT = "SYSTEM_ANNOUNCEMENT"
