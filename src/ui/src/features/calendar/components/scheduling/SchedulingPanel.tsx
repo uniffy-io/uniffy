@@ -50,15 +50,23 @@ export function SchedulingPanel({
   const loadingSuggestions = useAppSelector((state) => state.calendar.loading.suggestions);
   const [dayOffset, setDayOffset] = useState(0);
 
-  const userIds = useMemo(() => attendees.map((a) => a.userId), [attendees]);
+  // Callers pass freshly-built attendee arrays, and every fulfilled fetch
+  // re-renders them through the store; key the memos on content, not array
+  // identity, or the fetch effects retrigger themselves in a loop.
+  const userIdsKey = attendees.map((a) => a.userId).join(",");
+  const requiredIdsKey = attendees
+    .filter((a) => a.required)
+    .map((a) => a.userId)
+    .join(",");
+  const userIds = useMemo(() => (userIdsKey ? userIdsKey.split(",") : []), [userIdsKey]);
   const names = useMemo(
     () => Object.fromEntries(attendees.map((a) => [a.userId, a.name])),
     [attendees],
   );
   const requiredIds = useMemo(() => {
-    const marked = attendees.filter((a) => a.required).map((a) => a.userId);
+    const marked = requiredIdsKey ? requiredIdsKey.split(",") : [];
     return new Set(marked.length > 0 ? marked : userIds);
-  }, [attendees, userIds]);
+  }, [requiredIdsKey, userIds]);
 
   const overCap = userIds.length > MAX_FREE_BUSY_USERS;
   const gridDay = useMemo(
@@ -93,7 +101,12 @@ export function SchedulingPanel({
 
   useEffect(() => {
     if (overCap || userIds.length === 0) return;
-    const windowStart = startIso ?? new Date().toISOString();
+    // Suggestions for an event whose start already passed should look forward
+    // from now, not propose slots in the past. Compare epochs: ISO strings
+    // with mixed millisecond precision do not order lexicographically.
+    const now = new Date();
+    const windowStart =
+      startIso && Date.parse(startIso) > now.getTime() ? startIso : now.toISOString();
     const timer = setTimeout(() => {
       dispatch(
         fetchMeetingSuggestions({
