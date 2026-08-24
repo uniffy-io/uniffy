@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   X,
+  CaretDown,
+  CaretRight,
   Clock,
   Door,
   Tag,
   TextAa,
   Users,
+  UsersThree,
   Warning,
   VideoCamera,
   Prohibit,
@@ -13,7 +16,13 @@ import {
   Sliders,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { instantDayKey, instantFromDisplayParts } from "@/features/calendar/utils";
+import {
+  displayDayKey,
+  displayParts,
+  instantDayKey,
+  instantFromDisplayParts,
+} from "@/features/calendar/utils";
+import { SchedulingPanel } from "@/features/calendar/components/scheduling/SchedulingPanel";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
 import { createEvent } from "@/features/calendar/store/calendarThunks";
@@ -115,10 +124,12 @@ export function QuickEventModal({
   const [isFree, setIsFree] = useState(false);
   const [isOutOfOffice, setIsOutOfOffice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showFindTime, setShowFindTime] = useState(false);
   const pendingFileIdsRef = useRef<string[]>([]);
 
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const categories = useAppSelector((state) => state.calendar.categories);
+  const currentUser = useAppSelector((state) => state.auth.user);
 
   const handleFileUploaded = useCallback((fileId: string) => {
     pendingFileIdsRef.current.push(fileId);
@@ -314,7 +325,9 @@ export function QuickEventModal({
         onClick={onClose}
       />
 
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] max-w-xl animate-in zoom-in-95 fade-in duration-200">
+      <div
+        className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] ${showFindTime ? "max-w-3xl" : "max-w-xl"} animate-in zoom-in-95 fade-in duration-200`}
+      >
         <div className="bg-background rounded-xl shadow-2xl border border-border overflow-hidden relative">
           <button
             onClick={onClose}
@@ -538,6 +551,53 @@ export function QuickEventModal({
                   </div>
                 )}
               </div>
+
+              {attendees.length > 0 && (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowFindTime((value) => !value)}
+                    className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"
+                  >
+                    {showFindTime ? <CaretDown size={14} /> : <CaretRight size={14} />}
+                    <UsersThree size={16} weight="duotone" className="text-muted-foreground" />
+                    <span>Find a time</span>
+                  </button>
+                  {showFindTime && (
+                    <SchedulingPanel
+                      attendees={[
+                        ...(currentUser
+                          ? [
+                              {
+                                userId: currentUser.id,
+                                name: currentUser.fullName || currentUser.username,
+                                required: true,
+                              },
+                            ]
+                          : []),
+                        ...attendees
+                          .filter((a) => a.id !== currentUser?.id)
+                          .map((a) => ({
+                            userId: a.id,
+                            name: a.name,
+                            required: a.role !== "optional",
+                          })),
+                      ]}
+                      startIso={startIso}
+                      endIso={endIso}
+                      roomId={selectedRoomId}
+                      onPick={(pickedStart, pickedEnd) => {
+                        setStartDate(displayDayKey(pickedStart));
+                        setEndDate(displayDayKey(pickedEnd));
+                        const startParts = displayParts(new Date(pickedStart));
+                        const endParts = displayParts(new Date(pickedEnd));
+                        setStartHour(startParts.hours + startParts.minutes / 60);
+                        setEndHour(endParts.hours + endParts.minutes / 60);
+                      }}
+                    />
+                  )}
+                </div>
+              )}
 
               <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
 

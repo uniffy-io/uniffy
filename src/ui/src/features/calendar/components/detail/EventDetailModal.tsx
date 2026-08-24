@@ -33,6 +33,7 @@ import { EventPlaceSection } from "@/features/calendar/components/detail/EventPl
 import { EventPeopleSection } from "@/features/calendar/components/detail/EventPeopleSection";
 import { EventMetaSection } from "@/features/calendar/components/detail/EventMetaSection";
 import { EventStateSection } from "@/features/calendar/components/detail/EventStateSection";
+import { EventSchedulingSection } from "@/features/calendar/components/detail/EventSchedulingSection";
 import { EventActivityLog } from "@/features/calendar/components/detail/EventActivityLog";
 
 export function EventDetailModal() {
@@ -263,6 +264,12 @@ export function EventDetailModal() {
               <div className="px-5 py-3 border-b border-border">
                 <EventScheduleSection event={selectedEvent} canEdit={canEdit} commit={commit} />
               </div>
+
+              {selectedEvent.attendees.length > 0 && (
+                <div className="px-5 py-3 border-b border-border">
+                  <EventSchedulingSection event={selectedEvent} canEdit={canEdit} commit={commit} />
+                </div>
+              )}
 
               <div className="px-5 py-3 border-b border-border">
                 <EventPlaceSection event={selectedEvent} canEdit={canEdit} commit={commit} />

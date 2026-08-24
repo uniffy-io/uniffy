@@ -13,6 +13,8 @@ import {
   GetEventRequestSchema,
   GetEventTemplateRequestSchema,
   GetEventsInRangeRequestSchema,
+  GetFreeBusyRequestSchema,
+  SuggestMeetingTimesRequestSchema,
   ListCategoriesRequestSchema,
   ListEventActivitiesRequestSchema,
   ListEventTemplatesRequestSchema,
@@ -136,6 +138,16 @@ export const calendarApi = {
 
   listEventTemplates: async (request: MessageInitShape<typeof ListEventTemplatesRequestSchema>) => {
     return calendarClient.listEventTemplates(request);
+  },
+
+  getFreeBusy: async (request: MessageInitShape<typeof GetFreeBusyRequestSchema>) => {
+    return calendarClient.getFreeBusy(request);
+  },
+
+  suggestMeetingTimes: async (
+    request: MessageInitShape<typeof SuggestMeetingTimesRequestSchema>,
+  ) => {
+    return calendarClient.suggestMeetingTimes(request);
   },
 
   listEventActivities: async (

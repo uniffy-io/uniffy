@@ -10,7 +10,13 @@ import type {
   RecurrenceConfig as ProtoRecurrenceConfig,
   LinkedResource as ProtoLinkedResource,
   EventTemplate as ProtoEventTemplate,
+  BusyInterval as ProtoBusyInterval,
 } from "@uniffy/proto/cal/v1/calendar_pb";
+import type {
+  FreeBusyData,
+  MeetingSuggestion,
+  SchedulingBusyInterval,
+} from "@/features/calendar/types/scheduling";
 import {
   RecurrencePattern as ProtoRecurrencePattern,
   AttendeeStatus as ProtoAttendeeStatus,
@@ -878,5 +884,91 @@ export const fetchEventActivities = createAsyncThunk<
     return { eventId, activities };
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch activity");
+  }
+});
+
+const busyIntervalFromProto = (proto: ProtoBusyInterval): SchedulingBusyInterval => ({
+  start: timestampToIso(proto.startTime),
+  end: timestampToIso(proto.endTime),
+  isOutOfOffice: proto.isOutOfOffice,
+});
+
+export interface FreeBusyParams {
+  userIds: string[];
+  windowStart: string;
+  windowEnd: string;
+  roomId?: string;
+}
+
+export const freeBusyKey = (params: FreeBusyParams): string =>
+  [params.userIds.join(","), params.windowStart, params.windowEnd, params.roomId ?? ""].join("|");
+
+export const fetchFreeBusy = createAsyncThunk<
+  { key: string; data: FreeBusyData },
+  FreeBusyParams,
+  { state: RootState; rejectValue: string }
+>("calendar/fetchFreeBusy", async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.getFreeBusy({
+      organizationId,
+      userIds: params.userIds,
+      windowStart: isoToTimestamp(params.windowStart),
+      windowEnd: isoToTimestamp(params.windowEnd),
+      roomId: params.roomId,
+    });
+    return {
+      key: freeBusyKey(params),
+      data: {
+        users: response.users.map((user) => ({
+          userId: user.userId,
+          intervals: user.intervals.map(busyIntervalFromProto),
+          timezone: user.timezone,
+          workdayStart: user.workdayStart,
+          workdayEnd: user.workdayEnd,
+          workdays: [...user.workdays],
+        })),
+        roomBusy: response.roomBusy.map(busyIntervalFromProto),
+      },
+    };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch free/busy");
+  }
+});
+
+export interface SuggestTimesParams {
+  requiredUserIds: string[];
+  optionalUserIds: string[];
+  windowStart: string;
+  windowEnd: string;
+  durationMinutes: number;
+  roomId?: string;
+  maxResults?: number;
+}
+
+export const fetchMeetingSuggestions = createAsyncThunk<
+  MeetingSuggestion[],
+  SuggestTimesParams,
+  { state: RootState; rejectValue: string }
+>("calendar/fetchMeetingSuggestions", async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.suggestMeetingTimes({
+      organizationId,
+      requiredUserIds: params.requiredUserIds,
+      optionalUserIds: params.optionalUserIds,
+      windowStart: isoToTimestamp(params.windowStart),
+      windowEnd: isoToTimestamp(params.windowEnd),
+      durationMinutes: params.durationMinutes,
+      roomId: params.roomId,
+      maxResults: params.maxResults ?? 5,
+    });
+    return response.suggestions.map((s) => ({
+      start: timestampToIso(s.startTime),
+      end: timestampToIso(s.endTime),
+      unavailableOptionalUserIds: [...s.unavailableOptionalUserIds],
+    }));
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to suggest times");
   }
 });

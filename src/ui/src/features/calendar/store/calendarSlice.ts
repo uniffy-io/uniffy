@@ -26,7 +26,10 @@ import {
   deleteEventTemplate,
   listEventTemplates,
   fetchEventActivities,
+  fetchFreeBusy,
+  fetchMeetingSuggestions,
 } from "@/features/calendar/store/calendarThunks";
+import type { FreeBusyData, MeetingSuggestion } from "@/features/calendar/types/scheduling";
 
 interface CalendarState {
   events: Record<string, CalendarEvent>;
@@ -36,6 +39,12 @@ interface CalendarState {
   /** Activity log per event id, newest first. */
   activities: Record<string, EventActivity[]>;
   filters: EventFilters;
+  scheduling: {
+    /** Request key of the stored freeBusy data, so stale responses are ignorable. */
+    freeBusyKey: string | null;
+    freeBusy: FreeBusyData | null;
+    suggestions: MeetingSuggestion[];
+  };
   loading: {
     events: boolean;
     eventDetail: boolean;
@@ -44,6 +53,8 @@ interface CalendarState {
     creating: boolean;
     updating: boolean;
     deleting: boolean;
+    freeBusy: boolean;
+    suggestions: boolean;
   };
   errors: {
     events: string | null;
@@ -90,6 +101,11 @@ const initialState: CalendarState = {
     searchQuery: "",
     focusTimeOnly: false,
   },
+  scheduling: {
+    freeBusyKey: null,
+    freeBusy: null,
+    suggestions: [],
+  },
   loading: {
     events: false,
     eventDetail: false,
@@ -98,6 +114,8 @@ const initialState: CalendarState = {
     creating: false,
     updating: false,
     deleting: false,
+    freeBusy: false,
+    suggestions: false,
   },
   errors: {
     events: null,
@@ -371,6 +389,30 @@ const calendarSlice = createSlice({
     builder.addCase(fetchEventActivities.fulfilled, (state, action) => {
       state.activities[action.payload.eventId] = action.payload.activities;
     });
+
+    builder
+      .addCase(fetchFreeBusy.pending, (state) => {
+        state.loading.freeBusy = true;
+      })
+      .addCase(fetchFreeBusy.fulfilled, (state, action) => {
+        state.loading.freeBusy = false;
+        state.scheduling.freeBusyKey = action.payload.key;
+        state.scheduling.freeBusy = action.payload.data;
+      })
+      .addCase(fetchFreeBusy.rejected, (state) => {
+        state.loading.freeBusy = false;
+      })
+      .addCase(fetchMeetingSuggestions.pending, (state) => {
+        state.loading.suggestions = true;
+      })
+      .addCase(fetchMeetingSuggestions.fulfilled, (state, action) => {
+        state.loading.suggestions = false;
+        state.scheduling.suggestions = action.payload;
+      })
+      .addCase(fetchMeetingSuggestions.rejected, (state) => {
+        state.loading.suggestions = false;
+        state.scheduling.suggestions = [];
+      });
   },
 });
 
