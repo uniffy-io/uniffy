@@ -282,6 +282,53 @@ async def test_calendar_attendee_access_yields_to_explicit_block(session, access
     assert blocked[key].can_view is False
 
 
+async def test_calendar_attendee_floor_does_not_demote_higher_roles(session, access) -> None:
+    """The attendee floor lifts denied viewers only; resolving an organizer's own
+    event in the same batch as an attendee-floor event must keep OWNER."""
+    now = datetime.now(UTC)
+    calendar = Calendar(
+        organization_id=access.org_id,
+        owner_id=access.peer_id,
+        name="Floor calendar",
+    )
+    session.add(calendar)
+    await session.flush()
+    own_event = CalendarEvent(
+        organization_id=access.org_id,
+        organizer_id=access.peer_id,
+        calendar_id=calendar.id,
+        title="Own event",
+        start_time=now,
+        end_time=now + timedelta(hours=1),
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    invited_event = CalendarEvent(
+        organization_id=access.org_id,
+        organizer_id=access.member_id,
+        calendar_id=calendar.id,
+        title="Invited event",
+        start_time=now,
+        end_time=now + timedelta(hours=1),
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    session.add_all([own_event, invited_event])
+    await session.flush()
+    session.add_all(
+        [
+            EventAttendee(event_id=own_event.id, user_id=access.peer_id),
+            EventAttendee(event_id=invited_event.id, user_id=access.peer_id),
+        ]
+    )
+    await session.commit()
+    own_key = ResourceKey(ContentType.CALENDAR_EVENT, own_event.id)
+    invited_key = ResourceKey(ContentType.CALENDAR_EVENT, invited_event.id)
+
+    decisions = await _resolve(session, access, access.peer_id, [own_key, invited_key])
+
+    assert decisions[own_key].role is ContentRole.OWNER
+    assert decisions[invited_key].role is ContentRole.VIEWER
+
+
 async def test_directory_and_agent_folder_policies(session, access) -> None:
     own_folder = ChatAgentFolder(
         organization_id=access.org_id,

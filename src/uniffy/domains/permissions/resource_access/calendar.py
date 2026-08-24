@@ -137,7 +137,10 @@ async def resolve_calendar_events(
             continue
         key = ResourceKey(ContentType.CALENDAR_EVENT, row.id)
         decision = decisions[key]
-        if decision.row_state == ResourceRowState.LIVE:
+        # Attendance is a floor, not the effective role: only lift decisions the
+        # standard policy denied, so an organizer or explicit EDITOR resolved in
+        # the same batch as a denied event keeps their higher role.
+        if decision.row_state == ResourceRowState.LIVE and not decision.can_view:
             decisions[key] = ResourceAccessDecision(
                 key=key,
                 row_state=decision.row_state,
