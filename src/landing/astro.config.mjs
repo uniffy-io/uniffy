@@ -1,4 +1,5 @@
 import { defineConfig } from "astro/config";
+import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -34,6 +35,7 @@ export default defineConfig({
           items: [
             { label: "Overview", link: "/docs/" },
             { label: "Principles", link: "/docs/principles/" },
+            { label: "FAQ", link: "/faq" },
           ],
         },
         {
@@ -51,6 +53,7 @@ export default defineConfig({
       ],
       disable404Route: true,
     }),
+    sitemap(),
   ],
   vite: {
     plugins: [tailwindcss()],

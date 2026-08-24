@@ -18,7 +18,7 @@ The admin pages group everything by intent. These docs follow the same grouping,
 |-------|-------|----------------|
 | Access | [Members](/docs/administration/access/members/), [Teams, Groups](/docs/administration/access/teams-and-groups/), Directory, Domain Admins | Who is in the org, what role they hold, and how people are organized |
 | Security | [Default Permissions](/docs/administration/security/access-model/), Authentication, Encryption, Audit Log | How access is granted, proven, encrypted, and recorded |
-| Workspace | Agents, Rooms, Storage, Email | Infrastructure and integrations scoped to your org |
+| Workspace | [Agents](/docs/administration/workspace/agents/), [Building agents](/docs/administration/workspace/building-agents/), Rooms, Storage, Email | Infrastructure and integrations scoped to your org |
 
 ## Who can open them
 

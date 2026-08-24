@@ -3,43 +3,59 @@ const providers = [
   { name: "Anthropic", note: "Claude" },
   { name: "OpenAI", note: "GPT" },
   { name: "Google", note: "Gemini" },
-  { name: "Self-hosted", note: "Ollama / vLLM / OpenAI-compatible" },
-  { name: "Uniffy AI Cloud", note: "open-source · EU", featured: true },
+  { name: "xAI", note: "Grok" },
+  { name: "OpenRouter", note: "one key, many models" },
+  { name: "Self hosted", note: "Ollama / vLLM / OpenAI-compatible", featured: true },
 ];
 
 const pillars = [
   {
-    kicker: "Multi-provider",
+    kicker: "Many providers",
     title: "Any model, per agent",
-    body: "Each agent picks its own provider and specific model. Run Claude Opus for planning, GPT-5 for code review, Gemini Flash for triage, a self-hosted Llama for sensitive work. Side by side, in the same workspace, on the same data.",
+    body: "Each agent picks its own provider and specific model. Run Claude Opus for planning, GPT-5 for code review, Gemini Flash for triage, a self hosted Llama for sensitive work. Side by side, in the same workspace, on the same data.",
   },
   {
     kicker: "Bound by permissions",
     title: "Agents inherit your access",
-    body: "Every tool call runs as the asking user through the same permission system as the app. An agent cannot read what you cannot read. In a conversation, deletes and moves wait for your approval. A scheduled run has nobody to ask, so it runs with the permissions of the person who owns the schedule.",
+    body: "Every tool call runs as the asking user, through the same permission check the app itself runs. An agent cannot read what you cannot read, and a revoke lands on it in the same instant. Anything it cannot undo stops and asks you first. A scheduled run has nobody to ask, so it runs with the permissions of the person who owns the schedule and only theirs.",
   },
   {
-    kicker: "Uniffy AI Cloud",
-    title: "Open LLMs, hosted by us",
-    body: "Don't trust the labs at all? We run the top open-source models in our EU data centres and expose them as a single endpoint. The catalogue includes Llama 3.3, Mistral, Qwen, and DeepSeek. No third-party lab touches your prompts. No retention. No training on your data.",
+    kicker: "Self hosted models",
+    title: "No lab in the loop",
+    body: "Don't trust the labs at all? Point Uniffy at your own Ollama or vLLM endpoint and run Llama, Mistral, Qwen, or DeepSeek on your own hardware. No outside lab touches your prompts. Nothing ever leaves your infrastructure.",
   },
 ];
 
 const customisation = [
   {
-    kicker: "Soul prompt",
+    kicker: "Custom instructions",
     title: "Personality you write",
-    body: "A free-form instructions block on every agent. Sets the tone, the constraints, and the behaviour the agent carries into every conversation.",
+    body: "One free text block on every agent. It sets the tone, the constraints, and the house rules the agent carries into every conversation. A preview shows the fully assembled prompt, so you read exactly what the model reads.",
+  },
+  {
+    kicker: "Tools",
+    title: "The exact slice you allow",
+    body: "Tools come in groups that map to the product. Notes, files, projects, tasks, calendar, rooms, people, search, images. A meeting agent that holds calendar and rooms cannot wander into files, even for someone who owns every file in the org.",
   },
   {
     kicker: "Skills",
-    title: "Composable instructions",
-    body: "Bundled or org wide markdown skills you flip on per agent. Compose specialised behaviours without rewriting the prompt.",
+    title: "Procedures, not prompt bloat",
+    body: "Short markdown procedures an agent pulls in when they apply. Four ship with Uniffy, your org writes the rest, and every edit is versioned so you can compare and roll back. A thumbs down on an answer turns into a draft skill for review.",
   },
   {
     kicker: "Memory",
     title: "Facts that persist",
-    body: "Agents remember across conversations. Top entries auto-load into every prompt, weighted by importance and recency.",
+    body: "You get one memory store that every agent you talk to shares, and you can read, pin and delete all of it. Your org has its own, separate. What an agent learns in a channel stays with the channel.",
+  },
+  {
+    kicker: "Automations",
+    title: "Work that happens without you",
+    body: "Put an agent on a schedule and the Monday digest writes itself. A scheduled run executes as the person who owns it, so an automation can never become a way to run a prompt as a colleague with more access than you.",
+  },
+  {
+    kicker: "Budgets and limits",
+    title: "Spend you can actually see",
+    body: "Org budgets, per member quotas, and per minute rate limits on messages and image generation. Alerts on the way up, hard stops if you want them, and usage broken down by agent, model and key.",
   },
 ];
 
@@ -66,10 +82,10 @@ const demo: DemoLine[] = [
     time: "11:02",
     toolCalls: [
       { name: "notes.read_note", status: "ok", detail: "Roadmap Q3 2026" },
-      { name: "tasks.list", status: "ok", detail: "project: AGT-12 · 3 open" },
-      { name: "files.read", status: "denied", detail: "Budget 2026.xlsx · OWNER_ONLY" },
+      { name: "tasks.list_tasks", status: "ok", detail: "project: AGT-12 · 3 open" },
+      { name: "files.read_file_content", status: "denied", detail: "Budget 2026.xlsx · no access" },
     ],
-    text: "Egress retries are done and deploying. Two tasks remain. DLQ wiring and the metrics dashboard are still open. I tried to attach the budget breakdown but it is owner-only, so you'll need to share it with me first.",
+    text: "Egress retries are done and deploying. Two tasks remain. DLQ wiring and the metrics dashboard are still open. I went for the budget breakdown too, but it is private to its owner and you have no access to it, so neither do I.",
     cite: "Roadmap Q3 2026",
   },
   {
@@ -78,14 +94,21 @@ const demo: DemoLine[] = [
     initials: "TI",
     avatarColor: "bg-emerald-500",
     time: "11:03",
-    text: "Mark the retries task as done.",
+    text: "Mark the retries task done and bin the old runtime draft.",
+  },
+  {
+    kind: "agent",
+    sender: "EngineeringAgent",
+    time: "11:03",
+    toolCalls: [{ name: "tasks.update_task", status: "ok", detail: "Wire up egress worker retries · Done" }],
+    text: "Task closed. The note is a different matter, deleting it cannot be undone.",
   },
   {
     kind: "approval",
     sender: "EngineeringAgent",
     time: "11:03",
-    text: "About to mark Wire up egress worker retries as Done. This change is destructive. Approve to proceed?",
-    action: "tasks.update_status",
+    text: "About to delete Agent runtime draft v1. This cannot be undone. Approve to proceed?",
+    action: "notes.delete_note",
   },
 ];
 ---
@@ -96,9 +119,11 @@ const demo: DemoLine[] = [
       AI on your terms
     </h2>
     <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
-      Choose the model that fits the task. Bring your own provider credentials,
-      connect a self-hosted endpoint, or route through <span class="text-accent-strong">Uniffy AI Cloud</span> where we
-      operate the leading open-source models on our own infrastructure. Whatever
+      Uniffy's AI is an <span class="text-accent-strong">agent harness</span> for work.
+      Agents read, write, schedule, and organize across the whole workspace, and
+      none of it runs until your org switches it on. Choose the model that fits
+      the task. Bring your own provider credentials, or connect a self hosted
+      endpoint and keep every prompt on your own hardware. Whatever
       you pick, every tool call the agent makes is checked against the same
       permission system that protects the rest of your workspace. An agent only
       ever sees what the user asking it is allowed to see.
@@ -107,7 +132,8 @@ const demo: DemoLine[] = [
       One carve out, stated plainly. When an agent calls a service you connected,
       GitHub for example, it uses that connection's own credential. Its reach
       there is whatever that credential can reach, and it is the same for every
-      member who asks.
+      member who asks. The GitHub tools we ship today only read, and an admin
+      has to turn writing on before any integration can write at all.
     </p>
 
     <div class="mt-10 flex flex-col gap-3 font-mono text-xs md:flex-row md:flex-wrap md:items-center md:gap-2">
@@ -136,7 +162,7 @@ const demo: DemoLine[] = [
                 Agent
               </span>
             </div>
-            <p class="font-mono text-[11px] text-night-faint">claude-opus-4.7 &middot; Anthropic &middot; 9 tools enabled</p>
+            <p class="font-mono text-[11px] text-night-faint">Claude Opus 4.7 &middot; Anthropic &middot; 9 tools enabled</p>
           </div>
         </div>
         <div class="hidden items-center gap-3 font-mono text-[11px] text-night-faint sm:flex">
@@ -276,7 +302,7 @@ const demo: DemoLine[] = [
           <div class="mt-2 flex items-center justify-between rounded-md border border-night-hairline bg-night px-3 py-2">
             <div class="flex items-center gap-2">
               <span class="inline-flex h-5 w-5 items-center justify-center rounded bg-cyan-500/15 font-mono text-[10px] font-bold text-cyan-400">A</span>
-              <span class="font-mono text-xs text-night-text">claude-opus-4.7</span>
+              <span class="font-mono text-xs text-night-text">Claude Opus 4.7</span>
             </div>
             <div class="flex items-center gap-2 font-mono text-[11px] text-night-faint">
               <span>Anthropic</span>
@@ -284,9 +310,9 @@ const demo: DemoLine[] = [
             </div>
           </div>
           <div class="mt-2 flex flex-wrap gap-1.5 font-mono text-[10px] text-night-faint">
-            <span class="rounded-full border border-night-hairline px-2 py-0.5">fallback: claude-sonnet-4.6</span>
-            <span class="rounded-full border border-night-hairline px-2 py-0.5">200k ctx</span>
-            <span class="rounded-full border border-night-hairline px-2 py-0.5">tools, vision</span>
+            <span class="rounded-full border border-night-hairline px-2 py-0.5">fallback: Claude Sonnet 4.6</span>
+            <span class="rounded-full border border-night-hairline px-2 py-0.5">1M context</span>
+            <span class="rounded-full border border-night-hairline px-2 py-0.5">reasoning: high</span>
           </div>
         </div>
 
@@ -304,28 +330,28 @@ const demo: DemoLine[] = [
               </span>
             </li>
             <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
-              <span class="font-mono text-[11px] text-night-soft-text">tasks.list</span>
+              <span class="font-mono text-[11px] text-night-soft-text">tasks.list_tasks</span>
               <span class="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-400">
                 <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                 enabled
               </span>
             </li>
             <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
-              <span class="font-mono text-[11px] text-night-soft-text">tasks.update_status</span>
+              <span class="font-mono text-[11px] text-night-soft-text">tasks.update_task</span>
+              <span class="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-400">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                enabled
+              </span>
+            </li>
+            <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
+              <span class="font-mono text-[11px] text-night-soft-text">notes.delete_note</span>
               <span class="inline-flex items-center gap-1 font-mono text-[10px] text-amber-400">
                 <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                 approval required
               </span>
             </li>
             <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
-              <span class="font-mono text-[11px] text-night-soft-text">notes.delete</span>
-              <span class="inline-flex items-center gap-1 font-mono text-[10px] text-amber-400">
-                <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                approval required
-              </span>
-            </li>
-            <li class="flex items-center justify-between rounded-md bg-night/40 px-3 py-1.5">
-              <span class="font-mono text-[11px] text-night-faint">files.read</span>
+              <span class="font-mono text-[11px] text-night-faint">files.read_file_content</span>
               <span class="inline-flex items-center gap-1 font-mono text-[10px] text-night-faint">
                 <span class="h-1.5 w-1.5 rounded-full bg-night-faint"></span>
                 off
@@ -338,9 +364,9 @@ const demo: DemoLine[] = [
           <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Permissions</p>
           <div class="mt-2 grid gap-2 text-xs sm:grid-cols-2">
             <div class="rounded-md border border-night-hairline bg-night px-3 py-2">
-              <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Access mode</p>
-              <p class="mt-1 font-mono text-night-text">OPEN_TO_ORG</p>
-              <p class="mt-1 font-mono text-[10px] text-night-faint">baseline: viewer</p>
+              <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Who can use it</p>
+              <p class="mt-1 font-mono text-night-text">Everyone in org</p>
+              <p class="mt-1 font-mono text-[10px] text-night-faint">starting role: viewer</p>
             </div>
             <div class="rounded-md border border-night-hairline bg-night px-3 py-2">
               <p class="font-mono text-[10px] uppercase tracking-wider text-night-faint">Explicit grants</p>
@@ -363,7 +389,7 @@ const demo: DemoLine[] = [
 
       <div class="flex flex-wrap items-center justify-between gap-3 border-t border-night-hairline bg-night-band px-5 py-3 font-mono text-[11px] text-night-faint">
         <span>config validated &middot; ready to run</span>
-        <span class="hidden sm:inline">12 memories pinned</span>
+        <span class="hidden sm:inline">3 memories pinned</span>
       </div>
     </div>
     </div>
@@ -383,8 +409,9 @@ const demo: DemoLine[] = [
         Each agent is yours to shape.
       </h3>
       <p class="section-intro mt-3 max-w-3xl leading-relaxed text-night-soft-text">
-        Personality, skills, memory, and the exact slice of your workspace it can touch -
-        all configured per agent, never global, never one-size-fits-all.
+        Instructions, tools, skills, memory, schedules. All of it is set per agent, never
+        globally. Build one narrow agent for meeting prep and one that writes, and neither
+        inherits the other's reach.
       </p>
 
       <div class="mt-8 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
@@ -401,7 +428,7 @@ const demo: DemoLine[] = [
     <div class="mt-10 rounded-2xl border border-night-hairline bg-night-soft p-5 font-mono text-[13px] leading-relaxed sm:p-6 sm:text-sm md:mt-12 md:p-8">
       <span class="text-night-faint">// Most workspace agents bypass asker permissions.</span><br />
       <span class="text-night-faint">// They run with the workspace owner's reach, not yours.</span><br />
-      <span class="text-night-text">Uniffy is the only workspace where the agent is bound by your role, <em class="text-accent-strong">and</em> your choice of model, <em class="text-accent-strong">and</em> only the content you've explicitly allowed it to touch.</span>
+      <span class="text-night-text">Uniffy is the only workspace where the agent is bound by your role, <em class="text-accent-strong">and</em> your choice of model, <em class="text-accent-strong">and</em> the exact tool set its builder allowed it.</span>
     </div>
   </div>
 </section>

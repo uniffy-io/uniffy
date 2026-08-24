@@ -1,71 +1,55 @@
 ---
 title: Licensing
-description: How Uniffy licensing works. Free for 10 users, one license for every line, offline license keys, seats as the only thing a key changes.
+description: How Uniffy licensing works. Open source under the Functional Source License, free to self host with no user limit, and every release becomes Apache 2.0 after two years.
 sidebar:
   label: Licensing
   order: 3
 ---
 
-Uniffy is free to run on your own hardware for up to 10 users, full product, forever. This page explains what happens past 10, what a license key changes, and what it can never change.
+Uniffy is open source and free to run on your own hardware. Full product, any number of users, forever. This page explains the one thing the license does not allow, and the date on which each release becomes plain Apache 2.0.
 
-If you are a cloud tenant, you will never see a license key. Plans on `cloud.uniffy.io` are billing. License keys exist for self hosted deployments only.
+If you are a cloud tenant, none of this applies to you. Plans on `cloud.uniffy.io` are billing for a service we host. The license governs the code, and the code is free to run. The [FAQ](/faq) covers the short versions of the questions this page answers in full.
 
 ## One product, one license
 
-Every line of Uniffy ships under one source available license based on the Business Source License. The backend, the browser app, the mobile app, and the command line tool all carry the same license text. There is no open core split, no enterprise directory with a different header, no private repository for paying customers.
+Every line of Uniffy ships under the Functional Source License, FSL-1.1-Apache-2.0. The backend, the browser app, the mobile app, and the command line tool all carry the same license text. There is no open core split, no enterprise directory with a different header, no private repository for paying customers.
 
-On 2039-01-01 the license converts to Apache 2.0. That date is written into the license text itself, so we cannot take it back. If Uniffy the company disappears, the code opens.
+We call Uniffy open source because the rights that matter are yours. Read every line. Run it in production at any size. Modify it. Redistribute your changes. Purists will point out that the FSL is not on the OSI's approved list, because of the single restriction below. Fair point. Read the restriction and judge for yourself. And note that it expires: two years after each release, nothing but Apache 2.0 remains.
 
-Source available means you can read every line, audit it, run it yourself, and modify it for your own use. It is not an open source license in the OSI sense, and we will not pretend otherwise. The two things it does not allow are running Uniffy for more users than your grant covers and selling Uniffy as a hosted service to third parties.
+## Every release becomes Apache 2.0
+
+Two years after we publish a release, that release converts to the Apache License 2.0. This is not a promise in a blog post. It is an irrevocable grant written into the license text itself. If Uniffy the company disappears, the code opens on schedule anyway.
+
+The conversion runs per release. A version published in August 2026 becomes Apache 2.0 in August 2028. The version published next month follows two years behind it. At any moment, everything older than two years is plain open source.
 
 ## What is free
 
-Production use for up to 10 **active users**, with every feature the product has. This is not a trial and not a "Community Edition". It is the same build paying customers run.
+Production use, for any organization, at any size. Self host Uniffy for 5 people or 5,000 and you owe us nothing.
 
-A five person startup installs Uniffy on a single server and never thinks about licensing again.
+There is no seat count, no "Community Edition", and no trial. The build you run free is the build our paying cloud customers run.
 
-A fifty person company runs a pilot with eight people from one team. Still free, for as long as the pilot stays at ten or fewer active users.
+A five person startup installs Uniffy on one server and never thinks about licensing again.
 
-That same company rolls Uniffy out to everyone. Now it needs a license key for fifty seats.
+A two thousand person company rolls Uniffy out to everyone on their own Kubernetes. Still free. They might buy a support contract. They do not need a license.
 
-## What a license key changes
+## The one thing you cannot do
 
-One number: how many users can be active at the same time. Nothing else.
+You cannot sell Uniffy as Uniffy. The license bars a **competing use**: offering Uniffy, or a product that substitutes for it, to third parties as a commercial product or service. Hosting Uniffy for your customers and charging them for it is the thing this license exists to prevent.
 
-Licensed and unlicensed deployments run identical code. There is no feature that appears when a key is present. If you diff a licensed deployment against a free one, the only difference you will find is the seat count shown on the admin pages.
+Everything else stands. Run it internally at any scale. Modify it for your own use. A consultancy can charge you for installing, operating, and customizing your Uniffy. The license explicitly permits professional services, and we think a healthy market of people who help you run Uniffy is good for everyone.
 
-## What counts as a seat
+## No license keys
 
-A **seat** is one active user account, counted across the whole deployment. If your deployment hosts several organizations, the count is the sum over all of them, not per organization.
+There is nothing to activate. No keys, no seat counter, no license server, no phone home. A deployment with no outbound route to the internet is a fully supported configuration, with zero exceptions.
 
-Deactivating a user frees the seat immediately. Someone leaves the company, an admin deactivates the account, and the seat is available again the same second. Deactivated accounts keep their data and can be reactivated later, they just do not count while inactive.
+We will never lock you out of your own data, because there is no mechanism that could. Nothing expires and nothing is enforced by the software.
 
-## How the key works
+## How we make money
 
-A license key is a short signed text block. You paste it into the admin pages, or point the deployment at it with the `UNIFFY_LICENSE` environment variable. The deployment verifies the signature offline against public keys that ship inside the product.
+Two ways, and only two.
 
-There is no license server. Your instance never calls us to validate anything. Not on install, not daily, not ever. A deployment with no outbound route to the internet is a fully supported configuration, free or paid, with zero exceptions.
+We run `cloud.uniffy.io` for teams that do not want to operate servers. Free for up to 10 users, paid above that. You are paying for hosting, storage, backups, and the service levels on the pricing page. Never for features.
 
-## Renewals, and what happens when a license lapses
+We sell support for self hosted deployments. Upgrade help, incident response, a human who knows the codebase on the other end of a ticket. Three subscriptions, priced per deployment per year, on the [pricing page](/#pricing). The software stays free either way.
 
-A license covers every Uniffy release published before its end date, and it covers those releases forever. The check compares the license date against the release date of the build you are running, never against the clock on the wall.
-
-You buy a license in March. Every release we publish for the next year is yours. The license lapses the following March and you decide not to renew. The last covered release keeps running, fully licensed, for as long as you want to run it. What you give up is newer releases. Renewing buys another year of them.
-
-Trial keys are the one exception. A trial expires on a calendar date, and then the deployment falls back to the free tier rules.
-
-## What happens when you outgrow your seats
-
-On the free tier, activating an eleventh user is blocked with a clear message, and the admin pages show where you stand. Everyone already active keeps working. Nothing is hidden, nothing is deleted, nobody is logged out.
-
-On a paid license, you get a 10 percent buffer above your seat count. Grow into the buffer and the admin pages show a banner, and the overage is settled at renewal. Growth past the buffer is blocked until the license is upsized.
-
-If you restore a backup and land over your entitlement, the same rules apply. A banner, blocked growth, and nothing else.
-
-We will never lock you out of your own data. Not for an expired license, not for too many seats, not for anything. Enforcement gates growth, never access.
-
-## Buying a license
-
-Licenses are sold per seat, per year. Trial keys with unlimited seats are available if you want to evaluate at full size first. See [pricing](/#pricing) or [contact us](/contact).
-
-When you compare us to another vendor, ask them one question: if I stop paying, what exactly stops working? Our answer fits in one line. New seats stop, everything else keeps running.
+When you compare us to another vendor, ask them two questions. Can I run the full product myself, free, at any size? And what happens to the code if you disappear? Our answers are yes, and it becomes Apache 2.0 on a date already written into the license.

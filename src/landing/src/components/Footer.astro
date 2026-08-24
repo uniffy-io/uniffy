@@ -1,33 +1,39 @@
 ---
-const columns = [
+type FooterLink = { href: string; label: string; external?: boolean };
+
+const columns: { title: string; links: FooterLink[] }[] = [
   {
     title: "Product",
     links: [
-      { href: "#product", label: "Overview" },
-      { href: "#ai", label: "AI" },
-      { href: "#sovereign", label: "Self-host" },
-      { href: "#pricing", label: "Pricing" },
+      { href: "/#product", label: "Overview" },
+      { href: "/#ai", label: "AI" },
+      { href: "/#sovereign", label: "Self host" },
+      { href: "/#pricing", label: "Pricing" },
+      { href: "/cloud", label: "Cloud" },
     ],
   },
   {
-    title: "Company",
+    title: "Open source",
     links: [
-      { href: "/about", label: "About" },
-      { href: "/transparency", label: "Transparency" },
-      { href: "/contact", label: "Contact" },
+      { href: "https://github.com/uniffy-io/uniffy", label: "GitHub", external: true },
+      { href: "https://github.com/uniffy-io/uniffy/issues", label: "Issues", external: true },
+      { href: "/docs/deployment/licensing/", label: "Licensing" },
+      { href: "https://github.com/uniffy-io/uniffy/blob/main/docs/TRANSPARENCY.md", label: "Transparency", external: true },
     ],
   },
   {
     title: "Resources",
     links: [
       { href: "/docs/", label: "Docs" },
-      { href: "https://feedback.uniffy.io", label: "Feedback" },
-      { href: "https://status.uniffy.io", label: "Status" },
+      { href: "/faq", label: "FAQ" },
+      { href: "https://feedback.uniffy.io", label: "Feedback", external: true },
+      { href: "https://status.uniffy.io", label: "Status", external: true },
     ],
   },
   {
-    title: "Legal",
+    title: "Company",
     links: [
+      { href: "/contact", label: "Contact" },
       { href: "/terms", label: "Terms of Service" },
       { href: "/privacy", label: "Privacy Policy" },
     ],
@@ -49,6 +55,9 @@ const columns = [
           />
           <span class="text-night-text">Uniffy</span>
         </a>
+        <p class="mt-4 font-mono text-xs leading-relaxed text-night-faint">
+          Free to self host,<br />no user limit, forever.
+        </p>
       </div>
       {
         columns.map((col) => (
@@ -61,6 +70,8 @@ const columns = [
                 <li>
                   <a
                     href={link.href}
+                    target={link.external ? "_blank" : undefined}
+                    rel={link.external ? "noreferrer" : undefined}
                     class="text-sm text-night-soft-text transition-colors hover:text-night-text"
                   >
                     {link.label}
@@ -74,7 +85,7 @@ const columns = [
     </div>
     <div class="mt-16 flex flex-col gap-4 border-t border-night-hairline pt-8 sm:flex-row sm:items-center sm:justify-between">
       <p class="font-mono text-xs text-night-faint">
-        &copy; 2026 Uniffy, Inc. Source available, one license for every line.
+        &copy; 2026 Uniffy, Inc. Open source, one license for every line.
       </p>
       <nav class="flex items-center gap-4 font-mono text-xs text-night-faint" aria-label="Legal">
         <a href="/terms" class="transition-colors hover:text-night-text">Terms</a>

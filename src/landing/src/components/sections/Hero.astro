@@ -1,28 +1,33 @@
 ---
 ---
 
-<section class="hero-section relative flex min-h-[86vh] flex-col items-center justify-center overflow-hidden px-5 py-20 text-center sm:px-6 sm:py-24 md:px-10 lg:min-h-screen">
+<section class="hero-section relative flex min-h-[86vh] flex-col items-center justify-center overflow-hidden px-5 py-20 text-center sm:px-6 sm:py-24 md:px-10 lg:min-h-screen" data-hero>
   <div class="hero-backdrop pointer-events-none absolute inset-0" aria-hidden="true">
     <div class="hero-grid absolute inset-0"></div>
     <div class="hero-aurora hero-aurora--violet"></div>
-    <div class="hero-aurora hero-aurora--pink"></div>
-    <div class="hero-aurora hero-aurora--green"></div>
   </div>
 
-  <div class="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center">
+  <canvas
+    data-hero-canvas
+    class="absolute inset-0 z-[1] hidden h-full w-full md:block"
+    aria-hidden="true"
+  ></canvas>
+
+  <div class="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center" data-hero-content>
     <h1 class="hero-headline m-0 font-sans">
       Teamwork<br />
       <span class="hero-headline__line2">Simplified, Amplified, <span class="hero-headline__accent italic">Unified.</span></span>
     </h1>
 
     <p class="mt-6 max-w-2xl text-base leading-relaxed text-paper/90 sm:text-lg md:mt-7 md:text-xl">
-      Notes, Diagrams, Chat, Files, Projects, Calendar, AI. One workspace, everything is reachable and talks back.
-      Fully private. No trackers, no advertising, no data harvesting, no training on your data.
+      Notes, Diagrams, Chat, Files, Projects, Calendar. One private workspace, everything talks back.
+      Wired through all of it: an <span class="font-semibold text-paper">agent harness</span>.
+      Strictly opt in, bound by your permissions. Fully private. No trackers, no training on your data.
     </p>
 
     <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
       <a
-        href="https://cloud.uniffy.io/signup"
+        href="/cloud"
         class="inline-flex items-center gap-2 rounded-full bg-paper px-6 py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
       >
         Start free
@@ -32,20 +37,20 @@
         href="#sovereign"
         class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-6 py-3 text-sm font-medium text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1]"
       >
-        Self-host
+        Self host
       </a>
     </div>
-    <p class="mt-5 font-mono text-xs text-paper/65">Free for teams up to 10 users forever</p>
+    <p class="mt-5 font-mono text-xs text-paper/65">Free to self host, no user limit, forever</p>
 
     <div class="mt-12 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 font-mono text-[11px] font-medium uppercase tracking-wider text-paper/55">
       <span class="inline-flex items-center gap-1.5">
         <span class="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(105,74,255,0.7)]"></span>
-        Source available
+        Open source
       </span>
       <span class="text-paper/25">·</span>
       <span>Self hostable</span>
       <span class="text-paper/25">·</span>
-      <span>EU residency</span>
+      <span>EU cloud</span>
       <span class="text-paper/25">·</span>
       <span>No Cloud Act</span>
     </div>
@@ -78,8 +83,8 @@
 
   .hero-grid {
     background-image:
-      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
     background-size: 60px 60px;
     background-position: center;
     -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 44%, #000 28%, transparent 78%);
@@ -100,41 +105,13 @@
     max-height: 760px;
     left: 50%;
     top: 42%;
-    background: radial-gradient(circle, rgba(105, 74, 255, 0.5) 0%, rgba(105, 74, 255, 0) 68%);
-    animation: hero-drift-a 20s ease-in-out infinite;
-  }
-  .hero-aurora--pink {
-    width: 42vw;
-    height: 42vw;
-    max-width: 520px;
-    max-height: 520px;
-    left: 70%;
-    top: 26%;
-    background: radial-gradient(circle, rgba(253, 126, 234, 0.32) 0%, rgba(253, 126, 234, 0) 68%);
-    animation: hero-drift-b 24s ease-in-out infinite;
-  }
-  .hero-aurora--green {
-    width: 46vw;
-    height: 46vw;
-    max-width: 560px;
-    max-height: 560px;
-    left: 30%;
-    top: 70%;
-    background: radial-gradient(circle, rgba(1, 183, 127, 0.26) 0%, rgba(1, 183, 127, 0) 68%);
-    animation: hero-drift-c 28s ease-in-out infinite;
+    background: radial-gradient(circle, rgba(105, 74, 255, 0.34) 0%, rgba(105, 74, 255, 0) 68%);
+    animation: hero-drift 24s ease-in-out infinite;
   }
 
-  @keyframes hero-drift-a {
+  @keyframes hero-drift {
     0%, 100% { transform: translate(-50%, -50%) scale(1); }
     50% { transform: translate(-50%, calc(-50% - 26px)) scale(1.05); }
-  }
-  @keyframes hero-drift-b {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); }
-    50% { transform: translate(calc(-50% + 22px), calc(-50% + 16px)) scale(1.08); }
-  }
-  @keyframes hero-drift-c {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); }
-    50% { transform: translate(calc(-50% - 20px), calc(-50% - 18px)) scale(1.06); }
   }
 
   .hero-headline {
@@ -174,3 +151,573 @@
     }
   }
 </style>
+
+<script>
+  type NetNode = {
+    x: number;
+    y: number;
+    cx: number;
+    cy: number;
+    vx: number;
+    vy: number;
+    radius: number;
+    angle: number;
+    orbitR: number;
+    speed: number;
+    label?: string;
+    color: string;
+    gradStart: string;
+    gradEnd: string;
+    glowPhase: number;
+    flash: number;
+  };
+
+  type Pulse = { from: number; to: number; t: number; speed: number; life: number };
+  type PathPulse = { path: number[]; seg: number; t: number; speed: number };
+
+  // Mirrors IDENTITY_PAIRS in src/ui/src/config/theme/brandGradients.ts so the
+  // graph nodes carry the same violet -> pink identity gradients as product avatars.
+  const IDENTITY_PAIRS: [string, string][] = [
+    ["#694aff", "#fd7eea"],
+    ["#fd7eea", "#694aff"],
+    ["#694aff", "#b364f4"],
+    ["#b364f4", "#fd7eea"],
+    ["#543bcc", "#d871ef"],
+    ["#8e57fa", "#fd7eea"],
+    ["#694aff", "#d871ef"],
+    ["#8e57fa", "#b364f4"],
+  ];
+
+  const LABEL_POOL = [
+    "@q3-roadmap",
+    "@standup-notes",
+    "@ideas",
+    "@retro-notes",
+    "@launch.pdf",
+    "@budget.xlsx",
+    "@logo.svg",
+    "@demo.mp4",
+    "@design-review",
+    "@support",
+    "@launch-week",
+    "@friday-demo",
+    "@offsite",
+    "@ship-it",
+    "@fix-login",
+    "@scribe",
+    "@drafter",
+    "@researcher",
+  ];
+
+  function mixHex(a: string, b: string, t: number): string {
+    const ca = [parseInt(a.slice(1, 3), 16), parseInt(a.slice(3, 5), 16), parseInt(a.slice(5, 7), 16)];
+    const cb = [parseInt(b.slice(1, 3), 16), parseInt(b.slice(3, 5), 16), parseInt(b.slice(5, 7), 16)];
+    const c = ca.map((v, i) => Math.round(v + (cb[i] - v) * t));
+    return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+  }
+
+  function identityPair(key: string): [string, string] {
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = (hash * 31 + key.charCodeAt(i)) | 0;
+    }
+    return IDENTITY_PAIRS[Math.abs(hash) % IDENTITY_PAIRS.length];
+  }
+  const PULSE_COLOR = "#8571ff";
+  const MAX_LABELED = 1 + LABEL_POOL.length;
+  const CONNECTION_DIST = 300;
+  const CURSOR_DIST = 170;
+  const MAX_PULSES = 6;
+  const MAX_YOU_PULSES = 3;
+
+  function rgba(hex: string, a: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${Math.max(0, Math.min(a, 1))})`;
+  }
+
+  function setupHeroNetwork() {
+    const section = document.querySelector<HTMLElement>("[data-hero]");
+    const canvas = document.querySelector<HTMLCanvasElement>("[data-hero-canvas]");
+    const content = document.querySelector<HTMLElement>("[data-hero-content]");
+    if (!section || !canvas || !content) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const desktop = window.matchMedia("(min-width: 768px)");
+
+    let nodes: NetNode[] = [];
+    let pulses: Pulse[] = [];
+    let pathPulses: PathPulse[] = [];
+    let youPulseTimer = 800;
+    let raf = 0;
+    let prev = 0;
+    let labeledCount = 0;
+    let spawnTimer = 0;
+    let running = false;
+    let contentZone = { l: 0, r: 0, t: 0, b: 0 };
+    const drag = { active: false, lastX: 0, lastY: 0 };
+    const pointer = { x: 0, y: 0, active: false };
+    let poolOrder: string[] = [];
+    let poolIdx = 0;
+
+    const nextEntry = (): string => poolOrder[poolIdx++ % poolOrder.length];
+
+    const measureContentZone = () => {
+      const sr = section.getBoundingClientRect();
+      const cr = content.getBoundingClientRect();
+      const pad = 28;
+      const mid = cr.left - sr.left + cr.width / 2;
+      const half = Math.min(430, cr.width / 2);
+      contentZone = {
+        l: mid - half - pad,
+        r: mid + half + pad,
+        t: cr.top - sr.top - pad,
+        b: cr.bottom - sr.top + pad,
+      };
+    };
+
+    const sideBandPos = (w: number, h: number) => {
+      const roll = Math.random();
+      if (roll < 0.42) return { cx: w * (0.03 + Math.random() * 0.19), cy: h * (0.08 + Math.random() * 0.84) };
+      if (roll < 0.84) return { cx: w * (0.78 + Math.random() * 0.19), cy: h * (0.08 + Math.random() * 0.84) };
+      return { cx: w * (0.2 + Math.random() * 0.6), cy: h * (Math.random() < 0.5 ? 0.05 + Math.random() * 0.1 : 0.86 + Math.random() * 0.09) };
+    };
+
+    const makeNode = (w: number, h: number, label?: string): NetNode => {
+      const pos = label
+        ? sideBandPos(w, h)
+        : { cx: w * (0.04 + Math.random() * 0.92), cy: h * (0.06 + Math.random() * 0.88) };
+      const cx = pos.cx;
+      const cy = pos.cy;
+      const pair = label ? identityPair(label) : (["#ffffff", "#ffffff"] as [string, string]);
+      return {
+        x: cx,
+        y: cy,
+        cx,
+        cy,
+        vx: (Math.random() - 0.5) * 0.12,
+        vy: (Math.random() - 0.5) * 0.12,
+        radius: label ? 4.5 : 1.3 + Math.random() * 1.5,
+        angle: Math.random() * Math.PI * 2,
+        orbitR: label ? 15 + Math.random() * 20 : 8 + Math.random() * 22,
+        speed: 0.0002 + Math.random() * 0.0003,
+        label,
+        color: label ? mixHex(pair[0], pair[1], 0.5) : "#ffffff",
+        gradStart: pair[0],
+        gradEnd: pair[1],
+        glowPhase: Math.random() * Math.PI * 2,
+        flash: 0,
+      };
+    };
+
+    const init = (w: number, h: number) => {
+      nodes = [];
+      pulses = [];
+
+      poolOrder = [...LABEL_POOL].sort(() => Math.random() - 0.5);
+      poolIdx = 0;
+      pathPulses = [];
+      youPulseTimer = 800;
+
+      const you = makeNode(w, h, "You");
+      you.color = "#ffffff";
+      you.gradStart = "#ffffff";
+      you.gradEnd = "#ffffff";
+      const jitter = (Math.random() - 0.5) * 24;
+      if (contentZone.l >= 130) {
+        you.cx = contentZone.l - 68;
+        you.cy = contentZone.t + (contentZone.b - contentZone.t) * 0.42 + jitter;
+      } else {
+        you.cx = w / 2 + jitter;
+        you.cy = Math.max(64, contentZone.t - 72);
+      }
+      you.radius = 6;
+      you.vx = (Math.random() - 0.5) * 0.04;
+      you.vy = (Math.random() - 0.5) * 0.04;
+      you.orbitR = 10 + Math.random() * 8;
+      nodes.push(you);
+
+      const labeledStart = 10 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < labeledStart; i++) {
+        nodes.push(makeNode(w, h, nextEntry()));
+      }
+      labeledCount = 1 + labeledStart;
+      spawnTimer = 1500 + Math.random() * 3000;
+
+      const ambient = Math.round(Math.min(44, (w * h) / 42000));
+      for (let i = 0; i < ambient; i++) nodes.push(makeNode(w, h));
+    };
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = section.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      measureContentZone();
+      if (nodes.length === 0) init(rect.width, rect.height);
+    };
+
+    const inContentZone = (x: number, y: number) =>
+      x > contentZone.l && x < contentZone.r && y > contentZone.t && y < contentZone.b;
+
+    const draw = (ts: number) => {
+      const dt = Math.min(ts - prev, 64);
+      prev = ts;
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      const h = canvas.height / (window.devicePixelRatio || 1);
+      ctx.clearRect(0, 0, w, h);
+
+      for (const n of nodes) {
+        n.angle += n.speed * dt;
+        n.x = n.cx + Math.cos(n.angle) * n.orbitR;
+        n.y = n.cy + Math.sin(n.angle * 0.7) * n.orbitR * 0.6;
+        n.cx += n.vx * 0.015;
+        n.cy += n.vy * 0.015;
+      }
+
+      if (labeledCount < MAX_LABELED) {
+        spawnTimer -= dt;
+        if (spawnTimer <= 0) {
+          nodes.push(makeNode(w, h, nextEntry()));
+          labeledCount++;
+          spawnTimer = 1500 + Math.random() * 3000;
+        }
+      }
+
+      const conns: [number, number][] = [];
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x;
+          const dy = nodes[i].y - nodes[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECTION_DIST) {
+            conns.push([i, j]);
+            const labeled = !!nodes[i].label || !!nodes[j].label;
+            const alpha = (labeled ? 0.2 : 0.12) * (1 - dist / CONNECTION_DIST);
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x, nodes[i].y);
+            ctx.lineTo(nodes[j].x, nodes[j].y);
+            ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+            ctx.lineWidth = labeled ? 1.1 : 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      if (pointer.active) {
+        const halo = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, 70);
+        halo.addColorStop(0, "rgba(255,255,255,0.05)");
+        halo.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, 70, 0, Math.PI * 2);
+        ctx.fillStyle = halo;
+        ctx.fill();
+
+        for (const n of nodes) {
+          const dx = n.x - pointer.x;
+          const dy = n.y - pointer.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CURSOR_DIST) {
+            const strength = 1 - dist / CURSOR_DIST;
+            const alpha = (n.label ? 0.3 : 0.16) * strength;
+            ctx.beginPath();
+            ctx.moveTo(n.x, n.y);
+            ctx.lineTo(pointer.x, pointer.y);
+            ctx.strokeStyle = n.label ? rgba(n.color, alpha) : `rgba(255,255,255,${alpha})`;
+            ctx.lineWidth = n.label ? 1.2 : 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      if (conns.length > 0 && pulses.length < MAX_PULSES && Math.random() < 0.008) {
+        const [f, t] = conns[Math.floor(Math.random() * conns.length)];
+        pulses.push({ from: f, to: t, t: 0, speed: 0.00012 + Math.random() * 0.00018, life: 1 });
+      }
+
+      youPulseTimer -= dt;
+      if (youPulseTimer <= 0 && pathPulses.length < MAX_YOU_PULSES) {
+        const adj = new Map<number, number[]>();
+        for (const [a, b] of conns) {
+          const la = adj.get(a);
+          if (la) la.push(b);
+          else adj.set(a, [b]);
+          const lb = adj.get(b);
+          if (lb) lb.push(a);
+          else adj.set(b, [a]);
+        }
+        const path = [0];
+        let cur = 0;
+        const hops = 2 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < hops; i++) {
+          const opts = (adj.get(cur) ?? []).filter((x) => !path.includes(x));
+          if (opts.length === 0) break;
+          const labeledOpts = opts.filter((x) => nodes[x].label);
+          const pool = labeledOpts.length > 0 && (i === hops - 1 || Math.random() < 0.5) ? labeledOpts : opts;
+          cur = pool[Math.floor(Math.random() * pool.length)];
+          path.push(cur);
+        }
+        if (path.length > 1) {
+          pathPulses.push({ path, seg: 0, t: 0, speed: 0.00035 + Math.random() * 0.0002 });
+          youPulseTimer = 1400 + Math.random() * 2000;
+        } else {
+          youPulseTimer = 500;
+        }
+      }
+
+      for (let p = pathPulses.length - 1; p >= 0; p--) {
+        const pp = pathPulses[p];
+        pp.t += pp.speed * dt;
+        if (pp.t >= 1) {
+          const arrive = nodes[pp.path[pp.seg + 1]];
+          const isFinal = pp.seg + 2 >= pp.path.length;
+          arrive.flash = Math.min(1, arrive.flash + (isFinal ? 1 : 0.6));
+          pp.seg++;
+          pp.t = 0;
+          if (isFinal) {
+            pathPulses.splice(p, 1);
+            continue;
+          }
+        }
+        const a = nodes[pp.path[pp.seg]];
+        const b = nodes[pp.path[pp.seg + 1]];
+        const px = a.x + (b.x - a.x) * pp.t;
+        const py = a.y + (b.y - a.y) * pp.t;
+
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(px, py);
+        ctx.strokeStyle = rgba(PULSE_COLOR, 0.28);
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, 13);
+        grad.addColorStop(0, rgba(PULSE_COLOR, 0.75));
+        grad.addColorStop(1, rgba(PULSE_COLOR, 0));
+        ctx.beginPath();
+        ctx.arc(px, py, 13, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fill();
+      }
+
+      for (let p = pulses.length - 1; p >= 0; p--) {
+        const pulse = pulses[p];
+        pulse.t += pulse.speed * dt;
+        if (pulse.t > 1) pulse.life -= 0.025;
+        if (pulse.life <= 0) {
+          pulses.splice(p, 1);
+          continue;
+        }
+        const prog = Math.min(pulse.t, 1);
+        const a = nodes[pulse.from];
+        const b = nodes[pulse.to];
+        const px = a.x + (b.x - a.x) * prog;
+        const py = a.y + (b.y - a.y) * prog;
+        const alpha = 0.55 * pulse.life;
+
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, 11);
+        grad.addColorStop(0, rgba(PULSE_COLOR, alpha));
+        grad.addColorStop(1, rgba(PULSE_COLOR, 0));
+        ctx.beginPath();
+        ctx.arc(px, py, 11, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI * 2);
+        ctx.fillStyle = rgba("#ffffff", alpha * 0.9);
+        ctx.fill();
+      }
+
+      for (const n of nodes) {
+        if (n.flash > 0) n.flash = Math.max(0, n.flash - dt * 0.0012);
+        const hidden = n.label && inContentZone(n.x, n.y);
+
+        if (n.label && !hidden) {
+          const glowPulse = 0.5 + 0.5 * Math.sin(ts * 0.001 + n.glowPhase);
+          const isYou = n.label === "You";
+
+          if (isYou) {
+            const ringR = 14 + glowPulse * 3;
+            const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, ringR + 12);
+            glow.addColorStop(0, rgba(PULSE_COLOR, 0.2 + glowPulse * 0.1));
+            glow.addColorStop(0.6, rgba(PULSE_COLOR, 0.05 + glowPulse * 0.03));
+            glow.addColorStop(1, rgba(PULSE_COLOR, 0));
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, ringR + 12, 0, Math.PI * 2);
+            ctx.fillStyle = glow;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, ringR, 0, Math.PI * 2);
+            ctx.strokeStyle = rgba("#ffffff", 0.35 + glowPulse * 0.25);
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            const iconAlpha = 0.75 + glowPulse * 0.25;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y - 3, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = rgba("#ffffff", iconAlpha);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(n.x, n.y + 7, 5.5, Math.PI, 0, false);
+            ctx.fillStyle = rgba("#ffffff", iconAlpha);
+            ctx.fill();
+          } else {
+            const haloR = 17 + glowPulse * 4 + n.flash * 10;
+            const halo = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, haloR);
+            halo.addColorStop(0, rgba(n.color, 0.14 + glowPulse * 0.07 + n.flash * 0.3));
+            halo.addColorStop(0.5, rgba(n.color, 0.05 + glowPulse * 0.02 + n.flash * 0.12));
+            halo.addColorStop(1, rgba(n.color, 0));
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, haloR, 0, Math.PI * 2);
+            ctx.fillStyle = halo;
+            ctx.fill();
+
+            const dotAlpha = 0.8 + glowPulse * 0.2;
+            const dot = ctx.createLinearGradient(
+              n.x - n.radius,
+              n.y - n.radius,
+              n.x + n.radius,
+              n.y + n.radius
+            );
+            dot.addColorStop(0, rgba(n.gradStart, dotAlpha));
+            dot.addColorStop(1, rgba(n.gradEnd, dotAlpha));
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+            ctx.fillStyle = dot;
+            ctx.fill();
+          }
+
+          const labelY = isYou ? n.y + 22 : n.y + n.radius + 8;
+          ctx.font = `${isYou ? "600 12px" : "500 11px"} "JetBrains Mono Variable", ui-monospace, monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "top";
+          ctx.fillStyle = isYou
+            ? rgba("#ffffff", 0.6 + glowPulse * 0.15)
+            : rgba(n.color, 0.55 + glowPulse * 0.2 + n.flash * 0.3);
+          ctx.fillText(n.label, n.x, labelY);
+        } else if (!n.label) {
+          if (n.flash > 0) {
+            const fg = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, 10);
+            fg.addColorStop(0, rgba(PULSE_COLOR, 0.35 * n.flash));
+            fg.addColorStop(1, rgba(PULSE_COLOR, 0));
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = fg;
+            ctx.fill();
+          }
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${0.18 + n.flash * 0.5})`;
+          ctx.fill();
+        }
+      }
+
+      if (running) raf = requestAnimationFrame(draw);
+    };
+
+    const start = () => {
+      if (running || !desktop.matches) return;
+      running = true;
+      resize();
+      prev = performance.now();
+      raf = requestAnimationFrame(draw);
+    };
+
+    const stop = () => {
+      running = false;
+      cancelAnimationFrame(raf);
+    };
+
+    const HIT_RADIUS = 28;
+    const canvasPos = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+    const overYou = (mx: number, my: number) => {
+      for (const n of nodes) {
+        if (n.label !== "You") continue;
+        const dx = mx - n.x;
+        const dy = my - n.y;
+        if (dx * dx + dy * dy < HIT_RADIUS * HIT_RADIUS) return true;
+      }
+      return false;
+    };
+
+    canvas.style.pointerEvents = "auto";
+    canvas.addEventListener("mousedown", (e) => {
+      const pos = canvasPos(e);
+      if (overYou(pos.x, pos.y)) {
+        drag.active = true;
+        drag.lastX = pos.x;
+        drag.lastY = pos.y;
+        canvas.style.cursor = "grabbing";
+      }
+    });
+    window.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      pointer.x = pos.x;
+      pointer.y = pos.y;
+      pointer.active =
+        !drag.active && pos.x >= 0 && pos.y >= 0 && pos.x <= rect.width && pos.y <= rect.height;
+      if (drag.active) {
+        const dx = pos.x - drag.lastX;
+        const dy = pos.y - drag.lastY;
+        drag.lastX = pos.x;
+        drag.lastY = pos.y;
+        for (const n of nodes) {
+          n.cx += dx;
+          n.cy += dy;
+        }
+      } else {
+        canvas.style.cursor = overYou(pos.x, pos.y) ? "grab" : "";
+      }
+    });
+    section.addEventListener("mouseleave", () => {
+      pointer.active = false;
+    });
+    window.addEventListener("mouseup", () => {
+      if (drag.active) {
+        drag.active = false;
+        canvas.style.cursor = "";
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      if (running) resize();
+    });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) start();
+          else stop();
+        }
+      },
+      { threshold: 0 }
+    );
+    observer.observe(section);
+
+    desktop.addEventListener("change", (e) => {
+      if (e.matches) start();
+      else stop();
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupHeroNetwork, { once: true });
+  } else {
+    setupHeroNetwork();
+  }
+</script>

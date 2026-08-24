@@ -5,7 +5,6 @@ type Tier = {
   cadence: string;
   blurb: string;
   blurbHighlight?: string;
-  ai: string;
   features: string[];
   cta: { label: string; href: string };
   featured: boolean;
@@ -13,49 +12,44 @@ type Tier = {
 
 const tiers: Tier[] = [
   {
-    name: "Community",
-    price: "Free",
-    cadence: "forever",
-    blurb: "Up to 10 users. Self host or cloud. ",
+    name: "Free",
+    price: "€0",
+    cadence: "up to 10 users",
+    blurb: "Our cloud, free for small teams. ",
     blurbHighlight: "The full product, no feature gating.",
-    ai: "bring your own provider key",
     features: [
-      "Self host or cloud",
-      "Uniffy AI Cloud · 1M tokens / month free",
+      "10 GB of file storage",
       "Bring your own AI provider keys",
-      "Notes, Chat, Files, Calendar, Projects, Tasks, Diagrams, Rooms",
+      "Notes, Chat, Files, Calendar, Projects, Tasks, Diagrams, Calls",
       "Universal @ mentions across everything",
       "Configurable agents with permission bound tool calling",
-      "Unlimited history when self hosted",
       "Community support",
     ],
-    cta: { label: "Start free", href: "https://cloud.uniffy.io/signup" },
+    cta: { label: "Start free", href: "/cloud" },
     featured: false,
   },
   {
     name: "Team",
     price: "€7",
     cadence: "user / month",
-    blurb: "For teams of 11 to 50. Same software, more seats and more service.",
-    ai: "Uniffy AI Cloud included",
+    blurb: "For cloud teams of 11 to 50. Same software, hosted by us.",
     features: [
-      "Everything in Community, because everything is in Community",
-      "Uniffy AI Cloud · 10M tokens / user / month",
+      "Everything in Free, because everything is in Free",
+      "250 GB of storage per user, pooled across your org",
       "Unlimited cloud history",
       "Email support",
     ],
-    cta: { label: "Start trial", href: "https://cloud.uniffy.io/signup" },
+    cta: { label: "Start trial", href: "/cloud" },
     featured: true,
   },
   {
     name: "Business",
     price: "€15",
     cadence: "user / month",
-    blurb: "For organizations up to 500. Service levels for companies that need paper.",
-    ai: "Uniffy AI Cloud included",
+    blurb: "For organizations up to 500 on our cloud. Service levels for companies that need paper.",
     features: [
       "Everything in Team",
-      "Uniffy AI Cloud · 30M tokens / user / month",
+      "1 TB of storage per user, pooled across your org",
       "99.2% uptime SLA on cloud",
       "Priority support",
     ],
@@ -67,16 +61,71 @@ const tiers: Tier[] = [
     price: "Custom",
     cadence: "annual",
     blurb: "Unlimited seats, custom contracts, dedicated people on our side.",
-    ai: "self hosted models + dedicated routing",
     features: [
       "Everything in Business",
-      "Uniffy AI Cloud · pooled, custom token limits",
+      "Custom storage quotas",
       "Data residency of your choice",
-      "Self hosted models + dedicated routing",
+      "Support contracts for self hosted deployments",
       "Dedicated support + 99.98% SLA",
       "Custom contracts",
     ],
     cta: { label: "Talk to us", href: "/contact" },
+    featured: false,
+  },
+];
+
+const selfHostPoints = [
+  "Full product, every feature",
+  "No user limit, no seat counter",
+  "Runs fully isolated from the internet",
+  "Apache 2.0 two years after each release",
+];
+
+type SupportTier = {
+  name: string;
+  price: string;
+  blurb: string;
+  features: string[];
+  featured: boolean;
+};
+
+const supportTiers: SupportTier[] = [
+  {
+    name: "Basic",
+    price: "€490",
+    blurb: "A safety net for one production deployment.",
+    features: [
+      "5 support tickets per year",
+      "Response by the next business day",
+      "Email support, business hours (CET)",
+      "Upgrade and migration guidance",
+    ],
+    featured: false,
+  },
+  {
+    name: "Standard",
+    price: "€1,490",
+    blurb: "For deployments your company leans on every day.",
+    features: [
+      "Everything in Basic",
+      "15 support tickets per year",
+      "Response within 4 business hours",
+      "Remote troubleshooting sessions",
+      "Pre-upgrade review of your deployment",
+    ],
+    featured: true,
+  },
+  {
+    name: "Premium",
+    price: "€3,990",
+    blurb: "For deployments where an hour of downtime has a price tag.",
+    features: [
+      "Everything in Standard",
+      "Unlimited support tickets",
+      "Response within 2 business hours",
+      "We join your incident call",
+      "A named engineer who knows your setup",
+    ],
     featured: false,
   },
 ];
@@ -88,10 +137,43 @@ const tiers: Tier[] = [
       Honest pricing
     </h2>
     <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
-      Every plan runs the same software. Tiers price seats, hosted services, and support.
-      Never features. Free for up to 10 users, forever, self hosted or on our cloud.
-      No AI surcharge, ever. Use your own keys, Uniffy AI Cloud, or a self hosted model.
+      These plans price the cloud we host for you. Every tier runs the same software.
+      You pay for hosting, storage, service levels, and support. Never features.
+      No AI surcharge, ever. Use your own provider keys or a self hosted model.
     </p>
+
+    <div class="mt-12 flex flex-col gap-8 rounded-2xl border border-night-hairline bg-night-soft p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between lg:gap-12 lg:p-10">
+      <div class="max-w-xl">
+        <div class="inline-flex items-center rounded-full border border-night-hairline-strong bg-night px-2.5 py-1 font-mono text-xs text-night-text">
+          Self hosted
+        </div>
+        <h3 class="mt-5 font-sans text-2xl font-semibold tracking-tight text-night-text sm:text-3xl">
+          Free. No plan. No user limit.
+        </h3>
+        <p class="mt-3 leading-relaxed text-night-soft-text">
+          The plans below are for our hosted cloud. Running Uniffy yourself costs
+          nothing, at any size, forever. Open source, nothing to activate, no card
+          to enter.
+        </p>
+      </div>
+      <div class="flex flex-col gap-5 lg:items-end">
+        <ul class="space-y-2.5 text-sm">
+          {selfHostPoints.map((point) => (
+            <li class="flex items-start gap-2">
+              <span class="mt-1.5 h-1 w-2.5 flex-shrink-0 bg-accent" />
+              <span class="font-medium text-night-soft-text">{point}</span>
+            </li>
+          ))}
+        </ul>
+        <a
+          href="/docs/deployment/"
+          class="inline-flex items-center gap-2 rounded-full border border-night-hairline-strong bg-night px-5 py-3 text-sm font-medium text-night-text transition-colors hover:border-night-text"
+        >
+          Read the deployment guide
+          <span aria-hidden>&rarr;</span>
+        </a>
+      </div>
+    </div>
 
     <div class="mt-12 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 md:mt-16">
       {tiers.map((t) => (
@@ -141,11 +223,65 @@ const tiers: Tier[] = [
       ))}
     </div>
 
+    <div class="mt-20 md:mt-24">
+      <h3 class="font-sans text-2xl font-semibold tracking-tight text-night-text md:text-3xl">
+        Self hosted support
+      </h3>
+      <p class="section-intro mt-4 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
+        The software is free at any size. Support is what we sell. A subscription
+        buys a human who ships Uniffy on the other end of a ticket. Priced per
+        deployment, per year. You never need one to run in production, and GitHub
+        issues stay open to everyone.
+      </p>
+    </div>
+
+    <div class="mt-10 grid gap-5 sm:gap-6 lg:grid-cols-3">
+      {supportTiers.map((t) => (
+        <article
+          class={`flex flex-col rounded-2xl border p-6 sm:p-7 lg:p-8 ${t.featured ? "border-accent bg-night-band text-night-text" : "border-night-hairline bg-night-soft text-night-text"}`}
+        >
+          <h3 class="font-sans text-xl font-semibold tracking-tight">{t.name}</h3>
+          <div class="mt-5 flex items-baseline gap-2 md:mt-6">
+            <span class="font-sans text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
+              {t.price}
+            </span>
+            <span class={`font-mono text-xs ${t.featured ? "text-night-muted" : "text-night-faint"}`}>
+              deployment / year
+            </span>
+          </div>
+          <p class="mt-4 min-h-[3.5rem] text-sm leading-relaxed text-night-soft-text">
+            {t.blurb}
+          </p>
+
+          <ul class="mt-6 flex-1 space-y-2.5 text-sm">
+            {t.features.map((f) => (
+              <li class="flex items-start gap-2">
+                <span class="mt-1.5 h-1 w-2.5 flex-shrink-0 bg-accent" />
+                <span class="font-medium text-night-soft-text">{f}</span>
+              </li>
+            ))}
+          </ul>
+          <a
+            href="/contact"
+            class={`mt-8 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium transition-opacity ${
+              t.featured
+                ? "bg-accent text-white hover:opacity-90"
+                : "border border-night-hairline-strong bg-night-soft text-night-text hover:border-night-text"
+            }`}
+          >
+            Get {t.name}
+            <span aria-hidden>&rarr;</span>
+          </a>
+        </article>
+      ))}
+    </div>
+
     <p class="mt-10 max-w-3xl text-sm leading-relaxed text-night-soft-text md:mt-12">
       SSO, SCIM, guests, custom branding, retention policies, the audit log, every agent
-      feature. Those are product features, so they are in every plan, including the free one.
-      A license key changes one number, the seat count. It is a signed file your deployment
-      verifies offline. There is no license server and your instance never calls home.
+      feature. Those are product features, so they are in every plan, including the free
+      one and the self hosted install. There is no license key, no seat counter, and no
+      license server, and your instance never calls home. Every release becomes Apache 2.0
+      two years after we publish it.
       <a href="/docs/deployment/licensing/" class="font-medium text-accent-strong hover:underline"
         >Read how licensing works</a
       >.

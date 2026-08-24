@@ -1,0 +1,182 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Uniffy | Cloud under construction"
+  description="cloud.uniffy.io is being built right now. Uniffy is open source and free to self host today, full product, no user limit."
+>
+  <section class="cloud-section relative flex min-h-[86vh] flex-col items-center justify-center overflow-hidden px-5 py-20 text-center sm:px-6 sm:py-24 md:px-10">
+    <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+      <div class="cloud-grid absolute inset-0"></div>
+      <div class="cloud-aurora"></div>
+    </div>
+
+    <div class="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center">
+      <div class="inline-flex items-center gap-2 rounded-full border border-night-hairline-strong bg-night px-3 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider text-night-text">
+        <span class="h-1.5 w-1.5 rounded-full bg-brand-orange shadow-[0_0_8px_rgba(255,85,0,0.7)]"></span>
+        Under construction
+      </div>
+
+      <h1 class="mt-8 font-sans text-4xl font-semibold tracking-[-0.03em] text-paper/95 sm:text-5xl md:text-6xl">
+        Our cloud is not open yet
+      </h1>
+
+      <p class="mt-6 max-w-2xl text-base leading-relaxed text-paper/90 sm:text-lg">
+        We are building <span class="font-mono text-sm text-accent-strong sm:text-base">cloud.uniffy.io</span> right now.
+        Signups, billing, the hosted service. All of it is in progress, and none of it
+        is ready for your data. We would rather ship it right than ship it early.
+      </p>
+
+      <p class="mt-4 max-w-2xl text-base leading-relaxed text-paper/90 sm:text-lg">
+        You do not have to wait for us. Uniffy is open source and free to self host.
+        Full product, no user limit. Everything the cloud will run one day, you can
+        run today on your own hardware.
+      </p>
+
+      <form data-waitlist class="mt-9 flex w-full max-w-md flex-col gap-3 sm:flex-row">
+        <label class="sr-only" for="waitlist-email">Email</label>
+        <input
+          id="waitlist-email"
+          type="email"
+          name="email"
+          required
+          placeholder="you@company.com"
+          class="min-w-0 flex-1 rounded-full border border-paper/25 bg-paper/[0.05] px-5 py-3 text-sm text-paper placeholder:text-paper/40 backdrop-blur-sm transition-colors focus:border-accent-strong focus:outline-none"
+        />
+        <input
+          type="text"
+          name="website"
+          tabindex="-1"
+          autocomplete="off"
+          aria-hidden="true"
+          class="hidden"
+        />
+        <button
+          type="submit"
+          class="inline-flex items-center justify-center gap-2 rounded-full bg-paper px-6 py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
+        >
+          Tell me at launch
+          <span aria-hidden>&rarr;</span>
+        </button>
+      </form>
+      <p data-waitlist-note class="mt-4 max-w-md font-mono text-xs leading-relaxed text-paper/55">
+        Exactly one email, the day the cloud opens. No newsletter, no drip, no
+        sharing. The list lives with Cloudflare in the EU, and we delete it after.
+      </p>
+
+      <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+        <a
+          href="https://github.com/uniffy-io/uniffy"
+          target="_blank"
+          rel="noreferrer"
+          class="inline-flex items-center gap-2 rounded-full bg-paper px-6 py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
+        >
+          Explore on GitHub
+          <span aria-hidden>&rarr;</span>
+        </a>
+        <a
+          href="/docs/deployment/"
+          class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-6 py-3 text-sm font-medium text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1]"
+        >
+          Read the deployment guide
+        </a>
+      </div>
+      <p class="mt-5 font-mono text-xs text-paper/65">Free to self host, no user limit, forever</p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  function setupWaitlist() {
+    const form = document.querySelector<HTMLFormElement>("[data-waitlist]");
+    const note = document.querySelector<HTMLElement>("[data-waitlist-note]");
+    if (!form || !note) return;
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = new FormData(form);
+      const button = form.querySelector<HTMLButtonElement>("button");
+      if (button) button.disabled = true;
+
+      let ok = false;
+      try {
+        const res = await fetch("/api/waitlist", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email: data.get("email"),
+            website: data.get("website"),
+          }),
+        });
+        ok = res.ok;
+      } catch {
+        ok = false;
+      }
+
+      if (ok) {
+        form.remove();
+        note.textContent = "Done. One email, launch day. That is the whole relationship.";
+      } else {
+        if (button) button.disabled = false;
+        note.textContent =
+          "That did not go through. Try again in a moment, or watch the repo on GitHub instead.";
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupWaitlist, { once: true });
+  } else {
+    setupWaitlist();
+  }
+</script>
+
+<style>
+  .cloud-section {
+    background-color: #0a0d1a;
+  }
+
+  .cloud-section::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(105, 74, 255, 0.7) 18%,
+      rgba(253, 126, 234, 0.7) 45%,
+      rgba(255, 85, 0, 0.7) 68%,
+      rgba(1, 183, 127, 0.8) 90%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
+  .cloud-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+    background-size: 60px 60px;
+    background-position: center;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 44%, #000 28%, transparent 78%);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 44%, #000 28%, transparent 78%);
+  }
+
+  .cloud-aurora {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 60vw;
+    height: 60vw;
+    max-width: 700px;
+    max-height: 700px;
+    border-radius: 9999px;
+    filter: blur(90px);
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(255, 85, 0, 0.16) 0%, rgba(105, 74, 255, 0.2) 45%, rgba(105, 74, 255, 0) 70%);
+  }
+</style>

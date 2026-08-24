@@ -15,7 +15,7 @@ Each principle below is collapsed. Click a title to read it.
 <details class="principle">
 <summary>One codebase, one product</summary>
 
-Cloud and self hosted ship from the same commit. There is no "Community Edition" with features stripped out. No enterprise tier locked behind a license check. No private fork that only paying customers get. A license key changes one number, how many seats you can activate. It never unlocks a feature. The instance running at `cloud.uniffy.io` is exactly the code you can pull from GitHub and run on your own servers.
+Cloud and self hosted ship from the same commit. There is no "Community Edition" with features stripped out. No enterprise tier locked behind a license check. No private fork that only paying customers get. There is no license key at all. Nothing to activate, nothing to count. The instance running at `cloud.uniffy.io` is exactly the code you can pull from GitHub and run on your own servers.
 
 Two things follow from that.
 
@@ -58,7 +58,7 @@ If you are evaluating Uniffy and you want or need this, **Uniffy is not for you*
 
 The product does not send telemetry. We do not collect usage events. We do not collect crash reports. We do not pull fonts or assets from a CDN. Everything the app needs is bundled into it.
 
-There is no license server. A paid license is a signed file that your deployment verifies offline against keys that ship inside the product. Your instance never calls us. Not on install, not once a day, not ever, free or paid. A deployment with no outbound route to the internet is a fully supported configuration, not a special arrangement. The [licensing page](/docs/deployment/licensing/) in the deployment guide has the details.
+There is no license server, because there are no license keys. Self hosted Uniffy is free at any size and nothing needs activation. Your instance never calls us. Not on install, not once a day, not ever. A deployment with no outbound route to the internet is a fully supported configuration, not a special arrangement. The [licensing page](/docs/deployment/licensing/) in the deployment guide has the details.
 
 If we ever ship an optional analytics opt in, it will be off by default and clearly labeled. If you cannot find the switch, the feature does not exist.
 
@@ -69,11 +69,11 @@ Every call Uniffy makes to the outside world, whether that is sending mail throu
 <details class="principle">
 <summary>AI is your choice, not ours</summary>
 
-The product ships with every AI feature switched off. No agent runs, no model gets called, no provider credentials live in the deployment unless an administrator has gone in and turned them on.
+Uniffy's AI is an **agent harness** for work. Agents read, write, schedule, and organize across the whole workspace, with your permissions and nobody else's. And the product ships with all of it switched off. No agent runs, no model gets called, no provider credentials live in the deployment unless an administrator has gone in and turned them on.
 
 If your organization decides AI is not for you, you do nothing. The agents page sits empty. The compose box has no agent dropdown. No background job ever opens a connection to a model provider. The decision to bring AI into your workspace is yours to make, and yours to revoke at any time.
 
-When you do turn AI on, you pick the provider and the keys. Anthropic, OpenAI, Google, a self hosted Ollama or vLLM endpoint, or our own <strong class="accent">Uniffy AI Cloud</strong>. Your keys, your billing relationship, your choice of where the prompts go. We do not pool tenants behind a shared key, and we never read what flows through.
+When you do turn AI on, you pick the provider and the keys. Anthropic, OpenAI, Google, or a self hosted Ollama or vLLM endpoint. Your keys, your billing relationship, your choice of where the prompts go. We do not pool tenants behind a shared key, and we never read what flows through.
 
 The switch lives in the admin pages, not buried inside a personal setting. One person granting AI access to themselves is not enough. The org has to consciously opt in.
 

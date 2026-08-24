@@ -1,3 +1,9 @@
 name = "uniffy-landing"
 compatibility_date = "2025-05-01"
 pages_build_output_dir = "./dist"
+
+# Waitlist storage, pinned to WEUR (the privacy policy promises EU storage).
+[[d1_databases]]
+binding = "WAITLIST"
+database_name = "uniffy-waitlist"
+database_id = "46fbfd47-e7fe-4201-a0a1-d0d9702bf68c"
