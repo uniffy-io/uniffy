@@ -32,7 +32,17 @@ function parseParts(content: string): Part[] {
 
 type EventKind = "call-start" | "call-end" | "join" | "generic";
 
-function classify(content: string): EventKind {
+const METADATA_KINDS: Record<string, EventKind> = {
+  call_started: "call-start",
+  call_ended: "call-end",
+  member_joined: "join",
+};
+
+// Backend-stamped metadata.kind is authoritative; the wording fallback only
+// covers messages that predate the metadata and must not grow new patterns.
+function classify(content: string, metadata?: Record<string, string>): EventKind {
+  const stamped = metadata?.["kind"];
+  if (stamped && METADATA_KINDS[stamped]) return METADATA_KINDS[stamped];
   const t = content.toLowerCase();
   if (t.includes("started a call")) return "call-start";
   if (t.includes("ended the call") || t.includes("call ended")) return "call-end";
@@ -73,10 +83,16 @@ function renderText(text: string, keyBase: number, T: ThemeColors): React.ReactN
   });
 }
 
-export function SystemMessage({ content }: { content: string }) {
+export function SystemMessage({
+  content,
+  metadata,
+}: {
+  content: string;
+  metadata?: Record<string, string>;
+}) {
   const T = useTheme();
   const parts = parseParts(content);
-  const kind = classify(content);
+  const kind = classify(content, metadata);
   const Glyph = GLYPH[kind];
   const tint = tintFor(kind, T);
 

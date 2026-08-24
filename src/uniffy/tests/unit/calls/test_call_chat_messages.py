@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.models.calls import Call, CallEndReason, CallType
-from uniffy.core.models.chat.message import SenderType
+from uniffy.core.models.chat.message import ChatMessageMetadataKind, SenderType
 from uniffy.core.types import generate_id
 from uniffy.domains.calls.operations import _format_call_duration
 
@@ -85,6 +85,7 @@ async def test_all_left_summary_lists_participants() -> None:
     assert kwargs["sender_type"] == SenderType.SYSTEM
     assert kwargs["channel_id"] == call.channel_id
     assert kwargs["user_id"] == host_id
+    assert kwargs["message_metadata"] == {"kind": ChatMessageMetadataKind.CALL_ENDED.value}
     content = kwargs["content"]
     assert content.startswith("Call ended - ")
     assert "10m 00s" in content
@@ -155,4 +156,21 @@ async def test_system_message_failure_is_swallowed() -> None:
 
     with patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
         msg_ops_cls.return_value.send_message = AsyncMock(side_effect=RuntimeError("chat down"))
-        await ops._post_call_system_message(call, "Call ended", call.host_user_id)
+        await ops._post_call_system_message(
+            call, "Call ended", call.host_user_id, ChatMessageMetadataKind.CALL_ENDED
+        )
+
+
+async def test_start_message_carries_kind_metadata() -> None:
+    call = _call(generate_id())
+    session = _build_session()
+    ops = _build_ops(session)
+
+    with patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
+        msg_ops_cls.return_value.send_message = AsyncMock()
+        await ops._post_call_system_message(
+            call, "Alice started a call", call.host_user_id, ChatMessageMetadataKind.CALL_STARTED
+        )
+        kwargs = msg_ops_cls.return_value.send_message.call_args.kwargs
+    assert kwargs["sender_type"] == SenderType.SYSTEM
+    assert kwargs["message_metadata"] == {"kind": ChatMessageMetadataKind.CALL_STARTED.value}

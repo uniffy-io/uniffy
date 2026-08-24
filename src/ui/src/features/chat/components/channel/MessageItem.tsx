@@ -275,7 +275,9 @@ function MessageItemInner({
   }
 
   if (message.senderType === "SYSTEM") {
-    return <SystemMessage content={message.content} messageId={message.id} />;
+    return (
+      <SystemMessage content={message.content} messageId={message.id} metadata={message.metadata} />
+    );
   }
 
   if (message.isDeleted) {

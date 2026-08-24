@@ -29,7 +29,7 @@ from uniffy.core.models.calls import (
 )
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
-from uniffy.core.models.chat.message import SenderType
+from uniffy.core.models.chat.message import ChatMessageMetadataKind, SenderType
 from uniffy.core.types import SubjectType
 from uniffy.domains.calls.config import (
     LiveKitConfigError,
@@ -173,6 +173,7 @@ class CallOperations:
             call,
             f"{_user_mention(user_id, getattr(info, 'display_name', ''))} started a call",
             user_id,
+            ChatMessageMetadataKind.CALL_STARTED,
         )
         return call, participants, token, False
 
@@ -633,10 +634,12 @@ class CallOperations:
             summary = "Call ended"
         duration = _format_call_duration(int((ended_at - call.started_at).total_seconds()))
         content = f"{summary} - {duration}" + (f" - with {roster}" if roster else "")
-        await self._post_call_system_message(call, content, actor_user_id or call.host_user_id)
+        await self._post_call_system_message(
+            call, content, actor_user_id or call.host_user_id, ChatMessageMetadataKind.CALL_ENDED
+        )
 
     async def _post_call_system_message(
-        self, call: Call, content: str, sender_user_id: UUID
+        self, call: Call, content: str, sender_user_id: UUID, kind: ChatMessageMetadataKind
     ) -> None:
         """Lifecycle breadcrumbs ride the normal message pipeline as SYSTEM posts;
         a failure here must never break the call lifecycle."""
@@ -646,6 +649,7 @@ class CallOperations:
                 organization_id=call.organization_id,
                 channel_id=call.channel_id,
                 content=content,
+                message_metadata={"kind": kind.value},
                 sender_type=SenderType.SYSTEM,
             )
         except Exception:
