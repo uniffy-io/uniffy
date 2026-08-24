@@ -286,6 +286,7 @@ function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveS
       state.eventLocation = m["location"] || undefined;
       state.eventMeetingUrl = m["meeting_url"] || undefined;
       state.eventChannelId = m["channel_id"] || undefined;
+      state.eventStatus = m["event_status"] || undefined;
       break;
     case UrnType.FILE:
       state.fileProcessingStatus = (m["processing_status"] ||

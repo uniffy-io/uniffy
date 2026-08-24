@@ -155,6 +155,23 @@ describe("container and room live-state translation", () => {
     expect(patch.roomAmenities).toBe("Screen");
   });
 
+  it("maps calendar event status from metadata and stream patches", () => {
+    const CALENDAR_URN = "urn:uniffy:content:CALENDAR_EVENT:019fc01f-12b6-7f11-a000-000000000001";
+    const state = metadataToLiveState(
+      CALENDAR_URN,
+      create(UrnMetadataSchema, {
+        availability: UrnAvailability.AVAILABLE,
+        eventStatus: "CANCELLED",
+        metadata: { start_time: "2026-09-01T10:00:00+00:00" },
+      }),
+    );
+    expect(state.eventStatus).toBe("CANCELLED");
+    expect(state.eventStartTime).toBe("2026-09-01T10:00:00+00:00");
+
+    const patch = streamChangesToLiveState({ event_status: "CONFIRMED" });
+    expect(patch.eventStatus).toBe("CONFIRMED");
+  });
+
   it("translates availability stream states", () => {
     expect(streamChangesToLiveState({ availability: "RESTRICTED" }).availability).toBe(
       MentionAvailability.Restricted,

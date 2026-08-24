@@ -102,6 +102,11 @@ export const NOTIFICATION_PREFERENCE_GROUPS: NotificationPreferenceGroup[] = [
         label: "Invitation response",
         defaults: { in_app: true, browser: false, email: false },
       },
+      {
+        type: "CALENDAR_CANCELLED",
+        label: "Event cancelled",
+        defaults: { in_app: true, browser: true, email: true },
+      },
     ],
   },
   {

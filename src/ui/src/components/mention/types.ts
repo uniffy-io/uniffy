@@ -60,6 +60,8 @@ export interface MentionLiveState {
   eventLocation?: string;
   eventMeetingUrl?: string;
   eventChannelId?: string;
+  /** CONFIRMED / TENTATIVE / CANCELLED lifecycle status. */
+  eventStatus?: string;
 
   // FILE
   fileProcessingStatus?: FileProcessingStatus;

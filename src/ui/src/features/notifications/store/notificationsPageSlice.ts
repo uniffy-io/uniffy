@@ -241,6 +241,7 @@ const NOTIFICATION_TYPE_CATEGORIES: Record<string, number[]> = {
     NotificationType.CALENDAR_REMINDER,
     NotificationType.CALENDAR_INVITE,
     NotificationType.CALENDAR_RESPONSE,
+    NotificationType.CALENDAR_CANCELLED,
   ],
   permissions: [
     NotificationType.PERMISSION_GRANTED,
