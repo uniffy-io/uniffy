@@ -79,7 +79,7 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
 
   return (
     <div className="space-y-3">
-      {currentUserAttendee && (
+      {currentUserAttendee && event.status !== "cancelled" && (
         <div>
           <SectionLabel>Your Response</SectionLabel>
           <div className="flex items-center gap-1.5">

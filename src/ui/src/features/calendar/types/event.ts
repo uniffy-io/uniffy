@@ -24,6 +24,15 @@ export interface RecurrenceConfig {
 
 export type ResourceType = "note" | "file" | "chat";
 
+/** Lifecycle status; cancelled events stay visible, struck through. */
+export type EventStatus = "confirmed" | "tentative" | "cancelled";
+
+/** Detail visibility to viewers who are not organizer/attendee/editor. */
+export type EventVisibility = "standard" | "private";
+
+/** Whether the event blocks its attendees' time in free/busy answers. */
+export type EventTransparency = "opaque" | "transparent";
+
 export interface LinkedResource {
   id: string;
   type: ResourceType;
@@ -76,6 +85,12 @@ export interface CalendarEvent {
   roomAmenities?: string[];
   /** Caller's effective role, resolved server-side. Drives read-only affordances. */
   userRole: number;
+  status: EventStatus;
+  visibility: EventVisibility;
+  transparency: EventTransparency;
+  isOutOfOffice: boolean;
+  /** Server redacted this payload (private event, viewer not privileged). */
+  detailsHidden: boolean;
 }
 
 export type RecurrenceEditScope = "this_event" | "all_events" | "this_and_following";

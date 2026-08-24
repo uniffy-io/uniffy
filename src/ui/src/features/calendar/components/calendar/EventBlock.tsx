@@ -3,8 +3,9 @@ import { selectEvent, startDrag, endDrag } from "@/features/calendar/store";
 import type { PositionedEvent } from "@/features/calendar/types";
 import { ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
 import { formatTimeRange } from "@/features/calendar/utils";
+import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { cn } from "@/shared/utils/cn";
-import { Warning, Users, ArrowsClockwise } from "@phosphor-icons/react";
+import { Warning, Users, ArrowsClockwise, AirplaneTilt, EyeSlash } from "@phosphor-icons/react";
 import { SubjectAvatar, SUBJECT_TYPE } from "@/components/subject";
 
 interface EventBlockProps {
@@ -33,9 +34,12 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   // Middle/end day segments of a multi-day event hide the label.
   const showContent = multiDayPosition === "start" || multiDayPosition === "single";
 
+  const display = eventDisplayState(event);
+
   const category = event.categoryId ? categories[event.categoryId] : null;
   const categoryColor = category?.color ?? ACCENT_EVENT_COLOR;
-  const backgroundColor = eventTint(categoryColor, isSharedEvent ? 7 : 10);
+  // Free (transparent) events sit lighter on the grid; they do not block time.
+  const backgroundColor = eventTint(categoryColor, display.free ? 4 : isSharedEvent ? 7 : 10);
 
   const handleClick = () => {
     dispatch(selectEvent(event.id));
@@ -132,8 +136,17 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
         width: `${widthPercent}%`,
         height: event.height,
         backgroundColor,
+        // Out-of-office fills with a diagonal hatch so it reads at a glance.
+        backgroundImage: display.outOfOffice
+          ? `repeating-linear-gradient(45deg, ${eventTint(categoryColor, 12)} 0px, ${eventTint(categoryColor, 12)} 6px, transparent 6px, transparent 12px)`
+          : undefined,
         borderRadius: getBorderRadius(),
-        opacity: isDeclined ? 0.35 : isPendingOrTentative ? 0.6 : 1,
+        opacity:
+          isDeclined || display.cancelled
+            ? 0.35
+            : isPendingOrTentative || display.tentative
+              ? 0.6
+              : 1,
         boxShadow:
           event.hasConflict && !isSelected
             ? "inset 0 0 0 1px color-mix(in srgb, var(--status-warning) 50%, transparent)"
@@ -190,7 +203,27 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
                 />
               </span>
             )}
-            <span className={cn("truncate", isDeclined && "line-through")}>{event.title}</span>
+            {display.outOfOffice && (
+              <span title="Out of office">
+                <AirplaneTilt
+                  size={12}
+                  weight="duotone"
+                  className="text-muted-foreground flex-shrink-0"
+                />
+              </span>
+            )}
+            {display.detailsHidden && (
+              <span title="Private event">
+                <EyeSlash
+                  size={12}
+                  weight="duotone"
+                  className="text-muted-foreground flex-shrink-0"
+                />
+              </span>
+            )}
+            <span className={cn("truncate", (isDeclined || display.cancelled) && "line-through")}>
+              {display.title}
+            </span>
           </div>
 
           {!isShort && (

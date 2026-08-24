@@ -32,6 +32,7 @@ import { EventScheduleSection } from "@/features/calendar/components/detail/Even
 import { EventPlaceSection } from "@/features/calendar/components/detail/EventPlaceSection";
 import { EventPeopleSection } from "@/features/calendar/components/detail/EventPeopleSection";
 import { EventMetaSection } from "@/features/calendar/components/detail/EventMetaSection";
+import { EventStateSection } from "@/features/calendar/components/detail/EventStateSection";
 import { EventActivityLog } from "@/features/calendar/components/detail/EventActivityLog";
 
 export function EventDetailModal() {
@@ -156,6 +157,31 @@ export function EventDetailModal() {
               </Button>
             )}
           </div>
+        ) : selectedEvent.detailsHidden ? (
+          // Server-redacted private event: an honest busy block, nothing more.
+          // The activity log and description are not fetched or rendered.
+          <div className="flex flex-col gap-2 px-6 py-8">
+            <div className="flex items-start gap-3">
+              <div className="w-1 h-8 rounded-full shrink-0 bg-muted-foreground/40" />
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-semibold text-foreground">
+                  {selectedEvent.isOutOfOffice ? "Out of office" : "Busy"}
+                </h2>
+                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                  <Clock size={14} weight="duotone" />
+                  <span>{formatTimeRange(selectedEvent.startTime, selectedEvent.endTime)}</span>
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  This event is private. Its details are hidden.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button variant="outline" size="md" onClick={handleClose}>
+                Close
+              </Button>
+            </div>
+          </div>
         ) : (
           <>
             <div className="flex items-center justify-end gap-1 px-4 py-2 border-b border-border">
@@ -219,9 +245,18 @@ export function EventDetailModal() {
                     placeholder="Untitled event"
                     readOnly={!canEdit}
                     required
-                    className="text-lg"
+                    className={
+                      selectedEvent.status === "cancelled"
+                        ? "text-lg line-through opacity-60"
+                        : "text-lg"
+                    }
                     inputClassName="text-lg font-semibold"
                   />
+                  {selectedEvent.status === "cancelled" && (
+                    <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                      Cancelled
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -231,6 +266,10 @@ export function EventDetailModal() {
 
               <div className="px-5 py-3 border-b border-border">
                 <EventPlaceSection event={selectedEvent} canEdit={canEdit} commit={commit} />
+              </div>
+
+              <div className="px-5 py-3 border-b border-border">
+                <EventStateSection event={selectedEvent} canEdit={canEdit} commit={commit} />
               </div>
 
               <div className="px-5 py-3 border-b border-border">

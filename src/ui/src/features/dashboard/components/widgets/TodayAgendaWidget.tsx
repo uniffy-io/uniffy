@@ -11,6 +11,7 @@ import {
 import { effectiveDayKey, formatDateFull, formatTimeInZone } from "@/shared/utils/dateFormatting";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import type { CalendarEvent } from "@/features/calendar/types";
+import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 
 function formatEventTime(event: CalendarEvent): string {
   if (event.isAllDay) return "All day";
@@ -68,8 +69,13 @@ function EventItem({
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-            {event.title}
+          <p
+            className={cn(
+              "text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors",
+              eventDisplayState(event).cancelled && "line-through opacity-60",
+            )}
+          >
+            {eventDisplayState(event).title}
           </p>
           {isCurrent && (
             <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">

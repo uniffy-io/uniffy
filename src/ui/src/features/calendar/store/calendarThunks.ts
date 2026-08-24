@@ -17,6 +17,9 @@ import {
   AttendeeRole as ProtoAttendeeRole,
   DayOfWeek as ProtoDayOfWeek,
   ResourceType as ProtoResourceType,
+  EventStatus as ProtoEventStatus,
+  EventVisibility as ProtoEventVisibility,
+  EventTransparency as ProtoEventTransparency,
 } from "@uniffy/proto/cal/v1/calendar_pb";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { create } from "@bufbuild/protobuf";
@@ -33,6 +36,9 @@ import type {
   ResourceType,
   AttendeeStatus,
   AttendeeRole,
+  EventStatus,
+  EventVisibility,
+  EventTransparency,
   EventTemplate,
   CreateTemplatePayload,
   UpdateTemplatePayload,
@@ -137,6 +143,41 @@ const RESOURCE_TYPE_FROM_PROTO: Record<ProtoResourceType, ResourceType> = {
   [ProtoResourceType.CHAT]: "chat",
 };
 
+const EVENT_STATUS_FROM_PROTO: Record<ProtoEventStatus, EventStatus> = {
+  [ProtoEventStatus.UNSPECIFIED]: "confirmed",
+  [ProtoEventStatus.CONFIRMED]: "confirmed",
+  [ProtoEventStatus.TENTATIVE]: "tentative",
+  [ProtoEventStatus.CANCELLED]: "cancelled",
+};
+
+const EVENT_STATUS_TO_PROTO: Record<EventStatus, ProtoEventStatus> = {
+  confirmed: ProtoEventStatus.CONFIRMED,
+  tentative: ProtoEventStatus.TENTATIVE,
+  cancelled: ProtoEventStatus.CANCELLED,
+};
+
+const EVENT_VISIBILITY_FROM_PROTO: Record<ProtoEventVisibility, EventVisibility> = {
+  [ProtoEventVisibility.UNSPECIFIED]: "standard",
+  [ProtoEventVisibility.STANDARD]: "standard",
+  [ProtoEventVisibility.PRIVATE]: "private",
+};
+
+const EVENT_VISIBILITY_TO_PROTO: Record<EventVisibility, ProtoEventVisibility> = {
+  standard: ProtoEventVisibility.STANDARD,
+  private: ProtoEventVisibility.PRIVATE,
+};
+
+const EVENT_TRANSPARENCY_FROM_PROTO: Record<ProtoEventTransparency, EventTransparency> = {
+  [ProtoEventTransparency.UNSPECIFIED]: "opaque",
+  [ProtoEventTransparency.OPAQUE]: "opaque",
+  [ProtoEventTransparency.TRANSPARENT]: "transparent",
+};
+
+const EVENT_TRANSPARENCY_TO_PROTO: Record<EventTransparency, ProtoEventTransparency> = {
+  opaque: ProtoEventTransparency.OPAQUE,
+  transparent: ProtoEventTransparency.TRANSPARENT,
+};
+
 const EDIT_SCOPE_TO_PROTO: Record<RecurrenceEditScope, ProtoRecurrenceEditScope> = {
   this_event: ProtoRecurrenceEditScope.THIS_EVENT,
   all_events: ProtoRecurrenceEditScope.ALL_EVENTS,
@@ -210,6 +251,11 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
   roomCapacity: proto.roomCapacity || undefined,
   roomAmenities: proto.roomAmenities?.length ? [...proto.roomAmenities] : undefined,
   userRole: proto.userRole,
+  status: EVENT_STATUS_FROM_PROTO[proto.status] || "confirmed",
+  visibility: EVENT_VISIBILITY_FROM_PROTO[proto.visibility] || "standard",
+  transparency: EVENT_TRANSPARENCY_FROM_PROTO[proto.transparency] || "opaque",
+  isOutOfOffice: proto.isOutOfOffice,
+  detailsHidden: proto.detailsHidden,
 });
 
 /** Push hydrated tag rows into tags-slice cache so chips render without a follow-up RPC. */
@@ -311,6 +357,10 @@ export const createEvent = createAsyncThunk<
     tagIds?: string[];
     reminders?: number[];
     roomId?: string;
+    status?: EventStatus;
+    visibility?: EventVisibility;
+    transparency?: EventTransparency;
+    isOutOfOffice?: boolean;
   },
   { state: RootState; rejectValue: string; dispatch: typeof import("@/app/store").store.dispatch }
 >("calendar/createEvent", async (params, { getState, rejectWithValue, dispatch }) => {
@@ -351,6 +401,12 @@ export const createEvent = createAsyncThunk<
       roomId: params.roomId || undefined,
       channelId: params.channelId,
       channelAutoCreated: params.channelAutoCreated,
+      status: params.status ? EVENT_STATUS_TO_PROTO[params.status] : undefined,
+      visibility: params.visibility ? EVENT_VISIBILITY_TO_PROTO[params.visibility] : undefined,
+      transparency: params.transparency
+        ? EVENT_TRANSPARENCY_TO_PROTO[params.transparency]
+        : undefined,
+      isOutOfOffice: params.isOutOfOffice || false,
     });
 
     if (!response.event) {
@@ -403,6 +459,10 @@ export const updateEvent = createAsyncThunk<
     recurrenceEditScope?: RecurrenceEditScope;
     occurrenceDate?: string;
     roomId?: string;
+    status?: EventStatus;
+    visibility?: EventVisibility;
+    transparency?: EventTransparency;
+    isOutOfOffice?: boolean;
   },
   { state: RootState; rejectValue: string; dispatch: typeof import("@/app/store").store.dispatch }
 >("calendar/updateEvent", async (params, { getState, rejectWithValue, dispatch }) => {
@@ -446,6 +506,12 @@ export const updateEvent = createAsyncThunk<
       roomId: params.roomId,
       channelId: params.channelId,
       channelAutoCreated: params.channelAutoCreated,
+      status: params.status ? EVENT_STATUS_TO_PROTO[params.status] : undefined,
+      visibility: params.visibility ? EVENT_VISIBILITY_TO_PROTO[params.visibility] : undefined,
+      transparency: params.transparency
+        ? EVENT_TRANSPARENCY_TO_PROTO[params.transparency]
+        : undefined,
+      isOutOfOffice: params.isOutOfOffice,
     });
 
     if (!response.event) {

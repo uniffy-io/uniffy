@@ -5,6 +5,7 @@ import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
 import { useCalendarEvents } from "@/features/calendar/hooks";
 import { ACCENT_EVENT_COLOR } from "@/features/calendar/constants";
 import { formatTimeRange } from "@/features/calendar/utils";
+import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { formatDateWithWeekday } from "@/shared/utils/dateFormatting";
 import { cn } from "@/shared/utils/cn";
 
@@ -54,6 +55,9 @@ interface DateGroup {
     categoryColor: string;
     attendeeCount: number;
     isRecurring: boolean;
+    cancelled: boolean;
+    tentative: boolean;
+    outOfOffice: boolean;
   }>;
 }
 
@@ -88,10 +92,11 @@ export function AgendaView() {
       }
 
       const category = event.categoryId ? categories[event.categoryId] : null;
+      const display = eventDisplayState(event);
 
       groups.get(dateStr)!.events.push({
         id: event.id,
-        title: event.title,
+        title: display.title,
         startTime: event.startTime,
         endTime: event.endTime,
         isAllDay: event.isAllDay,
@@ -99,6 +104,9 @@ export function AgendaView() {
         categoryColor: category?.color ?? ACCENT_EVENT_COLOR,
         attendeeCount: event.attendees.length,
         isRecurring: event.isRecurring ?? false,
+        cancelled: display.cancelled,
+        tentative: display.tentative,
+        outOfOffice: display.outOfOffice,
       });
     }
 
@@ -149,8 +157,19 @@ export function AgendaView() {
                     />
 
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-foreground truncate">
+                      <div
+                        className={cn(
+                          "text-sm font-medium text-foreground truncate",
+                          event.cancelled && "line-through opacity-60",
+                          event.tentative && "opacity-70",
+                        )}
+                      >
                         {event.title}
+                        {event.outOfOffice && (
+                          <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-muted text-muted-foreground align-middle">
+                            Out of office
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">

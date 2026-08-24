@@ -10,6 +10,7 @@ import {
   VideoCamera,
   Prohibit,
   Link as LinkIcon,
+  Sliders,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { instantDayKey, instantFromDisplayParts } from "@/features/calendar/utils";
@@ -109,6 +110,10 @@ export function QuickEventModal({
   const [meetingUrl, setMeetingUrl] = useState("");
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [channelAutoCreated, setChannelAutoCreated] = useState(false);
+  const [isTentative, setIsTentative] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [isFree, setIsFree] = useState(false);
+  const [isOutOfOffice, setIsOutOfOffice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pendingFileIdsRef = useRef<string[]>([]);
 
@@ -173,6 +178,10 @@ export function QuickEventModal({
       setMeetingUrl("");
       setSelectedChannelId(null);
       setChannelAutoCreated(false);
+      setIsTentative(false);
+      setIsPrivate(false);
+      setIsFree(false);
+      setIsOutOfOffice(false);
       setIsSubmitting(false);
 
       const categoryIds = Object.keys(categories || {});
@@ -264,6 +273,10 @@ export function QuickEventModal({
         channelId: meetingMode === "channel" ? selectedChannelId || undefined : undefined,
         channelAutoCreated:
           meetingMode === "channel" && selectedChannelId ? channelAutoCreated : undefined,
+        status: isTentative ? "tentative" : undefined,
+        visibility: isPrivate ? "private" : undefined,
+        transparency: isFree ? "transparent" : undefined,
+        isOutOfOffice,
       }),
     );
 
@@ -551,6 +564,37 @@ export function QuickEventModal({
                         style={{ backgroundColor: cat.color }}
                       />
                       {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Sliders size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Options</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ["Tentative", isTentative, setIsTentative],
+                      ["Private", isPrivate, setIsPrivate],
+                      ["Free (doesn't block time)", isFree, setIsFree],
+                      ["Out of office", isOutOfOffice, setIsOutOfOffice],
+                    ] as const
+                  ).map(([label, active, setActive]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setActive(!active)}
+                      className={cn(
+                        "px-3 py-1.5 text-sm rounded-lg border transition-all",
+                        active
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {label}
                     </button>
                   ))}
                 </div>

@@ -25,6 +25,7 @@ export function useConflictDetection(
     for (const event of Object.values(events)) {
       if (excludeEventId && event.id === excludeEventId) continue;
       if (event.isAllDay) continue;
+      if (event.status === "cancelled" || event.transparency === "transparent") continue;
 
       const eventStart = new Date(event.startTime).getTime();
       const eventEnd = new Date(event.endTime).getTime();
