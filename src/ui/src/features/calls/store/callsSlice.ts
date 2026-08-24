@@ -22,11 +22,17 @@ export interface CallSessionState {
   screenShareQualityCap: ScreenShareQuality;
 }
 
+export interface PrejoinTarget {
+  channelId: string;
+  /** Set when answering a ring: join exactly this call, never start a new one. */
+  callId: string | null;
+}
+
 interface CallsState {
   activeByChannel: Record<string, CallData>;
   session: CallSessionState;
   ringInvites: RingInvite[];
-  prejoinChannelId: string | null;
+  prejoin: PrejoinTarget | null;
   endedInfo: CallEndedInfo | null;
 }
 
@@ -44,7 +50,7 @@ const initialState: CallsState = {
   activeByChannel: {},
   session: idleSession,
   ringInvites: [],
-  prejoinChannelId: null,
+  prejoin: null,
   endedInfo: null,
 };
 
@@ -131,11 +137,14 @@ const callsSlice = createSlice({
     ringDismissed(state, action: PayloadAction<string>) {
       state.ringInvites = state.ringInvites.filter((r) => r.callId !== action.payload);
     },
-    prejoinOpened(state, action: PayloadAction<string>) {
-      state.prejoinChannelId = action.payload;
+    prejoinOpened(state, action: PayloadAction<{ channelId: string; callId?: string }>) {
+      state.prejoin = {
+        channelId: action.payload.channelId,
+        callId: action.payload.callId ?? null,
+      };
     },
     prejoinClosed(state) {
-      state.prejoinChannelId = null;
+      state.prejoin = null;
     },
     sessionConnecting(
       state,
@@ -186,7 +195,7 @@ const callsSlice = createSlice({
         activeByChannel: {},
         session: idleSession,
         ringInvites: [],
-        prejoinChannelId: null,
+        prejoin: null,
         endedInfo: null,
       };
     },
@@ -224,7 +233,7 @@ export const selectCallSession = (state: RootState) => state.calls.session;
 
 export const selectRingInvites = (state: RootState) => state.calls.ringInvites;
 
-export const selectPrejoinChannelId = (state: RootState) => state.calls.prejoinChannelId;
+export const selectPrejoin = (state: RootState) => state.calls.prejoin;
 
 export const selectEndedInfo = (state: RootState) => state.calls.endedInfo;
 

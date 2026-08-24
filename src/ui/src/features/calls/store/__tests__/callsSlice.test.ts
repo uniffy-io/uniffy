@@ -10,6 +10,8 @@ import {
   hostChanged,
   ringReceived,
   ringDismissed,
+  prejoinOpened,
+  prejoinClosed,
   sessionConnecting,
   sessionConnected,
   sessionReset,
@@ -223,6 +225,18 @@ describe("callsSlice", () => {
     expect(state.session.callId).toBeNull();
   });
 
+  it("keeps the rung call's identity through the prejoin", () => {
+    let state = callsReducer(init(), prejoinOpened({ channelId: "chan-1", callId: "call-9" }));
+    expect(state.prejoin).toEqual({ channelId: "chan-1", callId: "call-9" });
+    state = callsReducer(state, prejoinClosed());
+    expect(state.prejoin).toBeNull();
+  });
+
+  it("opens a channel-initiated prejoin without a call identity", () => {
+    const state = callsReducer(init(), prejoinOpened({ channelId: "chan-1" }));
+    expect(state.prejoin).toEqual({ channelId: "chan-1", callId: null });
+  });
+
   it("wipes every slice field on sign-out", () => {
     let state = callsReducer(init(), callUpserted(call()));
     state = callsReducer(
@@ -240,7 +254,7 @@ describe("callsSlice", () => {
     expect(state.activeByChannel).toEqual({});
     expect(state.ringInvites).toHaveLength(0);
     expect(state.endedInfo).toBeNull();
-    expect(state.prejoinChannelId).toBeNull();
+    expect(state.prejoin).toBeNull();
     expect(state.session.status).toBe("idle");
     expect(state.session.callId).toBeNull();
   });
