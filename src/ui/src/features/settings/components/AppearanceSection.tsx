@@ -11,7 +11,27 @@ import { Button } from "@/components/ui/button";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { TimezoneSelect } from "@/components/ui/timezone-select";
 import { cn } from "@/shared/utils/cn";
-import { useSettings, useAppearanceSettings } from "@/features/settings/hooks/useSettings";
+import {
+  useSettings,
+  useAppearanceSettings,
+  useSchedulingSettings,
+} from "@/features/settings/hooks/useSettings";
+
+const WORKDAY_OPTIONS = [
+  { id: "monday", label: "Mon" },
+  { id: "tuesday", label: "Tue" },
+  { id: "wednesday", label: "Wed" },
+  { id: "thursday", label: "Thu" },
+  { id: "friday", label: "Fri" },
+  { id: "saturday", label: "Sat" },
+  { id: "sunday", label: "Sun" },
+];
+
+const CLOCK_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const hours = Math.floor(i / 2);
+  const minutes = i % 2 === 0 ? "00" : "30";
+  return `${String(hours).padStart(2, "0")}:${minutes}`;
+});
 
 // Theme token cascade: accent color (HSL) layers on top of base palette and mode (light/dark/system).
 const ACCENT_COLORS = [
@@ -120,6 +140,7 @@ const EDITOR_OPTIONS = [
 export function AppearanceSection() {
   const { updateSettings, saving } = useSettings();
   const appearance = useAppearanceSettings();
+  const scheduling = useSchedulingSettings();
 
   const handleThemeChange = (theme: string) => {
     updateSettings({ appearance: { theme } });
@@ -155,6 +176,23 @@ export function AppearanceSection() {
 
   const handleWeekStartChange = (weekStart: string) => {
     updateSettings({ appearance: { weekStart } });
+  };
+
+  const handleWorkdayHoursChange = (workdayStart: string, workdayEnd: string) => {
+    if (workdayStart < workdayEnd) {
+      updateSettings({ scheduling: { workdayStart, workdayEnd } });
+    }
+  };
+
+  const handleWorkdayToggle = (day: string) => {
+    const next = scheduling.workdays.includes(day)
+      ? scheduling.workdays.filter((d) => d !== day)
+      : WORKDAY_OPTIONS.map((o) => o.id).filter(
+          (d) => scheduling.workdays.includes(d) || d === day,
+        );
+    if (next.length > 0) {
+      updateSettings({ scheduling: { workdays: next } });
+    }
   };
 
   return (
@@ -230,6 +268,73 @@ export function AppearanceSection() {
                   className={cn(
                     "rounded-md border px-3 py-2 text-sm font-medium transition-colors",
                     (appearance.weekStart ?? "monday") === id
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-foreground hover:bg-muted",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Working hours</h2>
+          <p className="text-sm font-medium text-muted-foreground">
+            Meeting suggestions and availability answers stay inside these hours, on your own clock.
+          </p>
+        </div>
+
+        <div className="flex max-w-2xl flex-col gap-4 md:flex-row md:items-end">
+          <div className="flex shrink-0 items-end gap-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">From</label>
+              <select
+                value={scheduling.workdayStart}
+                disabled={saving}
+                onChange={(e) => handleWorkdayHoursChange(e.target.value, scheduling.workdayEnd)}
+                className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground"
+                aria-label="Workday start"
+              >
+                {CLOCK_OPTIONS.map((value) => (
+                  <option key={value} value={value} disabled={value >= scheduling.workdayEnd}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">To</label>
+              <select
+                value={scheduling.workdayEnd}
+                disabled={saving}
+                onChange={(e) => handleWorkdayHoursChange(scheduling.workdayStart, e.target.value)}
+                className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground"
+                aria-label="Workday end"
+              >
+                {CLOCK_OPTIONS.map((value) => (
+                  <option key={value} value={value} disabled={value <= scheduling.workdayStart}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="min-w-0 space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Workdays</label>
+            <div className="flex flex-wrap gap-2">
+              {WORKDAY_OPTIONS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleWorkdayToggle(id)}
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                    scheduling.workdays.includes(id)
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-foreground hover:bg-muted",
                   )}

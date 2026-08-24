@@ -72,6 +72,22 @@ export function useAppearanceSettings() {
   };
 }
 
+export function useSchedulingSettings() {
+  const effectiveSettings = useAppSelector((state) => state.settings.effectiveSettings);
+
+  return {
+    workdayStart: effectiveSettings?.scheduling.workdayStart ?? "09:00",
+    workdayEnd: effectiveSettings?.scheduling.workdayEnd ?? "18:00",
+    workdays: effectiveSettings?.scheduling.workdays ?? [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+    ],
+  };
+}
+
 export function useNotificationSettings() {
   const effectiveSettings = useAppSelector((state) => state.settings.effectiveSettings);
 
