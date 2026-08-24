@@ -122,6 +122,7 @@ INDEX_SETTINGS = MeilisearchSettings(
         "metadata.sender_id",
         "metadata.project_id",
         "metadata.folder_id",
+        "metadata.visibility",
     ],
     sortable_attributes=[
         "updated_at",
@@ -540,7 +541,16 @@ class MeilisearchClient:
             block_conditions.extend(f'NOT blocked_group_ids = "{gid}"' for gid in user_group_ids)
         block_filter = " AND ".join(block_conditions)
 
-        base = f"{org_filter} AND ({block_filter}) AND ({permission_filter})"
+        # A PRIVATE event stays findable by its organizer and attendees; a
+        # viewer who only holds a share grant sees it as a busy block, never
+        # as a search hit. `NOT =` matches documents without the attribute,
+        # so every other content type passes untouched.
+        privacy_filter = (
+            f'(NOT metadata.visibility = "PRIVATE" OR owner_id = "{user_id}"'
+            f' OR attendee_user_ids = "{user_id}")'
+        )
+
+        base = f"{org_filter} AND ({block_filter}) AND ({permission_filter}) AND {privacy_filter}"
 
         if my_content_only:
             return f'{base} AND owner_id = "{user_id}"'

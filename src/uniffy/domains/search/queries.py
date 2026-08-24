@@ -85,6 +85,7 @@ class SearchResult:
     event_location: str | None = None
     event_meeting_url: str | None = None
     event_channel_id: str | None = None
+    event_status: str | None = None
 
     # File fields
     file_mime_type: str | None = None

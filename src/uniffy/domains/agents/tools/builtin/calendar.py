@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from uniffy.core.types import RecurrencePattern
+from uniffy.core.types import EventStatus, EventTransparency, RecurrencePattern
 from uniffy.domains.agents.tools.builtin.args import parse_uuid, parse_uuid_list
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 from uniffy.domains.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
@@ -77,6 +77,12 @@ async def _format_event_result(
     lines.append(" | ".join(time_parts))
 
     fields: list[str] = []
+    if event.status != EventStatus.CONFIRMED:
+        fields.append(f"Status: {event.status.value.lower()}")
+    if event.is_out_of_office:
+        fields.append("Out of office: yes")
+    if event.transparency == EventTransparency.TRANSPARENT:
+        fields.append("Blocks time: no")
     if event.location:
         fields.append(f"Location: {event.location}")
     if event.meeting_url:
@@ -114,6 +120,34 @@ async def _format_event_result(
 
 
 # Executors
+
+
+async def _hidden_event_master_ids(ctx: ToolContext, events: list) -> set[UUID]:
+    """Master ids of PRIVATE events whose details the acting user may not see.
+
+    Tools run with the human user's identity, so a private event another
+    member shared with them still reads as a busy block in LLM context.
+    """
+    from sqlalchemy import select
+
+    from uniffy.core.models.calendar.attendee import EventAttendee
+    from uniffy.core.models.shared import EventVisibility
+
+    candidates: set[UUID] = set()
+    for ev in events:
+        if ev.visibility == EventVisibility.PRIVATE and ev.organizer_id != ctx.user_id:
+            raw = str(ev.id)
+            master = UUID(raw.split(OCCURRENCE_ID_SEPARATOR)[0])
+            candidates.add(master)
+    if not candidates:
+        return set()
+    result = await ctx.session.execute(
+        select(EventAttendee.event_id).where(
+            EventAttendee.event_id.in_(candidates),
+            EventAttendee.user_id == ctx.user_id,
+        )
+    )
+    return candidates - set(result.scalars().all())
 
 
 async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
@@ -168,19 +202,30 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
     if not events:
         return ToolResult(success=True, data="No events found in the specified range.")
 
+    hidden_ids = await _hidden_event_master_ids(ctx, events)
+
     lines = [f"Found {len(events)} events:"]
     for ev in events:
         start = ev.start_time.strftime("%Y-%m-%d %H:%M") if ev.start_time else "?"
         end = ev.end_time.strftime("%Y-%m-%d %H:%M") if ev.end_time else "?"
         urn = f"urn:uniffy:content:CALENDAR_EVENT:{ev.id}"
+        master = UUID(str(ev.id).split(OCCURRENCE_ID_SEPARATOR)[0])
+
+        if master in hidden_ids:
+            lines.append(f"- Busy ({start} to {end}) [private]")
+            continue
 
         parts = [f"- [[[{ev.title}|{urn}]]] ({start} to {end})"]
         if ev.is_all_day:
             parts.append("[all-day]")
+        if ev.status != EventStatus.CONFIRMED:
+            parts.append(f"[{ev.status.value.lower()}]")
         if ev.location:
             parts.append(f"@ {ev.location}")
         if ev.is_focus_time:
             parts.append("[focus]")
+        if ev.is_out_of_office:
+            parts.append("[out-of-office]")
         if ev.recurrence_pattern and ev.recurrence_pattern != RecurrencePattern.NONE:
             parts.append(f"[{ev.recurrence_pattern.value.lower()}]")
 
@@ -207,6 +252,14 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
         organization_id=ctx.organization_id,
         event_id=event_id,  # type: ignore[arg-type]
     )
+
+    if await _hidden_event_master_ids(ctx, [event]):
+        start = event.start_time.strftime("%Y-%m-%d %H:%M") if event.start_time else "?"
+        end = event.end_time.strftime("%Y-%m-%d %H:%M") if event.end_time else "?"
+        return ToolResult(
+            success=True,
+            data=f"Busy ({start} to {end}). This event is private; its details are hidden.",
+        )
 
     result = await _format_event_result("Event", event, ctx=ctx)
 
