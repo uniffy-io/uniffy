@@ -57,6 +57,7 @@ const (
 	NotificationType_NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED   NotificationType = 26
 	NotificationType_NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED   NotificationType = 27
 	NotificationType_NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED   NotificationType = 28
+	NotificationType_NOTIFICATION_TYPE_CALENDAR_CANCELLED        NotificationType = 29
 )
 
 // Enum value maps for NotificationType.
@@ -91,6 +92,7 @@ var (
 		26: "NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED",
 		27: "NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED",
 		28: "NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED",
+		29: "NOTIFICATION_TYPE_CALENDAR_CANCELLED",
 	}
 	NotificationType_value = map[string]int32{
 		"NOTIFICATION_TYPE_UNSPECIFIED":               0,
@@ -122,6 +124,7 @@ var (
 		"NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED":   26,
 		"NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED":   27,
 		"NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED":   28,
+		"NOTIFICATION_TYPE_CALENDAR_CANCELLED":        29,
 	}
 )
 
@@ -2499,7 +2502,7 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x1eBulkDeleteNotificationsRequest\x12)\n" +
 	"\x10notification_ids\x18\x01 \x03(\tR\x0fnotificationIds\"F\n" +
 	"\x1fBulkDeleteNotificationsResponse\x12#\n" +
-	"\rdeleted_count\x18\x01 \x01(\x05R\fdeletedCount*\xac\t\n" +
+	"\rdeleted_count\x18\x01 \x01(\x05R\fdeletedCount*\xd6\t\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12$\n" +
 	" NOTIFICATION_TYPE_CONTENT_SHARED\x10\x01\x12'\n" +
@@ -2530,7 +2533,8 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"+NOTIFICATION_TYPE_SUPPORT_SESSION_REQUESTED\x10\x19\x12-\n" +
 	")NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED\x10\x1a\x12-\n" +
 	")NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED\x10\x1b\x12-\n" +
-	")NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED\x10\x1c2\xf2\v\n" +
+	")NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED\x10\x1c\x12(\n" +
+	"$NOTIFICATION_TYPE_CALENDAR_CANCELLED\x10\x1d2\xf2\v\n" +
 	"\x14NotificationsService\x12n\n" +
 	"\x11ListNotifications\x12*.notifications.v1.ListNotificationsRequest\x1a+.notifications.v1.ListNotificationsResponse\"\x00\x12e\n" +
 	"\x0eGetUnreadCount\x12'.notifications.v1.GetUnreadCountRequest\x1a(.notifications.v1.GetUnreadCountResponse\"\x00\x12Y\n" +

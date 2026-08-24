@@ -452,6 +452,159 @@ func (RecurrenceEditScope) EnumDescriptor() ([]byte, []int) {
 	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{6}
 }
 
+// Lifecycle status of an event; cancelled events stay visible
+type EventStatus int32
+
+const (
+	EventStatus_EVENT_STATUS_UNSPECIFIED EventStatus = 0
+	EventStatus_EVENT_STATUS_CONFIRMED   EventStatus = 1
+	EventStatus_EVENT_STATUS_TENTATIVE   EventStatus = 2
+	EventStatus_EVENT_STATUS_CANCELLED   EventStatus = 3
+)
+
+// Enum value maps for EventStatus.
+var (
+	EventStatus_name = map[int32]string{
+		0: "EVENT_STATUS_UNSPECIFIED",
+		1: "EVENT_STATUS_CONFIRMED",
+		2: "EVENT_STATUS_TENTATIVE",
+		3: "EVENT_STATUS_CANCELLED",
+	}
+	EventStatus_value = map[string]int32{
+		"EVENT_STATUS_UNSPECIFIED": 0,
+		"EVENT_STATUS_CONFIRMED":   1,
+		"EVENT_STATUS_TENTATIVE":   2,
+		"EVENT_STATUS_CANCELLED":   3,
+	}
+)
+
+func (x EventStatus) Enum() *EventStatus {
+	p := new(EventStatus)
+	*p = x
+	return p
+}
+
+func (x EventStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_cal_v1_calendar_proto_enumTypes[7].Descriptor()
+}
+
+func (EventStatus) Type() protoreflect.EnumType {
+	return &file_cal_v1_calendar_proto_enumTypes[7]
+}
+
+func (x EventStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventStatus.Descriptor instead.
+func (EventStatus) EnumDescriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{7}
+}
+
+// Detail visibility to viewers who are not the organizer or an attendee
+type EventVisibility int32
+
+const (
+	EventVisibility_EVENT_VISIBILITY_UNSPECIFIED EventVisibility = 0
+	EventVisibility_EVENT_VISIBILITY_STANDARD    EventVisibility = 1
+	EventVisibility_EVENT_VISIBILITY_PRIVATE     EventVisibility = 2
+)
+
+// Enum value maps for EventVisibility.
+var (
+	EventVisibility_name = map[int32]string{
+		0: "EVENT_VISIBILITY_UNSPECIFIED",
+		1: "EVENT_VISIBILITY_STANDARD",
+		2: "EVENT_VISIBILITY_PRIVATE",
+	}
+	EventVisibility_value = map[string]int32{
+		"EVENT_VISIBILITY_UNSPECIFIED": 0,
+		"EVENT_VISIBILITY_STANDARD":    1,
+		"EVENT_VISIBILITY_PRIVATE":     2,
+	}
+)
+
+func (x EventVisibility) Enum() *EventVisibility {
+	p := new(EventVisibility)
+	*p = x
+	return p
+}
+
+func (x EventVisibility) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventVisibility) Descriptor() protoreflect.EnumDescriptor {
+	return file_cal_v1_calendar_proto_enumTypes[8].Descriptor()
+}
+
+func (EventVisibility) Type() protoreflect.EnumType {
+	return &file_cal_v1_calendar_proto_enumTypes[8]
+}
+
+func (x EventVisibility) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventVisibility.Descriptor instead.
+func (EventVisibility) EnumDescriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{8}
+}
+
+// Whether the event blocks the attendee's time in free/busy answers
+type EventTransparency int32
+
+const (
+	EventTransparency_EVENT_TRANSPARENCY_UNSPECIFIED EventTransparency = 0
+	EventTransparency_EVENT_TRANSPARENCY_OPAQUE      EventTransparency = 1
+	EventTransparency_EVENT_TRANSPARENCY_TRANSPARENT EventTransparency = 2
+)
+
+// Enum value maps for EventTransparency.
+var (
+	EventTransparency_name = map[int32]string{
+		0: "EVENT_TRANSPARENCY_UNSPECIFIED",
+		1: "EVENT_TRANSPARENCY_OPAQUE",
+		2: "EVENT_TRANSPARENCY_TRANSPARENT",
+	}
+	EventTransparency_value = map[string]int32{
+		"EVENT_TRANSPARENCY_UNSPECIFIED": 0,
+		"EVENT_TRANSPARENCY_OPAQUE":      1,
+		"EVENT_TRANSPARENCY_TRANSPARENT": 2,
+	}
+)
+
+func (x EventTransparency) Enum() *EventTransparency {
+	p := new(EventTransparency)
+	*p = x
+	return p
+}
+
+func (x EventTransparency) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventTransparency) Descriptor() protoreflect.EnumDescriptor {
+	return file_cal_v1_calendar_proto_enumTypes[9].Descriptor()
+}
+
+func (EventTransparency) Type() protoreflect.EnumType {
+	return &file_cal_v1_calendar_proto_enumTypes[9]
+}
+
+func (x EventTransparency) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventTransparency.Descriptor instead.
+func (EventTransparency) EnumDescriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{9}
+}
+
 // Calendar event
 type CalendarEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -523,7 +676,19 @@ type CalendarEvent struct {
 	ChannelAutoCreated bool `protobuf:"varint,36,opt,name=channel_auto_created,json=channelAutoCreated,proto3" json:"channel_auto_created,omitempty"`
 	// Caller's effective role on this event, so the client can render read-only
 	// affordances instead of controls every write would reject.
-	UserRole      v11.ContentRole `protobuf:"varint,37,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
+	UserRole v11.ContentRole `protobuf:"varint,37,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
+	// Lifecycle status; cancelled events render struck through and stop blocking time
+	Status EventStatus `protobuf:"varint,38,opt,name=status,proto3,enum=cal.v1.EventStatus" json:"status,omitempty"`
+	// Detail visibility; PRIVATE events are redacted for non-privileged viewers
+	Visibility EventVisibility `protobuf:"varint,39,opt,name=visibility,proto3,enum=cal.v1.EventVisibility" json:"visibility,omitempty"`
+	// Free/busy transparency; TRANSPARENT events never count as busy
+	Transparency EventTransparency `protobuf:"varint,40,opt,name=transparency,proto3,enum=cal.v1.EventTransparency" json:"transparency,omitempty"`
+	// Out-of-office period, rendered distinctly on every surface
+	IsOutOfOffice bool `protobuf:"varint,41,opt,name=is_out_of_office,json=isOutOfOffice,proto3" json:"is_out_of_office,omitempty"`
+	// True when the server redacted this payload for the caller (private event,
+	// caller is not organizer/attendee/editor): title, description, location,
+	// meeting, channel, category, and attendees are stripped.
+	DetailsHidden bool `protobuf:"varint,42,opt,name=details_hidden,json=detailsHidden,proto3" json:"details_hidden,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -801,6 +966,41 @@ func (x *CalendarEvent) GetUserRole() v11.ContentRole {
 		return x.UserRole
 	}
 	return v11.ContentRole(0)
+}
+
+func (x *CalendarEvent) GetStatus() EventStatus {
+	if x != nil {
+		return x.Status
+	}
+	return EventStatus_EVENT_STATUS_UNSPECIFIED
+}
+
+func (x *CalendarEvent) GetVisibility() EventVisibility {
+	if x != nil {
+		return x.Visibility
+	}
+	return EventVisibility_EVENT_VISIBILITY_UNSPECIFIED
+}
+
+func (x *CalendarEvent) GetTransparency() EventTransparency {
+	if x != nil {
+		return x.Transparency
+	}
+	return EventTransparency_EVENT_TRANSPARENCY_UNSPECIFIED
+}
+
+func (x *CalendarEvent) GetIsOutOfOffice() bool {
+	if x != nil {
+		return x.IsOutOfOffice
+	}
+	return false
+}
+
+func (x *CalendarEvent) GetDetailsHidden() bool {
+	if x != nil {
+		return x.DetailsHidden
+	}
+	return false
 }
 
 // Event attendee
@@ -1129,8 +1329,17 @@ type CreateEventRequest struct {
 	ChannelId *string `protobuf:"bytes,21,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
 	// Set when channel_id points at a room auto-created for this event.
 	ChannelAutoCreated *bool `protobuf:"varint,22,opt,name=channel_auto_created,json=channelAutoCreated,proto3,oneof" json:"channel_auto_created,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Lifecycle status (UNSPECIFIED defaults to CONFIRMED)
+	Status EventStatus `protobuf:"varint,23,opt,name=status,proto3,enum=cal.v1.EventStatus" json:"status,omitempty"`
+	// Detail visibility (UNSPECIFIED defaults to STANDARD)
+	Visibility EventVisibility `protobuf:"varint,24,opt,name=visibility,proto3,enum=cal.v1.EventVisibility" json:"visibility,omitempty"`
+	// Free/busy transparency (UNSPECIFIED lets the server default: all-day
+	// non-out-of-office events are TRANSPARENT, everything else OPAQUE)
+	Transparency EventTransparency `protobuf:"varint,25,opt,name=transparency,proto3,enum=cal.v1.EventTransparency" json:"transparency,omitempty"`
+	// Marks the event as an out-of-office period
+	IsOutOfOffice bool `protobuf:"varint,26,opt,name=is_out_of_office,json=isOutOfOffice,proto3" json:"is_out_of_office,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateEventRequest) Reset() {
@@ -1303,6 +1512,34 @@ func (x *CreateEventRequest) GetChannelAutoCreated() bool {
 	return false
 }
 
+func (x *CreateEventRequest) GetStatus() EventStatus {
+	if x != nil {
+		return x.Status
+	}
+	return EventStatus_EVENT_STATUS_UNSPECIFIED
+}
+
+func (x *CreateEventRequest) GetVisibility() EventVisibility {
+	if x != nil {
+		return x.Visibility
+	}
+	return EventVisibility_EVENT_VISIBILITY_UNSPECIFIED
+}
+
+func (x *CreateEventRequest) GetTransparency() EventTransparency {
+	if x != nil {
+		return x.Transparency
+	}
+	return EventTransparency_EVENT_TRANSPARENCY_UNSPECIFIED
+}
+
+func (x *CreateEventRequest) GetIsOutOfOffice() bool {
+	if x != nil {
+		return x.IsOutOfOffice
+	}
+	return false
+}
+
 // Request to get an event
 type GetEventRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1410,8 +1647,16 @@ type UpdateEventRequest struct {
 	// Marks the bound channel as a room auto-created for this event. Sent
 	// alongside a new channel_id; unset leaves the flag untouched.
 	ChannelAutoCreated *bool `protobuf:"varint,25,opt,name=channel_auto_created,json=channelAutoCreated,proto3,oneof" json:"channel_auto_created,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Updated lifecycle status; unset leaves it untouched
+	Status *EventStatus `protobuf:"varint,26,opt,name=status,proto3,enum=cal.v1.EventStatus,oneof" json:"status,omitempty"`
+	// Updated detail visibility; unset leaves it untouched
+	Visibility *EventVisibility `protobuf:"varint,27,opt,name=visibility,proto3,enum=cal.v1.EventVisibility,oneof" json:"visibility,omitempty"`
+	// Updated free/busy transparency; unset leaves it untouched
+	Transparency *EventTransparency `protobuf:"varint,28,opt,name=transparency,proto3,enum=cal.v1.EventTransparency,oneof" json:"transparency,omitempty"`
+	// Updated out-of-office flag; unset leaves it untouched
+	IsOutOfOffice *bool `protobuf:"varint,29,opt,name=is_out_of_office,json=isOutOfOffice,proto3,oneof" json:"is_out_of_office,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateEventRequest) Reset() {
@@ -1601,6 +1846,34 @@ func (x *UpdateEventRequest) GetChannelId() string {
 func (x *UpdateEventRequest) GetChannelAutoCreated() bool {
 	if x != nil && x.ChannelAutoCreated != nil {
 		return *x.ChannelAutoCreated
+	}
+	return false
+}
+
+func (x *UpdateEventRequest) GetStatus() EventStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return EventStatus_EVENT_STATUS_UNSPECIFIED
+}
+
+func (x *UpdateEventRequest) GetVisibility() EventVisibility {
+	if x != nil && x.Visibility != nil {
+		return *x.Visibility
+	}
+	return EventVisibility_EVENT_VISIBILITY_UNSPECIFIED
+}
+
+func (x *UpdateEventRequest) GetTransparency() EventTransparency {
+	if x != nil && x.Transparency != nil {
+		return *x.Transparency
+	}
+	return EventTransparency_EVENT_TRANSPARENCY_UNSPECIFIED
+}
+
+func (x *UpdateEventRequest) GetIsOutOfOffice() bool {
+	if x != nil && x.IsOutOfOffice != nil {
+		return *x.IsOutOfOffice
 	}
 	return false
 }
@@ -4288,7 +4561,7 @@ var File_cal_v1_calendar_proto protoreflect.FileDescriptor
 
 const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
-	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xd1\f\n" +
+	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xc6\x0e\n" +
 	"\rCalendarEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n" +
@@ -4337,7 +4610,14 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
 	"channel_id\x18# \x01(\tH\tR\tchannelId\x88\x01\x01\x120\n" +
 	"\x14channel_auto_created\x18$ \x01(\bR\x12channelAutoCreated\x123\n" +
-	"\tuser_role\x18% \x01(\x0e2\x16.common.v1.ContentRoleR\buserRoleB\x0e\n" +
+	"\tuser_role\x18% \x01(\x0e2\x16.common.v1.ContentRoleR\buserRole\x12+\n" +
+	"\x06status\x18& \x01(\x0e2\x13.cal.v1.EventStatusR\x06status\x127\n" +
+	"\n" +
+	"visibility\x18' \x01(\x0e2\x17.cal.v1.EventVisibilityR\n" +
+	"visibility\x12=\n" +
+	"\ftransparency\x18( \x01(\x0e2\x19.cal.v1.EventTransparencyR\ftransparency\x12'\n" +
+	"\x10is_out_of_office\x18) \x01(\bR\risOutOfOffice\x12%\n" +
+	"\x0edetails_hidden\x18* \x01(\bR\rdetailsHiddenB\x0e\n" +
 	"\f_meeting_urlB\r\n" +
 	"\v_recurrenceB\r\n" +
 	"\v_deleted_atB\x10\n" +
@@ -4381,7 +4661,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04type\x18\x02 \x01(\x0e2\x14.cal.v1.ResourceTypeR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x15\n" +
 	"\x03url\x18\x04 \x01(\tH\x00R\x03url\x88\x01\x01B\x06\n" +
-	"\x04_url\"\xae\a\n" +
+	"\x04_url\"\xfc\b\n" +
 	"\x12CreateEventRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -4411,7 +4691,13 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\atag_ids\x18\x14 \x03(\tR\x06tagIds\x12\"\n" +
 	"\n" +
 	"channel_id\x18\x15 \x01(\tH\aR\tchannelId\x88\x01\x01\x125\n" +
-	"\x14channel_auto_created\x18\x16 \x01(\bH\bR\x12channelAutoCreated\x88\x01\x01B\x0e\n" +
+	"\x14channel_auto_created\x18\x16 \x01(\bH\bR\x12channelAutoCreated\x88\x01\x01\x12+\n" +
+	"\x06status\x18\x17 \x01(\x0e2\x13.cal.v1.EventStatusR\x06status\x127\n" +
+	"\n" +
+	"visibility\x18\x18 \x01(\x0e2\x17.cal.v1.EventVisibilityR\n" +
+	"visibility\x12=\n" +
+	"\ftransparency\x18\x19 \x01(\x0e2\x19.cal.v1.EventTransparencyR\ftransparency\x12'\n" +
+	"\x10is_out_of_office\x18\x1a \x01(\bR\risOutOfOfficeB\x0e\n" +
 	"\f_descriptionB\v\n" +
 	"\t_timezoneB\v\n" +
 	"\t_locationB\x0e\n" +
@@ -4424,8 +4710,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x15_channel_auto_created\"U\n" +
 	"\x0fGetEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\x96\n" +
-	"\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xb8\f\n" +
 	"\x12UpdateEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -4459,7 +4744,13 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\atag_ids\x18\x17 \x01(\v2\x13.cal.v1.EventTagIdsH\x0fR\x06tagIds\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"channel_id\x18\x18 \x01(\tH\x10R\tchannelId\x88\x01\x01\x125\n" +
-	"\x14channel_auto_created\x18\x19 \x01(\bH\x11R\x12channelAutoCreated\x88\x01\x01B\b\n" +
+	"\x14channel_auto_created\x18\x19 \x01(\bH\x11R\x12channelAutoCreated\x88\x01\x01\x120\n" +
+	"\x06status\x18\x1a \x01(\x0e2\x13.cal.v1.EventStatusH\x12R\x06status\x88\x01\x01\x12<\n" +
+	"\n" +
+	"visibility\x18\x1b \x01(\x0e2\x17.cal.v1.EventVisibilityH\x13R\n" +
+	"visibility\x88\x01\x01\x12B\n" +
+	"\ftransparency\x18\x1c \x01(\x0e2\x19.cal.v1.EventTransparencyH\x14R\ftransparency\x88\x01\x01\x12,\n" +
+	"\x10is_out_of_office\x18\x1d \x01(\bH\x15R\risOutOfOffice\x88\x01\x01B\b\n" +
 	"\x06_titleB\x0e\n" +
 	"\f_descriptionB\r\n" +
 	"\v_start_timeB\v\n" +
@@ -4479,7 +4770,11 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
 	"\b_tag_idsB\r\n" +
 	"\v_channel_idB\x17\n" +
-	"\x15_channel_auto_created\"\x1f\n" +
+	"\x15_channel_auto_createdB\t\n" +
+	"\a_statusB\r\n" +
+	"\v_visibilityB\x0f\n" +
+	"\r_transparencyB\x13\n" +
+	"\x11_is_out_of_office\"\x1f\n" +
 	"\vEventTagIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\xa8\x02\n" +
 	"\x12DeleteEventRequest\x12\x19\n" +
@@ -4780,7 +5075,20 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"!RECURRENCE_EDIT_SCOPE_UNSPECIFIED\x10\x00\x12$\n" +
 	" RECURRENCE_EDIT_SCOPE_THIS_EVENT\x10\x01\x12$\n" +
 	" RECURRENCE_EDIT_SCOPE_ALL_EVENTS\x10\x02\x12,\n" +
-	"(RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING\x10\x032\xae\r\n" +
+	"(RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING\x10\x03*\x7f\n" +
+	"\vEventStatus\x12\x1c\n" +
+	"\x18EVENT_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16EVENT_STATUS_CONFIRMED\x10\x01\x12\x1a\n" +
+	"\x16EVENT_STATUS_TENTATIVE\x10\x02\x12\x1a\n" +
+	"\x16EVENT_STATUS_CANCELLED\x10\x03*p\n" +
+	"\x0fEventVisibility\x12 \n" +
+	"\x1cEVENT_VISIBILITY_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19EVENT_VISIBILITY_STANDARD\x10\x01\x12\x1c\n" +
+	"\x18EVENT_VISIBILITY_PRIVATE\x10\x02*z\n" +
+	"\x11EventTransparency\x12\"\n" +
+	"\x1eEVENT_TRANSPARENCY_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19EVENT_TRANSPARENCY_OPAQUE\x10\x01\x12\"\n" +
+	"\x1eEVENT_TRANSPARENCY_TRANSPARENT\x10\x022\xae\r\n" +
 	"\x0fCalendarService\x12H\n" +
 	"\vCreateEvent\x12\x1a.cal.v1.CreateEventRequest\x1a\x1b.cal.v1.CreateEventResponse\"\x00\x12?\n" +
 	"\bGetEvent\x12\x17.cal.v1.GetEventRequest\x1a\x18.cal.v1.GetEventResponse\"\x00\x12H\n" +
@@ -4816,7 +5124,7 @@ func file_cal_v1_calendar_proto_rawDescGZIP() []byte {
 	return file_cal_v1_calendar_proto_rawDescData
 }
 
-var file_cal_v1_calendar_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_cal_v1_calendar_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
 var file_cal_v1_calendar_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
 var file_cal_v1_calendar_proto_goTypes = []any{
 	(RecurrencePattern)(0),               // 0: cal.v1.RecurrencePattern
@@ -4826,168 +5134,180 @@ var file_cal_v1_calendar_proto_goTypes = []any{
 	(AttendeeRole)(0),                    // 4: cal.v1.AttendeeRole
 	(ResourceType)(0),                    // 5: cal.v1.ResourceType
 	(RecurrenceEditScope)(0),             // 6: cal.v1.RecurrenceEditScope
-	(*CalendarEvent)(nil),                // 7: cal.v1.CalendarEvent
-	(*Attendee)(nil),                     // 8: cal.v1.Attendee
-	(*RecurrenceConfig)(nil),             // 9: cal.v1.RecurrenceConfig
-	(*LinkedResource)(nil),               // 10: cal.v1.LinkedResource
-	(*CreateEventRequest)(nil),           // 11: cal.v1.CreateEventRequest
-	(*GetEventRequest)(nil),              // 12: cal.v1.GetEventRequest
-	(*UpdateEventRequest)(nil),           // 13: cal.v1.UpdateEventRequest
-	(*EventTagIds)(nil),                  // 14: cal.v1.EventTagIds
-	(*DeleteEventRequest)(nil),           // 15: cal.v1.DeleteEventRequest
-	(*DeleteEventResponse)(nil),          // 16: cal.v1.DeleteEventResponse
-	(*CreateEventResponse)(nil),          // 17: cal.v1.CreateEventResponse
-	(*GetEventResponse)(nil),             // 18: cal.v1.GetEventResponse
-	(*UpdateEventResponse)(nil),          // 19: cal.v1.UpdateEventResponse
-	(*AddAttendeesResponse)(nil),         // 20: cal.v1.AddAttendeesResponse
-	(*RemoveAttendeesResponse)(nil),      // 21: cal.v1.RemoveAttendeesResponse
-	(*ListEventsRequest)(nil),            // 22: cal.v1.ListEventsRequest
-	(*ListEventsResponse)(nil),           // 23: cal.v1.ListEventsResponse
-	(*GetEventsInRangeRequest)(nil),      // 24: cal.v1.GetEventsInRangeRequest
-	(*GetEventsInRangeResponse)(nil),     // 25: cal.v1.GetEventsInRangeResponse
-	(*Category)(nil),                     // 26: cal.v1.Category
-	(*CreateCategoryRequest)(nil),        // 27: cal.v1.CreateCategoryRequest
-	(*GetCategoryRequest)(nil),           // 28: cal.v1.GetCategoryRequest
-	(*UpdateCategoryRequest)(nil),        // 29: cal.v1.UpdateCategoryRequest
-	(*DeleteCategoryRequest)(nil),        // 30: cal.v1.DeleteCategoryRequest
-	(*DeleteCategoryResponse)(nil),       // 31: cal.v1.DeleteCategoryResponse
-	(*CreateCategoryResponse)(nil),       // 32: cal.v1.CreateCategoryResponse
-	(*GetCategoryResponse)(nil),          // 33: cal.v1.GetCategoryResponse
-	(*UpdateCategoryResponse)(nil),       // 34: cal.v1.UpdateCategoryResponse
-	(*ListCategoriesRequest)(nil),        // 35: cal.v1.ListCategoriesRequest
-	(*ListCategoriesResponse)(nil),       // 36: cal.v1.ListCategoriesResponse
-	(*UpdateAttendeeStatusRequest)(nil),  // 37: cal.v1.UpdateAttendeeStatusRequest
-	(*UpdateAttendeeStatusResponse)(nil), // 38: cal.v1.UpdateAttendeeStatusResponse
-	(*AddAttendeesRequest)(nil),          // 39: cal.v1.AddAttendeesRequest
-	(*RemoveAttendeesRequest)(nil),       // 40: cal.v1.RemoveAttendeesRequest
-	(*EventActivity)(nil),                // 41: cal.v1.EventActivity
-	(*ListEventActivitiesRequest)(nil),   // 42: cal.v1.ListEventActivitiesRequest
-	(*ListEventActivitiesResponse)(nil),  // 43: cal.v1.ListEventActivitiesResponse
-	(*EventTemplate)(nil),                // 44: cal.v1.EventTemplate
-	(*CreateEventTemplateRequest)(nil),   // 45: cal.v1.CreateEventTemplateRequest
-	(*GetEventTemplateRequest)(nil),      // 46: cal.v1.GetEventTemplateRequest
-	(*UpdateEventTemplateRequest)(nil),   // 47: cal.v1.UpdateEventTemplateRequest
-	(*DeleteEventTemplateRequest)(nil),   // 48: cal.v1.DeleteEventTemplateRequest
-	(*DeleteEventTemplateResponse)(nil),  // 49: cal.v1.DeleteEventTemplateResponse
-	(*CreateEventTemplateResponse)(nil),  // 50: cal.v1.CreateEventTemplateResponse
-	(*GetEventTemplateResponse)(nil),     // 51: cal.v1.GetEventTemplateResponse
-	(*UpdateEventTemplateResponse)(nil),  // 52: cal.v1.UpdateEventTemplateResponse
-	(*ListEventTemplatesRequest)(nil),    // 53: cal.v1.ListEventTemplatesRequest
-	(*ListEventTemplatesResponse)(nil),   // 54: cal.v1.ListEventTemplatesResponse
-	(*timestamppb.Timestamp)(nil),        // 55: google.protobuf.Timestamp
-	(*v1.Tag)(nil),                       // 56: tags.v1.Tag
-	(v11.ContentRole)(0),                 // 57: common.v1.ContentRole
-	(*v11.PaginationRequest)(nil),        // 58: common.v1.PaginationRequest
-	(*v11.PaginationResponse)(nil),       // 59: common.v1.PaginationResponse
-	(v11.AccessMode)(0),                  // 60: common.v1.AccessMode
+	(EventStatus)(0),                     // 7: cal.v1.EventStatus
+	(EventVisibility)(0),                 // 8: cal.v1.EventVisibility
+	(EventTransparency)(0),               // 9: cal.v1.EventTransparency
+	(*CalendarEvent)(nil),                // 10: cal.v1.CalendarEvent
+	(*Attendee)(nil),                     // 11: cal.v1.Attendee
+	(*RecurrenceConfig)(nil),             // 12: cal.v1.RecurrenceConfig
+	(*LinkedResource)(nil),               // 13: cal.v1.LinkedResource
+	(*CreateEventRequest)(nil),           // 14: cal.v1.CreateEventRequest
+	(*GetEventRequest)(nil),              // 15: cal.v1.GetEventRequest
+	(*UpdateEventRequest)(nil),           // 16: cal.v1.UpdateEventRequest
+	(*EventTagIds)(nil),                  // 17: cal.v1.EventTagIds
+	(*DeleteEventRequest)(nil),           // 18: cal.v1.DeleteEventRequest
+	(*DeleteEventResponse)(nil),          // 19: cal.v1.DeleteEventResponse
+	(*CreateEventResponse)(nil),          // 20: cal.v1.CreateEventResponse
+	(*GetEventResponse)(nil),             // 21: cal.v1.GetEventResponse
+	(*UpdateEventResponse)(nil),          // 22: cal.v1.UpdateEventResponse
+	(*AddAttendeesResponse)(nil),         // 23: cal.v1.AddAttendeesResponse
+	(*RemoveAttendeesResponse)(nil),      // 24: cal.v1.RemoveAttendeesResponse
+	(*ListEventsRequest)(nil),            // 25: cal.v1.ListEventsRequest
+	(*ListEventsResponse)(nil),           // 26: cal.v1.ListEventsResponse
+	(*GetEventsInRangeRequest)(nil),      // 27: cal.v1.GetEventsInRangeRequest
+	(*GetEventsInRangeResponse)(nil),     // 28: cal.v1.GetEventsInRangeResponse
+	(*Category)(nil),                     // 29: cal.v1.Category
+	(*CreateCategoryRequest)(nil),        // 30: cal.v1.CreateCategoryRequest
+	(*GetCategoryRequest)(nil),           // 31: cal.v1.GetCategoryRequest
+	(*UpdateCategoryRequest)(nil),        // 32: cal.v1.UpdateCategoryRequest
+	(*DeleteCategoryRequest)(nil),        // 33: cal.v1.DeleteCategoryRequest
+	(*DeleteCategoryResponse)(nil),       // 34: cal.v1.DeleteCategoryResponse
+	(*CreateCategoryResponse)(nil),       // 35: cal.v1.CreateCategoryResponse
+	(*GetCategoryResponse)(nil),          // 36: cal.v1.GetCategoryResponse
+	(*UpdateCategoryResponse)(nil),       // 37: cal.v1.UpdateCategoryResponse
+	(*ListCategoriesRequest)(nil),        // 38: cal.v1.ListCategoriesRequest
+	(*ListCategoriesResponse)(nil),       // 39: cal.v1.ListCategoriesResponse
+	(*UpdateAttendeeStatusRequest)(nil),  // 40: cal.v1.UpdateAttendeeStatusRequest
+	(*UpdateAttendeeStatusResponse)(nil), // 41: cal.v1.UpdateAttendeeStatusResponse
+	(*AddAttendeesRequest)(nil),          // 42: cal.v1.AddAttendeesRequest
+	(*RemoveAttendeesRequest)(nil),       // 43: cal.v1.RemoveAttendeesRequest
+	(*EventActivity)(nil),                // 44: cal.v1.EventActivity
+	(*ListEventActivitiesRequest)(nil),   // 45: cal.v1.ListEventActivitiesRequest
+	(*ListEventActivitiesResponse)(nil),  // 46: cal.v1.ListEventActivitiesResponse
+	(*EventTemplate)(nil),                // 47: cal.v1.EventTemplate
+	(*CreateEventTemplateRequest)(nil),   // 48: cal.v1.CreateEventTemplateRequest
+	(*GetEventTemplateRequest)(nil),      // 49: cal.v1.GetEventTemplateRequest
+	(*UpdateEventTemplateRequest)(nil),   // 50: cal.v1.UpdateEventTemplateRequest
+	(*DeleteEventTemplateRequest)(nil),   // 51: cal.v1.DeleteEventTemplateRequest
+	(*DeleteEventTemplateResponse)(nil),  // 52: cal.v1.DeleteEventTemplateResponse
+	(*CreateEventTemplateResponse)(nil),  // 53: cal.v1.CreateEventTemplateResponse
+	(*GetEventTemplateResponse)(nil),     // 54: cal.v1.GetEventTemplateResponse
+	(*UpdateEventTemplateResponse)(nil),  // 55: cal.v1.UpdateEventTemplateResponse
+	(*ListEventTemplatesRequest)(nil),    // 56: cal.v1.ListEventTemplatesRequest
+	(*ListEventTemplatesResponse)(nil),   // 57: cal.v1.ListEventTemplatesResponse
+	(*timestamppb.Timestamp)(nil),        // 58: google.protobuf.Timestamp
+	(*v1.Tag)(nil),                       // 59: tags.v1.Tag
+	(v11.ContentRole)(0),                 // 60: common.v1.ContentRole
+	(*v11.PaginationRequest)(nil),        // 61: common.v1.PaginationRequest
+	(*v11.PaginationResponse)(nil),       // 62: common.v1.PaginationResponse
+	(v11.AccessMode)(0),                  // 63: common.v1.AccessMode
 }
 var file_cal_v1_calendar_proto_depIdxs = []int32{
-	55, // 0: cal.v1.CalendarEvent.start_time:type_name -> google.protobuf.Timestamp
-	55, // 1: cal.v1.CalendarEvent.end_time:type_name -> google.protobuf.Timestamp
-	8,  // 2: cal.v1.CalendarEvent.attendees:type_name -> cal.v1.Attendee
-	9,  // 3: cal.v1.CalendarEvent.recurrence:type_name -> cal.v1.RecurrenceConfig
-	10, // 4: cal.v1.CalendarEvent.linked_resources:type_name -> cal.v1.LinkedResource
-	55, // 5: cal.v1.CalendarEvent.created_at:type_name -> google.protobuf.Timestamp
-	55, // 6: cal.v1.CalendarEvent.updated_at:type_name -> google.protobuf.Timestamp
-	55, // 7: cal.v1.CalendarEvent.deleted_at:type_name -> google.protobuf.Timestamp
-	56, // 8: cal.v1.CalendarEvent.tags:type_name -> tags.v1.Tag
-	57, // 9: cal.v1.CalendarEvent.user_role:type_name -> common.v1.ContentRole
-	2,  // 10: cal.v1.Attendee.status:type_name -> cal.v1.AttendeeStatus
-	4,  // 11: cal.v1.Attendee.role:type_name -> cal.v1.AttendeeRole
-	0,  // 12: cal.v1.RecurrenceConfig.pattern:type_name -> cal.v1.RecurrencePattern
-	1,  // 13: cal.v1.RecurrenceConfig.days_of_week:type_name -> cal.v1.DayOfWeek
-	55, // 14: cal.v1.RecurrenceConfig.end_date:type_name -> google.protobuf.Timestamp
-	5,  // 15: cal.v1.LinkedResource.type:type_name -> cal.v1.ResourceType
-	55, // 16: cal.v1.CreateEventRequest.start_time:type_name -> google.protobuf.Timestamp
-	55, // 17: cal.v1.CreateEventRequest.end_time:type_name -> google.protobuf.Timestamp
-	9,  // 18: cal.v1.CreateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
-	55, // 19: cal.v1.UpdateEventRequest.start_time:type_name -> google.protobuf.Timestamp
-	55, // 20: cal.v1.UpdateEventRequest.end_time:type_name -> google.protobuf.Timestamp
-	9,  // 21: cal.v1.UpdateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
-	6,  // 22: cal.v1.UpdateEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
-	14, // 23: cal.v1.UpdateEventRequest.tag_ids:type_name -> cal.v1.EventTagIds
-	6,  // 24: cal.v1.DeleteEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
-	7,  // 25: cal.v1.CreateEventResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 26: cal.v1.GetEventResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 27: cal.v1.UpdateEventResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 28: cal.v1.AddAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 29: cal.v1.RemoveAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
-	55, // 30: cal.v1.ListEventsRequest.start_date:type_name -> google.protobuf.Timestamp
-	55, // 31: cal.v1.ListEventsRequest.end_date:type_name -> google.protobuf.Timestamp
-	7,  // 32: cal.v1.ListEventsResponse.events:type_name -> cal.v1.CalendarEvent
-	55, // 33: cal.v1.GetEventsInRangeRequest.start_date:type_name -> google.protobuf.Timestamp
-	55, // 34: cal.v1.GetEventsInRangeRequest.end_date:type_name -> google.protobuf.Timestamp
-	7,  // 35: cal.v1.GetEventsInRangeResponse.events:type_name -> cal.v1.CalendarEvent
-	55, // 36: cal.v1.Category.created_at:type_name -> google.protobuf.Timestamp
-	55, // 37: cal.v1.Category.updated_at:type_name -> google.protobuf.Timestamp
-	26, // 38: cal.v1.CreateCategoryResponse.category:type_name -> cal.v1.Category
-	26, // 39: cal.v1.GetCategoryResponse.category:type_name -> cal.v1.Category
-	26, // 40: cal.v1.UpdateCategoryResponse.category:type_name -> cal.v1.Category
-	26, // 41: cal.v1.ListCategoriesResponse.categories:type_name -> cal.v1.Category
-	2,  // 42: cal.v1.UpdateAttendeeStatusRequest.status:type_name -> cal.v1.AttendeeStatus
-	4,  // 43: cal.v1.AddAttendeesRequest.role:type_name -> cal.v1.AttendeeRole
-	3,  // 44: cal.v1.EventActivity.action:type_name -> cal.v1.EventActivityAction
-	55, // 45: cal.v1.EventActivity.timestamp:type_name -> google.protobuf.Timestamp
-	58, // 46: cal.v1.ListEventActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
-	41, // 47: cal.v1.ListEventActivitiesResponse.activities:type_name -> cal.v1.EventActivity
-	59, // 48: cal.v1.ListEventActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
-	60, // 49: cal.v1.EventTemplate.access_mode:type_name -> common.v1.AccessMode
-	55, // 50: cal.v1.EventTemplate.created_at:type_name -> google.protobuf.Timestamp
-	55, // 51: cal.v1.EventTemplate.updated_at:type_name -> google.protobuf.Timestamp
-	57, // 52: cal.v1.EventTemplate.baseline_role:type_name -> common.v1.ContentRole
-	60, // 53: cal.v1.CreateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
-	57, // 54: cal.v1.CreateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
-	60, // 55: cal.v1.UpdateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
-	57, // 56: cal.v1.UpdateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
-	44, // 57: cal.v1.CreateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
-	44, // 58: cal.v1.GetEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
-	44, // 59: cal.v1.UpdateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
-	44, // 60: cal.v1.ListEventTemplatesResponse.templates:type_name -> cal.v1.EventTemplate
-	11, // 61: cal.v1.CalendarService.CreateEvent:input_type -> cal.v1.CreateEventRequest
-	12, // 62: cal.v1.CalendarService.GetEvent:input_type -> cal.v1.GetEventRequest
-	13, // 63: cal.v1.CalendarService.UpdateEvent:input_type -> cal.v1.UpdateEventRequest
-	15, // 64: cal.v1.CalendarService.DeleteEvent:input_type -> cal.v1.DeleteEventRequest
-	22, // 65: cal.v1.CalendarService.ListEvents:input_type -> cal.v1.ListEventsRequest
-	24, // 66: cal.v1.CalendarService.GetEventsInRange:input_type -> cal.v1.GetEventsInRangeRequest
-	27, // 67: cal.v1.CalendarService.CreateCategory:input_type -> cal.v1.CreateCategoryRequest
-	28, // 68: cal.v1.CalendarService.GetCategory:input_type -> cal.v1.GetCategoryRequest
-	29, // 69: cal.v1.CalendarService.UpdateCategory:input_type -> cal.v1.UpdateCategoryRequest
-	30, // 70: cal.v1.CalendarService.DeleteCategory:input_type -> cal.v1.DeleteCategoryRequest
-	35, // 71: cal.v1.CalendarService.ListCategories:input_type -> cal.v1.ListCategoriesRequest
-	37, // 72: cal.v1.CalendarService.UpdateAttendeeStatus:input_type -> cal.v1.UpdateAttendeeStatusRequest
-	39, // 73: cal.v1.CalendarService.AddAttendees:input_type -> cal.v1.AddAttendeesRequest
-	40, // 74: cal.v1.CalendarService.RemoveAttendees:input_type -> cal.v1.RemoveAttendeesRequest
-	42, // 75: cal.v1.CalendarService.ListEventActivities:input_type -> cal.v1.ListEventActivitiesRequest
-	45, // 76: cal.v1.CalendarService.CreateEventTemplate:input_type -> cal.v1.CreateEventTemplateRequest
-	46, // 77: cal.v1.CalendarService.GetEventTemplate:input_type -> cal.v1.GetEventTemplateRequest
-	47, // 78: cal.v1.CalendarService.UpdateEventTemplate:input_type -> cal.v1.UpdateEventTemplateRequest
-	48, // 79: cal.v1.CalendarService.DeleteEventTemplate:input_type -> cal.v1.DeleteEventTemplateRequest
-	53, // 80: cal.v1.CalendarService.ListEventTemplates:input_type -> cal.v1.ListEventTemplatesRequest
-	17, // 81: cal.v1.CalendarService.CreateEvent:output_type -> cal.v1.CreateEventResponse
-	18, // 82: cal.v1.CalendarService.GetEvent:output_type -> cal.v1.GetEventResponse
-	19, // 83: cal.v1.CalendarService.UpdateEvent:output_type -> cal.v1.UpdateEventResponse
-	16, // 84: cal.v1.CalendarService.DeleteEvent:output_type -> cal.v1.DeleteEventResponse
-	23, // 85: cal.v1.CalendarService.ListEvents:output_type -> cal.v1.ListEventsResponse
-	25, // 86: cal.v1.CalendarService.GetEventsInRange:output_type -> cal.v1.GetEventsInRangeResponse
-	32, // 87: cal.v1.CalendarService.CreateCategory:output_type -> cal.v1.CreateCategoryResponse
-	33, // 88: cal.v1.CalendarService.GetCategory:output_type -> cal.v1.GetCategoryResponse
-	34, // 89: cal.v1.CalendarService.UpdateCategory:output_type -> cal.v1.UpdateCategoryResponse
-	31, // 90: cal.v1.CalendarService.DeleteCategory:output_type -> cal.v1.DeleteCategoryResponse
-	36, // 91: cal.v1.CalendarService.ListCategories:output_type -> cal.v1.ListCategoriesResponse
-	38, // 92: cal.v1.CalendarService.UpdateAttendeeStatus:output_type -> cal.v1.UpdateAttendeeStatusResponse
-	20, // 93: cal.v1.CalendarService.AddAttendees:output_type -> cal.v1.AddAttendeesResponse
-	21, // 94: cal.v1.CalendarService.RemoveAttendees:output_type -> cal.v1.RemoveAttendeesResponse
-	43, // 95: cal.v1.CalendarService.ListEventActivities:output_type -> cal.v1.ListEventActivitiesResponse
-	50, // 96: cal.v1.CalendarService.CreateEventTemplate:output_type -> cal.v1.CreateEventTemplateResponse
-	51, // 97: cal.v1.CalendarService.GetEventTemplate:output_type -> cal.v1.GetEventTemplateResponse
-	52, // 98: cal.v1.CalendarService.UpdateEventTemplate:output_type -> cal.v1.UpdateEventTemplateResponse
-	49, // 99: cal.v1.CalendarService.DeleteEventTemplate:output_type -> cal.v1.DeleteEventTemplateResponse
-	54, // 100: cal.v1.CalendarService.ListEventTemplates:output_type -> cal.v1.ListEventTemplatesResponse
-	81, // [81:101] is the sub-list for method output_type
-	61, // [61:81] is the sub-list for method input_type
-	61, // [61:61] is the sub-list for extension type_name
-	61, // [61:61] is the sub-list for extension extendee
-	0,  // [0:61] is the sub-list for field type_name
+	58, // 0: cal.v1.CalendarEvent.start_time:type_name -> google.protobuf.Timestamp
+	58, // 1: cal.v1.CalendarEvent.end_time:type_name -> google.protobuf.Timestamp
+	11, // 2: cal.v1.CalendarEvent.attendees:type_name -> cal.v1.Attendee
+	12, // 3: cal.v1.CalendarEvent.recurrence:type_name -> cal.v1.RecurrenceConfig
+	13, // 4: cal.v1.CalendarEvent.linked_resources:type_name -> cal.v1.LinkedResource
+	58, // 5: cal.v1.CalendarEvent.created_at:type_name -> google.protobuf.Timestamp
+	58, // 6: cal.v1.CalendarEvent.updated_at:type_name -> google.protobuf.Timestamp
+	58, // 7: cal.v1.CalendarEvent.deleted_at:type_name -> google.protobuf.Timestamp
+	59, // 8: cal.v1.CalendarEvent.tags:type_name -> tags.v1.Tag
+	60, // 9: cal.v1.CalendarEvent.user_role:type_name -> common.v1.ContentRole
+	7,  // 10: cal.v1.CalendarEvent.status:type_name -> cal.v1.EventStatus
+	8,  // 11: cal.v1.CalendarEvent.visibility:type_name -> cal.v1.EventVisibility
+	9,  // 12: cal.v1.CalendarEvent.transparency:type_name -> cal.v1.EventTransparency
+	2,  // 13: cal.v1.Attendee.status:type_name -> cal.v1.AttendeeStatus
+	4,  // 14: cal.v1.Attendee.role:type_name -> cal.v1.AttendeeRole
+	0,  // 15: cal.v1.RecurrenceConfig.pattern:type_name -> cal.v1.RecurrencePattern
+	1,  // 16: cal.v1.RecurrenceConfig.days_of_week:type_name -> cal.v1.DayOfWeek
+	58, // 17: cal.v1.RecurrenceConfig.end_date:type_name -> google.protobuf.Timestamp
+	5,  // 18: cal.v1.LinkedResource.type:type_name -> cal.v1.ResourceType
+	58, // 19: cal.v1.CreateEventRequest.start_time:type_name -> google.protobuf.Timestamp
+	58, // 20: cal.v1.CreateEventRequest.end_time:type_name -> google.protobuf.Timestamp
+	12, // 21: cal.v1.CreateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
+	7,  // 22: cal.v1.CreateEventRequest.status:type_name -> cal.v1.EventStatus
+	8,  // 23: cal.v1.CreateEventRequest.visibility:type_name -> cal.v1.EventVisibility
+	9,  // 24: cal.v1.CreateEventRequest.transparency:type_name -> cal.v1.EventTransparency
+	58, // 25: cal.v1.UpdateEventRequest.start_time:type_name -> google.protobuf.Timestamp
+	58, // 26: cal.v1.UpdateEventRequest.end_time:type_name -> google.protobuf.Timestamp
+	12, // 27: cal.v1.UpdateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
+	6,  // 28: cal.v1.UpdateEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
+	17, // 29: cal.v1.UpdateEventRequest.tag_ids:type_name -> cal.v1.EventTagIds
+	7,  // 30: cal.v1.UpdateEventRequest.status:type_name -> cal.v1.EventStatus
+	8,  // 31: cal.v1.UpdateEventRequest.visibility:type_name -> cal.v1.EventVisibility
+	9,  // 32: cal.v1.UpdateEventRequest.transparency:type_name -> cal.v1.EventTransparency
+	6,  // 33: cal.v1.DeleteEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
+	10, // 34: cal.v1.CreateEventResponse.event:type_name -> cal.v1.CalendarEvent
+	10, // 35: cal.v1.GetEventResponse.event:type_name -> cal.v1.CalendarEvent
+	10, // 36: cal.v1.UpdateEventResponse.event:type_name -> cal.v1.CalendarEvent
+	10, // 37: cal.v1.AddAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
+	10, // 38: cal.v1.RemoveAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
+	58, // 39: cal.v1.ListEventsRequest.start_date:type_name -> google.protobuf.Timestamp
+	58, // 40: cal.v1.ListEventsRequest.end_date:type_name -> google.protobuf.Timestamp
+	10, // 41: cal.v1.ListEventsResponse.events:type_name -> cal.v1.CalendarEvent
+	58, // 42: cal.v1.GetEventsInRangeRequest.start_date:type_name -> google.protobuf.Timestamp
+	58, // 43: cal.v1.GetEventsInRangeRequest.end_date:type_name -> google.protobuf.Timestamp
+	10, // 44: cal.v1.GetEventsInRangeResponse.events:type_name -> cal.v1.CalendarEvent
+	58, // 45: cal.v1.Category.created_at:type_name -> google.protobuf.Timestamp
+	58, // 46: cal.v1.Category.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 47: cal.v1.CreateCategoryResponse.category:type_name -> cal.v1.Category
+	29, // 48: cal.v1.GetCategoryResponse.category:type_name -> cal.v1.Category
+	29, // 49: cal.v1.UpdateCategoryResponse.category:type_name -> cal.v1.Category
+	29, // 50: cal.v1.ListCategoriesResponse.categories:type_name -> cal.v1.Category
+	2,  // 51: cal.v1.UpdateAttendeeStatusRequest.status:type_name -> cal.v1.AttendeeStatus
+	4,  // 52: cal.v1.AddAttendeesRequest.role:type_name -> cal.v1.AttendeeRole
+	3,  // 53: cal.v1.EventActivity.action:type_name -> cal.v1.EventActivityAction
+	58, // 54: cal.v1.EventActivity.timestamp:type_name -> google.protobuf.Timestamp
+	61, // 55: cal.v1.ListEventActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
+	44, // 56: cal.v1.ListEventActivitiesResponse.activities:type_name -> cal.v1.EventActivity
+	62, // 57: cal.v1.ListEventActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
+	63, // 58: cal.v1.EventTemplate.access_mode:type_name -> common.v1.AccessMode
+	58, // 59: cal.v1.EventTemplate.created_at:type_name -> google.protobuf.Timestamp
+	58, // 60: cal.v1.EventTemplate.updated_at:type_name -> google.protobuf.Timestamp
+	60, // 61: cal.v1.EventTemplate.baseline_role:type_name -> common.v1.ContentRole
+	63, // 62: cal.v1.CreateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
+	60, // 63: cal.v1.CreateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
+	63, // 64: cal.v1.UpdateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
+	60, // 65: cal.v1.UpdateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
+	47, // 66: cal.v1.CreateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
+	47, // 67: cal.v1.GetEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
+	47, // 68: cal.v1.UpdateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
+	47, // 69: cal.v1.ListEventTemplatesResponse.templates:type_name -> cal.v1.EventTemplate
+	14, // 70: cal.v1.CalendarService.CreateEvent:input_type -> cal.v1.CreateEventRequest
+	15, // 71: cal.v1.CalendarService.GetEvent:input_type -> cal.v1.GetEventRequest
+	16, // 72: cal.v1.CalendarService.UpdateEvent:input_type -> cal.v1.UpdateEventRequest
+	18, // 73: cal.v1.CalendarService.DeleteEvent:input_type -> cal.v1.DeleteEventRequest
+	25, // 74: cal.v1.CalendarService.ListEvents:input_type -> cal.v1.ListEventsRequest
+	27, // 75: cal.v1.CalendarService.GetEventsInRange:input_type -> cal.v1.GetEventsInRangeRequest
+	30, // 76: cal.v1.CalendarService.CreateCategory:input_type -> cal.v1.CreateCategoryRequest
+	31, // 77: cal.v1.CalendarService.GetCategory:input_type -> cal.v1.GetCategoryRequest
+	32, // 78: cal.v1.CalendarService.UpdateCategory:input_type -> cal.v1.UpdateCategoryRequest
+	33, // 79: cal.v1.CalendarService.DeleteCategory:input_type -> cal.v1.DeleteCategoryRequest
+	38, // 80: cal.v1.CalendarService.ListCategories:input_type -> cal.v1.ListCategoriesRequest
+	40, // 81: cal.v1.CalendarService.UpdateAttendeeStatus:input_type -> cal.v1.UpdateAttendeeStatusRequest
+	42, // 82: cal.v1.CalendarService.AddAttendees:input_type -> cal.v1.AddAttendeesRequest
+	43, // 83: cal.v1.CalendarService.RemoveAttendees:input_type -> cal.v1.RemoveAttendeesRequest
+	45, // 84: cal.v1.CalendarService.ListEventActivities:input_type -> cal.v1.ListEventActivitiesRequest
+	48, // 85: cal.v1.CalendarService.CreateEventTemplate:input_type -> cal.v1.CreateEventTemplateRequest
+	49, // 86: cal.v1.CalendarService.GetEventTemplate:input_type -> cal.v1.GetEventTemplateRequest
+	50, // 87: cal.v1.CalendarService.UpdateEventTemplate:input_type -> cal.v1.UpdateEventTemplateRequest
+	51, // 88: cal.v1.CalendarService.DeleteEventTemplate:input_type -> cal.v1.DeleteEventTemplateRequest
+	56, // 89: cal.v1.CalendarService.ListEventTemplates:input_type -> cal.v1.ListEventTemplatesRequest
+	20, // 90: cal.v1.CalendarService.CreateEvent:output_type -> cal.v1.CreateEventResponse
+	21, // 91: cal.v1.CalendarService.GetEvent:output_type -> cal.v1.GetEventResponse
+	22, // 92: cal.v1.CalendarService.UpdateEvent:output_type -> cal.v1.UpdateEventResponse
+	19, // 93: cal.v1.CalendarService.DeleteEvent:output_type -> cal.v1.DeleteEventResponse
+	26, // 94: cal.v1.CalendarService.ListEvents:output_type -> cal.v1.ListEventsResponse
+	28, // 95: cal.v1.CalendarService.GetEventsInRange:output_type -> cal.v1.GetEventsInRangeResponse
+	35, // 96: cal.v1.CalendarService.CreateCategory:output_type -> cal.v1.CreateCategoryResponse
+	36, // 97: cal.v1.CalendarService.GetCategory:output_type -> cal.v1.GetCategoryResponse
+	37, // 98: cal.v1.CalendarService.UpdateCategory:output_type -> cal.v1.UpdateCategoryResponse
+	34, // 99: cal.v1.CalendarService.DeleteCategory:output_type -> cal.v1.DeleteCategoryResponse
+	39, // 100: cal.v1.CalendarService.ListCategories:output_type -> cal.v1.ListCategoriesResponse
+	41, // 101: cal.v1.CalendarService.UpdateAttendeeStatus:output_type -> cal.v1.UpdateAttendeeStatusResponse
+	23, // 102: cal.v1.CalendarService.AddAttendees:output_type -> cal.v1.AddAttendeesResponse
+	24, // 103: cal.v1.CalendarService.RemoveAttendees:output_type -> cal.v1.RemoveAttendeesResponse
+	46, // 104: cal.v1.CalendarService.ListEventActivities:output_type -> cal.v1.ListEventActivitiesResponse
+	53, // 105: cal.v1.CalendarService.CreateEventTemplate:output_type -> cal.v1.CreateEventTemplateResponse
+	54, // 106: cal.v1.CalendarService.GetEventTemplate:output_type -> cal.v1.GetEventTemplateResponse
+	55, // 107: cal.v1.CalendarService.UpdateEventTemplate:output_type -> cal.v1.UpdateEventTemplateResponse
+	52, // 108: cal.v1.CalendarService.DeleteEventTemplate:output_type -> cal.v1.DeleteEventTemplateResponse
+	57, // 109: cal.v1.CalendarService.ListEventTemplates:output_type -> cal.v1.ListEventTemplatesResponse
+	90, // [90:110] is the sub-list for method output_type
+	70, // [70:90] is the sub-list for method input_type
+	70, // [70:70] is the sub-list for extension type_name
+	70, // [70:70] is the sub-list for extension extendee
+	0,  // [0:70] is the sub-list for field type_name
 }
 
 func init() { file_cal_v1_calendar_proto_init() }
@@ -5016,7 +5336,7 @@ func file_cal_v1_calendar_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cal_v1_calendar_proto_rawDesc), len(file_cal_v1_calendar_proto_rawDesc)),
-			NumEnums:      7,
+			NumEnums:      10,
 			NumMessages:   48,
 			NumExtensions: 0,
 			NumServices:   1,

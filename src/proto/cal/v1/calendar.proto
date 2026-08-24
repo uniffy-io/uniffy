@@ -85,6 +85,28 @@ enum RecurrenceEditScope {
   RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING = 3;
 }
 
+// Lifecycle status of an event; cancelled events stay visible
+enum EventStatus {
+  EVENT_STATUS_UNSPECIFIED = 0;
+  EVENT_STATUS_CONFIRMED = 1;
+  EVENT_STATUS_TENTATIVE = 2;
+  EVENT_STATUS_CANCELLED = 3;
+}
+
+// Detail visibility to viewers who are not the organizer or an attendee
+enum EventVisibility {
+  EVENT_VISIBILITY_UNSPECIFIED = 0;
+  EVENT_VISIBILITY_STANDARD = 1;
+  EVENT_VISIBILITY_PRIVATE = 2;
+}
+
+// Whether the event blocks the attendee's time in free/busy answers
+enum EventTransparency {
+  EVENT_TRANSPARENCY_UNSPECIFIED = 0;
+  EVENT_TRANSPARENCY_OPAQUE = 1;
+  EVENT_TRANSPARENCY_TRANSPARENT = 2;
+}
+
 // Service Definition
 
 // CalendarService provides calendar and event management functionality
@@ -233,6 +255,18 @@ message CalendarEvent {
   // Caller's effective role on this event, so the client can render read-only
   // affordances instead of controls every write would reject.
   common.v1.ContentRole user_role = 37;
+  // Lifecycle status; cancelled events render struck through and stop blocking time
+  EventStatus status = 38;
+  // Detail visibility; PRIVATE events are redacted for non-privileged viewers
+  EventVisibility visibility = 39;
+  // Free/busy transparency; TRANSPARENT events never count as busy
+  EventTransparency transparency = 40;
+  // Out-of-office period, rendered distinctly on every surface
+  bool is_out_of_office = 41;
+  // True when the server redacted this payload for the caller (private event,
+  // caller is not organizer/attendee/editor): title, description, location,
+  // meeting, channel, category, and attendees are stripped.
+  bool details_hidden = 42;
 }
 
 // Event attendee
@@ -328,6 +362,15 @@ message CreateEventRequest {
   optional string channel_id = 21;
   // Set when channel_id points at a room auto-created for this event.
   optional bool channel_auto_created = 22;
+  // Lifecycle status (UNSPECIFIED defaults to CONFIRMED)
+  EventStatus status = 23;
+  // Detail visibility (UNSPECIFIED defaults to STANDARD)
+  EventVisibility visibility = 24;
+  // Free/busy transparency (UNSPECIFIED lets the server default: all-day
+  // non-out-of-office events are TRANSPARENT, everything else OPAQUE)
+  EventTransparency transparency = 25;
+  // Marks the event as an out-of-office period
+  bool is_out_of_office = 26;
 }
 
 // Request to get an event
@@ -389,6 +432,14 @@ message UpdateEventRequest {
   // Marks the bound channel as a room auto-created for this event. Sent
   // alongside a new channel_id; unset leaves the flag untouched.
   optional bool channel_auto_created = 25;
+  // Updated lifecycle status; unset leaves it untouched
+  optional EventStatus status = 26;
+  // Updated detail visibility; unset leaves it untouched
+  optional EventVisibility visibility = 27;
+  // Updated free/busy transparency; unset leaves it untouched
+  optional EventTransparency transparency = 28;
+  // Updated out-of-office flag; unset leaves it untouched
+  optional bool is_out_of_office = 29;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
