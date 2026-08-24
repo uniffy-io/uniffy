@@ -10,18 +10,20 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CreateProfileRequest(_message.Message):
-    __slots__ = ("name", "appearance", "keyboard_shortcuts", "notifications", "is_default")
+    __slots__ = ("name", "appearance", "keyboard_shortcuts", "notifications", "is_default", "scheduling")
     NAME_FIELD_NUMBER: _ClassVar[int]
     APPEARANCE_FIELD_NUMBER: _ClassVar[int]
     KEYBOARD_SHORTCUTS_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATIONS_FIELD_NUMBER: _ClassVar[int]
     IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
+    SCHEDULING_FIELD_NUMBER: _ClassVar[int]
     name: str
     appearance: AppearanceSettings
     keyboard_shortcuts: KeyboardShortcutsSettings
     notifications: NotificationsSettings
     is_default: bool
-    def __init__(self, name: _Optional[str] = ..., appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ..., is_default: _Optional[bool] = ...) -> None: ...
+    scheduling: SchedulingSettings
+    def __init__(self, name: _Optional[str] = ..., appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ..., is_default: _Optional[bool] = ..., scheduling: _Optional[_Union[SchedulingSettings, _Mapping]] = ...) -> None: ...
 
 class GetProfileRequest(_message.Message):
     __slots__ = ("profile_id",)
@@ -30,20 +32,22 @@ class GetProfileRequest(_message.Message):
     def __init__(self, profile_id: _Optional[str] = ...) -> None: ...
 
 class UpdateProfileRequest(_message.Message):
-    __slots__ = ("profile_id", "name", "appearance", "keyboard_shortcuts", "notifications", "is_default")
+    __slots__ = ("profile_id", "name", "appearance", "keyboard_shortcuts", "notifications", "is_default", "scheduling")
     PROFILE_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     APPEARANCE_FIELD_NUMBER: _ClassVar[int]
     KEYBOARD_SHORTCUTS_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATIONS_FIELD_NUMBER: _ClassVar[int]
     IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
+    SCHEDULING_FIELD_NUMBER: _ClassVar[int]
     profile_id: str
     name: str
     appearance: AppearanceSettings
     keyboard_shortcuts: KeyboardShortcutsSettings
     notifications: NotificationsSettings
     is_default: bool
-    def __init__(self, profile_id: _Optional[str] = ..., name: _Optional[str] = ..., appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ..., is_default: _Optional[bool] = ...) -> None: ...
+    scheduling: SchedulingSettings
+    def __init__(self, profile_id: _Optional[str] = ..., name: _Optional[str] = ..., appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ..., is_default: _Optional[bool] = ..., scheduling: _Optional[_Union[SchedulingSettings, _Mapping]] = ...) -> None: ...
 
 class DeleteProfileRequest(_message.Message):
     __slots__ = ("profile_id",)
@@ -114,14 +118,16 @@ class GetSettingsSchemaRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class GetSettingsSchemaResponse(_message.Message):
-    __slots__ = ("appearance_defaults", "keyboard_shortcuts_defaults", "notifications_defaults")
+    __slots__ = ("appearance_defaults", "keyboard_shortcuts_defaults", "notifications_defaults", "scheduling_defaults")
     APPEARANCE_DEFAULTS_FIELD_NUMBER: _ClassVar[int]
     KEYBOARD_SHORTCUTS_DEFAULTS_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATIONS_DEFAULTS_FIELD_NUMBER: _ClassVar[int]
+    SCHEDULING_DEFAULTS_FIELD_NUMBER: _ClassVar[int]
     appearance_defaults: AppearanceSettings
     keyboard_shortcuts_defaults: KeyboardShortcutsSettings
     notifications_defaults: NotificationsSettings
-    def __init__(self, appearance_defaults: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts_defaults: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications_defaults: _Optional[_Union[NotificationsSettings, _Mapping]] = ...) -> None: ...
+    scheduling_defaults: SchedulingSettings
+    def __init__(self, appearance_defaults: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts_defaults: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications_defaults: _Optional[_Union[NotificationsSettings, _Mapping]] = ..., scheduling_defaults: _Optional[_Union[SchedulingSettings, _Mapping]] = ...) -> None: ...
 
 class SetDefaultProfileRequest(_message.Message):
     __slots__ = ("profile_id",)
@@ -130,7 +136,7 @@ class SetDefaultProfileRequest(_message.Message):
     def __init__(self, profile_id: _Optional[str] = ...) -> None: ...
 
 class SettingsProfile(_message.Message):
-    __slots__ = ("id", "user_id", "name", "appearance", "keyboard_shortcuts", "notifications", "is_default", "created_at", "updated_at")
+    __slots__ = ("id", "user_id", "name", "appearance", "keyboard_shortcuts", "notifications", "is_default", "created_at", "updated_at", "scheduling")
     ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -140,6 +146,7 @@ class SettingsProfile(_message.Message):
     IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    SCHEDULING_FIELD_NUMBER: _ClassVar[int]
     id: str
     user_id: str
     name: str
@@ -149,17 +156,20 @@ class SettingsProfile(_message.Message):
     is_default: bool
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., user_id: _Optional[str] = ..., name: _Optional[str] = ..., appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ..., is_default: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    scheduling: SchedulingSettings
+    def __init__(self, id: _Optional[str] = ..., user_id: _Optional[str] = ..., name: _Optional[str] = ..., appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ..., is_default: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., scheduling: _Optional[_Union[SchedulingSettings, _Mapping]] = ...) -> None: ...
 
 class EffectiveSettings(_message.Message):
-    __slots__ = ("appearance", "keyboard_shortcuts", "notifications")
+    __slots__ = ("appearance", "keyboard_shortcuts", "notifications", "scheduling")
     APPEARANCE_FIELD_NUMBER: _ClassVar[int]
     KEYBOARD_SHORTCUTS_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATIONS_FIELD_NUMBER: _ClassVar[int]
+    SCHEDULING_FIELD_NUMBER: _ClassVar[int]
     appearance: AppearanceSettings
     keyboard_shortcuts: KeyboardShortcutsSettings
     notifications: NotificationsSettings
-    def __init__(self, appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ...) -> None: ...
+    scheduling: SchedulingSettings
+    def __init__(self, appearance: _Optional[_Union[AppearanceSettings, _Mapping]] = ..., keyboard_shortcuts: _Optional[_Union[KeyboardShortcutsSettings, _Mapping]] = ..., notifications: _Optional[_Union[NotificationsSettings, _Mapping]] = ..., scheduling: _Optional[_Union[SchedulingSettings, _Mapping]] = ...) -> None: ...
 
 class AppearanceSettings(_message.Message):
     __slots__ = ("theme", "accent_color", "font_family", "sidebar_collapsed", "compact_mode", "default_editor", "mention_display", "markdown_show_preview", "markdown_show_line_numbers", "timezone", "week_start")
@@ -186,6 +196,16 @@ class AppearanceSettings(_message.Message):
     timezone: str
     week_start: str
     def __init__(self, theme: _Optional[str] = ..., accent_color: _Optional[str] = ..., font_family: _Optional[str] = ..., sidebar_collapsed: _Optional[bool] = ..., compact_mode: _Optional[bool] = ..., default_editor: _Optional[str] = ..., mention_display: _Optional[str] = ..., markdown_show_preview: _Optional[bool] = ..., markdown_show_line_numbers: _Optional[bool] = ..., timezone: _Optional[str] = ..., week_start: _Optional[str] = ...) -> None: ...
+
+class SchedulingSettings(_message.Message):
+    __slots__ = ("workday_start", "workday_end", "workdays")
+    WORKDAY_START_FIELD_NUMBER: _ClassVar[int]
+    WORKDAY_END_FIELD_NUMBER: _ClassVar[int]
+    WORKDAYS_FIELD_NUMBER: _ClassVar[int]
+    workday_start: str
+    workday_end: str
+    workdays: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, workday_start: _Optional[str] = ..., workday_end: _Optional[str] = ..., workdays: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class KeyboardShortcutsSettings(_message.Message):
     __slots__ = ("bindings",)

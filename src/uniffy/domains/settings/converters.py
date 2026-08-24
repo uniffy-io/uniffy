@@ -16,6 +16,9 @@ from uniffy_proto.settings.v1.settings_pb2 import (
     NotificationsSettings as ProtoNotifications,
 )
 from uniffy_proto.settings.v1.settings_pb2 import (
+    SchedulingSettings as ProtoScheduling,
+)
+from uniffy_proto.settings.v1.settings_pb2 import (
     SettingsProfile as ProtoSettingsProfile,
 )
 
@@ -44,7 +47,50 @@ def profile_to_proto(profile: SettingsProfile) -> ProtoSettingsProfile:
     if profile.notifications:
         proto_profile.notifications.CopyFrom(notifications_dict_to_proto(profile.notifications))
 
+    if profile.scheduling:
+        proto_profile.scheduling.CopyFrom(scheduling_dict_to_proto(profile.scheduling))
+
     return proto_profile
+
+
+def scheduling_dict_to_proto(settings: dict[str, Any] | None) -> ProtoScheduling:
+    if not settings:
+        return ProtoScheduling()
+
+    proto = ProtoScheduling()
+
+    if settings.get("workday_start") is not None:
+        proto.workday_start = settings["workday_start"]
+
+    if settings.get("workday_end") is not None:
+        proto.workday_end = settings["workday_end"]
+
+    workdays = settings.get("workdays")
+    if workdays:
+        proto.workdays.extend(workdays)
+
+    return proto
+
+
+def scheduling_from_proto(proto: ProtoScheduling | None) -> dict[str, Any] | None:
+    # Sparse: only explicitly set fields are returned so updates stay PATCH-like.
+    # An empty workdays list on the wire means "not set" - the section cannot
+    # express zero workdays, which validation forbids anyway.
+    if not proto:
+        return None
+
+    result: dict[str, Any] = {}
+
+    if proto.HasField("workday_start"):
+        result["workday_start"] = proto.workday_start or None
+
+    if proto.HasField("workday_end"):
+        result["workday_end"] = proto.workday_end or None
+
+    if proto.workdays:
+        result["workdays"] = list(proto.workdays)
+
+    return result if result else None
 
 
 def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance:
@@ -155,6 +201,7 @@ def effective_settings_to_proto(settings: dict[str, Any]) -> ProtoEffectiveSetti
         appearance=appearance_dict_to_proto(settings.get("appearance")),
         keyboard_shortcuts=keyboard_shortcuts_dict_to_proto(settings.get("keyboard_shortcuts")),
         notifications=notifications_dict_to_proto(settings.get("notifications")),
+        scheduling=scheduling_dict_to_proto(settings.get("scheduling")),
     )
 
 

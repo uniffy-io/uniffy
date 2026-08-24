@@ -45,6 +45,8 @@ message CreateProfileRequest {
   NotificationsSettings notifications = 4;
   // Set as default profile
   bool is_default = 5;
+  // Initial scheduling overrides (optional)
+  SchedulingSettings scheduling = 6;
 }
 
 // Request to get a profile
@@ -67,6 +69,8 @@ message UpdateProfileRequest {
   NotificationsSettings notifications = 5;
   // Set as default profile (optional)
   optional bool is_default = 6;
+  // Updated scheduling settings (only include changed values)
+  SchedulingSettings scheduling = 7;
 }
 
 // Request to delete a profile
@@ -147,6 +151,8 @@ message GetSettingsSchemaResponse {
   KeyboardShortcutsSettings keyboard_shortcuts_defaults = 2;
   // Default notification settings
   NotificationsSettings notifications_defaults = 3;
+  // Default scheduling settings
+  SchedulingSettings scheduling_defaults = 4;
 }
 
 // Request to set default profile
@@ -175,6 +181,8 @@ message SettingsProfile {
   google.protobuf.Timestamp created_at = 8;
   // Updated timestamp
   google.protobuf.Timestamp updated_at = 9;
+  // Scheduling overrides (sparse - only user-changed values)
+  SchedulingSettings scheduling = 10;
 }
 
 // Effective settings (fully resolved with defaults)
@@ -185,6 +193,8 @@ message EffectiveSettings {
   KeyboardShortcutsSettings keyboard_shortcuts = 2;
   // Full notification settings
   NotificationsSettings notifications = 3;
+  // Full scheduling settings
+  SchedulingSettings scheduling = 4;
 }
 
 // Appearance settings
@@ -211,6 +221,16 @@ message AppearanceSettings {
   optional string timezone = 10;
   // First day of the week for calendar grids: "monday", "saturday", "sunday"
   optional string week_start = 11;
+}
+
+// Scheduling settings - working hours used everywhere availability is computed
+message SchedulingSettings {
+  // Workday start on the user's own clock (24h HH:MM)
+  optional string workday_start = 1;
+  // Workday end on the user's own clock (24h HH:MM)
+  optional string workday_end = 2;
+  // Working days, lowercase names ("monday".."sunday"); empty = inherit default
+  repeated string workdays = 3;
 }
 
 // Keyboard shortcuts settings

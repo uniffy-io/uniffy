@@ -35,6 +35,8 @@ from uniffy.domains.settings.converters import (
     notifications_dict_to_proto,
     notifications_from_proto,
     profile_to_proto,
+    scheduling_dict_to_proto,
+    scheduling_from_proto,
 )
 from uniffy.domains.settings.operations import SettingsOperations
 
@@ -59,6 +61,7 @@ class SettingsHandlers:
                     appearance=appearance_from_proto(request.appearance),
                     keyboard_shortcuts=keyboard_shortcuts_from_proto(request.keyboard_shortcuts),
                     notifications=notifications_from_proto(request.notifications),
+                    scheduling=scheduling_from_proto(request.scheduling),
                     is_default=request.is_default,
                 )
 
@@ -124,6 +127,7 @@ class SettingsHandlers:
                     appearance=appearance_from_proto(request.appearance),
                     keyboard_shortcuts=keyboard_shortcuts_from_proto(request.keyboard_shortcuts),
                     notifications=notifications_from_proto(request.notifications),
+                    scheduling=scheduling_from_proto(request.scheduling),
                     is_default=is_default,
                 )
 
@@ -250,6 +254,7 @@ class SettingsHandlers:
                     notifications_defaults=notifications_dict_to_proto(
                         schema["notifications_defaults"]
                     ),
+                    scheduling_defaults=scheduling_dict_to_proto(schema["scheduling_defaults"]),
                 )
 
         except ConnectError:

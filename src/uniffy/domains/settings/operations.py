@@ -1,6 +1,8 @@
 """Settings profile CRUD + effective-settings computation."""
 
 import re
+from collections.abc import Collection
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -11,18 +13,23 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.core.models.settings.settings_profile import SettingsProfile
 from uniffy.core.types import NotificationType
 from uniffy.domains.notifications.cache import invalidate_cached_settings
 from uniffy.domains.settings.defaults import (
     DEFAULT_REMINDER_INTERVALS,
+    SCHEDULING_DEFAULTS,
+    WORKDAY_NAMES,
     EmailFrequency,
     get_appearance_defaults_dict,
     get_effective_appearance,
     get_effective_keyboard_shortcuts,
     get_effective_notifications,
+    get_effective_scheduling,
     get_keyboard_shortcuts_defaults_dict,
     get_notifications_defaults_dict,
+    get_scheduling_defaults_dict,
 )
 
 _WEEK_START_VALUES = {"monday", "saturday", "sunday"}
@@ -113,6 +120,86 @@ def _validate_notifications(notifications: dict[str, Any] | None) -> None:
                 )
 
 
+def _validate_scheduling(scheduling: dict[str, Any] | None) -> None:
+    if not scheduling:
+        return
+    start = scheduling.get("workday_start")
+    end = scheduling.get("workday_end")
+    for key, value in (("workday_start", start), ("workday_end", end)):
+        if value is not None and (not isinstance(value, str) or not _CLOCK_RE.fullmatch(value)):
+            raise ValidationError(key, "Workday times must use HH:MM")
+    if start is not None and end is not None and start >= end:
+        raise ValidationError("workday_end", "Workday end must be after its start")
+    workdays = scheduling.get("workdays")
+    if workdays is not None:
+        if not isinstance(workdays, list) or not workdays:
+            raise ValidationError("workdays", "Workdays must be a non-empty list of day names")
+        unknown = [day for day in workdays if day not in WORKDAY_NAMES]
+        if unknown:
+            raise ValidationError("workdays", f"Unknown workdays: {', '.join(unknown)}")
+
+
+@dataclass(frozen=True)
+class SchedulingContext:
+    """Resolved per-user scheduling facts for availability computation."""
+
+    timezone: str
+    workday_start: str
+    workday_end: str
+    workdays: tuple[str, ...]
+
+
+async def get_users_scheduling_context(
+    session: AsyncSession,
+    user_ids: Collection[UUID],
+) -> dict[UUID, SchedulingContext]:
+    """Batched: every requested id resolves, defaults filling any gap.
+
+    Timezone chain: private appearance preference -> org-visible people
+    profile -> UTC. One query per table regardless of how many users.
+    """
+    ids = list(dict.fromkeys(user_ids))
+    if not ids:
+        return {}
+    profile_rows = (
+        await session.execute(
+            select(
+                SettingsProfile.user_id,
+                SettingsProfile.appearance,
+                SettingsProfile.scheduling,
+            ).where(
+                SettingsProfile.user_id.in_(ids),
+                SettingsProfile.is_default == True,  # noqa: E712
+            )
+        )
+    ).all()
+    people_rows = (
+        await session.execute(
+            select(PeopleProfile.user_id, PeopleProfile.timezone).where(
+                PeopleProfile.user_id.in_(ids),
+                PeopleProfile.timezone.is_not(None),
+            )
+        )
+    ).all()
+    appearance_by_user = {row.user_id: row.appearance or {} for row in profile_rows}
+    scheduling_by_user = {row.user_id: row.scheduling or {} for row in profile_rows}
+    people_tz = {row.user_id: row.timezone for row in people_rows}
+
+    contexts: dict[UUID, SchedulingContext] = {}
+    for uid in ids:
+        scheduling = scheduling_by_user.get(uid, {})
+        workdays = scheduling.get("workdays") or SCHEDULING_DEFAULTS.workdays
+        contexts[uid] = SchedulingContext(
+            timezone=(
+                appearance_by_user.get(uid, {}).get("timezone") or people_tz.get(uid) or "UTC"
+            ),
+            workday_start=scheduling.get("workday_start") or SCHEDULING_DEFAULTS.workday_start,
+            workday_end=scheduling.get("workday_end") or SCHEDULING_DEFAULTS.workday_end,
+            workdays=tuple(workdays),
+        )
+    return contexts
+
+
 async def get_user_timezone(session: AsyncSession, user_id: UUID) -> str | None:
     """Stored display timezone from the user's default profile; None = automatic."""
     profile = await SettingsOperations(session).get_default_profile(user_id)
@@ -147,6 +234,7 @@ class SettingsOperations:
         appearance: dict[str, Any] | None = None,
         keyboard_shortcuts: dict[str, Any] | None = None,
         notifications: dict[str, Any] | None = None,
+        scheduling: dict[str, Any] | None = None,
         is_default: bool = False,
     ) -> SettingsProfile:
         existing = await self._get_profile_by_name(user_id, name)
@@ -155,6 +243,7 @@ class SettingsOperations:
 
         _validate_appearance(appearance)
         _validate_notifications(notifications)
+        _validate_scheduling(scheduling)
 
         if is_default:
             await self._unset_default_profiles(user_id)
@@ -165,6 +254,7 @@ class SettingsOperations:
             appearance=appearance,
             keyboard_shortcuts=keyboard_shortcuts,
             notifications=notifications,
+            scheduling=scheduling,
             is_default=is_default,
         )
 
@@ -205,6 +295,7 @@ class SettingsOperations:
         appearance: dict[str, Any] | None = None,
         keyboard_shortcuts: dict[str, Any] | None = None,
         notifications: dict[str, Any] | None = None,
+        scheduling: dict[str, Any] | None = None,
         is_default: bool | None = None,
     ) -> SettingsProfile:
         """Sparse update; JSONB fields merge with existing values."""
@@ -229,6 +320,11 @@ class SettingsOperations:
             merged_notifications = self._merge_settings(profile.notifications, notifications)
             _validate_notifications(merged_notifications)
             profile.notifications = merged_notifications
+
+        if scheduling is not None:
+            merged_scheduling = self._merge_settings(profile.scheduling, scheduling)
+            _validate_scheduling(merged_scheduling)
+            profile.scheduling = merged_scheduling
 
         if is_default is not None:
             if is_default and not profile.is_default:
@@ -346,6 +442,7 @@ class SettingsOperations:
             "appearance": get_effective_appearance(profile.appearance),
             "keyboard_shortcuts": get_effective_keyboard_shortcuts(profile.keyboard_shortcuts),
             "notifications": get_effective_notifications(profile.notifications),
+            "scheduling": get_effective_scheduling(profile.scheduling),
         }
 
     def get_settings_schema(self) -> dict[str, Any]:
@@ -353,6 +450,7 @@ class SettingsOperations:
             "appearance_defaults": get_appearance_defaults_dict(),
             "keyboard_shortcuts_defaults": get_keyboard_shortcuts_defaults_dict(),
             "notifications_defaults": get_notifications_defaults_dict(),
+            "scheduling_defaults": get_scheduling_defaults_dict(),
         }
 
     async def _get_profile_by_name(
