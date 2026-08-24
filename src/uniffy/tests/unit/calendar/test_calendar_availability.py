@@ -1,4 +1,4 @@
-"""Unit tests for free/busy computation and meeting-slot suggestions."""
+"""Unit tests for free/busy computation."""
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
@@ -10,9 +10,10 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.types import AccessMode, RecurrencePattern, generate_id
 from uniffy.domains.calendar.availability import (
     MAX_FREE_BUSY_USERS,
-    compute_free_slots,
+    BusyInterval,
     get_busy_intervals,
     merge_intervals,
+    occupancy,
 )
 
 
@@ -38,95 +39,13 @@ class TestMergeIntervals:
         assert merged == [(_dt(3, 9), _dt(3, 12))]
 
 
-class TestComputeFreeSlots:
-    # 2026-08-03 is a Monday.
-
-    def test_free_week_yields_one_morning_slot_per_weekday(self) -> None:
-        slots = compute_free_slots(
-            [],
-            _dt(3, 0),
-            _dt(10, 0),
-            timedelta(minutes=30),
-            "UTC",
-        )
-        assert len(slots) == 5
-        assert slots[0] == (_dt(3, 9), _dt(3, 9, 30))
-        assert all(s.weekday() < 5 for s, _ in slots)
-
-    def test_busy_block_pushes_slot_after_it(self) -> None:
-        slots = compute_free_slots(
-            [(_dt(3, 9), _dt(3, 10, 15))],
-            _dt(3, 0),
-            _dt(3, 23),
-            timedelta(minutes=30),
-            "UTC",
-            max_results=1,
-        )
-        assert slots == [(_dt(3, 10, 30), _dt(3, 11))]
-
-    def test_window_start_mid_day_aligns_to_half_hour(self) -> None:
-        slots = compute_free_slots(
-            [],
-            _dt(3, 10, 12),
-            _dt(3, 23),
-            timedelta(minutes=30),
-            "UTC",
-            max_results=1,
-        )
-        assert slots == [(_dt(3, 10, 30), _dt(3, 11))]
-
-    def test_slot_never_ends_past_latest_hour(self) -> None:
-        slots = compute_free_slots(
-            [(_dt(3, 9), _dt(3, 17, 45))],
-            _dt(3, 0),
-            _dt(3, 23),
-            timedelta(minutes=30),
-            "UTC",
-            max_results=1,
-        )
-        assert slots == []
-
-    def test_fully_busy_day_skipped(self) -> None:
-        slots = compute_free_slots(
-            [(_dt(3, 9), _dt(3, 18))],
-            _dt(3, 0),
-            _dt(4, 23),
-            timedelta(minutes=30),
-            "UTC",
-            max_results=1,
-        )
-        assert slots == [(_dt(4, 9), _dt(4, 9, 30))]
-
-    def test_weekends_excluded_by_default_and_included_on_request(self) -> None:
-        # 2026-08-08 is a Saturday.
-        window = (_dt(8, 0), _dt(9, 23))
-        assert compute_free_slots([], *window, timedelta(minutes=30), "UTC") == []
-        slots = compute_free_slots([], *window, timedelta(minutes=30), "UTC", include_weekends=True)
-        assert slots[0] == (_dt(8, 9), _dt(8, 9, 30))
-
-    def test_working_hours_follow_timezone(self) -> None:
-        # 09:00 Sofia (UTC+3 in August) = 06:00 UTC.
-        slots = compute_free_slots(
-            [],
-            _dt(3, 0),
-            _dt(3, 23),
-            timedelta(minutes=30),
-            "Europe/Sofia",
-            max_results=1,
-        )
-        assert slots == [(_dt(3, 6), _dt(3, 6, 30))]
-
-    def test_invalid_hours_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            compute_free_slots(
-                [],
-                _dt(3, 0),
-                _dt(4, 0),
-                timedelta(minutes=30),
-                "UTC",
-                earliest_hour=18,
-                latest_hour=9,
-            )
+class TestOccupancy:
+    def test_flattens_across_kinds(self) -> None:
+        merged = occupancy([
+            BusyInterval(_dt(3, 9), _dt(3, 10)),
+            BusyInterval(_dt(3, 9, 30), _dt(3, 11), out_of_office=True),
+        ])
+        assert merged == [(_dt(3, 9), _dt(3, 11))]
 
 
 def _make_event(
@@ -190,7 +109,22 @@ class TestGetBusyIntervals:
         ]
 
         busy = await get_busy_intervals(session, generate_id(), [user], _dt(3, 0), _dt(4, 0))
-        assert busy[user] == [(_dt(3, 0), _dt(3, 2))]
+        assert busy[user] == [BusyInterval(_dt(3, 0), _dt(3, 2))]
+
+    async def test_out_of_office_events_come_back_flagged(self) -> None:
+        user = generate_id()
+        ooo = _make_event(start=_dt(3, 9), end=_dt(3, 17))
+        ooo.is_out_of_office = True
+        session = MagicMock()
+        session.execute = AsyncMock(
+            side_effect=[
+                MagicMock(all=MagicMock(return_value=[(user,)])),
+                MagicMock(all=MagicMock(return_value=[(ooo, user)])),
+            ]
+        )
+
+        busy = await get_busy_intervals(session, generate_id(), [user], _dt(3, 0), _dt(4, 0))
+        assert busy[user] == [BusyInterval(_dt(3, 9), _dt(3, 17), out_of_office=True)]
 
     async def test_weekly_recurring_master_expands_into_range(self) -> None:
         user = generate_id()
@@ -210,4 +144,4 @@ class TestGetBusyIntervals:
         )
 
         busy = await get_busy_intervals(session, generate_id(), [user], _dt(3, 0), _dt(10, 0))
-        assert (_dt(3, 9), _dt(3, 9, 30)) in busy[user]
+        assert BusyInterval(_dt(3, 9), _dt(3, 9, 30)) in busy[user]
