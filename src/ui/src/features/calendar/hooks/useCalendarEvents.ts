@@ -15,6 +15,7 @@ import {
   matchesQuickAccess,
 } from "@/features/calendar/utils";
 import { GRID } from "@/features/calendar/constants";
+import { getWeekStartsOn } from "@/shared/utils/weekStart";
 
 export function useCalendarEvents() {
   const dispatch = useAppDispatch();
@@ -35,8 +36,11 @@ export function useCalendarEvents() {
     const allEvents = Object.values(events);
     const now = new Date();
 
+    // "This Week" runs on the stored week-start preference, not the default.
+    const weekStartsOn = getWeekStartsOn();
+
     return allEvents.filter((event) => {
-      if (quickAccessFilter && !matchesQuickAccess(event, quickAccessFilter, now)) {
+      if (quickAccessFilter && !matchesQuickAccess(event, quickAccessFilter, now, weekStartsOn)) {
         return false;
       }
 

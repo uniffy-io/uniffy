@@ -1,5 +1,7 @@
 import type { CalendarEvent, Category } from "@uniffy/proto/cal/v1/calendar_pb";
 import { AttendeeStatus, RecurrencePattern, ResourceType } from "@uniffy/proto/cal/v1/calendar_pb";
+import type { ContentRole } from "@uniffy/proto/common/v1/common_pb";
+import { getEffectiveTimeZone } from "@core/datetimePrefs";
 
 export interface SerializedAttendee {
   id: string;
@@ -34,6 +36,8 @@ export interface SerializedEvent {
   categoryId: string;
   /** Event creator; the "Mine" scope matches this or an attendee. */
   organizerId: string;
+  /** Caller's effective role, advisory only - the backend stays the gate. */
+  userRole: ContentRole;
   attendees: SerializedAttendee[];
   recurrence?: { pattern: string };
   linkedResources: SerializedLinkedResource[];
@@ -77,11 +81,17 @@ function tsToDate(ts?: { seconds: bigint; nanos: number }): Date {
  * Formats a bare YYYY-MM-DD the way `dateFormatted` renders an instant, for
  * callers holding an occurrence date rather than an event. Built from the parts
  * rather than `new Date(iso)`, which reads the string as UTC midnight and lands
- * on the previous day for anyone west of Greenwich.
+ * on the previous day for anyone west of Greenwich. Already a calendar day, so
+ * no timezone conversion applies.
  */
 export function formatCalendarDate(isoDate: string): string {
   const [y, m, d] = isoDate.split("-").map(Number);
-  return formatDate(new Date(y, m - 1, d));
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function formatDate(d: Date): string {
@@ -90,11 +100,16 @@ function formatDate(d: Date): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: getEffectiveTimeZone(),
   });
 }
 
 function formatTime(d: Date): string {
-  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: getEffectiveTimeZone(),
+  });
 }
 
 function formatDuration(start: Date, end: Date): string {
@@ -126,6 +141,7 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
     calendarId: event.calendarId,
     categoryId: event.categoryId,
     organizerId: event.organizerId,
+    userRole: event.userRole,
     attendees: event.attendees.map((a) => ({
       id: a.id,
       name: a.name,

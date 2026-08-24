@@ -237,9 +237,12 @@ export function useUpdateAttendeeStatus() {
         organizationId: organizationId!,
         status: args.status,
       }),
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events-range"] });
-      queryClient.invalidateQueries({ queryKey: ["event", organizationId, variables.eventId] });
+      // Prefix match: the entry on screen may be keyed by an occurrence's
+      // synthetic `{masterId}__occurrence__{date}` id, not the master id the
+      // mutation was given.
+      queryClient.invalidateQueries({ queryKey: ["event", organizationId] });
     },
   });
 }

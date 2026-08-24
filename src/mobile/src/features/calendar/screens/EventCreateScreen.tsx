@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import {
   CalendarBlank,
@@ -32,6 +33,9 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
+import { getEffectiveTimeZone } from "@core/datetimePrefs";
+import { instantFromZonedWall, zonedParts } from "@shared/lib/zonedTime";
+import { userFacingError } from "@shared/lib/userFacingError";
 import { useCategories, useEvent } from "@features/calendar/useCalendar";
 import { useCreateEvent, useUpdateEvent } from "@features/calendar/useCalendarMutations";
 
@@ -57,21 +61,24 @@ function roundToNext30(date: Date): Date {
   return d;
 }
 
-function formatDateForInput(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
 }
 
-function formatTimeForInput(date: Date): string {
-  const h = String(date.getHours()).padStart(2, "0");
-  const m = String(date.getMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
+// Inputs are wall-clock in the member's display zone, so instants convert
+// through it in both directions - never through the device clock.
+function formatDateForInput(instant: Date): string {
+  const p = zonedParts(instant);
+  return `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
+}
+
+function formatTimeForInput(instant: Date): string {
+  const p = zonedParts(instant);
+  return `${pad2(p.hour)}:${pad2(p.minute)}`;
 }
 
 function parseDateTime(dateStr: string, timeStr: string): Date {
-  return new Date(`${dateStr}T${timeStr}:00`);
+  return instantFromZonedWall(dateStr, timeStr);
 }
 
 export function CreateEventScreen() {
@@ -237,12 +244,12 @@ export function CreateEventScreen() {
           meetingUrl: meetingMode === "link" ? trimmedUrl || undefined : undefined,
           channelId: channelOut || undefined,
           channelAutoCreated: channelOut ? channelAutoCreated : undefined,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezone: getEffectiveTimeZone(),
         });
       }
       router.back();
-    } catch {
-      // Error handled by query
+    } catch (error) {
+      Alert.alert("Could not save", userFacingError(error, "The event was not saved."));
     }
   };
 
