@@ -417,6 +417,54 @@ follows the browser. All backend storage stays UTC regardless of the choice.
       stack; permission grant expiries, audit export windows and chat mutes
       behave identically to a UTC host. (both products)
 
+## Calendar event states and privacy
+
+Event status (confirmed/tentative/cancelled), private events, free/busy
+transparency, and out of office. Needs the organizer (A), an attendee (B),
+and a member who is neither but holds a VIEWER share grant on the event (C -
+grant via the event's Share dialog). (both products)
+
+- [ ] A marks an event tentative: the grid chip fades for everyone; the detail modal shows the
+      Tentative state; the mention card shows a "Tentative" badge.
+- [ ] A cancels an event (Status -> Cancelled): it stays on every calendar struck through and
+      faded, the detail modal shows a "Cancelled" badge, and B receives a CALENDAR_CANCELLED
+      notification (in-app toast + email with mailcatcher). A does not receive one.
+- [ ] The cancelled event stops blocking time: the conflict warning disappears from an
+      overlapping draft in the quick-create modal, and the agent tool `calendar.get_free_busy`
+      no longer returns its interval.
+- [ ] B opens the cancelled event: the RSVP buttons are gone; `UpdateAttendeeStatus` via the
+      notification inline buttons returns "Cannot respond to a cancelled event".
+- [ ] Un-cancelling (Status -> Confirmed) restores reminders for non-declined attendees
+      (check `calendar_event_reminders` rows in `db shell`).
+- [ ] Recurring: cancel a single occurrence with scope "this event" - only that occurrence
+      renders struck through; the rest of the series is untouched; B is notified with the
+      occurrence date in the title.
+- [ ] A marks an event "Free": it renders lighter on the grid, raises no conflict warnings,
+      and never appears busy in free/busy answers.
+- [ ] A creates an out-of-office period: it renders with the hatch + airplane treatment on the
+      grid and blocks time even when all-day.
+
+**Private event leaks nothing on every surface.** A creates "Dentist" as Private with a
+location, description, attendees (B), and a booked room, then C is granted VIEWER via Share.
+
+- [ ] C's calendar grid shows only "Busy" at the right time - no title, location, or category
+      color anywhere (week, day, month, agenda, today panel, dashboard agenda).
+- [ ] C deep-links `/calendar/<event-id>`: the modal shows "Busy", the time range, and a
+      privacy note - no description, attendees, activity log, or referenced content. The
+      `GetEvent` response carries `details_hidden=true` and empty title/location/meeting
+      fields (verify in devtools).
+- [ ] C searches "Dentist": no hit. A and B still find it by title.
+- [ ] A message containing an `@`-mention of the event: C's chip resolves without title,
+      location, or meeting URL in the `ResolveUrns` response; A retitles the event and C's
+      open chip receives no title patch.
+- [ ] C opens the booked room's schedule: the busy slot shows no event title.
+- [ ] C asks an agent to list their calendar for that day: the tool output reads
+      "Busy ... [private]" with no title. `ListEventActivities` as C returns permission denied.
+- [ ] B (attendee) still sees every detail on all of the above surfaces; so does A.
+- [ ] Known limit: a mention typed by A while the title was visible keeps that label inside
+      the author's own Markdown - flipping the event private later redacts chips and previews,
+      not other people's stored text.
+
 ## Chat synced drafts
 
 Unsent composer text syncs across devices per channel and per thread. Needs one user logged in
