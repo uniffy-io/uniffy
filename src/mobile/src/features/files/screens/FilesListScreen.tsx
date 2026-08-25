@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -30,7 +30,7 @@ import {
   FolderPlus,
   PencilSimple,
 } from "phosphor-react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
@@ -80,6 +80,23 @@ function findFolder(nodes: PlainTreeNode[], id: string): PlainTreeNode | null {
     if (node.id === id) return node;
     if (node.isFolder && node.children.length > 0) {
       const found = findFolder(node.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function findFolderPath(
+  nodes: PlainTreeNode[],
+  id: string,
+  trail: { id: string; name: string }[] = [],
+): { id: string; name: string }[] | null {
+  for (const node of nodes) {
+    if (!node.isFolder) continue;
+    const next = [...trail, { id: node.id, name: node.name }];
+    if (node.id === id) return next;
+    if (node.children.length > 0) {
+      const found = findFolderPath(node.children, id, next);
       if (found) return found;
     }
   }
@@ -237,6 +254,20 @@ export function FilesListScreen() {
   );
   // Folder navigation stack: array of { id, name } for breadcrumb
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
+
+  // Deep link (`/files?folder=<id>`): seed the stack with the folder's ancestor
+  // path once the tree is loaded. Consumed once per param value so in-screen
+  // navigation afterwards is not fought.
+  const { folder: folderParam } = useLocalSearchParams<{ folder?: string }>();
+  const consumedFolderParamRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!folderParam || !filesTree.data) return;
+    if (consumedFolderParamRef.current === folderParam) return;
+    const path = findFolderPath(filesTree.data, folderParam);
+    if (!path) return;
+    consumedFolderParamRef.current = folderParam;
+    setFolderStack(path);
+  }, [folderParam, filesTree.data]);
 
   // Switching scope changes the underlying tree, so drop navigation + selection
   // that referenced the previous scope's folders.
