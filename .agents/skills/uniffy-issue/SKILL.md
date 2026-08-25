@@ -96,7 +96,7 @@ Before writing the body, do enough recon to make "Additional Notes - First-Glanc
 1. Search the affected domain with `rg` and `rg --files` to confirm the claimed missing behaviour really is missing - never assert "code does not handle X" without searching.
 2. Read the key files referenced in the body. Cite `file_path:line_number`.
 3. Cross-check `.agents/rules/<domain>.md` for established patterns.
-4. Check `.agents/plans/backlogs/` and any available project memory for relevant state, prior decisions, or feedback rules.
+4. Check `.agents/local/plans/backlogs/` and any available project memory for relevant state, prior decisions, or feedback rules.
 
 If the user says "first analyse" or "don't create yet", deliver findings as a regular response and wait for the go-ahead. Otherwise proceed to create after recon.
 

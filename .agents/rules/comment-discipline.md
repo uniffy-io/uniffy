@@ -29,7 +29,7 @@ Comments that reference process artifacts or history tend to rot fast.
 
 - Plan names, phase numbers, step numbers: `Phase 3`, `step 2`, `P5 wires this`, `plan §6.4`, `shipped as P8`, `lands in P7`, `(P2)`.
 - Backlog items, ticket IDs, PR numbers, session work, commit shas: `see backlog`, `tracked in INGEST-142`, `from PR #99`, `added in this session`.
-- Plan file paths: `.agents/plans/foo.md`, `.agents/plans/backlogs/bar-backlog.md`.
+- Plan file paths: `.agents/local/plans/foo.md`, `.agents/local/plans/backlogs/bar-backlog.md`.
 - Legacy / prior-implementation narration: `previously used X`, `was a class before`, `old method returned Y`, `renamed from Z`, `replaces the old handler`, `formerly the visibility scope`, `legacy color picker`, `before this binding landed`.
 - Tense-of-the-fix narration: `this change`, `we now`, `as of this commit`, `the new approach`.
 

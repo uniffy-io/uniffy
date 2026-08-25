@@ -163,7 +163,7 @@ That question outlives the page. A recap does not.
 - `Uniffy` is capitalized, always. `uniffy` is not the brand spelling.
 - `cloud.uniffy.io` is the canonical cloud URL. Backtick it.
 - `Community Edition` in scare quotes when describing what we are *not*. The quotes are part of the joke.
-- `open source` is how we describe the project. **`source available` is banned** - never use it, in landing copy, docs, or a comparison table. The license is `FSL-1.1-Apache-2.0`, which converts to Apache 2.0 two years after each release; write `Apache 2.0 future license` when the conversion matters. Never mention a Business Source License, a BUSL, an Additional Use Grant, a seat cap, or a license key: self hosting is free and unlimited, and the paid product is the hosted cloud.
+- `open source` is how we describe the project. The license is `FSL-1.1-Apache-2.0`, which converts to Apache 2.0 two years after each release; write `Apache 2.0 future license` when the conversion matters. Never mention a Business Source License, a BUSL, an Additional Use Grant, a seat cap, a seat counter, a license key, a license check, a license server, or activation. Not even to deny them. The claims we make are free, no user limit, and never calls home; the mechanics stay out. Self hosting is free and unlimited, and the paid product is the hosted cloud.
 - `admin pages` and `platform pages` lowercase. They are common nouns, not product names.
 - Bolded concept names like **support session**, **egress worker**, **admin pages** are lowercase and not capitalized.
 - US English. `behavior` not `behaviour`, `audit log` not `audit logs` in headings (singular reads as the system, plural reads as the data).

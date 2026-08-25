@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test suites use deliberately fake credentials as fixtures"
+paths = [
+    '''src/uniffy/tests/''',
+    '''\.test\.(ts|tsx)$''',
+    '''__tests__/''',
+]

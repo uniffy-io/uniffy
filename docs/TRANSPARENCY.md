@@ -9,7 +9,7 @@ Uniffy is **open source** software, free to self host with no user limit, using 
 ### What This Means
 
 - **Open Code**: The complete source code is publicly accessible. You can read it, learn from it, verify and understand exactly how Uniffy works.
-- **Free to Self Host**: Any organization, at any size, can run Uniffy in production at no cost. There is no user limit and no license key.
+- **Free to Self Host**: Any organization, at any size, can run Uniffy in production at no cost. There is no user limit.
 - **Public Development**: Development discussions, roadmaps, and issue tracking are all conducted in the open on GitHub.
 - **One Restriction**: You may not offer Uniffy to third parties as a competing commercial product or service. Internal use is always permitted.
 - **Delayed Open Source**: Every release automatically becomes Apache 2.0 two years after we publish it.
@@ -26,7 +26,7 @@ We are trying to build a cloud version of Uniffy that will be affordable for sma
 
 Uniffy respects your privacy. We do not collect telemetry, usage, or personal data. You have full control over your data.
 
-When using the self-hosted Uniffy in your own environment, we **ONLY** phone home for update checks (**if enabled**). There is no license validation because there are no license keys.
+When using the self-hosted Uniffy in your own environment, we **ONLY** phone home for update checks (**if enabled**).
 
 Air-gapped deployments with no external network access are fully supported for everyone. Nothing in the product requires outbound connectivity.
 

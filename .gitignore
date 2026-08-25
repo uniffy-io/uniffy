@@ -240,3 +240,5 @@ src/unictl/dist/
 
 # External repos cloned for analysis only (not part of the product)
 .external/
+.claude/settings.local.json
+.agents/local/

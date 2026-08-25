@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 RULES_DIR = Path(__file__).resolve().parents[2] / ".agents" / "rules"
+LOCAL_GUIDE = Path(__file__).resolve().parents[2] / ".agents" / "local" / "AGENTS.md"
 STATE_DIR = Path(tempfile.gettempdir()) / "uniffy-codex-path-rules"
 PATCH_PATH_RE = re.compile(
     r"^\*\*\* (?:Add|Update|Delete) File: (.+)$|^\*\*\* Move to: (.+)$",
@@ -159,13 +160,14 @@ def _startup(payload: dict[str, object], rules: tuple[Rule, ...]) -> None:
     state = {rule.relative_path: rule.digest for rule in always_on}
     _write_state(_state_path(payload), state)
     event = str(payload.get("hook_event_name"))
+    context = _context(always_on, "These repository-wide rules apply to every task.")
+    if LOCAL_GUIDE.is_file():
+        context += f"\n\n## Source: .agents/local/AGENTS.md\n\n{LOCAL_GUIDE.read_text(encoding='utf-8')}"
     print(
         json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": event,
-                "additionalContext": _context(
-                    always_on, "These repository-wide rules apply to every task."
-                ),
+                "additionalContext": context,
             }
         })
     )

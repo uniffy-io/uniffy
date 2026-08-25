@@ -594,6 +594,16 @@ def lint(service, stack):
         sh(["go", "vet", "./..."], cwd=ROOT / "src/unictl")
 
 
+@cli.command()
+@stack_option
+def gitleaks(stack):
+    """Scan the full git history for leaked secrets (allowlist in .gitleaks.toml)."""
+    if stack == "docker":
+        toolbox_run(["gitleaks", "git", "--redact", "--verbose", "/app"])
+    else:
+        sh(["gitleaks", "git", "--redact", "--verbose", str(ROOT)])
+
+
 @cli.command("format")
 @click.option("--service", "-s", type=click.Choice(["all", "backend", "ui", "mobile"]), default="all")
 @stack_option

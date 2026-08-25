@@ -26,7 +26,7 @@ The conversion runs per release. A version published in August 2026 becomes Apac
 
 Production use, for any organization, at any size. Self host Uniffy for 5 people or 5,000 and you owe us nothing.
 
-There is no seat count, no "Community Edition", and no trial. The build you run free is the build our paying cloud customers run.
+There is no "Community Edition" and no trial. The build you run free is the build our paying cloud customers run.
 
 A five person startup installs Uniffy on one server and never thinks about licensing again.
 
@@ -37,12 +37,6 @@ A two thousand person company rolls Uniffy out to everyone on their own Kubernet
 You cannot sell Uniffy as Uniffy. The license bars a **competing use**: offering Uniffy, or a product that substitutes for it, to third parties as a commercial product or service. Hosting Uniffy for your customers and charging them for it is the thing this license exists to prevent.
 
 Everything else stands. Run it internally at any scale. Modify it for your own use. A consultancy can charge you for installing, operating, and customizing your Uniffy. The license explicitly permits professional services, and we think a healthy market of people who help you run Uniffy is good for everyone.
-
-## No license keys
-
-There is nothing to activate. No keys, no seat counter, no license server, no phone home. A deployment with no outbound route to the internet is a fully supported configuration, with zero exceptions.
-
-We will never lock you out of your own data, because there is no mechanism that could. Nothing expires and nothing is enforced by the software.
 
 ## How we make money
 

@@ -38,6 +38,6 @@ Uniffy is pre 1.0 with no long term support branches yet. Security fixes land on
 - Platform operators get no automatic access to tenant content. Reaching it takes a time bound, audit logged support session the org owner can see and revoke.
 - Org admins get no content bypass. Personal content is private until shared.
 - Per organization secrets are encrypted with a key that belongs to that organization.
-- Telemetry is off by default and a fully isolated deployment is supported. 
+- Telemetry is off by default and a fully isolated deployment is supported.
 
 A path around any of those is a critical finding, regardless of anything else on this page.

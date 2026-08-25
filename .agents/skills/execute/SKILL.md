@@ -1,6 +1,6 @@
 ---
 name: execute
-description: Execute or resume an implementation plan from `.agents/plans/`, keeping its companion backlog and validation evidence current. Use when the user asks to implement a saved plan or continue planned multi-phase work.
+description: Execute or resume an implementation plan from `.agents/local/plans/`, keeping its companion backlog and validation evidence current. Use when the user asks to implement a saved plan or continue planned multi-phase work.
 ---
 
 # Execute: Implement from Plan
@@ -10,7 +10,7 @@ Use the plan path supplied with the request. If no path is supplied, proceed onl
 ## 1. Read and understand
 
 - Read the ENTIRE plan. Read the always-on rules and every path-scoped rule in `.agents/rules/` that matches the files in scope; the plan may name additional mandatory rule files.
-- Check `.agents/plans/backlogs/` for an existing backlog. If one exists, resume from the first `[ ]` or `[~]` item instead of starting over.
+- Check `.agents/local/plans/backlogs/` for an existing backlog. If one exists, resume from the first `[ ]` or `[~]` item instead of starting over.
 - If the plan is multi-phase and no backlog exists, create one (convention in AGENTS.md "Plans, Backlogs and Reviews").
 - Validate the plan against the current codebase before writing code: file paths, symbol names, and patterns it references may have drifted since it was written. Fix the plan's assumptions, not the codebase, when they disagree on facts.
 

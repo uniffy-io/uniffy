@@ -23,14 +23,25 @@
             "WebFetch(domain:docs.anthropic.com)",
             "WebFetch(domain:connectrpc.com)",
             "WebFetch(domain:reactflow.dev)",
-            "Edit(.agents/plans/**)",
-            "Edit(.agents/reviews/**)",
+            "Edit(.agents/local/**)",
             "mcp__playwright__*",
             "mcp__playwright-b__*"
         ],
         "deny": [
             "Read(.env)",
             "Read(.env.local)"
+        ]
+    },
+    "hooks": {
+        "SessionStart": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "[ -f \"$CLAUDE_PROJECT_DIR/.agents/local/AGENTS.md\" ] && cat \"$CLAUDE_PROJECT_DIR/.agents/local/AGENTS.md\" || true"
+                    }
+                ]
+            }
         ]
     },
     "enabledMcpjsonServers": [

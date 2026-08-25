@@ -1,11 +1,11 @@
 ---
 name: create-prd
-description: Create a Product Requirements Document from the current conversation and save it under `.agents/plans/`. Use when the user asks for a PRD, product specification, or requirements document for an Uniffy feature.
+description: Create a Product Requirements Document from the current conversation and save it under `.agents/local/plans/`. Use when the user asks for a PRD, product specification, or requirements document for an Uniffy feature.
 ---
 
 # Create PRD: Generate Product Requirements Document
 
-Generate a PRD from the current conversation context. Use the output filename supplied with the request, or `PRD.md` when none is supplied, and write it under `.agents/plans/`.
+Generate a PRD from the current conversation context. Use the output filename supplied with the request, or `PRD.md` when none is supplied, and write it under `.agents/local/plans/`.
 
 ## Structure
 

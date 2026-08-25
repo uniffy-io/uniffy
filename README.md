@@ -22,15 +22,14 @@
 
 ---
 
-One workspace for notes, files, chat, calls, calendar, and AI agents. Every piece of information can be referenced from anywhere with a universal `@` mention.
+Notes, Diagrams, Chat, Files, Projects, Calendar. One private workspace, everything talks back. Plus an agent harness on top of it. Agents as work infrastructure.
 
-Use it on our cloud or on your own hardware. Same code, same features, no user limit, no license keys. No trackers, no data harvesting, no training on your data. AI agents are opt in and yours to control: you choose the model, the skills, and the permissions.
+Every piece of information can be referenced from anywhere with a universal `@` mention. Use it on our cloud or on your own hardware. Same code, same features, no user limit. No trackers, no data harvesting, no training on your data. AI agents are opt in and yours to control: you choose the model, the skills, and the permissions.
 
 ## Table of Contents
 
 - [Documentation](#documentation)
 - [Development](#development)
-  - [Prerequisites](#prerequisites)
   - [Setup](#setup)
 - [Repository Structure](#repository-structure)
 - [System Architecture](#system-architecture)

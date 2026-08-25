@@ -1,7 +1,7 @@
 ---
 name: review-changes
 description: |
-  Run a disciplined review of the pending changes (uncommitted work plus the branch delta against main) across four dimensions: security, correctness, performance, and repo consistency. Fans out exploration subagents per dimension, then the main agent acts as judge: every finding is re-verified against the actual code before it is reported, and the result is saved to `.agents/reviews/` and replied verbatim. Use when asked to review the changes, review before a PR, check my work, audit this branch, or run a pre-merge review. Use `security-review` instead for a security-only pass, and `simplify` for quality-only cleanup with no bug hunting. Skip for reviewing a single function in conversation or code outside this repo.
+  Run a disciplined review of the pending changes (uncommitted work plus the branch delta against main) across four dimensions: security, correctness, performance, and repo consistency. Fans out exploration subagents per dimension, then the main agent acts as judge: every finding is re-verified against the actual code before it is reported, and the result is saved to `.agents/local/reviews/` and replied verbatim. Use when asked to review the changes, review before a PR, check my work, audit this branch, or run a pre-merge review. Use `security-review` instead for a security-only pass, and `simplify` for quality-only cleanup with no bug hunting. Skip for reviewing a single function in conversation or code outside this repo.
 ---
 
 # Review Pending Changes
@@ -14,7 +14,7 @@ This skill is the methodology for reviewing what is about to become a PR. The sh
 2. Scope the changes: `git status` + `git diff HEAD --stat` for uncommitted work, `git log --oneline origin/main..HEAD` and `git diff origin/main...HEAD --stat` for the branch delta. On `main` with uncommitted work, the uncommitted set IS the review scope.
 3. **Upstream alignment before anything else**: `git log --oneline HEAD..origin/main`. If upstream landed commits touching the same files, read those commits first and review against the merged reality, not the stale base. Overlaps and likely conflicts go in the review header.
 4. Bucket the changed files by area (backend / ui / mobile / proto / landing docs / infra) and drop `src/gen/**` from the review set. Generated code is never reviewed; review the `.proto` source and confirm `./manage.py proto` was run (a proto edit without its regenerated files is itself a finding).
-5. Check `.agents/plans/backlogs/` for a companion backlog. It carries the intent; a review that does not know what the change was trying to do misjudges half of it.
+5. Check `.agents/local/plans/backlogs/` for a companion backlog. It carries the intent; a review that does not know what the change was trying to do misjudges half of it.
 
 ## 2. Load the rules the diff touches
 
@@ -29,7 +29,7 @@ The rules in `.agents/rules/` are the judging criteria, not background reading. 
 | files / chat / calls / agents / notes / mentions domains | the matching domain rule file |
 | `src/landing/**` content | `landing-voice.md` |
 
-Also scan `.agents/scaling-reviews/` (including `resolved/`). A limit already registered there is not a finding; a new "correct today, falls over at scale" discovery becomes a file there, not a bug in the review.
+Also scan `.agents/local/scaling-reviews/` (including `resolved/`). A limit already registered there is not a finding; a new "correct today, falls over at scale" discovery becomes a file there, not a bug in the review.
 
 ## 3. Fan out exploration subagents
 
@@ -56,14 +56,14 @@ For each candidate, re-read the cited code yourself and try to refute it. Check 
 Classify what survives:
 
 - **Bug** - broken at current scale. Goes in the review, severity-ordered.
-- **Scaling limit** - correct today, falls over later. Goes in `.agents/scaling-reviews/{kebab-case}.md` with the load at which it bites and the mitigation levers; the review links it.
+- **Scaling limit** - correct today, falls over later. Goes in `.agents/local/scaling-reviews/{kebab-case}.md` with the load at which it bites and the mitigation levers; the review links it.
 - **Consistency drift** - style, reuse, rule violations. Reported below the bugs, batched.
 
 Known non-findings to reject on sight: an admin who cannot see a member's content (that is the permission model working); missing deprecation aliases or compat shims (pre-production, clean cuts are policy); generated-code diffs; missing docstrings on self-explanatory functions (comment discipline prefers deletion).
 
 ## 5. Report
 
-Write `.agents/reviews/{kebab-case}.md` and reply with the same content:
+Write `.agents/local/reviews/{kebab-case}.md` and reply with the same content:
 
 - Header: date, scope (branch, commit range, uncommitted or not), upstream alignment status.
 - Findings ordered most severe first, each with file/function/line, the verified failure scenario, and the verified fix proposal.

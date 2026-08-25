@@ -1,6 +1,6 @@
 ---
 name: plan-feature
-description: Create a comprehensive Uniffy feature plan in `.agents/plans/` through deep codebase analysis, applicable rules, verified patterns, risks, tests, and executable validation steps. Use when the user asks to plan a feature or prepare implementation work without writing product code.
+description: Create a comprehensive Uniffy feature plan in `.agents/local/plans/` through deep codebase analysis, applicable rules, verified patterns, risks, tests, and executable validation steps. Use when the user asks to plan a feature or prepare implementation work without writing product code.
 ---
 
 # Plan a Feature
@@ -30,7 +30,7 @@ Then map the territory with repository search and any available code-intelligenc
 - Identify integration points: `factory.py` mounts, `App.tsx` routes, `store.ts` reducers, proto files.
 - Content types: does this need a URN, search indexing, permission rows? The Search Integration Checklist in `architecture.md` lists every file a new content type touches.
 - Background work: check ARQ worker patterns if processing is needed.
-- Check `.agents/plans/` for related prior plans and `.agents/plans/backlogs/` for in-flight work that overlaps.
+- Check `.agents/local/plans/` for related prior plans and `.agents/local/plans/backlogs/` for in-flight work that overlaps.
 
 ## 3. External research (when the feature pulls in new tech)
 
@@ -42,7 +42,7 @@ Edge cases, race conditions, failure modes, performance (hot path? -> cache + in
 
 ## 5. Write the plan
 
-**Output:** `.agents/plans/{kebab-case-name}.md`. If the plan has 3+ phases or high complexity, also create `.agents/plans/backlogs/{name}-backlog.md` (convention in AGENTS.md).
+**Output:** `.agents/local/plans/{kebab-case-name}.md`. If the plan has 3+ phases or high complexity, also create `.agents/local/plans/backlogs/{name}-backlog.md` (convention in AGENTS.md).
 
 Plan structure:
 
