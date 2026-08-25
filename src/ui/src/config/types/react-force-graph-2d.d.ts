@@ -132,6 +132,8 @@ declare module "react-force-graph-2d" {
     autoPauseRedraw?: boolean;
     minZoom?: number;
     maxZoom?: number;
+    onRenderFramePre?: (ctx: CanvasRenderingContext2D, globalScale: number) => void;
+    onRenderFramePost?: (ctx: CanvasRenderingContext2D, globalScale: number) => void;
 
     // Ref
     ref?: MutableRefObject<ForceGraphMethods | undefined>;

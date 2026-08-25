@@ -7,7 +7,9 @@ Uniffy is a unified workspace where notes, files, chat, AI assistants, calendar,
 Every feature must work in BOTH deployment modes. The same codebase ships as:
 
 1. **`cloud.uniffy.io`** - our hosted multi-tenant SaaS. We run the infra, the database, the mail relay, the storage. Tenants share a single deployment. Platform admins (Uniffy operators) exist as a distinct role from tenant org admins.
-2. **Self-hosted** - paid license, customer runs their own deployment. Usually single-tenant (one org), occasionally multi-tenant. The customer is the operator AND the org owner; there is no Uniffy in the loop.
+2. **Self-hosted** - free and unlimited, customer runs their own deployment. Usually single-tenant (one org), occasionally multi-tenant. The customer is the operator AND the org owner; there is no Uniffy in the loop.
+
+**Licensing (settled, do not re-litigate):** the repo ships under FSL-1.1-Apache-2.0 (`LICENSE`), which converts to Apache 2.0 two years after each release. Self-hosting is free for any organization at any size, with **no seat cap, no paid tier, and no license keys** - there is nothing to gate, so never add an entitlement check, a seat count, or a license-validation call anywhere. Revenue comes from the hosted SaaS, not from self-hosters. In copy we say **open source**; "source available" is banned. Anything you find describing a Business Source License, an Additional Use Grant, or seat enforcement is a stale artifact of an abandoned plan - fix it rather than following it.
 
 ### Implications for every change
 
@@ -116,6 +118,6 @@ All plans and backlogs live in `.agents/plans/`, kebab-case filenames. **Plans**
 
 Backlog contents: progress summary table (`[ ]`/`[~]`/`[x]`/`[!]` with reason), how-to-resume instructions, per-phase checklists, dated session notes (absolute dates). Update it after every meaningful change and commit it alongside the work. When resuming a feature, check `.agents/plans/backlogs/` first. When the `execute` skill runs a multi-phase plan, create a companion backlog if none exists.
 
-**Reviews** (security, performance, implementation, ...) are saved to `.agents/reviews/{kebab-case}.md` and the same content is the reply to the user. Findings are a few sentences each with file/function/line specifics and a fix proposal that was actually verified during the review - no guesses.
+**Reviews** (security, performance, implementation, ...) are saved to `.agents/reviews/{kebab-case}.md` and the same content is the reply to the user. Findings are a few sentences each with file/function/line specifics and a fix proposal that was actually verified during the review - no guesses. Once every finding is fixed or explicitly deferred, record the per-finding outcome in the file and move it to `.agents/reviews/archive/`, so the active directory only holds reviews with open findings.
 
 **Scaling reviews** (`.agents/scaling-reviews/{kebab-case}.md`) are the registry of known scalability limits we are deliberately NOT fixing yet: one file per finding, carrying a Status line, the load at which it bites, file/function specifics, and the mitigation levers in sequencing order with their tradeoffs. The bar for filing is "correct today, falls over at scale, fix deferred on purpose" - anything broken at current scale is a bug, not a scaling review. File one whenever a capacity analysis, a review, or ordinary development surfaces such a limit; check the directory before designing anything that fans out per user, per org, or per connection, since the ceiling may already be documented. When a finding gets fixed, record what shipped in the file and move it to `.agents/scaling-reviews/resolved/`.

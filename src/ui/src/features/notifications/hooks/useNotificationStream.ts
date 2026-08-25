@@ -33,6 +33,7 @@ import { setDomainAdminDomains } from "@/features/auth/store/authSlice";
 import { adminApi } from "@/features/admin/api/adminApi";
 import { emitMentionStateChange, mergeMentionState } from "@/components/mention";
 import { invalidateMentionState } from "@/components/mention/mentionStateEmitter";
+import { invalidateUrnMetadataCache } from "@/features/search/utils/urnMetadataCache";
 import { accessRequestStateToLiveState } from "@/components/mention/accessRequestState";
 import { resolveUrnBatched } from "@/components/mention/useBatchedSubjectResolver";
 import { MentionAvailability } from "@/components/mention/types";
@@ -244,6 +245,9 @@ export function useNotificationStream() {
               const mc = event.mentionStateChanged;
               if (mc.urn && mc.changes) {
                 emitMentionStateChange(mc.urn, mc.changes);
+                // The URN metadata cache backs the graph and other resolution
+                // consumers; without this a rename keeps the old label until logout.
+                invalidateUrnMetadataCache([mc.urn]);
               }
             }
 
@@ -298,6 +302,7 @@ export function useNotificationStream() {
               });
               if (changedUrn) {
                 invalidateMentionState(changedUrn);
+                invalidateUrnMetadataCache([changedUrn]);
                 const requestStatus = getState()?.accessRequests.byUrn[changedUrn];
                 if (action === "revoked" && requestStatus) {
                   dispatch(

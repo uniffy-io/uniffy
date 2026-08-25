@@ -1,6 +1,6 @@
 import { type ReactNode, useState, useCallback } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
-import { BookmarkSimple, LockSimple, UsersThree, Buildings } from "@phosphor-icons/react";
+import { LockSimple, UsersThree, Buildings } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
@@ -13,7 +13,6 @@ import {
 } from "@/components/layout/CollapsibleSidebarRail";
 
 const NOTES_SECTIONS: SidebarSection[] = [
-  { id: "bookmarked", icon: BookmarkSimple, label: "Bookmarks" },
   { id: "personal", icon: LockSimple, label: "Personal" },
   { id: "shared", icon: UsersThree, label: "Shared" },
   { id: "organization", icon: Buildings, label: "Organization" },

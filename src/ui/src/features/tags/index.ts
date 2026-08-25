@@ -11,31 +11,24 @@ export {
 } from "@/features/tags/store/tagsSlice";
 export type {
   SerializedTag,
-  SerializedSavedTagFilter,
   SerializedTaggedContentItem,
   TagsState,
 } from "@/features/tags/store/tagsSlice";
 
 export {
-  createSavedFilterThunk,
   createTagThunk,
-  deleteSavedFilterThunk,
   deleteTagThunk,
   listContentByTagThunk,
-  listSavedFiltersThunk,
   listTagsThunk,
   mergeTagsThunk,
   suggestTagsThunk,
-  updateSavedFilterThunk,
   updateTagThunk,
   tagToPlain,
-  savedFilterToPlain,
   taggedContentItemToPlain,
   criteriaToPlain,
   criteriaToProto,
   emptyCriteria,
   type SerializedTagFilterCriteria,
-  type SerializedTagFilterIcon,
   type ListContentByTagParams,
 } from "@/features/tags/store/tagsThunks";
 
@@ -56,7 +49,3 @@ export {
   criteriaEquals,
   type UseTagFilterStateReturn,
 } from "@/features/tags/hooks/useTagFilterState";
-export {
-  useSavedTagFilters,
-  type UseSavedTagFiltersReturn,
-} from "@/features/tags/hooks/useSavedTagFilters";

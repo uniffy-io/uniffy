@@ -4,6 +4,7 @@ import {
   Plus,
   PencilSimple,
   MagnifyingGlass,
+  BookmarkSimple,
   ChatsCircle,
   Tray,
   Compass,
@@ -469,6 +470,15 @@ export function ChatSidebar() {
               {totalUnread}
             </span>
           )}
+        </button>
+
+        <button
+          onClick={() => navigate("/library?types=chat_message")}
+          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          data-testid="chat-sidebar-saved-link"
+        >
+          <BookmarkSimple size={16} />
+          <span className="font-medium">Saved</span>
         </button>
 
         <button

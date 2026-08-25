@@ -1,6 +1,8 @@
 export type ViewMode = "day" | "week" | "month" | "agenda";
 
-export type QuickAccessFilter = "today" | "this_week" | "upcoming" | "bookmarked";
+export const QUICK_ACCESS_FILTERS = ["today", "this_week", "upcoming"] as const;
+
+export type QuickAccessFilter = (typeof QUICK_ACCESS_FILTERS)[number];
 
 export interface TimeSlot {
   hour: number;

@@ -3,7 +3,6 @@ import { initializeNotesData, type SerializedNote } from "@/features/notes/store
 import { notesReducer, setCurrentNote, setNote } from "@/features/notes/store/notesSlice";
 
 const emptyTree = {
-  bookmarked: [],
   personal: [],
   shared: [],
   organization: [],

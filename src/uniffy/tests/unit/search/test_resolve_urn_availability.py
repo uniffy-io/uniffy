@@ -72,7 +72,7 @@ def resolver() -> SearchOperations:
     operations = SearchOperations(MagicMock())
     operations.resource_access = MagicMock()
     operations.resource_access.resolve = AsyncMock()
-    operations._enrich_live_state = AsyncMock()
+    operations.enrich_live_state = AsyncMock()
     return operations
 
 
@@ -157,8 +157,8 @@ async def test_resolve_composes_postgres_decisions_with_raw_previews(
     assert deleted_proto.urn_status == "DELETED"
     assert deleted_proto.metadata["urn_status"] == "DELETED"
 
-    resolver._enrich_live_state.assert_awaited_once()
-    enriched = resolver._enrich_live_state.await_args.args[0]
+    resolver.enrich_live_state.assert_awaited_once()
+    enriched = resolver.enrich_live_state.await_args.args[0]
     assert set(enriched) == {available_urn}
 
 
@@ -184,7 +184,7 @@ async def test_postgres_failure_returns_only_unavailable_results(
 
     assert result[urn].availability == UrnAvailability.UNAVAILABLE
     assert result[urn].title == ""
-    resolver._enrich_live_state.assert_not_awaited()
+    resolver.enrich_live_state.assert_not_awaited()
 
 
 @pytest.mark.parametrize("requestable", [False, True])

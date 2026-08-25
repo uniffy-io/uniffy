@@ -19,6 +19,7 @@ from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -247,6 +248,7 @@ async def _seed_access(db_session: AsyncSession) -> NS:
 
 async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
     await db_session.rollback()
+    await db_session.execute(delete(Bookmark).where(Bookmark.organization_id.in_(env.org_ids)))
     comment_ids = (
         await db_session.execute(
             select(Comment.id).where(Comment.organization_id.in_(env.org_ids))

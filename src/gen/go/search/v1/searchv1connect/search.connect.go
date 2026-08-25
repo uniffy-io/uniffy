@@ -41,6 +41,9 @@ const (
 	// SearchServiceResolveUrnsProcedure is the fully-qualified name of the SearchService's ResolveUrns
 	// RPC.
 	SearchServiceResolveUrnsProcedure = "/search.v1.SearchService/ResolveUrns"
+	// SearchServiceGetContentGraphProcedure is the fully-qualified name of the SearchService's
+	// GetContentGraph RPC.
+	SearchServiceGetContentGraphProcedure = "/search.v1.SearchService/GetContentGraph"
 )
 
 // SearchServiceClient is a client for the search.v1.SearchService service.
@@ -51,6 +54,8 @@ type SearchServiceClient interface {
 	GetReferences(context.Context, *connect.Request[v1.GetReferencesRequest]) (*connect.Response[v1.GetReferencesResponse], error)
 	// Resolve metadata for a batch of URNs
 	ResolveUrns(context.Context, *connect.Request[v1.ResolveUrnsRequest]) (*connect.Response[v1.ResolveUrnsResponse], error)
+	// Org-wide mention graph: URN reference edges from content the caller can access
+	GetContentGraph(context.Context, *connect.Request[v1.GetContentGraphRequest]) (*connect.Response[v1.GetContentGraphResponse], error)
 }
 
 // NewSearchServiceClient constructs a client for the search.v1.SearchService service. By default,
@@ -82,14 +87,21 @@ func NewSearchServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(searchServiceMethods.ByName("ResolveUrns")),
 			connect.WithClientOptions(opts...),
 		),
+		getContentGraph: connect.NewClient[v1.GetContentGraphRequest, v1.GetContentGraphResponse](
+			httpClient,
+			baseURL+SearchServiceGetContentGraphProcedure,
+			connect.WithSchema(searchServiceMethods.ByName("GetContentGraph")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // searchServiceClient implements SearchServiceClient.
 type searchServiceClient struct {
-	search        *connect.Client[v1.SearchRequest, v1.SearchResponse]
-	getReferences *connect.Client[v1.GetReferencesRequest, v1.GetReferencesResponse]
-	resolveUrns   *connect.Client[v1.ResolveUrnsRequest, v1.ResolveUrnsResponse]
+	search          *connect.Client[v1.SearchRequest, v1.SearchResponse]
+	getReferences   *connect.Client[v1.GetReferencesRequest, v1.GetReferencesResponse]
+	resolveUrns     *connect.Client[v1.ResolveUrnsRequest, v1.ResolveUrnsResponse]
+	getContentGraph *connect.Client[v1.GetContentGraphRequest, v1.GetContentGraphResponse]
 }
 
 // Search calls search.v1.SearchService.Search.
@@ -107,6 +119,11 @@ func (c *searchServiceClient) ResolveUrns(ctx context.Context, req *connect.Requ
 	return c.resolveUrns.CallUnary(ctx, req)
 }
 
+// GetContentGraph calls search.v1.SearchService.GetContentGraph.
+func (c *searchServiceClient) GetContentGraph(ctx context.Context, req *connect.Request[v1.GetContentGraphRequest]) (*connect.Response[v1.GetContentGraphResponse], error) {
+	return c.getContentGraph.CallUnary(ctx, req)
+}
+
 // SearchServiceHandler is an implementation of the search.v1.SearchService service.
 type SearchServiceHandler interface {
 	// Perform a global search across all entities (Spotlight-like)
@@ -115,6 +132,8 @@ type SearchServiceHandler interface {
 	GetReferences(context.Context, *connect.Request[v1.GetReferencesRequest]) (*connect.Response[v1.GetReferencesResponse], error)
 	// Resolve metadata for a batch of URNs
 	ResolveUrns(context.Context, *connect.Request[v1.ResolveUrnsRequest]) (*connect.Response[v1.ResolveUrnsResponse], error)
+	// Org-wide mention graph: URN reference edges from content the caller can access
+	GetContentGraph(context.Context, *connect.Request[v1.GetContentGraphRequest]) (*connect.Response[v1.GetContentGraphResponse], error)
 }
 
 // NewSearchServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -142,6 +161,12 @@ func NewSearchServiceHandler(svc SearchServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(searchServiceMethods.ByName("ResolveUrns")),
 		connect.WithHandlerOptions(opts...),
 	)
+	searchServiceGetContentGraphHandler := connect.NewUnaryHandler(
+		SearchServiceGetContentGraphProcedure,
+		svc.GetContentGraph,
+		connect.WithSchema(searchServiceMethods.ByName("GetContentGraph")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/search.v1.SearchService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SearchServiceSearchProcedure:
@@ -150,6 +175,8 @@ func NewSearchServiceHandler(svc SearchServiceHandler, opts ...connect.HandlerOp
 			searchServiceGetReferencesHandler.ServeHTTP(w, r)
 		case SearchServiceResolveUrnsProcedure:
 			searchServiceResolveUrnsHandler.ServeHTTP(w, r)
+		case SearchServiceGetContentGraphProcedure:
+			searchServiceGetContentGraphHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -169,4 +196,8 @@ func (UnimplementedSearchServiceHandler) GetReferences(context.Context, *connect
 
 func (UnimplementedSearchServiceHandler) ResolveUrns(context.Context, *connect.Request[v1.ResolveUrnsRequest]) (*connect.Response[v1.ResolveUrnsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("search.v1.SearchService.ResolveUrns is not implemented"))
+}
+
+func (UnimplementedSearchServiceHandler) GetContentGraph(context.Context, *connect.Request[v1.GetContentGraphRequest]) (*connect.Response[v1.GetContentGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("search.v1.SearchService.GetContentGraph is not implemented"))
 }

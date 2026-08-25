@@ -14,6 +14,7 @@ import {
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { NoteEditingIndicator } from "@/components/mention/LiveIndicators";
 import { ParentBadge, MetaSeparator } from "@/components/mention/previews/ParentBadge";
+import { ShowInGraphButton } from "@/components/mention/previews/ShowInGraphButton";
 import type { MentionLiveState } from "@/components/mention/types";
 
 interface NoteMentionPreviewProps {
@@ -150,6 +151,7 @@ export function NoteMentionPreview({
           )}
         </span>
         <span className="flex items-center gap-1">
+          <ShowInGraphButton urn={urn} />
           <button
             onMouseDown={(e) => {
               e.preventDefault();

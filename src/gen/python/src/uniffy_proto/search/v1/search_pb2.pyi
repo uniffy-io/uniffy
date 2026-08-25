@@ -174,6 +174,28 @@ class ResolveUrnsResponse(_message.Message):
     resolved: _containers.MessageMap[str, UrnMetadata]
     def __init__(self, resolved: _Optional[_Mapping[str, UrnMetadata]] = ...) -> None: ...
 
+class GetContentGraphRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class ContentGraphEdge(_message.Message):
+    __slots__ = ("source_urn", "target_urn")
+    SOURCE_URN_FIELD_NUMBER: _ClassVar[int]
+    TARGET_URN_FIELD_NUMBER: _ClassVar[int]
+    source_urn: str
+    target_urn: str
+    def __init__(self, source_urn: _Optional[str] = ..., target_urn: _Optional[str] = ...) -> None: ...
+
+class GetContentGraphResponse(_message.Message):
+    __slots__ = ("edges", "truncated")
+    EDGES_FIELD_NUMBER: _ClassVar[int]
+    TRUNCATED_FIELD_NUMBER: _ClassVar[int]
+    edges: _containers.RepeatedCompositeFieldContainer[ContentGraphEdge]
+    truncated: bool
+    def __init__(self, edges: _Optional[_Iterable[_Union[ContentGraphEdge, _Mapping]]] = ..., truncated: _Optional[bool] = ...) -> None: ...
+
 class UrnMetadata(_message.Message):
     __slots__ = ("title", "description", "type", "url", "metadata", "status", "due_date", "assignee_name", "processing_status", "completed_tasks", "total_tasks", "member_count", "updated_by_name", "priority", "priority_label", "priority_color", "status_label", "status_color", "task_type", "task_number", "project_name", "project_slug", "project_color", "subtask_completed", "subtask_total", "blocked_by_count", "event_start_time", "event_end_time", "event_is_all_day", "event_location", "event_meeting_url", "event_channel_id", "file_mime_type", "file_size", "note_node_type", "channel_type", "agent_emoji", "agent_theme_color", "user_avatar_url", "user_email", "assignee_ids", "content_tags", "urn_status", "availability", "can_request_access")
     class MetadataEntry(_message.Message):

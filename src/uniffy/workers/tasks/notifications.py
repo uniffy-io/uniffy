@@ -299,7 +299,10 @@ async def _resolve_recipients(
         content_urn = event.source_urn
         if content_urn:
             result = await session.execute(
-                select(Bookmark.user_id).where(Bookmark.urn == content_urn)
+                select(Bookmark.user_id).where(
+                    Bookmark.organization_id == event.organization_id,
+                    Bookmark.urn == content_urn,
+                )
             )
             for row in result.all():
                 recipient_set.add(row[0])

@@ -1,19 +1,8 @@
-import { useLocation } from "react-router-dom";
-import { CaretDoubleLeft, Atom } from "@phosphor-icons/react";
-import type { Icon } from "@phosphor-icons/react";
+import { CaretDoubleLeft } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { toggleSidebar } from "@/features/notes/store/editorSlice";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
-import { CompactNavItem } from "@/components/layout/CompactNavItem";
 import { CreateDropdown } from "@/features/notes/components/sidebar/CreateDropdown";
-
-interface NotesNavItem {
-  name: string;
-  path: string;
-  icon: Icon;
-}
-
-const notesNavItems: NotesNavItem[] = [{ name: "Graph", path: "/notes/graph", icon: Atom }];
 
 interface SidebarHeaderProps {
   onCreateNote: () => void;
@@ -29,7 +18,6 @@ export function SidebarHeader({
   creatingNote,
 }: SidebarHeaderProps) {
   const dispatch = useAppDispatch();
-  const location = useLocation();
   const { isMobile } = useBreakpoint();
 
   return (
@@ -40,15 +28,6 @@ export function SidebarHeader({
         onCreateFolder={onCreateFolder}
         creating={creatingNote}
       />
-      {notesNavItems.map((item) => (
-        <CompactNavItem
-          key={item.path}
-          to={item.path}
-          label={item.name}
-          icon={item.icon}
-          isActive={location.pathname === item.path}
-        />
-      ))}
       <div className="flex-1" />
       {/* Mobile drawer has its own close. */}
       {!isMobile && (

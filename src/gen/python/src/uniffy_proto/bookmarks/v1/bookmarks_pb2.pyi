@@ -1,6 +1,8 @@
 import datetime
 
+from common.v1 import common_pb2 as _common_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from search.v1 import search_pb2 as _search_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -25,23 +27,33 @@ class ToggleBookmarkResponse(_message.Message):
     bookmark: Bookmark
     def __init__(self, is_bookmarked: _Optional[bool] = ..., bookmark: _Optional[_Union[Bookmark, _Mapping]] = ...) -> None: ...
 
-class ListBookmarksRequest(_message.Message):
-    __slots__ = ("organization_id", "page", "page_size")
+class ListBookmarkItemsRequest(_message.Message):
+    __slots__ = ("organization_id", "content_types", "page_size", "page_token")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    PAGE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPES_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
-    page: int
+    content_types: _containers.RepeatedScalarFieldContainer[_common_pb2.ContentType]
     page_size: int
-    def __init__(self, organization_id: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
+    page_token: str
+    def __init__(self, organization_id: _Optional[str] = ..., content_types: _Optional[_Iterable[_Union[_common_pb2.ContentType, str]]] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
-class ListBookmarksResponse(_message.Message):
-    __slots__ = ("bookmarks", "total_count")
-    BOOKMARKS_FIELD_NUMBER: _ClassVar[int]
-    TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
-    bookmarks: _containers.RepeatedCompositeFieldContainer[Bookmark]
-    total_count: int
-    def __init__(self, bookmarks: _Optional[_Iterable[_Union[Bookmark, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
+class ListBookmarkItemsResponse(_message.Message):
+    __slots__ = ("items", "next_page_token")
+    ITEMS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    items: _containers.RepeatedCompositeFieldContainer[BookmarkItem]
+    next_page_token: str
+    def __init__(self, items: _Optional[_Iterable[_Union[BookmarkItem, _Mapping]]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
+
+class BookmarkItem(_message.Message):
+    __slots__ = ("bookmark", "content")
+    BOOKMARK_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    bookmark: Bookmark
+    content: _search_pb2.UrnMetadata
+    def __init__(self, bookmark: _Optional[_Union[Bookmark, _Mapping]] = ..., content: _Optional[_Union[_search_pb2.UrnMetadata, _Mapping]] = ...) -> None: ...
 
 class BulkCheckBookmarksRequest(_message.Message):
     __slots__ = ("organization_id", "urns")

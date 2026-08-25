@@ -6,7 +6,6 @@ import { fetchNotes } from "@/features/notes/store/notesThunks";
 import { initializeFilesData } from "@/features/files/store/filesSlice";
 import { fetchEventsInRange, fetchCategories } from "@/features/calendar/store/calendarThunks";
 import { fetchProjects, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
-import { fetchBookmarks } from "@/features/bookmarks";
 
 export function useDashboardFetch() {
   const dispatch = useAppDispatch();
@@ -22,9 +21,6 @@ export function useDashboardFetch() {
   );
   const projects = useAppSelector((state) => state.projects?.projects ?? {});
   const tasksCount = useAppSelector((state) => Object.keys(state.projects?.tasks ?? {}).length);
-  const bookmarksCount = useAppSelector(
-    (state) => Object.keys(state.bookmarks?.bookmarks ?? {}).length,
-  );
 
   useEffect(() => {
     if (!orgId || fetchedRef.current) return;
@@ -50,9 +46,6 @@ export function useDashboardFetch() {
       dispatch(fetchProjects());
     }
 
-    if (bookmarksCount === 0) {
-      dispatch(fetchBookmarks());
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 

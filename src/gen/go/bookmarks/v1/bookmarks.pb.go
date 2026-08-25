@@ -7,6 +7,8 @@
 package bookmarksv1
 
 import (
+	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
+	v11 "github.com/uniffy-io/uniffy-proto-go/search/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -132,33 +134,30 @@ func (x *ToggleBookmarkResponse) GetBookmark() *Bookmark {
 	return nil
 }
 
-// Request to list bookmarks
-type ListBookmarksRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Organization context
-	OrganizationId string `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	// Page number (1-indexed)
-	Page int32 `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`
-	// Page size (default 50)
-	PageSize      int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type ListBookmarkItemsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ContentTypes   []v1.ContentType       `protobuf:"varint,2,rep,packed,name=content_types,json=contentTypes,proto3,enum=common.v1.ContentType" json:"content_types,omitempty"`
+	PageSize       uint32                 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken      *string                `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3,oneof" json:"page_token,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
-func (x *ListBookmarksRequest) Reset() {
-	*x = ListBookmarksRequest{}
+func (x *ListBookmarkItemsRequest) Reset() {
+	*x = ListBookmarkItemsRequest{}
 	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListBookmarksRequest) String() string {
+func (x *ListBookmarkItemsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListBookmarksRequest) ProtoMessage() {}
+func (*ListBookmarkItemsRequest) ProtoMessage() {}
 
-func (x *ListBookmarksRequest) ProtoReflect() protoreflect.Message {
+func (x *ListBookmarkItemsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -170,57 +169,61 @@ func (x *ListBookmarksRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListBookmarksRequest.ProtoReflect.Descriptor instead.
-func (*ListBookmarksRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListBookmarkItemsRequest.ProtoReflect.Descriptor instead.
+func (*ListBookmarkItemsRequest) Descriptor() ([]byte, []int) {
 	return file_bookmarks_v1_bookmarks_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ListBookmarksRequest) GetOrganizationId() string {
+func (x *ListBookmarkItemsRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *ListBookmarksRequest) GetPage() int32 {
+func (x *ListBookmarkItemsRequest) GetContentTypes() []v1.ContentType {
 	if x != nil {
-		return x.Page
+		return x.ContentTypes
 	}
-	return 0
+	return nil
 }
 
-func (x *ListBookmarksRequest) GetPageSize() int32 {
+func (x *ListBookmarkItemsRequest) GetPageSize() uint32 {
 	if x != nil {
 		return x.PageSize
 	}
 	return 0
 }
 
-// Response for listing bookmarks
-type ListBookmarksResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// List of bookmarks
-	Bookmarks []*Bookmark `protobuf:"bytes,1,rep,name=bookmarks,proto3" json:"bookmarks,omitempty"`
-	// Total count of bookmarks
-	TotalCount    int32 `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+func (x *ListBookmarkItemsRequest) GetPageToken() string {
+	if x != nil && x.PageToken != nil {
+		return *x.PageToken
+	}
+	return ""
+}
+
+type ListBookmarkItemsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*BookmarkItem        `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	NextPageToken *string                `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3,oneof" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListBookmarksResponse) Reset() {
-	*x = ListBookmarksResponse{}
+func (x *ListBookmarkItemsResponse) Reset() {
+	*x = ListBookmarkItemsResponse{}
 	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListBookmarksResponse) String() string {
+func (x *ListBookmarkItemsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListBookmarksResponse) ProtoMessage() {}
+func (*ListBookmarkItemsResponse) ProtoMessage() {}
 
-func (x *ListBookmarksResponse) ProtoReflect() protoreflect.Message {
+func (x *ListBookmarkItemsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -232,23 +235,75 @@ func (x *ListBookmarksResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListBookmarksResponse.ProtoReflect.Descriptor instead.
-func (*ListBookmarksResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListBookmarkItemsResponse.ProtoReflect.Descriptor instead.
+func (*ListBookmarkItemsResponse) Descriptor() ([]byte, []int) {
 	return file_bookmarks_v1_bookmarks_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ListBookmarksResponse) GetBookmarks() []*Bookmark {
+func (x *ListBookmarkItemsResponse) GetItems() []*BookmarkItem {
 	if x != nil {
-		return x.Bookmarks
+		return x.Items
 	}
 	return nil
 }
 
-func (x *ListBookmarksResponse) GetTotalCount() int32 {
-	if x != nil {
-		return x.TotalCount
+func (x *ListBookmarkItemsResponse) GetNextPageToken() string {
+	if x != nil && x.NextPageToken != nil {
+		return *x.NextPageToken
 	}
-	return 0
+	return ""
+}
+
+type BookmarkItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Bookmark      *Bookmark              `protobuf:"bytes,1,opt,name=bookmark,proto3" json:"bookmark,omitempty"`
+	Content       *v11.UrnMetadata       `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BookmarkItem) Reset() {
+	*x = BookmarkItem{}
+	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BookmarkItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BookmarkItem) ProtoMessage() {}
+
+func (x *BookmarkItem) ProtoReflect() protoreflect.Message {
+	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BookmarkItem.ProtoReflect.Descriptor instead.
+func (*BookmarkItem) Descriptor() ([]byte, []int) {
+	return file_bookmarks_v1_bookmarks_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *BookmarkItem) GetBookmark() *Bookmark {
+	if x != nil {
+		return x.Bookmark
+	}
+	return nil
+}
+
+func (x *BookmarkItem) GetContent() *v11.UrnMetadata {
+	if x != nil {
+		return x.Content
+	}
+	return nil
 }
 
 // Request to check multiple URNs for bookmark status
@@ -264,7 +319,7 @@ type BulkCheckBookmarksRequest struct {
 
 func (x *BulkCheckBookmarksRequest) Reset() {
 	*x = BulkCheckBookmarksRequest{}
-	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[4]
+	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -276,7 +331,7 @@ func (x *BulkCheckBookmarksRequest) String() string {
 func (*BulkCheckBookmarksRequest) ProtoMessage() {}
 
 func (x *BulkCheckBookmarksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[4]
+	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -289,7 +344,7 @@ func (x *BulkCheckBookmarksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCheckBookmarksRequest.ProtoReflect.Descriptor instead.
 func (*BulkCheckBookmarksRequest) Descriptor() ([]byte, []int) {
-	return file_bookmarks_v1_bookmarks_proto_rawDescGZIP(), []int{4}
+	return file_bookmarks_v1_bookmarks_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *BulkCheckBookmarksRequest) GetOrganizationId() string {
@@ -317,7 +372,7 @@ type BulkCheckBookmarksResponse struct {
 
 func (x *BulkCheckBookmarksResponse) Reset() {
 	*x = BulkCheckBookmarksResponse{}
-	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[5]
+	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -329,7 +384,7 @@ func (x *BulkCheckBookmarksResponse) String() string {
 func (*BulkCheckBookmarksResponse) ProtoMessage() {}
 
 func (x *BulkCheckBookmarksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[5]
+	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -342,7 +397,7 @@ func (x *BulkCheckBookmarksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCheckBookmarksResponse.ProtoReflect.Descriptor instead.
 func (*BulkCheckBookmarksResponse) Descriptor() ([]byte, []int) {
-	return file_bookmarks_v1_bookmarks_proto_rawDescGZIP(), []int{5}
+	return file_bookmarks_v1_bookmarks_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *BulkCheckBookmarksResponse) GetBookmarkedUrns() map[string]bool {
@@ -371,7 +426,7 @@ type Bookmark struct {
 
 func (x *Bookmark) Reset() {
 	*x = Bookmark{}
-	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[6]
+	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -383,7 +438,7 @@ func (x *Bookmark) String() string {
 func (*Bookmark) ProtoMessage() {}
 
 func (x *Bookmark) ProtoReflect() protoreflect.Message {
-	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[6]
+	mi := &file_bookmarks_v1_bookmarks_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -396,7 +451,7 @@ func (x *Bookmark) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bookmark.ProtoReflect.Descriptor instead.
 func (*Bookmark) Descriptor() ([]byte, []int) {
-	return file_bookmarks_v1_bookmarks_proto_rawDescGZIP(), []int{6}
+	return file_bookmarks_v1_bookmarks_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Bookmark) GetId() string {
@@ -438,21 +493,27 @@ var File_bookmarks_v1_bookmarks_proto protoreflect.FileDescriptor
 
 const file_bookmarks_v1_bookmarks_proto_rawDesc = "" +
 	"\n" +
-	"\x1cbookmarks/v1/bookmarks.proto\x12\fbookmarks.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"R\n" +
+	"\x1cbookmarks/v1/bookmarks.proto\x12\fbookmarks.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16search/v1/search.proto\"R\n" +
 	"\x15ToggleBookmarkRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x10\n" +
 	"\x03urn\x18\x02 \x01(\tR\x03urn\"q\n" +
 	"\x16ToggleBookmarkResponse\x12#\n" +
 	"\ris_bookmarked\x18\x01 \x01(\bR\fisBookmarked\x122\n" +
-	"\bbookmark\x18\x02 \x01(\v2\x16.bookmarks.v1.BookmarkR\bbookmark\"p\n" +
-	"\x14ListBookmarksRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
-	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\"n\n" +
-	"\x15ListBookmarksResponse\x124\n" +
-	"\tbookmarks\x18\x01 \x03(\v2\x16.bookmarks.v1.BookmarkR\tbookmarks\x12\x1f\n" +
-	"\vtotal_count\x18\x02 \x01(\x05R\n" +
-	"totalCount\"X\n" +
+	"\bbookmark\x18\x02 \x01(\v2\x16.bookmarks.v1.BookmarkR\bbookmark\"\xd0\x01\n" +
+	"\x18ListBookmarkItemsRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12;\n" +
+	"\rcontent_types\x18\x02 \x03(\x0e2\x16.common.v1.ContentTypeR\fcontentTypes\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\rR\bpageSize\x12\"\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tH\x00R\tpageToken\x88\x01\x01B\r\n" +
+	"\v_page_token\"\x8e\x01\n" +
+	"\x19ListBookmarkItemsResponse\x120\n" +
+	"\x05items\x18\x01 \x03(\v2\x1a.bookmarks.v1.BookmarkItemR\x05items\x12+\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tH\x00R\rnextPageToken\x88\x01\x01B\x12\n" +
+	"\x10_next_page_token\"t\n" +
+	"\fBookmarkItem\x122\n" +
+	"\bbookmark\x18\x01 \x01(\v2\x16.bookmarks.v1.BookmarkR\bbookmark\x120\n" +
+	"\acontent\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\acontent\"X\n" +
 	"\x19BulkCheckBookmarksRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04urns\x18\x02 \x03(\tR\x04urns\"\xc6\x01\n" +
@@ -467,10 +528,10 @@ const file_bookmarks_v1_bookmarks_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x03 \x01(\tR\x0eorganizationId\x12\x10\n" +
 	"\x03urn\x18\x04 \x01(\tR\x03urn\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xb8\x02\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xc4\x02\n" +
 	"\x10BookmarksService\x12]\n" +
-	"\x0eToggleBookmark\x12#.bookmarks.v1.ToggleBookmarkRequest\x1a$.bookmarks.v1.ToggleBookmarkResponse\"\x00\x12Z\n" +
-	"\rListBookmarks\x12\".bookmarks.v1.ListBookmarksRequest\x1a#.bookmarks.v1.ListBookmarksResponse\"\x00\x12i\n" +
+	"\x0eToggleBookmark\x12#.bookmarks.v1.ToggleBookmarkRequest\x1a$.bookmarks.v1.ToggleBookmarkResponse\"\x00\x12f\n" +
+	"\x11ListBookmarkItems\x12&.bookmarks.v1.ListBookmarkItemsRequest\x1a'.bookmarks.v1.ListBookmarkItemsResponse\"\x00\x12i\n" +
 	"\x12BulkCheckBookmarks\x12'.bookmarks.v1.BulkCheckBookmarksRequest\x1a(.bookmarks.v1.BulkCheckBookmarksResponse\"\x00B?Z=github.com/uniffy-io/uniffy-proto-go/bookmarks/v1;bookmarksv1b\x06proto3"
 
 var (
@@ -485,34 +546,40 @@ func file_bookmarks_v1_bookmarks_proto_rawDescGZIP() []byte {
 	return file_bookmarks_v1_bookmarks_proto_rawDescData
 }
 
-var file_bookmarks_v1_bookmarks_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_bookmarks_v1_bookmarks_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_bookmarks_v1_bookmarks_proto_goTypes = []any{
 	(*ToggleBookmarkRequest)(nil),      // 0: bookmarks.v1.ToggleBookmarkRequest
 	(*ToggleBookmarkResponse)(nil),     // 1: bookmarks.v1.ToggleBookmarkResponse
-	(*ListBookmarksRequest)(nil),       // 2: bookmarks.v1.ListBookmarksRequest
-	(*ListBookmarksResponse)(nil),      // 3: bookmarks.v1.ListBookmarksResponse
-	(*BulkCheckBookmarksRequest)(nil),  // 4: bookmarks.v1.BulkCheckBookmarksRequest
-	(*BulkCheckBookmarksResponse)(nil), // 5: bookmarks.v1.BulkCheckBookmarksResponse
-	(*Bookmark)(nil),                   // 6: bookmarks.v1.Bookmark
-	nil,                                // 7: bookmarks.v1.BulkCheckBookmarksResponse.BookmarkedUrnsEntry
-	(*timestamppb.Timestamp)(nil),      // 8: google.protobuf.Timestamp
+	(*ListBookmarkItemsRequest)(nil),   // 2: bookmarks.v1.ListBookmarkItemsRequest
+	(*ListBookmarkItemsResponse)(nil),  // 3: bookmarks.v1.ListBookmarkItemsResponse
+	(*BookmarkItem)(nil),               // 4: bookmarks.v1.BookmarkItem
+	(*BulkCheckBookmarksRequest)(nil),  // 5: bookmarks.v1.BulkCheckBookmarksRequest
+	(*BulkCheckBookmarksResponse)(nil), // 6: bookmarks.v1.BulkCheckBookmarksResponse
+	(*Bookmark)(nil),                   // 7: bookmarks.v1.Bookmark
+	nil,                                // 8: bookmarks.v1.BulkCheckBookmarksResponse.BookmarkedUrnsEntry
+	(v1.ContentType)(0),                // 9: common.v1.ContentType
+	(*v11.UrnMetadata)(nil),            // 10: search.v1.UrnMetadata
+	(*timestamppb.Timestamp)(nil),      // 11: google.protobuf.Timestamp
 }
 var file_bookmarks_v1_bookmarks_proto_depIdxs = []int32{
-	6, // 0: bookmarks.v1.ToggleBookmarkResponse.bookmark:type_name -> bookmarks.v1.Bookmark
-	6, // 1: bookmarks.v1.ListBookmarksResponse.bookmarks:type_name -> bookmarks.v1.Bookmark
-	7, // 2: bookmarks.v1.BulkCheckBookmarksResponse.bookmarked_urns:type_name -> bookmarks.v1.BulkCheckBookmarksResponse.BookmarkedUrnsEntry
-	8, // 3: bookmarks.v1.Bookmark.created_at:type_name -> google.protobuf.Timestamp
-	0, // 4: bookmarks.v1.BookmarksService.ToggleBookmark:input_type -> bookmarks.v1.ToggleBookmarkRequest
-	2, // 5: bookmarks.v1.BookmarksService.ListBookmarks:input_type -> bookmarks.v1.ListBookmarksRequest
-	4, // 6: bookmarks.v1.BookmarksService.BulkCheckBookmarks:input_type -> bookmarks.v1.BulkCheckBookmarksRequest
-	1, // 7: bookmarks.v1.BookmarksService.ToggleBookmark:output_type -> bookmarks.v1.ToggleBookmarkResponse
-	3, // 8: bookmarks.v1.BookmarksService.ListBookmarks:output_type -> bookmarks.v1.ListBookmarksResponse
-	5, // 9: bookmarks.v1.BookmarksService.BulkCheckBookmarks:output_type -> bookmarks.v1.BulkCheckBookmarksResponse
-	7, // [7:10] is the sub-list for method output_type
-	4, // [4:7] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	7,  // 0: bookmarks.v1.ToggleBookmarkResponse.bookmark:type_name -> bookmarks.v1.Bookmark
+	9,  // 1: bookmarks.v1.ListBookmarkItemsRequest.content_types:type_name -> common.v1.ContentType
+	4,  // 2: bookmarks.v1.ListBookmarkItemsResponse.items:type_name -> bookmarks.v1.BookmarkItem
+	7,  // 3: bookmarks.v1.BookmarkItem.bookmark:type_name -> bookmarks.v1.Bookmark
+	10, // 4: bookmarks.v1.BookmarkItem.content:type_name -> search.v1.UrnMetadata
+	8,  // 5: bookmarks.v1.BulkCheckBookmarksResponse.bookmarked_urns:type_name -> bookmarks.v1.BulkCheckBookmarksResponse.BookmarkedUrnsEntry
+	11, // 6: bookmarks.v1.Bookmark.created_at:type_name -> google.protobuf.Timestamp
+	0,  // 7: bookmarks.v1.BookmarksService.ToggleBookmark:input_type -> bookmarks.v1.ToggleBookmarkRequest
+	2,  // 8: bookmarks.v1.BookmarksService.ListBookmarkItems:input_type -> bookmarks.v1.ListBookmarkItemsRequest
+	5,  // 9: bookmarks.v1.BookmarksService.BulkCheckBookmarks:input_type -> bookmarks.v1.BulkCheckBookmarksRequest
+	1,  // 10: bookmarks.v1.BookmarksService.ToggleBookmark:output_type -> bookmarks.v1.ToggleBookmarkResponse
+	3,  // 11: bookmarks.v1.BookmarksService.ListBookmarkItems:output_type -> bookmarks.v1.ListBookmarkItemsResponse
+	6,  // 12: bookmarks.v1.BookmarksService.BulkCheckBookmarks:output_type -> bookmarks.v1.BulkCheckBookmarksResponse
+	10, // [10:13] is the sub-list for method output_type
+	7,  // [7:10] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_bookmarks_v1_bookmarks_proto_init() }
@@ -520,13 +587,15 @@ func file_bookmarks_v1_bookmarks_proto_init() {
 	if File_bookmarks_v1_bookmarks_proto != nil {
 		return
 	}
+	file_bookmarks_v1_bookmarks_proto_msgTypes[2].OneofWrappers = []any{}
+	file_bookmarks_v1_bookmarks_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_bookmarks_v1_bookmarks_proto_rawDesc), len(file_bookmarks_v1_bookmarks_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

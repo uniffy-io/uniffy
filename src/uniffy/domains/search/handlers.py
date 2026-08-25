@@ -6,6 +6,9 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.search.v1.search_pb2 import (
+    ContentGraphEdge,
+    GetContentGraphRequest,
+    GetContentGraphResponse,
     GetReferencesRequest,
     GetReferencesResponse,
     ResolveUrnsRequest,
@@ -168,6 +171,35 @@ class SearchHandlers:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
             logger.exception(f"Error getting references: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def get_content_graph(
+        self,
+        request: GetContentGraphRequest,
+        ctx: RequestContext,
+    ) -> GetContentGraphResponse:
+        user_id = get_user_id_from_context(ctx)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
+
+        try:
+            async with open_session() as session:
+                ops = SearchOperations(session)
+                edges, truncated = await ops.get_content_graph(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                )
+
+            return GetContentGraphResponse(
+                edges=[ContentGraphEdge(source_urn=s, target_urn=t) for s, t in edges],
+                truncated=truncated,
+            )
+
+        except ConnectError:
+            raise
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except Exception:
+            logger.exception("Content graph build failed")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def resolve_urns(

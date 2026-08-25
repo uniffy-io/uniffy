@@ -4,19 +4,15 @@ import { unaryTransport } from "@/config/api";
 import {
   TagsService,
   AssignTagsRequestSchema,
-  CreateSavedFilterRequestSchema,
   CreateTagRequestSchema,
-  DeleteSavedFilterRequestSchema,
   DeleteTagRequestSchema,
   GetTagRequestSchema,
   GetTagsForUrnsRequestSchema,
   ListContentByTagRequestSchema,
-  ListSavedFiltersRequestSchema,
   ListTagsRequestSchema,
   MergeTagsRequestSchema,
   SuggestTagsRequestSchema,
   UnassignTagsRequestSchema,
-  UpdateSavedFilterRequestSchema,
   UpdateTagRequestSchema,
 } from "@uniffy/proto/tags/v1/tags_pb";
 
@@ -44,13 +40,4 @@ export const tagsApi = {
     tagsClient.getTagsForUrns(request),
   listContentByTag: (request: MessageInitShape<typeof ListContentByTagRequestSchema>) =>
     tagsClient.listContentByTag(request),
-
-  createSavedFilter: (request: MessageInitShape<typeof CreateSavedFilterRequestSchema>) =>
-    tagsClient.createSavedFilter(request),
-  updateSavedFilter: (request: MessageInitShape<typeof UpdateSavedFilterRequestSchema>) =>
-    tagsClient.updateSavedFilter(request),
-  deleteSavedFilter: (request: MessageInitShape<typeof DeleteSavedFilterRequestSchema>) =>
-    tagsClient.deleteSavedFilter(request),
-  listSavedFilters: (request: MessageInitShape<typeof ListSavedFiltersRequestSchema>) =>
-    tagsClient.listSavedFilters(request),
 };

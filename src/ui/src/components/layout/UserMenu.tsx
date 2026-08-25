@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
+  Books,
   SignOut,
   Moon,
   ShieldCheck,
@@ -9,7 +10,6 @@ import {
   Desktop,
   UserCircle,
   UsersThree,
-  Tag as TagIcon,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { logout } from "@/features/auth/store/authSlice";
@@ -17,7 +17,7 @@ import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree } from "@/features/notes/store/notesTreeSlice";
 import { clearNotesCache } from "@/features/notes";
-import { clearBookmarks } from "@/features/bookmarks";
+import { clearLibraryScope } from "@/features/library/store/clearLibraryScope";
 import { clearNotifications } from "@/features/notifications";
 import { cancelRecording } from "@/features/recording";
 import { clearPresence, useCustomStatus } from "@/features/presence";
@@ -139,7 +139,7 @@ export function UserMenu() {
     dispatch(resetSettings());
     dispatch(clearNotes());
     dispatch(clearTree());
-    dispatch(clearBookmarks());
+    clearLibraryScope(dispatch);
     dispatch(clearNotifications());
     dispatch(clearPresence());
     dispatch(clearPermissions());
@@ -279,18 +279,18 @@ export function UserMenu() {
 
             <button
               onClick={() => {
-                navigate("/tags");
+                navigate("/library");
                 setIsOpen(false);
               }}
               className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
             >
               <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
-              <TagIcon
+              <Books
                 size={16}
                 weight="duotone"
                 className="text-muted-foreground group-hover:text-primary transition-colors duration-200"
               />
-              <span>Tags</span>
+              <span>Library</span>
             </button>
 
             <button

@@ -1,15 +1,12 @@
-/**
- * Round-trip test for the criteria <-> URL serializer used by
- * ``useTagFilterState``. The hook itself ties into ``useSearchParams``;
- * this test exercises the pure encode/decode helpers via the public
- * functions exposed by the file.
- */
-
 import { describe, expect, it } from "vitest";
-import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
-import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { AccessMode, ContentType } from "@uniffy/proto/common/v1/common_pb";
 
-import { criteriaEquals, isCriteriaEmpty } from "@/features/tags/hooks/useTagFilterState";
+import {
+  criteriaEquals,
+  isCriteriaEmpty,
+  readLibraryTagFilterCriteria,
+  sanitizeLibraryTagFilterParams,
+} from "@/features/tags/hooks/useTagFilterState";
 import { criteriaToPlain, criteriaToProto, emptyCriteria } from "@/features/tags/store/tagsThunks";
 import { create } from "@bufbuild/protobuf";
 import { TagFilterCriteriaSchema } from "@uniffy/proto/tags/v1/tags_pb";
@@ -35,6 +32,54 @@ describe("useTagFilterState helpers", () => {
     const a = { ...emptyCriteria(), sources: ["manual" as const] };
     const b = { ...emptyCriteria(), sources: ["inline" as const] };
     expect(criteriaEquals({ ...a }, { ...b })).toBe(false);
+  });
+});
+
+describe("Library tag URL filters", () => {
+  it("reads only the visible content-type criterion", () => {
+    const criteria = readLibraryTagFilterCriteria(
+      new URLSearchParams({
+        types: String(ContentType.NOTE),
+        tags: "tag-1",
+        owners: "user-1",
+        sources: "manual",
+        createdAfter: "2026-01-01T00:00:00.000Z",
+        access: String(AccessMode.OPEN_TO_ORG),
+        untagged: "1",
+      }),
+    );
+
+    expect(criteria).toEqual({
+      ...emptyCriteria(),
+      contentTypes: [ContentType.NOTE],
+    });
+  });
+
+  it("converts legacy domain links and removes invisible criteria", () => {
+    const sanitized = sanitizeLibraryTagFilterParams(
+      new URLSearchParams({
+        domain: "file",
+        tags: "tag-1",
+        owners: "user-1",
+        sources: "inline",
+        createdBefore: "2026-12-31T00:00:00.000Z",
+        updatedAfter: "2026-06-01T00:00:00.000Z",
+        access: String(AccessMode.OWNER_ONLY),
+        untagged: "1",
+        keep: "yes",
+      }),
+    );
+
+    expect(sanitized.get("types")).toBe(String(ContentType.FILE));
+    expect(sanitized.get("domain")).toBeNull();
+    expect(sanitized.get("tags")).toBeNull();
+    expect(sanitized.get("owners")).toBeNull();
+    expect(sanitized.get("sources")).toBeNull();
+    expect(sanitized.get("createdBefore")).toBeNull();
+    expect(sanitized.get("updatedAfter")).toBeNull();
+    expect(sanitized.get("access")).toBeNull();
+    expect(sanitized.get("untagged")).toBeNull();
+    expect(sanitized.get("keep")).toBe("yes");
   });
 });
 

@@ -10,7 +10,6 @@ export function matchesQuickAccess(
   event: CalendarEvent,
   filter: QuickAccessFilter,
   now: Date,
-  bookmarkedUrns: Record<string, boolean>,
   weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1,
 ): boolean {
   switch (filter) {
@@ -24,8 +23,6 @@ export function matchesQuickAccess(
       );
     case "upcoming":
       return parseISO(event.endTime) >= now;
-    case "bookmarked":
-      return bookmarkedUrns[`urn:uniffy:content:CALENDAR_EVENT:${event.id}`] ?? false;
     default:
       return true;
   }

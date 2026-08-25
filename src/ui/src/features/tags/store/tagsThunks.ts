@@ -5,8 +5,6 @@ import { type ContentType, AccessMode as ProtoAccessMode } from "@uniffy/proto/c
 import {
   TagSort,
   TagFilterCriteriaSchema,
-  type IconValue as ProtoIconValue,
-  type SavedTagFilter as ProtoSavedTagFilter,
   type Tag,
   type TaggedContentItem,
   type TagFilterCriteria as ProtoTagFilterCriteria,
@@ -63,11 +61,6 @@ export const taggedContentItemToPlain = (item: TaggedContentItem): SerializedTag
   updatedAtMs: tsToMs(item.updatedAt),
   assignedAtMs: tsToMs(item.assignedAt),
 });
-
-export interface SerializedTagFilterIcon {
-  type: "icon" | "emoji";
-  value: string;
-}
 
 export interface SerializedTagFilterCriteria {
   tagIds: string[];
@@ -138,44 +131,6 @@ export const criteriaToProto = (
   updatedBefore: isoToTimestamp(criteria.updatedBefore),
   accessMode: criteria.accessMode ?? undefined,
   untaggedOnly: criteria.untaggedOnly,
-});
-
-export interface SerializedSavedTagFilter {
-  id: string;
-  userId: string;
-  organizationId: string;
-  name: string;
-  description: string;
-  icon: SerializedTagFilterIcon | null;
-  criteria: SerializedTagFilterCriteria;
-  sortBy: string;
-  sortOrder: string;
-  isPreset: boolean;
-  removedTagCount: number;
-  createdAt: string | null;
-  updatedAt: string | null;
-}
-
-const iconToPlain = (icon: ProtoIconValue | undefined): SerializedTagFilterIcon | null => {
-  if (!icon) return null;
-  const type = icon.type === "emoji" ? "emoji" : "icon";
-  return { type, value: icon.value };
-};
-
-export const savedFilterToPlain = (proto: ProtoSavedTagFilter): SerializedSavedTagFilter => ({
-  id: proto.id,
-  userId: proto.userId,
-  organizationId: proto.organizationId,
-  name: proto.name,
-  description: proto.description ?? "",
-  icon: iconToPlain(proto.icon),
-  criteria: criteriaToPlain(proto.criteria),
-  sortBy: proto.sortBy || "count",
-  sortOrder: proto.sortOrder || "desc",
-  isPreset: proto.isPreset,
-  removedTagCount: proto.removedTagCount,
-  createdAt: protoTimestampToIso(proto.createdAt),
-  updatedAt: protoTimestampToIso(proto.updatedAt),
 });
 
 export const suggestTagsThunk = createAsyncThunk<
@@ -338,104 +293,5 @@ export const listContentByTagThunk = createAsyncThunk<
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to list content for tag",
     );
-  }
-});
-
-const iconToProto = (icon: SerializedTagFilterIcon | null) =>
-  icon ? { type: icon.type, value: icon.value } : undefined;
-
-export const listSavedFiltersThunk = createAsyncThunk<
-  SerializedSavedTagFilter[],
-  void,
-  { state: RootState; rejectValue: string }
->("tags/listSavedFilters", async (_void, { getState, rejectWithValue }) => {
-  try {
-    const organizationId = getOrgId(getState());
-    const response = await tagsApi.listSavedFilters({
-      organizationId,
-      includePresets: true,
-    });
-    return response.filters.map(savedFilterToPlain);
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to list saved filters");
-  }
-});
-
-export const createSavedFilterThunk = createAsyncThunk<
-  SerializedSavedTagFilter,
-  {
-    name: string;
-    description?: string;
-    icon?: SerializedTagFilterIcon | null;
-    criteria: SerializedTagFilterCriteria;
-    sortBy?: string;
-    sortOrder?: string;
-  },
-  { state: RootState; rejectValue: string }
->("tags/createSavedFilter", async (params, { getState, rejectWithValue }) => {
-  try {
-    const organizationId = getOrgId(getState());
-    const response = await tagsApi.createSavedFilter({
-      organizationId,
-      name: params.name,
-      description: params.description ?? "",
-      icon: iconToProto(params.icon ?? null),
-      criteria: criteriaToProto(params.criteria),
-      sortBy: params.sortBy ?? "count",
-      sortOrder: params.sortOrder ?? "desc",
-    });
-    if (!response.filter) return rejectWithValue("No filter returned");
-    return savedFilterToPlain(response.filter);
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to save filter");
-  }
-});
-
-export const updateSavedFilterThunk = createAsyncThunk<
-  SerializedSavedTagFilter,
-  {
-    filterId: string;
-    name?: string;
-    description?: string;
-    icon?: SerializedTagFilterIcon | null;
-    criteria?: SerializedTagFilterCriteria;
-    sortBy?: string;
-    sortOrder?: string;
-  },
-  { state: RootState; rejectValue: string }
->("tags/updateSavedFilter", async (params, { getState, rejectWithValue }) => {
-  try {
-    const organizationId = getOrgId(getState());
-    const response = await tagsApi.updateSavedFilter({
-      organizationId,
-      filterId: params.filterId,
-      name: params.name,
-      description: params.description,
-      icon: params.icon === undefined ? undefined : iconToProto(params.icon),
-      criteria: params.criteria ? criteriaToProto(params.criteria) : undefined,
-      sortBy: params.sortBy,
-      sortOrder: params.sortOrder,
-    });
-    if (!response.filter) return rejectWithValue("No filter returned");
-    return savedFilterToPlain(response.filter);
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to update filter");
-  }
-});
-
-export const deleteSavedFilterThunk = createAsyncThunk<
-  string,
-  { filterId: string },
-  { state: RootState; rejectValue: string }
->("tags/deleteSavedFilter", async (params, { getState, rejectWithValue }) => {
-  try {
-    const organizationId = getOrgId(getState());
-    await tagsApi.deleteSavedFilter({
-      organizationId,
-      filterId: params.filterId,
-    });
-    return params.filterId;
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to delete filter");
   }
 });

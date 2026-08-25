@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Hash, Trash } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
@@ -20,6 +20,7 @@ import {
   clearEditingMessage,
   setEditingMessage,
 } from "@/features/chat/store/chatUiSlice";
+import { useBookmarkStatuses } from "@/features/bookmarks";
 import { selectMessagesForChannel } from "@/features/chat/store/chatMessagesSlice";
 import { useDraftSync } from "@/features/chat/hooks/useDraftSync";
 import { attachmentsApi } from "@/features/files/api/attachmentsApi";
@@ -66,6 +67,12 @@ export function ChannelView({
       ? (state.agents.agents[activeChannel.agentId] ?? null)
       : null,
   );
+
+  const messageBookmarkUrns = useMemo(
+    () => messageIds?.map((id) => `urn:uniffy:content:CHAT_MESSAGE:${id}`) ?? [],
+    [messageIds],
+  );
+  useBookmarkStatuses(messageBookmarkUrns);
 
   const isAgentDm = !!activeChannel?.isAgentDm && !!activeChannel?.agentId;
   let heroPhase: "off" | "pending" | "hero" = "off";

@@ -208,6 +208,6 @@ Attachments link a file to content via a generic `(content_type, content_id)` ro
 
 ## Shared systems (pointers)
 
-- **Bookmarks** (`domains/bookmarks/`, `bookmarks` table, unique `(user_id, urn)`): no `is_pinned` / `is_starred` / `is_favorite` fields on content models.
+- **Bookmarks** (`domains/bookmarks/`, `bookmarks` table, unique `(user_id, organization_id, urn)`): no `is_pinned` / `is_starred` / `is_favorite` fields on content models.
 - **Keyboard shortcuts**: backend is the source of truth - `domains/settings/defaults.py::DEFAULT_KEYBOARD_SHORTCUTS`.
 - **Search indexing**: through `BaseContentOperations._index_for_search`; mention live-state contract in `.agents/rules/mentions.md`.

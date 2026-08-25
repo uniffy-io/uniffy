@@ -57,11 +57,13 @@ export function useNotesList(filter: string) {
         .filter((n) => n.nodeType !== NodeType.FOLDER);
 
       if (filter === "Favorites") {
-        const bookmarksResponse = await bookmarksApi.listBookmarks({
+        const urns = notes.map((n) => `urn:uniffy:content:NOTE:${n.id}`);
+        if (urns.length === 0) return notes;
+        const checked = await bookmarksApi.bulkCheckBookmarks({
           organizationId: organizationId!,
+          urns,
         });
-        const bookmarkedUrns = new Set(bookmarksResponse.bookmarks.map((b) => b.urn));
-        return notes.filter((n) => bookmarkedUrns.has(`urn:uniffy:content:NOTE:${n.id}`));
+        return notes.filter((n) => checked.bookmarkedUrns[`urn:uniffy:content:NOTE:${n.id}`]);
       }
 
       return notes;

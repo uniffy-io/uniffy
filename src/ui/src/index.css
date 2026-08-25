@@ -361,6 +361,101 @@
   animation: mention-live-pulse 2.5s ease-in-out 3;
 }
 
+/* Bookmarks - ribbon filters and collection cards */
+@keyframes bookmark-ribbon-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bookmark-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.bookmark-ribbon {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 9px), 0 100%);
+  animation: bookmark-ribbon-drop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes bookmark-ribbon-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Side-rail variant: ribbon reads left-to-right with the notch cut into its free end. */
+.bookmark-ribbon-side {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 50%, 100% 100%, 0 100%);
+  animation: bookmark-ribbon-slide 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bookmark-card-marker {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 5px), 0 100%);
+}
+
+.bookmark-card-enter {
+  animation: bookmark-card-enter 0.4s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bookmark-ribbon,
+  .bookmark-ribbon-side,
+  .bookmark-card-enter {
+    animation: none;
+  }
+  .library-card-cell:hover .mention-expanded-card,
+  .library-card-cell:focus-within .mention-expanded-card {
+    transform: none;
+  }
+}
+
+/* Library grid only: pin every expanded mention card to one uniform footprint.
+   The card component itself stays flow-sized everywhere else. */
+.library-card-cell {
+  height: 100%;
+}
+.library-card-cell .mention-expanded-card {
+  height: 100%;
+  max-width: none;
+  margin-block: 0;
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.library-card-cell:hover .mention-expanded-card,
+.library-card-cell:focus-within .mention-expanded-card {
+  transform: translateY(-2px);
+  border-color: hsl(var(--primary) / 0.35);
+  box-shadow: 0 8px 24px -12px hsl(var(--foreground) / 0.25);
+}
+.library-card-cell .mention-expanded-card > span:last-child {
+  margin-top: auto;
+}
+.library-card-cell .mention-expanded-card img {
+  max-height: 7rem;
+  object-fit: cover;
+}
+
 /* Default values (fallback) - Light theme */
 :root {
   --primary: 250 100% 64.5%;

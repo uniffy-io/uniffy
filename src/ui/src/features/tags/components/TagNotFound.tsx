@@ -23,7 +23,7 @@ export function TagNotFound({ slug }: TagNotFoundProps) {
         )}
       </p>
       <Link
-        to="/tags"
+        to="/library/tags"
         className="mt-6 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         View all tags

@@ -12,7 +12,7 @@ import {
   ListBullets,
   Hash,
   FileText,
-  Cube,
+  Graph,
   ChatCircle,
   X,
 } from "@phosphor-icons/react";
@@ -313,17 +313,28 @@ export function NotesMetadataPanel() {
         </div>
       </div>
 
-      {/* Graph View Preview */}
+      {/* Graph View */}
       <div>
         <h4 className="uppercase tracking-wider text-xs font-semibold text-muted-foreground mb-3">
           Graph View
         </h4>
-        <div className="aspect-square rounded-lg bg-muted/30 border border-dashed border-border flex items-center justify-center">
-          <div className="text-center p-4">
-            <Cube size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-2" />
-            <p className="text-xs text-muted-foreground">Graph view coming soon</p>
-          </div>
-        </div>
+        <button
+          onClick={() =>
+            navigate(
+              `/library/graph?focus=${encodeURIComponent(`urn:uniffy:content:NOTE:${currentNoteId}`)}`,
+            )
+          }
+          className="w-full flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+          data-testid="note-show-in-graph"
+        >
+          <Graph size={20} weight="duotone" className="text-primary shrink-0" />
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-medium">Show in graph</span>
+            <span className="block text-xs text-muted-foreground">
+              See how this note connects across the organization
+            </span>
+          </span>
+        </button>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Do NOT file active exploit reports here.** Email security@uniffy.io for coordinated disclosure of exploitable vulnerabilities.
+        **Do NOT file active exploit reports here.** Email security@uniffy.io, or use private vulnerability reporting from the Security tab, for coordinated disclosure of exploitable vulnerabilities. See SECURITY.md.
         This template is for hardening work, audit findings, dependency CVEs, and policy gaps that are safe to discuss publicly.
 
   - type: textarea

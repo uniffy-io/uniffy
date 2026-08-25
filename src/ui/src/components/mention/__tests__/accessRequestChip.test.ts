@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { create } from "@bufbuild/protobuf";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MentionChip, MentionChipCompact } from "@/components/mention/MentionChip";
 import {
@@ -8,10 +9,12 @@ import {
   type MentionLiveState,
 } from "@/components/mention/types";
 import { isMentionInteractiveTarget } from "@/components/editor/plugins/mention";
+import { UrnMetadataSchema } from "@uniffy/proto/search/v1/search_pb";
 
 const mocks = vi.hoisted(() => ({
   dispatch: vi.fn(),
   fetchPreview: vi.fn(),
+  useMentionState: vi.fn(() => null),
   display: "expanded",
 }));
 
@@ -22,7 +25,7 @@ vi.mock("@/app/hooks", () => ({
 }));
 
 vi.mock("@/components/mention/useMentionState", () => ({
-  useMentionState: () => null,
+  useMentionState: mocks.useMentionState,
   useMentionDisplay: () => mocks.display,
 }));
 
@@ -56,7 +59,25 @@ describe("mention access states", () => {
   beforeEach(() => {
     mocks.dispatch.mockReset();
     mocks.fetchPreview.mockReset();
+    mocks.useMentionState.mockClear();
     mocks.display = "expanded";
+  });
+
+  it("passes resolved metadata into mention-state registration", () => {
+    const resolvedMetadata = create(UrnMetadataSchema, {
+      title: "Authorized title",
+      url: "/notes/authorized",
+    });
+
+    renderToStaticMarkup(
+      createElement(MentionChip, {
+        urn: URN,
+        label: "Stored note label",
+        resolvedMetadata,
+      }),
+    );
+
+    expect(mocks.useMentionState).toHaveBeenCalledWith(URN, resolvedMetadata);
   });
 
   it("renders an expanded restricted card from the stored label only", () => {

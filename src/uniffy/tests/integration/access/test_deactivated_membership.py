@@ -503,7 +503,7 @@ class TestCalendarAttendeeFloor:
     ) -> None:
         event = await _event_with_attendee(session, access, access.peer_id)
         ops = CalendarEventOperations(session)
-        attendee_access = await ops._attendee_access_filter(access.peer_id, access.org_id)
+        attendee_access = await ops.attendee_access_filter(access.peer_id, access.org_id)
 
         visible = await session.execute(
             select(CalendarEvent.id).where(
@@ -515,7 +515,7 @@ class TestCalendarAttendeeFloor:
 
         await _deactivate(session, access, access.peer_id)
         ops = CalendarEventOperations(session)
-        attendee_access = await ops._attendee_access_filter(access.peer_id, access.org_id)
+        attendee_access = await ops.attendee_access_filter(access.peer_id, access.org_id)
 
         visible = await session.execute(
             select(CalendarEvent.id).where(

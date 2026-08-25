@@ -100,7 +100,6 @@ export interface TreeNode {
 
 interface NotesTreeState {
   tree: {
-    bookmarked: TreeNode[];
     personal: TreeNode[];
     shared: TreeNode[];
     organization: TreeNode[];
@@ -188,7 +187,6 @@ export const fetchNotesTree = createAsyncThunk<
 });
 
 const emptyTree: NotesTreeState["tree"] = {
-  bookmarked: [],
   personal: [],
   shared: [],
   organization: [],
@@ -216,10 +214,6 @@ export const notesTreeSlice = createSlice({
       state.tree = action.payload;
     },
 
-    setBookmarkedNodes: (state, action: PayloadAction<TreeNode[]>) => {
-      state.tree.bookmarked = action.payload;
-    },
-
     setPersonalNodes: (state, action: PayloadAction<TreeNode[]>) => {
       state.tree.personal = action.payload;
     },
@@ -239,7 +233,7 @@ export const notesTreeSlice = createSlice({
     addNodeToSection: (
       state,
       action: PayloadAction<{
-        section: "bookmarked" | "personal" | "shared" | "organization" | "trash";
+        section: "personal" | "shared" | "organization" | "trash";
         node: TreeNode;
         parentId?: string;
       }>,
@@ -268,13 +262,7 @@ export const notesTreeSlice = createSlice({
         return false;
       };
 
-      for (const section of [
-        "bookmarked",
-        "personal",
-        "shared",
-        "organization",
-        "trash",
-      ] as const) {
+      for (const section of ["personal", "shared", "organization", "trash"] as const) {
         if (updateAndSort(state.tree[section])) break;
       }
     },
@@ -290,13 +278,7 @@ export const notesTreeSlice = createSlice({
           }));
       };
 
-      for (const section of [
-        "bookmarked",
-        "personal",
-        "shared",
-        "organization",
-        "trash",
-      ] as const) {
+      for (const section of ["personal", "shared", "organization", "trash"] as const) {
         state.tree[section] = removeFromArray(state.tree[section]);
       }
     },
@@ -335,15 +317,9 @@ export const notesTreeSlice = createSlice({
         return ids;
       };
 
-      state.expandedNodes = ["bookmarked", "personal", "shared", "organization", "trash"];
+      state.expandedNodes = ["personal", "shared", "organization", "trash"];
 
-      for (const section of [
-        "bookmarked",
-        "personal",
-        "shared",
-        "organization",
-        "trash",
-      ] as const) {
+      for (const section of ["personal", "shared", "organization", "trash"] as const) {
         state.expandedNodes.push(...collectFolderIds(state.tree[section]));
       }
     },
@@ -424,13 +400,7 @@ export const notesTreeSlice = createSlice({
           return false;
         };
 
-        for (const section of [
-          "bookmarked",
-          "personal",
-          "shared",
-          "organization",
-          "trash",
-        ] as const) {
+        for (const section of ["personal", "shared", "organization", "trash"] as const) {
           if (updateAndSort(state.tree[section])) break;
         }
       })
@@ -449,13 +419,7 @@ export const notesTreeSlice = createSlice({
           return false;
         };
 
-        for (const section of [
-          "bookmarked",
-          "personal",
-          "shared",
-          "organization",
-          "trash",
-        ] as const) {
+        for (const section of ["personal", "shared", "organization", "trash"] as const) {
           if (updateInArray(state.tree[section])) break;
         }
       })
@@ -535,13 +499,7 @@ export const notesTreeSlice = createSlice({
               }));
           };
 
-          for (const section of [
-            "bookmarked",
-            "personal",
-            "shared",
-            "organization",
-            "trash",
-          ] as const) {
+          for (const section of ["personal", "shared", "organization", "trash"] as const) {
             state.tree[section] = removeFromArray(state.tree[section]);
           }
         } else {
@@ -562,7 +520,7 @@ export const notesTreeSlice = createSlice({
             return result;
           };
 
-          for (const section of ["bookmarked", "personal", "shared", "organization"] as const) {
+          for (const section of ["personal", "shared", "organization"] as const) {
             state.tree[section] = removeAndCapture(state.tree[section]);
           }
 
@@ -600,7 +558,7 @@ export const notesTreeSlice = createSlice({
         };
 
         let movedNode: TreeNode | null = null;
-        for (const section of ["bookmarked", "personal", "shared", "organization"] as const) {
+        for (const section of ["personal", "shared", "organization"] as const) {
           movedNode = findAndRemoveNode(state.tree[section], note.id);
           if (movedNode) break;
         }
@@ -638,7 +596,7 @@ export const notesTreeSlice = createSlice({
         };
 
         let movedNode: TreeNode | null = null;
-        for (const section of ["bookmarked", "personal", "shared", "organization"] as const) {
+        for (const section of ["personal", "shared", "organization"] as const) {
           movedNode = findAndRemoveNode(state.tree[section], noteId);
           if (movedNode) break;
         }
@@ -670,7 +628,6 @@ export const notesTreeSlice = createSlice({
 
 export const {
   setTree,
-  setBookmarkedNodes,
   setPersonalNodes,
   setSharedNodes,
   setOrganizationNodes,

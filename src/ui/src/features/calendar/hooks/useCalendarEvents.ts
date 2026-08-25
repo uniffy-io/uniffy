@@ -25,7 +25,6 @@ export function useCalendarEvents() {
   const errors = useAppSelector((state) => state.calendar.errors);
 
   const quickAccessFilter = useAppSelector((state) => state.calendarUi.quickAccessFilter);
-  const bookmarkedUrns = useAppSelector((state) => state.bookmarks.bookmarkedUrns);
 
   const selectedEventId = useAppSelector((state) => state.calendarUi.selectedEventId);
   const isEventModalOpen = useAppSelector((state) => state.calendarUi.isEventModalOpen);
@@ -37,7 +36,7 @@ export function useCalendarEvents() {
     const now = new Date();
 
     return allEvents.filter((event) => {
-      if (quickAccessFilter && !matchesQuickAccess(event, quickAccessFilter, now, bookmarkedUrns)) {
+      if (quickAccessFilter && !matchesQuickAccess(event, quickAccessFilter, now)) {
         return false;
       }
 
@@ -68,7 +67,7 @@ export function useCalendarEvents() {
 
       return true;
     });
-  }, [events, filters, quickAccessFilter, bookmarkedUrns]);
+  }, [events, filters, quickAccessFilter]);
 
   const getEventsForDate = useCallback(
     (date: Date | string) => {

@@ -158,6 +158,8 @@ async def test_bookmarkers_who_lost_access_are_dropped() -> None:
     with _roles({KEPT: ContentRole.VIEWER, DROPPED: None}):
         out = await task._resolve_recipients(session, event)
 
+    bookmark_query = session.execute.await_args_list[1].args[0]
+    assert ORG in bookmark_query.compile().params.values()
     assert out == [KEPT]
 
 

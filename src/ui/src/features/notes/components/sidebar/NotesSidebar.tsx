@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTreeStateSync } from "@/features/notes/hooks/useTreeStateSync";
 import {
-  BookmarkSimple as BookmarkSimpleIcon,
   CaretDown,
   CaretRight,
   CaretUp,
@@ -28,14 +27,13 @@ import {
   updateNodeTitle,
   expandAll,
   collapseAll,
-  setBookmarkedNodes,
   setSelectedNode,
 } from "@/features/notes/store/notesTreeSlice";
 import type { TreeNode } from "@/features/notes/store/notesTreeSlice";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useBookmarks } from "@/features/bookmarks";
+import { useBookmarkStatuses } from "@/features/bookmarks";
 import { cn } from "@/shared/utils/cn";
 import { SidebarHeader } from "@/features/notes/components/sidebar/SidebarHeader";
 import { TreeNodeItem } from "@/features/notes/components/sidebar/TreeNodeItem";
@@ -47,14 +45,13 @@ import { NotesSidebarSkeleton } from "@/features/notes/components/sidebar/NotesS
 import type { ActiveMenuState, MoveTarget } from "@/features/notes/components/sidebar/types";
 
 interface SectionConfig {
-  id: "bookmarked" | "personal" | "shared" | "organization" | "trash";
+  id: "personal" | "shared" | "organization" | "trash";
   name: string;
   icon: typeof LockSimple;
   scope?: number;
 }
 
 const SECTIONS: SectionConfig[] = [
-  { id: "bookmarked", name: "Bookmarks", icon: BookmarkSimpleIcon },
   { id: "personal", name: "Personal Space", icon: LockSimple, scope: AccessMode.OWNER_ONLY },
   { id: "shared", name: "Shared With Me", icon: UsersThree },
   { id: "organization", name: "Organization", icon: Buildings, scope: AccessMode.OPEN_TO_ORG },
@@ -84,6 +81,19 @@ function findNodeParentId(
     }
   }
   return null;
+}
+
+function visibleNoteUrns(nodes: TreeNode[], expandedNodes: Set<string>): string[] {
+  const urns: string[] = [];
+  for (const node of nodes) {
+    if (node.type !== "folder") {
+      urns.push(`urn:uniffy:content:NOTE:${node.noteId ?? node.id}`);
+    }
+    if (node.type === "folder" && expandedNodes.has(node.id) && node.children) {
+      urns.push(...visibleNoteUrns(node.children, expandedNodes));
+    }
+  }
+  return urns;
 }
 
 export function NotesSidebar() {
@@ -137,35 +147,15 @@ export function NotesSidebar() {
     }
   }, [currentNoteId, treeLoaded, tree, dispatch]);
 
-  useBookmarks();
-  const bookmarkedUrns = useAppSelector((state) => state.bookmarks.bookmarkedUrns);
+  const visibleBookmarkUrns = useMemo(() => {
+    const expanded = new Set(expandedNodes);
+    return SECTIONS.flatMap((section) =>
+      expanded.has(section.id) ? visibleNoteUrns(tree[section.id], expanded) : [],
+    );
+  }, [tree, expandedNodes]);
+  useBookmarkStatuses(visibleBookmarkUrns);
 
   useTreeStateSync();
-
-  useEffect(() => {
-    const bookmarkedNoteIds = Object.keys(bookmarkedUrns)
-      .filter((urn) => bookmarkedUrns[urn] && urn.includes(":NOTE:"))
-      .map((urn) => urn.split(":NOTE:")[1]);
-
-    const findNodeById = (nodes: TreeNode[], id: string): TreeNode | null => {
-      for (const node of nodes) {
-        if (node.id === id) return node;
-        if (node.children) {
-          const found = findNodeById(node.children, id);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const allTreeNodes = [...tree.personal, ...tree.shared, ...tree.organization];
-
-    const bookmarkedNodes: TreeNode[] = bookmarkedNoteIds
-      .map((noteId) => findNodeById(allTreeNodes, noteId))
-      .filter((node): node is TreeNode => node !== null);
-
-    dispatch(setBookmarkedNodes(bookmarkedNodes));
-  }, [bookmarkedUrns, tree.personal, tree.shared, tree.organization, dispatch]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
@@ -185,9 +175,6 @@ export function NotesSidebar() {
       if (findNodeRecursively(tree.personal, nodeId)) return AccessMode.OWNER_ONLY;
       if (findNodeRecursively(tree.organization, nodeId)) return AccessMode.OPEN_TO_ORG;
       if (findNodeRecursively(tree.shared, nodeId)) return AccessMode.OWNER_ONLY;
-
-      const inBookmarked = findNodeRecursively(tree.bookmarked, nodeId);
-      if (inBookmarked) return inBookmarked.accessMode || AccessMode.OWNER_ONLY;
 
       return AccessMode.OWNER_ONLY;
     },
@@ -351,7 +338,7 @@ export function NotesSidebar() {
   const handleCopy = useCallback(
     async (noteId: string) => {
       const visibility = findNodeVisibility(noteId);
-      const allNodes = [...tree.personal, ...tree.shared, ...tree.organization, ...tree.bookmarked];
+      const allNodes = [...tree.personal, ...tree.shared, ...tree.organization];
       const node = findNodeRecursively(allNodes, noteId);
       const title = node ? `Copy of ${node.title}` : "Copy";
 
@@ -373,7 +360,7 @@ export function NotesSidebar() {
   const handleOpenMoveDialog = useCallback(
     (nodeId: string) => {
       const visibility = findNodeVisibility(nodeId);
-      const allNodes = [...tree.personal, ...tree.shared, ...tree.organization, ...tree.bookmarked];
+      const allNodes = [...tree.personal, ...tree.shared, ...tree.organization];
       const node = findNodeRecursively(allNodes, nodeId);
       const parentId = findNodeParentId([...tree.personal, ...tree.organization], nodeId);
 
@@ -569,11 +556,7 @@ export function NotesSidebar() {
           ) : (
             <CaretRight size={16} weight="bold" className="text-muted-foreground" />
           )}
-          <SectionIcon
-            size={16}
-            weight="duotone"
-            className={config.id === "bookmarked" ? "text-primary" : "text-muted-foreground"}
-          />
+          <SectionIcon size={16} weight="duotone" className="text-muted-foreground" />
           <span className="flex-1">{config.name}</span>
           {config.scope && (
             <span className="opacity-0 group-hover:opacity-100 transition-all shrink-0 flex items-center">
@@ -658,8 +641,7 @@ export function NotesSidebar() {
           {loading &&
           tree.personal.length === 0 &&
           tree.organization.length === 0 &&
-          tree.shared.length === 0 &&
-          tree.bookmarked.length === 0 ? (
+          tree.shared.length === 0 ? (
             <NotesSidebarSkeleton />
           ) : (
             <>{SECTIONS.map(renderSection)}</>
