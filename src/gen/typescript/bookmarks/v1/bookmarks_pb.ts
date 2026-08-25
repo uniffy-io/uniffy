@@ -4,15 +4,19 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { ContentType } from "../../common/v1/common_pb.js";
+import { file_common_v1_common } from "../../common/v1/common_pb.js";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { UrnMetadata } from "../../search/v1/search_pb.js";
+import { file_search_v1_search } from "../../search/v1/search_pb.js";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file bookmarks/v1/bookmarks.proto.
  */
 export const file_bookmarks_v1_bookmarks: GenFile = /*@__PURE__*/
-  fileDesc("Chxib29rbWFya3MvdjEvYm9va21hcmtzLnByb3RvEgxib29rbWFya3MudjEiPQoVVG9nZ2xlQm9va21hcmtSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRILCgN1cm4YAiABKAkiWQoWVG9nZ2xlQm9va21hcmtSZXNwb25zZRIVCg1pc19ib29rbWFya2VkGAEgASgIEigKCGJvb2ttYXJrGAIgASgLMhYuYm9va21hcmtzLnYxLkJvb2ttYXJrIlAKFExpc3RCb29rbWFya3NSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRwYWdlGAIgASgFEhEKCXBhZ2Vfc2l6ZRgDIAEoBSJXChVMaXN0Qm9va21hcmtzUmVzcG9uc2USKQoJYm9va21hcmtzGAEgAygLMhYuYm9va21hcmtzLnYxLkJvb2ttYXJrEhMKC3RvdGFsX2NvdW50GAIgASgFIkIKGUJ1bGtDaGVja0Jvb2ttYXJrc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEgwKBHVybnMYAiADKAkiqgEKGkJ1bGtDaGVja0Jvb2ttYXJrc1Jlc3BvbnNlElUKD2Jvb2ttYXJrZWRfdXJucxgBIAMoCzI8LmJvb2ttYXJrcy52MS5CdWxrQ2hlY2tCb29rbWFya3NSZXNwb25zZS5Cb29rbWFya2VkVXJuc0VudHJ5GjUKE0Jvb2ttYXJrZWRVcm5zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgIOgI4ASJ9CghCb29rbWFyaxIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgDIAEoCRILCgN1cm4YBCABKAkSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAyuAIKEEJvb2ttYXJrc1NlcnZpY2USXQoOVG9nZ2xlQm9va21hcmsSIy5ib29rbWFya3MudjEuVG9nZ2xlQm9va21hcmtSZXF1ZXN0GiQuYm9va21hcmtzLnYxLlRvZ2dsZUJvb2ttYXJrUmVzcG9uc2UiABJaCg1MaXN0Qm9va21hcmtzEiIuYm9va21hcmtzLnYxLkxpc3RCb29rbWFya3NSZXF1ZXN0GiMuYm9va21hcmtzLnYxLkxpc3RCb29rbWFya3NSZXNwb25zZSIAEmkKEkJ1bGtDaGVja0Jvb2ttYXJrcxInLmJvb2ttYXJrcy52MS5CdWxrQ2hlY2tCb29rbWFya3NSZXF1ZXN0GiguYm9va21hcmtzLnYxLkJ1bGtDaGVja0Jvb2ttYXJrc1Jlc3BvbnNlIgBCP1o9Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL2Jvb2ttYXJrcy92MTtib29rbWFya3N2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("Chxib29rbWFya3MvdjEvYm9va21hcmtzLnByb3RvEgxib29rbWFya3MudjEiPQoVVG9nZ2xlQm9va21hcmtSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRILCgN1cm4YAiABKAkiWQoWVG9nZ2xlQm9va21hcmtSZXNwb25zZRIVCg1pc19ib29rbWFya2VkGAEgASgIEigKCGJvb2ttYXJrGAIgASgLMhYuYm9va21hcmtzLnYxLkJvb2ttYXJrIp0BChhMaXN0Qm9va21hcmtJdGVtc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEi0KDWNvbnRlbnRfdHlwZXMYAiADKA4yFi5jb21tb24udjEuQ29udGVudFR5cGUSEQoJcGFnZV9zaXplGAMgASgNEhcKCnBhZ2VfdG9rZW4YBCABKAlIAIgBAUINCgtfcGFnZV90b2tlbiJ4ChlMaXN0Qm9va21hcmtJdGVtc1Jlc3BvbnNlEikKBWl0ZW1zGAEgAygLMhouYm9va21hcmtzLnYxLkJvb2ttYXJrSXRlbRIcCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAlIAIgBAUISChBfbmV4dF9wYWdlX3Rva2VuImEKDEJvb2ttYXJrSXRlbRIoCghib29rbWFyaxgBIAEoCzIWLmJvb2ttYXJrcy52MS5Cb29rbWFyaxInCgdjb250ZW50GAIgASgLMhYuc2VhcmNoLnYxLlVybk1ldGFkYXRhIkIKGUJ1bGtDaGVja0Jvb2ttYXJrc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEgwKBHVybnMYAiADKAkiqgEKGkJ1bGtDaGVja0Jvb2ttYXJrc1Jlc3BvbnNlElUKD2Jvb2ttYXJrZWRfdXJucxgBIAMoCzI8LmJvb2ttYXJrcy52MS5CdWxrQ2hlY2tCb29rbWFya3NSZXNwb25zZS5Cb29rbWFya2VkVXJuc0VudHJ5GjUKE0Jvb2ttYXJrZWRVcm5zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgIOgI4ASJ9CghCb29rbWFyaxIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgDIAEoCRILCgN1cm4YBCABKAkSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAyxAIKEEJvb2ttYXJrc1NlcnZpY2USXQoOVG9nZ2xlQm9va21hcmsSIy5ib29rbWFya3MudjEuVG9nZ2xlQm9va21hcmtSZXF1ZXN0GiQuYm9va21hcmtzLnYxLlRvZ2dsZUJvb2ttYXJrUmVzcG9uc2UiABJmChFMaXN0Qm9va21hcmtJdGVtcxImLmJvb2ttYXJrcy52MS5MaXN0Qm9va21hcmtJdGVtc1JlcXVlc3QaJy5ib29rbWFya3MudjEuTGlzdEJvb2ttYXJrSXRlbXNSZXNwb25zZSIAEmkKEkJ1bGtDaGVja0Jvb2ttYXJrcxInLmJvb2ttYXJrcy52MS5CdWxrQ2hlY2tCb29rbWFya3NSZXF1ZXN0GiguYm9va21hcmtzLnYxLkJ1bGtDaGVja0Jvb2ttYXJrc1Jlc3BvbnNlIgBCP1o9Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL2Jvb2ttYXJrcy92MTtib29rbWFya3N2MWIGcHJvdG8z", [file_common_v1_common, file_google_protobuf_timestamp, file_search_v1_search]);
 
 /**
  * Request to toggle a bookmark
@@ -71,67 +75,80 @@ export const ToggleBookmarkResponseSchema: GenMessage<ToggleBookmarkResponse> = 
   messageDesc(file_bookmarks_v1_bookmarks, 1);
 
 /**
- * Request to list bookmarks
- *
- * @generated from message bookmarks.v1.ListBookmarksRequest
+ * @generated from message bookmarks.v1.ListBookmarkItemsRequest
  */
-export type ListBookmarksRequest = Message<"bookmarks.v1.ListBookmarksRequest"> & {
+export type ListBookmarkItemsRequest = Message<"bookmarks.v1.ListBookmarkItemsRequest"> & {
   /**
-   * Organization context
-   *
    * @generated from field: string organization_id = 1;
    */
   organizationId: string;
 
   /**
-   * Page number (1-indexed)
-   *
-   * @generated from field: int32 page = 2;
+   * @generated from field: repeated common.v1.ContentType content_types = 2;
    */
-  page: number;
+  contentTypes: ContentType[];
 
   /**
-   * Page size (default 50)
-   *
-   * @generated from field: int32 page_size = 3;
+   * @generated from field: uint32 page_size = 3;
    */
   pageSize: number;
+
+  /**
+   * @generated from field: optional string page_token = 4;
+   */
+  pageToken?: string | undefined;
 };
 
 /**
- * Describes the message bookmarks.v1.ListBookmarksRequest.
- * Use `create(ListBookmarksRequestSchema)` to create a new message.
+ * Describes the message bookmarks.v1.ListBookmarkItemsRequest.
+ * Use `create(ListBookmarkItemsRequestSchema)` to create a new message.
  */
-export const ListBookmarksRequestSchema: GenMessage<ListBookmarksRequest> = /*@__PURE__*/
+export const ListBookmarkItemsRequestSchema: GenMessage<ListBookmarkItemsRequest> = /*@__PURE__*/
   messageDesc(file_bookmarks_v1_bookmarks, 2);
 
 /**
- * Response for listing bookmarks
- *
- * @generated from message bookmarks.v1.ListBookmarksResponse
+ * @generated from message bookmarks.v1.ListBookmarkItemsResponse
  */
-export type ListBookmarksResponse = Message<"bookmarks.v1.ListBookmarksResponse"> & {
+export type ListBookmarkItemsResponse = Message<"bookmarks.v1.ListBookmarkItemsResponse"> & {
   /**
-   * List of bookmarks
-   *
-   * @generated from field: repeated bookmarks.v1.Bookmark bookmarks = 1;
+   * @generated from field: repeated bookmarks.v1.BookmarkItem items = 1;
    */
-  bookmarks: Bookmark[];
+  items: BookmarkItem[];
 
   /**
-   * Total count of bookmarks
-   *
-   * @generated from field: int32 total_count = 2;
+   * @generated from field: optional string next_page_token = 2;
    */
-  totalCount: number;
+  nextPageToken?: string | undefined;
 };
 
 /**
- * Describes the message bookmarks.v1.ListBookmarksResponse.
- * Use `create(ListBookmarksResponseSchema)` to create a new message.
+ * Describes the message bookmarks.v1.ListBookmarkItemsResponse.
+ * Use `create(ListBookmarkItemsResponseSchema)` to create a new message.
  */
-export const ListBookmarksResponseSchema: GenMessage<ListBookmarksResponse> = /*@__PURE__*/
+export const ListBookmarkItemsResponseSchema: GenMessage<ListBookmarkItemsResponse> = /*@__PURE__*/
   messageDesc(file_bookmarks_v1_bookmarks, 3);
+
+/**
+ * @generated from message bookmarks.v1.BookmarkItem
+ */
+export type BookmarkItem = Message<"bookmarks.v1.BookmarkItem"> & {
+  /**
+   * @generated from field: bookmarks.v1.Bookmark bookmark = 1;
+   */
+  bookmark?: Bookmark | undefined;
+
+  /**
+   * @generated from field: search.v1.UrnMetadata content = 2;
+   */
+  content?: UrnMetadata | undefined;
+};
+
+/**
+ * Describes the message bookmarks.v1.BookmarkItem.
+ * Use `create(BookmarkItemSchema)` to create a new message.
+ */
+export const BookmarkItemSchema: GenMessage<BookmarkItem> = /*@__PURE__*/
+  messageDesc(file_bookmarks_v1_bookmarks, 4);
 
 /**
  * Request to check multiple URNs for bookmark status
@@ -159,7 +176,7 @@ export type BulkCheckBookmarksRequest = Message<"bookmarks.v1.BulkCheckBookmarks
  * Use `create(BulkCheckBookmarksRequestSchema)` to create a new message.
  */
 export const BulkCheckBookmarksRequestSchema: GenMessage<BulkCheckBookmarksRequest> = /*@__PURE__*/
-  messageDesc(file_bookmarks_v1_bookmarks, 4);
+  messageDesc(file_bookmarks_v1_bookmarks, 5);
 
 /**
  * Response for bulk check operation
@@ -180,7 +197,7 @@ export type BulkCheckBookmarksResponse = Message<"bookmarks.v1.BulkCheckBookmark
  * Use `create(BulkCheckBookmarksResponseSchema)` to create a new message.
  */
 export const BulkCheckBookmarksResponseSchema: GenMessage<BulkCheckBookmarksResponse> = /*@__PURE__*/
-  messageDesc(file_bookmarks_v1_bookmarks, 5);
+  messageDesc(file_bookmarks_v1_bookmarks, 6);
 
 /**
  * Bookmark model
@@ -229,7 +246,7 @@ export type Bookmark = Message<"bookmarks.v1.Bookmark"> & {
  * Use `create(BookmarkSchema)` to create a new message.
  */
 export const BookmarkSchema: GenMessage<Bookmark> = /*@__PURE__*/
-  messageDesc(file_bookmarks_v1_bookmarks, 6);
+  messageDesc(file_bookmarks_v1_bookmarks, 7);
 
 /**
  * BookmarksService provides user-scoped bookmark management
@@ -248,14 +265,14 @@ export const BookmarksService: GenService<{
     output: typeof ToggleBookmarkResponseSchema;
   },
   /**
-   * List all bookmarks for the current user in an organization
+   * List authorized bookmarks with display and navigation metadata
    *
-   * @generated from rpc bookmarks.v1.BookmarksService.ListBookmarks
+   * @generated from rpc bookmarks.v1.BookmarksService.ListBookmarkItems
    */
-  listBookmarks: {
+  listBookmarkItems: {
     methodKind: "unary";
-    input: typeof ListBookmarksRequestSchema;
-    output: typeof ListBookmarksResponseSchema;
+    input: typeof ListBookmarkItemsRequestSchema;
+    output: typeof ListBookmarkItemsResponseSchema;
   },
   /**
    * Check if multiple URNs are bookmarked (bulk operation)

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -15,6 +15,14 @@ class CalendarEvent(SQLModel, table=True):
     """A calendar event with optional recurrence, attendees, and markdown description."""
 
     __tablename__ = "calendar_events"
+    __table_args__ = (
+        Index(
+            "ix_calendar_events_org_updated_refs",
+            "organization_id",
+            "updated_at",
+            postgresql_where=text("is_deleted = false AND outgoing_references IS NOT NULL"),
+        ),
+    )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
@@ -99,7 +107,6 @@ class CalendarEvent(SQLModel, table=True):
 
     @property
     def owner_id(self) -> UUID:
-        """Alias for organizer_id used by BaseContentOperations."""
         return self.organizer_id
 
     def __repr__(self) -> str:

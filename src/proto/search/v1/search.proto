@@ -16,6 +16,9 @@ service SearchService {
 
   // Resolve metadata for a batch of URNs
   rpc ResolveUrns(ResolveUrnsRequest) returns (ResolveUrnsResponse) {}
+
+  // Org-wide mention graph: URN reference edges from content the caller can access
+  rpc GetContentGraph(GetContentGraphRequest) returns (GetContentGraphResponse) {}
 }
 
 enum SearchResultType {
@@ -130,6 +133,22 @@ message ResolveUrnsRequest {
 message ResolveUrnsResponse {
   // Map of URN -> resolved metadata (missing URNs omitted)
   map<string, UrnMetadata> resolved = 1;
+}
+
+message GetContentGraphRequest {
+  string organization_id = 1;
+}
+
+// One outgoing mention: source content references target content
+message ContentGraphEdge {
+  string source_urn = 1;
+  string target_urn = 2;
+}
+
+message GetContentGraphResponse {
+  repeated ContentGraphEdge edges = 1;
+  // True when a per-type row cap clipped the edge set
+  bool truncated = 2;
 }
 
 // Lightweight metadata for a URN

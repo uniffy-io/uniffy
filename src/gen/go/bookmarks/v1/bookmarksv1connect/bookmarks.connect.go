@@ -36,9 +36,9 @@ const (
 	// BookmarksServiceToggleBookmarkProcedure is the fully-qualified name of the BookmarksService's
 	// ToggleBookmark RPC.
 	BookmarksServiceToggleBookmarkProcedure = "/bookmarks.v1.BookmarksService/ToggleBookmark"
-	// BookmarksServiceListBookmarksProcedure is the fully-qualified name of the BookmarksService's
-	// ListBookmarks RPC.
-	BookmarksServiceListBookmarksProcedure = "/bookmarks.v1.BookmarksService/ListBookmarks"
+	// BookmarksServiceListBookmarkItemsProcedure is the fully-qualified name of the BookmarksService's
+	// ListBookmarkItems RPC.
+	BookmarksServiceListBookmarkItemsProcedure = "/bookmarks.v1.BookmarksService/ListBookmarkItems"
 	// BookmarksServiceBulkCheckBookmarksProcedure is the fully-qualified name of the BookmarksService's
 	// BulkCheckBookmarks RPC.
 	BookmarksServiceBulkCheckBookmarksProcedure = "/bookmarks.v1.BookmarksService/BulkCheckBookmarks"
@@ -48,8 +48,8 @@ const (
 type BookmarksServiceClient interface {
 	// Toggle a bookmark on a URN (add if not bookmarked, remove if bookmarked)
 	ToggleBookmark(context.Context, *connect.Request[v1.ToggleBookmarkRequest]) (*connect.Response[v1.ToggleBookmarkResponse], error)
-	// List all bookmarks for the current user in an organization
-	ListBookmarks(context.Context, *connect.Request[v1.ListBookmarksRequest]) (*connect.Response[v1.ListBookmarksResponse], error)
+	// List authorized bookmarks with display and navigation metadata
+	ListBookmarkItems(context.Context, *connect.Request[v1.ListBookmarkItemsRequest]) (*connect.Response[v1.ListBookmarkItemsResponse], error)
 	// Check if multiple URNs are bookmarked (bulk operation)
 	BulkCheckBookmarks(context.Context, *connect.Request[v1.BulkCheckBookmarksRequest]) (*connect.Response[v1.BulkCheckBookmarksResponse], error)
 }
@@ -71,10 +71,10 @@ func NewBookmarksServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(bookmarksServiceMethods.ByName("ToggleBookmark")),
 			connect.WithClientOptions(opts...),
 		),
-		listBookmarks: connect.NewClient[v1.ListBookmarksRequest, v1.ListBookmarksResponse](
+		listBookmarkItems: connect.NewClient[v1.ListBookmarkItemsRequest, v1.ListBookmarkItemsResponse](
 			httpClient,
-			baseURL+BookmarksServiceListBookmarksProcedure,
-			connect.WithSchema(bookmarksServiceMethods.ByName("ListBookmarks")),
+			baseURL+BookmarksServiceListBookmarkItemsProcedure,
+			connect.WithSchema(bookmarksServiceMethods.ByName("ListBookmarkItems")),
 			connect.WithClientOptions(opts...),
 		),
 		bulkCheckBookmarks: connect.NewClient[v1.BulkCheckBookmarksRequest, v1.BulkCheckBookmarksResponse](
@@ -89,7 +89,7 @@ func NewBookmarksServiceClient(httpClient connect.HTTPClient, baseURL string, op
 // bookmarksServiceClient implements BookmarksServiceClient.
 type bookmarksServiceClient struct {
 	toggleBookmark     *connect.Client[v1.ToggleBookmarkRequest, v1.ToggleBookmarkResponse]
-	listBookmarks      *connect.Client[v1.ListBookmarksRequest, v1.ListBookmarksResponse]
+	listBookmarkItems  *connect.Client[v1.ListBookmarkItemsRequest, v1.ListBookmarkItemsResponse]
 	bulkCheckBookmarks *connect.Client[v1.BulkCheckBookmarksRequest, v1.BulkCheckBookmarksResponse]
 }
 
@@ -98,9 +98,9 @@ func (c *bookmarksServiceClient) ToggleBookmark(ctx context.Context, req *connec
 	return c.toggleBookmark.CallUnary(ctx, req)
 }
 
-// ListBookmarks calls bookmarks.v1.BookmarksService.ListBookmarks.
-func (c *bookmarksServiceClient) ListBookmarks(ctx context.Context, req *connect.Request[v1.ListBookmarksRequest]) (*connect.Response[v1.ListBookmarksResponse], error) {
-	return c.listBookmarks.CallUnary(ctx, req)
+// ListBookmarkItems calls bookmarks.v1.BookmarksService.ListBookmarkItems.
+func (c *bookmarksServiceClient) ListBookmarkItems(ctx context.Context, req *connect.Request[v1.ListBookmarkItemsRequest]) (*connect.Response[v1.ListBookmarkItemsResponse], error) {
+	return c.listBookmarkItems.CallUnary(ctx, req)
 }
 
 // BulkCheckBookmarks calls bookmarks.v1.BookmarksService.BulkCheckBookmarks.
@@ -112,8 +112,8 @@ func (c *bookmarksServiceClient) BulkCheckBookmarks(ctx context.Context, req *co
 type BookmarksServiceHandler interface {
 	// Toggle a bookmark on a URN (add if not bookmarked, remove if bookmarked)
 	ToggleBookmark(context.Context, *connect.Request[v1.ToggleBookmarkRequest]) (*connect.Response[v1.ToggleBookmarkResponse], error)
-	// List all bookmarks for the current user in an organization
-	ListBookmarks(context.Context, *connect.Request[v1.ListBookmarksRequest]) (*connect.Response[v1.ListBookmarksResponse], error)
+	// List authorized bookmarks with display and navigation metadata
+	ListBookmarkItems(context.Context, *connect.Request[v1.ListBookmarkItemsRequest]) (*connect.Response[v1.ListBookmarkItemsResponse], error)
 	// Check if multiple URNs are bookmarked (bulk operation)
 	BulkCheckBookmarks(context.Context, *connect.Request[v1.BulkCheckBookmarksRequest]) (*connect.Response[v1.BulkCheckBookmarksResponse], error)
 }
@@ -131,10 +131,10 @@ func NewBookmarksServiceHandler(svc BookmarksServiceHandler, opts ...connect.Han
 		connect.WithSchema(bookmarksServiceMethods.ByName("ToggleBookmark")),
 		connect.WithHandlerOptions(opts...),
 	)
-	bookmarksServiceListBookmarksHandler := connect.NewUnaryHandler(
-		BookmarksServiceListBookmarksProcedure,
-		svc.ListBookmarks,
-		connect.WithSchema(bookmarksServiceMethods.ByName("ListBookmarks")),
+	bookmarksServiceListBookmarkItemsHandler := connect.NewUnaryHandler(
+		BookmarksServiceListBookmarkItemsProcedure,
+		svc.ListBookmarkItems,
+		connect.WithSchema(bookmarksServiceMethods.ByName("ListBookmarkItems")),
 		connect.WithHandlerOptions(opts...),
 	)
 	bookmarksServiceBulkCheckBookmarksHandler := connect.NewUnaryHandler(
@@ -147,8 +147,8 @@ func NewBookmarksServiceHandler(svc BookmarksServiceHandler, opts ...connect.Han
 		switch r.URL.Path {
 		case BookmarksServiceToggleBookmarkProcedure:
 			bookmarksServiceToggleBookmarkHandler.ServeHTTP(w, r)
-		case BookmarksServiceListBookmarksProcedure:
-			bookmarksServiceListBookmarksHandler.ServeHTTP(w, r)
+		case BookmarksServiceListBookmarkItemsProcedure:
+			bookmarksServiceListBookmarkItemsHandler.ServeHTTP(w, r)
 		case BookmarksServiceBulkCheckBookmarksProcedure:
 			bookmarksServiceBulkCheckBookmarksHandler.ServeHTTP(w, r)
 		default:
@@ -164,8 +164,8 @@ func (UnimplementedBookmarksServiceHandler) ToggleBookmark(context.Context, *con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bookmarks.v1.BookmarksService.ToggleBookmark is not implemented"))
 }
 
-func (UnimplementedBookmarksServiceHandler) ListBookmarks(context.Context, *connect.Request[v1.ListBookmarksRequest]) (*connect.Response[v1.ListBookmarksResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bookmarks.v1.BookmarksService.ListBookmarks is not implemented"))
+func (UnimplementedBookmarksServiceHandler) ListBookmarkItems(context.Context, *connect.Request[v1.ListBookmarkItemsRequest]) (*connect.Response[v1.ListBookmarkItemsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bookmarks.v1.BookmarksService.ListBookmarkItems is not implemented"))
 }
 
 func (UnimplementedBookmarksServiceHandler) BulkCheckBookmarks(context.Context, *connect.Request[v1.BulkCheckBookmarksRequest]) (*connect.Response[v1.BulkCheckBookmarksResponse], error) {

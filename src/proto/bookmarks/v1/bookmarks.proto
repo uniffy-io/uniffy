@@ -2,7 +2,9 @@ syntax = "proto3";
 
 package bookmarks.v1;
 
+import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
+import "search/v1/search.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/bookmarks/v1;bookmarksv1";
 
@@ -11,8 +13,8 @@ service BookmarksService {
   // Toggle a bookmark on a URN (add if not bookmarked, remove if bookmarked)
   rpc ToggleBookmark(ToggleBookmarkRequest) returns (ToggleBookmarkResponse) {}
 
-  // List all bookmarks for the current user in an organization
-  rpc ListBookmarks(ListBookmarksRequest) returns (ListBookmarksResponse) {}
+  // List authorized bookmarks with display and navigation metadata
+  rpc ListBookmarkItems(ListBookmarkItemsRequest) returns (ListBookmarkItemsResponse) {}
 
   // Check if multiple URNs are bookmarked (bulk operation)
   rpc BulkCheckBookmarks(BulkCheckBookmarksRequest) returns (BulkCheckBookmarksResponse) {}
@@ -34,22 +36,21 @@ message ToggleBookmarkResponse {
   Bookmark bookmark = 2;
 }
 
-// Request to list bookmarks
-message ListBookmarksRequest {
-  // Organization context
+message ListBookmarkItemsRequest {
   string organization_id = 1;
-  // Page number (1-indexed)
-  int32 page = 2;
-  // Page size (default 50)
-  int32 page_size = 3;
+  repeated common.v1.ContentType content_types = 2;
+  uint32 page_size = 3;
+  optional string page_token = 4;
 }
 
-// Response for listing bookmarks
-message ListBookmarksResponse {
-  // List of bookmarks
-  repeated Bookmark bookmarks = 1;
-  // Total count of bookmarks
-  int32 total_count = 2;
+message ListBookmarkItemsResponse {
+  repeated BookmarkItem items = 1;
+  optional string next_page_token = 2;
+}
+
+message BookmarkItem {
+  Bookmark bookmark = 1;
+  search.v1.UrnMetadata content = 2;
 }
 
 // Request to check multiple URNs for bookmark status

@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	BookmarksService_ToggleBookmark_FullMethodName     = "/bookmarks.v1.BookmarksService/ToggleBookmark"
-	BookmarksService_ListBookmarks_FullMethodName      = "/bookmarks.v1.BookmarksService/ListBookmarks"
+	BookmarksService_ListBookmarkItems_FullMethodName  = "/bookmarks.v1.BookmarksService/ListBookmarkItems"
 	BookmarksService_BulkCheckBookmarks_FullMethodName = "/bookmarks.v1.BookmarksService/BulkCheckBookmarks"
 )
 
@@ -32,8 +32,8 @@ const (
 type BookmarksServiceClient interface {
 	// Toggle a bookmark on a URN (add if not bookmarked, remove if bookmarked)
 	ToggleBookmark(ctx context.Context, in *ToggleBookmarkRequest, opts ...grpc.CallOption) (*ToggleBookmarkResponse, error)
-	// List all bookmarks for the current user in an organization
-	ListBookmarks(ctx context.Context, in *ListBookmarksRequest, opts ...grpc.CallOption) (*ListBookmarksResponse, error)
+	// List authorized bookmarks with display and navigation metadata
+	ListBookmarkItems(ctx context.Context, in *ListBookmarkItemsRequest, opts ...grpc.CallOption) (*ListBookmarkItemsResponse, error)
 	// Check if multiple URNs are bookmarked (bulk operation)
 	BulkCheckBookmarks(ctx context.Context, in *BulkCheckBookmarksRequest, opts ...grpc.CallOption) (*BulkCheckBookmarksResponse, error)
 }
@@ -56,10 +56,10 @@ func (c *bookmarksServiceClient) ToggleBookmark(ctx context.Context, in *ToggleB
 	return out, nil
 }
 
-func (c *bookmarksServiceClient) ListBookmarks(ctx context.Context, in *ListBookmarksRequest, opts ...grpc.CallOption) (*ListBookmarksResponse, error) {
+func (c *bookmarksServiceClient) ListBookmarkItems(ctx context.Context, in *ListBookmarkItemsRequest, opts ...grpc.CallOption) (*ListBookmarkItemsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListBookmarksResponse)
-	err := c.cc.Invoke(ctx, BookmarksService_ListBookmarks_FullMethodName, in, out, cOpts...)
+	out := new(ListBookmarkItemsResponse)
+	err := c.cc.Invoke(ctx, BookmarksService_ListBookmarkItems_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +84,8 @@ func (c *bookmarksServiceClient) BulkCheckBookmarks(ctx context.Context, in *Bul
 type BookmarksServiceServer interface {
 	// Toggle a bookmark on a URN (add if not bookmarked, remove if bookmarked)
 	ToggleBookmark(context.Context, *ToggleBookmarkRequest) (*ToggleBookmarkResponse, error)
-	// List all bookmarks for the current user in an organization
-	ListBookmarks(context.Context, *ListBookmarksRequest) (*ListBookmarksResponse, error)
+	// List authorized bookmarks with display and navigation metadata
+	ListBookmarkItems(context.Context, *ListBookmarkItemsRequest) (*ListBookmarkItemsResponse, error)
 	// Check if multiple URNs are bookmarked (bulk operation)
 	BulkCheckBookmarks(context.Context, *BulkCheckBookmarksRequest) (*BulkCheckBookmarksResponse, error)
 	mustEmbedUnimplementedBookmarksServiceServer()
@@ -101,8 +101,8 @@ type UnimplementedBookmarksServiceServer struct{}
 func (UnimplementedBookmarksServiceServer) ToggleBookmark(context.Context, *ToggleBookmarkRequest) (*ToggleBookmarkResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ToggleBookmark not implemented")
 }
-func (UnimplementedBookmarksServiceServer) ListBookmarks(context.Context, *ListBookmarksRequest) (*ListBookmarksResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListBookmarks not implemented")
+func (UnimplementedBookmarksServiceServer) ListBookmarkItems(context.Context, *ListBookmarkItemsRequest) (*ListBookmarkItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListBookmarkItems not implemented")
 }
 func (UnimplementedBookmarksServiceServer) BulkCheckBookmarks(context.Context, *BulkCheckBookmarksRequest) (*BulkCheckBookmarksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BulkCheckBookmarks not implemented")
@@ -146,20 +146,20 @@ func _BookmarksService_ToggleBookmark_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BookmarksService_ListBookmarks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListBookmarksRequest)
+func _BookmarksService_ListBookmarkItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBookmarkItemsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BookmarksServiceServer).ListBookmarks(ctx, in)
+		return srv.(BookmarksServiceServer).ListBookmarkItems(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: BookmarksService_ListBookmarks_FullMethodName,
+		FullMethod: BookmarksService_ListBookmarkItems_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BookmarksServiceServer).ListBookmarks(ctx, req.(*ListBookmarksRequest))
+		return srv.(BookmarksServiceServer).ListBookmarkItems(ctx, req.(*ListBookmarkItemsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -194,8 +194,8 @@ var BookmarksService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _BookmarksService_ToggleBookmark_Handler,
 		},
 		{
-			MethodName: "ListBookmarks",
-			Handler:    _BookmarksService_ListBookmarks_Handler,
+			MethodName: "ListBookmarkItems",
+			Handler:    _BookmarksService_ListBookmarkItems_Handler,
 		},
 		{
 			MethodName: "BulkCheckBookmarks",

@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SearchService_Search_FullMethodName        = "/search.v1.SearchService/Search"
-	SearchService_GetReferences_FullMethodName = "/search.v1.SearchService/GetReferences"
-	SearchService_ResolveUrns_FullMethodName   = "/search.v1.SearchService/ResolveUrns"
+	SearchService_Search_FullMethodName          = "/search.v1.SearchService/Search"
+	SearchService_GetReferences_FullMethodName   = "/search.v1.SearchService/GetReferences"
+	SearchService_ResolveUrns_FullMethodName     = "/search.v1.SearchService/ResolveUrns"
+	SearchService_GetContentGraph_FullMethodName = "/search.v1.SearchService/GetContentGraph"
 )
 
 // SearchServiceClient is the client API for SearchService service.
@@ -38,6 +39,8 @@ type SearchServiceClient interface {
 	GetReferences(ctx context.Context, in *GetReferencesRequest, opts ...grpc.CallOption) (*GetReferencesResponse, error)
 	// Resolve metadata for a batch of URNs
 	ResolveUrns(ctx context.Context, in *ResolveUrnsRequest, opts ...grpc.CallOption) (*ResolveUrnsResponse, error)
+	// Org-wide mention graph: URN reference edges from content the caller can access
+	GetContentGraph(ctx context.Context, in *GetContentGraphRequest, opts ...grpc.CallOption) (*GetContentGraphResponse, error)
 }
 
 type searchServiceClient struct {
@@ -78,6 +81,16 @@ func (c *searchServiceClient) ResolveUrns(ctx context.Context, in *ResolveUrnsRe
 	return out, nil
 }
 
+func (c *searchServiceClient) GetContentGraph(ctx context.Context, in *GetContentGraphRequest, opts ...grpc.CallOption) (*GetContentGraphResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetContentGraphResponse)
+	err := c.cc.Invoke(ctx, SearchService_GetContentGraph_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SearchServiceServer is the server API for SearchService service.
 // All implementations must embed UnimplementedSearchServiceServer
 // for forward compatibility.
@@ -92,6 +105,8 @@ type SearchServiceServer interface {
 	GetReferences(context.Context, *GetReferencesRequest) (*GetReferencesResponse, error)
 	// Resolve metadata for a batch of URNs
 	ResolveUrns(context.Context, *ResolveUrnsRequest) (*ResolveUrnsResponse, error)
+	// Org-wide mention graph: URN reference edges from content the caller can access
+	GetContentGraph(context.Context, *GetContentGraphRequest) (*GetContentGraphResponse, error)
 	mustEmbedUnimplementedSearchServiceServer()
 }
 
@@ -110,6 +125,9 @@ func (UnimplementedSearchServiceServer) GetReferences(context.Context, *GetRefer
 }
 func (UnimplementedSearchServiceServer) ResolveUrns(context.Context, *ResolveUrnsRequest) (*ResolveUrnsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResolveUrns not implemented")
+}
+func (UnimplementedSearchServiceServer) GetContentGraph(context.Context, *GetContentGraphRequest) (*GetContentGraphResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetContentGraph not implemented")
 }
 func (UnimplementedSearchServiceServer) mustEmbedUnimplementedSearchServiceServer() {}
 func (UnimplementedSearchServiceServer) testEmbeddedByValue()                       {}
@@ -186,6 +204,24 @@ func _SearchService_ResolveUrns_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SearchService_GetContentGraph_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetContentGraphRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SearchServiceServer).GetContentGraph(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SearchService_GetContentGraph_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SearchServiceServer).GetContentGraph(ctx, req.(*GetContentGraphRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SearchService_ServiceDesc is the grpc.ServiceDesc for SearchService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -204,6 +240,10 @@ var SearchService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveUrns",
 			Handler:    _SearchService_ResolveUrns_Handler,
+		},
+		{
+			MethodName: "GetContentGraph",
+			Handler:    _SearchService_GetContentGraph_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

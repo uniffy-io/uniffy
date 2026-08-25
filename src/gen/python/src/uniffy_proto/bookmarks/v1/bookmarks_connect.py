@@ -21,7 +21,7 @@ class BookmarksService(Protocol):
     async def toggle_bookmark(self, request: bookmarks_dot_v1_dot_bookmarks__pb2.ToggleBookmarkRequest, ctx: RequestContext) -> bookmarks_dot_v1_dot_bookmarks__pb2.ToggleBookmarkResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def list_bookmarks(self, request: bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksRequest, ctx: RequestContext) -> bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksResponse:
+    async def list_bookmark_items(self, request: bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsRequest, ctx: RequestContext) -> bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def bulk_check_bookmarks(self, request: bookmarks_dot_v1_dot_bookmarks__pb2.BulkCheckBookmarksRequest, ctx: RequestContext) -> bookmarks_dot_v1_dot_bookmarks__pb2.BulkCheckBookmarksResponse:
@@ -43,15 +43,15 @@ class BookmarksServiceASGIApplication(ConnectASGIApplication[BookmarksService]):
                     ),
                     function=svc.toggle_bookmark,
                 ),
-                "/bookmarks.v1.BookmarksService/ListBookmarks": Endpoint.unary(
+                "/bookmarks.v1.BookmarksService/ListBookmarkItems": Endpoint.unary(
                     method=MethodInfo(
-                        name="ListBookmarks",
+                        name="ListBookmarkItems",
                         service_name="bookmarks.v1.BookmarksService",
-                        input=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksRequest,
-                        output=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksResponse,
+                        input=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsRequest,
+                        output=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=svc.list_bookmarks,
+                    function=svc.list_bookmark_items,
                 ),
                 "/bookmarks.v1.BookmarksService/BulkCheckBookmarks": Endpoint.unary(
                     method=MethodInfo(
@@ -97,20 +97,20 @@ class BookmarksServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def list_bookmarks(
+    async def list_bookmark_items(
         self,
-        request: bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksRequest,
+        request: bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksResponse:
+    ) -> bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="ListBookmarks",
+                name="ListBookmarkItems",
                 service_name="bookmarks.v1.BookmarksService",
-                input=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksRequest,
-                output=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksResponse,
+                input=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsRequest,
+                output=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -144,7 +144,7 @@ class BookmarksServiceClient(ConnectClient):
 class BookmarksServiceSync(Protocol):
     def toggle_bookmark(self, request: bookmarks_dot_v1_dot_bookmarks__pb2.ToggleBookmarkRequest, ctx: RequestContext) -> bookmarks_dot_v1_dot_bookmarks__pb2.ToggleBookmarkResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_bookmarks(self, request: bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksRequest, ctx: RequestContext) -> bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksResponse:
+    def list_bookmark_items(self, request: bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsRequest, ctx: RequestContext) -> bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def bulk_check_bookmarks(self, request: bookmarks_dot_v1_dot_bookmarks__pb2.BulkCheckBookmarksRequest, ctx: RequestContext) -> bookmarks_dot_v1_dot_bookmarks__pb2.BulkCheckBookmarksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -164,15 +164,15 @@ class BookmarksServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.toggle_bookmark,
                 ),
-                "/bookmarks.v1.BookmarksService/ListBookmarks": EndpointSync.unary(
+                "/bookmarks.v1.BookmarksService/ListBookmarkItems": EndpointSync.unary(
                     method=MethodInfo(
-                        name="ListBookmarks",
+                        name="ListBookmarkItems",
                         service_name="bookmarks.v1.BookmarksService",
-                        input=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksRequest,
-                        output=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksResponse,
+                        input=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsRequest,
+                        output=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
-                    function=service.list_bookmarks,
+                    function=service.list_bookmark_items,
                 ),
                 "/bookmarks.v1.BookmarksService/BulkCheckBookmarks": EndpointSync.unary(
                     method=MethodInfo(
@@ -218,20 +218,20 @@ class BookmarksServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
-    def list_bookmarks(
+    def list_bookmark_items(
         self,
-        request: bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksRequest,
+        request: bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksResponse:
+    ) -> bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
-                name="ListBookmarks",
+                name="ListBookmarkItems",
                 service_name="bookmarks.v1.BookmarksService",
-                input=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksRequest,
-                output=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarksResponse,
+                input=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsRequest,
+                output=bookmarks_dot_v1_dot_bookmarks__pb2.ListBookmarkItemsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

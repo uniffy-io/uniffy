@@ -32,6 +32,7 @@ from uniffy.domains.permissions.resource_access import (
     ResourceRowState,
 )
 from uniffy.domains.search.authorized_search import AuthorizedSearch, AuthorizedSearchQuery
+from uniffy.domains.search.content_graph import GRAPH_MAX_ROWS_PER_TYPE, build_content_graph
 from uniffy.domains.search.queries import (
     SearchResult,
     UrnAvailability,
@@ -178,6 +179,20 @@ class SearchOperations:
 
         return search_results, total
 
+    async def get_content_graph(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        max_rows_per_type: int = GRAPH_MAX_ROWS_PER_TYPE,
+    ) -> tuple[list[tuple[str, str]], bool]:
+        return await build_content_graph(
+            self.session,
+            self.access_query,
+            user_id,
+            organization_id,
+            max_rows_per_type,
+        )
+
     async def resolve_urns(
         self,
         user_id: UUID,
@@ -263,10 +278,10 @@ class SearchOperations:
                 resolved[urn] = raw_document
                 available[urn] = raw_document
 
-        await self._enrich_live_state(available, organization_id, user_id)
+        await self.enrich_live_state(available, organization_id, user_id)
         return resolved
 
-    async def _enrich_live_state(
+    async def enrich_live_state(
         self,
         results: dict[str, SearchResult],
         organization_id: UUID,

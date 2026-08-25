@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Enum, Index
+from sqlalchemy import Column, DateTime, Enum, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -12,14 +12,18 @@ from uniffy.core.types import AccessMode, ContentRole, NodeType, generate_id
 
 
 class Note(SQLModel, table=True):
-    """Org-scoped note. Markdown content for NOTE/TEMPLATE; `canvas_content` JSONB for CANVAS.
-
-    `outgoing_references` mirrors URNs found in body for backlink + mention indexing.
-    """
+    """An org-scoped markdown or canvas note with extracted outgoing URN references."""
 
     __tablename__ = "notes_notes"
-    # Serves the per-folder child COUNT behind note-folder mention stats.
-    __table_args__ = (Index("ix_notes_notes_parent_id_is_deleted", "parent_id", "is_deleted"),)
+    __table_args__ = (
+        Index("ix_notes_notes_parent_id_is_deleted", "parent_id", "is_deleted"),
+        Index(
+            "ix_notes_notes_org_updated_refs",
+            "organization_id",
+            "updated_at",
+            postgresql_where=text("is_deleted = false AND outgoing_references IS NOT NULL"),
+        ),
+    )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)

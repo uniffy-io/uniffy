@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Integer
+from sqlalchemy import Column, DateTime, Index, Integer, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -15,6 +15,14 @@ class Task(SQLModel, table=True):
     """Task within a project. Access policy is inherited from the parent project."""
 
     __tablename__ = "projects_tasks"
+    __table_args__ = (
+        Index(
+            "ix_projects_tasks_org_updated_refs",
+            "organization_id",
+            "updated_at",
+            postgresql_where=text("is_deleted = false AND outgoing_references IS NOT NULL"),
+        ),
+    )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     project_id: UUID = Field(foreign_key="projects_projects.id", nullable=False, index=True)

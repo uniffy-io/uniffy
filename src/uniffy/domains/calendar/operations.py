@@ -231,7 +231,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
         return result.scalar_one_or_none() is not None
 
-    async def _attendee_access_filter(self, user_id: UUID, organization_id: UUID):
+    async def attendee_access_filter(self, user_id: UUID, organization_id: UUID):
         """WHERE branch granting invitees visibility, minus explicit BLOCKED grants.
 
         The membership EXISTS is uncorrelated, so it collapses to a constant
@@ -973,7 +973,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
         permission_filter = or_(
             access_filter,
-            await self._attendee_access_filter(user_id, organization_id),
+            await self.attendee_access_filter(user_id, organization_id),
         )
 
         base_filters = [
@@ -1396,7 +1396,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         query = query.where(
             or_(
                 access_filter,
-                await self._attendee_access_filter(user_id, organization_id),
+                await self.attendee_access_filter(user_id, organization_id),
             )
         )
 

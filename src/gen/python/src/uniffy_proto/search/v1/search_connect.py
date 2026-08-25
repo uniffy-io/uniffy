@@ -27,6 +27,9 @@ class SearchService(Protocol):
     async def resolve_urns(self, request: search_dot_v1_dot_search__pb2.ResolveUrnsRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.ResolveUrnsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_content_graph(self, request: search_dot_v1_dot_search__pb2.GetContentGraphRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.GetContentGraphResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class SearchServiceASGIApplication(ConnectASGIApplication[SearchService]):
     def __init__(self, service: SearchService | AsyncGenerator[SearchService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -62,6 +65,16 @@ class SearchServiceASGIApplication(ConnectASGIApplication[SearchService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.resolve_urns,
+                ),
+                "/search.v1.SearchService/GetContentGraph": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetContentGraph",
+                        service_name="search.v1.SearchService",
+                        input=search_dot_v1_dot_search__pb2.GetContentGraphRequest,
+                        output=search_dot_v1_dot_search__pb2.GetContentGraphResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_content_graph,
                 ),
             },
             interceptors=interceptors,
@@ -137,6 +150,26 @@ class SearchServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_content_graph(
+        self,
+        request: search_dot_v1_dot_search__pb2.GetContentGraphRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> search_dot_v1_dot_search__pb2.GetContentGraphResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetContentGraph",
+                service_name="search.v1.SearchService",
+                input=search_dot_v1_dot_search__pb2.GetContentGraphRequest,
+                output=search_dot_v1_dot_search__pb2.GetContentGraphResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -147,6 +180,8 @@ class SearchServiceSync(Protocol):
     def get_references(self, request: search_dot_v1_dot_search__pb2.GetReferencesRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.GetReferencesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def resolve_urns(self, request: search_dot_v1_dot_search__pb2.ResolveUrnsRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.ResolveUrnsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_content_graph(self, request: search_dot_v1_dot_search__pb2.GetContentGraphRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.GetContentGraphResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -183,6 +218,16 @@ class SearchServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.resolve_urns,
+                ),
+                "/search.v1.SearchService/GetContentGraph": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetContentGraph",
+                        service_name="search.v1.SearchService",
+                        input=search_dot_v1_dot_search__pb2.GetContentGraphRequest,
+                        output=search_dot_v1_dot_search__pb2.GetContentGraphResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_content_graph,
                 ),
             },
             interceptors=interceptors,
@@ -252,6 +297,26 @@ class SearchServiceClientSync(ConnectClientSync):
                 service_name="search.v1.SearchService",
                 input=search_dot_v1_dot_search__pb2.ResolveUrnsRequest,
                 output=search_dot_v1_dot_search__pb2.ResolveUrnsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_content_graph(
+        self,
+        request: search_dot_v1_dot_search__pb2.GetContentGraphRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> search_dot_v1_dot_search__pb2.GetContentGraphResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetContentGraph",
+                service_name="search.v1.SearchService",
+                input=search_dot_v1_dot_search__pb2.GetContentGraphRequest,
+                output=search_dot_v1_dot_search__pb2.GetContentGraphResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
