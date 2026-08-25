@@ -1,7 +1,7 @@
 """Add status, visibility, transparency, and out-of-office to calendar events.
 
-Revision ID: 090
-Revises: 089
+Revision ID: 092
+Revises: 091
 Create Date: 2026-08-24
 
 Transparency backfill: all-day events have never blocked time in free/busy
@@ -15,8 +15,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "090"
-down_revision: str | None = "089"
+revision: str = "092"
+down_revision: str | None = "091"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

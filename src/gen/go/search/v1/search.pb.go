@@ -715,6 +715,156 @@ func (x *ResolveUrnsResponse) GetResolved() map[string]*UrnMetadata {
 	return nil
 }
 
+type GetContentGraphRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetContentGraphRequest) Reset() {
+	*x = GetContentGraphRequest{}
+	mi := &file_search_v1_search_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetContentGraphRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetContentGraphRequest) ProtoMessage() {}
+
+func (x *GetContentGraphRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_search_v1_search_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetContentGraphRequest.ProtoReflect.Descriptor instead.
+func (*GetContentGraphRequest) Descriptor() ([]byte, []int) {
+	return file_search_v1_search_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetContentGraphRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+// One outgoing mention: source content references target content
+type ContentGraphEdge struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SourceUrn     string                 `protobuf:"bytes,1,opt,name=source_urn,json=sourceUrn,proto3" json:"source_urn,omitempty"`
+	TargetUrn     string                 `protobuf:"bytes,2,opt,name=target_urn,json=targetUrn,proto3" json:"target_urn,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContentGraphEdge) Reset() {
+	*x = ContentGraphEdge{}
+	mi := &file_search_v1_search_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContentGraphEdge) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContentGraphEdge) ProtoMessage() {}
+
+func (x *ContentGraphEdge) ProtoReflect() protoreflect.Message {
+	mi := &file_search_v1_search_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContentGraphEdge.ProtoReflect.Descriptor instead.
+func (*ContentGraphEdge) Descriptor() ([]byte, []int) {
+	return file_search_v1_search_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ContentGraphEdge) GetSourceUrn() string {
+	if x != nil {
+		return x.SourceUrn
+	}
+	return ""
+}
+
+func (x *ContentGraphEdge) GetTargetUrn() string {
+	if x != nil {
+		return x.TargetUrn
+	}
+	return ""
+}
+
+type GetContentGraphResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Edges []*ContentGraphEdge    `protobuf:"bytes,1,rep,name=edges,proto3" json:"edges,omitempty"`
+	// True when a per-type row cap clipped the edge set
+	Truncated     bool `protobuf:"varint,2,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetContentGraphResponse) Reset() {
+	*x = GetContentGraphResponse{}
+	mi := &file_search_v1_search_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetContentGraphResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetContentGraphResponse) ProtoMessage() {}
+
+func (x *GetContentGraphResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_search_v1_search_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetContentGraphResponse.ProtoReflect.Descriptor instead.
+func (*GetContentGraphResponse) Descriptor() ([]byte, []int) {
+	return file_search_v1_search_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetContentGraphResponse) GetEdges() []*ContentGraphEdge {
+	if x != nil {
+		return x.Edges
+	}
+	return nil
+}
+
+func (x *GetContentGraphResponse) GetTruncated() bool {
+	if x != nil {
+		return x.Truncated
+	}
+	return false
+}
+
 // Lightweight metadata for a URN
 type UrnMetadata struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
@@ -783,7 +933,7 @@ type UrnMetadata struct {
 
 func (x *UrnMetadata) Reset() {
 	*x = UrnMetadata{}
-	mi := &file_search_v1_search_proto_msgTypes[7]
+	mi := &file_search_v1_search_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -795,7 +945,7 @@ func (x *UrnMetadata) String() string {
 func (*UrnMetadata) ProtoMessage() {}
 
 func (x *UrnMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[7]
+	mi := &file_search_v1_search_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -808,7 +958,7 @@ func (x *UrnMetadata) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UrnMetadata.ProtoReflect.Descriptor instead.
 func (*UrnMetadata) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{7}
+	return file_search_v1_search_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UrnMetadata) GetTitle() string {
@@ -1193,7 +1343,17 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\bresolved\x18\x01 \x03(\v2,.search.v1.ResolveUrnsResponse.ResolvedEntryR\bresolved\x1aS\n" +
 	"\rResolvedEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"\x82\x0e\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"A\n" +
+	"\x16GetContentGraphRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"P\n" +
+	"\x10ContentGraphEdge\x12\x1d\n" +
+	"\n" +
+	"source_urn\x18\x01 \x01(\tR\tsourceUrn\x12\x1d\n" +
+	"\n" +
+	"target_urn\x18\x02 \x01(\tR\ttargetUrn\"j\n" +
+	"\x17GetContentGraphResponse\x121\n" +
+	"\x05edges\x18\x01 \x03(\v2\x1b.search.v1.ContentGraphEdgeR\x05edges\x12\x1c\n" +
+	"\ttruncated\x18\x02 \x01(\bR\ttruncated\"\x82\x0e\n" +
 	"\vUrnMetadata\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12/\n" +
@@ -1274,11 +1434,12 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x1aURN_AVAILABILITY_AVAILABLE\x10\x01\x12\x1f\n" +
 	"\x1bURN_AVAILABILITY_RESTRICTED\x10\x02\x12\x1c\n" +
 	"\x18URN_AVAILABILITY_DELETED\x10\x03\x12 \n" +
-	"\x1cURN_AVAILABILITY_UNAVAILABLE\x10\x042\xf6\x01\n" +
+	"\x1cURN_AVAILABILITY_UNAVAILABLE\x10\x042\xd2\x02\n" +
 	"\rSearchService\x12?\n" +
 	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00\x12T\n" +
 	"\rGetReferences\x12\x1f.search.v1.GetReferencesRequest\x1a .search.v1.GetReferencesResponse\"\x00\x12N\n" +
-	"\vResolveUrns\x12\x1d.search.v1.ResolveUrnsRequest\x1a\x1e.search.v1.ResolveUrnsResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/search/v1;searchv1b\x06proto3"
+	"\vResolveUrns\x12\x1d.search.v1.ResolveUrnsRequest\x1a\x1e.search.v1.ResolveUrnsResponse\"\x00\x12Z\n" +
+	"\x0fGetContentGraph\x12!.search.v1.GetContentGraphRequest\x1a\".search.v1.GetContentGraphResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/search/v1;searchv1b\x06proto3"
 
 var (
 	file_search_v1_search_proto_rawDescOnce sync.Once
@@ -1293,48 +1454,54 @@ func file_search_v1_search_proto_rawDescGZIP() []byte {
 }
 
 var file_search_v1_search_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_search_v1_search_proto_goTypes = []any{
-	(SearchResultType)(0),         // 0: search.v1.SearchResultType
-	(UrnAvailability)(0),          // 1: search.v1.UrnAvailability
-	(*SearchRequest)(nil),         // 2: search.v1.SearchRequest
-	(*SearchResponse)(nil),        // 3: search.v1.SearchResponse
-	(*SearchResultItem)(nil),      // 4: search.v1.SearchResultItem
-	(*GetReferencesRequest)(nil),  // 5: search.v1.GetReferencesRequest
-	(*GetReferencesResponse)(nil), // 6: search.v1.GetReferencesResponse
-	(*ResolveUrnsRequest)(nil),    // 7: search.v1.ResolveUrnsRequest
-	(*ResolveUrnsResponse)(nil),   // 8: search.v1.ResolveUrnsResponse
-	(*UrnMetadata)(nil),           // 9: search.v1.UrnMetadata
-	nil,                           // 10: search.v1.SearchRequest.MetadataFiltersEntry
-	nil,                           // 11: search.v1.SearchResultItem.MetadataEntry
-	nil,                           // 12: search.v1.ResolveUrnsResponse.ResolvedEntry
-	nil,                           // 13: search.v1.UrnMetadata.MetadataEntry
+	(SearchResultType)(0),           // 0: search.v1.SearchResultType
+	(UrnAvailability)(0),            // 1: search.v1.UrnAvailability
+	(*SearchRequest)(nil),           // 2: search.v1.SearchRequest
+	(*SearchResponse)(nil),          // 3: search.v1.SearchResponse
+	(*SearchResultItem)(nil),        // 4: search.v1.SearchResultItem
+	(*GetReferencesRequest)(nil),    // 5: search.v1.GetReferencesRequest
+	(*GetReferencesResponse)(nil),   // 6: search.v1.GetReferencesResponse
+	(*ResolveUrnsRequest)(nil),      // 7: search.v1.ResolveUrnsRequest
+	(*ResolveUrnsResponse)(nil),     // 8: search.v1.ResolveUrnsResponse
+	(*GetContentGraphRequest)(nil),  // 9: search.v1.GetContentGraphRequest
+	(*ContentGraphEdge)(nil),        // 10: search.v1.ContentGraphEdge
+	(*GetContentGraphResponse)(nil), // 11: search.v1.GetContentGraphResponse
+	(*UrnMetadata)(nil),             // 12: search.v1.UrnMetadata
+	nil,                             // 13: search.v1.SearchRequest.MetadataFiltersEntry
+	nil,                             // 14: search.v1.SearchResultItem.MetadataEntry
+	nil,                             // 15: search.v1.ResolveUrnsResponse.ResolvedEntry
+	nil,                             // 16: search.v1.UrnMetadata.MetadataEntry
 }
 var file_search_v1_search_proto_depIdxs = []int32{
 	0,  // 0: search.v1.SearchRequest.type_filters:type_name -> search.v1.SearchResultType
-	10, // 1: search.v1.SearchRequest.metadata_filters:type_name -> search.v1.SearchRequest.MetadataFiltersEntry
+	13, // 1: search.v1.SearchRequest.metadata_filters:type_name -> search.v1.SearchRequest.MetadataFiltersEntry
 	0,  // 2: search.v1.SearchRequest.type_priority:type_name -> search.v1.SearchResultType
 	4,  // 3: search.v1.SearchResponse.items:type_name -> search.v1.SearchResultItem
 	0,  // 4: search.v1.SearchResultItem.type:type_name -> search.v1.SearchResultType
-	11, // 5: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
+	14, // 5: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
 	0,  // 6: search.v1.GetReferencesRequest.type_filters:type_name -> search.v1.SearchResultType
 	4,  // 7: search.v1.GetReferencesResponse.items:type_name -> search.v1.SearchResultItem
-	12, // 8: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
-	0,  // 9: search.v1.UrnMetadata.type:type_name -> search.v1.SearchResultType
-	13, // 10: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
-	1,  // 11: search.v1.UrnMetadata.availability:type_name -> search.v1.UrnAvailability
-	9,  // 12: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
-	2,  // 13: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
-	5,  // 14: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
-	7,  // 15: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
-	3,  // 16: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
-	6,  // 17: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
-	8,  // 18: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
-	16, // [16:19] is the sub-list for method output_type
-	13, // [13:16] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	15, // 8: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
+	10, // 9: search.v1.GetContentGraphResponse.edges:type_name -> search.v1.ContentGraphEdge
+	0,  // 10: search.v1.UrnMetadata.type:type_name -> search.v1.SearchResultType
+	16, // 11: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
+	1,  // 12: search.v1.UrnMetadata.availability:type_name -> search.v1.UrnAvailability
+	12, // 13: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
+	2,  // 14: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
+	5,  // 15: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
+	7,  // 16: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
+	9,  // 17: search.v1.SearchService.GetContentGraph:input_type -> search.v1.GetContentGraphRequest
+	3,  // 18: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
+	6,  // 19: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
+	8,  // 20: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
+	11, // 21: search.v1.SearchService.GetContentGraph:output_type -> search.v1.GetContentGraphResponse
+	18, // [18:22] is the sub-list for method output_type
+	14, // [14:18] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_search_v1_search_proto_init() }
@@ -1348,7 +1515,7 @@ func file_search_v1_search_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_search_v1_search_proto_rawDesc), len(file_search_v1_search_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   12,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
