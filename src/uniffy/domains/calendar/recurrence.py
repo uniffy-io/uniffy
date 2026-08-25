@@ -42,6 +42,67 @@ def resolve_event_zone(timezone: str) -> ZoneInfo:
         return ZoneInfo("UTC")
 
 
+def recurrence_end_date(recurrence_config: dict | None, timezone: str) -> date | None:
+    """Resolve the series end bound to a date in the EVENT's timezone.
+
+    The bound is stored as an instant (isoformat string) but compared against
+    occurrence dates computed in the event's own zone; reading the instant's
+    UTC date instead shifts the cut by a day near a UTC date boundary.
+    Date-only and naive values are taken verbatim.
+    """
+    raw_end = (recurrence_config or {}).get("end_date")
+    if not raw_end:
+        return None
+    if isinstance(raw_end, str):
+        raw_end = datetime.fromisoformat(raw_end)
+    if isinstance(raw_end, datetime):
+        if raw_end.tzinfo is not None:
+            return raw_end.astimezone(resolve_event_zone(timezone)).date()
+        return raw_end.date()
+    if isinstance(raw_end, date):
+        return raw_end
+    return None
+
+
+def series_end_bound(occurrence_date: date, timezone: str) -> str:
+    """Instant closing a series immediately before ``occurrence_date``.
+
+    The last instant of the preceding day in the event's zone, so
+    ``recurrence_end_date`` resolves it back to ``occurrence_date - 1`` and
+    clients render the intended local day rather than a UTC-midnight shift.
+    """
+    tz = resolve_event_zone(timezone)
+    cut_local = datetime(
+        occurrence_date.year, occurrence_date.month, occurrence_date.day, tzinfo=tz
+    ) - timedelta(seconds=1)
+    return cut_local.astimezone(ZoneInfo("UTC")).isoformat()
+
+
+def count_occurrences_through(
+    event_start_date: date,
+    pattern: RecurrencePattern,
+    recurrence_config: dict | None,
+    through: date,
+) -> int:
+    """Occurrences the series spends on or before ``through``, the master's own
+    date included. Mirrors the expander's max-occurrence accounting, so
+    cancelled exceptions still count.
+    """
+    config = recurrence_config or {}
+    dates = _generate_occurrence_dates(
+        event_start_date=event_start_date,
+        pattern=pattern,
+        interval=max(1, config.get("interval", 1)),
+        days_of_week=config.get("days_of_week"),
+        day_of_month=config.get("day_of_month"),
+        end_date=None,
+        max_occurrences=config.get("max_occurrences"),
+        range_start=event_start_date,
+        range_end=through,
+    )
+    return len(dates)
+
+
 def occurrence_start_for_date(
     start_time: datetime, timezone: str, occurrence_date: date
 ) -> datetime:
@@ -85,17 +146,7 @@ def expand_recurrence(
     config = recurrence_config
     interval = max(1, config.get("interval", 1))
 
-    # Determine end conditions
-    end_date: date | None = None
-    raw_end = config.get("end_date")
-    if raw_end:
-        if isinstance(raw_end, str):
-            end_date = datetime.fromisoformat(raw_end).date()
-        elif isinstance(raw_end, datetime):
-            end_date = raw_end.date()
-        elif isinstance(raw_end, date):
-            end_date = raw_end
-
+    end_date = recurrence_end_date(config, timezone)
     max_occurrences: int | None = config.get("max_occurrences")
 
     tz = resolve_event_zone(timezone)

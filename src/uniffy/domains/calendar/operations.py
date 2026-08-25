@@ -6,6 +6,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import String, and_, cast, delete, func, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
@@ -54,14 +55,24 @@ from uniffy.core.types import (
     RecurrenceEditScope,
     RecurrencePattern,
     SortOrder,
+    generate_id,
 )
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.recurrence import (
     OCCURRENCE_ID_SEPARATOR,
+    count_occurrences_through,
     expand_recurrence,
     occurrence_start_for_date,
+    resolve_event_zone,
+    series_end_bound,
 )
+from uniffy.domains.calendar.reminders import (
+    is_recurring_master,
+    load_exception_dates,
+    next_reminder_start,
+)
+from uniffy.domains.settings.operations import get_user_reminder_defaults
 from uniffy.domains.tags import TagAssignment, TagOperations
 
 logger = logger.bind(component="calendar.operations")
@@ -378,9 +389,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
 
         if reminders is None:
-            from uniffy.domains.settings.defaults import DEFAULT_REMINDER_INTERVALS
-
-            reminders = list(DEFAULT_REMINDER_INTERVALS)
+            reminders = await get_user_reminder_defaults(self.session, user_id)
 
         event = CalendarEvent(
             organization_id=organization_id,
@@ -434,12 +443,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             reminder_user_ids = [user_id]
             if attendee_ids:
                 reminder_user_ids.extend(aid for aid in attendee_ids if aid != user_id)
-            await self._create_reminder_rows(
-                event_id=event.id,
-                user_ids=reminder_user_ids,
-                intervals=reminders,
-                start_time=start_time,
-            )
+            await self._create_reminder_rows(event, reminder_user_ids, reminders)
 
         await self._log_activity(event.id, user_id, "created")
 
@@ -542,7 +546,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         Access-policy changes go through `permissions.v1.MembersService`.
         """
         if recurrence_edit_scope and occurrence_date:
-            if recurrence_edit_scope == RecurrenceEditScope.THIS_EVENT:
+            scoped_to_occurrences = recurrence_edit_scope in (
+                RecurrenceEditScope.THIS_EVENT,
+                RecurrenceEditScope.THIS_AND_FOLLOWING,
+            )
+            if scoped_to_occurrences:
                 real_event_id = self._parse_master_event_id(event_id)
                 updates = self._collect_update_kwargs(
                     title=title,
@@ -555,28 +563,43 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     meeting_url=meeting_url,
                     category_id=category_id,
                     is_focus_time=is_focus_time,
+                    reminders=reminders,
                 )
-                return await self.edit_single_occurrence(
-                    user_id,
-                    organization_id,
-                    real_event_id,
-                    occurrence_date,
-                    **updates,
+                # Anything else in the request would previously be dropped on
+                # the floor while the save reported success; refuse instead so
+                # every caller (mobile, agent tools) learns the scope limit.
+                unscopable = self._collect_update_kwargs(
+                    calendar_id=calendar_id,
+                    tag_ids=tag_ids,
+                    linked_resources=linked_resources,
+                    attendee_ids=attendee_ids,
+                    room_id=room_id,
+                    channel_id=channel_id,
                 )
-            elif recurrence_edit_scope == RecurrenceEditScope.THIS_AND_FOLLOWING:
-                real_event_id = self._parse_master_event_id(event_id)
-                updates = self._collect_update_kwargs(
-                    title=title,
-                    description=description,
-                    start_time=start_time,
-                    end_time=end_time,
-                    is_all_day=is_all_day,
-                    timezone=timezone,
-                    location=location,
-                    meeting_url=meeting_url,
-                    category_id=category_id,
-                    is_focus_time=is_focus_time,
-                )
+                if recurrence_edit_scope == RecurrenceEditScope.THIS_AND_FOLLOWING:
+                    if recurrence_config is not None:
+                        updates["recurrence_config"] = recurrence_config
+                elif recurrence_config is not None:
+                    unscopable["recurrence_config"] = recurrence_config
+                if unscopable:
+                    scope_label = (
+                        "a single occurrence"
+                        if recurrence_edit_scope == RecurrenceEditScope.THIS_EVENT
+                        else "this and following occurrences"
+                    )
+                    raise ValidationError(
+                        "recurrence_edit_scope",
+                        f"These changes cannot be applied to {scope_label}: "
+                        f"{', '.join(sorted(unscopable))}. Apply them to the whole series.",
+                    )
+                if recurrence_edit_scope == RecurrenceEditScope.THIS_EVENT:
+                    return await self.edit_single_occurrence(
+                        user_id,
+                        organization_id,
+                        real_event_id,
+                        occurrence_date,
+                        **updates,
+                    )
                 return await self.edit_this_and_following(
                     user_id,
                     organization_id,
@@ -649,9 +672,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             event.reminders = reminders
 
         reminders_changed = reminders is not None
-        start_changed = start_time is not None
-        if reminders_changed or start_changed:
-            effective_start = start_time if start_time is not None else event.start_time
+        schedule_changed = start_time is not None or recurrence_config is not None
+        if reminders_changed or schedule_changed:
             effective_reminders = reminders if reminders is not None else (event.reminders or [])
             await self._delete_reminder_rows(event.id)
             if effective_reminders:
@@ -664,12 +686,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 result = await self.session.execute(stmt)
                 active_user_ids = [row[0] for row in result.all()]
                 if active_user_ids:
-                    await self._create_reminder_rows(
-                        event_id=event.id,
-                        user_ids=active_user_ids,
-                        intervals=effective_reminders,
-                        start_time=effective_start,
-                    )
+                    await self._create_reminder_rows(event, active_user_ids, effective_reminders)
 
         newly_invited_ids: list[UUID] = []
         removed_attendee_ids: list[UUID] = []
@@ -890,15 +907,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     raise NotFoundError("CalendarEvent", real_event_id)
                 await self._require_delete(user_id, organization_id, master)
                 config = dict(master.recurrence_config or {})
-                end_dt = datetime(
-                    occurrence_date.year,
-                    occurrence_date.month,
-                    occurrence_date.day,
-                    tzinfo=master.start_time.tzinfo,
-                ) - timedelta(days=1)
-                config["end_date"] = end_dt.isoformat()
+                config["end_date"] = series_end_bound(occurrence_date, master.timezone or "UTC")
                 master.recurrence_config = config
                 master.updated_at = datetime.now(UTC)
+                await self._reschedule_master_reminder_rows(master)
                 await self.session.commit()
                 return True
 
@@ -1137,6 +1149,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
         self.session.add(exception)
 
+        await self._reschedule_master_reminder_rows(event)
+
         await self._log_activity(
             event_id,
             user_id,
@@ -1219,6 +1233,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         att_result = await self.session.execute(
             select(EventAttendee).where(EventAttendee.event_id == master.id)
         )
+        active_attendee_ids: list[UUID] = []
         for att in att_result.scalars().all():
             new_att = EventAttendee(
                 event_id=override.id,
@@ -1229,6 +1244,12 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 invited_via_group_id=att.invited_via_group_id,
             )
             self.session.add(new_att)
+            if att.status != AttendeeStatus.DECLINED:
+                active_attendee_ids.append(att.user_id)
+
+        if override.reminders and active_attendee_ids:
+            await self._create_reminder_rows(override, active_attendee_ids, override.reminders)
+        await self._reschedule_master_reminder_rows(master)
 
         await self._copy_tag_assignments(
             organization_id=organization_id,
@@ -1274,29 +1295,43 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             name: value for name, value in self._activity_snapshot(master).items() if name in updates
         }
 
-        config = dict(master.recurrence_config or {})
-        end_dt = datetime(
-            occurrence_date.year,
-            occurrence_date.month,
-            occurrence_date.day,
-            tzinfo=master.start_time.tzinfo,
-        ) - timedelta(days=1)
-        config["end_date"] = end_dt.isoformat()
+        event_zone = master.timezone or "UTC"
+        original_config = dict(master.recurrence_config or {})
+
+        # The new series inherits the original bounds: the original end date as
+        # is, and a max-occurrence budget minus what the old series spends.
+        new_config = dict(original_config)
+        if new_config.get("max_occurrences"):
+            consumed = count_occurrences_through(
+                master.start_time.astimezone(resolve_event_zone(event_zone)).date(),
+                master.recurrence_pattern,
+                original_config,
+                occurrence_date - timedelta(days=1),
+            )
+            remaining = int(new_config["max_occurrences"]) - consumed
+            if remaining <= 0:
+                raise ValidationError(
+                    "occurrence_date", "This occurrence is beyond the end of the series."
+                )
+            new_config["max_occurrences"] = remaining
+
+        # A rule change scoped to "this and following" defines the new series
+        # outright, bounds included, instead of inheriting the original ones.
+        new_pattern = master.recurrence_pattern
+        requested_config = updates.pop("recurrence_config", None)
+        if isinstance(requested_config, dict):
+            new_config = dict(requested_config)
+            if new_config.get("pattern"):
+                new_pattern = RecurrencePattern(new_config["pattern"])
+
+        config = dict(original_config)
+        config["end_date"] = series_end_bound(occurrence_date, event_zone)
         master.recurrence_config = config
         master.updated_at = datetime.now(UTC)
 
         duration = master.end_time - master.start_time
-        new_start = occurrence_start_for_date(
-            master.start_time, master.timezone or "UTC", occurrence_date
-        )
+        new_start = occurrence_start_for_date(master.start_time, event_zone, occurrence_date)
         new_end = new_start + duration
-
-        new_config = dict(master.recurrence_config or {})
-        original_end = (master.recurrence_config or {}).get("end_date")
-        if original_end and original_end != config["end_date"]:
-            new_config["end_date"] = original_end
-        else:
-            new_config.pop("end_date", None)
 
         new_event = CalendarEvent(
             organization_id=master.organization_id,
@@ -1317,7 +1352,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             baseline_role=master.baseline_role,
             is_focus_time=master.is_focus_time,
             linked_resources=master.linked_resources,
-            recurrence_pattern=master.recurrence_pattern,
+            recurrence_pattern=new_pattern,
             recurrence_config=new_config,
             reminders=master.reminders,
         )
@@ -1332,6 +1367,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         att_result = await self.session.execute(
             select(EventAttendee).where(EventAttendee.event_id == master.id)
         )
+        active_attendee_ids: list[UUID] = []
         for att in att_result.scalars().all():
             new_att = EventAttendee(
                 event_id=new_event.id,
@@ -1342,6 +1378,12 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 invited_via_group_id=att.invited_via_group_id,
             )
             self.session.add(new_att)
+            if att.status != AttendeeStatus.DECLINED:
+                active_attendee_ids.append(att.user_id)
+
+        if new_event.reminders and active_attendee_ids:
+            await self._create_reminder_rows(new_event, active_attendee_ids, new_event.reminders)
+        await self._reschedule_master_reminder_rows(master)
 
         await self._copy_tag_assignments(
             organization_id=organization_id,
@@ -1478,12 +1520,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 added_ids.append(attendee_id)
 
         if added_ids and event.reminders:
-            await self._create_reminder_rows(
-                event_id=event_id,
-                user_ids=added_ids,
-                intervals=event.reminders,
-                start_time=event.start_time,
-            )
+            await self._create_reminder_rows(event, added_ids, event.reminders)
 
         event.updated_at = datetime.now(UTC)
 
@@ -1603,12 +1640,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             and status in (AttendeeStatus.ACCEPTED, AttendeeStatus.TENTATIVE)
             and event.reminders
         ):
-            await self._create_reminder_rows(
-                event_id=event_id,
-                user_ids=[user_id],
-                intervals=event.reminders,
-                start_time=event.start_time,
-            )
+            await self._create_reminder_rows(event, [user_id], event.reminders)
 
         if old_status != status:
             await self._log_activity(
@@ -1723,24 +1755,80 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
     async def _create_reminder_rows(
         self,
-        event_id: UUID,
+        event: CalendarEvent,
         user_ids: list[UUID],
         intervals: list[int],
-        start_time: datetime,
     ) -> None:
+        """Write one pending row per (user, interval), anchored to the next
+        occurrence that can still remind. Upserting resets a previously sent
+        row instead of violating the (event, user, minutes) uniqueness.
+        """
         now = datetime.now(UTC)
-        for user_id in user_ids:
-            for minutes in intervals:
-                scheduled_at = start_time - timedelta(minutes=minutes)
-                if scheduled_at <= now:
-                    continue
-                reminder = EventReminder(
-                    event_id=event_id,
-                    user_id=user_id,
-                    minutes_before=minutes,
-                    scheduled_at=scheduled_at,
+        exceptions: set[date] = set()
+        if is_recurring_master(event):
+            await self.session.flush()
+            exceptions = await load_exception_dates(self.session, event.id)
+
+        values: list[dict] = []
+        for minutes in intervals:
+            anchor = next_reminder_start(event, exceptions, minutes, now)
+            if anchor is None:
+                continue
+            scheduled_at = anchor - timedelta(minutes=minutes)
+            values.extend(
+                {
+                    "id": generate_id(),
+                    "event_id": event.id,
+                    "user_id": user_id,
+                    "minutes_before": minutes,
+                    "scheduled_at": scheduled_at,
+                    "created_at": now,
+                }
+                for user_id in user_ids
+            )
+        if not values:
+            return
+
+        stmt = pg_insert(EventReminder).values(values)
+        await self.session.execute(
+            stmt.on_conflict_do_update(
+                constraint="uq_event_user_minutes",
+                set_={"scheduled_at": stmt.excluded.scheduled_at, "sent_at": None},
+            )
+        )
+
+    async def _reschedule_master_reminder_rows(self, event: CalendarEvent) -> None:
+        """Re-anchor pending rows after a series edit changes which occurrence
+        is next (cancelled or overridden occurrence, moved series end, new rule).
+        """
+        await self.session.flush()
+        result = await self.session.execute(
+            select(EventReminder).where(
+                and_(
+                    EventReminder.event_id == event.id,
+                    EventReminder.sent_at.is_(None),
                 )
-                self.session.add(reminder)
+            )
+        )
+        rows = list(result.scalars().all())
+        if not rows:
+            return
+
+        exceptions: set[date] = set()
+        if is_recurring_master(event):
+            exceptions = await load_exception_dates(self.session, event.id)
+        now = datetime.now(UTC)
+        anchors: dict[int, datetime | None] = {}
+        for row in rows:
+            if row.minutes_before not in anchors:
+                anchors[row.minutes_before] = next_reminder_start(
+                    event, exceptions, row.minutes_before, now
+                )
+            anchor = anchors[row.minutes_before]
+            if anchor is None:
+                await self.session.delete(row)
+            else:
+                row.scheduled_at = anchor - timedelta(minutes=row.minutes_before)
 
     async def _copy_tag_assignments(
         self,

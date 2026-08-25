@@ -15,6 +15,7 @@ from uniffy.core.models.settings.settings_profile import SettingsProfile
 from uniffy.core.types import NotificationType
 from uniffy.domains.notifications.cache import invalidate_cached_settings
 from uniffy.domains.settings.defaults import (
+    DEFAULT_REMINDER_INTERVALS,
     EmailFrequency,
     get_appearance_defaults_dict,
     get_effective_appearance,
@@ -25,6 +26,7 @@ from uniffy.domains.settings.defaults import (
 )
 
 _WEEK_START_VALUES = {"monday", "saturday", "sunday"}
+_MAX_REMINDER_MINUTES = 4 * 7 * 24 * 60
 _CLOCK_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 _NOTIFICATION_CHANNELS = {"in_app", "browser", "email"}
 
@@ -71,6 +73,21 @@ def _validate_notifications(notifications: dict[str, Any] | None) -> None:
     ):
         raise ValidationError("email_digest_time", "Daily digest time must use HH:MM")
 
+    intervals = notifications.get("default_reminder_intervals")
+    if intervals is not None and (
+        not isinstance(intervals, list)
+        or not all(
+            isinstance(minutes, int)
+            and not isinstance(minutes, bool)
+            and 0 <= minutes <= _MAX_REMINDER_MINUTES
+            for minutes in intervals
+        )
+    ):
+        raise ValidationError(
+            "default_reminder_intervals",
+            "Reminder intervals must be whole minutes between 0 and four weeks",
+        )
+
     channel_overrides = notifications.get("channel_overrides")
     if channel_overrides is None:
         return
@@ -102,6 +119,19 @@ async def get_user_timezone(session: AsyncSession, user_id: UUID) -> str | None:
     if not profile or not profile.appearance:
         return None
     return profile.appearance.get("timezone") or None
+
+
+async def get_user_reminder_defaults(session: AsyncSession, user_id: UUID) -> list[int]:
+    """The member's configured default reminder intervals in minutes.
+
+    An explicitly configured empty list means "no reminders" and is honored;
+    only an unset preference falls back to the global default.
+    """
+    profile = await SettingsOperations(session).get_default_profile(user_id)
+    configured = (profile.notifications or {}).get("default_reminder_intervals") if profile else None
+    if configured is None:
+        return list(DEFAULT_REMINDER_INTERVALS)
+    return [int(minutes) for minutes in configured]
 
 
 class SettingsOperations:
