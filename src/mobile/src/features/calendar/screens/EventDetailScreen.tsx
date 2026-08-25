@@ -24,14 +24,18 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
-import { RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
+import { AttendeeStatus, RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
 import { RecurrenceScopeSheet } from "@features/calendar/components/RecurrenceScopeSheet";
+import { useAuth } from "@core/providers/AuthContext";
+import { roleCanDelete, roleCanEdit } from "@shared/permissions/contentRoles";
+import { userFacingError } from "@shared/lib/userFacingError";
 import { useEvent, useCategories } from "@features/calendar/useCalendar";
 import { formatCalendarDate } from "@features/calendar/calendarSerializer";
 import {
   useAddAttendees,
   useDeleteEvent,
   useRemoveAttendees,
+  useUpdateAttendeeStatus,
 } from "@features/calendar/useCalendarMutations";
 import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
 import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
@@ -43,6 +47,12 @@ const RSVP_COLORS: Record<string, string> = {
   pending: "#909296",
   declined: "#E64980",
 };
+
+const RSVP_OPTIONS: { status: string; proto: AttendeeStatus; label: string }[] = [
+  { status: "accepted", proto: AttendeeStatus.ACCEPTED, label: "Going" },
+  { status: "tentative", proto: AttendeeStatus.TENTATIVE, label: "Maybe" },
+  { status: "declined", proto: AttendeeStatus.DECLINED, label: "Decline" },
+];
 
 // An occurrence of a recurring event is addressed as
 // `{masterId}__occurrence__{date}` - a virtual id the calendar domain expands
@@ -61,11 +71,13 @@ export function EventDetailScreen() {
   const [prejoinOpen, setPrejoinOpen] = useState(false);
   const [invitePickerOpen, setInvitePickerOpen] = useState(false);
   const [scopeAction, setScopeAction] = useState<"edit" | "delete" | null>(null);
+  const { user } = useAuth();
   const eventQuery = useEvent(id);
   const categoriesQuery = useCategories();
   const deleteEvent = useDeleteEvent();
   const addAttendees = useAddAttendees();
   const removeAttendees = useRemoveAttendees();
+  const updateAttendeeStatus = useUpdateAttendeeStatus();
   const activeMeetingCall = useActiveCall(eventQuery.data?.channelId ?? undefined);
 
   // The route param is the only place the occurrence survives: GetEvent parses
@@ -94,8 +106,15 @@ export function EventDetailScreen() {
         return;
       }
       const args = { eventId, userIds: [userId] };
-      if (isAttendee) removeAttendees.mutate(args);
-      else addAttendees.mutate(args);
+      const callbacks = {
+        onError: (error: unknown) =>
+          Alert.alert(
+            "Could not update attendees",
+            userFacingError(error, "The change was not saved."),
+          ),
+      };
+      if (isAttendee) removeAttendees.mutate(args, callbacks);
+      else addAttendees.mutate(args, callbacks);
     },
     [eventId, organizerId, addAttendees, removeAttendees],
   );
@@ -121,6 +140,13 @@ export function EventDetailScreen() {
   // Attendee ids ARE user ids (proto `Attendee.id`), so they feed the picker's
   // selection and the add/remove calls without a lookup.
   const attendeeIds = event.attendees.map((a) => a.id);
+
+  // Advisory affordance gating from the server-resolved role; the backend
+  // stays the gate either way. Without it a viewer taps Edit, the save is
+  // refused, and the app looks like it lied.
+  const canEdit = roleCanEdit(event.userRole);
+  const canDelete = roleCanDelete(event.userRole);
+  const ownAttendee = event.attendees.find((a) => a.id === user?.id);
 
   const hasMeetingUrl = !!event.meetingUrl;
   const hasChannel = !!event.channelId;
@@ -149,12 +175,28 @@ export function EventDetailScreen() {
     });
 
   const removeEvent = (scope?: RecurrenceEditScope) => {
-    deleteEvent.mutate({
-      eventId: id,
-      recurrenceEditScope: scope,
-      occurrenceDate: scope === undefined ? undefined : occurrenceDate,
-    });
-    router.back();
+    deleteEvent.mutate(
+      {
+        eventId: id,
+        recurrenceEditScope: scope,
+        occurrenceDate: scope === undefined ? undefined : occurrenceDate,
+      },
+      {
+        onSuccess: () => router.back(),
+        onError: (error) =>
+          Alert.alert("Could not delete", userFacingError(error, "The event was not deleted.")),
+      },
+    );
+  };
+
+  const respond = (status: AttendeeStatus) => {
+    updateAttendeeStatus.mutate(
+      { eventId: event.id, status },
+      {
+        onError: (error) =>
+          Alert.alert("Could not respond", userFacingError(error, "Your response was not saved.")),
+      },
+    );
   };
 
   return (
@@ -277,6 +319,37 @@ export function EventDetailScreen() {
           )}
         </View>
 
+        {ownAttendee && (
+          <View style={{ gap: 10 }}>
+            <Text style={[styles.sectionLabel, { color: T.textDim }]}>YOUR RESPONSE</Text>
+            <View style={styles.rsvpRow}>
+              {RSVP_OPTIONS.map((option) => {
+                const active = ownAttendee.status === option.status;
+                const color = RSVP_COLORS[option.status];
+                return (
+                  <TouchableOpacity
+                    key={option.status}
+                    style={[
+                      styles.rsvpOption,
+                      {
+                        borderColor: active ? color : T.border,
+                        backgroundColor: active ? color + "18" : T.surface,
+                      },
+                    ]}
+                    onPress={() => respond(option.proto)}
+                    disabled={updateAttendeeStatus.isPending}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.rsvpOptionText, { color: active ? color : T.textBright }]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         {event.attendees.length > 0 && (
           <View style={{ gap: 10 }}>
             <Text style={[styles.sectionLabel, { color: T.textDim }]}>
@@ -348,21 +421,29 @@ export function EventDetailScreen() {
         icon="calendar"
         iconColor={eventColor}
         actions={[
-          {
-            icon: "edit-2",
-            label: "Edit event",
-            onPress: () => (needsScope ? setScopeAction("edit") : editEvent()),
-          },
+          ...(canEdit
+            ? [
+                {
+                  icon: "edit-2" as const,
+                  label: "Edit event",
+                  onPress: () => (needsScope ? setScopeAction("edit") : editEvent()),
+                },
+              ]
+            : []),
           {
             icon: "at-sign",
             label: "Copy reference link",
             onPress: () => void copyReferenceLink(),
           },
-          {
-            icon: "user-plus",
-            label: "Invite more people",
-            onPress: () => setInvitePickerOpen(true),
-          },
+          ...(canEdit
+            ? [
+                {
+                  icon: "user-plus" as const,
+                  label: "Invite more people",
+                  onPress: () => setInvitePickerOpen(true),
+                },
+              ]
+            : []),
           ...(hasMeetingUrl
             ? [
                 {
@@ -408,12 +489,16 @@ export function EventDetailScreen() {
             color: bookmarked ? T.accent : undefined,
             onPress: () => toggleBookmark.mutate(eventUrn),
           },
-          {
-            icon: "trash-2" as const,
-            label: "Delete event",
-            isDanger: true,
-            onPress: () => (needsScope ? setScopeAction("delete") : removeEvent()),
-          },
+          ...(canDelete
+            ? [
+                {
+                  icon: "trash-2" as const,
+                  label: "Delete event",
+                  isDanger: true,
+                  onPress: () => (needsScope ? setScopeAction("delete") : removeEvent()),
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -505,6 +590,15 @@ const styles = StyleSheet.create({
   attendeeName: { fontSize: 14, fontFamily: FONT.medium, flex: 1 },
   rsvpBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   rsvpText: { fontSize: 11, fontFamily: FONT.medium },
+  rsvpRow: { flexDirection: "row", gap: 8 },
+  rsvpOption: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  rsvpOptionText: { fontSize: 13, fontFamily: FONT.semibold },
   linkedRow: {
     flexDirection: "row",
     alignItems: "center",

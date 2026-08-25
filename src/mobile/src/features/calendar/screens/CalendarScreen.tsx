@@ -20,11 +20,23 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
+import { useDateTimePrefs, type WeekStartDay } from "@core/datetimePrefs";
+import {
+  instantFromZonedWall,
+  localDayKey,
+  zonedDayKey,
+  zonedMinutesSinceMidnight,
+  zonedParts,
+} from "@shared/lib/zonedTime";
 import { useEventsInRange, useCategories } from "@features/calendar/useCalendar";
 import { CalendarFilterSheet } from "@features/calendar/components/CalendarFilterSheet";
 import type { SerializedEvent, SerializedCategory } from "@features/calendar/calendarSerializer";
 
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const BASE_DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function dayLabelsFrom(weekStartsOn: WeekStartDay): string[] {
+  return Array.from({ length: 7 }, (_, i) => BASE_DAY_LABELS[(weekStartsOn + i) % 7]);
+}
 
 type ViewMode = "day" | "week" | "month";
 
@@ -76,11 +88,10 @@ function minBlockHeight(fontScale: number) {
 const GRID_HEIGHT = (HOUR_END - HOUR_START) * HOUR_HEIGHT;
 const TIME_COL_WIDTH = 56;
 
-function startOfWeek(date: Date): Date {
+function startOfWeek(date: Date, weekStartsOn: WeekStartDay): Date {
   const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
+  const diff = (d.getDay() - weekStartsOn + 7) % 7;
+  d.setDate(d.getDate() - diff);
   d.setHours(0, 0, 0, 0);
   return d;
 }
@@ -131,9 +142,10 @@ function pad2(n: number): string {
 }
 
 function formatClockLabel(date: Date): string {
-  const hour = date.getHours() % 12 === 0 ? 12 : date.getHours() % 12;
-  const meridiem = date.getHours() < 12 ? "AM" : "PM";
-  return `${hour}:${pad2(date.getMinutes())} ${meridiem}`;
+  const p = zonedParts(date);
+  const hour = p.hour % 12 === 0 ? 12 : p.hour % 12;
+  const meridiem = p.hour < 12 ? "AM" : "PM";
+  return `${hour}:${pad2(p.minute)} ${meridiem}`;
 }
 
 function minutesToHHMM(min: number): string {
@@ -146,9 +158,9 @@ const SNAP_MINUTES = 15;
 const DRAFT_DURATION_MIN = 60;
 const MAX_DRAFT_START_MIN = 24 * 60 - DRAFT_DURATION_MIN;
 
+// Wall-clock position of an instant on the grid, read in the display zone.
 function getMinutesSinceMidnight(iso: string): number {
-  const d = new Date(iso);
-  return d.getHours() * 60 + d.getMinutes();
+  return zonedMinutesSinceMidnight(iso);
 }
 
 type EventSpan = { id: string; startMin: number; endMin: number };
@@ -219,12 +231,12 @@ type MonthCell = {
   isCurrentMonth: boolean;
 };
 
-function buildMonthCells(currentMonth: Date): MonthCell[] {
+function buildMonthCells(currentMonth: Date, weekStartsOn: WeekStartDay): MonthCell[] {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
-  const leadingBlanks = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+  const leadingBlanks = (firstDayOfWeek - weekStartsOn + 7) % 7;
 
   const cells: MonthCell[] = [];
 
@@ -253,27 +265,34 @@ function MonthGrid({
   T,
   currentMonth,
   selectedDate,
+  today,
   onSelectDate,
   events,
   categoriesMap,
+  weekStartsOn,
+  dayLabels,
 }: {
   T: ReturnType<typeof useTheme>;
   currentMonth: Date;
   selectedDate: Date;
+  today: Date;
   onSelectDate: (d: Date) => void;
   events: SerializedEvent[];
   categoriesMap: Map<string, SerializedCategory>;
+  weekStartsOn: WeekStartDay;
+  dayLabels: string[];
 }) {
-  const today = new Date();
-  const cells = useMemo(() => buildMonthCells(currentMonth), [currentMonth]);
+  const cells = useMemo(
+    () => buildMonthCells(currentMonth, weekStartsOn),
+    [currentMonth, weekStartsOn],
+  );
 
-  // Group events by date key "YYYY-MM-DD"
+  // Group events by the display-zone day of their start instant.
   const eventsByDate = useMemo(() => {
     const map = new Map<string, SerializedEvent[]>();
     events.forEach((e) => {
       if (!e.startTime) return;
-      const d = new Date(e.startTime);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const key = zonedDayKey(e.startTime);
       const arr = map.get(key) ?? [];
       arr.push(e);
       map.set(key, arr);
@@ -289,8 +308,8 @@ function MonthGrid({
   return (
     <View style={styles.monthGrid}>
       <View style={[styles.monthDayHeaders, { borderBottomColor: T.border }]}>
-        {DAY_LABELS.map((d, i) => (
-          <Text key={d} style={[styles.monthDayHeader, { color: i === 4 ? T.accent : T.textDim }]}>
+        {dayLabels.map((d) => (
+          <Text key={d} style={[styles.monthDayHeader, { color: T.textDim }]}>
             {d.charAt(0)}
           </Text>
         ))}
@@ -299,9 +318,7 @@ function MonthGrid({
         <View key={ri} style={[styles.monthRow, { borderBottomColor: T.border }]}>
           {row.map((cell, ci) => {
             const isToday = cell.date !== null && isSameDay(cell.date, today);
-            const dateKey = cell.date
-              ? `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`
-              : "";
+            const dateKey = cell.date ? localDayKey(cell.date) : "";
             const cellEvents = eventsByDate.get(dateKey) ?? [];
             const visibleEvents = cellEvents.slice(0, MAX_EVENTS_PER_CELL);
             const moreCount = cellEvents.length - MAX_EVENTS_PER_CELL;
@@ -374,6 +391,7 @@ function WeekGrid({
   onEventPress,
   refreshing,
   onRefresh,
+  dayLabels,
 }: {
   T: ReturnType<typeof useTheme>;
   weekDates: Date[];
@@ -387,6 +405,7 @@ function WeekGrid({
   onEventPress: (id: string) => void;
   refreshing: boolean;
   onRefresh: () => void;
+  dayLabels: string[];
 }) {
   const { width } = useWindowDimensions();
   const dayWidth = (width - TIME_COL_WIDTH) / 7;
@@ -394,8 +413,7 @@ function WeekGrid({
   const todayIdx = weekDates.findIndex((d) => isSameDay(d, today));
 
   useEffect(() => {
-    const now = new Date();
-    const y = Math.max(0, (now.getHours() - 1) * HOUR_HEIGHT);
+    const y = Math.max(0, (zonedParts(new Date()).hour - 1) * HOUR_HEIGHT);
     const t = setTimeout(() => scrollRef.current?.scrollTo({ y, animated: false }), 100);
     return () => clearTimeout(t);
   }, []);
@@ -414,7 +432,8 @@ function WeekGrid({
       width: number;
     }[] = [];
     weekDates.forEach((wd, dayIdx) => {
-      const dayEvents = events.filter((e) => e.startTime && isSameDay(new Date(e.startTime), wd));
+      const dayKey = localDayKey(wd);
+      const dayEvents = events.filter((e) => e.startTime && zonedDayKey(e.startTime) === dayKey);
       const timed = dayEvents.filter((e) => !e.isAllDay);
       const allDay = dayEvents.filter((e) => e.isAllDay);
       const spans = timed.map((e) => {
@@ -458,7 +477,8 @@ function WeekGrid({
     return out;
   }, [events, weekDates, dayWidth]);
 
-  const currentTimeTop = ((now.getHours() * 60 + now.getMinutes()) / 60) * HOUR_HEIGHT;
+  const nowParts = zonedParts(now);
+  const currentTimeTop = ((nowParts.hour * 60 + nowParts.minute) / 60) * HOUR_HEIGHT;
   const pastWidth = todayIdx * dayWidth;
   const futureWidth = (weekDates.length - 1 - todayIdx) * dayWidth;
 
@@ -477,7 +497,7 @@ function WeekGrid({
               activeOpacity={0.7}
             >
               <Text style={[styles.weekHeaderLabel, { color: isSel ? T.accent : T.textDim }]}>
-                {DAY_LABELS[i]}
+                {dayLabels[i]}
               </Text>
               <View style={[styles.weekHeaderCircle, isToday && { backgroundColor: T.accent }]}>
                 <Text
@@ -637,13 +657,26 @@ function WeekGrid({
   );
 }
 
+// The day the display zone's clock is on right now, as a calendar day token.
+function zonedTodayToken(timeZone?: string): Date {
+  const p = zonedParts(new Date(), timeZone);
+  return new Date(p.year, p.month - 1, p.day);
+}
+
+// The instant the display zone's clock reads midnight of this day token.
+function zonedStartOfDayInstant(token: Date, timeZone?: string): Date {
+  return instantFromZonedWall(localDayKey(token), "00:00", timeZone);
+}
+
 export function CalendarScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const topPad = (Platform.OS === "web" ? 20 : insets.top) + 6;
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
-  const today = useMemo(() => new Date(), []);
+  const { timeZone, weekStartsOn } = useDateTimePrefs();
+  const dayLabels = useMemo(() => dayLabelsFrom(weekStartsOn), [weekStartsOn]);
+  const today = useMemo(() => zonedTodayToken(timeZone), [timeZone]);
   const [currentMonth, setCurrentMonth] = useState(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
@@ -653,7 +686,10 @@ export function CalendarScreen() {
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const dayScrollRef = useRef<ScrollView>(null);
 
-  const weekStart = useMemo(() => startOfWeek(selectedDate), [selectedDate]);
+  const weekStart = useMemo(
+    () => startOfWeek(selectedDate, weekStartsOn),
+    [selectedDate, weekStartsOn],
+  );
   const weekDates = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(weekStart);
@@ -662,17 +698,26 @@ export function CalendarScreen() {
     });
   }, [weekStart]);
 
+  // Range bounds are the display zone's midnights, so events near a day
+  // boundary land in the fetched window the grid actually shows.
   const rangeStart = useMemo(() => {
-    if (viewMode === "month") return startOfMonth(currentMonth).toISOString();
-    return weekStart.toISOString();
-  }, [viewMode, currentMonth, weekStart]);
+    if (viewMode === "month") {
+      return zonedStartOfDayInstant(startOfMonth(currentMonth), timeZone).toISOString();
+    }
+    return zonedStartOfDayInstant(weekStart, timeZone).toISOString();
+  }, [viewMode, currentMonth, weekStart, timeZone]);
 
   const rangeEnd = useMemo(() => {
-    if (viewMode === "month") return endOfMonth(currentMonth).toISOString();
+    if (viewMode === "month") {
+      const afterEnd = new Date(endOfMonth(currentMonth));
+      afterEnd.setDate(afterEnd.getDate() + 1);
+      afterEnd.setHours(0, 0, 0, 0);
+      return new Date(zonedStartOfDayInstant(afterEnd, timeZone).getTime() - 1000).toISOString();
+    }
     const end = new Date(weekStart);
     end.setDate(end.getDate() + 7);
-    return end.toISOString();
-  }, [viewMode, currentMonth, weekStart]);
+    return zonedStartOfDayInstant(end, timeZone).toISOString();
+  }, [viewMode, currentMonth, weekStart, timeZone]);
 
   const eventsQuery = useEventsInRange(rangeStart, rangeEnd);
   const categoriesQuery = useCategories();
@@ -707,10 +752,11 @@ export function CalendarScreen() {
 
   const dayEvents = useMemo(() => {
     if (!eventsQuery.data) return [];
+    const selectedKey = localDayKey(selectedDate);
     return eventsQuery.data
       .filter((e) => {
         if (!e.startTime) return false;
-        return isSameDay(new Date(e.startTime), selectedDate) && matchesFilter(e);
+        return zonedDayKey(e.startTime) === selectedKey && matchesFilter(e);
       })
       .sort((a, b) => {
         if (!a.startTime || !b.startTime) return 0;
@@ -769,8 +815,7 @@ export function CalendarScreen() {
   const hasData = !!eventsQuery.data;
   useEffect(() => {
     if (viewMode === "day" && dayScrollRef.current) {
-      const now = new Date();
-      const scrollTo = Math.max(0, (now.getHours() - 1) * HOUR_HEIGHT);
+      const scrollTo = Math.max(0, (zonedParts(new Date()).hour - 1) * HOUR_HEIGHT);
       setTimeout(() => {
         dayScrollRef.current?.scrollTo({ y: scrollTo, animated: false });
       }, 100);
@@ -814,9 +859,9 @@ export function CalendarScreen() {
   );
 
   const goToToday = useCallback(() => {
-    const now = new Date();
-    setSelectedDate(now);
-    setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+    const todayToken = zonedTodayToken();
+    setSelectedDate(todayToken);
+    setCurrentMonth(new Date(todayToken.getFullYear(), todayToken.getMonth(), 1));
   }, []);
 
   const periodLabel =
@@ -908,7 +953,8 @@ export function CalendarScreen() {
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
-  const currentTimeTop = ((now.getHours() * 60 + now.getMinutes()) / 60) * HOUR_HEIGHT;
+  const nowParts = zonedParts(now);
+  const currentTimeTop = ((nowParts.hour * 60 + nowParts.minute) / 60) * HOUR_HEIGHT;
   const isSelectedToday = isSameDay(selectedDate, today);
 
   return (
@@ -1004,7 +1050,7 @@ export function CalendarScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.dayLabel, { color: isSelected ? T.accent : T.textDim }]}>
-                    {DAY_LABELS[i]}
+                    {dayLabels[i]}
                   </Text>
                   <View style={[styles.dayCircle, isSelected && { backgroundColor: T.accent }]}>
                     <Text
@@ -1240,6 +1286,7 @@ export function CalendarScreen() {
             onEventPress={(id) => router.push(`/calendar/${id}` as any)}
             refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
             onRefresh={() => eventsQuery.refetch()}
+            dayLabels={dayLabels}
           />
         )
       ) : (
@@ -1265,6 +1312,7 @@ export function CalendarScreen() {
                 T={T}
                 currentMonth={currentMonth}
                 selectedDate={selectedDate}
+                today={today}
                 onSelectDate={(d) => {
                   setSelectedDate(d);
                   setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -1272,6 +1320,8 @@ export function CalendarScreen() {
                 }}
                 events={rangeEvents}
                 categoriesMap={categoriesMap}
+                weekStartsOn={weekStartsOn}
+                dayLabels={dayLabels}
               />
             </ScrollView>
           )}

@@ -3,6 +3,7 @@ import { useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@core/providers/AuthContext";
 import { settingsApi } from "@core/api/settingsApi";
+import { loadDateTimePrefs, setDateTimePrefs } from "@core/datetimePrefs";
 import { buildAccentColors } from "@theme/colorUtils";
 import { DARK, LIGHT, DEFAULT_ACCENT_HSL, ACCENT_PRESETS } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
@@ -15,6 +16,9 @@ type ThemeContextValue = {
   accentColorHsl: string | null;
   setThemeMode: (mode: ThemeMode) => void;
   setAccentColor: (hsl: string | null) => void;
+  /** Empty/null timezone = automatic (device zone). */
+  setTimezonePref: (timeZone: string | null) => void;
+  setWeekStartPref: (weekStart: "monday" | "saturday" | "sunday") => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -59,6 +63,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         loadItem(THEME_MODE_KEY),
         loadItem(ACCENT_COLOR_KEY),
         loadItem(PROFILE_ID_KEY),
+        loadDateTimePrefs(),
       ]);
       if (!mounted) return;
       if (cachedMode === "light" || cachedMode === "dark" || cachedMode === "system") {
@@ -107,6 +112,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           setAccentColorHslState(appearance.accentColor);
           await storeItem(ACCENT_COLOR_KEY, appearance.accentColor);
         }
+
+        // The calendar renders in the member's chosen zone and week start, so
+        // these travel with the same settings fetch as the theme.
+        setDateTimePrefs({
+          timezone: appearance?.timezone ?? null,
+          weekStart: appearance?.weekStart ?? null,
+        });
       } catch {
         // Settings fetch failed — use cached/default values
       }
@@ -155,6 +167,36 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [profileId],
   );
 
+  const setTimezonePref = useCallback(
+    (timeZone: string | null) => {
+      setDateTimePrefs({ timezone: timeZone });
+      if (profileId) {
+        settingsApi
+          .updateProfile({
+            profileId,
+            appearance: { timezone: timeZone ?? "" },
+          })
+          .catch(() => {});
+      }
+    },
+    [profileId],
+  );
+
+  const setWeekStartPref = useCallback(
+    (weekStart: "monday" | "saturday" | "sunday") => {
+      setDateTimePrefs({ weekStart });
+      if (profileId) {
+        settingsApi
+          .updateProfile({
+            profileId,
+            appearance: { weekStart },
+          })
+          .catch(() => {});
+      }
+    },
+    [profileId],
+  );
+
   const value = useMemo(() => {
     const resolvedIsDark =
       themeMode === "system" ? systemColorScheme === "dark" : themeMode === "dark";
@@ -174,8 +216,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       accentColorHsl,
       setThemeMode,
       setAccentColor,
+      setTimezonePref,
+      setWeekStartPref,
     };
-  }, [themeMode, accentColorHsl, systemColorScheme, setThemeMode, setAccentColor]);
+  }, [
+    themeMode,
+    accentColorHsl,
+    systemColorScheme,
+    setThemeMode,
+    setAccentColor,
+    setTimezonePref,
+    setWeekStartPref,
+  ]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
