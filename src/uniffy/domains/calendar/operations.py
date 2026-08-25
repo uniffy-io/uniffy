@@ -789,7 +789,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if became_cancelled:
             # A cancelled event must not remind anyone; mirrors the decline path.
             await self._delete_reminder_rows(event.id)
-        elif became_active and event.reminders and not (reminders_changed or start_changed):
+        elif became_active and event.reminders and not (reminders_changed or schedule_changed):
             stmt = select(EventAttendee.user_id).where(
                 and_(
                     EventAttendee.event_id == event.id,
@@ -799,12 +799,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             result = await self.session.execute(stmt)
             active_user_ids = [row[0] for row in result.all()]
             if active_user_ids:
-                await self._create_reminder_rows(
-                    event_id=event.id,
-                    user_ids=active_user_ids,
-                    intervals=event.reminders,
-                    start_time=event.start_time,
-                )
+                await self._create_reminder_rows(event, active_user_ids, event.reminders)
 
         newly_invited_ids: list[UUID] = []
         removed_attendee_ids: list[UUID] = []
