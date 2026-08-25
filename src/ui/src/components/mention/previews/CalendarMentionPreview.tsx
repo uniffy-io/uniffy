@@ -149,7 +149,7 @@ export function CalendarMentionPreview({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              dispatch(prejoinOpened(channelId));
+              dispatch(prejoinOpened({ channelId }));
             }}
             className={cn(
               "inline-flex items-center gap-1.5 text-xs font-medium transition-colors",

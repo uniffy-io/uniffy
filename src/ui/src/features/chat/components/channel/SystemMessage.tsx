@@ -1,6 +1,10 @@
 import { type ReactNode } from "react";
 import { PhoneCall, PhoneX, UserPlus, Info } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import {
+  classifySystemMessage,
+  type SystemMessageKind,
+} from "@/features/chat/utils/systemMessageKind";
 
 // Lifecycle breadcrumbs (call started/ended, channel joins) arrive as SYSTEM
 // messages whose content is a backend-composed string with [[[label|urn]]]
@@ -26,17 +30,7 @@ function parseParts(content: string): Part[] {
   return parts;
 }
 
-type EventKind = "call-start" | "call-end" | "join" | "generic";
-
-function classify(content: string): EventKind {
-  const t = content.toLowerCase();
-  if (t.includes("started a call")) return "call-start";
-  if (t.includes("ended the call") || t.includes("call ended")) return "call-end";
-  if (t.includes("joined the channel")) return "join";
-  return "generic";
-}
-
-const KIND_STYLE: Record<EventKind, { Glyph: typeof PhoneCall; badge: string }> = {
+const KIND_STYLE: Record<SystemMessageKind, { Glyph: typeof PhoneCall; badge: string }> = {
   "call-start": { Glyph: PhoneCall, badge: "bg-green-500/15 text-green-600 dark:text-green-400" },
   "call-end": { Glyph: PhoneX, badge: "bg-red-500/15 text-red-600 dark:text-red-400" },
   join: { Glyph: UserPlus, badge: "bg-green-500/15 text-green-600 dark:text-green-400" },
@@ -64,11 +58,12 @@ function renderText(text: string, keyBase: string): ReactNode[] {
 interface SystemMessageProps {
   content: string;
   messageId?: string;
+  metadata?: Record<string, unknown>;
 }
 
-export function SystemMessage({ content, messageId }: SystemMessageProps) {
+export function SystemMessage({ content, messageId, metadata }: SystemMessageProps) {
   const parts = parseParts(content);
-  const { Glyph, badge } = KIND_STYLE[classify(content)];
+  const { Glyph, badge } = KIND_STYLE[classifySystemMessage(content, metadata)];
 
   return (
     <div

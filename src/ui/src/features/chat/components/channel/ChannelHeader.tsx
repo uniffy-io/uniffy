@@ -311,7 +311,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           {!isAgentDm && !inCallHere && (
             <button
               type="button"
-              onClick={() => dispatch(prejoinOpened(activeChannel.id))}
+              onClick={() => dispatch(prejoinOpened({ channelId: activeChannel.id }))}
               className={cn(
                 activeCall ? headerChipClass : headerButtonClass,
                 activeCall &&

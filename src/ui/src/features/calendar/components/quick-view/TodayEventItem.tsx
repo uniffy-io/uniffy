@@ -162,7 +162,7 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            dispatch(prejoinOpened(event.channelId!));
+            dispatch(prejoinOpened({ channelId: event.channelId! }));
           }}
           className={cn(
             "shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium mt-0.5",

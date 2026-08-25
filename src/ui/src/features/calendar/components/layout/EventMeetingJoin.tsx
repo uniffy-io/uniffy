@@ -76,7 +76,7 @@ export function EventMeetingJoin({ channelId }: EventMeetingJoinProps) {
             size="sm"
             variant="default"
             disabled={hasAccess !== true}
-            onClick={() => dispatch(prejoinOpened(channelId))}
+            onClick={() => dispatch(prejoinOpened({ channelId }))}
           >
             <VideoCamera size={14} weight="fill" />
             Join meeting

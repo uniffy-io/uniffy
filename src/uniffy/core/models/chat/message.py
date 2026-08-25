@@ -31,6 +31,11 @@ class ChatMessageMetadataKind(StrEnum):
     AGENT_ERROR = "agent_error"
     SKILL_DRAFT = "skill_draft"
     IMAGE_GENERATION = "image_generation"
+    # SYSTEM breadcrumb kinds: clients classify the capsule by this, never by
+    # matching the message wording.
+    CALL_STARTED = "call_started"
+    CALL_ENDED = "call_ended"
+    MEMBER_JOINED = "member_joined"
 
 
 class ChatMessageVisibility(StrEnum):

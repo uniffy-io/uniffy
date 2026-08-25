@@ -17,7 +17,7 @@ import { useDevices } from "@/features/calls/hooks/useDevices";
 import {
   prejoinClosed,
   selectActiveCallForChannel,
-  selectPrejoinChannelId,
+  selectPrejoin,
 } from "@/features/calls/store/callsSlice";
 import {
   audioInputSelected,
@@ -105,8 +105,10 @@ function DeviceSelect({
 
 export function PreJoinScreen() {
   const dispatch = useAppDispatch();
-  const { joinChannelCall } = useCall();
-  const channelId = useAppSelector(selectPrejoinChannelId);
+  const { joinChannelCall, joinCallById } = useCall();
+  const prejoin = useAppSelector(selectPrejoin);
+  const channelId = prejoin?.channelId ?? null;
+  const callId = prejoin?.callId ?? null;
   const channel = useAppSelector((s) => (channelId ? s.chatChannels.byId[channelId] : undefined));
   const activeCall = useAppSelector((s) =>
     channelId ? selectActiveCallForChannel(s, channelId) : null,
@@ -120,7 +122,7 @@ export function PreJoinScreen() {
   const [micDenied, setMicDenied] = useState(false);
   const [camDenied, setCamDenied] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [joinError, setJoinError] = useState(false);
+  const [joinError, setJoinError] = useState<"failed" | "ended" | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
@@ -212,6 +214,7 @@ export function PreJoinScreen() {
     setCamOn(false);
     setMicDenied(false);
     setCamDenied(false);
+    setJoinError(null);
     stopCamStream();
     stopMicStream();
     dispatch(prejoinClosed());
@@ -220,27 +223,48 @@ export function PreJoinScreen() {
   const handleJoin = useCallback(async () => {
     if (!channelId) return;
     setJoining(true);
-    setJoinError(false);
+    setJoinError(null);
     const opts = { micEnabled: micOn, cameraEnabled: camOn };
     stopCamStream();
     stopMicStream();
     try {
-      await joinChannelCall(channelId, opts);
+      // A prejoin opened for a ring targets that exact call; only a
+      // channel-initiated prejoin may start a new call.
+      if (callId) {
+        await joinCallById(callId, channelId, opts);
+      } else {
+        await joinChannelCall(channelId, opts);
+      }
       // Reset toggles so a later reopen starts fresh (mic/cam off) rather than
       // showing a stale "ON" with no preview stream.
       setMicOn(false);
       setCamOn(false);
       dispatch(prejoinClosed());
-    } catch {
+    } catch (error) {
       // The preview streams were released before the attempt; clear the toggles
       // so they do not read "on" with no preview while the user retries.
       setMicOn(false);
       setCamOn(false);
-      setJoinError(true);
+      // unwrap() rejects with a SerializedError (plain object), not an Error.
+      const message =
+        typeof error === "object" && error !== null && "message" in error
+          ? String((error as { message?: unknown }).message ?? "")
+          : "";
+      setJoinError(/call has ended|\[not_found]/i.test(message) ? "ended" : "failed");
     } finally {
       setJoining(false);
     }
-  }, [channelId, micOn, camOn, joinChannelCall, dispatch, stopCamStream, stopMicStream]);
+  }, [
+    channelId,
+    callId,
+    micOn,
+    camOn,
+    joinCallById,
+    joinChannelCall,
+    dispatch,
+    stopCamStream,
+    stopMicStream,
+  ]);
 
   if (!channelId) return null;
 
@@ -252,7 +276,7 @@ export function PreJoinScreen() {
       <div className="p-5 space-y-4" data-testid="call-prejoin">
         <div>
           <h2 className="text-base font-semibold text-foreground">
-            {activeCall ? `Join call in ${channelName}` : `Start call in ${channelName}`}
+            {activeCall || callId ? `Join call in ${channelName}` : `Start call in ${channelName}`}
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">Joining as {userName}</p>
         </div>
@@ -355,21 +379,32 @@ export function PreJoinScreen() {
           </div>
         )}
 
-        {joinError && (
+        {joinError === "failed" && (
           <p className="text-xs text-red-500">Unable to connect. Check your network and retry.</p>
+        )}
+        {joinError === "ended" && (
+          <p className="text-xs text-muted-foreground" data-testid="call-prejoin-ended">
+            This call has already ended.
+          </p>
         )}
 
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={close} disabled={joining}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => void handleJoin()}
-            loading={joining}
-            data-testid="call-prejoin-join"
-          >
-            {joinError ? "Retry" : "Join"}
-          </Button>
+          {joinError === "ended" ? (
+            <Button onClick={close}>Close</Button>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={close} disabled={joining}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleJoin()}
+                loading={joining}
+                data-testid="call-prejoin-join"
+              >
+                {joinError === "failed" ? "Retry" : "Join"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </Modal>

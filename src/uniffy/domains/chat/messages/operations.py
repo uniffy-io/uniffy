@@ -249,7 +249,15 @@ class ChatMessageOperations:
             raise ValidationError("content", f"Message exceeds {MAX_MESSAGE_LENGTH} characters")
 
         channel = await self.access.get_channel(channel_id, organization_id)
-        member = await self.access.require_send(user_id, channel)
+        # SYSTEM breadcrumbs record something that happened, attributed to a user
+        # for display - they are not that user speaking. The attributed user may
+        # have no member row (a PUBLIC-channel caller, a moderating admin) and the
+        # channel may already be archived (a call ended by archiving); neither may
+        # lose the record. All SYSTEM sends are internal - the SendMessage RPC
+        # never passes a sender_type.
+        member: ChatChannelMember | None = None
+        if sender_type != SenderType.SYSTEM:
+            member = await self.access.require_send(user_id, channel)
         if sender_type == SenderType.USER:
             await check_chat_mutation_limit(
                 SEND,

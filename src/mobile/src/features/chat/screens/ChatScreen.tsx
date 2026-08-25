@@ -1665,7 +1665,7 @@ const MessageRow = React.memo(function MessageRow({
     thinking && thinking.length > 0 ? thinking : persisted;
 
   if (isSystem) {
-    return <SystemMessage content={message.content} />;
+    return <SystemMessage content={message.content} metadata={message.metadata} />;
   }
 
   return (

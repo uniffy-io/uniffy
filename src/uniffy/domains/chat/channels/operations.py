@@ -2562,7 +2562,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel: ChatChannel,
     ) -> None:
         try:
-            from uniffy.core.models.chat.message import SenderType
+            from uniffy.core.models.chat.message import ChatMessageMetadataKind, SenderType
             from uniffy.domains.chat.messages.operations import ChatMessageOperations
 
             user_result = await self.session.execute(
@@ -2579,6 +2579,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 organization_id=organization_id,
                 channel_id=channel.id,
                 content=content,
+                message_metadata={"kind": ChatMessageMetadataKind.MEMBER_JOINED.value},
                 sender_type=SenderType.SYSTEM,
             )
         except Exception:

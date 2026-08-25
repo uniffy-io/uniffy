@@ -113,7 +113,9 @@ function InviteCard({ invite }: { invite: RingInvite }) {
         type="button"
         onClick={() => {
           dispatch(ringDismissed(invite.callId));
-          dispatch(prejoinOpened(invite.channelId));
+          // Carry the call identity: answering must join THIS call, and say so
+          // if it already ended - never start a fresh one in the channel.
+          dispatch(prejoinOpened({ channelId: invite.channelId, callId: invite.callId }));
         }}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white hover:bg-emerald-600"
         aria-label="Accept call"
