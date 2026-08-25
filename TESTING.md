@@ -630,6 +630,54 @@ can read the target channel.
 - [ ] Delete the source message: authorized target cards become restricted live and remain so
       after reload. Delete the verification forwards and channels afterward.
 
+## Library (bookmarks + tags)
+
+`/library` is the one recall surface: the Bookmarks tab holds the user's private bookmarks, the
+Tags tab holds the shared taxonomy, and the Knowledge Graph tab draws the mention network across
+them. Run with two users in isolated
+browsers; User B needs a private channel User A is initially a member of.
+
+- [ ] User A saves one item of each kind: a note (tree context menu), a file and a folder (card
+      actions), a calendar event (detail modal), and a chat message (hover menu > Save message).
+      Every item appears on the Bookmarks tab newest-first with the right type badge, and each card
+      navigates to the content using the server URL (the chat message lands on the exact message).
+- [ ] The user menu shows a single Library entry; the dashboard Bookmarked widget shows resolved
+      titles and its "View all bookmarks" link opens `/library` (not a search URL).
+- [ ] Type ribbons sync to `?types=`: pick Messages, reload the page, and the filter is still
+      active. The chat sidebar Saved entry opens `/library?types=chat_message`.
+- [ ] With more than 50 bookmarks, "Load more" appends the next page without duplicates.
+- [ ] Save the same item twice from two devices at once: one bookmark row results and neither
+      client sees an error. Saving via a non-canonical URN spelling (uppercase or dashless UUID)
+      resolves to the same single card rather than a duplicate.
+- [ ] Removing a bookmark from the page updates the localized affordances (tree indicator, card
+      icon, hover menu label) without a reload, and vice versa.
+- [ ] User A saves a message in User B's private channel, then User B removes User A from the
+      channel. The saved card disappears from User A's Bookmarks tab; re-adding User A restores the
+      same card without re-saving.
+- [ ] Delete a saved note. Its card becomes a generic "This item was deleted" card with no title,
+      snippet, source, or URL anywhere in the page or the `ListBookmarkItems` response, and the
+      Remove action still works.
+- [ ] Tags tab: searching and the type ribbons narrow the chip cloud and the selected tag's
+      content. Selecting a chip routes to `/library/tags/:slug` and the content renders as cards
+      grouped by type. Tag edit (hover pencil) still opens the edit dialog. There is no Filters
+      drawer and no saved filters on this surface: an inherited `?owners=`/`?sources=`/`?access=`
+      URL is stripped rather than applied.
+- [ ] Knowledge Graph tab: nodes render in one Unity Violet to Belonging Pink sweep with hue by
+      content type, hovering a node dims the rest and highlights its edges, and clicking navigates
+      to the content. On a large org a `role=status` notice reports the bounded view. "Show in
+      graph" from a note, task, or event mention focuses that node; when the target is outside the
+      bounded view the surface says so instead of silently ignoring the `?focus=` parameter.
+- [ ] Return to the Library graph tab after five minutes away: exactly one `GetContentGraph`
+      request fires on refocus, not two.
+- [ ] Existing links redirect with their query intact: `/bookmarks?types=chat_message` opens the
+      filtered Bookmarks tab, `/tags/{slug}` opens the tag detail, and tag chips/mentions across the
+      app land on `/library/tags/{slug}`.
+- [ ] Notes and Files sidebars no longer show a Bookmarks section, Calendar quick access no longer
+      shows a Bookmarked filter, yet all Save/Unsave actions on the content itself still work.
+- [ ] Mobile: the Bookmarks screen lists the same items with type filter chips and cursor load
+      more; a chat-message row opens its channel, a folder row opens that folder in Files, and
+      deleted/unavailable rows render the generic card with a working Remove.
+
 ## Agents in threads
 
 An agent answering inside a thread is a first-class reply: it moves the thread's counters, can be
