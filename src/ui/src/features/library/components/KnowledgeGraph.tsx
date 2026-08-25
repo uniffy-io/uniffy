@@ -1,188 +1,243 @@
-/**
- * Notes Graph Dashboard
- *
- * Interactive force-directed graph visualization showing connections
- * between notes based on URN mentions.
- */
+/** Interactive force-directed graph of URN mention connections across the org's content. */
 
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { createElement, useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ForceGraph2D from "react-force-graph-2d";
 import type { ForceGraphMethods, NodeObject, LinkObject } from "react-force-graph-2d";
-import { useAppSelector } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import {
   buildGraphData,
   getNodeSize,
-  getGraphStats,
   type GraphNode,
-} from "@/features/notes/utils/notesGraphUtils";
+} from "@/features/library/utils/knowledgeGraphUtils";
 import {
   Cube,
+  WarningCircle,
+  MagnifyingGlass,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
   ArrowsOutSimple,
-  FileText,
-  User,
-  Folder,
-  ChatTeardrop,
-  Link,
+  X,
 } from "@phosphor-icons/react";
-import { getIconComponent } from "@/features/notes/utils/noteIconConstants";
-import { drawIconOnCanvas } from "@/features/notes/utils/noteIcons";
-import { UrnType, urnToPath, parseUrn } from "@/shared/utils/urn";
-import { URN_TYPE_HEX_COLORS } from "@/config/theme/urnColors";
+import { fetchContentGraph, type SerializedGraphEdge } from "@/features/library/store/graphSlice";
+import { GraphNodeDetails } from "@/features/library/components/GraphNodeDetails";
+import { UrnType, urnToPath } from "@/shared/utils/urn";
+import { getContentTypeIcon, getContentTypeLabel } from "@/config/theme/contentTypes";
+import { useSavedTypesFilter } from "@/features/bookmarks/hooks/useSavedTypesFilter";
+import { brandAlpha, brandAxisColor, brandGradient } from "@/config/theme/brandGradients";
+import { getUrnTypeBrandStops } from "@/config/theme/urnColors";
+import { getInitials } from "@/components/subject/utils";
+import { cn } from "@/shared/utils/cn";
 import { useUrnResolution } from "@/features/search";
 import { useTheme } from "@/config/theme/ThemeProvider";
+import { GraphHitIndex } from "@/features/library/utils/graphHitIndex";
 
-/** Cast NodeObject to our GraphNode type */
+const EMPTY_GRAPH_EDGES: SerializedGraphEdge[] = [];
+const GRAPH_HIT_RADIUS = 15;
+const GRAPH_HIT_CELL_SIZE = GRAPH_HIT_RADIUS * 2;
+
 function asGraphNode(node: NodeObject): GraphNode {
   return node as unknown as GraphNode;
 }
 
-/**
- * Draw a type-specific icon inside a node circle
- * Icons match Heroicons 24/outline style - thin strokes, geometric shapes
- */
-function drawNodeIcon(
-  ctx: CanvasRenderingContext2D,
-  type: UrnType | "note",
-  x: number,
-  y: number,
-  size: number,
-  color: string,
-) {
-  const s = size * 0.35; // Icon takes up ~35% of node radius
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = size * 0.05; // Very thin lines like Heroicons outline
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-
-  ctx.save();
-  ctx.translate(x, y);
-
-  switch (type) {
-    case "note":
-    case UrnType.NOTE: {
-      // DocumentTextIcon - document with text lines
-      const w = s * 0.75;
-      const h = s;
-      const fold = s * 0.22;
-      ctx.beginPath();
-      ctx.moveTo(-w / 2, -h / 2);
-      ctx.lineTo(w / 2 - fold, -h / 2);
-      ctx.lineTo(w / 2, -h / 2 + fold);
-      ctx.lineTo(w / 2, h / 2);
-      ctx.lineTo(-w / 2, h / 2);
-      ctx.closePath();
-      ctx.stroke();
-      // Fold line
-      ctx.beginPath();
-      ctx.moveTo(w / 2 - fold, -h / 2);
-      ctx.lineTo(w / 2 - fold, -h / 2 + fold);
-      ctx.lineTo(w / 2, -h / 2 + fold);
-      ctx.stroke();
-      // Text lines
-      ctx.beginPath();
-      ctx.moveTo(-w / 3, h * 0.05);
-      ctx.lineTo(w / 3, h * 0.05);
-      ctx.moveTo(-w / 3, h * 0.25);
-      ctx.lineTo(w / 3, h * 0.25);
-      ctx.stroke();
-      break;
-    }
-
-    case UrnType.USER: {
-      // UserIcon - circle head + shoulders arc
-      const headR = s * 0.3;
-      ctx.beginPath();
-      ctx.arc(0, -s * 0.25, headR, 0, 2 * Math.PI);
-      ctx.stroke();
-      // Shoulders
-      ctx.beginPath();
-      ctx.arc(0, s * 0.85, s * 0.55, Math.PI * 1.2, Math.PI * 1.8);
-      ctx.stroke();
-      break;
-    }
-
-    case UrnType.CHAT: {
-      // ChatBubbleLeftIcon - speech bubble
-      const w = s * 0.9;
-      const h = s * 0.7;
-      const r = s * 0.15;
-      ctx.beginPath();
-      ctx.roundRect(-w / 2, -h / 2 - s * 0.08, w, h, r);
-      ctx.stroke();
-      // Tail pointing down-left
-      ctx.beginPath();
-      ctx.moveTo(-w * 0.25, h / 2 - s * 0.08);
-      ctx.lineTo(-w * 0.35, h / 2 + s * 0.18);
-      ctx.lineTo(-w * 0.05, h / 2 - s * 0.08);
-      ctx.stroke();
-      break;
-    }
-
-    case UrnType.FILE: {
-      // FolderIcon - folder shape
-      const w = s * 0.9;
-      const h = s * 0.7;
-      const tabW = w * 0.35;
-      const tabH = h * 0.2;
-      ctx.beginPath();
-      ctx.moveTo(-w / 2, -h / 2 + tabH);
-      ctx.lineTo(-w / 2, h / 2);
-      ctx.lineTo(w / 2, h / 2);
-      ctx.lineTo(w / 2, -h / 2 + tabH);
-      ctx.lineTo(-w / 2 + tabW + tabH, -h / 2 + tabH);
-      ctx.lineTo(-w / 2 + tabW, -h / 2);
-      ctx.lineTo(-w / 2, -h / 2);
-      ctx.closePath();
-      ctx.stroke();
-      break;
-    }
-
-    case UrnType.CALENDAR_EVENT: {
-      // CalendarIcon - calendar with top hooks
-      const w = s * 0.8;
-      const h = s * 0.85;
-      const r = s * 0.1;
-      // Main rectangle
-      ctx.beginPath();
-      ctx.roundRect(-w / 2, -h / 2 + h * 0.12, w, h * 0.8, r);
-      ctx.stroke();
-      // Top hooks
-      ctx.beginPath();
-      ctx.moveTo(-w * 0.28, -h / 2 + h * 0.12);
-      ctx.lineTo(-w * 0.28, -h / 2);
-      ctx.moveTo(w * 0.28, -h / 2 + h * 0.12);
-      ctx.lineTo(w * 0.28, -h / 2);
-      ctx.stroke();
-      // Header line
-      ctx.beginPath();
-      ctx.moveTo(-w / 2, -h * 0.08);
-      ctx.lineTo(w / 2, -h * 0.08);
-      ctx.stroke();
-      break;
-    }
-
-    default: {
-      // LinkIcon - chain link for unknown types
-      const linkR = s * 0.22;
-      const gap = s * 0.15;
-      ctx.beginPath();
-      ctx.arc(-gap, -gap * 0.5, linkR, Math.PI * 0.75, Math.PI * 2.25);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(gap, gap * 0.5, linkR, Math.PI * 1.75, Math.PI * 1.25 + 2 * Math.PI);
-      ctx.stroke();
-      break;
-    }
-  }
-
-  ctx.restore();
+function linkEndpointIds(link: LinkObject): [string, string] {
+  const source = typeof link.source === "object" ? (link.source as NodeObject).id : link.source;
+  const target = typeof link.target === "object" ? (link.target as NodeObject).id : link.target;
+  return [String(source), String(target)];
 }
 
-/** Convert HSL string (from CSS var) to hex color */
+/** BFS out to `depth` hops; the result includes the root. */
+function neighborhoodIds(
+  adjacency: Map<string, Set<string>>,
+  rootId: string,
+  depth: number,
+): Set<string> {
+  const seen = new Set([rootId]);
+  let frontier = [rootId];
+  for (let hop = 0; hop < depth; hop++) {
+    const next: string[] = [];
+    for (const id of frontier) {
+      for (const neighbor of adjacency.get(id) ?? []) {
+        if (!seen.has(neighbor)) {
+          seen.add(neighbor);
+          next.push(neighbor);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return seen;
+}
+
+interface SimulationForce {
+  (alpha: number): void;
+  initialize?: (nodes: NodeObject[]) => void;
+}
+
+// d3-force is not a declared dependency (it only exists transitively inside
+// react-force-graph-2d), so the two extra forces are hand-rolled d3-compatible ones.
+
+/** Circle collision keyed on the painted node radius, via a uniform spatial grid. */
+function collisionForce(radiusFor: (node: NodeObject) => number): SimulationForce {
+  let nodes: NodeObject[] = [];
+  const force: SimulationForce = () => {
+    if (nodes.length === 0) return;
+    const radii = new Array<number>(nodes.length);
+    let maxRadius = 0;
+    for (let i = 0; i < nodes.length; i++) {
+      radii[i] = radiusFor(nodes[i]);
+      if (radii[i] > maxRadius) maxRadius = radii[i];
+    }
+    // Cell side = max diameter, so any overlapping pair (separation < ra + rb
+    // <= cell side) always lands within the 3x3 neighbor window.
+    const cellSize = maxRadius * 2 || 1;
+    const grid = new Map<string, number[]>();
+    for (let i = 0; i < nodes.length; i++) {
+      const key = `${Math.floor((nodes[i].x ?? 0) / cellSize)},${Math.floor((nodes[i].y ?? 0) / cellSize)}`;
+      const bucket = grid.get(key);
+      if (bucket) bucket.push(i);
+      else grid.set(key, [i]);
+    }
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i];
+      const ra = radii[i];
+      const cx = Math.floor((a.x ?? 0) / cellSize);
+      const cy = Math.floor((a.y ?? 0) / cellSize);
+      for (let gx = cx - 1; gx <= cx + 1; gx++) {
+        for (let gy = cy - 1; gy <= cy + 1; gy++) {
+          const bucket = grid.get(`${gx},${gy}`);
+          if (!bucket) continue;
+          for (const j of bucket) {
+            if (j <= i) continue;
+            const b = nodes[j];
+            const minDist = ra + radii[j];
+            let dx = (b.x ?? 0) - (a.x ?? 0);
+            let dy = (b.y ?? 0) - (a.y ?? 0);
+            let distSq = dx * dx + dy * dy;
+            if (distSq === 0) {
+              dx = (i % 2 ? 1 : -1) * 0.5;
+              dy = 0.5;
+              distSq = 0.5;
+            }
+            if (distSq < minDist * minDist) {
+              const dist = Math.sqrt(distSq);
+              const push = ((minDist - dist) / dist) * 0.5;
+              a.x = (a.x ?? 0) - dx * push;
+              a.y = (a.y ?? 0) - dy * push;
+              b.x = (b.x ?? 0) + dx * push;
+              b.y = (b.y ?? 0) + dy * push;
+            }
+          }
+        }
+      }
+    }
+  };
+  force.initialize = (n) => {
+    nodes = n;
+  };
+  return force;
+}
+
+/** Gentle pull toward the origin so disconnected components stay near the main cluster. */
+function axisPullForce(axis: "x" | "y", strength: number): SimulationForce {
+  let nodes: NodeObject[] = [];
+  const force: SimulationForce = (alpha) => {
+    for (const node of nodes) {
+      const velocityKey = axis === "x" ? "vx" : "vy";
+      node[velocityKey] = (node[velocityKey] ?? 0) - (node[axis] ?? 0) * strength * alpha;
+    }
+  };
+  force.initialize = (n) => {
+    nodes = n;
+  };
+  return force;
+}
+
+const GRAPH_STALE_AFTER_MS = 5 * 60_000;
+
+// Edges tint off the same Unity Violet axis the nodes ride, so the canvas is one
+// palette rather than violet nodes on grey wiring. Dark and light differ only in
+// how much of the axis survives against the background.
+const GRAPH_EDGE_VIOLET = brandAxisColor(0.18);
+const GRAPH_EDGE_ACTIVE = brandAxisColor(0.35);
+
+const GRAPH_LINK_PAINT = {
+  active: brandAlpha(GRAPH_EDGE_ACTIVE, 0.8),
+  idleDark: brandAlpha(GRAPH_EDGE_VIOLET, 0.45),
+  idleLight: brandAlpha(GRAPH_EDGE_VIOLET, 0.35),
+  dimmedDark: brandAlpha(GRAPH_EDGE_VIOLET, 0.12),
+  dimmedLight: brandAlpha(GRAPH_EDGE_VIOLET, 0.12),
+};
+
+const GRAPH_ARROW_PAINT = {
+  active: GRAPH_EDGE_ACTIVE,
+  idleDark: brandAlpha(GRAPH_EDGE_ACTIVE, 0.65),
+  idleLight: brandAlpha(GRAPH_EDGE_ACTIVE, 0.6),
+  dimmedDark: brandAlpha(GRAPH_EDGE_VIOLET, 0.14),
+  dimmedLight: brandAlpha(GRAPH_EDGE_VIOLET, 0.14),
+};
+
+const PERSON_TYPES = new Set<UrnType>([UrnType.USER, UrnType.TEAM]);
+
+/** Circle nodes are actors (people, teams, agents); content renders as rounded tiles. */
+function isCircleNode(type: UrnType): boolean {
+  return PERSON_TYPES.has(type) || type === UrnType.AGENT;
+}
+
+// The nodes reuse the exact Phosphor icons the mention chips use, rasterized
+// once per type onto an Image the canvas can stamp at any zoom level.
+const ICON_RASTER_SIZE = 96;
+const iconImageCache = new Map<string, HTMLImageElement>();
+
+function getIconImage(type: UrnType, color: string, onReady: () => void): HTMLImageElement {
+  const key = `${type}:${color}`;
+  let img = iconImageCache.get(key);
+  if (!img) {
+    const IconComponent = getContentTypeIcon(type);
+    const svg = renderToStaticMarkup(
+      createElement(IconComponent, { size: ICON_RASTER_SIZE, color, weight: "fill" }),
+    );
+    img = new Image(ICON_RASTER_SIZE, ICON_RASTER_SIZE);
+    img.onload = onReady;
+    img.src = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    iconImageCache.set(key, img);
+  }
+  return img;
+}
+
+// measureText per labeled node per frame dominates paint cost on big graphs;
+// zoom varies the font size continuously, so bucket it to one decimal.
+const labelWidthCache = new Map<string, number>();
+
+function measureLabel(ctx: CanvasRenderingContext2D, text: string, fontSize: number): number {
+  const key = `${text}:${fontSize.toFixed(1)}`;
+  let width = labelWidthCache.get(key);
+  if (width === undefined) {
+    width = ctx.measureText(text).width;
+    labelWidthCache.set(key, width);
+  }
+  return width;
+}
+
+function traceNodeShape(
+  ctx: CanvasRenderingContext2D,
+  node: GraphNode,
+  x: number,
+  y: number,
+  inflate = 0,
+) {
+  const size = getNodeSize(node) + inflate;
+  ctx.beginPath();
+  if (isCircleNode(node.type)) {
+    ctx.arc(x, y, size, 0, 2 * Math.PI);
+  } else {
+    const side = size * 1.8;
+    ctx.roundRect(x - side / 2, y - side / 2, side, side, size * 0.55);
+  }
+}
+
 function hslToHex(hsl: string): string {
   const parts = hsl.trim().split(/\s+/);
   if (parts.length !== 3) return "#8b5cf6";
@@ -218,7 +273,6 @@ function hslToHex(hsl: string): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-/** Get theme colors from CSS variables */
 function getThemeColors() {
   const root = document.documentElement;
   const getVar = (name: string) => getComputedStyle(root).getPropertyValue(name).trim();
@@ -238,34 +292,73 @@ function getThemeColors() {
   };
 }
 
-export function NotesGraphDashboard() {
+export function KnowledgeGraph() {
+  useDocumentTitle("Knowledge Graph");
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<ForceGraphMethods | null>(null);
+  const hitIndexRef = useRef(new GraphHitIndex<NodeObject>(GRAPH_HIT_CELL_SIZE));
 
   // Store nodes by ID to preserve x/y positions across re-renders
   // The d3-force simulation mutates these objects to add x/y coordinates
   const nodeMapRef = useRef<Map<string, NodeObject>>(new Map());
 
-  // WORKAROUND: Custom hit detection to bypass react-force-graph-2d color-tracking bug
-  // The library's canvas-color-tracker has issues where certain node indices fail hit detection
-  // We implement coordinate-based hit detection instead
+  // The library's color tracker misses some node indices, so pointer events use painted positions.
   const lastHoveredNodeRef = useRef<string | null>(null);
+
+  // Per-node paint alpha, lerped toward its target each frame so hover focus
+  // fades instead of snapping. The library repaints every rAF, so no ticker.
+  const dimAlphaRef = useRef<Map<string, number>>(new Map());
 
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [themeColors, setThemeColors] = useState(getThemeColors);
 
-  // Get notes from Redux store (populated by NotesPage's fetchNotes dispatch)
-  const notes = useAppSelector((state) => state.notes?.notes ?? {});
-  const loading = useAppSelector((state) => state.notes?.loading ?? false);
+  // Bumped when a rasterized icon finishes loading so the canvas repaints even
+  // if the simulation already settled.
+  const [, setIconEpoch] = useState(0);
+  const handleIconReady = useCallback(() => setIconEpoch((epoch) => epoch + 1), []);
 
-  // Track theme changes
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const graphState = useAppSelector((state) => state.libraryGraph);
+  const graphMatchesOrganization = graphState.organizationId === organizationId;
+  const edges = graphMatchesOrganization ? graphState.edges : EMPTY_GRAPH_EDGES;
+  const graphStatus = graphMatchesOrganization ? graphState.status : "idle";
+  const graphError = graphMatchesOrganization ? graphState.error : null;
+  const graphFetchedAt = graphMatchesOrganization ? graphState.fetchedAt : null;
+  const graphTruncated = graphMatchesOrganization && graphState.truncated;
+
+  useEffect(() => {
+    if (!organizationId || graphStatus !== "idle") return;
+    dispatch(fetchContentGraph(organizationId));
+  }, [dispatch, organizationId, graphStatus]);
+
+  // A long-lived tab never refetches from "succeeded"; refresh stale data when
+  // the user comes back to the tab. Positions survive through nodeMapRef.
+  useEffect(() => {
+    if (!organizationId || graphStatus !== "succeeded" || graphFetchedAt === null) return;
+    const maybeRefetch = () => {
+      if (document.visibilityState === "hidden") return;
+      if (Date.now() - graphFetchedAt < GRAPH_STALE_AFTER_MS) return;
+      dispatch(fetchContentGraph(organizationId));
+    };
+    window.addEventListener("focus", maybeRefetch);
+    document.addEventListener("visibilitychange", maybeRefetch);
+    return () => {
+      window.removeEventListener("focus", maybeRefetch);
+      document.removeEventListener("visibilitychange", maybeRefetch);
+    };
+  }, [dispatch, organizationId, graphStatus, graphFetchedAt]);
+
+  // Only block the canvas before the first data arrives - a staleness refetch
+  // keeps the existing graph (and its layout) on screen.
+  const loading = graphStatus === "idle" || (graphStatus === "loading" && edges.length === 0);
+
   const accentColor = useAppSelector((state) => state.theme?.accentColor);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  // Update theme colors when theme changes
   useEffect(() => {
     const timer = setTimeout(() => {
       setThemeColors(getThemeColors());
@@ -273,36 +366,114 @@ export function NotesGraphDashboard() {
     return () => clearTimeout(timer);
   }, [accentColor, resolvedTheme]);
 
-  // Collect all external URNs from notes (non-NOTE types)
-  const externalUrns = useMemo(() => {
-    const notesList = Object.values(notes).filter((n) => !n.isDeleted);
-    const noteIds = new Set(notesList.map((n) => n.id));
+  // Resolve titles and availability for every node in the graph
+  const allUrns = useMemo(() => {
     const urns = new Set<string>();
-
-    for (const note of notesList) {
-      for (const urn of note.outgoingReferences || []) {
-        const parsed = parseUrn(urn);
-        // Only resolve URNs that aren't internal notes
-        if (parsed.isValid && !noteIds.has(parsed.id)) {
-          urns.add(urn);
-        }
-      }
+    for (const edge of edges) {
+      urns.add(edge.sourceUrn);
+      urns.add(edge.targetUrn);
     }
-
     return Array.from(urns);
-  }, [notes]);
+  }, [edges]);
+  const { resolved: urnMetadata } = useUrnResolution(allUrns);
 
-  // Resolve URN metadata for external references
-  const { resolved: urnMetadata } = useUrnResolution(externalUrns);
+  // Build the full graph, then narrow it through focus and type filters
+  const fullData = useMemo(() => buildGraphData(edges, urnMetadata), [edges, urnMetadata]);
 
-  // Build graph data from notes with URN metadata for external references
-  const graphData = useMemo(() => {
-    const notesList = Object.values(notes).filter((n) => !n.isDeleted);
-    if (notesList.length === 0) {
-      return { nodes: [] as NodeObject[], links: [] as LinkObject[] };
+  const fullAdjacency = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const link of fullData.links) {
+      if (link.source === link.target) continue;
+      if (!map.has(link.source)) map.set(link.source, new Set());
+      if (!map.has(link.target)) map.set(link.target, new Set());
+      map.get(link.source)?.add(link.target);
+      map.get(link.target)?.add(link.source);
     }
+    return map;
+  }, [fullData]);
 
-    const data = buildGraphData(notesList, urnMetadata);
+  const nodeLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const node of fullData.nodes) map.set(node.id, node.label);
+    return map;
+  }, [fullData]);
+
+  // Directed link maps feed the hover card's outgoing/incoming breakdown
+  const linkDirections = useMemo(() => {
+    const incoming = new Map<string, string[]>();
+    const outgoing = new Map<string, string[]>();
+    for (const link of fullData.links) {
+      if (link.source === link.target) continue;
+      let out = outgoing.get(link.source);
+      if (!out) outgoing.set(link.source, (out = []));
+      out.push(link.target);
+      let inc = incoming.get(link.target);
+      if (!inc) incoming.set(link.target, (inc = []));
+      inc.push(link.source);
+    }
+    return { incoming, outgoing };
+  }, [fullData]);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusParam = searchParams.get("focus");
+  const focusId = useMemo(
+    () => (focusParam && fullData.nodes.some((n) => n.id === focusParam) ? focusParam : null),
+    [focusParam, fullData],
+  );
+  // "Show in graph" can point at content outside the bounded projection; dropping
+  // the parameter without a word looks like the action did nothing.
+  const focusMissing = !!focusParam && focusId === null && fullData.nodes.length > 0;
+
+  const setFocus = useCallback(
+    (id: string | null) => {
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        if (id) {
+          next.set("focus", id);
+        } else {
+          next.delete("focus");
+          next.delete("depth");
+        }
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
+
+  const depthParam = searchParams.get("depth");
+  const focusDepth = depthParam === "1" || depthParam === "3" ? Number(depthParam) : 2;
+
+  const cycleFocusDepth = useCallback(() => {
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      const upcoming = focusDepth === 3 ? 1 : focusDepth + 1;
+      // Default depth stays out of the URL so plain focus links keep clean
+      if (upcoming === 2) next.delete("depth");
+      else next.set("depth", String(upcoming));
+      return next;
+    });
+  }, [setSearchParams, focusDepth]);
+
+  const focusIds = useMemo(
+    () => (focusId ? neighborhoodIds(fullAdjacency, focusId, focusDepth) : null),
+    [focusId, focusDepth, fullAdjacency],
+  );
+
+  // Type visibility rides the sidebar's shared `?types=` filter rail
+  const { selected: selectedTypes } = useSavedTypesFilter();
+
+  const graphData = useMemo(() => {
+    const visibleNodes = fullData.nodes.filter(
+      (node) =>
+        (!focusIds || focusIds.has(node.id)) &&
+        (node.id === focusId || selectedTypes.length === 0 || selectedTypes.includes(node.type)),
+    );
+    const visibleIds = new Set(visibleNodes.map((n) => n.id));
+    // Fresh link objects every time: d3 rewrites source/target to node references,
+    // and a recycled link pointing at a filtered-out node crashes the link force.
+    const visibleLinks = fullData.links
+      .filter((l) => visibleIds.has(l.source) && visibleIds.has(l.target))
+      .map((l) => ({ source: l.source, target: l.target }));
 
     // Preserve node positions from previous render
     // This ref access during render is intentional to maintain node positions
@@ -325,8 +496,8 @@ export function NotesGraphDashboard() {
       };
     };
 
-    for (let i = 0; i < data.nodes.length; i++) {
-      const node = data.nodes[i];
+    for (let i = 0; i < visibleNodes.length; i++) {
+      const node = visibleNodes[i];
       const existing = existingNodes.get(node.id);
       if (existing && typeof existing.x === "number" && typeof existing.y === "number") {
         // Preserve existing position
@@ -346,31 +517,40 @@ export function NotesGraphDashboard() {
     /* eslint-enable react/react-compiler */
 
     return {
-      nodes: data.nodes as unknown as NodeObject[],
-      links: data.links as unknown as LinkObject[],
+      nodes: visibleNodes as unknown as NodeObject[],
+      links: visibleLinks as unknown as LinkObject[],
     };
-  }, [notes, urnMetadata]);
+  }, [fullData, focusIds, focusId, selectedTypes]);
 
-  // Get graph statistics
-  const stats = useMemo(() => {
-    const notesList = Object.values(notes).filter((n) => !n.isDeleted);
-    if (notesList.length === 0) {
-      return {
-        totalNodes: 0,
-        internalNotes: 0,
-        externalReferences: 0,
-        totalLinks: 0,
-        avgConnections: 0,
-      };
+  const hoverNeighbors = useMemo(
+    () => (hoveredNode ? (fullAdjacency.get(hoveredNode.id) ?? null) : null),
+    [hoveredNode, fullAdjacency],
+  );
+
+  const hoverLinkInfo = useMemo(() => {
+    if (!hoveredNode) return null;
+    const outgoing = linkDirections.outgoing.get(hoveredNode.id) ?? [];
+    const incoming = linkDirections.incoming.get(hoveredNode.id) ?? [];
+    return {
+      outgoing: outgoing.length,
+      incoming: incoming.length,
+      referencedBy: incoming.slice(0, 4).map((id) => nodeLabelById.get(id) ?? "Untitled"),
+      moreReferences: Math.max(0, incoming.length - 4),
+    };
+  }, [hoveredNode, linkDirections, nodeLabelById]);
+
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const searchMatches = useMemo(() => {
+    if (!normalizedQuery) return null;
+    const matches = new Set<string>();
+    for (const node of graphData.nodes) {
+      const graphNode = asGraphNode(node);
+      if (graphNode.label.toLowerCase().includes(normalizedQuery)) matches.add(graphNode.id);
     }
-    const data = buildGraphData(notesList, urnMetadata);
-    return getGraphStats(data);
-  }, [notes, urnMetadata]);
+    return matches;
+  }, [graphData, normalizedQuery]);
 
-  // Track layout and calculate dimensions based on sidebar state
-  const isSidebarOpen = useAppSelector((state) => state.editor?.isSidebarOpen ?? true);
-
-  // Handle container resize with ResizeObserver
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -394,20 +574,6 @@ export function NotesGraphDashboard() {
     return () => resizeObserver.disconnect();
   }, []); // Only run once on mount
 
-  // Update dimensions when sidebar state changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          setDimensions({ width: rect.width, height: rect.height });
-        }
-      }
-    }, 300); // Allow time for sidebar animation
-    return () => clearTimeout(timer);
-  }, [isSidebarOpen]);
-
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
@@ -422,24 +588,74 @@ export function NotesGraphDashboard() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Default zoom level
-  const DEFAULT_ZOOM = 3;
-
-  // Set initial zoom and center once on mount
-  const hasInitialized = useRef(false);
+  // Simulation tuning: collision keeps nodes apart, the axis pull keeps
+  // disconnected components from drifting off-screen.
   useEffect(() => {
-    if (hasInitialized.current || !graphRef.current || !dimensions || graphData.nodes.length === 0)
-      return;
-    hasInitialized.current = true;
+    const fg = graphRef.current;
+    if (!fg || graphData.nodes.length === 0) return;
 
-    // Wait for graph to render, then set default zoom centered at origin
-    const timer = setTimeout(() => {
-      graphRef.current?.zoom(DEFAULT_ZOOM, 0);
-      graphRef.current?.centerAt(0, 0, 0);
-    }, 100);
+    const charge = fg.d3Force("charge") as
+      | { strength: (v: number) => void; distanceMax: (v: number) => void }
+      | undefined;
+    charge?.strength(-150);
+    charge?.distanceMax(450);
 
+    const link = fg.d3Force("link") as
+      | { distance: (fn: (l: LinkObject) => number) => void }
+      | undefined;
+    link?.distance((l: LinkObject) => {
+      const sourceSize =
+        typeof l.source === "object" ? getNodeSize(asGraphNode(l.source as NodeObject)) : 6;
+      const targetSize =
+        typeof l.target === "object" ? getNodeSize(asGraphNode(l.target as NodeObject)) : 6;
+      return 28 + sourceSize + targetSize;
+    });
+
+    fg.d3Force(
+      "collide",
+      // Tiles are squares of side 1.8x the radius, so pad by their half-diagonal
+      collisionForce((node) => getNodeSize(asGraphNode(node)) * 1.3 + 4),
+    );
+    fg.d3Force("x", axisPullForce("x", 0.04));
+    fg.d3Force("y", axisPullForce("y", 0.04));
+    fg.d3ReheatSimulation();
+  }, [graphData, dimensions]);
+
+  // Frame the whole graph instead of a fixed zoom at the origin: once when data
+  // arrives, and again when the simulation settles into its final layout.
+  const hasSettledRef = useRef(false);
+  const frameGraph = useCallback(() => {
+    const fg = graphRef.current;
+    if (!fg) return;
+    fg.zoomToFit(500, 90);
+    // zoomToFit overshoots on tiny graphs; pull back to a sane magnification.
+    window.setTimeout(() => {
+      if ((graphRef.current?.zoom() ?? 0) > 4) graphRef.current?.zoom(4, 200);
+    }, 550);
+  }, []);
+
+  useEffect(() => {
+    if (hasSettledRef.current || !dimensions || graphData.nodes.length === 0) return;
+    const timer = setTimeout(frameGraph, 400);
     return () => clearTimeout(timer);
-  }, [graphData.nodes.length, dimensions]);
+  }, [graphData.nodes.length, dimensions, frameGraph]);
+
+  const handleEngineStop = useCallback(() => {
+    if (hasSettledRef.current) return;
+    hasSettledRef.current = true;
+    frameGraph();
+  }, [frameGraph]);
+
+  // Re-frame when the focus scope changes - the visible set can move anywhere
+  const focusScope = focusId ? `${focusId}:${focusDepth}` : null;
+  const lastFramedFocusRef = useRef(focusScope);
+  useEffect(() => {
+    if (lastFramedFocusRef.current === focusScope) return;
+    lastFramedFocusRef.current = focusScope;
+    if (graphData.nodes.length === 0) return;
+    const timer = setTimeout(frameGraph, 450);
+    return () => clearTimeout(timer);
+  }, [focusScope, graphData.nodes.length, frameGraph]);
 
   // Cleanup: pause animation immediately on unmount to prevent navigation delays
   useEffect(() => {
@@ -450,7 +666,6 @@ export function NotesGraphDashboard() {
     };
   }, []);
 
-  // Zoom controls - get current zoom and multiply
   const handleZoomIn = useCallback(() => {
     if (!graphRef.current) return;
     const p1 = graphRef.current.screen2GraphCoords(0, 0);
@@ -473,65 +688,32 @@ export function NotesGraphDashboard() {
     graphRef.current?.zoomToFit(400, 100);
   }, []);
 
-  // Node click handler - navigate to the appropriate page for any node type
   const handleNodeClick = useCallback(
     (node: NodeObject) => {
       const graphNode = asGraphNode(node);
-
-      if (graphNode.isInternal) {
-        // Internal notes - navigate directly
-        navigate(`/notes/${graphNode.id}`);
-      } else if (graphNode.urn) {
-        // External references - use urnToPath for proper routing
-        const path = urnToPath(graphNode.urn);
-        if (path !== "#") {
-          navigate(path);
-        }
+      const path = urnToPath(graphNode.urn);
+      if (path !== "#") {
+        navigate(path);
       }
     },
     [navigate],
   );
 
-  // WORKAROUND: Custom hit detection to bypass library bug
-  // Find node at screen coordinates using graph's coordinate transformation
-  const findNodeAtPosition = useCallback(
-    (screenX: number, screenY: number): NodeObject | null => {
-      if (!graphRef.current || !containerRef.current) return null;
+  const findNodeAtPosition = useCallback((screenX: number, screenY: number): NodeObject | null => {
+    if (!graphRef.current || !containerRef.current) return null;
 
-      // Get container bounds
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = screenX - rect.left;
-      const y = screenY - rect.top;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = screenX - rect.left;
+    const y = screenY - rect.top;
 
-      // Convert screen coords to graph coords using the graph's transformation
-      const graphCoords = graphRef.current.screen2GraphCoords(x, y);
-      if (!graphCoords) return null;
+    const graphCoords = graphRef.current.screen2GraphCoords(x, y);
+    if (!graphCoords) return null;
 
-      const hitRadius = 15; // Pixels in graph coordinates for hit testing
+    return hitIndexRef.current.closest(graphCoords.x, graphCoords.y, GRAPH_HIT_RADIUS);
+  }, []);
 
-      // Find the closest node within hit radius
-      let closestNode: NodeObject | null = null;
-      let closestDist = Infinity;
+  const clearHitIndex = useCallback(() => hitIndexRef.current.clear(), []);
 
-      for (const node of graphData.nodes) {
-        if (typeof node.x !== "number" || typeof node.y !== "number") continue;
-
-        const dx = graphCoords.x - node.x;
-        const dy = graphCoords.y - node.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < hitRadius && dist < closestDist) {
-          closestDist = dist;
-          closestNode = node;
-        }
-      }
-
-      return closestNode;
-    },
-    [graphData.nodes],
-  );
-
-  // Custom mouse move handler for hover detection
   // The compiler infers the stable `setHoveredNode` as the dependency; the real
   // one is `findNodeAtPosition`, and this closure has to stay stable because it
   // is registered as a native pointer listener on the graph canvas.
@@ -562,15 +744,44 @@ export function NotesGraphDashboard() {
   );
   /* eslint-enable react/react-compiler */
 
-  // Custom click handler
+  // Click walks the graph (focus), double-click opens the content. The single
+  // click is deferred so a double-click never fires a focus change first.
+  const clickTimerRef = useRef<number | null>(null);
   const handleCanvasClick = useCallback(
     (e: MouseEvent) => {
       const node = findNodeAtPosition(e.clientX, e.clientY);
-      if (node) {
-        handleNodeClick(node);
+      if (!node) return;
+      const nodeId = asGraphNode(node).id;
+      if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = window.setTimeout(() => {
+        clickTimerRef.current = null;
+        if (nodeId === focusId) {
+          handleNodeClick(node);
+        } else {
+          setFocus(nodeId);
+        }
+      }, 250);
+    },
+    [findNodeAtPosition, focusId, handleNodeClick, setFocus],
+  );
+
+  const handleCanvasDblClick = useCallback(
+    (e: MouseEvent) => {
+      if (clickTimerRef.current) {
+        window.clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
       }
+      const node = findNodeAtPosition(e.clientX, e.clientY);
+      if (node) handleNodeClick(node);
     },
     [findNodeAtPosition, handleNodeClick],
+  );
+
+  useEffect(
+    () => () => {
+      if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
+    },
+    [],
   );
 
   // Attach custom mouse handlers to bypass library's broken hit detection
@@ -583,11 +794,13 @@ export function NotesGraphDashboard() {
     const attachHandlers = (canvasEl: HTMLCanvasElement) => {
       canvasEl.addEventListener("mousemove", handleCanvasMouseMove);
       canvasEl.addEventListener("click", handleCanvasClick);
+      canvasEl.addEventListener("dblclick", handleCanvasDblClick);
     };
 
     const detachHandlers = (canvasEl: HTMLCanvasElement) => {
       canvasEl.removeEventListener("mousemove", handleCanvasMouseMove);
       canvasEl.removeEventListener("click", handleCanvasClick);
+      canvasEl.removeEventListener("dblclick", handleCanvasDblClick);
     };
 
     if (canvas) {
@@ -614,28 +827,41 @@ export function NotesGraphDashboard() {
         detachHandlers(canvas);
       }
     };
-  }, [handleCanvasMouseMove, handleCanvasClick, loading]);
+  }, [handleCanvasMouseMove, handleCanvasClick, handleCanvasDblClick, loading]);
 
-  // Get node color based on type
-  const getNodeColor = useCallback(
-    (node: GraphNode): string => {
-      if (node.isInternal) {
-        return themeColors.primary;
-      }
-      return URN_TYPE_HEX_COLORS[node.type as UrnType] || URN_TYPE_HEX_COLORS[UrnType.UNKNOWN];
-    },
-    [themeColors.primary],
-  );
-
-  // Custom node painting with glow effects
   const paintNode = useCallback(
     (node: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
+      hitIndexRef.current.add(node);
       const graphNode = asGraphNode(node);
       const size = getNodeSize(graphNode);
       const isHovered = hoveredNode?.id === graphNode.id;
-      const nodeColor = getNodeColor(graphNode);
+      const isNeighbor = hoverNeighbors?.has(graphNode.id) ?? false;
+      const isFocusRoot = graphNode.id === focusId;
+      const matchesSearch = searchMatches?.has(graphNode.id) ?? false;
+      // Hover focus wins, then search: everything outside the active set recedes.
+      const dimmed = hoveredNode
+        ? !isHovered && !isNeighbor
+        : searchMatches
+          ? !matchesSearch
+          : false;
+      const isPerson = PERSON_TYPES.has(graphNode.type);
+      // Type picks a slice of the Unity Violet -> Belonging Pink axis, so the canvas
+      // reads as one sweep and hue tells you the type; shape and icon separate them
+      // further. People are told apart by their initials, not by their fill.
+      const stops = getUrnTypeBrandStops(graphNode.type);
+      const nodeColor = stops.start;
       const x = node.x || 0;
       const y = node.y || 0;
+
+      const targetAlpha = dimmed ? 0.14 : 1;
+      const alphaMap = dimAlphaRef.current;
+      const current = alphaMap.get(graphNode.id) ?? 1;
+      let alpha = current + (targetAlpha - current) * 0.25;
+      if (Math.abs(alpha - targetAlpha) < 0.01) alpha = targetAlpha;
+      alphaMap.set(graphNode.id, alpha);
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
 
       // Outer glow for hovered nodes
       if (isHovered) {
@@ -654,134 +880,144 @@ export function NotesGraphDashboard() {
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
-      // Main node circle with gradient
-      const nodeGradient = ctx.createRadialGradient(x - size * 0.3, y - size * 0.3, 0, x, y, size);
-      nodeGradient.addColorStop(0, nodeColor);
-      nodeGradient.addColorStop(1, nodeColor + "cc");
+      const fill = ctx.createLinearGradient(x - size, y - size, x + size, y + size);
+      fill.addColorStop(0, stops.start);
+      fill.addColorStop(1, stops.end);
 
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, 2 * Math.PI);
-      ctx.fillStyle = nodeGradient;
+      traceNodeShape(ctx, graphNode, x, y);
+      ctx.fillStyle = fill;
       ctx.fill();
 
       // Reset shadow
       ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
 
-      // Draw icon inside the node
-      const iconColor = isDark ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.95)";
-
-      if (graphNode.customIcon) {
-        if (graphNode.customIcon.type === "emoji") {
-          // Draw custom emoji icon - sized to match heroicons (~70% of node)
-          const emojiSize = size * 0.65;
-          ctx.font = `${emojiSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          // Small vertical offset to visually center (emojis tend to sit high)
-          ctx.fillText(graphNode.customIcon.value, x, y + emojiSize * 0.08);
-        } else {
-          // Draw custom heroicon using SVG path data
-          const iconSize = size * 0.7; // Icon takes up ~70% of node size
-          const drawn = drawIconOnCanvas(
-            ctx,
-            graphNode.customIcon.value,
-            x,
-            y,
-            iconSize,
-            iconColor,
-          );
-          if (!drawn) {
-            // Fallback to default icon if heroicon not found
-            drawNodeIcon(ctx, "note", x, y, size, iconColor);
-          }
-        }
+      if (isPerson) {
+        // Avatar-style initials, matching SubjectAvatar everywhere else
+        ctx.font = `600 ${Math.max(size * 0.85, 3)}px Inter, system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        ctx.fillText(getInitials(graphNode.label), x, y + size * 0.05);
       } else {
-        // Draw default type icon using canvas paths
-        drawNodeIcon(ctx, graphNode.type, x, y, size, iconColor);
+        const icon = getIconImage(graphNode.type, "#ffffff", handleIconReady);
+        if (icon.complete && icon.naturalWidth > 0) {
+          const iconSize = isCircleNode(graphNode.type) ? size * 1.15 : size * 1.05;
+          ctx.drawImage(icon, x - iconSize / 2, y - iconSize / 2, iconSize, iconSize);
+        }
       }
 
       // Border ring (consistent for all nodes)
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, 2 * Math.PI);
+      traceNodeShape(ctx, graphNode, x, y);
       ctx.strokeStyle = isHovered ? themeColors.foreground : nodeColor;
       ctx.lineWidth = isHovered ? 2 / globalScale : 1 / globalScale;
       ctx.stroke();
 
-      // Label (only when zoomed in enough or hovered)
-      if (globalScale > 0.6 || isHovered) {
-        const fontSize = Math.max(11 / globalScale, 4);
+      // Focus root gets a standing accent halo so the anchor stays identifiable
+      if (isFocusRoot) {
+        traceNodeShape(ctx, graphNode, x, y, 3.5 / globalScale);
+        ctx.strokeStyle = themeColors.primary;
+        ctx.lineWidth = 1.5 / globalScale;
+        ctx.stroke();
+      }
+
+      // Zoom-scaled label culling: at low zoom only hubs get labels, hover
+      // always shows its own neighborhood, search always labels its matches.
+      // Prevents the label soup dense clusters produce when every node draws text.
+      const showLabel = hoveredNode
+        ? isHovered || (isNeighbor && globalScale > 0.5)
+        : searchMatches
+          ? matchesSearch
+          : isFocusRoot ||
+            globalScale > 2.2 ||
+            (globalScale > 1.2 && graphNode.connections >= 2) ||
+            (globalScale > 0.7 && graphNode.connections >= 5);
+
+      if (showLabel) {
+        const fontSize = Math.max(11 / globalScale, 3);
         const label = graphNode.label;
-        const maxLength = isHovered ? 30 : 18;
+        const maxLength = isHovered ? 34 : 20;
         const truncatedLabel = label.length > maxLength ? label.slice(0, maxLength) + "…" : label;
 
         ctx.font = `500 ${fontSize}px Inter, system-ui, sans-serif`;
+        const labelY = y + size + 5 / globalScale;
+        const textWidth = measureLabel(ctx, truncatedLabel, fontSize);
+        const padX = 4 / globalScale;
+        const padY = 2.5 / globalScale;
+
+        // Backdrop pill keeps labels legible where they cross links or nodes.
+        ctx.beginPath();
+        ctx.roundRect(
+          x - textWidth / 2 - padX,
+          labelY - padY,
+          textWidth + padX * 2,
+          fontSize + padY * 2,
+          4 / globalScale,
+        );
+        ctx.fillStyle = themeColors.background + (isDark ? "cc" : "d9");
+        ctx.fill();
+
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-
-        const labelY = y + size + 6 / globalScale;
-
-        // Label text - white on dark, dark on light
-        ctx.fillStyle = isDark ? themeColors.foreground : "#18181b";
+        ctx.fillStyle =
+          isHovered || isNeighbor || isFocusRoot || matchesSearch || graphNode.connections >= 5
+            ? themeColors.foreground
+            : themeColors.mutedForeground;
         ctx.fillText(truncatedLabel, x, labelY);
       }
+
+      ctx.restore();
     },
-    [hoveredNode, getNodeColor, themeColors, isDark],
+    [hoveredNode, hoverNeighbors, focusId, searchMatches, themeColors, isDark, handleIconReady],
+  );
+
+  const isHoverAdjacentLink = useCallback(
+    (link: LinkObject) => {
+      if (!hoveredNode) return false;
+      const [sourceId, targetId] = linkEndpointIds(link);
+      return hoveredNode.id === sourceId || hoveredNode.id === targetId;
+    },
+    [hoveredNode],
   );
 
   // Link styling
   const getLinkColor = useCallback(
     (link: LinkObject) => {
-      const sourceId =
-        typeof link.source === "object" ? (link.source as NodeObject).id : link.source;
-      const targetId =
-        typeof link.target === "object" ? (link.target as NodeObject).id : link.target;
-
       if (hoveredNode) {
-        if (hoveredNode.id === sourceId || hoveredNode.id === targetId) {
-          return themeColors.primary + "cc";
-        }
-        return isDark ? "rgba(63, 63, 70, 0.15)" : "rgba(161, 161, 170, 0.15)";
+        if (isHoverAdjacentLink(link)) return GRAPH_LINK_PAINT.active;
+        return isDark ? GRAPH_LINK_PAINT.dimmedDark : GRAPH_LINK_PAINT.dimmedLight;
       }
-      return isDark ? "rgba(113, 113, 122, 0.35)" : "rgba(161, 161, 170, 0.4)";
+      return isDark ? GRAPH_LINK_PAINT.idleDark : GRAPH_LINK_PAINT.idleLight;
     },
-    [hoveredNode, themeColors.primary, isDark],
+    [hoveredNode, isHoverAdjacentLink, isDark],
   );
 
   const getLinkWidth = useCallback(
-    (link: LinkObject) => {
-      const sourceId =
-        typeof link.source === "object" ? (link.source as NodeObject).id : link.source;
-      const targetId =
-        typeof link.target === "object" ? (link.target as NodeObject).id : link.target;
-
-      if (hoveredNode && (hoveredNode.id === sourceId || hoveredNode.id === targetId)) {
-        return 2;
-      }
-      return 1;
-    },
-    [hoveredNode],
+    (link: LinkObject) => (isHoverAdjacentLink(link) ? 2 : 1),
+    [isHoverAdjacentLink],
   );
 
-  // Get icon for node type
-  const getTypeIcon = (type: UrnType | "note") => {
-    switch (type) {
-      case "note":
-      case UrnType.NOTE:
-        return FileText;
-      case UrnType.USER:
-        return User;
-      case UrnType.FILE:
-        return Folder;
-      case UrnType.CHAT:
-        return ChatTeardrop;
-      default:
-        return Link;
-    }
-  };
+  // Arrows read direction at a glance, so they get more contrast than the line
+  const getLinkArrowColor = useCallback(
+    (link: LinkObject) => {
+      if (hoveredNode) {
+        if (isHoverAdjacentLink(link)) return GRAPH_ARROW_PAINT.active;
+        return isDark ? GRAPH_ARROW_PAINT.dimmedDark : GRAPH_ARROW_PAINT.dimmedLight;
+      }
+      return isDark ? GRAPH_ARROW_PAINT.idleDark : GRAPH_ARROW_PAINT.idleLight;
+    },
+    [hoveredNode, isHoverAdjacentLink, isDark],
+  );
 
-  // Empty state
-  if (!loading && graphData.nodes.length === 0) {
+  // Particles only animate on the hovered neighborhood - a constant particle
+  // swarm across every link reads as noise and burns CPU on big graphs.
+  const getLinkParticles = useCallback(
+    (link: LinkObject) => (isHoverAdjacentLink(link) ? 2 : 0),
+    [isHoverAdjacentLink],
+  );
+
+  // Empty state (no accessible mention edges at all; filtered-empty still renders the canvas)
+  if ((graphStatus === "succeeded" || graphStatus === "failed") && fullData.nodes.length === 0) {
     return (
       <div className="h-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
         <div className="text-center p-8 max-w-md">
@@ -791,20 +1027,34 @@ export function NotesGraphDashboard() {
               <Cube size={48} weight="duotone" className="text-primary/60" />
             </div>
           </div>
-          <h2 className="text-2xl font-semibold mb-3">Your Knowledge Graph</h2>
+          <h2 className="text-2xl font-semibold mb-3">Knowledge Graph</h2>
           <p className="text-muted-foreground mb-6 leading-relaxed">
-            Create notes and link them together using @mentions to build your personal knowledge
-            network.
+            {graphStatus === "failed"
+              ? (graphError ?? "The graph could not be loaded.")
+              : "Link notes, tasks, and events together with @mentions to map how your organization's knowledge connects."}
           </p>
+          {graphStatus === "failed" && (
+            <button
+              type="button"
+              onClick={() => organizationId && dispatch(fetchContentGraph(organizationId))}
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Try again
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full w-full flex flex-col bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden">
+    <div className="h-full w-full flex flex-col bg-background overflow-hidden">
       {/* Graph container */}
       <div ref={containerRef} className="flex-1 relative min-h-0 w-full">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-72 [background-image:radial-gradient(hsl(var(--foreground)/0.07)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:linear-gradient(to_bottom,black,transparent)]"
+        />
         {loading || !dimensions ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="relative">
@@ -821,17 +1071,27 @@ export function NotesGraphDashboard() {
             graphData={graphData}
             nodeId="id"
             nodeLabel=""
+            // Arrow tips offset from the target by the library's own radius
+            // (nodeRelSize * sqrt(val)); match it to the painted node size so
+            // arrowheads land at the tile edge instead of underneath it.
+            nodeVal={(node: NodeObject) => {
+              const size = getNodeSize(asGraphNode(node)) * 1.15;
+              return (size * size) / 16;
+            }}
             nodeCanvasObject={paintNode}
             nodeCanvasObjectMode={() => "replace"}
+            onRenderFramePre={clearHitIndex}
             linkColor={getLinkColor}
             linkWidth={getLinkWidth}
-            linkDirectionalParticles={2}
+            linkDirectionalArrowLength={4}
+            linkDirectionalArrowRelPos={1}
+            linkDirectionalArrowColor={getLinkArrowColor}
+            linkDirectionalParticles={getLinkParticles}
             linkDirectionalParticleWidth={2}
             linkDirectionalParticleSpeed={0.005}
-            linkDirectionalParticleColor={() => themeColors.primary + "cc"}
-            // WORKAROUND: Disable library's broken hover/click detection
-            // (canvas-color-tracker bug where certain node indices fail hit detection)
-            // We use our own coordinate-based hit detection instead
+            linkDirectionalParticleColor={() => GRAPH_ARROW_PAINT.active}
+            onEngineStop={handleEngineStop}
+            // Pointer events use the frame-refreshed position index above.
             enablePointerInteraction={false}
             // No warmupTicks - render immediately and let simulation animate visually
             // This prevents the jarring "half render then jump" behavior with many nodes
@@ -873,78 +1133,191 @@ export function NotesGraphDashboard() {
 
         {/* Hover card */}
         {hoveredNode && (
-          <div className="absolute top-4 left-4 bg-card/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl p-4 max-w-xs animate-in fade-in slide-in-from-left-2 duration-200 pointer-events-none">
+          <div className="absolute top-4 right-4 bg-card/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl p-4 max-w-xs animate-in fade-in slide-in-from-right-2 duration-200 pointer-events-none">
             <div className="flex items-start gap-3">
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-inner"
-                style={{
-                  background: `linear-gradient(135deg, ${getNodeColor(hoveredNode)}20, ${getNodeColor(hoveredNode)}10)`,
-                  borderColor: getNodeColor(hoveredNode) + "30",
-                  borderWidth: 1,
-                }}
-              >
-                {hoveredNode.customIcon ? (
-                  hoveredNode.customIcon.type === "emoji" ? (
-                    <span className="text-xl">{hoveredNode.customIcon.value}</span>
-                  ) : (
-                    (() => {
-                      const Icon = getIconComponent(hoveredNode.customIcon.value);
-                      return (
-                        <Icon
-                          size={20}
-                          weight="duotone"
-                          style={{ color: getNodeColor(hoveredNode) }}
-                        />
-                      );
-                    })()
-                  )
-                ) : (
-                  (() => {
-                    const Icon = getTypeIcon(hoveredNode.type);
-                    return (
-                      <Icon
-                        size={20}
-                        weight="duotone"
-                        style={{ color: getNodeColor(hoveredNode) }}
-                      />
-                    );
-                  })()
-                )}
-              </div>
+              {PERSON_TYPES.has(hoveredNode.type) ? (
+                <div
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white shadow-inner"
+                  style={{
+                    // Matches the node on the canvas, which rides the type's slice of
+                    // the brand axis rather than the per-person avatar hash.
+                    background: brandGradient(getUrnTypeBrandStops(hoveredNode.type)),
+                  }}
+                >
+                  {getInitials(hoveredNode.label)}
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    "flex h-10 w-10 flex-shrink-0 items-center justify-center shadow-inner",
+                    hoveredNode.type === UrnType.AGENT ? "rounded-full" : "rounded-lg",
+                  )}
+                  style={{
+                    background: `linear-gradient(135deg, ${hoveredNode.color}20, ${hoveredNode.color}10)`,
+                    borderColor: hoveredNode.color + "30",
+                    borderWidth: 1,
+                  }}
+                >
+                  {(() => {
+                    const Icon = getContentTypeIcon(hoveredNode.type);
+                    return <Icon size={20} weight="duotone" style={{ color: hoveredNode.color }} />;
+                  })()}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium truncate">{hoveredNode.label}</h3>
                 <div className="flex items-center gap-2 mt-1">
                   <span
-                    className="text-xs px-1.5 py-0.5 rounded-md capitalize"
+                    className="text-xs px-1.5 py-0.5 rounded-md"
                     style={{
-                      backgroundColor: getNodeColor(hoveredNode) + "15",
-                      color: getNodeColor(hoveredNode),
+                      backgroundColor: hoveredNode.color + "15",
+                      color: hoveredNode.color,
                     }}
                   >
-                    {hoveredNode.isInternal ? "Note" : hoveredNode.type.replace("_", " ")}
+                    {getContentTypeLabel(hoveredNode.type)}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {hoveredNode.connections} connection
-                  {hoveredNode.connections !== 1 ? "s" : ""}
-                </p>
+                {hoverLinkInfo && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {hoverLinkInfo.outgoing} outgoing · {hoverLinkInfo.incoming} incoming
+                  </p>
+                )}
               </div>
             </div>
-            {(hoveredNode.isInternal ||
-              (hoveredNode.urn && urnToPath(hoveredNode.urn) !== "#")) && (
-              <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">Click</kbd>
-                <span>to open</span>
+            <GraphNodeDetails node={hoveredNode} meta={urnMetadata.get(hoveredNode.urn)} />
+            {hoverLinkInfo && hoverLinkInfo.referencedBy.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Referenced by
+                </p>
+                <ul className="mt-1.5 space-y-0.5">
+                  {hoverLinkInfo.referencedBy.map((label, i) => (
+                    <li key={i} className="truncate text-xs text-foreground">
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+                {hoverLinkInfo.moreReferences > 0 && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    +{hoverLinkInfo.moreReferences} more
+                  </p>
+                )}
               </div>
             )}
+            <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">Click</kbd>
+              <span>{hoveredNode.id === focusId ? "to open" : "to focus"}</span>
+              {hoveredNode.id !== focusId &&
+                (hoveredNode.isInternal ||
+                  (hoveredNode.urn && urnToPath(hoveredNode.urn) !== "#")) && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">
+                      2×Click
+                    </kbd>
+                    <span>to open</span>
+                  </>
+                )}
+            </div>
           </div>
         )}
 
-        {/* Stats */}
-        <div className="absolute top-4 left-4 flex items-center gap-2 text-xs text-muted-foreground pointer-events-none">
-          <span>{stats.totalNodes} nodes</span>
-          <span>·</span>
-          <span>{stats.totalLinks} links</span>
+        {/* Node search and the focus scope chip */}
+        <div className="absolute left-4 top-4 z-10 flex flex-col items-start gap-2">
+          <div className="relative">
+            <MagnifyingGlass
+              size={14}
+              weight="bold"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-primary"
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setQuery("");
+                if (e.key === "Enter" && searchMatches && searchMatches.size > 0) {
+                  graphRef.current?.zoomToFit(500, 120, (n) =>
+                    searchMatches.has(asGraphNode(n).id),
+                  );
+                }
+              }}
+              placeholder="Filter graph..."
+              className={cn(
+                "w-56 rounded-full border border-border bg-card py-2 pl-9 pr-8 text-xs text-foreground",
+                "shadow-md placeholder:text-muted-foreground",
+                "transition-[width,border-color] duration-200 focus:w-72 focus:border-primary/60 focus:outline-none",
+              )}
+              data-testid="graph-search"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X size={12} weight="bold" />
+              </button>
+            )}
+          </div>
+
+          {focusId && (
+            <div
+              className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-primary shadow-lg backdrop-blur-sm"
+              data-testid="graph-focus-chip"
+            >
+              <span className="max-w-52 truncate">{nodeLabelById.get(focusId) ?? "Focused"}</span>
+              <button
+                type="button"
+                onClick={cycleFocusDepth}
+                className="rounded-full bg-primary/15 px-1.5 py-0.5 font-medium tabular-nums hover:bg-primary/25"
+                title="Change focus depth"
+                data-testid="graph-focus-depth"
+              >
+                {focusDepth} hop{focusDepth === 1 ? "" : "s"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFocus(null)}
+                aria-label="Show full graph"
+                className="hover:text-foreground"
+              >
+                <X size={12} weight="bold" />
+              </button>
+            </div>
+          )}
+
+          {graphTruncated && (
+            <div
+              role="status"
+              className="flex max-w-72 items-center gap-2 rounded-lg border border-yellow-300/60 bg-yellow-100/90 px-3 py-2 text-xs text-yellow-900 shadow-lg backdrop-blur-sm dark:border-yellow-700/60 dark:bg-yellow-950/80 dark:text-yellow-200"
+              data-testid="graph-truncation-notice"
+            >
+              <WarningCircle size={16} weight="fill" className="shrink-0" />
+              <span>Showing a bounded view of this large graph.</span>
+            </div>
+          )}
+
+          {focusMissing && (
+            <div
+              role="status"
+              className="flex max-w-72 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur-sm"
+              data-testid="graph-focus-missing-notice"
+            >
+              <WarningCircle size={16} className="shrink-0" />
+              <span>
+                That item is not in this view of the graph
+                {graphTruncated ? ", which is bounded to recently updated content." : "."}
+              </span>
+            </div>
+          )}
+
+          {searchMatches && (
+            <span className="text-xs text-muted-foreground">
+              {searchMatches.size} match{searchMatches.size === 1 ? "" : "es"}
+            </span>
+          )}
         </div>
       </div>
     </div>

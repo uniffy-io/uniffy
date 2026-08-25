@@ -1,6 +1,6 @@
 import { type ReactNode, useState, useCallback } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
-import { SquaresFour, BookmarkSimple, LockSimple, Buildings } from "@phosphor-icons/react";
+import { SquaresFour, LockSimple, Buildings } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
@@ -13,7 +13,6 @@ import {
 
 const FILES_SECTIONS: SidebarSection[] = [
   { id: "all", icon: SquaresFour, label: "All Files" },
-  { id: "bookmarked", icon: BookmarkSimple, label: "Bookmarks" },
   { id: "personal", icon: LockSimple, label: "Personal" },
   { id: "organization", icon: Buildings, label: "Organization" },
 ];

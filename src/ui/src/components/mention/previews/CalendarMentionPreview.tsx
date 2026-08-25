@@ -16,6 +16,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { prejoinOpened, selectActiveCallForChannel } from "@/features/calls/store/callsSlice";
 import { cn } from "@/shared/utils/cn";
 import type { RootState } from "@/app/store";
+import { ShowInGraphButton } from "@/components/mention/previews/ShowInGraphButton";
 
 interface CalendarMentionPreviewProps {
   urn: string;
@@ -187,6 +188,7 @@ export function CalendarMentionPreview({
           <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>
         </span>
         <span className="flex items-center gap-1">
+          <ShowInGraphButton urn={urn} />
           <button
             onClick={(e) => {
               e.stopPropagation();

@@ -60,7 +60,7 @@ import { selectSubfoldersForCurrentFolder } from "@/features/files/store/selecto
 import type { SerializedFile } from "@/features/files/store/filesThunks";
 import type { SerializedTreeNode, SerializedFolder } from "@/features/files/store/filesTreeThunks";
 import { useAccessPolicyDialog } from "@/features/permissions";
-import { toggleBookmark } from "@/features/bookmarks";
+import { addBookmarksSafely, useBookmarkStatuses } from "@/features/bookmarks";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { ContentType, AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { bucketForContent, roleCanDelete, roleCanEdit } from "@/shared/utils/contentRoles";
@@ -317,6 +317,15 @@ export function FilesList({
       return f.accessMode === AccessMode.EXPLICIT_MEMBERS;
     });
   }, [subfolders, viewScope, userId]);
+
+  const visibleBookmarkUrns = useMemo(
+    () => [
+      ...scopedFiles.map((file) => `urn:uniffy:content:FILE:${file.id}`),
+      ...scopedSubfolders.map((folder) => `urn:uniffy:content:FOLDER:${folder.id}`),
+    ],
+    [scopedFiles, scopedSubfolders],
+  );
+  useBookmarkStatuses(visibleBookmarkUrns);
 
   // Single click - just select the file (for details panel)
   const handleSelectFile = useCallback(
@@ -714,14 +723,11 @@ export function FilesList({
   );
 
   const handleBulkBookmark = useCallback(async () => {
-    // Only bookmark files for now
     if (selectedFileIds.length === 0) return;
     setBulkActionLoading(true);
     try {
-      for (const fileId of selectedFileIds) {
-        const fileUrn = `urn:uniffy:content:FILE:${fileId}`;
-        await dispatch(toggleBookmark(fileUrn));
-      }
+      const urns = selectedFileIds.map((fileId) => `urn:uniffy:content:FILE:${fileId}`);
+      await dispatch(addBookmarksSafely(urns));
     } finally {
       setBulkActionLoading(false);
     }

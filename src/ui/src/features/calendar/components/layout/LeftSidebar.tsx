@@ -2,7 +2,6 @@ import { Plus, CalendarBlank, CaretDoubleLeft } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { openEventModal, toggleSidebar } from "@/features/calendar/store";
-import { useBookmarks } from "@/features/bookmarks";
 import { QuickAccess } from "@/features/calendar/components/sidebar/QuickAccess";
 import { MiniCalendar } from "@/features/calendar/components/sidebar/MiniCalendar";
 import { CategoryList } from "@/features/calendar/components/sidebar/CategoryList";
@@ -12,9 +11,6 @@ import { TemplateList } from "@/features/calendar/components/sidebar/TemplateLis
 export function LeftSidebar() {
   const dispatch = useAppDispatch();
   const { isMobile } = useBreakpoint();
-
-  // Fetches on org change; the Bookmarked quick-access filter reads the same slice.
-  useBookmarks();
 
   const handleNewEvent = () => {
     dispatch(openEventModal({ mode: "create" }));

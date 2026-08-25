@@ -1,3 +1,5 @@
+import type { UrnMetadata } from "@uniffy/proto/search/v1/search_pb";
+
 /** Task status IDs come from the project's configurable status field (e.g. "status_todo"). */
 export type TaskStatus = string;
 
@@ -165,6 +167,9 @@ export interface MentionChipProps extends MentionChipBaseProps {
   onClick?: (e?: React.MouseEvent) => void;
   onReplaceWithMedia?: (mediaType: "image" | "video" | "audio", url: string, title: string) => void;
   liveState?: MentionLiveState | null;
+  resolvedMetadata?: UrnMetadata;
+  /** Always render the expanded card, ignoring the mentionDisplay setting and per-chip toggles. */
+  forceExpanded?: boolean;
 }
 
 export interface MentionChipCompactProps extends MentionChipBaseProps {

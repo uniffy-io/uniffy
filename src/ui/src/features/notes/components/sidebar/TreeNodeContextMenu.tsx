@@ -9,7 +9,6 @@ import { useEffect, useRef } from "react";
 import { PencilSimple, Trash, CopySimple, ArrowRight, BookmarkSimple } from "@phosphor-icons/react";
 import type { ActiveMenuState } from "@/features/notes/components/sidebar/types";
 import { useBookmarkToggle } from "@/features/bookmarks";
-import { buildUrn, UrnType } from "@/shared/utils/urn";
 
 interface TreeNodeContextMenuProps {
   menu: ActiveMenuState;
@@ -29,7 +28,7 @@ export function TreeNodeContextMenu({
   onMove,
 }: TreeNodeContextMenuProps) {
   const isBookmarkable = menu.nodeType === "note" || menu.nodeType === "canvas";
-  const nodeUrn = isBookmarkable ? buildUrn(UrnType.NOTE, menu.nodeId) : "";
+  const nodeUrn = isBookmarkable ? `urn:uniffy:content:NOTE:${menu.nodeId}` : "";
   const {
     isBookmarked,
     toggling: bookmarkToggling,

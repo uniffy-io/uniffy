@@ -66,14 +66,12 @@ export function buildNoteHierarchy(notes: SerializedNote[]): TreeNode[] {
 }
 
 export interface OrganizedNotes {
-  bookmarked: TreeNode[];
   personal: TreeNode[];
   shared: TreeNode[];
   organization: TreeNode[];
   trash: TreeNode[];
 }
 
-/** The `bookmarked` section is populated by NotesSidebar separately since bookmarks are user-scoped. */
 export function organizeNotesBySection(
   notes: SerializedNote[],
   currentUserId: string,
@@ -109,7 +107,6 @@ export function organizeNotesBySection(
   });
 
   return {
-    bookmarked: [],
     personal: buildNoteHierarchy(personal),
     shared: buildNoteHierarchy(shared),
     organization: buildNoteHierarchy(organization),

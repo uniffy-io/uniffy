@@ -123,10 +123,10 @@ When adding a new content type (e.g., `TASK`), update these files:
 | File | Update |
 |------|--------|
 | `src/ui/src/shared/utils/urnTypes.ts` | Add to `UrnType` const |
-| `src/ui/src/config/theme/urnColors.ts` | Add hex color and theme |
+| `src/ui/src/config/theme/urnColors.ts` | Add hex color, theme, and a `BRAND_RAMP_ORDER` slot |
 | `src/ui/src/config/theme/contentTypes.ts` | Add to `CONTENT_TYPE_CONFIG` |
 | `src/ui/src/features/search/utils/queryParser.ts` | Add to `TYPE_KEYWORD_MAP` and `FILTER_PREFIXES` |
-| `src/ui/src/features/search/components/SearchResultsList.tsx` | Add to `SEARCH_RESULT_TYPE_TO_URN_TYPE` |
+| `src/ui/src/shared/utils/searchResultTypes.ts` | Add to `SEARCH_RESULT_TYPE_TO_URN_TYPE` |
 
 ---
 

@@ -25,7 +25,7 @@ const RESOLVE_DEBOUNCE = 200;
 
 interface MentionStateContextValue {
   states: Map<string, MentionLiveState>;
-  register: (urn: string) => void;
+  register: (urn: string, resolvedMetadata?: UrnMetadata) => void;
   unregister: (urn: string) => void;
   mentionDisplay: MentionDisplayMode;
 }
@@ -448,6 +448,7 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
   const [states, setStates] = useState<Map<string, MentionLiveState>>(new Map());
   const pendingUrns = useRef(new Set<string>());
   const resolveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousOrganizationId = useRef(organizationId);
 
   const flushPending = useCallback(async () => {
     resolveTimer.current = null;
@@ -518,11 +519,25 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     resolveTimer.current = setTimeout(flushPending, RESOLVE_DEBOUNCE);
   }, [flushPending]);
 
-  // Refetch on every fresh registration so domain switches pull fresh state from Meili rather than serve indefinitely cached entries.
   const register = useCallback(
-    (urn: string) => {
+    (urn: string, resolvedMetadata?: UrnMetadata) => {
       const count = registeredUrns.current.get(urn) ?? 0;
       registeredUrns.current.set(urn, count + 1);
+
+      if (resolvedMetadata) {
+        pendingUrns.current.delete(urn);
+        const liveState = metadataToLiveState(urn, resolvedMetadata);
+        setStates((prev) => {
+          const next = new Map(prev);
+          next.set(urn, liveState);
+          return next;
+        });
+        setMentionState(urn, liveState);
+        if (resolvedMetadata.url) {
+          setMentionUrl(urn, resolvedMetadata.url);
+        }
+        return;
+      }
 
       if (count === 0) {
         pendingUrns.current.add(urn);
@@ -582,7 +597,12 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
   }, []);
 
   useEffect(() => {
-    if (!organizationId) return;
+    if (!organizationId) {
+      previousOrganizationId.current = null;
+      return;
+    }
+    if (organizationId === previousOrganizationId.current) return;
+    previousOrganizationId.current = organizationId;
 
     // eslint-disable-next-line react/react-compiler -- an org switch must drop every resolved title before the refetch, or chips keep rendering the previous tenant's content
     setStates(new Map());

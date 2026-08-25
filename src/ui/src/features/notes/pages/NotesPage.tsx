@@ -1,15 +1,13 @@
-import { useEffect, useCallback, useRef, Suspense } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { ErrorBoundary, PageErrorFallback, PageLoader } from "@/components/feedback";
 import { NotesLayout } from "@/features/notes/components/NotesLayout";
 import { NotesSidebar } from "@/features/notes/components/sidebar/NotesSidebar";
 import { NotesEditor } from "@/features/notes/components/editor/NotesEditor";
 import { NoteFolderView } from "@/features/notes/components/folder/NoteFolderView";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { NotesMetadataPanel } from "@/features/notes/components/metadata/NotesMetadataPanel";
-import { NotesEmptyState } from "@/features/notes/components/NotesEmptyState";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import {
   toggleSidebar,
@@ -24,19 +22,8 @@ import { setCurrentNote, fetchNote, initializeNotesData } from "@/features/notes
 import { saveLastOpenedNote, clearLastOpenedNote } from "@/features/notes/utils/lastOpenedNote";
 import { useShortcutHandler, useAppearanceSettings } from "@/features/settings";
 import { useNotesCacheSync } from "@/features/notes/hooks/useNotesCacheSync";
-import { lazyImport } from "@/shared/utils/lazyImport";
 import { recordRecentItem } from "@/features/search/utils/recentItems";
 import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
-
-// Separate chunk: the graph pulls d3-force and never loads on the editor path.
-const NotesGraphDashboard = lazyImport(
-  () => import("@/features/notes/components/dashboard/NotesGraphDashboard"),
-  "NotesGraphDashboard",
-);
-
-function renderPageErrorFallback(props: { error: Error; reset: () => void }) {
-  return <PageErrorFallback {...props} />;
-}
 
 export function NotesPage() {
   const dispatch = useAppDispatch();
@@ -57,14 +44,12 @@ export function NotesPage() {
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
 
-  const isGraphRoute = location.pathname === "/notes/graph";
   const fromLastOpened = Boolean(
     (location.state as { fromLastOpened?: boolean } | null)?.fromLastOpened,
   );
 
   const currentNote = currentNoteId ? notesState?.notes[currentNoteId] : null;
-  const pageTitle = isGraphRoute ? "Knowledge Graph" : currentNote?.title || "Notes";
-  useDocumentTitle(pageTitle);
+  useDocumentTitle(currentNote?.title || "Notes");
 
   const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
@@ -104,8 +89,6 @@ export function NotesPage() {
     });
   }, [organizationId, userId, currentNoteId, currentNote?.title]);
 
-  const notesLoading = notesState?.loading ?? false;
-  const notesCount = Object.keys(notesState?.notes ?? {}).length;
   const treeLoaded = useAppSelector((state) => state.notesTree.treeLoaded);
 
   // Gating on tree state (not notesCount) - fetchNote can mask an empty tree.
@@ -131,7 +114,7 @@ export function NotesPage() {
         // A stale last-opened pointer (deleted note, revoked access) must not trap /notes in a dead redirect.
         if (fromLastOpened && organizationId && userId) {
           clearLastOpenedNote(organizationId, userId);
-          navigate("/notes/graph", { replace: true });
+          navigate("/library/graph", { replace: true });
         }
       });
   }, [noteId, fromLastOpened, organizationId, userId, dispatch, navigate]);
@@ -142,17 +125,7 @@ export function NotesPage() {
       <NotesLayout
         sidebar={<NotesSidebar />}
         editor={
-          isGraphRoute ? (
-            treeLoaded && notesCount === 0 && !notesLoading ? (
-              <NotesEmptyState key="empty-state" />
-            ) : (
-              <ErrorBoundary fallback={renderPageErrorFallback}>
-                <Suspense fallback={<PageLoader />}>
-                  <NotesGraphDashboard key="graph-dashboard" />
-                </Suspense>
-              </ErrorBoundary>
-            )
-          ) : currentNote?.nodeType === NodeType.FOLDER ? (
+          currentNote?.nodeType === NodeType.FOLDER ? (
             <NoteFolderView key="folder-view" />
           ) : (
             <NotesEditor key="note-editor" />

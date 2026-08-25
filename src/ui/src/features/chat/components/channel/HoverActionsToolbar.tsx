@@ -2,6 +2,7 @@ import { memo, useState, useCallback, useRef, useEffect } from "react";
 import {
   ArrowBendDoubleUpRight,
   ArrowBendUpLeft,
+  BookmarkSimple,
   ChatText,
   Copy,
   DotsThreeVertical,
@@ -12,6 +13,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { useBookmarkToggle } from "@/features/bookmarks";
 import { cn } from "@/shared/utils/cn";
 import { openThreadPanel } from "@/features/chat/store/chatUiSlice";
 import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
@@ -55,6 +57,13 @@ function HoverActionsToolbarInner({
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
 
   const isOwnMessage = senderId === currentUserId;
+
+  const messageUrn = `urn:uniffy:content:CHAT_MESSAGE:${messageId}`;
+  const {
+    isBookmarked,
+    toggling: bookmarkToggling,
+    toggle: toggleBookmark,
+  } = useBookmarkToggle(messageUrn);
 
   useEffect(() => {
     if (!showMoreMenu) return;
@@ -120,6 +129,11 @@ function HoverActionsToolbarInner({
     navigator.clipboard.writeText(permalink);
     setShowMoreMenu(false);
   }, [channelId, messageId]);
+
+  const handleToggleSave = useCallback(() => {
+    toggleBookmark();
+    setShowMoreMenu(false);
+  }, [toggleBookmark]);
 
   const handleEdit = useCallback(() => {
     setShowMoreMenu(false);
@@ -252,6 +266,16 @@ function HoverActionsToolbarInner({
             >
               <LinkSimple size={14} />
               <span>Copy link</span>
+            </button>
+            <button
+              className={menuItemClass}
+              onClick={handleToggleSave}
+              disabled={bookmarkToggling}
+              data-testid={`chat-message-save-button-${messageId}`}
+              data-state={isBookmarked ? "saved" : "unsaved"}
+            >
+              <BookmarkSimple size={14} weight={isBookmarked ? "fill" : "regular"} />
+              <span>{isBookmarked ? "Remove from saved" : "Save message"}</span>
             </button>
             {isOwnMessage && (
               <>

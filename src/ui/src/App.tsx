@@ -1,9 +1,10 @@
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
   Route,
   Navigate,
+  useLocation,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -28,8 +29,7 @@ import { CallProvider } from "@/features/calls/components/CallProvider";
 import { CallDock } from "@/features/calls/components/CallDock";
 import { UploadBoot } from "@/features/files/components/upload/UploadBoot";
 import { ErrorBoundary } from "@/components/feedback/ErrorBoundary";
-import { PageLoader } from "@/components/feedback/PageLoader";
-import { PageErrorFallback } from "@/components/feedback/PageErrorFallback";
+import { LazyRoute } from "@/components/feedback/LazyRoute";
 import { AppErrorFallback } from "@/components/feedback/AppErrorFallback";
 import { NotFoundPage } from "@/components/feedback/NotFoundPage";
 import {
@@ -195,10 +195,7 @@ const NotificationsPage = lazyImport(
   () => import("@/features/notifications/pages/NotificationsPage"),
   "NotificationsPage",
 );
-const TagsExplorerPage = lazyImport(
-  () => import("@/features/tags/pages/TagsExplorerPage"),
-  "TagsExplorerPage",
-);
+const LibraryPage = lazyImport(() => import("@/features/library/pages/LibraryPage"), "LibraryPage");
 const OrgChartPage = lazyImport(
   () => import("@/features/people/pages/OrgChartPage"),
   "OrgChartPage",
@@ -280,26 +277,8 @@ interface ErrorFallbackProps {
   reset: () => void;
 }
 
-function renderPageErrorFallback(props: ErrorFallbackProps) {
-  return <PageErrorFallback {...props} />;
-}
-
 function renderAppErrorFallback(props: ErrorFallbackProps) {
   return <AppErrorFallback {...props} />;
-}
-
-/**
- * LazyRoute - Wraps lazy-loaded page components with Suspense and ErrorBoundary.
- *
- * Provides route-level error isolation: if a page crashes, the global chrome
- * (header, spotlight search, toaster) keeps working.
- */
-function LazyRoute({ children }: { children: React.ReactNode }) {
-  return (
-    <ErrorBoundary fallback={renderPageErrorFallback}>
-      <Suspense fallback={<PageLoader />}>{children}</Suspense>
-    </ErrorBoundary>
-  );
 }
 
 /**
@@ -323,8 +302,7 @@ function AdminIndexRedirect() {
 }
 
 /**
- * NotesIndexRedirect - Sends /notes to the user's last opened note, else the graph dashboard.
- * Redirecting during render keeps the heavy graph from mounting for a throwaway frame.
+ * NotesIndexRedirect - Sends /notes to the user's last opened note, else the Library knowledge graph.
  */
 function NotesIndexRedirect() {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -334,7 +312,7 @@ function NotesIndexRedirect() {
   if (lastNoteId) {
     return <Navigate to={`/notes/${lastNoteId}`} replace state={{ fromLastOpened: true }} />;
   }
-  return <Navigate to="/notes/graph" replace />;
+  return <Navigate to="/library/graph" replace />;
 }
 
 /**
@@ -365,6 +343,18 @@ function ChatIndexRedirect() {
 function TeamChartRedirect() {
   const { teamId } = useParams<{ teamId: string }>();
   return <Navigate to={teamId ? `/people?team=${teamId}` : "/people"} replace />;
+}
+
+/** Existing /bookmarks and /tags links land on the merged Library surface. */
+function BookmarksRouteRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/library${location.search}`} replace />;
+}
+
+function TagsRouteRedirect() {
+  const { slug } = useParams<{ slug?: string }>();
+  const location = useLocation();
+  return <Navigate to={`/library/tags${slug ? `/${slug}` : ""}${location.search}`} replace />;
 }
 
 /**
@@ -800,18 +790,12 @@ export function App() {
                     }
                   />
 
-                  <Route
-                    path="/notes/graph"
-                    element={
-                      <ProtectedRoute>
-                        <LazyRoute>
-                          <NotesPage />
-                        </LazyRoute>
-                      </ProtectedRoute>
-                    }
-                  />
+                  <Route path="/notes/graph" element={<Navigate to="/library/graph" replace />} />
 
-                  <Route path="/notes/tags" element={<Navigate to="/tags?domain=note" replace />} />
+                  <Route
+                    path="/notes/tags"
+                    element={<Navigate to="/library/tags?domain=note" replace />}
+                  />
 
                   <Route
                     path="/notes/:noteId"
@@ -858,8 +842,10 @@ export function App() {
                     }
                   />
 
-                  {/* Phase 3 redirect; unified /tags explorer ships in Phase 5. */}
-                  <Route path="/files/tags" element={<Navigate to="/tags?domain=file" replace />} />
+                  <Route
+                    path="/files/tags"
+                    element={<Navigate to="/library/tags?domain=file" replace />}
+                  />
 
                   <Route
                     path="/files/trash"
@@ -1068,27 +1054,50 @@ export function App() {
                     }
                   />
 
-                  {/* Unified tags explorer */}
+                  {/* Library: private bookmarks + the shared tag taxonomy in one surface */}
                   <Route
-                    path="/tags"
+                    path="/library"
                     element={
                       <ProtectedRoute>
                         <LazyRoute>
-                          <TagsExplorerPage />
+                          <LibraryPage />
                         </LazyRoute>
                       </ProtectedRoute>
                     }
                   />
                   <Route
-                    path="/tags/:slug"
+                    path="/library/tags"
                     element={
                       <ProtectedRoute>
                         <LazyRoute>
-                          <TagsExplorerPage />
+                          <LibraryPage />
                         </LazyRoute>
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/library/tags/:slug"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <LibraryPage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/library/graph"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <LibraryPage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/bookmarks" element={<BookmarksRouteRedirect />} />
+                  <Route path="/tags" element={<TagsRouteRedirect />} />
+                  <Route path="/tags/:slug" element={<TagsRouteRedirect />} />
 
                   {/* People = the org chart; the redirect must precede /people/:userId */}
                   <Route

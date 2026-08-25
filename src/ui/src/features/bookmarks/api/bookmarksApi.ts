@@ -3,7 +3,7 @@ import { unaryTransport } from "@/config/api";
 import {
   BookmarksService,
   BulkCheckBookmarksRequestSchema,
-  ListBookmarksRequestSchema,
+  ListBookmarkItemsRequestSchema,
   ToggleBookmarkRequestSchema,
 } from "@uniffy/proto/bookmarks/v1/bookmarks_pb";
 import type { MessageInitShape } from "@bufbuild/protobuf";
@@ -15,8 +15,8 @@ export const bookmarksApi = {
     return bookmarksClient.toggleBookmark(request);
   },
 
-  listBookmarks: async (request: MessageInitShape<typeof ListBookmarksRequestSchema>) => {
-    return bookmarksClient.listBookmarks(request);
+  listBookmarkItems: async (request: MessageInitShape<typeof ListBookmarkItemsRequestSchema>) => {
+    return bookmarksClient.listBookmarkItems(request);
   },
 
   bulkCheckBookmarks: async (request: MessageInitShape<typeof BulkCheckBookmarksRequestSchema>) => {

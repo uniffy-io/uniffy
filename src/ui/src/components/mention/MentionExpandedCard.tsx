@@ -24,7 +24,8 @@ interface MentionExpandedCardProps {
   liveState: MentionLiveState;
   description?: string;
   onClick?: (e?: React.MouseEvent) => void;
-  onCollapse: () => void;
+  /** Absent when the surface pins cards open; the collapse control is hidden. */
+  onCollapse?: () => void;
   onEmbed?: () => void;
 }
 
@@ -53,7 +54,7 @@ export function MentionExpandedCard({
     title: liveState.title || label,
     description: strippedDesc,
     liveState,
-    onClose: onCollapse,
+    onClose: onCollapse ?? (() => undefined),
     onCopyLink: handleCopyLink,
   };
 
@@ -110,21 +111,23 @@ export function MentionExpandedCard({
         if (e.key === "Enter" || e.key === " ") onClick?.();
       }}
     >
-      <button
-        onMouseDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onCollapse();
-        }}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 transition-opacity"
-        title="Collapse to chip"
-      >
-        <CaretUp size={12} weight="bold" />
-      </button>
+      {onCollapse && (
+        <button
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onCollapse();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 transition-opacity"
+          title="Collapse to chip"
+        >
+          <CaretUp size={12} weight="bold" />
+        </button>
+      )}
 
       {renderPreview()}
     </span>

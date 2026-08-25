@@ -5,16 +5,30 @@ export {
   clearBookmarks,
   setBookmarkStatus,
   clearError,
-  fetchBookmarks,
+  fetchBookmarkItems,
   toggleBookmark,
+  toggleBookmarkSafely,
+  addBookmarksSafely,
   bulkCheckBookmarks,
 } from "@/features/bookmarks/store/bookmarksSlice";
 
-export type { SerializedBookmark, BookmarksState } from "@/features/bookmarks/store/bookmarksSlice";
+export type {
+  SerializedBookmark,
+  SerializedBookmarkItem,
+  SerializedBookmarkContent,
+  BookmarkItemsScope,
+  BookmarksState,
+} from "@/features/bookmarks/store/bookmarksSlice";
 
 export {
-  useBookmarks,
+  useBookmarkItems,
   useIsBookmarked,
+  useBookmarkStatuses,
   useBookmarkToggle,
-  useBookmarksByType,
 } from "@/features/bookmarks/hooks/useBookmarks";
+
+export {
+  BOOKMARK_FILTER_TYPES,
+  parseBookmarkTypesParam,
+  serializeBookmarkTypesParam,
+} from "@/features/bookmarks/utils/bookmarkTypes";

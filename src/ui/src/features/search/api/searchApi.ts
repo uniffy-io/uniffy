@@ -1,6 +1,7 @@
 import { createClient } from "@connectrpc/connect";
 import {
   SearchService,
+  GetContentGraphRequestSchema,
   ResolveUrnsRequestSchema,
   SearchRequestSchema,
 } from "@uniffy/proto/search/v1/search_pb";
@@ -19,7 +20,17 @@ export const searchApi = {
     return searchClient.search(request, { signal: options?.signal });
   },
 
-  resolveUrns: async (request: MessageInitShape<typeof ResolveUrnsRequestSchema>) => {
-    return searchClient.resolveUrns(request);
+  resolveUrns: async (
+    request: MessageInitShape<typeof ResolveUrnsRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => {
+    return searchClient.resolveUrns(request, { signal: options?.signal });
+  },
+
+  getContentGraph: async (
+    request: MessageInitShape<typeof GetContentGraphRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => {
+    return searchClient.getContentGraph(request, { signal: options?.signal });
   },
 };

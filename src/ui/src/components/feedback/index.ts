@@ -4,3 +4,4 @@ export { PageErrorFallback } from "@/components/feedback/PageErrorFallback";
 export { AppErrorFallback } from "@/components/feedback/AppErrorFallback";
 export { NotFoundPage } from "@/components/feedback/NotFoundPage";
 export { EmptyState } from "@/components/feedback/EmptyState";
+export { LazyRoute } from "@/components/feedback/LazyRoute";

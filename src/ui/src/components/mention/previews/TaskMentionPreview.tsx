@@ -15,6 +15,7 @@ import { isTaskDoneStatus } from "@/components/mention/types";
 import { SubjectAvatarStack } from "@/components/subject";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 import type { MentionLiveState } from "@/components/mention/types";
+import { ShowInGraphButton } from "@/components/mention/previews/ShowInGraphButton";
 
 interface TaskMentionPreviewProps {
   urn: string;
@@ -220,6 +221,7 @@ export function TaskMentionPreview({
           )}
         </span>
         <span className="flex items-center gap-1">
+          <ShowInGraphButton urn={urn} />
           <button
             onClick={(e) => {
               e.stopPropagation();

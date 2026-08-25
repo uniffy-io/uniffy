@@ -97,13 +97,6 @@ export { useNoteLoader, useCurrentNote } from "@/features/notes/hooks/useNotesHo
 export { useNotesCacheSync } from "@/features/notes/hooks/useNotesCacheSync";
 export { useTreeStateSync } from "@/features/notes/hooks/useTreeStateSync";
 
-export {
-  buildGraphData,
-  parseMentionsFromContent,
-  getNodeSize,
-  getGraphStats,
-} from "@/features/notes/utils/notesGraphUtils";
-
 export { buildBreadcrumbPath } from "@/features/notes/utils/notesTreeUtils";
 export type { BreadcrumbItem } from "@/features/notes/utils/notesTreeUtils";
 
@@ -134,4 +127,3 @@ export { clearTreeState } from "@/features/notes/utils/treeStateStorage";
 
 export type { TreeNode } from "@/features/notes/store/notesTreeSlice";
 export type { EditorMode, MetadataPanelTab } from "@/features/notes/store/editorSlice";
-export type { GraphNode, GraphLink, GraphData } from "@/features/notes/utils/notesGraphUtils";

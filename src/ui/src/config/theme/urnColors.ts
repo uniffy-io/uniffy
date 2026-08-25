@@ -1,4 +1,5 @@
 import { UrnType } from "@/shared/utils/urnTypes";
+import { brandRampStops, type BrandStops } from "@/config/theme/brandGradients";
 
 /** Hex color values for canvas/SVG rendering (graphs, charts). */
 export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
@@ -197,6 +198,49 @@ export function getUrnTypeHexColor(type: UrnType): string {
 
 export function getUrnTypeTheme(type: UrnType): UrnTypeTheme {
   return URN_TYPE_THEMES[type] || URN_TYPE_THEMES[UrnType.UNKNOWN];
+}
+
+/**
+ * Order the brand-axis ramp walks, violet end to pink end. Content types that
+ * belong together sit next to each other, so neighbouring hues read as related
+ * rather than arbitrary. Appending a type here shifts every later slice, which
+ * is fine - the ramp is a sweep, not a set of fixed identities.
+ */
+const BRAND_RAMP_ORDER: readonly UrnType[] = [
+  UrnType.NOTE,
+  UrnType.TAG,
+  UrnType.FOLDER,
+  UrnType.FILE,
+  UrnType.PROJECT,
+  UrnType.TASK,
+  UrnType.CALENDAR_EVENT,
+  UrnType.ROOM,
+  UrnType.CHAT,
+  UrnType.CHAT_MESSAGE,
+  UrnType.AGENT_FOLDER,
+  UrnType.AGENT_CHAT,
+  UrnType.AGENT_CRON_TASK,
+  UrnType.AGENT,
+  UrnType.TEAM,
+  UrnType.USER,
+];
+
+/**
+ * Stops a URN type is painted with on canvas surfaces. The whole graph is one
+ * Unity Violet -> Belonging Pink sweep instead of a set of unrelated hues, so
+ * position on the axis carries the type while shape and icon still separate
+ * them. Deliberately independent of the viewer's accent: like identity paint,
+ * the canvas has to look the same to everyone reading it.
+ */
+export function getUrnTypeBrandStops(type: UrnType): BrandStops {
+  const index = BRAND_RAMP_ORDER.indexOf(type);
+  if (index === -1) {
+    return {
+      start: URN_TYPE_HEX_COLORS[UrnType.UNKNOWN],
+      end: URN_TYPE_HEX_COLORS[UrnType.UNKNOWN],
+    };
+  }
+  return brandRampStops(index, BRAND_RAMP_ORDER.length);
 }
 
 export const URN_TYPE_LEGEND: Array<{

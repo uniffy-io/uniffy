@@ -34,7 +34,7 @@ export function TagMentionPreview({
   const palette = tagColorClasses(liveState.tagSlug ?? "", liveState.tagColor ?? undefined);
   const totalUsage = liveState.tagUsageCount ?? 0;
   const slug = liveState.tagSlug ?? "";
-  const tagPath = slug ? `/tags/${slug}` : "/tags";
+  const tagPath = slug ? `/library/tags/${slug}` : "/library/tags";
   const lastAddedAt = liveState.tagRecentAssignmentAt?.[0];
 
   return (

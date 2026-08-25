@@ -20,7 +20,7 @@ import { useEventCommit } from "@/features/calendar/hooks/useEventCommit";
 import { useEventPermission } from "@/features/calendar/hooks/useEventPermission";
 import { useAccessPolicyDialog } from "@/features/permissions";
 import { ACCENT_EVENT_COLOR } from "@/features/calendar/constants";
-import { useBookmarkToggle } from "@/features/bookmarks";
+import { useBookmarkStatuses, useBookmarkToggle } from "@/features/bookmarks";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { MentionChipCompact } from "@/components/mention";
@@ -49,6 +49,7 @@ export function EventDetailModal() {
     useEventCommit(selectedEvent);
 
   const eventUrn = selectedEvent ? `urn:uniffy:content:CALENDAR_EVENT:${selectedEvent.id}` : "";
+  useBookmarkStatuses(eventUrn ? [eventUrn] : []);
   const {
     isBookmarked,
     toggling: bookmarkToggling,

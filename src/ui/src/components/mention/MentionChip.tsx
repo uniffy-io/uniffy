@@ -508,6 +508,8 @@ function MentionChipInner({
   onClick,
   onReplaceWithMedia,
   liveState,
+  resolvedMetadata,
+  forceExpanded = false,
 }: MentionChipProps) {
   const { type: urnType, id: urnId, isValid: isValidUrn } = parseUrn(urn);
   const style = getTypeStyle(urnType);
@@ -518,7 +520,7 @@ function MentionChipInner({
   const isPeopleToken = isPeopleTokenType(urnType);
   const isSelfMention = urnType === UrnType.USER && !!urnId && urnId === currentUserId;
 
-  const contextState = useMentionState(urn);
+  const contextState = useMentionState(urn, resolvedMetadata);
 
   const { preview, isLoading, error, fetchPreview } = useUrnPreview();
 
@@ -544,7 +546,7 @@ function MentionChipInner({
     setUserToggled(value);
     writeToggle(urn, value);
   };
-  const wantsExpanded = canExpand && (userToggled ?? defaultExpanded);
+  const wantsExpanded = canExpand && (forceExpanded || (userToggled ?? defaultExpanded));
   const isExpanded = wantsExpanded && !!resolvedLiveState;
 
   const availability = resolvedLiveState?.availability;
@@ -721,7 +723,7 @@ function MentionChipInner({
         liveState={resolvedLiveState}
         description={resolvedLiveState.description ?? preview?.description}
         onClick={onClick}
-        onCollapse={() => persistToggle(false)}
+        onCollapse={forceExpanded ? undefined : () => persistToggle(false)}
         onEmbed={onReplaceWithMedia ? handleEmbed : undefined}
       />
     );

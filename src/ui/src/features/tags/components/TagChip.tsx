@@ -62,7 +62,7 @@ export function TagChip({
   }
 
   return (
-    <Link to={`/tags/${tag.slug}`} className={baseClass}>
+    <Link to={`/library/tags/${tag.slug}`} className={baseClass}>
       {inner}
     </Link>
   );

@@ -1,8 +1,8 @@
-/** URL-synced filter state. Query params: `tags`, `types`, `owners`, `sources`, `created/updatedAfter/Before`, `access`, `untagged`. */
+/** URL-synced content-type filtering for the Library Tags surface. */
 
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ContentType, AccessMode as ProtoAccessMode } from "@uniffy/proto/common/v1/common_pb";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { emptyCriteria, type SerializedTagFilterCriteria } from "@/features/tags/store/tagsThunks";
 
 const splitCsv = (value: string | null): string[] =>
@@ -21,10 +21,19 @@ const DOMAIN_TO_CONTENT_TYPE: Record<string, ContentType> = {
   task: ContentType.TASK,
 };
 
-function readFromParams(params: URLSearchParams): SerializedTagFilterCriteria {
-  const sources = splitCsv(params.get("sources")).filter(
-    (s): s is "manual" | "inline" => s === "manual" || s === "inline",
-  );
+const UNSUPPORTED_LIBRARY_TAG_PARAMS = [
+  "tags",
+  "owners",
+  "sources",
+  "createdAfter",
+  "createdBefore",
+  "updatedAfter",
+  "updatedBefore",
+  "access",
+  "untagged",
+] as const;
+
+function contentTypesFromParams(params: URLSearchParams): ContentType[] {
   let types = splitCsv(params.get("types"))
     .map((v) => Number.parseInt(v, 10))
     .filter((n): n is ContentType => Number.isFinite(n));
@@ -34,42 +43,38 @@ function readFromParams(params: URLSearchParams): SerializedTagFilterCriteria {
       .filter((t): t is ContentType => t !== undefined);
     if (domainTypes.length > 0) types = domainTypes;
   }
-  const accessRaw = params.get("access");
-  const access = accessRaw !== null ? Number.parseInt(accessRaw, 10) : NaN;
+  return types;
+}
+
+export function readLibraryTagFilterCriteria(params: URLSearchParams): SerializedTagFilterCriteria {
   return {
-    tagIds: splitCsv(params.get("tags")),
-    contentTypes: types,
-    ownerIds: splitCsv(params.get("owners")),
-    sources,
-    createdAfter: params.get("createdAfter"),
-    createdBefore: params.get("createdBefore"),
-    updatedAfter: params.get("updatedAfter"),
-    updatedBefore: params.get("updatedBefore"),
-    accessMode: Number.isFinite(access) ? (access as ProtoAccessMode) : null,
-    untaggedOnly: params.get("untagged") === "1",
+    ...emptyCriteria(),
+    contentTypes: contentTypesFromParams(params),
   };
+}
+
+export function sanitizeLibraryTagFilterParams(params: URLSearchParams): URLSearchParams {
+  const next = new URLSearchParams(params);
+  const contentTypes = contentTypesFromParams(params);
+
+  for (const key of UNSUPPORTED_LIBRARY_TAG_PARAMS) next.delete(key);
+  if (contentTypes.length > 0) next.set("types", contentTypes.map(String).join(","));
+  else next.delete("types");
+  next.delete("domain");
+
+  return next;
 }
 
 function writeToParams(
   base: URLSearchParams,
   criteria: SerializedTagFilterCriteria,
 ): URLSearchParams {
-  const next = new URLSearchParams(base);
+  const next = sanitizeLibraryTagFilterParams(base);
   const setOrDelete = (key: string, value: string | null) => {
     if (value && value.length > 0) next.set(key, value);
     else next.delete(key);
   };
-  setOrDelete("tags", criteria.tagIds.join(","));
   setOrDelete("types", criteria.contentTypes.map(String).join(","));
-  next.delete("domain");
-  setOrDelete("owners", criteria.ownerIds.join(","));
-  setOrDelete("sources", criteria.sources.join(","));
-  setOrDelete("createdAfter", criteria.createdAfter);
-  setOrDelete("createdBefore", criteria.createdBefore);
-  setOrDelete("updatedAfter", criteria.updatedAfter);
-  setOrDelete("updatedBefore", criteria.updatedBefore);
-  setOrDelete("access", criteria.accessMode !== null ? String(criteria.accessMode) : null);
-  setOrDelete("untagged", criteria.untaggedOnly ? "1" : null);
   return next;
 }
 
@@ -118,7 +123,7 @@ export interface UseTagFilterStateReturn {
 
 export function useTagFilterState(): UseTagFilterStateReturn {
   const [searchParams, setSearchParams] = useSearchParams();
-  const criteria = useMemo(() => readFromParams(searchParams), [searchParams]);
+  const criteria = useMemo(() => readLibraryTagFilterCriteria(searchParams), [searchParams]);
 
   const setCriteria = useCallback(
     (next: SerializedTagFilterCriteria) => {

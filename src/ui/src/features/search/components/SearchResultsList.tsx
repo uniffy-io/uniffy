@@ -13,6 +13,7 @@ import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
 import { cn } from "@/shared/utils/cn";
 import { BROADCAST_URN_PREFIX, parseUrn, UrnType } from "@/shared/utils/urn";
+import { SEARCH_RESULT_TYPE_TO_URN_TYPE } from "@/shared/utils/searchResultTypes";
 import { type UrnTypeTheme } from "@/config/theme/urnColors";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
 import { stripMarkdown } from "@/features/search/utils/stripMarkdown";
@@ -21,26 +22,6 @@ import { useThumbnailUrl } from "@/features/files/hooks/useThumbnail";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { SUBJECT_TYPE } from "@/components/subject/types";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
-
-/** SearchResultType to UrnType. Update when adding a new content type. */
-const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
-  [SearchResultType.NOTE]: UrnType.NOTE,
-  [SearchResultType.FILE]: UrnType.FILE,
-  [SearchResultType.FOLDER]: UrnType.FOLDER,
-  [SearchResultType.CHAT]: UrnType.CHAT,
-  [SearchResultType.AGENT_CHAT]: UrnType.AGENT_CHAT,
-  [SearchResultType.AGENT_FOLDER]: UrnType.AGENT_FOLDER,
-  [SearchResultType.CHAT_MESSAGE]: UrnType.CHAT_MESSAGE,
-  [SearchResultType.USER]: UrnType.USER,
-  [SearchResultType.TEAM]: UrnType.TEAM,
-  [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
-  [SearchResultType.PROJECT]: UrnType.PROJECT,
-  [SearchResultType.TASK]: UrnType.TASK,
-  [SearchResultType.AGENT]: UrnType.AGENT,
-  [SearchResultType.ROOM]: UrnType.ROOM,
-  [SearchResultType.TAG]: UrnType.TAG,
-  [SearchResultType.AGENT_CRON_TASK]: UrnType.AGENT_CRON_TASK,
-};
 
 interface ResultTheme extends UrnTypeTheme {
   icon: Icon;

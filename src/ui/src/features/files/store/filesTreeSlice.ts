@@ -12,8 +12,6 @@ import {
 
 export interface FilesTreeState {
   tree: {
-    /** Populated from the bookmarks store. */
-    bookmarked: SerializedTreeNode[];
     personal: SerializedTreeNode[];
     shared: SerializedTreeNode[];
     organization: SerializedTreeNode[];
@@ -33,13 +31,12 @@ export interface FilesTreeState {
 
 const initialState: FilesTreeState = {
   tree: {
-    bookmarked: [],
     personal: [],
     shared: [],
     organization: [],
   },
   folders: {},
-  expandedNodes: ["bookmarked", "personal", "organization"],
+  expandedNodes: ["personal", "organization"],
   selectedFolderId: null,
   loading: false,
   creatingFolder: false,
@@ -73,11 +70,9 @@ export const filesTreeSlice = createSlice({
       };
 
       state.expandedNodes = [
-        "bookmarked",
         "personal",
         "shared",
         "organization",
-        ...getAllNodeIds(state.tree.bookmarked),
         ...getAllNodeIds(state.tree.personal),
         ...getAllNodeIds(state.tree.shared),
         ...getAllNodeIds(state.tree.organization),
@@ -92,13 +87,8 @@ export const filesTreeSlice = createSlice({
       state.selectedFolderId = action.payload;
     },
 
-    setBookmarkedNodes: (state, action: PayloadAction<SerializedTreeNode[]>) => {
-      state.tree.bookmarked = action.payload;
-    },
-
     clearTree: (state) => {
       state.tree = {
-        bookmarked: [],
         personal: [],
         shared: [],
         organization: [],
@@ -162,7 +152,7 @@ export const filesTreeSlice = createSlice({
           }
         }
 
-        state.tree = { bookmarked: state.tree.bookmarked, personal, shared, organization };
+        state.tree = { personal, shared, organization };
       })
       .addCase(fetchFilesTree.rejected, (state, action) => {
         state.loading = false;
@@ -295,7 +285,6 @@ export const {
   expandAll,
   collapseAll,
   setSelectedFolder,
-  setBookmarkedNodes,
   clearTree,
   clearError,
 } = filesTreeSlice.actions;

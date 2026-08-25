@@ -13,7 +13,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree as clearNotesTree } from "@/features/notes/store/notesTreeSlice";
-import { clearBookmarks } from "@/features/bookmarks";
+import { clearLibraryScope } from "@/features/library/store/clearLibraryScope";
 import { clearPresence } from "@/features/presence";
 import { clearPermissions } from "@/features/permissions";
 import { clearAdmin } from "@/features/admin";
@@ -164,6 +164,7 @@ export function OrganizationPicker() {
         return;
       }
 
+      clearLibraryScope(dispatch);
       setMemoryAccessToken(r.accessToken);
 
       if (user) {
@@ -220,7 +221,7 @@ export function OrganizationPicker() {
     dispatch(clearUploads());
     dispatch(closeViewer());
     dispatch(clearSavedFilters());
-    dispatch(clearBookmarks());
+    clearLibraryScope(dispatch);
     dispatch(clearPresence());
     dispatch(clearPermissions());
     dispatch(clearAdmin());

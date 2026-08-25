@@ -15,10 +15,12 @@ import type { PersistedState, MigrationManifest } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import { authReducer } from "@/features/auth/store/authSlice";
 import { instantDayKey } from "@/features/calendar/utils";
+import { QUICK_ACCESS_FILTERS } from "@/features/calendar/types/calendar";
 import { setPreferredTimeZone } from "@/shared/utils/timezone";
 import { setPreferredWeekStart } from "@/shared/utils/weekStart";
 import type { AuthState } from "@/features/auth/store/authSlice";
 import { bookmarksReducer } from "@/features/bookmarks/store/bookmarksSlice";
+import { libraryGraphReducer } from "@/features/library/store/graphSlice";
 import { themeReducer } from "@/config/theme/themeSlice";
 import { notesReducer } from "@/features/notes/store/notesSlice";
 import { notesTreeReducer } from "@/features/notes/store/notesTreeSlice";
@@ -100,6 +102,11 @@ const calendarUiTransform = createTransform(
   (outboundState: any) => ({
     ...outboundState,
     currentDate: instantDayKey(new Date()),
+    // A filter persisted under an older vocabulary matches every event and
+    // highlights no pill, which reads as a broken calendar rather than a reset.
+    quickAccessFilter: QUICK_ACCESS_FILTERS.includes(outboundState?.quickAccessFilter)
+      ? outboundState.quickAccessFilter
+      : null,
   }),
   { whitelist: ["calendarUi"] },
 );
@@ -176,6 +183,7 @@ const agentsUiTransform = createTransform(
 const rootReducer = combineReducers({
   auth: authReducer,
   bookmarks: bookmarksReducer,
+  libraryGraph: libraryGraphReducer,
   theme: themeReducer,
   notes: notesReducer,
   notesTree: notesTreeReducer,

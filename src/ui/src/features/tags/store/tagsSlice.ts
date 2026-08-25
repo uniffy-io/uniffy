@@ -2,18 +2,13 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
 import {
-  createSavedFilterThunk,
   createTagThunk,
-  deleteSavedFilterThunk,
   deleteTagThunk,
   listContentByTagThunk,
-  listSavedFiltersThunk,
   listTagsThunk,
   mergeTagsThunk,
   suggestTagsThunk,
-  updateSavedFilterThunk,
   updateTagThunk,
-  type SerializedSavedTagFilter,
   type SerializedTag,
   type SerializedTaggedContentItem,
 } from "@/features/tags/store/tagsThunks";
@@ -41,13 +36,6 @@ export interface TagsState {
   listNextPageToken: string;
 
   contentByTag: Record<string, ContentByTagBucket>;
-
-  savedFilters: {
-    byId: Record<string, SerializedSavedTagFilter>;
-    ids: string[];
-    status: "idle" | "loading" | "succeeded" | "failed";
-    error: string | null;
-  };
 }
 
 const initialState: TagsState = {
@@ -65,13 +53,6 @@ const initialState: TagsState = {
   listNextPageToken: "",
 
   contentByTag: {},
-
-  savedFilters: {
-    byId: {},
-    ids: [],
-    status: "idle",
-    error: null,
-  },
 };
 
 function indexTag(state: TagsState, tag: SerializedTag): void {
@@ -94,17 +75,6 @@ function dropTagId(state: TagsState, tagId: string): void {
   delete state.contentByTag[tagId];
   for (const urn of Object.keys(state.assignmentsByUrn)) {
     state.assignmentsByUrn[urn] = state.assignmentsByUrn[urn].filter((id) => id !== tagId);
-  }
-  for (const filterId of state.savedFilters.ids) {
-    const filter = state.savedFilters.byId[filterId];
-    if (!filter) continue;
-    if (filter.criteria.tagIds.includes(tagId)) {
-      filter.criteria = {
-        ...filter.criteria,
-        tagIds: filter.criteria.tagIds.filter((id) => id !== tagId),
-      };
-      filter.removedTagCount += 1;
-    }
   }
 }
 
@@ -144,7 +114,7 @@ const tagsSlice = createSlice({
       dropTagId(state, action.payload);
     },
     clearTags() {
-      return { ...initialState, savedFilters: { ...initialState.savedFilters } };
+      return initialState;
     },
   },
   extraReducers: (builder) => {
@@ -258,41 +228,6 @@ const tagsSlice = createSlice({
         bucket.error = action.payload ?? action.error.message ?? "Failed";
       }
     });
-
-    builder.addCase(listSavedFiltersThunk.pending, (state) => {
-      state.savedFilters.status = "loading";
-      state.savedFilters.error = null;
-    });
-    builder.addCase(listSavedFiltersThunk.fulfilled, (state, action) => {
-      state.savedFilters.status = "succeeded";
-      state.savedFilters.byId = {};
-      state.savedFilters.ids = [];
-      for (const filter of action.payload) {
-        state.savedFilters.byId[filter.id] = filter;
-        state.savedFilters.ids.push(filter.id);
-      }
-    });
-    builder.addCase(listSavedFiltersThunk.rejected, (state, action) => {
-      state.savedFilters.status = "failed";
-      state.savedFilters.error = action.payload ?? action.error.message ?? "List failed";
-    });
-
-    builder.addCase(createSavedFilterThunk.fulfilled, (state, action) => {
-      state.savedFilters.byId[action.payload.id] = action.payload;
-      if (!state.savedFilters.ids.includes(action.payload.id)) {
-        state.savedFilters.ids.push(action.payload.id);
-      }
-    });
-    builder.addCase(updateSavedFilterThunk.fulfilled, (state, action) => {
-      state.savedFilters.byId[action.payload.id] = action.payload;
-      if (!state.savedFilters.ids.includes(action.payload.id)) {
-        state.savedFilters.ids.push(action.payload.id);
-      }
-    });
-    builder.addCase(deleteSavedFilterThunk.fulfilled, (state, action) => {
-      delete state.savedFilters.byId[action.payload];
-      state.savedFilters.ids = state.savedFilters.ids.filter((id) => id !== action.payload);
-    });
   },
 });
 
@@ -305,4 +240,4 @@ export const {
   clearTags,
 } = tagsSlice.actions;
 export const tagsReducer = tagsSlice.reducer;
-export type { SerializedTag, SerializedSavedTagFilter, SerializedTaggedContentItem };
+export type { SerializedTag, SerializedTaggedContentItem };
