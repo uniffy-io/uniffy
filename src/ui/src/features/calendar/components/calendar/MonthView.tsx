@@ -10,6 +10,7 @@ import {
 } from "@/features/calendar/store";
 import { ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
 import { displayParts, instantFromDisplayParts } from "@/features/calendar/utils";
+import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 
@@ -154,6 +155,7 @@ export function MonthView() {
                       const pendingOrTentative =
                         attendee != null &&
                         (attendee.status === "pending" || attendee.status === "tentative");
+                      const display = eventDisplayState(event);
                       return (
                         <div
                           key={event.id}
@@ -165,15 +167,20 @@ export function MonthView() {
                           }}
                           className={cn(
                             "text-[10px] px-1.5 py-0.5 rounded truncate cursor-move hover:brightness-95 active:cursor-grabbing",
-                            declined && "line-through",
+                            (declined || display.cancelled) && "line-through",
                           )}
                           style={{
-                            backgroundColor: eventTint(eventColor, 12),
+                            backgroundColor: eventTint(eventColor, display.free ? 6 : 12),
                             color: eventColor,
-                            opacity: declined ? 0.35 : pendingOrTentative ? 0.6 : 1,
+                            opacity:
+                              declined || display.cancelled
+                                ? 0.35
+                                : pendingOrTentative || display.tentative
+                                  ? 0.6
+                                  : 1,
                           }}
                         >
-                          {event.title}
+                          {display.title}
                         </div>
                       );
                     })}

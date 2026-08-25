@@ -903,6 +903,7 @@ type UrnMetadata struct {
 	EventLocation   string `protobuf:"bytes,36,opt,name=event_location,json=eventLocation,proto3" json:"event_location,omitempty"`         // location text
 	EventMeetingUrl string `protobuf:"bytes,37,opt,name=event_meeting_url,json=eventMeetingUrl,proto3" json:"event_meeting_url,omitempty"` // video call URL
 	EventChannelId  string `protobuf:"bytes,49,opt,name=event_channel_id,json=eventChannelId,proto3" json:"event_channel_id,omitempty"`    // bound chat channel for a Uniffy online meeting
+	EventStatus     string `protobuf:"bytes,52,opt,name=event_status,json=eventStatus,proto3" json:"event_status,omitempty"`               // CONFIRMED/TENTATIVE/CANCELLED lifecycle status
 	// File enrichment
 	FileMimeType string `protobuf:"bytes,38,opt,name=file_mime_type,json=fileMimeType,proto3" json:"file_mime_type,omitempty"` // MIME type
 	FileSize     int64  `protobuf:"varint,39,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`              // size in bytes
@@ -1184,6 +1185,13 @@ func (x *UrnMetadata) GetEventChannelId() string {
 	return ""
 }
 
+func (x *UrnMetadata) GetEventStatus() string {
+	if x != nil {
+		return x.EventStatus
+	}
+	return ""
+}
+
 func (x *UrnMetadata) GetFileMimeType() string {
 	if x != nil {
 		return x.FileMimeType
@@ -1345,7 +1353,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"target_urn\x18\x02 \x01(\tR\ttargetUrn\"j\n" +
 	"\x17GetContentGraphResponse\x121\n" +
 	"\x05edges\x18\x01 \x03(\v2\x1b.search.v1.ContentGraphEdgeR\x05edges\x12\x1c\n" +
-	"\ttruncated\x18\x02 \x01(\bR\ttruncated\"\xdf\r\n" +
+	"\ttruncated\x18\x02 \x01(\bR\ttruncated\"\x82\x0e\n" +
 	"\vUrnMetadata\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12/\n" +
@@ -1381,7 +1389,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x10event_is_all_day\x18# \x01(\bR\reventIsAllDay\x12%\n" +
 	"\x0eevent_location\x18$ \x01(\tR\reventLocation\x12*\n" +
 	"\x11event_meeting_url\x18% \x01(\tR\x0feventMeetingUrl\x12(\n" +
-	"\x10event_channel_id\x181 \x01(\tR\x0eeventChannelId\x12$\n" +
+	"\x10event_channel_id\x181 \x01(\tR\x0eeventChannelId\x12!\n" +
+	"\fevent_status\x184 \x01(\tR\veventStatus\x12$\n" +
 	"\x0efile_mime_type\x18& \x01(\tR\ffileMimeType\x12\x1b\n" +
 	"\tfile_size\x18' \x01(\x03R\bfileSize\x12$\n" +
 	"\x0enote_node_type\x18( \x01(\tR\fnoteNodeType\x12!\n" +

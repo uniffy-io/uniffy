@@ -10,13 +10,22 @@ import type {
   RecurrenceConfig as ProtoRecurrenceConfig,
   LinkedResource as ProtoLinkedResource,
   EventTemplate as ProtoEventTemplate,
+  BusyInterval as ProtoBusyInterval,
 } from "@uniffy/proto/cal/v1/calendar_pb";
+import type {
+  FreeBusyData,
+  MeetingSuggestion,
+  SchedulingBusyInterval,
+} from "@/features/calendar/types/scheduling";
 import {
   RecurrencePattern as ProtoRecurrencePattern,
   AttendeeStatus as ProtoAttendeeStatus,
   AttendeeRole as ProtoAttendeeRole,
   DayOfWeek as ProtoDayOfWeek,
   ResourceType as ProtoResourceType,
+  EventStatus as ProtoEventStatus,
+  EventVisibility as ProtoEventVisibility,
+  EventTransparency as ProtoEventTransparency,
 } from "@uniffy/proto/cal/v1/calendar_pb";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { create } from "@bufbuild/protobuf";
@@ -33,6 +42,9 @@ import type {
   ResourceType,
   AttendeeStatus,
   AttendeeRole,
+  EventStatus,
+  EventVisibility,
+  EventTransparency,
   EventTemplate,
   CreateTemplatePayload,
   UpdateTemplatePayload,
@@ -137,6 +149,41 @@ const RESOURCE_TYPE_FROM_PROTO: Record<ProtoResourceType, ResourceType> = {
   [ProtoResourceType.CHAT]: "chat",
 };
 
+const EVENT_STATUS_FROM_PROTO: Record<ProtoEventStatus, EventStatus> = {
+  [ProtoEventStatus.UNSPECIFIED]: "confirmed",
+  [ProtoEventStatus.CONFIRMED]: "confirmed",
+  [ProtoEventStatus.TENTATIVE]: "tentative",
+  [ProtoEventStatus.CANCELLED]: "cancelled",
+};
+
+const EVENT_STATUS_TO_PROTO: Record<EventStatus, ProtoEventStatus> = {
+  confirmed: ProtoEventStatus.CONFIRMED,
+  tentative: ProtoEventStatus.TENTATIVE,
+  cancelled: ProtoEventStatus.CANCELLED,
+};
+
+const EVENT_VISIBILITY_FROM_PROTO: Record<ProtoEventVisibility, EventVisibility> = {
+  [ProtoEventVisibility.UNSPECIFIED]: "standard",
+  [ProtoEventVisibility.STANDARD]: "standard",
+  [ProtoEventVisibility.PRIVATE]: "private",
+};
+
+const EVENT_VISIBILITY_TO_PROTO: Record<EventVisibility, ProtoEventVisibility> = {
+  standard: ProtoEventVisibility.STANDARD,
+  private: ProtoEventVisibility.PRIVATE,
+};
+
+const EVENT_TRANSPARENCY_FROM_PROTO: Record<ProtoEventTransparency, EventTransparency> = {
+  [ProtoEventTransparency.UNSPECIFIED]: "opaque",
+  [ProtoEventTransparency.OPAQUE]: "opaque",
+  [ProtoEventTransparency.TRANSPARENT]: "transparent",
+};
+
+const EVENT_TRANSPARENCY_TO_PROTO: Record<EventTransparency, ProtoEventTransparency> = {
+  opaque: ProtoEventTransparency.OPAQUE,
+  transparent: ProtoEventTransparency.TRANSPARENT,
+};
+
 const EDIT_SCOPE_TO_PROTO: Record<RecurrenceEditScope, ProtoRecurrenceEditScope> = {
   this_event: ProtoRecurrenceEditScope.THIS_EVENT,
   all_events: ProtoRecurrenceEditScope.ALL_EVENTS,
@@ -210,6 +257,11 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
   roomCapacity: proto.roomCapacity || undefined,
   roomAmenities: proto.roomAmenities?.length ? [...proto.roomAmenities] : undefined,
   userRole: proto.userRole,
+  status: EVENT_STATUS_FROM_PROTO[proto.status] || "confirmed",
+  visibility: EVENT_VISIBILITY_FROM_PROTO[proto.visibility] || "standard",
+  transparency: EVENT_TRANSPARENCY_FROM_PROTO[proto.transparency] || "opaque",
+  isOutOfOffice: proto.isOutOfOffice,
+  detailsHidden: proto.detailsHidden,
 });
 
 /** Push hydrated tag rows into tags-slice cache so chips render without a follow-up RPC. */
@@ -306,11 +358,16 @@ export const createEvent = createAsyncThunk<
     calendarId: string;
     categoryId?: string;
     attendeeIds?: string[];
+    attendees?: { userId: string; role: AttendeeRole }[];
     recurrence?: RecurrenceConfig;
     isFocusTime?: boolean;
     tagIds?: string[];
     reminders?: number[];
     roomId?: string;
+    status?: EventStatus;
+    visibility?: EventVisibility;
+    transparency?: EventTransparency;
+    isOutOfOffice?: boolean;
   },
   { state: RootState; rejectValue: string; dispatch: typeof import("@/app/store").store.dispatch }
 >("calendar/createEvent", async (params, { getState, rejectWithValue, dispatch }) => {
@@ -344,6 +401,10 @@ export const createEvent = createAsyncThunk<
       calendarId: params.calendarId,
       categoryId: params.categoryId,
       attendeeIds: params.attendeeIds || [],
+      attendees: (params.attendees || []).map((a) => ({
+        userId: a.userId,
+        role: ATTENDEE_ROLE_TO_PROTO[a.role],
+      })),
       recurrence: recurrenceConfig,
       isFocusTime: params.isFocusTime || false,
       tagIds: params.tagIds || [],
@@ -351,6 +412,12 @@ export const createEvent = createAsyncThunk<
       roomId: params.roomId || undefined,
       channelId: params.channelId,
       channelAutoCreated: params.channelAutoCreated,
+      status: params.status ? EVENT_STATUS_TO_PROTO[params.status] : undefined,
+      visibility: params.visibility ? EVENT_VISIBILITY_TO_PROTO[params.visibility] : undefined,
+      transparency: params.transparency
+        ? EVENT_TRANSPARENCY_TO_PROTO[params.transparency]
+        : undefined,
+      isOutOfOffice: params.isOutOfOffice || false,
     });
 
     if (!response.event) {
@@ -403,6 +470,10 @@ export const updateEvent = createAsyncThunk<
     recurrenceEditScope?: RecurrenceEditScope;
     occurrenceDate?: string;
     roomId?: string;
+    status?: EventStatus;
+    visibility?: EventVisibility;
+    transparency?: EventTransparency;
+    isOutOfOffice?: boolean;
   },
   { state: RootState; rejectValue: string; dispatch: typeof import("@/app/store").store.dispatch }
 >("calendar/updateEvent", async (params, { getState, rejectWithValue, dispatch }) => {
@@ -446,6 +517,12 @@ export const updateEvent = createAsyncThunk<
       roomId: params.roomId,
       channelId: params.channelId,
       channelAutoCreated: params.channelAutoCreated,
+      status: params.status ? EVENT_STATUS_TO_PROTO[params.status] : undefined,
+      visibility: params.visibility ? EVENT_VISIBILITY_TO_PROTO[params.visibility] : undefined,
+      transparency: params.transparency
+        ? EVENT_TRANSPARENCY_TO_PROTO[params.transparency]
+        : undefined,
+      isOutOfOffice: params.isOutOfOffice,
     });
 
     if (!response.event) {
@@ -812,5 +889,112 @@ export const fetchEventActivities = createAsyncThunk<
     return { eventId, activities };
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch activity");
+  }
+});
+
+const busyIntervalFromProto = (proto: ProtoBusyInterval): SchedulingBusyInterval => ({
+  start: timestampToIso(proto.startTime),
+  end: timestampToIso(proto.endTime),
+  isOutOfOffice: proto.isOutOfOffice,
+});
+
+export interface FreeBusyParams {
+  userIds: string[];
+  windowStart: string;
+  windowEnd: string;
+  roomId?: string;
+}
+
+export const freeBusyKey = (params: FreeBusyParams): string =>
+  [params.userIds.join(","), params.windowStart, params.windowEnd, params.roomId ?? ""].join("|");
+
+export const fetchFreeBusy = createAsyncThunk<
+  { key: string; data: FreeBusyData },
+  FreeBusyParams,
+  { state: RootState; rejectValue: string }
+>("calendar/fetchFreeBusy", async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.getFreeBusy({
+      organizationId,
+      userIds: params.userIds,
+      windowStart: isoToTimestamp(params.windowStart),
+      windowEnd: isoToTimestamp(params.windowEnd),
+      roomId: params.roomId,
+    });
+    return {
+      key: freeBusyKey(params),
+      data: {
+        users: response.users.map((user) => ({
+          userId: user.userId,
+          intervals: user.intervals.map(busyIntervalFromProto),
+          timezone: user.timezone,
+          workdayStart: user.workdayStart,
+          workdayEnd: user.workdayEnd,
+          workdays: [...user.workdays],
+        })),
+        roomBusy: response.roomBusy.map(busyIntervalFromProto),
+      },
+    };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch free/busy");
+  }
+});
+
+export interface SuggestTimesParams {
+  requiredUserIds: string[];
+  optionalUserIds: string[];
+  windowStart: string;
+  windowEnd: string;
+  durationMinutes: number;
+  roomId?: string;
+  maxResults?: number;
+}
+
+export const fetchMeetingSuggestions = createAsyncThunk<
+  MeetingSuggestion[],
+  SuggestTimesParams,
+  { state: RootState; rejectValue: string }
+>("calendar/fetchMeetingSuggestions", async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.suggestMeetingTimes({
+      organizationId,
+      requiredUserIds: params.requiredUserIds,
+      optionalUserIds: params.optionalUserIds,
+      windowStart: isoToTimestamp(params.windowStart),
+      windowEnd: isoToTimestamp(params.windowEnd),
+      durationMinutes: params.durationMinutes,
+      roomId: params.roomId,
+      maxResults: params.maxResults ?? 5,
+    });
+    return response.suggestions.map((s) => ({
+      start: timestampToIso(s.startTime),
+      end: timestampToIso(s.endTime),
+      unavailableOptionalUserIds: [...s.unavailableOptionalUserIds],
+    }));
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to suggest times");
+  }
+});
+
+export const updateAttendeeRole = createAsyncThunk<
+  { eventId: string; userId: string; role: AttendeeRole },
+  { eventId: string; userId: string; role: AttendeeRole },
+  { state: RootState; rejectValue: string }
+>("calendar/updateAttendeeRole", async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    await calendarApi.updateAttendeeRole({
+      eventId: params.eventId,
+      organizationId,
+      userId: params.userId,
+      role: ATTENDEE_ROLE_TO_PROTO[params.role],
+    });
+    return params;
+  } catch (error) {
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to update attendee role",
+    );
   }
 });

@@ -25,6 +25,7 @@ class SettingsProfile(SQLModel, table=True):
     appearance: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     keyboard_shortcuts: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     notifications: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    scheduling: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     custom_status: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     is_default: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(

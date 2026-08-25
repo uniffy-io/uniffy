@@ -27,7 +27,16 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
     EventActivityAction as ProtoEventActivityAction,
 )
 from uniffy_proto.cal.v1.calendar_pb2 import (
+    EventStatus as ProtoEventStatus,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
     EventTemplate as ProtoEventTemplate,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    EventTransparency as ProtoEventTransparency,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    EventVisibility as ProtoEventVisibility,
 )
 from uniffy_proto.cal.v1.calendar_pb2 import (
     LinkedResource as ProtoLinkedResource,
@@ -61,6 +70,9 @@ from uniffy.core.types import (
     AttendeeRole,
     AttendeeStatus,
     ContentRole,
+    EventStatus,
+    EventTransparency,
+    EventVisibility,
     RecurrenceEditScope,
     RecurrencePattern,
     ResourceType,
@@ -86,6 +98,40 @@ RECURRENCE_FROM_PROTO = {
     ProtoRecurrencePattern.RECURRENCE_PATTERN_BIWEEKLY: RecurrencePattern.BIWEEKLY,
     ProtoRecurrencePattern.RECURRENCE_PATTERN_MONTHLY: RecurrencePattern.MONTHLY,
     ProtoRecurrencePattern.RECURRENCE_PATTERN_YEARLY: RecurrencePattern.YEARLY,
+}
+
+EVENT_STATUS_TO_PROTO = {
+    EventStatus.CONFIRMED: ProtoEventStatus.EVENT_STATUS_CONFIRMED,
+    EventStatus.TENTATIVE: ProtoEventStatus.EVENT_STATUS_TENTATIVE,
+    EventStatus.CANCELLED: ProtoEventStatus.EVENT_STATUS_CANCELLED,
+}
+
+EVENT_STATUS_FROM_PROTO = {
+    ProtoEventStatus.EVENT_STATUS_UNSPECIFIED: EventStatus.CONFIRMED,
+    ProtoEventStatus.EVENT_STATUS_CONFIRMED: EventStatus.CONFIRMED,
+    ProtoEventStatus.EVENT_STATUS_TENTATIVE: EventStatus.TENTATIVE,
+    ProtoEventStatus.EVENT_STATUS_CANCELLED: EventStatus.CANCELLED,
+}
+
+EVENT_VISIBILITY_TO_PROTO = {
+    EventVisibility.STANDARD: ProtoEventVisibility.EVENT_VISIBILITY_STANDARD,
+    EventVisibility.PRIVATE: ProtoEventVisibility.EVENT_VISIBILITY_PRIVATE,
+}
+
+EVENT_VISIBILITY_FROM_PROTO = {
+    ProtoEventVisibility.EVENT_VISIBILITY_UNSPECIFIED: EventVisibility.STANDARD,
+    ProtoEventVisibility.EVENT_VISIBILITY_STANDARD: EventVisibility.STANDARD,
+    ProtoEventVisibility.EVENT_VISIBILITY_PRIVATE: EventVisibility.PRIVATE,
+}
+
+EVENT_TRANSPARENCY_TO_PROTO = {
+    EventTransparency.OPAQUE: ProtoEventTransparency.EVENT_TRANSPARENCY_OPAQUE,
+    EventTransparency.TRANSPARENT: ProtoEventTransparency.EVENT_TRANSPARENCY_TRANSPARENT,
+}
+
+EVENT_TRANSPARENCY_FROM_PROTO = {
+    ProtoEventTransparency.EVENT_TRANSPARENCY_OPAQUE: EventTransparency.OPAQUE,
+    ProtoEventTransparency.EVENT_TRANSPARENCY_TRANSPARENT: EventTransparency.TRANSPARENT,
 }
 
 ATTENDEE_STATUS_TO_PROTO = {
@@ -183,6 +229,21 @@ def recurrence_edit_scope_from_proto(
     return RECURRENCE_EDIT_SCOPE_FROM_PROTO.get(proto_scope, RecurrenceEditScope.ALL_EVENTS)
 
 
+def event_status_from_proto(proto_status: ProtoEventStatus.ValueType) -> EventStatus:
+    return EVENT_STATUS_FROM_PROTO.get(proto_status, EventStatus.CONFIRMED)
+
+
+def event_visibility_from_proto(proto_visibility: ProtoEventVisibility.ValueType) -> EventVisibility:
+    return EVENT_VISIBILITY_FROM_PROTO.get(proto_visibility, EventVisibility.STANDARD)
+
+
+def event_transparency_from_proto(
+    proto_transparency: ProtoEventTransparency.ValueType,
+) -> EventTransparency | None:
+    """UNSPECIFIED maps to None so the operations layer can apply its own default."""
+    return EVENT_TRANSPARENCY_FROM_PROTO.get(proto_transparency)
+
+
 def activity_to_proto(activity: EventActivity) -> ProtoEventActivity:
     proto = ProtoEventActivity(
         id=str(activity.id),
@@ -215,6 +276,7 @@ def event_to_proto(
     room_capacity: int = 0,
     room_amenities: list[str] | None = None,
     user_role: ContentRole | None = None,
+    details_hidden: bool = False,
 ) -> ProtoCalendarEvent:
     """Convert a ``CalendarEvent`` row to its proto representation.
 
@@ -223,6 +285,11 @@ def event_to_proto(
     ``channel_id`` and ``channel_auto_created`` ride along and the frontend
     resolves the channel name, which keeps private channel names from leaking
     on list paths.
+
+    ``details_hidden`` is the private-event redaction: only the fields needed
+    to render an honest busy block survive - times, all-day, timezone, status,
+    transparency, out-of-office, and recurrence identity. Everything that
+    reveals what the event is about is stripped server-side.
     """
     proto_recurrence = RECURRENCE_TO_PROTO.get(
         event.recurrence_pattern,
@@ -232,23 +299,32 @@ def event_to_proto(
     proto_event = ProtoCalendarEvent(
         id=str(event.id),
         organization_id=str(event.organization_id),
-        title=event.title,
-        description=event.description,
+        title="" if details_hidden else event.title,
+        description="" if details_hidden else event.description,
         start_time=datetime_to_timestamp(event.start_time),
         end_time=datetime_to_timestamp(event.end_time),
         is_all_day=event.is_all_day,
         timezone=event.timezone,
-        location=event.location,
+        location="" if details_hidden else event.location,
         calendar_id=str(event.calendar_id),
-        category_id=str(event.category_id) if event.category_id else "",
+        category_id=str(event.category_id) if event.category_id and not details_hidden else "",
         organizer_id=str(event.organizer_id),
         is_focus_time=event.is_focus_time,
         is_deleted=event.is_deleted,
-        channel_auto_created=event.channel_auto_created,
-        tags=[tag_to_proto(t) for t in tags] if tags else [],
-        outgoing_references=event.outgoing_references or [],
+        channel_auto_created=event.channel_auto_created and not details_hidden,
+        tags=[tag_to_proto(t) for t in tags] if tags and not details_hidden else [],
+        outgoing_references=(event.outgoing_references or []) if not details_hidden else [],
         created_at=datetime_to_timestamp(event.created_at),
         updated_at=datetime_to_timestamp(event.updated_at),
+        status=EVENT_STATUS_TO_PROTO.get(event.status, ProtoEventStatus.EVENT_STATUS_CONFIRMED),
+        visibility=EVENT_VISIBILITY_TO_PROTO.get(
+            event.visibility, ProtoEventVisibility.EVENT_VISIBILITY_STANDARD
+        ),
+        transparency=EVENT_TRANSPARENCY_TO_PROTO.get(
+            event.transparency, ProtoEventTransparency.EVENT_TRANSPARENCY_OPAQUE
+        ),
+        is_out_of_office=event.is_out_of_office,
+        details_hidden=details_hidden,
     )
 
     if user_role is not None:
@@ -263,19 +339,19 @@ def event_to_proto(
     if occurrence_date:
         proto_event.occurrence_date = occurrence_date
 
-    if event.reminders:
+    if event.reminders and not details_hidden:
         proto_event.reminders.extend(event.reminders)
 
-    if event.meeting_url:
+    if event.meeting_url and not details_hidden:
         proto_event.meeting_url = event.meeting_url
 
-    if event.channel_id:
+    if event.channel_id and not details_hidden:
         proto_event.channel_id = str(event.channel_id)
 
     if event.deleted_at:
         proto_event.deleted_at.CopyFrom(datetime_to_timestamp(event.deleted_at))
 
-    if event.linked_resources:
+    if event.linked_resources and not details_hidden:
         for resource in event.linked_resources:
             proto_resource = ProtoLinkedResource(
                 id=resource.get("id", ""),
@@ -316,7 +392,7 @@ def event_to_proto(
             proto_recurrence_config.max_occurrences = config["max_occurrences"]
         proto_event.recurrence.CopyFrom(proto_recurrence_config)
 
-    if attendees:
+    if attendees and not details_hidden:
         for attendee, user_info in attendees:
             proto_attendee = ProtoAttendee(
                 id=str(attendee.user_id),
@@ -339,6 +415,9 @@ def event_to_proto(
             if attendee.invited_via_group_id:
                 proto_attendee.invited_via_group_id = str(attendee.invited_via_group_id)
             proto_event.attendees.append(proto_attendee)
+
+    if details_hidden:
+        return proto_event
 
     if room_id:
         proto_event.room_id = room_id

@@ -62,6 +62,10 @@ const settingsSlice = createSlice({
         if (payload.notifications) {
           Object.assign(current.notifications, payload.notifications);
         }
+
+        if (payload.scheduling) {
+          Object.assign(current.scheduling, payload.scheduling);
+        }
       }
     },
   },

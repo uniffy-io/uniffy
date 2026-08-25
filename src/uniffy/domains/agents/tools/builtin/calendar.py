@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from uniffy.core.types import RecurrencePattern
+from uniffy.core.types import EventStatus, EventTransparency, RecurrencePattern
 from uniffy.domains.agents.tools.builtin.args import parse_uuid, parse_uuid_list
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 from uniffy.domains.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
@@ -77,6 +77,12 @@ async def _format_event_result(
     lines.append(" | ".join(time_parts))
 
     fields: list[str] = []
+    if event.status != EventStatus.CONFIRMED:
+        fields.append(f"Status: {event.status.value.lower()}")
+    if event.is_out_of_office:
+        fields.append("Out of office: yes")
+    if event.transparency == EventTransparency.TRANSPARENT:
+        fields.append("Blocks time: no")
     if event.location:
         fields.append(f"Location: {event.location}")
     if event.meeting_url:
@@ -114,6 +120,34 @@ async def _format_event_result(
 
 
 # Executors
+
+
+async def _hidden_event_master_ids(ctx: ToolContext, events: list) -> set[UUID]:
+    """Master ids of PRIVATE events whose details the acting user may not see.
+
+    Tools run with the human user's identity, so a private event another
+    member shared with them still reads as a busy block in LLM context.
+    """
+    from sqlalchemy import select
+
+    from uniffy.core.models.calendar.attendee import EventAttendee
+    from uniffy.core.models.shared import EventVisibility
+
+    candidates: set[UUID] = set()
+    for ev in events:
+        if ev.visibility == EventVisibility.PRIVATE and ev.organizer_id != ctx.user_id:
+            raw = str(ev.id)
+            master = UUID(raw.split(OCCURRENCE_ID_SEPARATOR)[0])
+            candidates.add(master)
+    if not candidates:
+        return set()
+    result = await ctx.session.execute(
+        select(EventAttendee.event_id).where(
+            EventAttendee.event_id.in_(candidates),
+            EventAttendee.user_id == ctx.user_id,
+        )
+    )
+    return candidates - set(result.scalars().all())
 
 
 async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
@@ -168,19 +202,30 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
     if not events:
         return ToolResult(success=True, data="No events found in the specified range.")
 
+    hidden_ids = await _hidden_event_master_ids(ctx, events)
+
     lines = [f"Found {len(events)} events:"]
     for ev in events:
         start = ev.start_time.strftime("%Y-%m-%d %H:%M") if ev.start_time else "?"
         end = ev.end_time.strftime("%Y-%m-%d %H:%M") if ev.end_time else "?"
         urn = f"urn:uniffy:content:CALENDAR_EVENT:{ev.id}"
+        master = UUID(str(ev.id).split(OCCURRENCE_ID_SEPARATOR)[0])
+
+        if master in hidden_ids:
+            lines.append(f"- Busy ({start} to {end}) [private]")
+            continue
 
         parts = [f"- [[[{ev.title}|{urn}]]] ({start} to {end})"]
         if ev.is_all_day:
             parts.append("[all-day]")
+        if ev.status != EventStatus.CONFIRMED:
+            parts.append(f"[{ev.status.value.lower()}]")
         if ev.location:
             parts.append(f"@ {ev.location}")
         if ev.is_focus_time:
             parts.append("[focus]")
+        if ev.is_out_of_office:
+            parts.append("[out-of-office]")
         if ev.recurrence_pattern and ev.recurrence_pattern != RecurrencePattern.NONE:
             parts.append(f"[{ev.recurrence_pattern.value.lower()}]")
 
@@ -207,6 +252,14 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
         organization_id=ctx.organization_id,
         event_id=event_id,  # type: ignore[arg-type]
     )
+
+    if await _hidden_event_master_ids(ctx, [event]):
+        start = event.start_time.strftime("%Y-%m-%d %H:%M") if event.start_time else "?"
+        end = event.end_time.strftime("%Y-%m-%d %H:%M") if event.end_time else "?"
+        return ToolResult(
+            success=True,
+            data=f"Busy ({start} to {end}). This event is private; its details are hidden.",
+        )
 
     result = await _format_event_result("Event", event, ctx=ctx)
 
@@ -1048,13 +1101,18 @@ async def _execute_get_free_busy(ctx: ToolContext, args: dict) -> ToolResult:
         intervals = busy.get(uid, [])
         if not intervals:
             lines.append("  free for the whole range")
-        for s, e in intervals:
-            lines.append(f"  {_fmt_local(s, tz)} to {_fmt_local(e, tz)}")
+        for interval in intervals:
+            suffix = " (out of office)" if interval.out_of_office else ""
+            lines.append(
+                f"  {_fmt_local(interval.start, tz)} to {_fmt_local(interval.end, tz)}{suffix}"
+            )
     return ToolResult(success=True, data="\n".join(lines))
 
 
 async def _execute_find_time(ctx: ToolContext, args: dict) -> ToolResult:
-    from uniffy.domains.calendar.availability import compute_free_slots, get_busy_intervals
+    from uniffy.domains.calendar.availability import get_busy_intervals
+    from uniffy.domains.calendar.scheduling import suggest_meeting_times
+    from uniffy.domains.settings.operations import get_users_scheduling_context
 
     raw_attendees = args.get("attendee_ids")
     if not raw_attendees or not isinstance(raw_attendees, list):
@@ -1085,44 +1143,51 @@ async def _execute_find_time(ctx: ToolContext, args: dict) -> ToolResult:
     if window_end <= window_start:
         return ToolResult(success=False, data="", error="window_end must be after window_start")
 
-    earliest_hour = int(args.get("earliest_hour") or 9)
-    latest_hour = int(args.get("latest_hour") or 18)
+    hour_override = None
+    if args.get("earliest_hour") is not None or args.get("latest_hour") is not None:
+        hour_override = (int(args.get("earliest_hour") or 9), int(args.get("latest_hour") or 18))
     include_weekends = bool(args.get("include_weekends", False))
     max_results = min(10, max(1, int(args.get("max_results") or 5)))
 
     busy_by_user = await get_busy_intervals(
         ctx.session, ctx.organization_id, participant_ids, window_start, window_end
     )
-    all_busy = [iv for intervals in busy_by_user.values() for iv in intervals]
+    schedule_by_user = await get_users_scheduling_context(ctx.session, participant_ids)
 
     try:
         tz = ZoneInfo(tz_name)
     except KeyError, ValueError:
         tz = ZoneInfo("UTC")
-        tz_name = "UTC"
 
-    slots = compute_free_slots(
-        all_busy,
-        window_start,
-        window_end,
-        timedelta(minutes=duration_minutes),
-        tz_name,
-        earliest_hour=earliest_hour,
-        latest_hour=latest_hour,
-        include_weekends=include_weekends,
+    suggestions = suggest_meeting_times(
+        busy_by_user,
+        schedule_by_user,
+        required_ids=participant_ids,
+        optional_ids=[],
+        room_busy=[],
+        window_start=window_start,
+        window_end=window_end,
+        duration=timedelta(minutes=duration_minutes),
         max_results=max_results,
+        hour_override=hour_override,
+        extra_workdays=include_weekends,
     )
 
     names = await _member_display_names(ctx, participant_ids)
     who = ", ".join(names.get(uid, str(uid)) for uid in participant_ids)
 
-    if not slots:
+    if not suggestions:
+        hours_note = (
+            f"within {hour_override[0]:02d}:00-{hour_override[1]:02d}:00 {tz.key}"
+            if hour_override
+            else "within each attendee's working hours"
+        )
         return ToolResult(
             success=True,
             data=(
                 f"No open {duration_minutes}-minute slot for {who} between "
                 f"{_fmt_local(window_start, tz)} and {_fmt_local(window_end, tz)} "
-                f"within {earliest_hour:02d}:00-{latest_hour:02d}:00 {tz.key}. "
+                f"{hours_note}. "
                 "Try a wider window, different hours, or include_weekends=true."
             ),
         )
@@ -1131,9 +1196,9 @@ async def _execute_find_time(ctx: ToolContext, args: dict) -> ToolResult:
         f"Open {duration_minutes}-minute slots for {who} (times in {tz.key}; "
         "pass start/end exactly as shown to calendar.create_event):"
     ]
-    for i, (s, e) in enumerate(slots, start=1):
-        local_s = s.astimezone(tz)
-        local_e = e.astimezone(tz)
+    for i, suggestion in enumerate(suggestions, start=1):
+        local_s = suggestion.start.astimezone(tz)
+        local_e = suggestion.end.astimezone(tz)
         lines.append(
             f"{i}. {local_s.strftime('%a')} {local_s.strftime('%Y-%m-%dT%H:%M:%S')} "
             f"to {local_e.strftime('%Y-%m-%dT%H:%M:%S')}"
@@ -1185,8 +1250,9 @@ find_time = ToolDefinition(
     group="Calendar",
     description=(
         "Suggest open meeting slots that work for the current user plus the "
-        "given attendees, based on everyone's calendars. Working hours default "
-        "to 09:00-18:00 weekdays in the user's timezone. Follow up with "
+        "given attendees, based on everyone's calendars. Each attendee's saved "
+        "working hours, workdays, and timezone apply automatically; only pass "
+        "earliest_hour/latest_hour to override them. Follow up with "
         "calendar.create_event using a suggested slot."
     ),
     parameter_schema={
@@ -1219,15 +1285,23 @@ find_time = ToolDefinition(
             },
             "earliest_hour": {
                 "type": "integer",
-                "description": "Earliest slot start hour (0-23) in the user's timezone. Default 9.",
+                "description": (
+                    "Override: earliest slot start hour (0-23) applied to everyone in "
+                    "their own timezone. Omit to use each attendee's saved working hours."
+                ),
             },
             "latest_hour": {
                 "type": "integer",
-                "description": "Latest slot end hour (1-24) in the user's timezone. Default 18.",
+                "description": (
+                    "Override: latest slot end hour (1-24) applied to everyone in "
+                    "their own timezone. Omit to use each attendee's saved working hours."
+                ),
             },
             "include_weekends": {
                 "type": "boolean",
-                "description": "Consider Saturday and Sunday. Default false.",
+                "description": (
+                    "Consider every day of the week, not just saved workdays. Default false."
+                ),
             },
             "max_results": {
                 "type": "integer",

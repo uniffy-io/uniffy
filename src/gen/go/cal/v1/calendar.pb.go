@@ -452,6 +452,159 @@ func (RecurrenceEditScope) EnumDescriptor() ([]byte, []int) {
 	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{6}
 }
 
+// Lifecycle status of an event; cancelled events stay visible
+type EventStatus int32
+
+const (
+	EventStatus_EVENT_STATUS_UNSPECIFIED EventStatus = 0
+	EventStatus_EVENT_STATUS_CONFIRMED   EventStatus = 1
+	EventStatus_EVENT_STATUS_TENTATIVE   EventStatus = 2
+	EventStatus_EVENT_STATUS_CANCELLED   EventStatus = 3
+)
+
+// Enum value maps for EventStatus.
+var (
+	EventStatus_name = map[int32]string{
+		0: "EVENT_STATUS_UNSPECIFIED",
+		1: "EVENT_STATUS_CONFIRMED",
+		2: "EVENT_STATUS_TENTATIVE",
+		3: "EVENT_STATUS_CANCELLED",
+	}
+	EventStatus_value = map[string]int32{
+		"EVENT_STATUS_UNSPECIFIED": 0,
+		"EVENT_STATUS_CONFIRMED":   1,
+		"EVENT_STATUS_TENTATIVE":   2,
+		"EVENT_STATUS_CANCELLED":   3,
+	}
+)
+
+func (x EventStatus) Enum() *EventStatus {
+	p := new(EventStatus)
+	*p = x
+	return p
+}
+
+func (x EventStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_cal_v1_calendar_proto_enumTypes[7].Descriptor()
+}
+
+func (EventStatus) Type() protoreflect.EnumType {
+	return &file_cal_v1_calendar_proto_enumTypes[7]
+}
+
+func (x EventStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventStatus.Descriptor instead.
+func (EventStatus) EnumDescriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{7}
+}
+
+// Detail visibility to viewers who are not the organizer or an attendee
+type EventVisibility int32
+
+const (
+	EventVisibility_EVENT_VISIBILITY_UNSPECIFIED EventVisibility = 0
+	EventVisibility_EVENT_VISIBILITY_STANDARD    EventVisibility = 1
+	EventVisibility_EVENT_VISIBILITY_PRIVATE     EventVisibility = 2
+)
+
+// Enum value maps for EventVisibility.
+var (
+	EventVisibility_name = map[int32]string{
+		0: "EVENT_VISIBILITY_UNSPECIFIED",
+		1: "EVENT_VISIBILITY_STANDARD",
+		2: "EVENT_VISIBILITY_PRIVATE",
+	}
+	EventVisibility_value = map[string]int32{
+		"EVENT_VISIBILITY_UNSPECIFIED": 0,
+		"EVENT_VISIBILITY_STANDARD":    1,
+		"EVENT_VISIBILITY_PRIVATE":     2,
+	}
+)
+
+func (x EventVisibility) Enum() *EventVisibility {
+	p := new(EventVisibility)
+	*p = x
+	return p
+}
+
+func (x EventVisibility) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventVisibility) Descriptor() protoreflect.EnumDescriptor {
+	return file_cal_v1_calendar_proto_enumTypes[8].Descriptor()
+}
+
+func (EventVisibility) Type() protoreflect.EnumType {
+	return &file_cal_v1_calendar_proto_enumTypes[8]
+}
+
+func (x EventVisibility) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventVisibility.Descriptor instead.
+func (EventVisibility) EnumDescriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{8}
+}
+
+// Whether the event blocks the attendee's time in free/busy answers
+type EventTransparency int32
+
+const (
+	EventTransparency_EVENT_TRANSPARENCY_UNSPECIFIED EventTransparency = 0
+	EventTransparency_EVENT_TRANSPARENCY_OPAQUE      EventTransparency = 1
+	EventTransparency_EVENT_TRANSPARENCY_TRANSPARENT EventTransparency = 2
+)
+
+// Enum value maps for EventTransparency.
+var (
+	EventTransparency_name = map[int32]string{
+		0: "EVENT_TRANSPARENCY_UNSPECIFIED",
+		1: "EVENT_TRANSPARENCY_OPAQUE",
+		2: "EVENT_TRANSPARENCY_TRANSPARENT",
+	}
+	EventTransparency_value = map[string]int32{
+		"EVENT_TRANSPARENCY_UNSPECIFIED": 0,
+		"EVENT_TRANSPARENCY_OPAQUE":      1,
+		"EVENT_TRANSPARENCY_TRANSPARENT": 2,
+	}
+)
+
+func (x EventTransparency) Enum() *EventTransparency {
+	p := new(EventTransparency)
+	*p = x
+	return p
+}
+
+func (x EventTransparency) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventTransparency) Descriptor() protoreflect.EnumDescriptor {
+	return file_cal_v1_calendar_proto_enumTypes[9].Descriptor()
+}
+
+func (EventTransparency) Type() protoreflect.EnumType {
+	return &file_cal_v1_calendar_proto_enumTypes[9]
+}
+
+func (x EventTransparency) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventTransparency.Descriptor instead.
+func (EventTransparency) EnumDescriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{9}
+}
+
 // Calendar event
 type CalendarEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -523,7 +676,19 @@ type CalendarEvent struct {
 	ChannelAutoCreated bool `protobuf:"varint,36,opt,name=channel_auto_created,json=channelAutoCreated,proto3" json:"channel_auto_created,omitempty"`
 	// Caller's effective role on this event, so the client can render read-only
 	// affordances instead of controls every write would reject.
-	UserRole      v11.ContentRole `protobuf:"varint,37,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
+	UserRole v11.ContentRole `protobuf:"varint,37,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole" json:"user_role,omitempty"`
+	// Lifecycle status; cancelled events render struck through and stop blocking time
+	Status EventStatus `protobuf:"varint,38,opt,name=status,proto3,enum=cal.v1.EventStatus" json:"status,omitempty"`
+	// Detail visibility; PRIVATE events are redacted for non-privileged viewers
+	Visibility EventVisibility `protobuf:"varint,39,opt,name=visibility,proto3,enum=cal.v1.EventVisibility" json:"visibility,omitempty"`
+	// Free/busy transparency; TRANSPARENT events never count as busy
+	Transparency EventTransparency `protobuf:"varint,40,opt,name=transparency,proto3,enum=cal.v1.EventTransparency" json:"transparency,omitempty"`
+	// Out-of-office period, rendered distinctly on every surface
+	IsOutOfOffice bool `protobuf:"varint,41,opt,name=is_out_of_office,json=isOutOfOffice,proto3" json:"is_out_of_office,omitempty"`
+	// True when the server redacted this payload for the caller (private event,
+	// caller is not organizer/attendee/editor): title, description, location,
+	// meeting, channel, category, and attendees are stripped.
+	DetailsHidden bool `protobuf:"varint,42,opt,name=details_hidden,json=detailsHidden,proto3" json:"details_hidden,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -801,6 +966,41 @@ func (x *CalendarEvent) GetUserRole() v11.ContentRole {
 		return x.UserRole
 	}
 	return v11.ContentRole(0)
+}
+
+func (x *CalendarEvent) GetStatus() EventStatus {
+	if x != nil {
+		return x.Status
+	}
+	return EventStatus_EVENT_STATUS_UNSPECIFIED
+}
+
+func (x *CalendarEvent) GetVisibility() EventVisibility {
+	if x != nil {
+		return x.Visibility
+	}
+	return EventVisibility_EVENT_VISIBILITY_UNSPECIFIED
+}
+
+func (x *CalendarEvent) GetTransparency() EventTransparency {
+	if x != nil {
+		return x.Transparency
+	}
+	return EventTransparency_EVENT_TRANSPARENCY_UNSPECIFIED
+}
+
+func (x *CalendarEvent) GetIsOutOfOffice() bool {
+	if x != nil {
+		return x.IsOutOfOffice
+	}
+	return false
+}
+
+func (x *CalendarEvent) GetDetailsHidden() bool {
+	if x != nil {
+		return x.DetailsHidden
+	}
+	return false
 }
 
 // Event attendee
@@ -1129,8 +1329,19 @@ type CreateEventRequest struct {
 	ChannelId *string `protobuf:"bytes,21,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
 	// Set when channel_id points at a room auto-created for this event.
 	ChannelAutoCreated *bool `protobuf:"varint,22,opt,name=channel_auto_created,json=channelAutoCreated,proto3,oneof" json:"channel_auto_created,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Lifecycle status (UNSPECIFIED defaults to CONFIRMED)
+	Status EventStatus `protobuf:"varint,23,opt,name=status,proto3,enum=cal.v1.EventStatus" json:"status,omitempty"`
+	// Detail visibility (UNSPECIFIED defaults to STANDARD)
+	Visibility EventVisibility `protobuf:"varint,24,opt,name=visibility,proto3,enum=cal.v1.EventVisibility" json:"visibility,omitempty"`
+	// Free/busy transparency (UNSPECIFIED lets the server default: all-day
+	// non-out-of-office events are TRANSPARENT, everything else OPAQUE)
+	Transparency EventTransparency `protobuf:"varint,25,opt,name=transparency,proto3,enum=cal.v1.EventTransparency" json:"transparency,omitempty"`
+	// Marks the event as an out-of-office period
+	IsOutOfOffice bool `protobuf:"varint,26,opt,name=is_out_of_office,json=isOutOfOffice,proto3" json:"is_out_of_office,omitempty"`
+	// Attendees with explicit roles; merged with attendee_ids (which imply REQUIRED)
+	Attendees     []*AttendeeInput `protobuf:"bytes,27,rep,name=attendees,proto3" json:"attendees,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateEventRequest) Reset() {
@@ -1303,6 +1514,94 @@ func (x *CreateEventRequest) GetChannelAutoCreated() bool {
 	return false
 }
 
+func (x *CreateEventRequest) GetStatus() EventStatus {
+	if x != nil {
+		return x.Status
+	}
+	return EventStatus_EVENT_STATUS_UNSPECIFIED
+}
+
+func (x *CreateEventRequest) GetVisibility() EventVisibility {
+	if x != nil {
+		return x.Visibility
+	}
+	return EventVisibility_EVENT_VISIBILITY_UNSPECIFIED
+}
+
+func (x *CreateEventRequest) GetTransparency() EventTransparency {
+	if x != nil {
+		return x.Transparency
+	}
+	return EventTransparency_EVENT_TRANSPARENCY_UNSPECIFIED
+}
+
+func (x *CreateEventRequest) GetIsOutOfOffice() bool {
+	if x != nil {
+		return x.IsOutOfOffice
+	}
+	return false
+}
+
+func (x *CreateEventRequest) GetAttendees() []*AttendeeInput {
+	if x != nil {
+		return x.Attendees
+	}
+	return nil
+}
+
+// An attendee to invite, with the role to invite them under
+type AttendeeInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Role          AttendeeRole           `protobuf:"varint,2,opt,name=role,proto3,enum=cal.v1.AttendeeRole" json:"role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AttendeeInput) Reset() {
+	*x = AttendeeInput{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AttendeeInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AttendeeInput) ProtoMessage() {}
+
+func (x *AttendeeInput) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AttendeeInput.ProtoReflect.Descriptor instead.
+func (*AttendeeInput) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AttendeeInput) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AttendeeInput) GetRole() AttendeeRole {
+	if x != nil {
+		return x.Role
+	}
+	return AttendeeRole_ATTENDEE_ROLE_UNSPECIFIED
+}
+
 // Request to get an event
 type GetEventRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1316,7 +1615,7 @@ type GetEventRequest struct {
 
 func (x *GetEventRequest) Reset() {
 	*x = GetEventRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[5]
+	mi := &file_cal_v1_calendar_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1328,7 +1627,7 @@ func (x *GetEventRequest) String() string {
 func (*GetEventRequest) ProtoMessage() {}
 
 func (x *GetEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[5]
+	mi := &file_cal_v1_calendar_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1341,7 +1640,7 @@ func (x *GetEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEventRequest.ProtoReflect.Descriptor instead.
 func (*GetEventRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{5}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetEventRequest) GetEventId() string {
@@ -1410,13 +1709,21 @@ type UpdateEventRequest struct {
 	// Marks the bound channel as a room auto-created for this event. Sent
 	// alongside a new channel_id; unset leaves the flag untouched.
 	ChannelAutoCreated *bool `protobuf:"varint,25,opt,name=channel_auto_created,json=channelAutoCreated,proto3,oneof" json:"channel_auto_created,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Updated lifecycle status; unset leaves it untouched
+	Status *EventStatus `protobuf:"varint,26,opt,name=status,proto3,enum=cal.v1.EventStatus,oneof" json:"status,omitempty"`
+	// Updated detail visibility; unset leaves it untouched
+	Visibility *EventVisibility `protobuf:"varint,27,opt,name=visibility,proto3,enum=cal.v1.EventVisibility,oneof" json:"visibility,omitempty"`
+	// Updated free/busy transparency; unset leaves it untouched
+	Transparency *EventTransparency `protobuf:"varint,28,opt,name=transparency,proto3,enum=cal.v1.EventTransparency,oneof" json:"transparency,omitempty"`
+	// Updated out-of-office flag; unset leaves it untouched
+	IsOutOfOffice *bool `protobuf:"varint,29,opt,name=is_out_of_office,json=isOutOfOffice,proto3,oneof" json:"is_out_of_office,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateEventRequest) Reset() {
 	*x = UpdateEventRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[6]
+	mi := &file_cal_v1_calendar_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1428,7 +1735,7 @@ func (x *UpdateEventRequest) String() string {
 func (*UpdateEventRequest) ProtoMessage() {}
 
 func (x *UpdateEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[6]
+	mi := &file_cal_v1_calendar_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1441,7 +1748,7 @@ func (x *UpdateEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEventRequest.ProtoReflect.Descriptor instead.
 func (*UpdateEventRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{6}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateEventRequest) GetEventId() string {
@@ -1605,6 +1912,34 @@ func (x *UpdateEventRequest) GetChannelAutoCreated() bool {
 	return false
 }
 
+func (x *UpdateEventRequest) GetStatus() EventStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return EventStatus_EVENT_STATUS_UNSPECIFIED
+}
+
+func (x *UpdateEventRequest) GetVisibility() EventVisibility {
+	if x != nil && x.Visibility != nil {
+		return *x.Visibility
+	}
+	return EventVisibility_EVENT_VISIBILITY_UNSPECIFIED
+}
+
+func (x *UpdateEventRequest) GetTransparency() EventTransparency {
+	if x != nil && x.Transparency != nil {
+		return *x.Transparency
+	}
+	return EventTransparency_EVENT_TRANSPARENCY_UNSPECIFIED
+}
+
+func (x *UpdateEventRequest) GetIsOutOfOffice() bool {
+	if x != nil && x.IsOutOfOffice != nil {
+		return *x.IsOutOfOffice
+	}
+	return false
+}
+
 // Wrapper so the caller can distinguish "leave tags alone" from
 // "clear all tags" (proto3 cannot tell an empty repeated apart from
 // an unset one). Mirrors NoteTagIds / FileTagIds.
@@ -1617,7 +1952,7 @@ type EventTagIds struct {
 
 func (x *EventTagIds) Reset() {
 	*x = EventTagIds{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[7]
+	mi := &file_cal_v1_calendar_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1629,7 +1964,7 @@ func (x *EventTagIds) String() string {
 func (*EventTagIds) ProtoMessage() {}
 
 func (x *EventTagIds) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[7]
+	mi := &file_cal_v1_calendar_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1642,7 +1977,7 @@ func (x *EventTagIds) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTagIds.ProtoReflect.Descriptor instead.
 func (*EventTagIds) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{7}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *EventTagIds) GetIds() []string {
@@ -1671,7 +2006,7 @@ type DeleteEventRequest struct {
 
 func (x *DeleteEventRequest) Reset() {
 	*x = DeleteEventRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[8]
+	mi := &file_cal_v1_calendar_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1683,7 +2018,7 @@ func (x *DeleteEventRequest) String() string {
 func (*DeleteEventRequest) ProtoMessage() {}
 
 func (x *DeleteEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[8]
+	mi := &file_cal_v1_calendar_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1696,7 +2031,7 @@ func (x *DeleteEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteEventRequest.ProtoReflect.Descriptor instead.
 func (*DeleteEventRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{8}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteEventRequest) GetEventId() string {
@@ -1745,7 +2080,7 @@ type DeleteEventResponse struct {
 
 func (x *DeleteEventResponse) Reset() {
 	*x = DeleteEventResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[9]
+	mi := &file_cal_v1_calendar_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1757,7 +2092,7 @@ func (x *DeleteEventResponse) String() string {
 func (*DeleteEventResponse) ProtoMessage() {}
 
 func (x *DeleteEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[9]
+	mi := &file_cal_v1_calendar_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1770,7 +2105,7 @@ func (x *DeleteEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteEventResponse.ProtoReflect.Descriptor instead.
 func (*DeleteEventResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{9}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteEventResponse) GetSuccess() bool {
@@ -1797,7 +2132,7 @@ type CreateEventResponse struct {
 
 func (x *CreateEventResponse) Reset() {
 	*x = CreateEventResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[10]
+	mi := &file_cal_v1_calendar_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1809,7 +2144,7 @@ func (x *CreateEventResponse) String() string {
 func (*CreateEventResponse) ProtoMessage() {}
 
 func (x *CreateEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[10]
+	mi := &file_cal_v1_calendar_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1822,7 +2157,7 @@ func (x *CreateEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateEventResponse.ProtoReflect.Descriptor instead.
 func (*CreateEventResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{10}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateEventResponse) GetEvent() *CalendarEvent {
@@ -1842,7 +2177,7 @@ type GetEventResponse struct {
 
 func (x *GetEventResponse) Reset() {
 	*x = GetEventResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[11]
+	mi := &file_cal_v1_calendar_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1854,7 +2189,7 @@ func (x *GetEventResponse) String() string {
 func (*GetEventResponse) ProtoMessage() {}
 
 func (x *GetEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[11]
+	mi := &file_cal_v1_calendar_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1867,7 +2202,7 @@ func (x *GetEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEventResponse.ProtoReflect.Descriptor instead.
 func (*GetEventResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{11}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetEventResponse) GetEvent() *CalendarEvent {
@@ -1887,7 +2222,7 @@ type UpdateEventResponse struct {
 
 func (x *UpdateEventResponse) Reset() {
 	*x = UpdateEventResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[12]
+	mi := &file_cal_v1_calendar_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1899,7 +2234,7 @@ func (x *UpdateEventResponse) String() string {
 func (*UpdateEventResponse) ProtoMessage() {}
 
 func (x *UpdateEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[12]
+	mi := &file_cal_v1_calendar_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1912,7 +2247,7 @@ func (x *UpdateEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEventResponse.ProtoReflect.Descriptor instead.
 func (*UpdateEventResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{12}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateEventResponse) GetEvent() *CalendarEvent {
@@ -1932,7 +2267,7 @@ type AddAttendeesResponse struct {
 
 func (x *AddAttendeesResponse) Reset() {
 	*x = AddAttendeesResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[13]
+	mi := &file_cal_v1_calendar_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1944,7 +2279,7 @@ func (x *AddAttendeesResponse) String() string {
 func (*AddAttendeesResponse) ProtoMessage() {}
 
 func (x *AddAttendeesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[13]
+	mi := &file_cal_v1_calendar_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1957,10 +2292,128 @@ func (x *AddAttendeesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddAttendeesResponse.ProtoReflect.Descriptor instead.
 func (*AddAttendeesResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{13}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AddAttendeesResponse) GetEvent() *CalendarEvent {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
+// Request to change an attendee's role (REQUIRED <-> OPTIONAL only)
+type UpdateAttendeeRoleRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Event ID
+	EventId string `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	// Organization ID
+	OrganizationId string `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	// The attendee to change
+	UserId string `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// The new role; ORGANIZER is not assignable
+	Role          AttendeeRole `protobuf:"varint,4,opt,name=role,proto3,enum=cal.v1.AttendeeRole" json:"role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAttendeeRoleRequest) Reset() {
+	*x = UpdateAttendeeRoleRequest{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAttendeeRoleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAttendeeRoleRequest) ProtoMessage() {}
+
+func (x *UpdateAttendeeRoleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAttendeeRoleRequest.ProtoReflect.Descriptor instead.
+func (*UpdateAttendeeRoleRequest) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *UpdateAttendeeRoleRequest) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *UpdateAttendeeRoleRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *UpdateAttendeeRoleRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *UpdateAttendeeRoleRequest) GetRole() AttendeeRole {
+	if x != nil {
+		return x.Role
+	}
+	return AttendeeRole_ATTENDEE_ROLE_UNSPECIFIED
+}
+
+// Response containing the event (UpdateAttendeeRole)
+type UpdateAttendeeRoleResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Event         *CalendarEvent         `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAttendeeRoleResponse) Reset() {
+	*x = UpdateAttendeeRoleResponse{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAttendeeRoleResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAttendeeRoleResponse) ProtoMessage() {}
+
+func (x *UpdateAttendeeRoleResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAttendeeRoleResponse.ProtoReflect.Descriptor instead.
+func (*UpdateAttendeeRoleResponse) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *UpdateAttendeeRoleResponse) GetEvent() *CalendarEvent {
 	if x != nil {
 		return x.Event
 	}
@@ -1977,7 +2430,7 @@ type RemoveAttendeesResponse struct {
 
 func (x *RemoveAttendeesResponse) Reset() {
 	*x = RemoveAttendeesResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[14]
+	mi := &file_cal_v1_calendar_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1989,7 +2442,7 @@ func (x *RemoveAttendeesResponse) String() string {
 func (*RemoveAttendeesResponse) ProtoMessage() {}
 
 func (x *RemoveAttendeesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[14]
+	mi := &file_cal_v1_calendar_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2002,7 +2455,7 @@ func (x *RemoveAttendeesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveAttendeesResponse.ProtoReflect.Descriptor instead.
 func (*RemoveAttendeesResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{14}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *RemoveAttendeesResponse) GetEvent() *CalendarEvent {
@@ -2043,7 +2496,7 @@ type ListEventsRequest struct {
 
 func (x *ListEventsRequest) Reset() {
 	*x = ListEventsRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[15]
+	mi := &file_cal_v1_calendar_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2055,7 +2508,7 @@ func (x *ListEventsRequest) String() string {
 func (*ListEventsRequest) ProtoMessage() {}
 
 func (x *ListEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[15]
+	mi := &file_cal_v1_calendar_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2068,7 +2521,7 @@ func (x *ListEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListEventsRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{15}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListEventsRequest) GetOrganizationId() string {
@@ -2162,7 +2615,7 @@ type ListEventsResponse struct {
 
 func (x *ListEventsResponse) Reset() {
 	*x = ListEventsResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[16]
+	mi := &file_cal_v1_calendar_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2174,7 +2627,7 @@ func (x *ListEventsResponse) String() string {
 func (*ListEventsResponse) ProtoMessage() {}
 
 func (x *ListEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[16]
+	mi := &file_cal_v1_calendar_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2187,7 +2640,7 @@ func (x *ListEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListEventsResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{16}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListEventsResponse) GetEvents() []*CalendarEvent {
@@ -2244,7 +2697,7 @@ type GetEventsInRangeRequest struct {
 
 func (x *GetEventsInRangeRequest) Reset() {
 	*x = GetEventsInRangeRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[17]
+	mi := &file_cal_v1_calendar_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2256,7 +2709,7 @@ func (x *GetEventsInRangeRequest) String() string {
 func (*GetEventsInRangeRequest) ProtoMessage() {}
 
 func (x *GetEventsInRangeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[17]
+	mi := &file_cal_v1_calendar_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2269,7 +2722,7 @@ func (x *GetEventsInRangeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEventsInRangeRequest.ProtoReflect.Descriptor instead.
 func (*GetEventsInRangeRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{17}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetEventsInRangeRequest) GetOrganizationId() string {
@@ -2317,7 +2770,7 @@ type GetEventsInRangeResponse struct {
 
 func (x *GetEventsInRangeResponse) Reset() {
 	*x = GetEventsInRangeResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[18]
+	mi := &file_cal_v1_calendar_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2329,7 +2782,7 @@ func (x *GetEventsInRangeResponse) String() string {
 func (*GetEventsInRangeResponse) ProtoMessage() {}
 
 func (x *GetEventsInRangeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[18]
+	mi := &file_cal_v1_calendar_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2342,7 +2795,7 @@ func (x *GetEventsInRangeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEventsInRangeResponse.ProtoReflect.Descriptor instead.
 func (*GetEventsInRangeResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{18}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetEventsInRangeResponse) GetEvents() []*CalendarEvent {
@@ -2379,7 +2832,7 @@ type Category struct {
 
 func (x *Category) Reset() {
 	*x = Category{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[19]
+	mi := &file_cal_v1_calendar_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2391,7 +2844,7 @@ func (x *Category) String() string {
 func (*Category) ProtoMessage() {}
 
 func (x *Category) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[19]
+	mi := &file_cal_v1_calendar_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2404,7 +2857,7 @@ func (x *Category) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Category.ProtoReflect.Descriptor instead.
 func (*Category) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{19}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *Category) GetId() string {
@@ -2487,7 +2940,7 @@ type CreateCategoryRequest struct {
 
 func (x *CreateCategoryRequest) Reset() {
 	*x = CreateCategoryRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[20]
+	mi := &file_cal_v1_calendar_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2499,7 +2952,7 @@ func (x *CreateCategoryRequest) String() string {
 func (*CreateCategoryRequest) ProtoMessage() {}
 
 func (x *CreateCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[20]
+	mi := &file_cal_v1_calendar_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2512,7 +2965,7 @@ func (x *CreateCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCategoryRequest.ProtoReflect.Descriptor instead.
 func (*CreateCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{20}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CreateCategoryRequest) GetOrganizationId() string {
@@ -2556,7 +3009,7 @@ type GetCategoryRequest struct {
 
 func (x *GetCategoryRequest) Reset() {
 	*x = GetCategoryRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[21]
+	mi := &file_cal_v1_calendar_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2568,7 +3021,7 @@ func (x *GetCategoryRequest) String() string {
 func (*GetCategoryRequest) ProtoMessage() {}
 
 func (x *GetCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[21]
+	mi := &file_cal_v1_calendar_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2581,7 +3034,7 @@ func (x *GetCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCategoryRequest.ProtoReflect.Descriptor instead.
 func (*GetCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{21}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetCategoryRequest) GetCategoryId() string {
@@ -2619,7 +3072,7 @@ type UpdateCategoryRequest struct {
 
 func (x *UpdateCategoryRequest) Reset() {
 	*x = UpdateCategoryRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[22]
+	mi := &file_cal_v1_calendar_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2631,7 +3084,7 @@ func (x *UpdateCategoryRequest) String() string {
 func (*UpdateCategoryRequest) ProtoMessage() {}
 
 func (x *UpdateCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[22]
+	mi := &file_cal_v1_calendar_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2644,7 +3097,7 @@ func (x *UpdateCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCategoryRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{22}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *UpdateCategoryRequest) GetCategoryId() string {
@@ -2702,7 +3155,7 @@ type DeleteCategoryRequest struct {
 
 func (x *DeleteCategoryRequest) Reset() {
 	*x = DeleteCategoryRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[23]
+	mi := &file_cal_v1_calendar_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2714,7 +3167,7 @@ func (x *DeleteCategoryRequest) String() string {
 func (*DeleteCategoryRequest) ProtoMessage() {}
 
 func (x *DeleteCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[23]
+	mi := &file_cal_v1_calendar_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2727,7 +3180,7 @@ func (x *DeleteCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCategoryRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{23}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *DeleteCategoryRequest) GetCategoryId() string {
@@ -2755,7 +3208,7 @@ type DeleteCategoryResponse struct {
 
 func (x *DeleteCategoryResponse) Reset() {
 	*x = DeleteCategoryResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[24]
+	mi := &file_cal_v1_calendar_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2767,7 +3220,7 @@ func (x *DeleteCategoryResponse) String() string {
 func (*DeleteCategoryResponse) ProtoMessage() {}
 
 func (x *DeleteCategoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[24]
+	mi := &file_cal_v1_calendar_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2780,7 +3233,7 @@ func (x *DeleteCategoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCategoryResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCategoryResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{24}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *DeleteCategoryResponse) GetSuccess() bool {
@@ -2807,7 +3260,7 @@ type CreateCategoryResponse struct {
 
 func (x *CreateCategoryResponse) Reset() {
 	*x = CreateCategoryResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[25]
+	mi := &file_cal_v1_calendar_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2819,7 +3272,7 @@ func (x *CreateCategoryResponse) String() string {
 func (*CreateCategoryResponse) ProtoMessage() {}
 
 func (x *CreateCategoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[25]
+	mi := &file_cal_v1_calendar_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2832,7 +3285,7 @@ func (x *CreateCategoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCategoryResponse.ProtoReflect.Descriptor instead.
 func (*CreateCategoryResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{25}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *CreateCategoryResponse) GetCategory() *Category {
@@ -2852,7 +3305,7 @@ type GetCategoryResponse struct {
 
 func (x *GetCategoryResponse) Reset() {
 	*x = GetCategoryResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[26]
+	mi := &file_cal_v1_calendar_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2864,7 +3317,7 @@ func (x *GetCategoryResponse) String() string {
 func (*GetCategoryResponse) ProtoMessage() {}
 
 func (x *GetCategoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[26]
+	mi := &file_cal_v1_calendar_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2877,7 +3330,7 @@ func (x *GetCategoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCategoryResponse.ProtoReflect.Descriptor instead.
 func (*GetCategoryResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{26}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetCategoryResponse) GetCategory() *Category {
@@ -2897,7 +3350,7 @@ type UpdateCategoryResponse struct {
 
 func (x *UpdateCategoryResponse) Reset() {
 	*x = UpdateCategoryResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[27]
+	mi := &file_cal_v1_calendar_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2909,7 +3362,7 @@ func (x *UpdateCategoryResponse) String() string {
 func (*UpdateCategoryResponse) ProtoMessage() {}
 
 func (x *UpdateCategoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[27]
+	mi := &file_cal_v1_calendar_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2922,7 +3375,7 @@ func (x *UpdateCategoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCategoryResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCategoryResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{27}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *UpdateCategoryResponse) GetCategory() *Category {
@@ -2943,7 +3396,7 @@ type ListCategoriesRequest struct {
 
 func (x *ListCategoriesRequest) Reset() {
 	*x = ListCategoriesRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[28]
+	mi := &file_cal_v1_calendar_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2955,7 +3408,7 @@ func (x *ListCategoriesRequest) String() string {
 func (*ListCategoriesRequest) ProtoMessage() {}
 
 func (x *ListCategoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[28]
+	mi := &file_cal_v1_calendar_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2968,7 +3421,7 @@ func (x *ListCategoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCategoriesRequest.ProtoReflect.Descriptor instead.
 func (*ListCategoriesRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{28}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListCategoriesRequest) GetOrganizationId() string {
@@ -2988,7 +3441,7 @@ type ListCategoriesResponse struct {
 
 func (x *ListCategoriesResponse) Reset() {
 	*x = ListCategoriesResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[29]
+	mi := &file_cal_v1_calendar_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3000,7 +3453,7 @@ func (x *ListCategoriesResponse) String() string {
 func (*ListCategoriesResponse) ProtoMessage() {}
 
 func (x *ListCategoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[29]
+	mi := &file_cal_v1_calendar_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3013,7 +3466,7 @@ func (x *ListCategoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCategoriesResponse.ProtoReflect.Descriptor instead.
 func (*ListCategoriesResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{29}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ListCategoriesResponse) GetCategories() []*Category {
@@ -3038,7 +3491,7 @@ type UpdateAttendeeStatusRequest struct {
 
 func (x *UpdateAttendeeStatusRequest) Reset() {
 	*x = UpdateAttendeeStatusRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[30]
+	mi := &file_cal_v1_calendar_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3050,7 +3503,7 @@ func (x *UpdateAttendeeStatusRequest) String() string {
 func (*UpdateAttendeeStatusRequest) ProtoMessage() {}
 
 func (x *UpdateAttendeeStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[30]
+	mi := &file_cal_v1_calendar_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3063,7 +3516,7 @@ func (x *UpdateAttendeeStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAttendeeStatusRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAttendeeStatusRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{30}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *UpdateAttendeeStatusRequest) GetEventId() string {
@@ -3098,7 +3551,7 @@ type UpdateAttendeeStatusResponse struct {
 
 func (x *UpdateAttendeeStatusResponse) Reset() {
 	*x = UpdateAttendeeStatusResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[31]
+	mi := &file_cal_v1_calendar_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3110,7 +3563,7 @@ func (x *UpdateAttendeeStatusResponse) String() string {
 func (*UpdateAttendeeStatusResponse) ProtoMessage() {}
 
 func (x *UpdateAttendeeStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[31]
+	mi := &file_cal_v1_calendar_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3123,7 +3576,7 @@ func (x *UpdateAttendeeStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAttendeeStatusResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAttendeeStatusResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{31}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *UpdateAttendeeStatusResponse) GetSuccess() bool {
@@ -3157,7 +3610,7 @@ type AddAttendeesRequest struct {
 
 func (x *AddAttendeesRequest) Reset() {
 	*x = AddAttendeesRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[32]
+	mi := &file_cal_v1_calendar_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3169,7 +3622,7 @@ func (x *AddAttendeesRequest) String() string {
 func (*AddAttendeesRequest) ProtoMessage() {}
 
 func (x *AddAttendeesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[32]
+	mi := &file_cal_v1_calendar_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3182,7 +3635,7 @@ func (x *AddAttendeesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddAttendeesRequest.ProtoReflect.Descriptor instead.
 func (*AddAttendeesRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{32}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *AddAttendeesRequest) GetEventId() string {
@@ -3228,7 +3681,7 @@ type RemoveAttendeesRequest struct {
 
 func (x *RemoveAttendeesRequest) Reset() {
 	*x = RemoveAttendeesRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[33]
+	mi := &file_cal_v1_calendar_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3240,7 +3693,7 @@ func (x *RemoveAttendeesRequest) String() string {
 func (*RemoveAttendeesRequest) ProtoMessage() {}
 
 func (x *RemoveAttendeesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[33]
+	mi := &file_cal_v1_calendar_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3253,7 +3706,7 @@ func (x *RemoveAttendeesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveAttendeesRequest.ProtoReflect.Descriptor instead.
 func (*RemoveAttendeesRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{33}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RemoveAttendeesRequest) GetEventId() string {
@@ -3302,7 +3755,7 @@ type EventActivity struct {
 
 func (x *EventActivity) Reset() {
 	*x = EventActivity{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[34]
+	mi := &file_cal_v1_calendar_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3314,7 +3767,7 @@ func (x *EventActivity) String() string {
 func (*EventActivity) ProtoMessage() {}
 
 func (x *EventActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[34]
+	mi := &file_cal_v1_calendar_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3327,7 +3780,7 @@ func (x *EventActivity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventActivity.ProtoReflect.Descriptor instead.
 func (*EventActivity) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{34}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *EventActivity) GetId() string {
@@ -3401,7 +3854,7 @@ type ListEventActivitiesRequest struct {
 
 func (x *ListEventActivitiesRequest) Reset() {
 	*x = ListEventActivitiesRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[35]
+	mi := &file_cal_v1_calendar_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3413,7 +3866,7 @@ func (x *ListEventActivitiesRequest) String() string {
 func (*ListEventActivitiesRequest) ProtoMessage() {}
 
 func (x *ListEventActivitiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[35]
+	mi := &file_cal_v1_calendar_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3426,7 +3879,7 @@ func (x *ListEventActivitiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventActivitiesRequest.ProtoReflect.Descriptor instead.
 func (*ListEventActivitiesRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{35}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListEventActivitiesRequest) GetOrganizationId() string {
@@ -3463,7 +3916,7 @@ type ListEventActivitiesResponse struct {
 
 func (x *ListEventActivitiesResponse) Reset() {
 	*x = ListEventActivitiesResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[36]
+	mi := &file_cal_v1_calendar_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3475,7 +3928,7 @@ func (x *ListEventActivitiesResponse) String() string {
 func (*ListEventActivitiesResponse) ProtoMessage() {}
 
 func (x *ListEventActivitiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[36]
+	mi := &file_cal_v1_calendar_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3488,7 +3941,7 @@ func (x *ListEventActivitiesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventActivitiesResponse.ProtoReflect.Descriptor instead.
 func (*ListEventActivitiesResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{36}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ListEventActivitiesResponse) GetActivities() []*EventActivity {
@@ -3542,7 +3995,7 @@ type EventTemplate struct {
 
 func (x *EventTemplate) Reset() {
 	*x = EventTemplate{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[37]
+	mi := &file_cal_v1_calendar_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3554,7 +4007,7 @@ func (x *EventTemplate) String() string {
 func (*EventTemplate) ProtoMessage() {}
 
 func (x *EventTemplate) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[37]
+	mi := &file_cal_v1_calendar_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3567,7 +4020,7 @@ func (x *EventTemplate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTemplate.ProtoReflect.Descriptor instead.
 func (*EventTemplate) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{37}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *EventTemplate) GetId() string {
@@ -3686,7 +4139,7 @@ type CreateEventTemplateRequest struct {
 
 func (x *CreateEventTemplateRequest) Reset() {
 	*x = CreateEventTemplateRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[38]
+	mi := &file_cal_v1_calendar_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3698,7 +4151,7 @@ func (x *CreateEventTemplateRequest) String() string {
 func (*CreateEventTemplateRequest) ProtoMessage() {}
 
 func (x *CreateEventTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[38]
+	mi := &file_cal_v1_calendar_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3711,7 +4164,7 @@ func (x *CreateEventTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateEventTemplateRequest.ProtoReflect.Descriptor instead.
 func (*CreateEventTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{38}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *CreateEventTemplateRequest) GetOrganizationId() string {
@@ -3794,7 +4247,7 @@ type GetEventTemplateRequest struct {
 
 func (x *GetEventTemplateRequest) Reset() {
 	*x = GetEventTemplateRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[39]
+	mi := &file_cal_v1_calendar_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3806,7 +4259,7 @@ func (x *GetEventTemplateRequest) String() string {
 func (*GetEventTemplateRequest) ProtoMessage() {}
 
 func (x *GetEventTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[39]
+	mi := &file_cal_v1_calendar_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3819,7 +4272,7 @@ func (x *GetEventTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEventTemplateRequest.ProtoReflect.Descriptor instead.
 func (*GetEventTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{39}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *GetEventTemplateRequest) GetTemplateId() string {
@@ -3855,7 +4308,7 @@ type UpdateEventTemplateRequest struct {
 
 func (x *UpdateEventTemplateRequest) Reset() {
 	*x = UpdateEventTemplateRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[40]
+	mi := &file_cal_v1_calendar_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3867,7 +4320,7 @@ func (x *UpdateEventTemplateRequest) String() string {
 func (*UpdateEventTemplateRequest) ProtoMessage() {}
 
 func (x *UpdateEventTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[40]
+	mi := &file_cal_v1_calendar_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3880,7 +4333,7 @@ func (x *UpdateEventTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEventTemplateRequest.ProtoReflect.Descriptor instead.
 func (*UpdateEventTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{40}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *UpdateEventTemplateRequest) GetTemplateId() string {
@@ -3970,7 +4423,7 @@ type DeleteEventTemplateRequest struct {
 
 func (x *DeleteEventTemplateRequest) Reset() {
 	*x = DeleteEventTemplateRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[41]
+	mi := &file_cal_v1_calendar_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3982,7 +4435,7 @@ func (x *DeleteEventTemplateRequest) String() string {
 func (*DeleteEventTemplateRequest) ProtoMessage() {}
 
 func (x *DeleteEventTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[41]
+	mi := &file_cal_v1_calendar_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3995,7 +4448,7 @@ func (x *DeleteEventTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteEventTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DeleteEventTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{41}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *DeleteEventTemplateRequest) GetTemplateId() string {
@@ -4022,7 +4475,7 @@ type DeleteEventTemplateResponse struct {
 
 func (x *DeleteEventTemplateResponse) Reset() {
 	*x = DeleteEventTemplateResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[42]
+	mi := &file_cal_v1_calendar_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4034,7 +4487,7 @@ func (x *DeleteEventTemplateResponse) String() string {
 func (*DeleteEventTemplateResponse) ProtoMessage() {}
 
 func (x *DeleteEventTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[42]
+	mi := &file_cal_v1_calendar_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4047,7 +4500,7 @@ func (x *DeleteEventTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteEventTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DeleteEventTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{42}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *DeleteEventTemplateResponse) GetSuccess() bool {
@@ -4073,7 +4526,7 @@ type CreateEventTemplateResponse struct {
 
 func (x *CreateEventTemplateResponse) Reset() {
 	*x = CreateEventTemplateResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[43]
+	mi := &file_cal_v1_calendar_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4085,7 +4538,7 @@ func (x *CreateEventTemplateResponse) String() string {
 func (*CreateEventTemplateResponse) ProtoMessage() {}
 
 func (x *CreateEventTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[43]
+	mi := &file_cal_v1_calendar_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4098,7 +4551,7 @@ func (x *CreateEventTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateEventTemplateResponse.ProtoReflect.Descriptor instead.
 func (*CreateEventTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{43}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *CreateEventTemplateResponse) GetTemplate() *EventTemplate {
@@ -4117,7 +4570,7 @@ type GetEventTemplateResponse struct {
 
 func (x *GetEventTemplateResponse) Reset() {
 	*x = GetEventTemplateResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[44]
+	mi := &file_cal_v1_calendar_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4129,7 +4582,7 @@ func (x *GetEventTemplateResponse) String() string {
 func (*GetEventTemplateResponse) ProtoMessage() {}
 
 func (x *GetEventTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[44]
+	mi := &file_cal_v1_calendar_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4142,7 +4595,7 @@ func (x *GetEventTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEventTemplateResponse.ProtoReflect.Descriptor instead.
 func (*GetEventTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{44}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *GetEventTemplateResponse) GetTemplate() *EventTemplate {
@@ -4161,7 +4614,7 @@ type UpdateEventTemplateResponse struct {
 
 func (x *UpdateEventTemplateResponse) Reset() {
 	*x = UpdateEventTemplateResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[45]
+	mi := &file_cal_v1_calendar_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4173,7 +4626,7 @@ func (x *UpdateEventTemplateResponse) String() string {
 func (*UpdateEventTemplateResponse) ProtoMessage() {}
 
 func (x *UpdateEventTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[45]
+	mi := &file_cal_v1_calendar_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4186,7 +4639,7 @@ func (x *UpdateEventTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEventTemplateResponse.ProtoReflect.Descriptor instead.
 func (*UpdateEventTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{45}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *UpdateEventTemplateResponse) GetTemplate() *EventTemplate {
@@ -4205,7 +4658,7 @@ type ListEventTemplatesRequest struct {
 
 func (x *ListEventTemplatesRequest) Reset() {
 	*x = ListEventTemplatesRequest{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[46]
+	mi := &file_cal_v1_calendar_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4217,7 +4670,7 @@ func (x *ListEventTemplatesRequest) String() string {
 func (*ListEventTemplatesRequest) ProtoMessage() {}
 
 func (x *ListEventTemplatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[46]
+	mi := &file_cal_v1_calendar_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4230,7 +4683,7 @@ func (x *ListEventTemplatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventTemplatesRequest.ProtoReflect.Descriptor instead.
 func (*ListEventTemplatesRequest) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{46}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListEventTemplatesRequest) GetOrganizationId() string {
@@ -4249,7 +4702,7 @@ type ListEventTemplatesResponse struct {
 
 func (x *ListEventTemplatesResponse) Reset() {
 	*x = ListEventTemplatesResponse{}
-	mi := &file_cal_v1_calendar_proto_msgTypes[47]
+	mi := &file_cal_v1_calendar_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4261,7 +4714,7 @@ func (x *ListEventTemplatesResponse) String() string {
 func (*ListEventTemplatesResponse) ProtoMessage() {}
 
 func (x *ListEventTemplatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cal_v1_calendar_proto_msgTypes[47]
+	mi := &file_cal_v1_calendar_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4274,7 +4727,7 @@ func (x *ListEventTemplatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventTemplatesResponse.ProtoReflect.Descriptor instead.
 func (*ListEventTemplatesResponse) Descriptor() ([]byte, []int) {
-	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{47}
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ListEventTemplatesResponse) GetTemplates() []*EventTemplate {
@@ -4284,11 +4737,500 @@ func (x *ListEventTemplatesResponse) GetTemplates() []*EventTemplate {
 	return nil
 }
 
+// A blocked span in someone's calendar; no details beyond the kind
+type BusyInterval struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime   *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	// The span comes from an out-of-office event
+	IsOutOfOffice bool `protobuf:"varint,3,opt,name=is_out_of_office,json=isOutOfOffice,proto3" json:"is_out_of_office,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BusyInterval) Reset() {
+	*x = BusyInterval{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BusyInterval) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BusyInterval) ProtoMessage() {}
+
+func (x *BusyInterval) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BusyInterval.ProtoReflect.Descriptor instead.
+func (*BusyInterval) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *BusyInterval) GetStartTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartTime
+	}
+	return nil
+}
+
+func (x *BusyInterval) GetEndTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EndTime
+	}
+	return nil
+}
+
+func (x *BusyInterval) GetIsOutOfOffice() bool {
+	if x != nil {
+		return x.IsOutOfOffice
+	}
+	return false
+}
+
+// One user's availability facts for the grid
+type UserFreeBusy struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	UserId    string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Intervals []*BusyInterval        `protobuf:"bytes,2,rep,name=intervals,proto3" json:"intervals,omitempty"`
+	// IANA zone the working hours below are expressed in
+	Timezone string `protobuf:"bytes,3,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	// Workday bounds on that user's own clock (24h HH:MM)
+	WorkdayStart string `protobuf:"bytes,4,opt,name=workday_start,json=workdayStart,proto3" json:"workday_start,omitempty"`
+	WorkdayEnd   string `protobuf:"bytes,5,opt,name=workday_end,json=workdayEnd,proto3" json:"workday_end,omitempty"`
+	// Lowercase day names ("monday".."sunday")
+	Workdays      []string `protobuf:"bytes,6,rep,name=workdays,proto3" json:"workdays,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserFreeBusy) Reset() {
+	*x = UserFreeBusy{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserFreeBusy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserFreeBusy) ProtoMessage() {}
+
+func (x *UserFreeBusy) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserFreeBusy.ProtoReflect.Descriptor instead.
+func (*UserFreeBusy) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *UserFreeBusy) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *UserFreeBusy) GetIntervals() []*BusyInterval {
+	if x != nil {
+		return x.Intervals
+	}
+	return nil
+}
+
+func (x *UserFreeBusy) GetTimezone() string {
+	if x != nil {
+		return x.Timezone
+	}
+	return ""
+}
+
+func (x *UserFreeBusy) GetWorkdayStart() string {
+	if x != nil {
+		return x.WorkdayStart
+	}
+	return ""
+}
+
+func (x *UserFreeBusy) GetWorkdayEnd() string {
+	if x != nil {
+		return x.WorkdayEnd
+	}
+	return ""
+}
+
+func (x *UserFreeBusy) GetWorkdays() []string {
+	if x != nil {
+		return x.Workdays
+	}
+	return nil
+}
+
+type GetFreeBusyRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	// At most 20 users per query
+	UserIds     []string               `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	WindowStart *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=window_start,json=windowStart,proto3" json:"window_start,omitempty"`
+	WindowEnd   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=window_end,json=windowEnd,proto3" json:"window_end,omitempty"`
+	// Include this room's booked spans in the response
+	RoomId        *string `protobuf:"bytes,5,opt,name=room_id,json=roomId,proto3,oneof" json:"room_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFreeBusyRequest) Reset() {
+	*x = GetFreeBusyRequest{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFreeBusyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFreeBusyRequest) ProtoMessage() {}
+
+func (x *GetFreeBusyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFreeBusyRequest.ProtoReflect.Descriptor instead.
+func (*GetFreeBusyRequest) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *GetFreeBusyRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GetFreeBusyRequest) GetUserIds() []string {
+	if x != nil {
+		return x.UserIds
+	}
+	return nil
+}
+
+func (x *GetFreeBusyRequest) GetWindowStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.WindowStart
+	}
+	return nil
+}
+
+func (x *GetFreeBusyRequest) GetWindowEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.WindowEnd
+	}
+	return nil
+}
+
+func (x *GetFreeBusyRequest) GetRoomId() string {
+	if x != nil && x.RoomId != nil {
+		return *x.RoomId
+	}
+	return ""
+}
+
+type GetFreeBusyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Users []*UserFreeBusy        `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	// Booked spans for the requested room, empty when no room_id was sent
+	RoomBusy      []*BusyInterval `protobuf:"bytes,2,rep,name=room_busy,json=roomBusy,proto3" json:"room_busy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFreeBusyResponse) Reset() {
+	*x = GetFreeBusyResponse{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFreeBusyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFreeBusyResponse) ProtoMessage() {}
+
+func (x *GetFreeBusyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFreeBusyResponse.ProtoReflect.Descriptor instead.
+func (*GetFreeBusyResponse) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *GetFreeBusyResponse) GetUsers() []*UserFreeBusy {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
+func (x *GetFreeBusyResponse) GetRoomBusy() []*BusyInterval {
+	if x != nil {
+		return x.RoomBusy
+	}
+	return nil
+}
+
+type SuggestMeetingTimesRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId  string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	RequiredUserIds []string               `protobuf:"bytes,2,rep,name=required_user_ids,json=requiredUserIds,proto3" json:"required_user_ids,omitempty"`
+	OptionalUserIds []string               `protobuf:"bytes,3,rep,name=optional_user_ids,json=optionalUserIds,proto3" json:"optional_user_ids,omitempty"`
+	WindowStart     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=window_start,json=windowStart,proto3" json:"window_start,omitempty"`
+	WindowEnd       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=window_end,json=windowEnd,proto3" json:"window_end,omitempty"`
+	// Meeting length in minutes (5-480)
+	DurationMinutes int32 `protobuf:"varint,6,opt,name=duration_minutes,json=durationMinutes,proto3" json:"duration_minutes,omitempty"`
+	// A suggestion never overlaps this room's confirmed bookings
+	RoomId *string `protobuf:"bytes,7,opt,name=room_id,json=roomId,proto3,oneof" json:"room_id,omitempty"`
+	// 1-10, default 5
+	MaxResults    int32 `protobuf:"varint,8,opt,name=max_results,json=maxResults,proto3" json:"max_results,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SuggestMeetingTimesRequest) Reset() {
+	*x = SuggestMeetingTimesRequest{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SuggestMeetingTimesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SuggestMeetingTimesRequest) ProtoMessage() {}
+
+func (x *SuggestMeetingTimesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SuggestMeetingTimesRequest.ProtoReflect.Descriptor instead.
+func (*SuggestMeetingTimesRequest) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *SuggestMeetingTimesRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SuggestMeetingTimesRequest) GetRequiredUserIds() []string {
+	if x != nil {
+		return x.RequiredUserIds
+	}
+	return nil
+}
+
+func (x *SuggestMeetingTimesRequest) GetOptionalUserIds() []string {
+	if x != nil {
+		return x.OptionalUserIds
+	}
+	return nil
+}
+
+func (x *SuggestMeetingTimesRequest) GetWindowStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.WindowStart
+	}
+	return nil
+}
+
+func (x *SuggestMeetingTimesRequest) GetWindowEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.WindowEnd
+	}
+	return nil
+}
+
+func (x *SuggestMeetingTimesRequest) GetDurationMinutes() int32 {
+	if x != nil {
+		return x.DurationMinutes
+	}
+	return 0
+}
+
+func (x *SuggestMeetingTimesRequest) GetRoomId() string {
+	if x != nil && x.RoomId != nil {
+		return *x.RoomId
+	}
+	return ""
+}
+
+func (x *SuggestMeetingTimesRequest) GetMaxResults() int32 {
+	if x != nil {
+		return x.MaxResults
+	}
+	return 0
+}
+
+type MeetingTimeSuggestion struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime   *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	// Optional attendees who cannot make this slot (busy or outside their hours)
+	UnavailableOptionalUserIds []string `protobuf:"bytes,3,rep,name=unavailable_optional_user_ids,json=unavailableOptionalUserIds,proto3" json:"unavailable_optional_user_ids,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *MeetingTimeSuggestion) Reset() {
+	*x = MeetingTimeSuggestion{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MeetingTimeSuggestion) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MeetingTimeSuggestion) ProtoMessage() {}
+
+func (x *MeetingTimeSuggestion) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MeetingTimeSuggestion.ProtoReflect.Descriptor instead.
+func (*MeetingTimeSuggestion) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *MeetingTimeSuggestion) GetStartTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartTime
+	}
+	return nil
+}
+
+func (x *MeetingTimeSuggestion) GetEndTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EndTime
+	}
+	return nil
+}
+
+func (x *MeetingTimeSuggestion) GetUnavailableOptionalUserIds() []string {
+	if x != nil {
+		return x.UnavailableOptionalUserIds
+	}
+	return nil
+}
+
+type SuggestMeetingTimesResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Suggestions   []*MeetingTimeSuggestion `protobuf:"bytes,1,rep,name=suggestions,proto3" json:"suggestions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SuggestMeetingTimesResponse) Reset() {
+	*x = SuggestMeetingTimesResponse{}
+	mi := &file_cal_v1_calendar_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SuggestMeetingTimesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SuggestMeetingTimesResponse) ProtoMessage() {}
+
+func (x *SuggestMeetingTimesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cal_v1_calendar_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SuggestMeetingTimesResponse.ProtoReflect.Descriptor instead.
+func (*SuggestMeetingTimesResponse) Descriptor() ([]byte, []int) {
+	return file_cal_v1_calendar_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *SuggestMeetingTimesResponse) GetSuggestions() []*MeetingTimeSuggestion {
+	if x != nil {
+		return x.Suggestions
+	}
+	return nil
+}
+
 var File_cal_v1_calendar_proto protoreflect.FileDescriptor
 
 const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
-	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xd1\f\n" +
+	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xc6\x0e\n" +
 	"\rCalendarEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n" +
@@ -4337,7 +5279,14 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
 	"channel_id\x18# \x01(\tH\tR\tchannelId\x88\x01\x01\x120\n" +
 	"\x14channel_auto_created\x18$ \x01(\bR\x12channelAutoCreated\x123\n" +
-	"\tuser_role\x18% \x01(\x0e2\x16.common.v1.ContentRoleR\buserRoleB\x0e\n" +
+	"\tuser_role\x18% \x01(\x0e2\x16.common.v1.ContentRoleR\buserRole\x12+\n" +
+	"\x06status\x18& \x01(\x0e2\x13.cal.v1.EventStatusR\x06status\x127\n" +
+	"\n" +
+	"visibility\x18' \x01(\x0e2\x17.cal.v1.EventVisibilityR\n" +
+	"visibility\x12=\n" +
+	"\ftransparency\x18( \x01(\x0e2\x19.cal.v1.EventTransparencyR\ftransparency\x12'\n" +
+	"\x10is_out_of_office\x18) \x01(\bR\risOutOfOffice\x12%\n" +
+	"\x0edetails_hidden\x18* \x01(\bR\rdetailsHiddenB\x0e\n" +
 	"\f_meeting_urlB\r\n" +
 	"\v_recurrenceB\r\n" +
 	"\v_deleted_atB\x10\n" +
@@ -4381,7 +5330,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04type\x18\x02 \x01(\x0e2\x14.cal.v1.ResourceTypeR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x15\n" +
 	"\x03url\x18\x04 \x01(\tH\x00R\x03url\x88\x01\x01B\x06\n" +
-	"\x04_url\"\xae\a\n" +
+	"\x04_url\"\xb1\t\n" +
 	"\x12CreateEventRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -4411,7 +5360,14 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\atag_ids\x18\x14 \x03(\tR\x06tagIds\x12\"\n" +
 	"\n" +
 	"channel_id\x18\x15 \x01(\tH\aR\tchannelId\x88\x01\x01\x125\n" +
-	"\x14channel_auto_created\x18\x16 \x01(\bH\bR\x12channelAutoCreated\x88\x01\x01B\x0e\n" +
+	"\x14channel_auto_created\x18\x16 \x01(\bH\bR\x12channelAutoCreated\x88\x01\x01\x12+\n" +
+	"\x06status\x18\x17 \x01(\x0e2\x13.cal.v1.EventStatusR\x06status\x127\n" +
+	"\n" +
+	"visibility\x18\x18 \x01(\x0e2\x17.cal.v1.EventVisibilityR\n" +
+	"visibility\x12=\n" +
+	"\ftransparency\x18\x19 \x01(\x0e2\x19.cal.v1.EventTransparencyR\ftransparency\x12'\n" +
+	"\x10is_out_of_office\x18\x1a \x01(\bR\risOutOfOffice\x123\n" +
+	"\tattendees\x18\x1b \x03(\v2\x15.cal.v1.AttendeeInputR\tattendeesB\x0e\n" +
 	"\f_descriptionB\v\n" +
 	"\t_timezoneB\v\n" +
 	"\t_locationB\x0e\n" +
@@ -4421,11 +5377,13 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
 	"\b_room_idB\r\n" +
 	"\v_channel_idB\x17\n" +
-	"\x15_channel_auto_created\"U\n" +
+	"\x15_channel_auto_created\"R\n" +
+	"\rAttendeeInput\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12(\n" +
+	"\x04role\x18\x02 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role\"U\n" +
 	"\x0fGetEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\x96\n" +
-	"\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xb8\f\n" +
 	"\x12UpdateEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -4459,7 +5417,13 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\atag_ids\x18\x17 \x01(\v2\x13.cal.v1.EventTagIdsH\x0fR\x06tagIds\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"channel_id\x18\x18 \x01(\tH\x10R\tchannelId\x88\x01\x01\x125\n" +
-	"\x14channel_auto_created\x18\x19 \x01(\bH\x11R\x12channelAutoCreated\x88\x01\x01B\b\n" +
+	"\x14channel_auto_created\x18\x19 \x01(\bH\x11R\x12channelAutoCreated\x88\x01\x01\x120\n" +
+	"\x06status\x18\x1a \x01(\x0e2\x13.cal.v1.EventStatusH\x12R\x06status\x88\x01\x01\x12<\n" +
+	"\n" +
+	"visibility\x18\x1b \x01(\x0e2\x17.cal.v1.EventVisibilityH\x13R\n" +
+	"visibility\x88\x01\x01\x12B\n" +
+	"\ftransparency\x18\x1c \x01(\x0e2\x19.cal.v1.EventTransparencyH\x14R\ftransparency\x88\x01\x01\x12,\n" +
+	"\x10is_out_of_office\x18\x1d \x01(\bH\x15R\risOutOfOffice\x88\x01\x01B\b\n" +
 	"\x06_titleB\x0e\n" +
 	"\f_descriptionB\r\n" +
 	"\v_start_timeB\v\n" +
@@ -4479,7 +5443,11 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
 	"\b_tag_idsB\r\n" +
 	"\v_channel_idB\x17\n" +
-	"\x15_channel_auto_created\"\x1f\n" +
+	"\x15_channel_auto_createdB\t\n" +
+	"\a_statusB\r\n" +
+	"\v_visibilityB\x0f\n" +
+	"\r_transparencyB\x13\n" +
+	"\x11_is_out_of_office\"\x1f\n" +
 	"\vEventTagIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\xa8\x02\n" +
 	"\x12DeleteEventRequest\x12\x19\n" +
@@ -4500,6 +5468,13 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x13UpdateEventResponse\x12+\n" +
 	"\x05event\x18\x01 \x01(\v2\x15.cal.v1.CalendarEventR\x05event\"C\n" +
 	"\x14AddAttendeesResponse\x12+\n" +
+	"\x05event\x18\x01 \x01(\v2\x15.cal.v1.CalendarEventR\x05event\"\xa2\x01\n" +
+	"\x19UpdateAttendeeRoleRequest\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12(\n" +
+	"\x04role\x18\x04 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role\"I\n" +
+	"\x1aUpdateAttendeeRoleResponse\x12+\n" +
 	"\x05event\x18\x01 \x01(\v2\x15.cal.v1.CalendarEventR\x05event\"F\n" +
 	"\x17RemoveAttendeesResponse\x12+\n" +
 	"\x05event\x18\x01 \x01(\v2\x15.cal.v1.CalendarEventR\x05event\"\xeb\x03\n" +
@@ -4725,7 +5700,52 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x19ListEventTemplatesRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"Q\n" +
 	"\x1aListEventTemplatesResponse\x123\n" +
-	"\ttemplates\x18\x01 \x03(\v2\x15.cal.v1.EventTemplateR\ttemplates*\xf1\x01\n" +
+	"\ttemplates\x18\x01 \x03(\v2\x15.cal.v1.EventTemplateR\ttemplates\"\xa9\x01\n" +
+	"\fBusyInterval\x129\n" +
+	"\n" +
+	"start_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
+	"\bend_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12'\n" +
+	"\x10is_out_of_office\x18\x03 \x01(\bR\risOutOfOffice\"\xd9\x01\n" +
+	"\fUserFreeBusy\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x122\n" +
+	"\tintervals\x18\x02 \x03(\v2\x14.cal.v1.BusyIntervalR\tintervals\x12\x1a\n" +
+	"\btimezone\x18\x03 \x01(\tR\btimezone\x12#\n" +
+	"\rworkday_start\x18\x04 \x01(\tR\fworkdayStart\x12\x1f\n" +
+	"\vworkday_end\x18\x05 \x01(\tR\n" +
+	"workdayEnd\x12\x1a\n" +
+	"\bworkdays\x18\x06 \x03(\tR\bworkdays\"\xfc\x01\n" +
+	"\x12GetFreeBusyRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
+	"\buser_ids\x18\x02 \x03(\tR\auserIds\x12=\n" +
+	"\fwindow_start\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vwindowStart\x129\n" +
+	"\n" +
+	"window_end\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\twindowEnd\x12\x1c\n" +
+	"\aroom_id\x18\x05 \x01(\tH\x00R\x06roomId\x88\x01\x01B\n" +
+	"\n" +
+	"\b_room_id\"t\n" +
+	"\x13GetFreeBusyResponse\x12*\n" +
+	"\x05users\x18\x01 \x03(\v2\x14.cal.v1.UserFreeBusyR\x05users\x121\n" +
+	"\troom_busy\x18\x02 \x03(\v2\x14.cal.v1.BusyIntervalR\broomBusy\"\x8d\x03\n" +
+	"\x1aSuggestMeetingTimesRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12*\n" +
+	"\x11required_user_ids\x18\x02 \x03(\tR\x0frequiredUserIds\x12*\n" +
+	"\x11optional_user_ids\x18\x03 \x03(\tR\x0foptionalUserIds\x12=\n" +
+	"\fwindow_start\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vwindowStart\x129\n" +
+	"\n" +
+	"window_end\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\twindowEnd\x12)\n" +
+	"\x10duration_minutes\x18\x06 \x01(\x05R\x0fdurationMinutes\x12\x1c\n" +
+	"\aroom_id\x18\a \x01(\tH\x00R\x06roomId\x88\x01\x01\x12\x1f\n" +
+	"\vmax_results\x18\b \x01(\x05R\n" +
+	"maxResultsB\n" +
+	"\n" +
+	"\b_room_id\"\xcc\x01\n" +
+	"\x15MeetingTimeSuggestion\x129\n" +
+	"\n" +
+	"start_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
+	"\bend_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12A\n" +
+	"\x1dunavailable_optional_user_ids\x18\x03 \x03(\tR\x1aunavailableOptionalUserIds\"^\n" +
+	"\x1bSuggestMeetingTimesResponse\x12?\n" +
+	"\vsuggestions\x18\x01 \x03(\v2\x1d.cal.v1.MeetingTimeSuggestionR\vsuggestions*\xf1\x01\n" +
 	"\x11RecurrencePattern\x12\"\n" +
 	"\x1eRECURRENCE_PATTERN_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17RECURRENCE_PATTERN_NONE\x10\x01\x12\x1c\n" +
@@ -4780,7 +5800,20 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"!RECURRENCE_EDIT_SCOPE_UNSPECIFIED\x10\x00\x12$\n" +
 	" RECURRENCE_EDIT_SCOPE_THIS_EVENT\x10\x01\x12$\n" +
 	" RECURRENCE_EDIT_SCOPE_ALL_EVENTS\x10\x02\x12,\n" +
-	"(RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING\x10\x032\xae\r\n" +
+	"(RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING\x10\x03*\x7f\n" +
+	"\vEventStatus\x12\x1c\n" +
+	"\x18EVENT_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16EVENT_STATUS_CONFIRMED\x10\x01\x12\x1a\n" +
+	"\x16EVENT_STATUS_TENTATIVE\x10\x02\x12\x1a\n" +
+	"\x16EVENT_STATUS_CANCELLED\x10\x03*p\n" +
+	"\x0fEventVisibility\x12 \n" +
+	"\x1cEVENT_VISIBILITY_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19EVENT_VISIBILITY_STANDARD\x10\x01\x12\x1c\n" +
+	"\x18EVENT_VISIBILITY_PRIVATE\x10\x02*z\n" +
+	"\x11EventTransparency\x12\"\n" +
+	"\x1eEVENT_TRANSPARENCY_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19EVENT_TRANSPARENCY_OPAQUE\x10\x01\x12\"\n" +
+	"\x1eEVENT_TRANSPARENCY_TRANSPARENT\x10\x022\xb9\x0f\n" +
 	"\x0fCalendarService\x12H\n" +
 	"\vCreateEvent\x12\x1a.cal.v1.CreateEventRequest\x1a\x1b.cal.v1.CreateEventResponse\"\x00\x12?\n" +
 	"\bGetEvent\x12\x17.cal.v1.GetEventRequest\x1a\x18.cal.v1.GetEventResponse\"\x00\x12H\n" +
@@ -4795,8 +5828,11 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x0eDeleteCategory\x12\x1d.cal.v1.DeleteCategoryRequest\x1a\x1e.cal.v1.DeleteCategoryResponse\"\x00\x12Q\n" +
 	"\x0eListCategories\x12\x1d.cal.v1.ListCategoriesRequest\x1a\x1e.cal.v1.ListCategoriesResponse\"\x00\x12c\n" +
 	"\x14UpdateAttendeeStatus\x12#.cal.v1.UpdateAttendeeStatusRequest\x1a$.cal.v1.UpdateAttendeeStatusResponse\"\x00\x12K\n" +
-	"\fAddAttendees\x12\x1b.cal.v1.AddAttendeesRequest\x1a\x1c.cal.v1.AddAttendeesResponse\"\x00\x12T\n" +
-	"\x0fRemoveAttendees\x12\x1e.cal.v1.RemoveAttendeesRequest\x1a\x1f.cal.v1.RemoveAttendeesResponse\"\x00\x12`\n" +
+	"\fAddAttendees\x12\x1b.cal.v1.AddAttendeesRequest\x1a\x1c.cal.v1.AddAttendeesResponse\"\x00\x12]\n" +
+	"\x12UpdateAttendeeRole\x12!.cal.v1.UpdateAttendeeRoleRequest\x1a\".cal.v1.UpdateAttendeeRoleResponse\"\x00\x12T\n" +
+	"\x0fRemoveAttendees\x12\x1e.cal.v1.RemoveAttendeesRequest\x1a\x1f.cal.v1.RemoveAttendeesResponse\"\x00\x12H\n" +
+	"\vGetFreeBusy\x12\x1a.cal.v1.GetFreeBusyRequest\x1a\x1b.cal.v1.GetFreeBusyResponse\"\x00\x12`\n" +
+	"\x13SuggestMeetingTimes\x12\".cal.v1.SuggestMeetingTimesRequest\x1a#.cal.v1.SuggestMeetingTimesResponse\"\x00\x12`\n" +
 	"\x13ListEventActivities\x12\".cal.v1.ListEventActivitiesRequest\x1a#.cal.v1.ListEventActivitiesResponse\"\x00\x12`\n" +
 	"\x13CreateEventTemplate\x12\".cal.v1.CreateEventTemplateRequest\x1a#.cal.v1.CreateEventTemplateResponse\"\x00\x12W\n" +
 	"\x10GetEventTemplate\x12\x1f.cal.v1.GetEventTemplateRequest\x1a .cal.v1.GetEventTemplateResponse\"\x00\x12`\n" +
@@ -4816,8 +5852,8 @@ func file_cal_v1_calendar_proto_rawDescGZIP() []byte {
 	return file_cal_v1_calendar_proto_rawDescData
 }
 
-var file_cal_v1_calendar_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_cal_v1_calendar_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
+var file_cal_v1_calendar_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
+var file_cal_v1_calendar_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
 var file_cal_v1_calendar_proto_goTypes = []any{
 	(RecurrencePattern)(0),               // 0: cal.v1.RecurrencePattern
 	(DayOfWeek)(0),                       // 1: cal.v1.DayOfWeek
@@ -4826,168 +5862,212 @@ var file_cal_v1_calendar_proto_goTypes = []any{
 	(AttendeeRole)(0),                    // 4: cal.v1.AttendeeRole
 	(ResourceType)(0),                    // 5: cal.v1.ResourceType
 	(RecurrenceEditScope)(0),             // 6: cal.v1.RecurrenceEditScope
-	(*CalendarEvent)(nil),                // 7: cal.v1.CalendarEvent
-	(*Attendee)(nil),                     // 8: cal.v1.Attendee
-	(*RecurrenceConfig)(nil),             // 9: cal.v1.RecurrenceConfig
-	(*LinkedResource)(nil),               // 10: cal.v1.LinkedResource
-	(*CreateEventRequest)(nil),           // 11: cal.v1.CreateEventRequest
-	(*GetEventRequest)(nil),              // 12: cal.v1.GetEventRequest
-	(*UpdateEventRequest)(nil),           // 13: cal.v1.UpdateEventRequest
-	(*EventTagIds)(nil),                  // 14: cal.v1.EventTagIds
-	(*DeleteEventRequest)(nil),           // 15: cal.v1.DeleteEventRequest
-	(*DeleteEventResponse)(nil),          // 16: cal.v1.DeleteEventResponse
-	(*CreateEventResponse)(nil),          // 17: cal.v1.CreateEventResponse
-	(*GetEventResponse)(nil),             // 18: cal.v1.GetEventResponse
-	(*UpdateEventResponse)(nil),          // 19: cal.v1.UpdateEventResponse
-	(*AddAttendeesResponse)(nil),         // 20: cal.v1.AddAttendeesResponse
-	(*RemoveAttendeesResponse)(nil),      // 21: cal.v1.RemoveAttendeesResponse
-	(*ListEventsRequest)(nil),            // 22: cal.v1.ListEventsRequest
-	(*ListEventsResponse)(nil),           // 23: cal.v1.ListEventsResponse
-	(*GetEventsInRangeRequest)(nil),      // 24: cal.v1.GetEventsInRangeRequest
-	(*GetEventsInRangeResponse)(nil),     // 25: cal.v1.GetEventsInRangeResponse
-	(*Category)(nil),                     // 26: cal.v1.Category
-	(*CreateCategoryRequest)(nil),        // 27: cal.v1.CreateCategoryRequest
-	(*GetCategoryRequest)(nil),           // 28: cal.v1.GetCategoryRequest
-	(*UpdateCategoryRequest)(nil),        // 29: cal.v1.UpdateCategoryRequest
-	(*DeleteCategoryRequest)(nil),        // 30: cal.v1.DeleteCategoryRequest
-	(*DeleteCategoryResponse)(nil),       // 31: cal.v1.DeleteCategoryResponse
-	(*CreateCategoryResponse)(nil),       // 32: cal.v1.CreateCategoryResponse
-	(*GetCategoryResponse)(nil),          // 33: cal.v1.GetCategoryResponse
-	(*UpdateCategoryResponse)(nil),       // 34: cal.v1.UpdateCategoryResponse
-	(*ListCategoriesRequest)(nil),        // 35: cal.v1.ListCategoriesRequest
-	(*ListCategoriesResponse)(nil),       // 36: cal.v1.ListCategoriesResponse
-	(*UpdateAttendeeStatusRequest)(nil),  // 37: cal.v1.UpdateAttendeeStatusRequest
-	(*UpdateAttendeeStatusResponse)(nil), // 38: cal.v1.UpdateAttendeeStatusResponse
-	(*AddAttendeesRequest)(nil),          // 39: cal.v1.AddAttendeesRequest
-	(*RemoveAttendeesRequest)(nil),       // 40: cal.v1.RemoveAttendeesRequest
-	(*EventActivity)(nil),                // 41: cal.v1.EventActivity
-	(*ListEventActivitiesRequest)(nil),   // 42: cal.v1.ListEventActivitiesRequest
-	(*ListEventActivitiesResponse)(nil),  // 43: cal.v1.ListEventActivitiesResponse
-	(*EventTemplate)(nil),                // 44: cal.v1.EventTemplate
-	(*CreateEventTemplateRequest)(nil),   // 45: cal.v1.CreateEventTemplateRequest
-	(*GetEventTemplateRequest)(nil),      // 46: cal.v1.GetEventTemplateRequest
-	(*UpdateEventTemplateRequest)(nil),   // 47: cal.v1.UpdateEventTemplateRequest
-	(*DeleteEventTemplateRequest)(nil),   // 48: cal.v1.DeleteEventTemplateRequest
-	(*DeleteEventTemplateResponse)(nil),  // 49: cal.v1.DeleteEventTemplateResponse
-	(*CreateEventTemplateResponse)(nil),  // 50: cal.v1.CreateEventTemplateResponse
-	(*GetEventTemplateResponse)(nil),     // 51: cal.v1.GetEventTemplateResponse
-	(*UpdateEventTemplateResponse)(nil),  // 52: cal.v1.UpdateEventTemplateResponse
-	(*ListEventTemplatesRequest)(nil),    // 53: cal.v1.ListEventTemplatesRequest
-	(*ListEventTemplatesResponse)(nil),   // 54: cal.v1.ListEventTemplatesResponse
-	(*timestamppb.Timestamp)(nil),        // 55: google.protobuf.Timestamp
-	(*v1.Tag)(nil),                       // 56: tags.v1.Tag
-	(v11.ContentRole)(0),                 // 57: common.v1.ContentRole
-	(*v11.PaginationRequest)(nil),        // 58: common.v1.PaginationRequest
-	(*v11.PaginationResponse)(nil),       // 59: common.v1.PaginationResponse
-	(v11.AccessMode)(0),                  // 60: common.v1.AccessMode
+	(EventStatus)(0),                     // 7: cal.v1.EventStatus
+	(EventVisibility)(0),                 // 8: cal.v1.EventVisibility
+	(EventTransparency)(0),               // 9: cal.v1.EventTransparency
+	(*CalendarEvent)(nil),                // 10: cal.v1.CalendarEvent
+	(*Attendee)(nil),                     // 11: cal.v1.Attendee
+	(*RecurrenceConfig)(nil),             // 12: cal.v1.RecurrenceConfig
+	(*LinkedResource)(nil),               // 13: cal.v1.LinkedResource
+	(*CreateEventRequest)(nil),           // 14: cal.v1.CreateEventRequest
+	(*AttendeeInput)(nil),                // 15: cal.v1.AttendeeInput
+	(*GetEventRequest)(nil),              // 16: cal.v1.GetEventRequest
+	(*UpdateEventRequest)(nil),           // 17: cal.v1.UpdateEventRequest
+	(*EventTagIds)(nil),                  // 18: cal.v1.EventTagIds
+	(*DeleteEventRequest)(nil),           // 19: cal.v1.DeleteEventRequest
+	(*DeleteEventResponse)(nil),          // 20: cal.v1.DeleteEventResponse
+	(*CreateEventResponse)(nil),          // 21: cal.v1.CreateEventResponse
+	(*GetEventResponse)(nil),             // 22: cal.v1.GetEventResponse
+	(*UpdateEventResponse)(nil),          // 23: cal.v1.UpdateEventResponse
+	(*AddAttendeesResponse)(nil),         // 24: cal.v1.AddAttendeesResponse
+	(*UpdateAttendeeRoleRequest)(nil),    // 25: cal.v1.UpdateAttendeeRoleRequest
+	(*UpdateAttendeeRoleResponse)(nil),   // 26: cal.v1.UpdateAttendeeRoleResponse
+	(*RemoveAttendeesResponse)(nil),      // 27: cal.v1.RemoveAttendeesResponse
+	(*ListEventsRequest)(nil),            // 28: cal.v1.ListEventsRequest
+	(*ListEventsResponse)(nil),           // 29: cal.v1.ListEventsResponse
+	(*GetEventsInRangeRequest)(nil),      // 30: cal.v1.GetEventsInRangeRequest
+	(*GetEventsInRangeResponse)(nil),     // 31: cal.v1.GetEventsInRangeResponse
+	(*Category)(nil),                     // 32: cal.v1.Category
+	(*CreateCategoryRequest)(nil),        // 33: cal.v1.CreateCategoryRequest
+	(*GetCategoryRequest)(nil),           // 34: cal.v1.GetCategoryRequest
+	(*UpdateCategoryRequest)(nil),        // 35: cal.v1.UpdateCategoryRequest
+	(*DeleteCategoryRequest)(nil),        // 36: cal.v1.DeleteCategoryRequest
+	(*DeleteCategoryResponse)(nil),       // 37: cal.v1.DeleteCategoryResponse
+	(*CreateCategoryResponse)(nil),       // 38: cal.v1.CreateCategoryResponse
+	(*GetCategoryResponse)(nil),          // 39: cal.v1.GetCategoryResponse
+	(*UpdateCategoryResponse)(nil),       // 40: cal.v1.UpdateCategoryResponse
+	(*ListCategoriesRequest)(nil),        // 41: cal.v1.ListCategoriesRequest
+	(*ListCategoriesResponse)(nil),       // 42: cal.v1.ListCategoriesResponse
+	(*UpdateAttendeeStatusRequest)(nil),  // 43: cal.v1.UpdateAttendeeStatusRequest
+	(*UpdateAttendeeStatusResponse)(nil), // 44: cal.v1.UpdateAttendeeStatusResponse
+	(*AddAttendeesRequest)(nil),          // 45: cal.v1.AddAttendeesRequest
+	(*RemoveAttendeesRequest)(nil),       // 46: cal.v1.RemoveAttendeesRequest
+	(*EventActivity)(nil),                // 47: cal.v1.EventActivity
+	(*ListEventActivitiesRequest)(nil),   // 48: cal.v1.ListEventActivitiesRequest
+	(*ListEventActivitiesResponse)(nil),  // 49: cal.v1.ListEventActivitiesResponse
+	(*EventTemplate)(nil),                // 50: cal.v1.EventTemplate
+	(*CreateEventTemplateRequest)(nil),   // 51: cal.v1.CreateEventTemplateRequest
+	(*GetEventTemplateRequest)(nil),      // 52: cal.v1.GetEventTemplateRequest
+	(*UpdateEventTemplateRequest)(nil),   // 53: cal.v1.UpdateEventTemplateRequest
+	(*DeleteEventTemplateRequest)(nil),   // 54: cal.v1.DeleteEventTemplateRequest
+	(*DeleteEventTemplateResponse)(nil),  // 55: cal.v1.DeleteEventTemplateResponse
+	(*CreateEventTemplateResponse)(nil),  // 56: cal.v1.CreateEventTemplateResponse
+	(*GetEventTemplateResponse)(nil),     // 57: cal.v1.GetEventTemplateResponse
+	(*UpdateEventTemplateResponse)(nil),  // 58: cal.v1.UpdateEventTemplateResponse
+	(*ListEventTemplatesRequest)(nil),    // 59: cal.v1.ListEventTemplatesRequest
+	(*ListEventTemplatesResponse)(nil),   // 60: cal.v1.ListEventTemplatesResponse
+	(*BusyInterval)(nil),                 // 61: cal.v1.BusyInterval
+	(*UserFreeBusy)(nil),                 // 62: cal.v1.UserFreeBusy
+	(*GetFreeBusyRequest)(nil),           // 63: cal.v1.GetFreeBusyRequest
+	(*GetFreeBusyResponse)(nil),          // 64: cal.v1.GetFreeBusyResponse
+	(*SuggestMeetingTimesRequest)(nil),   // 65: cal.v1.SuggestMeetingTimesRequest
+	(*MeetingTimeSuggestion)(nil),        // 66: cal.v1.MeetingTimeSuggestion
+	(*SuggestMeetingTimesResponse)(nil),  // 67: cal.v1.SuggestMeetingTimesResponse
+	(*timestamppb.Timestamp)(nil),        // 68: google.protobuf.Timestamp
+	(*v1.Tag)(nil),                       // 69: tags.v1.Tag
+	(v11.ContentRole)(0),                 // 70: common.v1.ContentRole
+	(*v11.PaginationRequest)(nil),        // 71: common.v1.PaginationRequest
+	(*v11.PaginationResponse)(nil),       // 72: common.v1.PaginationResponse
+	(v11.AccessMode)(0),                  // 73: common.v1.AccessMode
 }
 var file_cal_v1_calendar_proto_depIdxs = []int32{
-	55, // 0: cal.v1.CalendarEvent.start_time:type_name -> google.protobuf.Timestamp
-	55, // 1: cal.v1.CalendarEvent.end_time:type_name -> google.protobuf.Timestamp
-	8,  // 2: cal.v1.CalendarEvent.attendees:type_name -> cal.v1.Attendee
-	9,  // 3: cal.v1.CalendarEvent.recurrence:type_name -> cal.v1.RecurrenceConfig
-	10, // 4: cal.v1.CalendarEvent.linked_resources:type_name -> cal.v1.LinkedResource
-	55, // 5: cal.v1.CalendarEvent.created_at:type_name -> google.protobuf.Timestamp
-	55, // 6: cal.v1.CalendarEvent.updated_at:type_name -> google.protobuf.Timestamp
-	55, // 7: cal.v1.CalendarEvent.deleted_at:type_name -> google.protobuf.Timestamp
-	56, // 8: cal.v1.CalendarEvent.tags:type_name -> tags.v1.Tag
-	57, // 9: cal.v1.CalendarEvent.user_role:type_name -> common.v1.ContentRole
-	2,  // 10: cal.v1.Attendee.status:type_name -> cal.v1.AttendeeStatus
-	4,  // 11: cal.v1.Attendee.role:type_name -> cal.v1.AttendeeRole
-	0,  // 12: cal.v1.RecurrenceConfig.pattern:type_name -> cal.v1.RecurrencePattern
-	1,  // 13: cal.v1.RecurrenceConfig.days_of_week:type_name -> cal.v1.DayOfWeek
-	55, // 14: cal.v1.RecurrenceConfig.end_date:type_name -> google.protobuf.Timestamp
-	5,  // 15: cal.v1.LinkedResource.type:type_name -> cal.v1.ResourceType
-	55, // 16: cal.v1.CreateEventRequest.start_time:type_name -> google.protobuf.Timestamp
-	55, // 17: cal.v1.CreateEventRequest.end_time:type_name -> google.protobuf.Timestamp
-	9,  // 18: cal.v1.CreateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
-	55, // 19: cal.v1.UpdateEventRequest.start_time:type_name -> google.protobuf.Timestamp
-	55, // 20: cal.v1.UpdateEventRequest.end_time:type_name -> google.protobuf.Timestamp
-	9,  // 21: cal.v1.UpdateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
-	6,  // 22: cal.v1.UpdateEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
-	14, // 23: cal.v1.UpdateEventRequest.tag_ids:type_name -> cal.v1.EventTagIds
-	6,  // 24: cal.v1.DeleteEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
-	7,  // 25: cal.v1.CreateEventResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 26: cal.v1.GetEventResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 27: cal.v1.UpdateEventResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 28: cal.v1.AddAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 29: cal.v1.RemoveAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
-	55, // 30: cal.v1.ListEventsRequest.start_date:type_name -> google.protobuf.Timestamp
-	55, // 31: cal.v1.ListEventsRequest.end_date:type_name -> google.protobuf.Timestamp
-	7,  // 32: cal.v1.ListEventsResponse.events:type_name -> cal.v1.CalendarEvent
-	55, // 33: cal.v1.GetEventsInRangeRequest.start_date:type_name -> google.protobuf.Timestamp
-	55, // 34: cal.v1.GetEventsInRangeRequest.end_date:type_name -> google.protobuf.Timestamp
-	7,  // 35: cal.v1.GetEventsInRangeResponse.events:type_name -> cal.v1.CalendarEvent
-	55, // 36: cal.v1.Category.created_at:type_name -> google.protobuf.Timestamp
-	55, // 37: cal.v1.Category.updated_at:type_name -> google.protobuf.Timestamp
-	26, // 38: cal.v1.CreateCategoryResponse.category:type_name -> cal.v1.Category
-	26, // 39: cal.v1.GetCategoryResponse.category:type_name -> cal.v1.Category
-	26, // 40: cal.v1.UpdateCategoryResponse.category:type_name -> cal.v1.Category
-	26, // 41: cal.v1.ListCategoriesResponse.categories:type_name -> cal.v1.Category
-	2,  // 42: cal.v1.UpdateAttendeeStatusRequest.status:type_name -> cal.v1.AttendeeStatus
-	4,  // 43: cal.v1.AddAttendeesRequest.role:type_name -> cal.v1.AttendeeRole
-	3,  // 44: cal.v1.EventActivity.action:type_name -> cal.v1.EventActivityAction
-	55, // 45: cal.v1.EventActivity.timestamp:type_name -> google.protobuf.Timestamp
-	58, // 46: cal.v1.ListEventActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
-	41, // 47: cal.v1.ListEventActivitiesResponse.activities:type_name -> cal.v1.EventActivity
-	59, // 48: cal.v1.ListEventActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
-	60, // 49: cal.v1.EventTemplate.access_mode:type_name -> common.v1.AccessMode
-	55, // 50: cal.v1.EventTemplate.created_at:type_name -> google.protobuf.Timestamp
-	55, // 51: cal.v1.EventTemplate.updated_at:type_name -> google.protobuf.Timestamp
-	57, // 52: cal.v1.EventTemplate.baseline_role:type_name -> common.v1.ContentRole
-	60, // 53: cal.v1.CreateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
-	57, // 54: cal.v1.CreateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
-	60, // 55: cal.v1.UpdateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
-	57, // 56: cal.v1.UpdateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
-	44, // 57: cal.v1.CreateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
-	44, // 58: cal.v1.GetEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
-	44, // 59: cal.v1.UpdateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
-	44, // 60: cal.v1.ListEventTemplatesResponse.templates:type_name -> cal.v1.EventTemplate
-	11, // 61: cal.v1.CalendarService.CreateEvent:input_type -> cal.v1.CreateEventRequest
-	12, // 62: cal.v1.CalendarService.GetEvent:input_type -> cal.v1.GetEventRequest
-	13, // 63: cal.v1.CalendarService.UpdateEvent:input_type -> cal.v1.UpdateEventRequest
-	15, // 64: cal.v1.CalendarService.DeleteEvent:input_type -> cal.v1.DeleteEventRequest
-	22, // 65: cal.v1.CalendarService.ListEvents:input_type -> cal.v1.ListEventsRequest
-	24, // 66: cal.v1.CalendarService.GetEventsInRange:input_type -> cal.v1.GetEventsInRangeRequest
-	27, // 67: cal.v1.CalendarService.CreateCategory:input_type -> cal.v1.CreateCategoryRequest
-	28, // 68: cal.v1.CalendarService.GetCategory:input_type -> cal.v1.GetCategoryRequest
-	29, // 69: cal.v1.CalendarService.UpdateCategory:input_type -> cal.v1.UpdateCategoryRequest
-	30, // 70: cal.v1.CalendarService.DeleteCategory:input_type -> cal.v1.DeleteCategoryRequest
-	35, // 71: cal.v1.CalendarService.ListCategories:input_type -> cal.v1.ListCategoriesRequest
-	37, // 72: cal.v1.CalendarService.UpdateAttendeeStatus:input_type -> cal.v1.UpdateAttendeeStatusRequest
-	39, // 73: cal.v1.CalendarService.AddAttendees:input_type -> cal.v1.AddAttendeesRequest
-	40, // 74: cal.v1.CalendarService.RemoveAttendees:input_type -> cal.v1.RemoveAttendeesRequest
-	42, // 75: cal.v1.CalendarService.ListEventActivities:input_type -> cal.v1.ListEventActivitiesRequest
-	45, // 76: cal.v1.CalendarService.CreateEventTemplate:input_type -> cal.v1.CreateEventTemplateRequest
-	46, // 77: cal.v1.CalendarService.GetEventTemplate:input_type -> cal.v1.GetEventTemplateRequest
-	47, // 78: cal.v1.CalendarService.UpdateEventTemplate:input_type -> cal.v1.UpdateEventTemplateRequest
-	48, // 79: cal.v1.CalendarService.DeleteEventTemplate:input_type -> cal.v1.DeleteEventTemplateRequest
-	53, // 80: cal.v1.CalendarService.ListEventTemplates:input_type -> cal.v1.ListEventTemplatesRequest
-	17, // 81: cal.v1.CalendarService.CreateEvent:output_type -> cal.v1.CreateEventResponse
-	18, // 82: cal.v1.CalendarService.GetEvent:output_type -> cal.v1.GetEventResponse
-	19, // 83: cal.v1.CalendarService.UpdateEvent:output_type -> cal.v1.UpdateEventResponse
-	16, // 84: cal.v1.CalendarService.DeleteEvent:output_type -> cal.v1.DeleteEventResponse
-	23, // 85: cal.v1.CalendarService.ListEvents:output_type -> cal.v1.ListEventsResponse
-	25, // 86: cal.v1.CalendarService.GetEventsInRange:output_type -> cal.v1.GetEventsInRangeResponse
-	32, // 87: cal.v1.CalendarService.CreateCategory:output_type -> cal.v1.CreateCategoryResponse
-	33, // 88: cal.v1.CalendarService.GetCategory:output_type -> cal.v1.GetCategoryResponse
-	34, // 89: cal.v1.CalendarService.UpdateCategory:output_type -> cal.v1.UpdateCategoryResponse
-	31, // 90: cal.v1.CalendarService.DeleteCategory:output_type -> cal.v1.DeleteCategoryResponse
-	36, // 91: cal.v1.CalendarService.ListCategories:output_type -> cal.v1.ListCategoriesResponse
-	38, // 92: cal.v1.CalendarService.UpdateAttendeeStatus:output_type -> cal.v1.UpdateAttendeeStatusResponse
-	20, // 93: cal.v1.CalendarService.AddAttendees:output_type -> cal.v1.AddAttendeesResponse
-	21, // 94: cal.v1.CalendarService.RemoveAttendees:output_type -> cal.v1.RemoveAttendeesResponse
-	43, // 95: cal.v1.CalendarService.ListEventActivities:output_type -> cal.v1.ListEventActivitiesResponse
-	50, // 96: cal.v1.CalendarService.CreateEventTemplate:output_type -> cal.v1.CreateEventTemplateResponse
-	51, // 97: cal.v1.CalendarService.GetEventTemplate:output_type -> cal.v1.GetEventTemplateResponse
-	52, // 98: cal.v1.CalendarService.UpdateEventTemplate:output_type -> cal.v1.UpdateEventTemplateResponse
-	49, // 99: cal.v1.CalendarService.DeleteEventTemplate:output_type -> cal.v1.DeleteEventTemplateResponse
-	54, // 100: cal.v1.CalendarService.ListEventTemplates:output_type -> cal.v1.ListEventTemplatesResponse
-	81, // [81:101] is the sub-list for method output_type
-	61, // [61:81] is the sub-list for method input_type
-	61, // [61:61] is the sub-list for extension type_name
-	61, // [61:61] is the sub-list for extension extendee
-	0,  // [0:61] is the sub-list for field type_name
+	68,  // 0: cal.v1.CalendarEvent.start_time:type_name -> google.protobuf.Timestamp
+	68,  // 1: cal.v1.CalendarEvent.end_time:type_name -> google.protobuf.Timestamp
+	11,  // 2: cal.v1.CalendarEvent.attendees:type_name -> cal.v1.Attendee
+	12,  // 3: cal.v1.CalendarEvent.recurrence:type_name -> cal.v1.RecurrenceConfig
+	13,  // 4: cal.v1.CalendarEvent.linked_resources:type_name -> cal.v1.LinkedResource
+	68,  // 5: cal.v1.CalendarEvent.created_at:type_name -> google.protobuf.Timestamp
+	68,  // 6: cal.v1.CalendarEvent.updated_at:type_name -> google.protobuf.Timestamp
+	68,  // 7: cal.v1.CalendarEvent.deleted_at:type_name -> google.protobuf.Timestamp
+	69,  // 8: cal.v1.CalendarEvent.tags:type_name -> tags.v1.Tag
+	70,  // 9: cal.v1.CalendarEvent.user_role:type_name -> common.v1.ContentRole
+	7,   // 10: cal.v1.CalendarEvent.status:type_name -> cal.v1.EventStatus
+	8,   // 11: cal.v1.CalendarEvent.visibility:type_name -> cal.v1.EventVisibility
+	9,   // 12: cal.v1.CalendarEvent.transparency:type_name -> cal.v1.EventTransparency
+	2,   // 13: cal.v1.Attendee.status:type_name -> cal.v1.AttendeeStatus
+	4,   // 14: cal.v1.Attendee.role:type_name -> cal.v1.AttendeeRole
+	0,   // 15: cal.v1.RecurrenceConfig.pattern:type_name -> cal.v1.RecurrencePattern
+	1,   // 16: cal.v1.RecurrenceConfig.days_of_week:type_name -> cal.v1.DayOfWeek
+	68,  // 17: cal.v1.RecurrenceConfig.end_date:type_name -> google.protobuf.Timestamp
+	5,   // 18: cal.v1.LinkedResource.type:type_name -> cal.v1.ResourceType
+	68,  // 19: cal.v1.CreateEventRequest.start_time:type_name -> google.protobuf.Timestamp
+	68,  // 20: cal.v1.CreateEventRequest.end_time:type_name -> google.protobuf.Timestamp
+	12,  // 21: cal.v1.CreateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
+	7,   // 22: cal.v1.CreateEventRequest.status:type_name -> cal.v1.EventStatus
+	8,   // 23: cal.v1.CreateEventRequest.visibility:type_name -> cal.v1.EventVisibility
+	9,   // 24: cal.v1.CreateEventRequest.transparency:type_name -> cal.v1.EventTransparency
+	15,  // 25: cal.v1.CreateEventRequest.attendees:type_name -> cal.v1.AttendeeInput
+	4,   // 26: cal.v1.AttendeeInput.role:type_name -> cal.v1.AttendeeRole
+	68,  // 27: cal.v1.UpdateEventRequest.start_time:type_name -> google.protobuf.Timestamp
+	68,  // 28: cal.v1.UpdateEventRequest.end_time:type_name -> google.protobuf.Timestamp
+	12,  // 29: cal.v1.UpdateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
+	6,   // 30: cal.v1.UpdateEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
+	18,  // 31: cal.v1.UpdateEventRequest.tag_ids:type_name -> cal.v1.EventTagIds
+	7,   // 32: cal.v1.UpdateEventRequest.status:type_name -> cal.v1.EventStatus
+	8,   // 33: cal.v1.UpdateEventRequest.visibility:type_name -> cal.v1.EventVisibility
+	9,   // 34: cal.v1.UpdateEventRequest.transparency:type_name -> cal.v1.EventTransparency
+	6,   // 35: cal.v1.DeleteEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
+	10,  // 36: cal.v1.CreateEventResponse.event:type_name -> cal.v1.CalendarEvent
+	10,  // 37: cal.v1.GetEventResponse.event:type_name -> cal.v1.CalendarEvent
+	10,  // 38: cal.v1.UpdateEventResponse.event:type_name -> cal.v1.CalendarEvent
+	10,  // 39: cal.v1.AddAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
+	4,   // 40: cal.v1.UpdateAttendeeRoleRequest.role:type_name -> cal.v1.AttendeeRole
+	10,  // 41: cal.v1.UpdateAttendeeRoleResponse.event:type_name -> cal.v1.CalendarEvent
+	10,  // 42: cal.v1.RemoveAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
+	68,  // 43: cal.v1.ListEventsRequest.start_date:type_name -> google.protobuf.Timestamp
+	68,  // 44: cal.v1.ListEventsRequest.end_date:type_name -> google.protobuf.Timestamp
+	10,  // 45: cal.v1.ListEventsResponse.events:type_name -> cal.v1.CalendarEvent
+	68,  // 46: cal.v1.GetEventsInRangeRequest.start_date:type_name -> google.protobuf.Timestamp
+	68,  // 47: cal.v1.GetEventsInRangeRequest.end_date:type_name -> google.protobuf.Timestamp
+	10,  // 48: cal.v1.GetEventsInRangeResponse.events:type_name -> cal.v1.CalendarEvent
+	68,  // 49: cal.v1.Category.created_at:type_name -> google.protobuf.Timestamp
+	68,  // 50: cal.v1.Category.updated_at:type_name -> google.protobuf.Timestamp
+	32,  // 51: cal.v1.CreateCategoryResponse.category:type_name -> cal.v1.Category
+	32,  // 52: cal.v1.GetCategoryResponse.category:type_name -> cal.v1.Category
+	32,  // 53: cal.v1.UpdateCategoryResponse.category:type_name -> cal.v1.Category
+	32,  // 54: cal.v1.ListCategoriesResponse.categories:type_name -> cal.v1.Category
+	2,   // 55: cal.v1.UpdateAttendeeStatusRequest.status:type_name -> cal.v1.AttendeeStatus
+	4,   // 56: cal.v1.AddAttendeesRequest.role:type_name -> cal.v1.AttendeeRole
+	3,   // 57: cal.v1.EventActivity.action:type_name -> cal.v1.EventActivityAction
+	68,  // 58: cal.v1.EventActivity.timestamp:type_name -> google.protobuf.Timestamp
+	71,  // 59: cal.v1.ListEventActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
+	47,  // 60: cal.v1.ListEventActivitiesResponse.activities:type_name -> cal.v1.EventActivity
+	72,  // 61: cal.v1.ListEventActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
+	73,  // 62: cal.v1.EventTemplate.access_mode:type_name -> common.v1.AccessMode
+	68,  // 63: cal.v1.EventTemplate.created_at:type_name -> google.protobuf.Timestamp
+	68,  // 64: cal.v1.EventTemplate.updated_at:type_name -> google.protobuf.Timestamp
+	70,  // 65: cal.v1.EventTemplate.baseline_role:type_name -> common.v1.ContentRole
+	73,  // 66: cal.v1.CreateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
+	70,  // 67: cal.v1.CreateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
+	73,  // 68: cal.v1.UpdateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
+	70,  // 69: cal.v1.UpdateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
+	50,  // 70: cal.v1.CreateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
+	50,  // 71: cal.v1.GetEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
+	50,  // 72: cal.v1.UpdateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
+	50,  // 73: cal.v1.ListEventTemplatesResponse.templates:type_name -> cal.v1.EventTemplate
+	68,  // 74: cal.v1.BusyInterval.start_time:type_name -> google.protobuf.Timestamp
+	68,  // 75: cal.v1.BusyInterval.end_time:type_name -> google.protobuf.Timestamp
+	61,  // 76: cal.v1.UserFreeBusy.intervals:type_name -> cal.v1.BusyInterval
+	68,  // 77: cal.v1.GetFreeBusyRequest.window_start:type_name -> google.protobuf.Timestamp
+	68,  // 78: cal.v1.GetFreeBusyRequest.window_end:type_name -> google.protobuf.Timestamp
+	62,  // 79: cal.v1.GetFreeBusyResponse.users:type_name -> cal.v1.UserFreeBusy
+	61,  // 80: cal.v1.GetFreeBusyResponse.room_busy:type_name -> cal.v1.BusyInterval
+	68,  // 81: cal.v1.SuggestMeetingTimesRequest.window_start:type_name -> google.protobuf.Timestamp
+	68,  // 82: cal.v1.SuggestMeetingTimesRequest.window_end:type_name -> google.protobuf.Timestamp
+	68,  // 83: cal.v1.MeetingTimeSuggestion.start_time:type_name -> google.protobuf.Timestamp
+	68,  // 84: cal.v1.MeetingTimeSuggestion.end_time:type_name -> google.protobuf.Timestamp
+	66,  // 85: cal.v1.SuggestMeetingTimesResponse.suggestions:type_name -> cal.v1.MeetingTimeSuggestion
+	14,  // 86: cal.v1.CalendarService.CreateEvent:input_type -> cal.v1.CreateEventRequest
+	16,  // 87: cal.v1.CalendarService.GetEvent:input_type -> cal.v1.GetEventRequest
+	17,  // 88: cal.v1.CalendarService.UpdateEvent:input_type -> cal.v1.UpdateEventRequest
+	19,  // 89: cal.v1.CalendarService.DeleteEvent:input_type -> cal.v1.DeleteEventRequest
+	28,  // 90: cal.v1.CalendarService.ListEvents:input_type -> cal.v1.ListEventsRequest
+	30,  // 91: cal.v1.CalendarService.GetEventsInRange:input_type -> cal.v1.GetEventsInRangeRequest
+	33,  // 92: cal.v1.CalendarService.CreateCategory:input_type -> cal.v1.CreateCategoryRequest
+	34,  // 93: cal.v1.CalendarService.GetCategory:input_type -> cal.v1.GetCategoryRequest
+	35,  // 94: cal.v1.CalendarService.UpdateCategory:input_type -> cal.v1.UpdateCategoryRequest
+	36,  // 95: cal.v1.CalendarService.DeleteCategory:input_type -> cal.v1.DeleteCategoryRequest
+	41,  // 96: cal.v1.CalendarService.ListCategories:input_type -> cal.v1.ListCategoriesRequest
+	43,  // 97: cal.v1.CalendarService.UpdateAttendeeStatus:input_type -> cal.v1.UpdateAttendeeStatusRequest
+	45,  // 98: cal.v1.CalendarService.AddAttendees:input_type -> cal.v1.AddAttendeesRequest
+	25,  // 99: cal.v1.CalendarService.UpdateAttendeeRole:input_type -> cal.v1.UpdateAttendeeRoleRequest
+	46,  // 100: cal.v1.CalendarService.RemoveAttendees:input_type -> cal.v1.RemoveAttendeesRequest
+	63,  // 101: cal.v1.CalendarService.GetFreeBusy:input_type -> cal.v1.GetFreeBusyRequest
+	65,  // 102: cal.v1.CalendarService.SuggestMeetingTimes:input_type -> cal.v1.SuggestMeetingTimesRequest
+	48,  // 103: cal.v1.CalendarService.ListEventActivities:input_type -> cal.v1.ListEventActivitiesRequest
+	51,  // 104: cal.v1.CalendarService.CreateEventTemplate:input_type -> cal.v1.CreateEventTemplateRequest
+	52,  // 105: cal.v1.CalendarService.GetEventTemplate:input_type -> cal.v1.GetEventTemplateRequest
+	53,  // 106: cal.v1.CalendarService.UpdateEventTemplate:input_type -> cal.v1.UpdateEventTemplateRequest
+	54,  // 107: cal.v1.CalendarService.DeleteEventTemplate:input_type -> cal.v1.DeleteEventTemplateRequest
+	59,  // 108: cal.v1.CalendarService.ListEventTemplates:input_type -> cal.v1.ListEventTemplatesRequest
+	21,  // 109: cal.v1.CalendarService.CreateEvent:output_type -> cal.v1.CreateEventResponse
+	22,  // 110: cal.v1.CalendarService.GetEvent:output_type -> cal.v1.GetEventResponse
+	23,  // 111: cal.v1.CalendarService.UpdateEvent:output_type -> cal.v1.UpdateEventResponse
+	20,  // 112: cal.v1.CalendarService.DeleteEvent:output_type -> cal.v1.DeleteEventResponse
+	29,  // 113: cal.v1.CalendarService.ListEvents:output_type -> cal.v1.ListEventsResponse
+	31,  // 114: cal.v1.CalendarService.GetEventsInRange:output_type -> cal.v1.GetEventsInRangeResponse
+	38,  // 115: cal.v1.CalendarService.CreateCategory:output_type -> cal.v1.CreateCategoryResponse
+	39,  // 116: cal.v1.CalendarService.GetCategory:output_type -> cal.v1.GetCategoryResponse
+	40,  // 117: cal.v1.CalendarService.UpdateCategory:output_type -> cal.v1.UpdateCategoryResponse
+	37,  // 118: cal.v1.CalendarService.DeleteCategory:output_type -> cal.v1.DeleteCategoryResponse
+	42,  // 119: cal.v1.CalendarService.ListCategories:output_type -> cal.v1.ListCategoriesResponse
+	44,  // 120: cal.v1.CalendarService.UpdateAttendeeStatus:output_type -> cal.v1.UpdateAttendeeStatusResponse
+	24,  // 121: cal.v1.CalendarService.AddAttendees:output_type -> cal.v1.AddAttendeesResponse
+	26,  // 122: cal.v1.CalendarService.UpdateAttendeeRole:output_type -> cal.v1.UpdateAttendeeRoleResponse
+	27,  // 123: cal.v1.CalendarService.RemoveAttendees:output_type -> cal.v1.RemoveAttendeesResponse
+	64,  // 124: cal.v1.CalendarService.GetFreeBusy:output_type -> cal.v1.GetFreeBusyResponse
+	67,  // 125: cal.v1.CalendarService.SuggestMeetingTimes:output_type -> cal.v1.SuggestMeetingTimesResponse
+	49,  // 126: cal.v1.CalendarService.ListEventActivities:output_type -> cal.v1.ListEventActivitiesResponse
+	56,  // 127: cal.v1.CalendarService.CreateEventTemplate:output_type -> cal.v1.CreateEventTemplateResponse
+	57,  // 128: cal.v1.CalendarService.GetEventTemplate:output_type -> cal.v1.GetEventTemplateResponse
+	58,  // 129: cal.v1.CalendarService.UpdateEventTemplate:output_type -> cal.v1.UpdateEventTemplateResponse
+	55,  // 130: cal.v1.CalendarService.DeleteEventTemplate:output_type -> cal.v1.DeleteEventTemplateResponse
+	60,  // 131: cal.v1.CalendarService.ListEventTemplates:output_type -> cal.v1.ListEventTemplatesResponse
+	109, // [109:132] is the sub-list for method output_type
+	86,  // [86:109] is the sub-list for method input_type
+	86,  // [86:86] is the sub-list for extension type_name
+	86,  // [86:86] is the sub-list for extension extendee
+	0,   // [0:86] is the sub-list for field type_name
 }
 
 func init() { file_cal_v1_calendar_proto_init() }
@@ -5000,24 +6080,26 @@ func file_cal_v1_calendar_proto_init() {
 	file_cal_v1_calendar_proto_msgTypes[2].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[3].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[4].OneofWrappers = []any{}
-	file_cal_v1_calendar_proto_msgTypes[6].OneofWrappers = []any{}
-	file_cal_v1_calendar_proto_msgTypes[8].OneofWrappers = []any{}
-	file_cal_v1_calendar_proto_msgTypes[15].OneofWrappers = []any{}
-	file_cal_v1_calendar_proto_msgTypes[19].OneofWrappers = []any{}
-	file_cal_v1_calendar_proto_msgTypes[20].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[7].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[9].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[18].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[22].OneofWrappers = []any{}
-	file_cal_v1_calendar_proto_msgTypes[34].OneofWrappers = []any{}
-	file_cal_v1_calendar_proto_msgTypes[35].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[23].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[25].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[37].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[38].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[40].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[41].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[43].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[53].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[55].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cal_v1_calendar_proto_rawDesc), len(file_cal_v1_calendar_proto_rawDesc)),
-			NumEnums:      7,
-			NumMessages:   48,
+			NumEnums:      10,
+			NumMessages:   58,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

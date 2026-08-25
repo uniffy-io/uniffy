@@ -39,6 +39,7 @@ const MESSAGE_PATTERNS: [RegExp, string][] = [
   ],
   [/timeout|timed?\s*out/i, "The request timed out. Please try again."],
   [/abort/i, ""], // empty = suppress
+  [/per free\/busy query/i, ""], // the scheduling panel renders the cap inline
   [
     /notallowederror|permission denied/i,
     "Screen recording permission denied. Click the camcorder icon to retry.",

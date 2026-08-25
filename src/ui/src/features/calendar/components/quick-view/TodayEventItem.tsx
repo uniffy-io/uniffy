@@ -4,6 +4,7 @@ import { prejoinOpened, selectActiveCallForChannel } from "@/features/calls/stor
 import { cn } from "@/shared/utils/cn";
 import type { RootState } from "@/app/store";
 import { formatTime } from "@/features/calendar/utils";
+import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { getCategoryColor } from "@/features/calendar/constants";
 import type { CalendarEvent } from "@/features/calendar/types";
 
@@ -150,7 +151,14 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
           )}
         </div>
 
-        <p className="text-sm font-medium text-foreground truncate leading-snug">{event.title}</p>
+        <p
+          className={cn(
+            "text-sm font-medium text-foreground truncate leading-snug",
+            eventDisplayState(event).cancelled && "line-through opacity-60",
+          )}
+        >
+          {eventDisplayState(event).title}
+        </p>
 
         <div className="mt-0.5">
           <ContextLine event={event} />

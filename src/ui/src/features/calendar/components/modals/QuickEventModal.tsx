@@ -1,18 +1,28 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   X,
+  CaretDown,
+  CaretRight,
   Clock,
   Door,
   Tag,
   TextAa,
   Users,
+  UsersThree,
   Warning,
   VideoCamera,
   Prohibit,
   Link as LinkIcon,
+  Sliders,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { instantDayKey, instantFromDisplayParts } from "@/features/calendar/utils";
+import {
+  displayDayKey,
+  displayParts,
+  instantDayKey,
+  instantFromDisplayParts,
+} from "@/features/calendar/utils";
+import { SchedulingPanel } from "@/features/calendar/components/scheduling/SchedulingPanel";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
 import { createEvent } from "@/features/calendar/store/calendarThunks";
@@ -109,11 +119,17 @@ export function QuickEventModal({
   const [meetingUrl, setMeetingUrl] = useState("");
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [channelAutoCreated, setChannelAutoCreated] = useState(false);
+  const [isTentative, setIsTentative] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [isFree, setIsFree] = useState(false);
+  const [isOutOfOffice, setIsOutOfOffice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showFindTime, setShowFindTime] = useState(false);
   const pendingFileIdsRef = useRef<string[]>([]);
 
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const categories = useAppSelector((state) => state.calendar.categories);
+  const currentUser = useAppSelector((state) => state.auth.user);
 
   const handleFileUploaded = useCallback((fileId: string) => {
     pendingFileIdsRef.current.push(fileId);
@@ -173,6 +189,10 @@ export function QuickEventModal({
       setMeetingUrl("");
       setSelectedChannelId(null);
       setChannelAutoCreated(false);
+      setIsTentative(false);
+      setIsPrivate(false);
+      setIsFree(false);
+      setIsOutOfOffice(false);
       setIsSubmitting(false);
 
       const categoryIds = Object.keys(categories || {});
@@ -257,6 +277,7 @@ export function QuickEventModal({
         categoryId: isValidUuid(selectedCategoryId) ? selectedCategoryId : undefined,
         isFocusTime: selectedCategoryId === "cat-deepwork",
         attendeeIds: attendees.map((a) => a.id),
+        attendees: attendees.map((a) => ({ userId: a.id, role: a.role })),
         recurrence,
         roomId: selectedRoomId || undefined,
         tagIds,
@@ -264,6 +285,10 @@ export function QuickEventModal({
         channelId: meetingMode === "channel" ? selectedChannelId || undefined : undefined,
         channelAutoCreated:
           meetingMode === "channel" && selectedChannelId ? channelAutoCreated : undefined,
+        status: isTentative ? "tentative" : undefined,
+        visibility: isPrivate ? "private" : undefined,
+        transparency: isFree ? "transparent" : undefined,
+        isOutOfOffice,
       }),
     );
 
@@ -301,7 +326,9 @@ export function QuickEventModal({
         onClick={onClose}
       />
 
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] max-w-xl animate-in zoom-in-95 fade-in duration-200">
+      <div
+        className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] ${showFindTime ? "max-w-3xl" : "max-w-xl"} animate-in zoom-in-95 fade-in duration-200`}
+      >
         <div className="bg-background rounded-xl shadow-2xl border border-border overflow-hidden relative">
           <button
             onClick={onClose}
@@ -526,6 +553,63 @@ export function QuickEventModal({
                 )}
               </div>
 
+              {attendees.length > 0 && (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowFindTime((value) => !value)}
+                    className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"
+                  >
+                    {showFindTime ? <CaretDown size={14} /> : <CaretRight size={14} />}
+                    <UsersThree size={16} weight="duotone" className="text-muted-foreground" />
+                    <span>Find a time</span>
+                  </button>
+                  {showFindTime && (
+                    <SchedulingPanel
+                      attendees={[
+                        ...(currentUser
+                          ? [
+                              {
+                                userId: currentUser.id,
+                                name: currentUser.fullName || currentUser.username,
+                                required: true,
+                              },
+                            ]
+                          : []),
+                        ...attendees
+                          .filter((a) => a.id !== currentUser?.id)
+                          .map((a) => ({
+                            userId: a.id,
+                            name: a.name,
+                            required: a.role !== "optional",
+                          })),
+                      ]}
+                      startIso={startIso}
+                      endIso={endIso}
+                      roomId={selectedRoomId}
+                      onToggleRequired={(userId) => {
+                        if (userId === currentUser?.id) return;
+                        setAttendees((current) =>
+                          current.map((a) =>
+                            a.id === userId
+                              ? { ...a, role: a.role === "optional" ? "required" : "optional" }
+                              : a,
+                          ),
+                        );
+                      }}
+                      onPick={(pickedStart, pickedEnd) => {
+                        setStartDate(displayDayKey(pickedStart));
+                        setEndDate(displayDayKey(pickedEnd));
+                        const startParts = displayParts(new Date(pickedStart));
+                        const endParts = displayParts(new Date(pickedEnd));
+                        setStartHour(startParts.hours + startParts.minutes / 60);
+                        setEndHour(endParts.hours + endParts.minutes / 60);
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+
               <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
 
               <div className="space-y-2">
@@ -551,6 +635,37 @@ export function QuickEventModal({
                         style={{ backgroundColor: cat.color }}
                       />
                       {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Sliders size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Options</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ["Tentative", isTentative, setIsTentative],
+                      ["Private", isPrivate, setIsPrivate],
+                      ["Free (doesn't block time)", isFree, setIsFree],
+                      ["Out of office", isOutOfOffice, setIsOutOfOffice],
+                    ] as const
+                  ).map(([label, active, setActive]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setActive(!active)}
+                      className={cn(
+                        "px-3 py-1.5 text-sm rounded-lg border transition-all",
+                        active
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {label}
                     </button>
                   ))}
                 </div>

@@ -66,6 +66,7 @@ export function CalendarMentionPreview({
 }: CalendarMentionPreviewProps) {
   const [copied, setCopied] = useState(false);
   const dispatch = useAppDispatch();
+  const isCancelled = liveState.eventStatus === "CANCELLED";
   const channelId = liveState.eventChannelId;
   const activeCall = useAppSelector((s: RootState) =>
     channelId ? selectActiveCallForChannel(s, channelId) : null,
@@ -86,10 +87,27 @@ export function CalendarMentionPreview({
             <CalendarDots size={18} weight="duotone" />
           </span>
           <span className="block flex-1 min-w-0 pt-0.5">
-            <span className="block font-semibold text-sm truncate">{title}</span>
+            <span
+              className={cn(
+                "block font-semibold text-sm truncate",
+                isCancelled && "line-through opacity-60",
+              )}
+            >
+              {title}
+            </span>
             <span className="flex items-center gap-1.5 mt-0.5">
               <span className="text-xs font-medium text-rose-600 dark:text-rose-400">Event</span>
-              {liveState.eventStartTime && (
+              {isCancelled && (
+                <span className="text-[10px] font-medium px-1.5 py-px rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                  Cancelled
+                </span>
+              )}
+              {liveState.eventStatus === "TENTATIVE" && (
+                <span className="text-[10px] font-medium px-1.5 py-px rounded-full bg-muted text-muted-foreground">
+                  Tentative
+                </span>
+              )}
+              {liveState.eventStartTime && !isCancelled && (
                 <>
                   <span className="text-muted-foreground/40">.</span>
                   <CalendarTemporalIndicator

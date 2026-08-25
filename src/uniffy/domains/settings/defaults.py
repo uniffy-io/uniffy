@@ -93,6 +93,24 @@ class AppearanceDefaults:
     week_start: str = "monday"  # one of: "monday", "saturday", "sunday"
 
 
+WORKDAY_NAMES: tuple[str, ...] = (
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+)
+
+
+@dataclass(frozen=True)
+class SchedulingDefaults:
+    workday_start: str = "09:00"  # 24h HH:MM on the user's own clock
+    workday_end: str = "18:00"
+    workdays: tuple[str, ...] = WORKDAY_NAMES[:5]
+
+
 DEFAULT_REMINDER_INTERVALS: list[int] = [15]
 
 
@@ -121,6 +139,7 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
     NotificationType.CALENDAR_REMINDER: {"in_app": True, "browser": True, "email": False},
     NotificationType.CALENDAR_INVITE: {"in_app": True, "browser": True, "email": True},
     NotificationType.CALENDAR_RESPONSE: {"in_app": True, "browser": False, "email": False},
+    NotificationType.CALENDAR_CANCELLED: {"in_app": True, "browser": True, "email": True},
     NotificationType.PERMISSION_GRANTED: {"in_app": True, "browser": False, "email": True},
     NotificationType.PERMISSION_REVOKED: {"in_app": True, "browser": False, "email": True},
     NotificationType.SYSTEM_ANNOUNCEMENT: {"in_app": True, "browser": True, "email": True},
@@ -170,6 +189,19 @@ TRANSACTIONAL_EMAIL_NOTIFICATION_TYPES = {
 
 APPEARANCE_DEFAULTS = AppearanceDefaults()
 NOTIFICATIONS_DEFAULTS = NotificationsDefaults()
+SCHEDULING_DEFAULTS = SchedulingDefaults()
+
+
+def get_scheduling_defaults_dict() -> dict[str, Any]:
+    return {
+        "workday_start": SCHEDULING_DEFAULTS.workday_start,
+        "workday_end": SCHEDULING_DEFAULTS.workday_end,
+        "workdays": list(SCHEDULING_DEFAULTS.workdays),
+    }
+
+
+def get_effective_scheduling(overrides: dict[str, Any] | None) -> dict[str, Any]:
+    return merge_with_defaults(overrides, get_scheduling_defaults_dict())
 
 
 def get_appearance_defaults_dict() -> dict[str, Any]:

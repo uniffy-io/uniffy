@@ -8,6 +8,7 @@ import {
   Bell,
   CalendarPlus,
   CalendarCheck,
+  CalendarX,
   ShieldCheck,
   ShieldSlash,
   Megaphone,
@@ -83,6 +84,12 @@ const NOTIFICATION_TYPE_CONFIG: Record<number, NotificationTypeConfig> = {
     label: "Response",
     color: "text-emerald-400",
     bgColor: "bg-emerald-500",
+  },
+  [NotificationType.CALENDAR_CANCELLED]: {
+    icon: CalendarX,
+    label: "Cancelled",
+    color: "text-red-400",
+    bgColor: "bg-red-500",
   },
   [NotificationType.PERMISSION_GRANTED]: {
     icon: ShieldCheck,

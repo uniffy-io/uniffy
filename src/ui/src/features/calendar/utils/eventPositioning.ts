@@ -163,8 +163,16 @@ function getMultiDayPosition(event: CalendarEvent, date: Date | string): MultiDa
   }
 }
 
+/** Cancelled and free (transparent) events never count as conflicts. */
+function blocksTime(event: CalendarEvent): boolean {
+  return event.status !== "cancelled" && event.transparency !== "transparent";
+}
+
 export function findConflicts(event: CalendarEvent, allEvents: CalendarEvent[]): CalendarEvent[] {
-  return allEvents.filter((other) => other.id !== event.id && eventsOverlap(event, other));
+  if (!blocksTime(event)) return [];
+  return allEvents.filter(
+    (other) => other.id !== event.id && blocksTime(other) && eventsOverlap(event, other),
+  );
 }
 
 /** Includes events that span into this day, not just those that start on it. */

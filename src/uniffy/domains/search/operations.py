@@ -15,6 +15,7 @@ from uniffy.core.auth.permissions.defaults import (
 from uniffy.core.content.references import parse_urn
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.files.file import File
 from uniffy.core.models.login.user import User
@@ -22,6 +23,7 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.shared import EventVisibility
 from uniffy.core.models.tags.tag import TagAssignment
 from uniffy.core.search.meilisearch import SearchCandidateScope
 from uniffy.core.types import AccessMode, ContentType
@@ -336,7 +338,7 @@ class SearchOperations:
         if project_ids:
             await self._enrich_projects(results, project_ids, urn_to_id, organization_id)
         if calendar_ids:
-            await self._enrich_calendar_events(results, calendar_ids, urn_to_id)
+            await self._enrich_calendar_events(results, calendar_ids, urn_to_id, user_id)
         if note_ids:
             await self._enrich_notes(results, note_ids, urn_to_id)
         if chat_ids:
@@ -583,8 +585,15 @@ class SearchOperations:
         results: dict[str, SearchResult],
         event_ids: list[UUID],
         urn_to_id: dict[str, UUID],
+        user_id: UUID,
     ) -> None:
-        """Enrich calendar event results with time, location, and meeting URL."""
+        """Enrich calendar event results with time, location, and meeting URL.
+
+        A PRIVATE event's raw index document may carry its title for the
+        organizer's own search; a viewer who merely holds a share grant must
+        still see only a busy block, so everything but the times is redacted
+        here before the preview leaves the server.
+        """
         try:
             stmt = select(
                 CalendarEvent.id,
@@ -594,12 +603,24 @@ class SearchOperations:
                 CalendarEvent.location,
                 CalendarEvent.meeting_url,
                 CalendarEvent.channel_id,
+                CalendarEvent.status,
+                CalendarEvent.visibility,
+                CalendarEvent.organizer_id,
             ).where(
                 and_(
                     CalendarEvent.id.in_(event_ids),
                     CalendarEvent.is_deleted == False,  # noqa: E712
                 )
             )
+            attendee_result = await self.session.execute(
+                select(EventAttendee.event_id).where(
+                    and_(
+                        EventAttendee.event_id.in_(event_ids),
+                        EventAttendee.user_id == user_id,
+                    )
+                )
+            )
+            attending_ids = set(attendee_result.scalars().all())
             result = await self.session.execute(stmt)
             id_to_urn = {v: k for k, v in urn_to_id.items()}
             for row in result.all():
@@ -610,9 +631,23 @@ class SearchOperations:
                 sr.event_start_time = row.start_time.isoformat() if row.start_time else None
                 sr.event_end_time = row.end_time.isoformat() if row.end_time else None
                 sr.event_is_all_day = row.is_all_day or False
-                sr.event_location = row.location
-                sr.event_meeting_url = row.meeting_url
-                sr.event_channel_id = str(row.channel_id) if row.channel_id else None
+                sr.event_status = row.status.value
+                hidden = (
+                    row.visibility == EventVisibility.PRIVATE
+                    and row.organizer_id != user_id
+                    and row.id not in attending_ids
+                )
+                if hidden:
+                    sr.title = ""
+                    sr.description = None
+                    sr.content_tags = None
+                    sr.event_location = None
+                    sr.event_meeting_url = None
+                    sr.event_channel_id = None
+                else:
+                    sr.event_location = row.location
+                    sr.event_meeting_url = row.meeting_url
+                    sr.event_channel_id = str(row.channel_id) if row.channel_id else None
         except Exception:
             logger.opt(exception=True).warning("Failed to enrich calendar event live state")
 

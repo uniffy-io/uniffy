@@ -13,10 +13,13 @@ import {
   GetEventRequestSchema,
   GetEventTemplateRequestSchema,
   GetEventsInRangeRequestSchema,
+  GetFreeBusyRequestSchema,
+  SuggestMeetingTimesRequestSchema,
   ListCategoriesRequestSchema,
   ListEventActivitiesRequestSchema,
   ListEventTemplatesRequestSchema,
   RemoveAttendeesRequestSchema,
+  UpdateAttendeeRoleRequestSchema,
   UpdateAttendeeStatusRequestSchema,
   UpdateCategoryRequestSchema,
   UpdateEventRequestSchema,
@@ -108,6 +111,10 @@ export const calendarApi = {
     return calendarClient.addAttendees(request);
   },
 
+  updateAttendeeRole: async (request: MessageInitShape<typeof UpdateAttendeeRoleRequestSchema>) => {
+    return calendarClient.updateAttendeeRole(request);
+  },
+
   removeAttendees: async (request: MessageInitShape<typeof RemoveAttendeesRequestSchema>) => {
     return calendarClient.removeAttendees(request);
   },
@@ -136,6 +143,16 @@ export const calendarApi = {
 
   listEventTemplates: async (request: MessageInitShape<typeof ListEventTemplatesRequestSchema>) => {
     return calendarClient.listEventTemplates(request);
+  },
+
+  getFreeBusy: async (request: MessageInitShape<typeof GetFreeBusyRequestSchema>) => {
+    return calendarClient.getFreeBusy(request);
+  },
+
+  suggestMeetingTimes: async (
+    request: MessageInitShape<typeof SuggestMeetingTimesRequestSchema>,
+  ) => {
+    return calendarClient.suggestMeetingTimes(request);
   },
 
   listEventActivities: async (

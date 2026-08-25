@@ -15,10 +15,13 @@ from uniffy.core.content.members import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
+from uniffy.core.models.calendar.attendee import EventAttendee
+from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
+from uniffy.core.models.shared import EventVisibility
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
@@ -560,18 +563,44 @@ class BookingOperations:
             end_date,
         )
 
+        # The booking row snapshots the event title; a booking for a PRIVATE
+        # event must not reveal it to whoever browses the room's schedule.
+        hidden_event_ids = await self._private_event_ids_hidden_from(
+            user_id, [b.event_id for b, _ in booking_rows if b.event_id]
+        )
+
         slots: list[dict] = []
         for booking, booker_name in booking_rows:
+            hidden = booking.event_id in hidden_event_ids
             slots.append({
                 "start_time": booking.start_time.isoformat(),
                 "end_time": booking.end_time.isoformat(),
                 "is_available": False,
                 "booking_id": str(booking.id),
-                "event_title": booking.title,
+                "event_title": "" if hidden else booking.title,
                 "booker_name": booker_name,
             })
 
         return slots
+
+    async def _private_event_ids_hidden_from(
+        self, user_id: UUID, event_ids: list[UUID]
+    ) -> set[UUID]:
+        if not event_ids:
+            return set()
+        result = await self.session.execute(
+            select(CalendarEvent.id).where(
+                and_(
+                    CalendarEvent.id.in_(event_ids),
+                    CalendarEvent.visibility == EventVisibility.PRIVATE,
+                    CalendarEvent.organizer_id != user_id,
+                    ~CalendarEvent.id.in_(
+                        select(EventAttendee.event_id).where(EventAttendee.user_id == user_id)
+                    ),
+                )
+            )
+        )
+        return set(result.scalars().all())
 
     async def find_available_rooms(
         self,

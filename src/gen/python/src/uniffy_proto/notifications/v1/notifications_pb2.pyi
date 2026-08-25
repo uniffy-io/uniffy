@@ -43,6 +43,7 @@ class NotificationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED: _ClassVar[NotificationType]
     NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED: _ClassVar[NotificationType]
     NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED: _ClassVar[NotificationType]
+    NOTIFICATION_TYPE_CALENDAR_CANCELLED: _ClassVar[NotificationType]
 NOTIFICATION_TYPE_UNSPECIFIED: NotificationType
 NOTIFICATION_TYPE_CONTENT_SHARED: NotificationType
 NOTIFICATION_TYPE_CONTENT_MENTIONED: NotificationType
@@ -72,6 +73,7 @@ NOTIFICATION_TYPE_SUPPORT_SESSION_REQUESTED: NotificationType
 NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED: NotificationType
 NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED: NotificationType
 NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED: NotificationType
+NOTIFICATION_TYPE_CALENDAR_CANCELLED: NotificationType
 
 class Notification(_message.Message):
     __slots__ = ("id", "organization_id", "user_id", "notification_type", "title", "body", "source_urn", "actor_id", "is_read", "read_at", "created_at", "expires_at", "actor_name", "actor_avatar_url", "metadata")

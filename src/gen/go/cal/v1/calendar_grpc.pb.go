@@ -32,7 +32,10 @@ const (
 	CalendarService_ListCategories_FullMethodName       = "/cal.v1.CalendarService/ListCategories"
 	CalendarService_UpdateAttendeeStatus_FullMethodName = "/cal.v1.CalendarService/UpdateAttendeeStatus"
 	CalendarService_AddAttendees_FullMethodName         = "/cal.v1.CalendarService/AddAttendees"
+	CalendarService_UpdateAttendeeRole_FullMethodName   = "/cal.v1.CalendarService/UpdateAttendeeRole"
 	CalendarService_RemoveAttendees_FullMethodName      = "/cal.v1.CalendarService/RemoveAttendees"
+	CalendarService_GetFreeBusy_FullMethodName          = "/cal.v1.CalendarService/GetFreeBusy"
+	CalendarService_SuggestMeetingTimes_FullMethodName  = "/cal.v1.CalendarService/SuggestMeetingTimes"
 	CalendarService_ListEventActivities_FullMethodName  = "/cal.v1.CalendarService/ListEventActivities"
 	CalendarService_CreateEventTemplate_FullMethodName  = "/cal.v1.CalendarService/CreateEventTemplate"
 	CalendarService_GetEventTemplate_FullMethodName     = "/cal.v1.CalendarService/GetEventTemplate"
@@ -73,8 +76,16 @@ type CalendarServiceClient interface {
 	UpdateAttendeeStatus(ctx context.Context, in *UpdateAttendeeStatusRequest, opts ...grpc.CallOption) (*UpdateAttendeeStatusResponse, error)
 	// Add attendees to an event
 	AddAttendees(ctx context.Context, in *AddAttendeesRequest, opts ...grpc.CallOption) (*AddAttendeesResponse, error)
+	// Change an existing attendee between required and optional
+	UpdateAttendeeRole(ctx context.Context, in *UpdateAttendeeRoleRequest, opts ...grpc.CallOption) (*UpdateAttendeeRoleResponse, error)
 	// Remove attendees from an event
 	RemoveAttendees(ctx context.Context, in *RemoveAttendeesRequest, opts ...grpc.CallOption) (*RemoveAttendeesResponse, error)
+	// Per-user busy intervals for the availability grid. Returns only
+	// (start, end, out_of_office) spans - never titles or details.
+	GetFreeBusy(ctx context.Context, in *GetFreeBusyRequest, opts ...grpc.CallOption) (*GetFreeBusyResponse, error)
+	// Meeting-time suggestions honoring every required attendee's working
+	// hours and timezone, ranked by optional-attendee availability.
+	SuggestMeetingTimes(ctx context.Context, in *SuggestMeetingTimesRequest, opts ...grpc.CallOption) (*SuggestMeetingTimesResponse, error)
 	// List the activity log for an event, newest first
 	ListEventActivities(ctx context.Context, in *ListEventActivitiesRequest, opts ...grpc.CallOption) (*ListEventActivitiesResponse, error)
 	// Create a new event template
@@ -227,10 +238,40 @@ func (c *calendarServiceClient) AddAttendees(ctx context.Context, in *AddAttende
 	return out, nil
 }
 
+func (c *calendarServiceClient) UpdateAttendeeRole(ctx context.Context, in *UpdateAttendeeRoleRequest, opts ...grpc.CallOption) (*UpdateAttendeeRoleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateAttendeeRoleResponse)
+	err := c.cc.Invoke(ctx, CalendarService_UpdateAttendeeRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *calendarServiceClient) RemoveAttendees(ctx context.Context, in *RemoveAttendeesRequest, opts ...grpc.CallOption) (*RemoveAttendeesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RemoveAttendeesResponse)
 	err := c.cc.Invoke(ctx, CalendarService_RemoveAttendees_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) GetFreeBusy(ctx context.Context, in *GetFreeBusyRequest, opts ...grpc.CallOption) (*GetFreeBusyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetFreeBusyResponse)
+	err := c.cc.Invoke(ctx, CalendarService_GetFreeBusy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) SuggestMeetingTimes(ctx context.Context, in *SuggestMeetingTimesRequest, opts ...grpc.CallOption) (*SuggestMeetingTimesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SuggestMeetingTimesResponse)
+	err := c.cc.Invoke(ctx, CalendarService_SuggestMeetingTimes_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -329,8 +370,16 @@ type CalendarServiceServer interface {
 	UpdateAttendeeStatus(context.Context, *UpdateAttendeeStatusRequest) (*UpdateAttendeeStatusResponse, error)
 	// Add attendees to an event
 	AddAttendees(context.Context, *AddAttendeesRequest) (*AddAttendeesResponse, error)
+	// Change an existing attendee between required and optional
+	UpdateAttendeeRole(context.Context, *UpdateAttendeeRoleRequest) (*UpdateAttendeeRoleResponse, error)
 	// Remove attendees from an event
 	RemoveAttendees(context.Context, *RemoveAttendeesRequest) (*RemoveAttendeesResponse, error)
+	// Per-user busy intervals for the availability grid. Returns only
+	// (start, end, out_of_office) spans - never titles or details.
+	GetFreeBusy(context.Context, *GetFreeBusyRequest) (*GetFreeBusyResponse, error)
+	// Meeting-time suggestions honoring every required attendee's working
+	// hours and timezone, ranked by optional-attendee availability.
+	SuggestMeetingTimes(context.Context, *SuggestMeetingTimesRequest) (*SuggestMeetingTimesResponse, error)
 	// List the activity log for an event, newest first
 	ListEventActivities(context.Context, *ListEventActivitiesRequest) (*ListEventActivitiesResponse, error)
 	// Create a new event template
@@ -392,8 +441,17 @@ func (UnimplementedCalendarServiceServer) UpdateAttendeeStatus(context.Context, 
 func (UnimplementedCalendarServiceServer) AddAttendees(context.Context, *AddAttendeesRequest) (*AddAttendeesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddAttendees not implemented")
 }
+func (UnimplementedCalendarServiceServer) UpdateAttendeeRole(context.Context, *UpdateAttendeeRoleRequest) (*UpdateAttendeeRoleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAttendeeRole not implemented")
+}
 func (UnimplementedCalendarServiceServer) RemoveAttendees(context.Context, *RemoveAttendeesRequest) (*RemoveAttendeesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveAttendees not implemented")
+}
+func (UnimplementedCalendarServiceServer) GetFreeBusy(context.Context, *GetFreeBusyRequest) (*GetFreeBusyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetFreeBusy not implemented")
+}
+func (UnimplementedCalendarServiceServer) SuggestMeetingTimes(context.Context, *SuggestMeetingTimesRequest) (*SuggestMeetingTimesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SuggestMeetingTimes not implemented")
 }
 func (UnimplementedCalendarServiceServer) ListEventActivities(context.Context, *ListEventActivitiesRequest) (*ListEventActivitiesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListEventActivities not implemented")
@@ -668,6 +726,24 @@ func _CalendarService_AddAttendees_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CalendarService_UpdateAttendeeRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAttendeeRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).UpdateAttendeeRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_UpdateAttendeeRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).UpdateAttendeeRole(ctx, req.(*UpdateAttendeeRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CalendarService_RemoveAttendees_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RemoveAttendeesRequest)
 	if err := dec(in); err != nil {
@@ -682,6 +758,42 @@ func _CalendarService_RemoveAttendees_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CalendarServiceServer).RemoveAttendees(ctx, req.(*RemoveAttendeesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_GetFreeBusy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFreeBusyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).GetFreeBusy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_GetFreeBusy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).GetFreeBusy(ctx, req.(*GetFreeBusyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_SuggestMeetingTimes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SuggestMeetingTimesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).SuggestMeetingTimes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_SuggestMeetingTimes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).SuggestMeetingTimes(ctx, req.(*SuggestMeetingTimesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -854,8 +966,20 @@ var CalendarService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CalendarService_AddAttendees_Handler,
 		},
 		{
+			MethodName: "UpdateAttendeeRole",
+			Handler:    _CalendarService_UpdateAttendeeRole_Handler,
+		},
+		{
 			MethodName: "RemoveAttendees",
 			Handler:    _CalendarService_RemoveAttendees_Handler,
+		},
+		{
+			MethodName: "GetFreeBusy",
+			Handler:    _CalendarService_GetFreeBusy_Handler,
+		},
+		{
+			MethodName: "SuggestMeetingTimes",
+			Handler:    _CalendarService_SuggestMeetingTimes_Handler,
 		},
 		{
 			MethodName: "ListEventActivities",

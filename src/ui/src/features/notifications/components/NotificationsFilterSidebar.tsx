@@ -6,6 +6,7 @@ import {
   Bell,
   CalendarPlus,
   CalendarCheck,
+  CalendarX,
   ShieldCheck,
   ShieldSlash,
   Megaphone,
@@ -71,6 +72,7 @@ const TYPE_CATEGORIES: TypeCategory[] = [
       { value: NotificationType.CALENDAR_REMINDER, label: "Reminder", icon: Bell },
       { value: NotificationType.CALENDAR_INVITE, label: "Invite", icon: CalendarPlus },
       { value: NotificationType.CALENDAR_RESPONSE, label: "Response", icon: CalendarCheck },
+      { value: NotificationType.CALENDAR_CANCELLED, label: "Cancelled", icon: CalendarX },
     ],
   },
   {

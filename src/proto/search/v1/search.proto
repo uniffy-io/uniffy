@@ -191,6 +191,7 @@ message UrnMetadata {
   string event_location = 36; // location text
   string event_meeting_url = 37; // video call URL
   string event_channel_id = 49; // bound chat channel for a Uniffy online meeting
+  string event_status = 52; // CONFIRMED/TENTATIVE/CANCELLED lifecycle status
 
   // File enrichment
   string file_mime_type = 38; // MIME type

@@ -29,6 +29,7 @@ const TYPE_LABELS: Record<number, string> = {
   [NotificationType.CALENDAR_REMINDER]: "Reminder",
   [NotificationType.CALENDAR_INVITE]: "Invite",
   [NotificationType.CALENDAR_RESPONSE]: "Response",
+  [NotificationType.CALENDAR_CANCELLED]: "Cancelled",
   [NotificationType.PERMISSION_GRANTED]: "Access granted",
   [NotificationType.PERMISSION_REVOKED]: "Access revoked",
   [NotificationType.ACCESS_REQUESTED]: "Access requested",

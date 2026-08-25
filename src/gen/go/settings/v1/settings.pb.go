@@ -34,7 +34,9 @@ type CreateProfileRequest struct {
 	// Initial notification overrides (optional)
 	Notifications *NotificationsSettings `protobuf:"bytes,4,opt,name=notifications,proto3" json:"notifications,omitempty"`
 	// Set as default profile
-	IsDefault     bool `protobuf:"varint,5,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	IsDefault bool `protobuf:"varint,5,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	// Initial scheduling overrides (optional)
+	Scheduling    *SchedulingSettings `protobuf:"bytes,6,opt,name=scheduling,proto3" json:"scheduling,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -104,6 +106,13 @@ func (x *CreateProfileRequest) GetIsDefault() bool {
 	return false
 }
 
+func (x *CreateProfileRequest) GetScheduling() *SchedulingSettings {
+	if x != nil {
+		return x.Scheduling
+	}
+	return nil
+}
+
 // Request to get a profile
 type GetProfileRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -164,7 +173,9 @@ type UpdateProfileRequest struct {
 	// Updated notification settings (only include changed values)
 	Notifications *NotificationsSettings `protobuf:"bytes,5,opt,name=notifications,proto3" json:"notifications,omitempty"`
 	// Set as default profile (optional)
-	IsDefault     *bool `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
+	IsDefault *bool `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
+	// Updated scheduling settings (only include changed values)
+	Scheduling    *SchedulingSettings `protobuf:"bytes,7,opt,name=scheduling,proto3" json:"scheduling,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -239,6 +250,13 @@ func (x *UpdateProfileRequest) GetIsDefault() bool {
 		return *x.IsDefault
 	}
 	return false
+}
+
+func (x *UpdateProfileRequest) GetScheduling() *SchedulingSettings {
+	if x != nil {
+		return x.Scheduling
+	}
+	return nil
 }
 
 // Request to delete a profile
@@ -765,8 +783,10 @@ type GetSettingsSchemaResponse struct {
 	KeyboardShortcutsDefaults *KeyboardShortcutsSettings `protobuf:"bytes,2,opt,name=keyboard_shortcuts_defaults,json=keyboardShortcutsDefaults,proto3" json:"keyboard_shortcuts_defaults,omitempty"`
 	// Default notification settings
 	NotificationsDefaults *NotificationsSettings `protobuf:"bytes,3,opt,name=notifications_defaults,json=notificationsDefaults,proto3" json:"notifications_defaults,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Default scheduling settings
+	SchedulingDefaults *SchedulingSettings `protobuf:"bytes,4,opt,name=scheduling_defaults,json=schedulingDefaults,proto3" json:"scheduling_defaults,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GetSettingsSchemaResponse) Reset() {
@@ -816,6 +836,13 @@ func (x *GetSettingsSchemaResponse) GetKeyboardShortcutsDefaults() *KeyboardShor
 func (x *GetSettingsSchemaResponse) GetNotificationsDefaults() *NotificationsSettings {
 	if x != nil {
 		return x.NotificationsDefaults
+	}
+	return nil
+}
+
+func (x *GetSettingsSchemaResponse) GetSchedulingDefaults() *SchedulingSettings {
+	if x != nil {
+		return x.SchedulingDefaults
 	}
 	return nil
 }
@@ -886,7 +913,9 @@ type SettingsProfile struct {
 	// Created timestamp
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// Updated timestamp
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Scheduling overrides (sparse - only user-changed values)
+	Scheduling    *SchedulingSettings `protobuf:"bytes,10,opt,name=scheduling,proto3" json:"scheduling,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -984,6 +1013,13 @@ func (x *SettingsProfile) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *SettingsProfile) GetScheduling() *SchedulingSettings {
+	if x != nil {
+		return x.Scheduling
+	}
+	return nil
+}
+
 // Effective settings (fully resolved with defaults)
 type EffectiveSettings struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -993,6 +1029,8 @@ type EffectiveSettings struct {
 	KeyboardShortcuts *KeyboardShortcutsSettings `protobuf:"bytes,2,opt,name=keyboard_shortcuts,json=keyboardShortcuts,proto3" json:"keyboard_shortcuts,omitempty"`
 	// Full notification settings
 	Notifications *NotificationsSettings `protobuf:"bytes,3,opt,name=notifications,proto3" json:"notifications,omitempty"`
+	// Full scheduling settings
+	Scheduling    *SchedulingSettings `protobuf:"bytes,4,opt,name=scheduling,proto3" json:"scheduling,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1044,6 +1082,13 @@ func (x *EffectiveSettings) GetKeyboardShortcuts() *KeyboardShortcutsSettings {
 func (x *EffectiveSettings) GetNotifications() *NotificationsSettings {
 	if x != nil {
 		return x.Notifications
+	}
+	return nil
+}
+
+func (x *EffectiveSettings) GetScheduling() *SchedulingSettings {
+	if x != nil {
+		return x.Scheduling
 	}
 	return nil
 }
@@ -1184,6 +1229,70 @@ func (x *AppearanceSettings) GetWeekStart() string {
 	return ""
 }
 
+// Scheduling settings - working hours used everywhere availability is computed
+type SchedulingSettings struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Workday start on the user's own clock (24h HH:MM)
+	WorkdayStart *string `protobuf:"bytes,1,opt,name=workday_start,json=workdayStart,proto3,oneof" json:"workday_start,omitempty"`
+	// Workday end on the user's own clock (24h HH:MM)
+	WorkdayEnd *string `protobuf:"bytes,2,opt,name=workday_end,json=workdayEnd,proto3,oneof" json:"workday_end,omitempty"`
+	// Working days, lowercase names ("monday".."sunday"); empty = inherit default
+	Workdays      []string `protobuf:"bytes,3,rep,name=workdays,proto3" json:"workdays,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SchedulingSettings) Reset() {
+	*x = SchedulingSettings{}
+	mi := &file_settings_v1_settings_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SchedulingSettings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SchedulingSettings) ProtoMessage() {}
+
+func (x *SchedulingSettings) ProtoReflect() protoreflect.Message {
+	mi := &file_settings_v1_settings_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SchedulingSettings.ProtoReflect.Descriptor instead.
+func (*SchedulingSettings) Descriptor() ([]byte, []int) {
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *SchedulingSettings) GetWorkdayStart() string {
+	if x != nil && x.WorkdayStart != nil {
+		return *x.WorkdayStart
+	}
+	return ""
+}
+
+func (x *SchedulingSettings) GetWorkdayEnd() string {
+	if x != nil && x.WorkdayEnd != nil {
+		return *x.WorkdayEnd
+	}
+	return ""
+}
+
+func (x *SchedulingSettings) GetWorkdays() []string {
+	if x != nil {
+		return x.Workdays
+	}
+	return nil
+}
+
 // Keyboard shortcuts settings
 type KeyboardShortcutsSettings struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1197,7 +1306,7 @@ type KeyboardShortcutsSettings struct {
 
 func (x *KeyboardShortcutsSettings) Reset() {
 	*x = KeyboardShortcutsSettings{}
-	mi := &file_settings_v1_settings_proto_msgTypes[19]
+	mi := &file_settings_v1_settings_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1209,7 +1318,7 @@ func (x *KeyboardShortcutsSettings) String() string {
 func (*KeyboardShortcutsSettings) ProtoMessage() {}
 
 func (x *KeyboardShortcutsSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[19]
+	mi := &file_settings_v1_settings_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1222,7 +1331,7 @@ func (x *KeyboardShortcutsSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyboardShortcutsSettings.ProtoReflect.Descriptor instead.
 func (*KeyboardShortcutsSettings) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{19}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *KeyboardShortcutsSettings) GetBindings() map[string]string {
@@ -1262,7 +1371,7 @@ type NotificationsSettings struct {
 
 func (x *NotificationsSettings) Reset() {
 	*x = NotificationsSettings{}
-	mi := &file_settings_v1_settings_proto_msgTypes[20]
+	mi := &file_settings_v1_settings_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1274,7 +1383,7 @@ func (x *NotificationsSettings) String() string {
 func (*NotificationsSettings) ProtoMessage() {}
 
 func (x *NotificationsSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[20]
+	mi := &file_settings_v1_settings_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1287,7 +1396,7 @@ func (x *NotificationsSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NotificationsSettings.ProtoReflect.Descriptor instead.
 func (*NotificationsSettings) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{20}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *NotificationsSettings) GetBrowserEnabled() bool {
@@ -1375,7 +1484,7 @@ type NotificationChannelPreference struct {
 
 func (x *NotificationChannelPreference) Reset() {
 	*x = NotificationChannelPreference{}
-	mi := &file_settings_v1_settings_proto_msgTypes[21]
+	mi := &file_settings_v1_settings_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1387,7 +1496,7 @@ func (x *NotificationChannelPreference) String() string {
 func (*NotificationChannelPreference) ProtoMessage() {}
 
 func (x *NotificationChannelPreference) ProtoReflect() protoreflect.Message {
-	mi := &file_settings_v1_settings_proto_msgTypes[21]
+	mi := &file_settings_v1_settings_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1400,7 +1509,7 @@ func (x *NotificationChannelPreference) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NotificationChannelPreference.ProtoReflect.Descriptor instead.
 func (*NotificationChannelPreference) Descriptor() ([]byte, []int) {
-	return file_settings_v1_settings_proto_rawDescGZIP(), []int{21}
+	return file_settings_v1_settings_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *NotificationChannelPreference) GetInApp() bool {
@@ -1428,7 +1537,7 @@ var File_settings_v1_settings_proto protoreflect.FileDescriptor
 
 const file_settings_v1_settings_proto_rawDesc = "" +
 	"\n" +
-	"\x1asettings/v1/settings.proto\x12\vsettings.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xab\x02\n" +
+	"\x1asettings/v1/settings.proto\x12\vsettings.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xec\x02\n" +
 	"\x14CreateProfileRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12?\n" +
 	"\n" +
@@ -1437,10 +1546,13 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x12keyboard_shortcuts\x18\x03 \x01(\v2&.settings.v1.KeyboardShortcutsSettingsR\x11keyboardShortcuts\x12H\n" +
 	"\rnotifications\x18\x04 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"2\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\x12?\n" +
+	"\n" +
+	"scheduling\x18\x06 \x01(\v2\x1f.settings.v1.SchedulingSettingsR\n" +
+	"scheduling\"2\n" +
 	"\x11GetProfileRequest\x12\x1d\n" +
 	"\n" +
-	"profile_id\x18\x01 \x01(\tR\tprofileId\"\xec\x02\n" +
+	"profile_id\x18\x01 \x01(\tR\tprofileId\"\xad\x03\n" +
 	"\x14UpdateProfileRequest\x12\x1d\n" +
 	"\n" +
 	"profile_id\x18\x01 \x01(\tR\tprofileId\x12\x17\n" +
@@ -1451,7 +1563,10 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x12keyboard_shortcuts\x18\x04 \x01(\v2&.settings.v1.KeyboardShortcutsSettingsR\x11keyboardShortcuts\x12H\n" +
 	"\rnotifications\x18\x05 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\x12\"\n" +
 	"\n" +
-	"is_default\x18\x06 \x01(\bH\x01R\tisDefault\x88\x01\x01B\a\n" +
+	"is_default\x18\x06 \x01(\bH\x01R\tisDefault\x88\x01\x01\x12?\n" +
+	"\n" +
+	"scheduling\x18\a \x01(\v2\x1f.settings.v1.SchedulingSettingsR\n" +
+	"schedulingB\a\n" +
 	"\x05_nameB\r\n" +
 	"\v_is_default\"5\n" +
 	"\x14DeleteProfileRequest\x12\x1d\n" +
@@ -1480,14 +1595,15 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x1cGetEffectiveSettingsResponse\x126\n" +
 	"\aprofile\x18\x01 \x01(\v2\x1c.settings.v1.SettingsProfileR\aprofile\x12M\n" +
 	"\x12effective_settings\x18\x02 \x01(\v2\x1e.settings.v1.EffectiveSettingsR\x11effectiveSettings\"\x1a\n" +
-	"\x18GetSettingsSchemaRequest\"\xb0\x02\n" +
+	"\x18GetSettingsSchemaRequest\"\x82\x03\n" +
 	"\x19GetSettingsSchemaResponse\x12P\n" +
 	"\x13appearance_defaults\x18\x01 \x01(\v2\x1f.settings.v1.AppearanceSettingsR\x12appearanceDefaults\x12f\n" +
 	"\x1bkeyboard_shortcuts_defaults\x18\x02 \x01(\v2&.settings.v1.KeyboardShortcutsSettingsR\x19keyboardShortcutsDefaults\x12Y\n" +
-	"\x16notifications_defaults\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\x15notificationsDefaults\"9\n" +
+	"\x16notifications_defaults\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\x15notificationsDefaults\x12P\n" +
+	"\x13scheduling_defaults\x18\x04 \x01(\v2\x1f.settings.v1.SchedulingSettingsR\x12schedulingDefaults\"9\n" +
 	"\x18SetDefaultProfileRequest\x12\x1d\n" +
 	"\n" +
-	"profile_id\x18\x01 \x01(\tR\tprofileId\"\xc5\x03\n" +
+	"profile_id\x18\x01 \x01(\tR\tprofileId\"\x86\x04\n" +
 	"\x0fSettingsProfile\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
@@ -1502,13 +1618,20 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xf5\x01\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12?\n" +
+	"\n" +
+	"scheduling\x18\n" +
+	" \x01(\v2\x1f.settings.v1.SchedulingSettingsR\n" +
+	"scheduling\"\xb6\x02\n" +
 	"\x11EffectiveSettings\x12?\n" +
 	"\n" +
 	"appearance\x18\x01 \x01(\v2\x1f.settings.v1.AppearanceSettingsR\n" +
 	"appearance\x12U\n" +
 	"\x12keyboard_shortcuts\x18\x02 \x01(\v2&.settings.v1.KeyboardShortcutsSettingsR\x11keyboardShortcuts\x12H\n" +
-	"\rnotifications\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\"\xbf\x05\n" +
+	"\rnotifications\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\x12?\n" +
+	"\n" +
+	"scheduling\x18\x04 \x01(\v2\x1f.settings.v1.SchedulingSettingsR\n" +
+	"scheduling\"\xbf\x05\n" +
 	"\x12AppearanceSettings\x12\x19\n" +
 	"\x05theme\x18\x01 \x01(\tH\x00R\x05theme\x88\x01\x01\x12&\n" +
 	"\faccent_color\x18\x02 \x01(\tH\x01R\vaccentColor\x88\x01\x01\x12$\n" +
@@ -1535,7 +1658,14 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x16_markdown_show_previewB\x1d\n" +
 	"\x1b_markdown_show_line_numbersB\v\n" +
 	"\t_timezoneB\r\n" +
-	"\v_week_start\"\xaa\x01\n" +
+	"\v_week_start\"\xa2\x01\n" +
+	"\x12SchedulingSettings\x12(\n" +
+	"\rworkday_start\x18\x01 \x01(\tH\x00R\fworkdayStart\x88\x01\x01\x12$\n" +
+	"\vworkday_end\x18\x02 \x01(\tH\x01R\n" +
+	"workdayEnd\x88\x01\x01\x12\x1a\n" +
+	"\bworkdays\x18\x03 \x03(\tR\bworkdaysB\x10\n" +
+	"\x0e_workday_startB\x0e\n" +
+	"\f_workday_end\"\xaa\x01\n" +
 	"\x19KeyboardShortcutsSettings\x12P\n" +
 	"\bbindings\x18\x01 \x03(\v24.settings.v1.KeyboardShortcutsSettings.BindingsEntryR\bbindings\x1a;\n" +
 	"\rBindingsEntry\x12\x10\n" +
@@ -1595,7 +1725,7 @@ func file_settings_v1_settings_proto_rawDescGZIP() []byte {
 	return file_settings_v1_settings_proto_rawDescData
 }
 
-var file_settings_v1_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_settings_v1_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_settings_v1_settings_proto_goTypes = []any{
 	(*CreateProfileRequest)(nil),          // 0: settings.v1.CreateProfileRequest
 	(*GetProfileRequest)(nil),             // 1: settings.v1.GetProfileRequest
@@ -1616,62 +1746,68 @@ var file_settings_v1_settings_proto_goTypes = []any{
 	(*SettingsProfile)(nil),               // 16: settings.v1.SettingsProfile
 	(*EffectiveSettings)(nil),             // 17: settings.v1.EffectiveSettings
 	(*AppearanceSettings)(nil),            // 18: settings.v1.AppearanceSettings
-	(*KeyboardShortcutsSettings)(nil),     // 19: settings.v1.KeyboardShortcutsSettings
-	(*NotificationsSettings)(nil),         // 20: settings.v1.NotificationsSettings
-	(*NotificationChannelPreference)(nil), // 21: settings.v1.NotificationChannelPreference
-	nil,                                   // 22: settings.v1.KeyboardShortcutsSettings.BindingsEntry
-	nil,                                   // 23: settings.v1.NotificationsSettings.ChannelOverridesEntry
-	(*timestamppb.Timestamp)(nil),         // 24: google.protobuf.Timestamp
+	(*SchedulingSettings)(nil),            // 19: settings.v1.SchedulingSettings
+	(*KeyboardShortcutsSettings)(nil),     // 20: settings.v1.KeyboardShortcutsSettings
+	(*NotificationsSettings)(nil),         // 21: settings.v1.NotificationsSettings
+	(*NotificationChannelPreference)(nil), // 22: settings.v1.NotificationChannelPreference
+	nil,                                   // 23: settings.v1.KeyboardShortcutsSettings.BindingsEntry
+	nil,                                   // 24: settings.v1.NotificationsSettings.ChannelOverridesEntry
+	(*timestamppb.Timestamp)(nil),         // 25: google.protobuf.Timestamp
 }
 var file_settings_v1_settings_proto_depIdxs = []int32{
 	18, // 0: settings.v1.CreateProfileRequest.appearance:type_name -> settings.v1.AppearanceSettings
-	19, // 1: settings.v1.CreateProfileRequest.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
-	20, // 2: settings.v1.CreateProfileRequest.notifications:type_name -> settings.v1.NotificationsSettings
-	18, // 3: settings.v1.UpdateProfileRequest.appearance:type_name -> settings.v1.AppearanceSettings
-	19, // 4: settings.v1.UpdateProfileRequest.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
-	20, // 5: settings.v1.UpdateProfileRequest.notifications:type_name -> settings.v1.NotificationsSettings
-	16, // 6: settings.v1.CreateProfileResponse.profile:type_name -> settings.v1.SettingsProfile
-	16, // 7: settings.v1.GetProfileResponse.profile:type_name -> settings.v1.SettingsProfile
-	16, // 8: settings.v1.UpdateProfileResponse.profile:type_name -> settings.v1.SettingsProfile
-	16, // 9: settings.v1.SetDefaultProfileResponse.profile:type_name -> settings.v1.SettingsProfile
-	16, // 10: settings.v1.ListProfilesResponse.profiles:type_name -> settings.v1.SettingsProfile
-	16, // 11: settings.v1.GetEffectiveSettingsResponse.profile:type_name -> settings.v1.SettingsProfile
-	17, // 12: settings.v1.GetEffectiveSettingsResponse.effective_settings:type_name -> settings.v1.EffectiveSettings
-	18, // 13: settings.v1.GetSettingsSchemaResponse.appearance_defaults:type_name -> settings.v1.AppearanceSettings
-	19, // 14: settings.v1.GetSettingsSchemaResponse.keyboard_shortcuts_defaults:type_name -> settings.v1.KeyboardShortcutsSettings
-	20, // 15: settings.v1.GetSettingsSchemaResponse.notifications_defaults:type_name -> settings.v1.NotificationsSettings
-	18, // 16: settings.v1.SettingsProfile.appearance:type_name -> settings.v1.AppearanceSettings
-	19, // 17: settings.v1.SettingsProfile.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
-	20, // 18: settings.v1.SettingsProfile.notifications:type_name -> settings.v1.NotificationsSettings
-	24, // 19: settings.v1.SettingsProfile.created_at:type_name -> google.protobuf.Timestamp
-	24, // 20: settings.v1.SettingsProfile.updated_at:type_name -> google.protobuf.Timestamp
-	18, // 21: settings.v1.EffectiveSettings.appearance:type_name -> settings.v1.AppearanceSettings
-	19, // 22: settings.v1.EffectiveSettings.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
-	20, // 23: settings.v1.EffectiveSettings.notifications:type_name -> settings.v1.NotificationsSettings
-	22, // 24: settings.v1.KeyboardShortcutsSettings.bindings:type_name -> settings.v1.KeyboardShortcutsSettings.BindingsEntry
-	23, // 25: settings.v1.NotificationsSettings.channel_overrides:type_name -> settings.v1.NotificationsSettings.ChannelOverridesEntry
-	21, // 26: settings.v1.NotificationsSettings.ChannelOverridesEntry.value:type_name -> settings.v1.NotificationChannelPreference
-	0,  // 27: settings.v1.SettingsService.CreateProfile:input_type -> settings.v1.CreateProfileRequest
-	1,  // 28: settings.v1.SettingsService.GetProfile:input_type -> settings.v1.GetProfileRequest
-	2,  // 29: settings.v1.SettingsService.UpdateProfile:input_type -> settings.v1.UpdateProfileRequest
-	3,  // 30: settings.v1.SettingsService.DeleteProfile:input_type -> settings.v1.DeleteProfileRequest
-	9,  // 31: settings.v1.SettingsService.ListProfiles:input_type -> settings.v1.ListProfilesRequest
-	11, // 32: settings.v1.SettingsService.GetEffectiveSettings:input_type -> settings.v1.GetEffectiveSettingsRequest
-	13, // 33: settings.v1.SettingsService.GetSettingsSchema:input_type -> settings.v1.GetSettingsSchemaRequest
-	15, // 34: settings.v1.SettingsService.SetDefaultProfile:input_type -> settings.v1.SetDefaultProfileRequest
-	5,  // 35: settings.v1.SettingsService.CreateProfile:output_type -> settings.v1.CreateProfileResponse
-	6,  // 36: settings.v1.SettingsService.GetProfile:output_type -> settings.v1.GetProfileResponse
-	7,  // 37: settings.v1.SettingsService.UpdateProfile:output_type -> settings.v1.UpdateProfileResponse
-	4,  // 38: settings.v1.SettingsService.DeleteProfile:output_type -> settings.v1.DeleteProfileResponse
-	10, // 39: settings.v1.SettingsService.ListProfiles:output_type -> settings.v1.ListProfilesResponse
-	12, // 40: settings.v1.SettingsService.GetEffectiveSettings:output_type -> settings.v1.GetEffectiveSettingsResponse
-	14, // 41: settings.v1.SettingsService.GetSettingsSchema:output_type -> settings.v1.GetSettingsSchemaResponse
-	8,  // 42: settings.v1.SettingsService.SetDefaultProfile:output_type -> settings.v1.SetDefaultProfileResponse
-	35, // [35:43] is the sub-list for method output_type
-	27, // [27:35] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	20, // 1: settings.v1.CreateProfileRequest.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
+	21, // 2: settings.v1.CreateProfileRequest.notifications:type_name -> settings.v1.NotificationsSettings
+	19, // 3: settings.v1.CreateProfileRequest.scheduling:type_name -> settings.v1.SchedulingSettings
+	18, // 4: settings.v1.UpdateProfileRequest.appearance:type_name -> settings.v1.AppearanceSettings
+	20, // 5: settings.v1.UpdateProfileRequest.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
+	21, // 6: settings.v1.UpdateProfileRequest.notifications:type_name -> settings.v1.NotificationsSettings
+	19, // 7: settings.v1.UpdateProfileRequest.scheduling:type_name -> settings.v1.SchedulingSettings
+	16, // 8: settings.v1.CreateProfileResponse.profile:type_name -> settings.v1.SettingsProfile
+	16, // 9: settings.v1.GetProfileResponse.profile:type_name -> settings.v1.SettingsProfile
+	16, // 10: settings.v1.UpdateProfileResponse.profile:type_name -> settings.v1.SettingsProfile
+	16, // 11: settings.v1.SetDefaultProfileResponse.profile:type_name -> settings.v1.SettingsProfile
+	16, // 12: settings.v1.ListProfilesResponse.profiles:type_name -> settings.v1.SettingsProfile
+	16, // 13: settings.v1.GetEffectiveSettingsResponse.profile:type_name -> settings.v1.SettingsProfile
+	17, // 14: settings.v1.GetEffectiveSettingsResponse.effective_settings:type_name -> settings.v1.EffectiveSettings
+	18, // 15: settings.v1.GetSettingsSchemaResponse.appearance_defaults:type_name -> settings.v1.AppearanceSettings
+	20, // 16: settings.v1.GetSettingsSchemaResponse.keyboard_shortcuts_defaults:type_name -> settings.v1.KeyboardShortcutsSettings
+	21, // 17: settings.v1.GetSettingsSchemaResponse.notifications_defaults:type_name -> settings.v1.NotificationsSettings
+	19, // 18: settings.v1.GetSettingsSchemaResponse.scheduling_defaults:type_name -> settings.v1.SchedulingSettings
+	18, // 19: settings.v1.SettingsProfile.appearance:type_name -> settings.v1.AppearanceSettings
+	20, // 20: settings.v1.SettingsProfile.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
+	21, // 21: settings.v1.SettingsProfile.notifications:type_name -> settings.v1.NotificationsSettings
+	25, // 22: settings.v1.SettingsProfile.created_at:type_name -> google.protobuf.Timestamp
+	25, // 23: settings.v1.SettingsProfile.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 24: settings.v1.SettingsProfile.scheduling:type_name -> settings.v1.SchedulingSettings
+	18, // 25: settings.v1.EffectiveSettings.appearance:type_name -> settings.v1.AppearanceSettings
+	20, // 26: settings.v1.EffectiveSettings.keyboard_shortcuts:type_name -> settings.v1.KeyboardShortcutsSettings
+	21, // 27: settings.v1.EffectiveSettings.notifications:type_name -> settings.v1.NotificationsSettings
+	19, // 28: settings.v1.EffectiveSettings.scheduling:type_name -> settings.v1.SchedulingSettings
+	23, // 29: settings.v1.KeyboardShortcutsSettings.bindings:type_name -> settings.v1.KeyboardShortcutsSettings.BindingsEntry
+	24, // 30: settings.v1.NotificationsSettings.channel_overrides:type_name -> settings.v1.NotificationsSettings.ChannelOverridesEntry
+	22, // 31: settings.v1.NotificationsSettings.ChannelOverridesEntry.value:type_name -> settings.v1.NotificationChannelPreference
+	0,  // 32: settings.v1.SettingsService.CreateProfile:input_type -> settings.v1.CreateProfileRequest
+	1,  // 33: settings.v1.SettingsService.GetProfile:input_type -> settings.v1.GetProfileRequest
+	2,  // 34: settings.v1.SettingsService.UpdateProfile:input_type -> settings.v1.UpdateProfileRequest
+	3,  // 35: settings.v1.SettingsService.DeleteProfile:input_type -> settings.v1.DeleteProfileRequest
+	9,  // 36: settings.v1.SettingsService.ListProfiles:input_type -> settings.v1.ListProfilesRequest
+	11, // 37: settings.v1.SettingsService.GetEffectiveSettings:input_type -> settings.v1.GetEffectiveSettingsRequest
+	13, // 38: settings.v1.SettingsService.GetSettingsSchema:input_type -> settings.v1.GetSettingsSchemaRequest
+	15, // 39: settings.v1.SettingsService.SetDefaultProfile:input_type -> settings.v1.SetDefaultProfileRequest
+	5,  // 40: settings.v1.SettingsService.CreateProfile:output_type -> settings.v1.CreateProfileResponse
+	6,  // 41: settings.v1.SettingsService.GetProfile:output_type -> settings.v1.GetProfileResponse
+	7,  // 42: settings.v1.SettingsService.UpdateProfile:output_type -> settings.v1.UpdateProfileResponse
+	4,  // 43: settings.v1.SettingsService.DeleteProfile:output_type -> settings.v1.DeleteProfileResponse
+	10, // 44: settings.v1.SettingsService.ListProfiles:output_type -> settings.v1.ListProfilesResponse
+	12, // 45: settings.v1.SettingsService.GetEffectiveSettings:output_type -> settings.v1.GetEffectiveSettingsResponse
+	14, // 46: settings.v1.SettingsService.GetSettingsSchema:output_type -> settings.v1.GetSettingsSchemaResponse
+	8,  // 47: settings.v1.SettingsService.SetDefaultProfile:output_type -> settings.v1.SetDefaultProfileResponse
+	40, // [40:48] is the sub-list for method output_type
+	32, // [32:40] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_settings_v1_settings_proto_init() }
@@ -1682,15 +1818,16 @@ func file_settings_v1_settings_proto_init() {
 	file_settings_v1_settings_proto_msgTypes[2].OneofWrappers = []any{}
 	file_settings_v1_settings_proto_msgTypes[11].OneofWrappers = []any{}
 	file_settings_v1_settings_proto_msgTypes[18].OneofWrappers = []any{}
-	file_settings_v1_settings_proto_msgTypes[20].OneofWrappers = []any{}
+	file_settings_v1_settings_proto_msgTypes[19].OneofWrappers = []any{}
 	file_settings_v1_settings_proto_msgTypes[21].OneofWrappers = []any{}
+	file_settings_v1_settings_proto_msgTypes[22].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_settings_v1_settings_proto_rawDesc), len(file_settings_v1_settings_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   24,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

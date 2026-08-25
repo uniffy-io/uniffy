@@ -79,7 +79,7 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
 
   return (
     <div className="space-y-3">
-      {currentUserAttendee && (
+      {currentUserAttendee && event.status !== "cancelled" && (
         <div>
           <SectionLabel>Your Response</SectionLabel>
           <div className="flex items-center gap-1.5">
@@ -191,7 +191,14 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
                   {attendee.role === "organizer" ? (
                     <span className="text-xs text-muted-foreground">Organizer</span>
                   ) : (
-                    <AttendeeStatusLabel status={attendee.status} />
+                    <span className="inline-flex items-center gap-2">
+                      {attendee.role === "optional" && (
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          Optional
+                        </span>
+                      )}
+                      <AttendeeStatusLabel status={attendee.status} />
+                    </span>
                   )}
                 </div>
               );

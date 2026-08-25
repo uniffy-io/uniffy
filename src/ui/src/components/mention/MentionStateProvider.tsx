@@ -87,6 +87,7 @@ export function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLive
       state.eventLocation = meta.eventLocation || undefined;
       state.eventMeetingUrl = meta.eventMeetingUrl || undefined;
       state.eventChannelId = meta.eventChannelId || undefined;
+      state.eventStatus = meta.eventStatus || m.event_status || undefined;
       break;
 
     case UrnType.FILE:
@@ -295,6 +296,9 @@ export function streamChangesToLiveState(
         break;
       case "meeting_url":
         patch.eventMeetingUrl = value || undefined;
+        break;
+      case "event_status":
+        patch.eventStatus = value || undefined;
         break;
 
       // FILE

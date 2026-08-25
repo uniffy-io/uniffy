@@ -3,6 +3,9 @@ import { useAppDispatch } from "@/app/hooks";
 import { updateEvent } from "@/features/calendar/store/calendarThunks";
 import type {
   CalendarEvent,
+  EventStatus,
+  EventTransparency,
+  EventVisibility,
   RecurrenceConfig,
   RecurrenceEditScope,
 } from "@/features/calendar/types";
@@ -26,6 +29,10 @@ export interface EventPatch {
   tagIds?: string[];
   reminders?: number[];
   roomId?: string;
+  status?: EventStatus;
+  visibility?: EventVisibility;
+  transparency?: EventTransparency;
+  isOutOfOffice?: boolean;
 }
 
 /**
@@ -45,6 +52,9 @@ const OCCURRENCE_SCOPABLE_FIELDS: (keyof EventPatch)[] = [
   "meetingUrl",
   "categoryId",
   "isFocusTime",
+  // Cancelling one occurrence materializes an override row that stays
+  // visible struck-through; visibility/transparency/OOO stay series-level.
+  "status",
 ];
 
 function isMasterOnly(patch: EventPatch): boolean {

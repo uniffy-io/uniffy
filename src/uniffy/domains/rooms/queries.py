@@ -10,6 +10,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.models.shared import BookingStatus, RoomStatus, RoomType
+from uniffy.domains.calendar.availability import merge_intervals
 
 
 async def check_booking_conflict(
@@ -45,6 +46,27 @@ async def check_booking_conflict(
 
     result = await session.execute(query)
     return bool(result.scalar())
+
+
+async def get_room_busy_intervals(
+    session: AsyncSession,
+    organization_id: UUID,
+    room_id: UUID,
+    range_start: datetime,
+    range_end: datetime,
+) -> list[tuple[datetime, datetime]]:
+    """Merged (start, end) spans of confirmed bookings - no titles, no bookers."""
+    result = await session.execute(
+        select(RoomBooking.start_time, RoomBooking.end_time).where(
+            RoomBooking.room_id == room_id,
+            RoomBooking.organization_id == organization_id,
+            RoomBooking.status == BookingStatus.CONFIRMED,
+            RoomBooking.start_time < range_end,
+            RoomBooking.end_time > range_start,
+        )
+    )
+    intervals = [(max(start, range_start), min(end, range_end)) for start, end in result.all()]
+    return merge_intervals(intervals)
 
 
 async def get_room_bookings_in_range(

@@ -42,6 +42,8 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
     ListEventTemplatesResponse,
     RemoveAttendeesRequest,
     RemoveAttendeesResponse,
+    UpdateAttendeeRoleRequest,
+    UpdateAttendeeRoleResponse,
     UpdateAttendeeStatusRequest,
     UpdateAttendeeStatusResponse,
     UpdateCategoryRequest,
@@ -72,7 +74,10 @@ from uniffy.domains.calendar.converters import (
     attendee_role_from_proto,
     attendee_status_from_proto,
     category_to_proto,
+    event_status_from_proto,
     event_to_proto,
+    event_transparency_from_proto,
+    event_visibility_from_proto,
     recurrence_config_from_proto,
     recurrence_edit_scope_from_proto,
     recurrence_from_proto,
@@ -82,6 +87,7 @@ from uniffy.domains.calendar.operations import (
     CalendarEventOperations,
     CategoryOperations,
     EventTemplateOperations,
+    event_details_hidden,
 )
 from uniffy.domains.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
 from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
@@ -224,6 +230,17 @@ class CalendarHandlers:
         if request.attendee_ids:
             attendee_ids = [_parse_uuid(aid, "attendee_id") for aid in request.attendee_ids]
 
+        attendee_roles = None
+        if request.attendees:
+            attendee_roles = {}
+            merged_ids = list(attendee_ids or [])
+            for entry in request.attendees:
+                entry_id = _parse_uuid(entry.user_id, "attendee_id")
+                attendee_roles[entry_id] = attendee_role_from_proto(entry.role)
+                if entry_id not in merged_ids:
+                    merged_ids.append(entry_id)
+            attendee_ids = merged_ids
+
         linked_resources = None
         if request.linked_resource_urns:
             linked_resources = [
@@ -269,6 +286,7 @@ class CalendarHandlers:
                     meeting_url=request.meeting_url if request.HasField("meeting_url") else None,
                     category_id=category_id,
                     attendee_ids=attendee_ids,
+                    attendee_roles=attendee_roles,
                     recurrence_pattern=recurrence_pattern,
                     recurrence_config=recurrence_config,
                     is_focus_time=request.is_focus_time,
@@ -278,6 +296,10 @@ class CalendarHandlers:
                     room_id=room_id,
                     channel_id=channel_id,
                     channel_auto_created=request.channel_auto_created,
+                    status=event_status_from_proto(request.status),
+                    visibility=event_visibility_from_proto(request.visibility),
+                    transparency=event_transparency_from_proto(request.transparency),
+                    is_out_of_office=request.is_out_of_office,
                 )
 
                 attendees = await queries.get_event_attendees(session, event.id)
@@ -318,6 +340,7 @@ class CalendarHandlers:
                 )
                 room_info = await self._get_event_room_info(session, event_id)
                 tags_by_urn = await _hydrate_event_tags(session, organization_id, [event.id])
+                user_role = await ops._resolve_role(user_id, organization_id, event)
                 return GetEventResponse(
                     event=event_to_proto(
                         event,
@@ -326,7 +349,13 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
-                        user_role=await ops._resolve_role(user_id, organization_id, event),
+                        user_role=user_role,
+                        details_hidden=event_details_hidden(
+                            event,
+                            user_id,
+                            user_role,
+                            any(att.user_id == user_id for att, _ in attendees),
+                        ),
                         **room_info,
                     )
                 )
@@ -405,6 +434,14 @@ class CalendarHandlers:
             kwargs["channel_id"] = request.channel_id
         if request.HasField("channel_auto_created"):
             kwargs["channel_auto_created"] = request.channel_auto_created
+        if request.HasField("status"):
+            kwargs["status"] = event_status_from_proto(request.status)
+        if request.HasField("visibility"):
+            kwargs["visibility"] = event_visibility_from_proto(request.visibility)
+        if request.HasField("transparency"):
+            kwargs["transparency"] = event_transparency_from_proto(request.transparency)
+        if request.HasField("is_out_of_office"):
+            kwargs["is_out_of_office"] = request.is_out_of_office
 
         try:
             async with open_session() as session:
@@ -538,6 +575,7 @@ class CalendarHandlers:
                 for event in events:
                     attendees = await queries.get_event_attendees(session, event.id)
                     room_info = await self._get_event_room_info(session, event.id)
+                    user_role = decisions[ResourceKey(ContentType.CALENDAR_EVENT, event.id)].role
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -546,9 +584,13 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                                 [],
                             ),
-                            user_role=decisions[
-                                ResourceKey(ContentType.CALENDAR_EVENT, event.id)
-                            ].role,
+                            user_role=user_role,
+                            details_hidden=event_details_hidden(
+                                event,
+                                user_id,
+                                user_role,
+                                any(att.user_id == user_id for att, _ in attendees),
+                            ),
                             **room_info,
                         )
                     )
@@ -622,6 +664,7 @@ class CalendarHandlers:
                             session,
                             real_id,
                         )
+                    user_role = decisions[ResourceKey(ContentType.CALENDAR_EVENT, real_id)].role
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -630,9 +673,15 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, real_id),
                                 [],
                             ),
-                            user_role=decisions[
-                                ResourceKey(ContentType.CALENDAR_EVENT, real_id)
-                            ].role,
+                            user_role=user_role,
+                            details_hidden=event_details_hidden(
+                                event,
+                                user_id,
+                                user_role,
+                                any(
+                                    att.user_id == user_id for att, _ in attendees_cache[real_id_str]
+                                ),
+                            ),
                             **room_info_cache[real_id_str],
                         )
                     )
@@ -787,6 +836,44 @@ class CalendarHandlers:
             raise
         except Exception as exc:
             raise _map_domain_error("update_attendee_status", exc) from exc
+
+    async def update_attendee_role(
+        self,
+        request: UpdateAttendeeRoleRequest,
+        ctx: RequestContext,
+    ) -> UpdateAttendeeRoleResponse:
+        """Flip an attendee between required and optional."""
+        user_id = get_user_id_from_context(ctx)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
+        event_id = _parse_event_id(request.event_id)
+        target_user_id = _parse_uuid(request.user_id, "user_id")
+
+        try:
+            async with open_session() as session:
+                ops = CalendarEventOperations(session)
+                event = await ops.update_attendee_role(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    event_id=event_id,
+                    target_user_id=target_user_id,
+                    role=attendee_role_from_proto(request.role),
+                )
+                attendees = await queries.get_event_attendees(session, event.id)
+                tags_by_urn = await _hydrate_event_tags(session, organization_id, [event.id])
+                return UpdateAttendeeRoleResponse(
+                    event=event_to_proto(
+                        event,
+                        attendees,
+                        tags=tags_by_urn.get(
+                            build_content_urn(ContentType.CALENDAR_EVENT, event.id), []
+                        ),
+                        user_role=await ops._resolve_role(user_id, organization_id, event),
+                    )
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("update_attendee_role", exc) from exc
 
     async def add_attendees(
         self,

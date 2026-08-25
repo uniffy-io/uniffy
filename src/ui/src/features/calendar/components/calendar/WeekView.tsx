@@ -12,6 +12,7 @@ import { GridLines } from "@/features/calendar/components/calendar/GridLines";
 import { CurrentTimeIndicator } from "@/features/calendar/components/calendar/CurrentTimeIndicator";
 import { EventBlock } from "@/features/calendar/components/calendar/EventBlock";
 import { GRID, LAYOUT, ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
+import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { positionAllDayEvents } from "@/features/calendar/utils/eventPositioning";
 import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
 import { cn } from "@/shared/utils/cn";
@@ -286,6 +287,7 @@ export function WeekView() {
                   const category = event.categoryId ? categories[event.categoryId] : null;
                   const color = category?.color ?? ACCENT_EVENT_COLOR;
                   const isSelected = selectedEventId === event.id;
+                  const display = eventDisplayState(event);
 
                   return (
                     <button
@@ -295,19 +297,22 @@ export function WeekView() {
                         "absolute text-left text-xs truncate px-2 py-0.5 rounded transition-colors",
                         "hover:brightness-90",
                         isSelected && "ring-2 ring-primary",
+                        display.cancelled && "line-through opacity-50",
+                        display.tentative && "opacity-60",
                       )}
                       style={{
                         left: `${(adjustedStart / columnCount) * 100}%`,
                         width: `${(adjustedSpan / columnCount) * 100 - 0.5}%`,
                         top: row * allDayRowHeight + 3,
                         height: allDayRowHeight - 4,
-                        backgroundColor: eventTint(color, 12),
+                        backgroundColor: eventTint(color, display.free ? 6 : 12),
                         color: color,
                         borderLeft: `3px solid ${color}`,
+                        borderLeftStyle: display.outOfOffice ? "dashed" : "solid",
                       }}
-                      title={event.title}
+                      title={display.title}
                     >
-                      {event.title}
+                      {display.title}
                     </button>
                   );
                 })}

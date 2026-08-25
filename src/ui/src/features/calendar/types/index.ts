@@ -8,6 +8,9 @@ export type {
   DayOfWeek,
   LinkedResource,
   ResourceType,
+  EventStatus,
+  EventVisibility,
+  EventTransparency,
 } from "@/features/calendar/types/event";
 
 export type {

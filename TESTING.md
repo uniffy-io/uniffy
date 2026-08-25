@@ -417,6 +417,83 @@ follows the browser. All backend storage stays UTC regardless of the choice.
       stack; permission grant expiries, audit export windows and chat mutes
       behave identically to a UTC host. (both products)
 
+## Calendar event states and privacy
+
+Event status (confirmed/tentative/cancelled), private events, free/busy
+transparency, and out of office. Needs the organizer (A), an attendee (B),
+and a member who is neither but holds a VIEWER share grant on the event (C -
+grant via the event's Share dialog). (both products)
+
+- [ ] A marks an event tentative: the grid chip fades for everyone; the detail modal shows the
+      Tentative state; the mention card shows a "Tentative" badge.
+- [ ] A cancels an event (Status -> Cancelled): it stays on every calendar struck through and
+      faded, the detail modal shows a "Cancelled" badge, and B receives a CALENDAR_CANCELLED
+      notification (in-app toast + email with mailcatcher). A does not receive one.
+- [ ] The cancelled event stops blocking time: the conflict warning disappears from an
+      overlapping draft in the quick-create modal, and the agent tool `calendar.get_free_busy`
+      no longer returns its interval.
+- [ ] B opens the cancelled event: the RSVP buttons are gone; `UpdateAttendeeStatus` via the
+      notification inline buttons returns "Cannot respond to a cancelled event".
+- [ ] Un-cancelling (Status -> Confirmed) restores reminders for non-declined attendees
+      (check `calendar_event_reminders` rows in `db shell`).
+- [ ] Recurring: cancel a single occurrence with scope "this event" - only that occurrence
+      renders struck through; the rest of the series is untouched; B is notified with the
+      occurrence date in the title.
+- [ ] A marks an event "Free": it renders lighter on the grid, raises no conflict warnings,
+      and never appears busy in free/busy answers.
+- [ ] A creates an out-of-office period: it renders with the hatch + airplane treatment on the
+      grid and blocks time even when all-day.
+
+**Private event leaks nothing on every surface.** A creates "Dentist" as Private with a
+location, description, attendees (B), and a booked room, then C is granted VIEWER via Share.
+
+- [ ] C's calendar grid shows only "Busy" at the right time - no title, location, or category
+      color anywhere (week, day, month, agenda, today panel, dashboard agenda).
+- [ ] C deep-links `/calendar/<event-id>`: the modal shows "Busy", the time range, and a
+      privacy note - no description, attendees, activity log, or referenced content. The
+      `GetEvent` response carries `details_hidden=true` and empty title/location/meeting
+      fields (verify in devtools).
+- [ ] C searches "Dentist": no hit. A and B still find it by title.
+- [ ] A message containing an `@`-mention of the event: C's chip resolves without title,
+      location, or meeting URL in the `ResolveUrns` response; A retitles the event and C's
+      open chip receives no title patch.
+- [ ] C opens the booked room's schedule: the busy slot shows no event title.
+- [ ] C asks an agent to list their calendar for that day: the tool output reads
+      "Busy ... [private]" with no title. `ListEventActivities` as C returns permission denied.
+- [ ] B (attendee) still sees every detail on all of the above surfaces; so does A.
+- [ ] Known limit: a mention typed by A while the title was visible keeps that label inside
+      the author's own Markdown - flipping the event private later redacts chips and previews,
+      not other people's stored text.
+
+## Calendar scheduling assistant
+
+Needs an organizer (A) and two attendees (B, C) in three timezones: set A's timezone
+preference to UTC, B's to Europe/Sofia, C's to America/New_York (Settings > Appearance >
+Date & time), and give B custom working hours (Settings > Appearance > Working hours).
+(both products)
+
+- [ ] Working hours round trip: B sets 10:00-16:00 and drops Friday; reloading Settings
+      shows the saved values; A's suggestion results change accordingly.
+- [ ] A creates an event, adds B and C, opens "Find a time": the grid shows one row per
+      person, non-working time dimmed per each person's own clock, an "Everyone required"
+      row, and each row's label carries the person's zone and current local time.
+- [ ] Suggested times all fall inside every attendee's working hours in their own timezone
+      (with the three zones above, slots cluster in the shared afternoon-UTC overlap).
+- [ ] A busy event on B's calendar blocks that span in B's row and pushes suggestions.
+- [ ] A private event on B's calendar contributes a busy block that reveals no title
+      anywhere in the panel (devtools: `GetFreeBusy` carries only intervals).
+- [ ] A "Free (doesn't block time)" event does not appear as busy; a cancelled one neither.
+- [ ] An out-of-office period renders hatched and no suggestion overlaps it.
+- [ ] Pick a room on the event: the grid gains a room row; book the room from another
+      account for a slot and confirm no suggestion proposes it.
+- [ ] Toggle C to Optional on their grid row: suggestions may now overlap C's busy time but
+      list "Without C"; C's row in the people section shows the Optional tag.
+- [ ] "Use this time" sets the event's start and end in one action (on a recurring event the
+      scope dialog appears first).
+- [ ] Add more than 20 attendees: the panel shows the inline cap message, no red toast.
+- [ ] Ask an agent to find a meeting time for A+B+C without naming hours: the suggestions
+      respect each person's saved working hours; passing explicit hours overrides them.
+
 ## Chat synced drafts
 
 Unsent composer text syncs across devices per channel and per thread. Needs one user logged in

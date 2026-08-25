@@ -81,6 +81,7 @@ class TestMetadataKeyAllowlist:
             "sender_id",
             "project_id",
             "folder_id",
+            "visibility",
         } == FILTERABLE_METADATA_KEYS
 
 
@@ -106,7 +107,15 @@ class TestChatMessagePermissions:
         filter_expr = client._build_permission_filter(generate_id(), caller)
 
         assert f'(entity_type != "chat_message" AND owner_id = "{caller}")' in filter_expr
-        assert f' OR owner_id = "{caller}"' not in filter_expr
+        # The private-event clause is AND-ed onto the base, so its owner_id
+        # disjunct can only restrict, never grant; strip it before asserting
+        # no grant path exists via bare ownership.
+        privacy_clause = (
+            f'(NOT metadata.visibility = "PRIVATE" OR owner_id = "{caller}"'
+            f' OR attendee_user_ids = "{caller}")'
+        )
+        assert privacy_clause in filter_expr
+        assert f' OR owner_id = "{caller}"' not in filter_expr.replace(privacy_clause, "")
 
 
 class TestTaskSharingRefresh:

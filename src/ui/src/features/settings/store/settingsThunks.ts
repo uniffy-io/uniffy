@@ -6,6 +6,7 @@ import type {
   AppearanceSettings,
   KeyboardShortcutsSettings,
   NotificationsSettings,
+  SchedulingSettings,
 } from "@uniffy/proto/settings/v1/settings_pb";
 
 const appearanceToPlain = (appearance?: AppearanceSettings) => {
@@ -22,6 +23,17 @@ const appearanceToPlain = (appearance?: AppearanceSettings) => {
     markdownShowLineNumbers: appearance.markdownShowLineNumbers,
     timezone: appearance.timezone || undefined,
     weekStart: appearance.weekStart || undefined,
+  };
+};
+
+const DEFAULT_WORKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+
+const schedulingToPlain = (scheduling?: SchedulingSettings) => {
+  if (!scheduling) return undefined;
+  return {
+    workdayStart: scheduling.workdayStart || undefined,
+    workdayEnd: scheduling.workdayEnd || undefined,
+    workdays: scheduling.workdays?.length ? [...scheduling.workdays] : DEFAULT_WORKDAYS,
   };
 };
 
@@ -93,6 +105,11 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
     defaultReminderIntervals: [15],
     toastEnabled: false,
   },
+  scheduling: schedulingToPlain(settings.scheduling) ?? {
+    workdayStart: "09:00",
+    workdayEnd: "18:00",
+    workdays: DEFAULT_WORKDAYS,
+  },
 });
 
 export type SerializedEffectiveSettings = ReturnType<typeof effectiveSettingsToPlain>;
@@ -101,6 +118,7 @@ export interface SettingsUpdates {
   appearance?: Partial<SerializedEffectiveSettings["appearance"]>;
   keyboardShortcuts?: Partial<SerializedEffectiveSettings["keyboardShortcuts"]>;
   notifications?: Partial<SerializedEffectiveSettings["notifications"]>;
+  scheduling?: Partial<SerializedEffectiveSettings["scheduling"]>;
 }
 
 export const fetchEffectiveSettings = createAsyncThunk<
@@ -144,6 +162,7 @@ export const updateSettings = createAsyncThunk<
           }
         : undefined,
       notifications: updates.notifications,
+      scheduling: updates.scheduling,
     });
 
     if (!response.profile) {

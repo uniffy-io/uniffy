@@ -85,6 +85,28 @@ enum RecurrenceEditScope {
   RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING = 3;
 }
 
+// Lifecycle status of an event; cancelled events stay visible
+enum EventStatus {
+  EVENT_STATUS_UNSPECIFIED = 0;
+  EVENT_STATUS_CONFIRMED = 1;
+  EVENT_STATUS_TENTATIVE = 2;
+  EVENT_STATUS_CANCELLED = 3;
+}
+
+// Detail visibility to viewers who are not the organizer or an attendee
+enum EventVisibility {
+  EVENT_VISIBILITY_UNSPECIFIED = 0;
+  EVENT_VISIBILITY_STANDARD = 1;
+  EVENT_VISIBILITY_PRIVATE = 2;
+}
+
+// Whether the event blocks the attendee's time in free/busy answers
+enum EventTransparency {
+  EVENT_TRANSPARENCY_UNSPECIFIED = 0;
+  EVENT_TRANSPARENCY_OPAQUE = 1;
+  EVENT_TRANSPARENCY_TRANSPARENT = 2;
+}
+
 // Service Definition
 
 // CalendarService provides calendar and event management functionality
@@ -134,8 +156,21 @@ service CalendarService {
   // Add attendees to an event
   rpc AddAttendees(AddAttendeesRequest) returns (AddAttendeesResponse) {}
 
+  // Change an existing attendee between required and optional
+  rpc UpdateAttendeeRole(UpdateAttendeeRoleRequest) returns (UpdateAttendeeRoleResponse) {}
+
   // Remove attendees from an event
   rpc RemoveAttendees(RemoveAttendeesRequest) returns (RemoveAttendeesResponse) {}
+
+  // === Scheduling Operations ===
+
+  // Per-user busy intervals for the availability grid. Returns only
+  // (start, end, out_of_office) spans - never titles or details.
+  rpc GetFreeBusy(GetFreeBusyRequest) returns (GetFreeBusyResponse) {}
+
+  // Meeting-time suggestions honoring every required attendee's working
+  // hours and timezone, ranked by optional-attendee availability.
+  rpc SuggestMeetingTimes(SuggestMeetingTimesRequest) returns (SuggestMeetingTimesResponse) {}
 
   // === Activity Operations ===
 
@@ -233,6 +268,18 @@ message CalendarEvent {
   // Caller's effective role on this event, so the client can render read-only
   // affordances instead of controls every write would reject.
   common.v1.ContentRole user_role = 37;
+  // Lifecycle status; cancelled events render struck through and stop blocking time
+  EventStatus status = 38;
+  // Detail visibility; PRIVATE events are redacted for non-privileged viewers
+  EventVisibility visibility = 39;
+  // Free/busy transparency; TRANSPARENT events never count as busy
+  EventTransparency transparency = 40;
+  // Out-of-office period, rendered distinctly on every surface
+  bool is_out_of_office = 41;
+  // True when the server redacted this payload for the caller (private event,
+  // caller is not organizer/attendee/editor): title, description, location,
+  // meeting, channel, category, and attendees are stripped.
+  bool details_hidden = 42;
 }
 
 // Event attendee
@@ -328,6 +375,23 @@ message CreateEventRequest {
   optional string channel_id = 21;
   // Set when channel_id points at a room auto-created for this event.
   optional bool channel_auto_created = 22;
+  // Lifecycle status (UNSPECIFIED defaults to CONFIRMED)
+  EventStatus status = 23;
+  // Detail visibility (UNSPECIFIED defaults to STANDARD)
+  EventVisibility visibility = 24;
+  // Free/busy transparency (UNSPECIFIED lets the server default: all-day
+  // non-out-of-office events are TRANSPARENT, everything else OPAQUE)
+  EventTransparency transparency = 25;
+  // Marks the event as an out-of-office period
+  bool is_out_of_office = 26;
+  // Attendees with explicit roles; merged with attendee_ids (which imply REQUIRED)
+  repeated AttendeeInput attendees = 27;
+}
+
+// An attendee to invite, with the role to invite them under
+message AttendeeInput {
+  string user_id = 1;
+  AttendeeRole role = 2;
 }
 
 // Request to get an event
@@ -389,6 +453,14 @@ message UpdateEventRequest {
   // Marks the bound channel as a room auto-created for this event. Sent
   // alongside a new channel_id; unset leaves the flag untouched.
   optional bool channel_auto_created = 25;
+  // Updated lifecycle status; unset leaves it untouched
+  optional EventStatus status = 26;
+  // Updated detail visibility; unset leaves it untouched
+  optional EventVisibility visibility = 27;
+  // Updated free/busy transparency; unset leaves it untouched
+  optional EventTransparency transparency = 28;
+  // Updated out-of-office flag; unset leaves it untouched
+  optional bool is_out_of_office = 29;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
@@ -435,6 +507,23 @@ message UpdateEventResponse {
 
 // Response containing an event (AddAttendees)
 message AddAttendeesResponse {
+  CalendarEvent event = 1;
+}
+
+// Request to change an attendee's role (REQUIRED <-> OPTIONAL only)
+message UpdateAttendeeRoleRequest {
+  // Event ID
+  string event_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // The attendee to change
+  string user_id = 3;
+  // The new role; ORGANIZER is not assignable
+  AttendeeRole role = 4;
+}
+
+// Response containing the event (UpdateAttendeeRole)
+message UpdateAttendeeRoleResponse {
   CalendarEvent event = 1;
 }
 
@@ -771,4 +860,68 @@ message ListEventTemplatesRequest {
 
 message ListEventTemplatesResponse {
   repeated EventTemplate templates = 1;
+}
+
+// Scheduling Messages
+
+// A blocked span in someone's calendar; no details beyond the kind
+message BusyInterval {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  // The span comes from an out-of-office event
+  bool is_out_of_office = 3;
+}
+
+// One user's availability facts for the grid
+message UserFreeBusy {
+  string user_id = 1;
+  repeated BusyInterval intervals = 2;
+  // IANA zone the working hours below are expressed in
+  string timezone = 3;
+  // Workday bounds on that user's own clock (24h HH:MM)
+  string workday_start = 4;
+  string workday_end = 5;
+  // Lowercase day names ("monday".."sunday")
+  repeated string workdays = 6;
+}
+
+message GetFreeBusyRequest {
+  string organization_id = 1;
+  // At most 20 users per query
+  repeated string user_ids = 2;
+  google.protobuf.Timestamp window_start = 3;
+  google.protobuf.Timestamp window_end = 4;
+  // Include this room's booked spans in the response
+  optional string room_id = 5;
+}
+
+message GetFreeBusyResponse {
+  repeated UserFreeBusy users = 1;
+  // Booked spans for the requested room, empty when no room_id was sent
+  repeated BusyInterval room_busy = 2;
+}
+
+message SuggestMeetingTimesRequest {
+  string organization_id = 1;
+  repeated string required_user_ids = 2;
+  repeated string optional_user_ids = 3;
+  google.protobuf.Timestamp window_start = 4;
+  google.protobuf.Timestamp window_end = 5;
+  // Meeting length in minutes (5-480)
+  int32 duration_minutes = 6;
+  // A suggestion never overlaps this room's confirmed bookings
+  optional string room_id = 7;
+  // 1-10, default 5
+  int32 max_results = 8;
+}
+
+message MeetingTimeSuggestion {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  // Optional attendees who cannot make this slot (busy or outside their hours)
+  repeated string unavailable_optional_user_ids = 3;
+}
+
+message SuggestMeetingTimesResponse {
+  repeated MeetingTimeSuggestion suggestions = 1;
 }
