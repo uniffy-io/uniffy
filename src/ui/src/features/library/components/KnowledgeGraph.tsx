@@ -1207,17 +1207,15 @@ export function KnowledgeGraph() {
             <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-1.5 text-xs text-muted-foreground">
               <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">Click</kbd>
               <span>{hoveredNode.id === focusId ? "to open" : "to focus"}</span>
-              {hoveredNode.id !== focusId &&
-                (hoveredNode.isInternal ||
-                  (hoveredNode.urn && urnToPath(hoveredNode.urn) !== "#")) && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">
-                      2×Click
-                    </kbd>
-                    <span>to open</span>
-                  </>
-                )}
+              {hoveredNode.id !== focusId && urnToPath(hoveredNode.urn) !== "#" && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">
+                    2×Click
+                  </kbd>
+                  <span>to open</span>
+                </>
+              )}
             </div>
           </div>
         )}

@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import type { Icon } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
-import type { FetchPriority } from "@/features/dashboard/hooks/useDashboardData";
+
+export type FetchPriority = 1 | 2 | 3;
 
 interface WidgetCardProps {
   title: string;
