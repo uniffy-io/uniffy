@@ -1,8 +1,30 @@
-# Uniffy
+<p align="center">
+  <img src="docs/brand/uniffy-symbol.png" alt="The Uniffy mark, a cube with violet, pink, orange, and green faces" width="140">
+</p>
 
-> **Teamwork. Simplified, amplified, unified.**  
+<h1 align="center">Uniffy</h1>
 
-A unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions. Fully private. No trackers, no advertising, no data harvesting, no training on your data.  OPT-IN AI Agents inside your work workspace configured and controlled by you. You choose the model, skills, permissions, and behavior. 
+<p align="center"><strong>Teamwork. Simplified, amplified, unified.</strong></p>
+
+<p align="center">
+  <a href="https://github.com/uniffy-io/uniffy/actions/workflows/test.yml"><img src="https://github.com/uniffy-io/uniffy/actions/workflows/test.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--Apache--2.0-694aff" alt="License: FSL-1.1-Apache-2.0"></a>
+  <a href="https://uniffy.io/docs/deployment/"><img src="https://img.shields.io/badge/self%20hosting-free%20and%20unlimited-01b77f" alt="Self hosting: free and unlimited"></a>
+  <a href="docs/TRANSPARENCY.md"><img src="https://img.shields.io/badge/telemetry-off%20by%20default-fd7eea" alt="Telemetry: off by default"></a>
+</p>
+
+<p align="center">
+  <a href="https://uniffy.io">Website</a> ·
+  <a href="https://uniffy.io/docs">Documentation</a> ·
+  <a href="SECURITY.md">Security</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+---
+
+One workspace for notes, files, chat, calls, calendar, and AI agents. Every piece of information can be referenced from anywhere with a universal `@` mention.
+
+Use it on our cloud or on your own hardware. Same code, same features, no user limit, no license keys. No trackers, no data harvesting, no training on your data. AI agents are opt in and yours to control: you choose the model, the skills, and the permissions.
 
 ## Table of Contents
 
@@ -22,18 +44,7 @@ A unified workspace where notes, files, chat, AI assistants, calendar, and workf
 
 ## Development
 
-### Prerequisites
-
-- Python 3.14+
-- Node.js 24+ with pnpm (>=9)
-- Docker and Docker Compose
-- [uv](https://github.com/astral-sh/uv) (Python package manager)
-- [buf](https://buf.build/) (Protocol Buffer compiler)
-- Go 1.26+ (optional, for CLI development and proto generation)
-
 ### Setup
-
-- Setup
 
 ```bash
 git clone git@github.com:uniffy-io/uniffy.git
@@ -41,7 +52,6 @@ cd uniffy
 cp .env.example .env
 # Set JWT_SECRET_KEY (generate with: openssl rand -hex 32)
 ```
-
 
 #### Start Developing
 

@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
     - name: Active security vulnerability (private disclosure)
-      url: mailto:admins@uniffy.io
-      about: Do not file exploitable vulnerabilities as public issues. Email instead.
+      url: mailto:security@uniffy.io
+      about: Do not file exploitable vulnerabilities as public issues. Email us, or use private vulnerability reporting from the Security tab. See SECURITY.md.
