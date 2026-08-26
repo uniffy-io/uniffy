@@ -6,6 +6,7 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChatBroadcastMinRole,
+    ChatEditHistoryVisibility,
     ChatPolicy,
     GetChatPolicyRequest,
     GetChatPolicyResponse,
@@ -18,6 +19,7 @@ from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.chat.policy import (
     BroadcastMinRole,
+    EditHistoryVisibility,
     ResolvedChatPolicy,
     get_chat_policy_view,
     update_chat_policy,
@@ -31,13 +33,27 @@ _MIN_ROLE_TO_PROTO = {
 }
 _MIN_ROLE_FROM_PROTO = {proto: role for role, proto in _MIN_ROLE_TO_PROTO.items()}
 
+_EDIT_HISTORY_TO_PROTO = {
+    EditHistoryVisibility.ADMINS: ChatEditHistoryVisibility.CHAT_EDIT_HISTORY_VISIBILITY_ADMINS,
+    EditHistoryVisibility.EVERYONE: (
+        ChatEditHistoryVisibility.CHAT_EDIT_HISTORY_VISIBILITY_EVERYONE
+    ),
+}
+_EDIT_HISTORY_FROM_PROTO = {proto: value for value, proto in _EDIT_HISTORY_TO_PROTO.items()}
+
 
 def _policy_to_proto(policy: ResolvedChatPolicy) -> ChatPolicy:
-    return ChatPolicy(
+    proto = ChatPolicy(
         organization_id=str(policy.organization_id),
         broadcast_min_role=_MIN_ROLE_TO_PROTO[policy.broadcast_min_role],
         broadcast_confirm_threshold=policy.broadcast_confirm_threshold,
+        edit_history_visible_to=_EDIT_HISTORY_TO_PROTO[policy.edit_history_visible_to],
+        agents_enabled=policy.agents_enabled,
     )
+    # An absent edit window means unlimited editing.
+    if policy.edit_window_minutes is not None:
+        proto.edit_window_minutes = policy.edit_window_minutes
+    return proto
 
 
 def _handle_error(e: Exception) -> None:
@@ -84,6 +100,12 @@ class ChatPolicyHandlers:
         min_role = _MIN_ROLE_FROM_PROTO.get(request.broadcast_min_role)
         if min_role is None:
             raise ConnectError(Code.INVALID_ARGUMENT, "broadcast_min_role is required")
+        edit_history_visible_to = _EDIT_HISTORY_FROM_PROTO.get(request.edit_history_visible_to)
+        if edit_history_visible_to is None:
+            raise ConnectError(Code.INVALID_ARGUMENT, "edit_history_visible_to is required")
+        edit_window_minutes = (
+            request.edit_window_minutes if request.HasField("edit_window_minutes") else None
+        )
 
         try:
             async with open_session() as session:
@@ -93,6 +115,9 @@ class ChatPolicyHandlers:
                     org_id,
                     broadcast_min_role=min_role,
                     broadcast_confirm_threshold=request.broadcast_confirm_threshold,
+                    edit_window_minutes=edit_window_minutes,
+                    edit_history_visible_to=edit_history_visible_to,
+                    agents_enabled=request.agents_enabled,
                 )
                 return UpdateChatPolicyResponse(policy=_policy_to_proto(policy))
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:

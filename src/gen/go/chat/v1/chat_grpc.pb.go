@@ -36,6 +36,7 @@ const (
 	ChatService_GetMessages_FullMethodName                      = "/chat.v1.ChatService/GetMessages"
 	ChatService_GetMessage_FullMethodName                       = "/chat.v1.ChatService/GetMessage"
 	ChatService_UpdateMessage_FullMethodName                    = "/chat.v1.ChatService/UpdateMessage"
+	ChatService_GetMessageRevisions_FullMethodName              = "/chat.v1.ChatService/GetMessageRevisions"
 	ChatService_DeleteMessage_FullMethodName                    = "/chat.v1.ChatService/DeleteMessage"
 	ChatService_PinMessage_FullMethodName                       = "/chat.v1.ChatService/PinMessage"
 	ChatService_UnpinMessage_FullMethodName                     = "/chat.v1.ChatService/UnpinMessage"
@@ -110,6 +111,9 @@ type ChatServiceClient interface {
 	GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (*GetMessagesResponse, error)
 	GetMessage(ctx context.Context, in *GetMessageRequest, opts ...grpc.CallOption) (*GetMessageResponse, error)
 	UpdateMessage(ctx context.Context, in *UpdateMessageRequest, opts ...grpc.CallOption) (*UpdateMessageResponse, error)
+	// Prior contents of an edited message. The sender always may read them;
+	// other viewers are gated by ChatPolicy.edit_history_visible_to.
+	GetMessageRevisions(ctx context.Context, in *GetMessageRevisionsRequest, opts ...grpc.CallOption) (*GetMessageRevisionsResponse, error)
 	DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*DeleteMessageResponse, error)
 	PinMessage(ctx context.Context, in *PinMessageRequest, opts ...grpc.CallOption) (*PinMessageResponse, error)
 	UnpinMessage(ctx context.Context, in *UnpinMessageRequest, opts ...grpc.CallOption) (*UnpinMessageResponse, error)
@@ -375,6 +379,16 @@ func (c *chatServiceClient) UpdateMessage(ctx context.Context, in *UpdateMessage
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateMessageResponse)
 	err := c.cc.Invoke(ctx, ChatService_UpdateMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) GetMessageRevisions(ctx context.Context, in *GetMessageRevisionsRequest, opts ...grpc.CallOption) (*GetMessageRevisionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMessageRevisionsResponse)
+	err := c.cc.Invoke(ctx, ChatService_GetMessageRevisions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -867,6 +881,9 @@ type ChatServiceServer interface {
 	GetMessages(context.Context, *GetMessagesRequest) (*GetMessagesResponse, error)
 	GetMessage(context.Context, *GetMessageRequest) (*GetMessageResponse, error)
 	UpdateMessage(context.Context, *UpdateMessageRequest) (*UpdateMessageResponse, error)
+	// Prior contents of an edited message. The sender always may read them;
+	// other viewers are gated by ChatPolicy.edit_history_visible_to.
+	GetMessageRevisions(context.Context, *GetMessageRevisionsRequest) (*GetMessageRevisionsResponse, error)
 	DeleteMessage(context.Context, *DeleteMessageRequest) (*DeleteMessageResponse, error)
 	PinMessage(context.Context, *PinMessageRequest) (*PinMessageResponse, error)
 	UnpinMessage(context.Context, *UnpinMessageRequest) (*UnpinMessageResponse, error)
@@ -1018,6 +1035,9 @@ func (UnimplementedChatServiceServer) GetMessage(context.Context, *GetMessageReq
 }
 func (UnimplementedChatServiceServer) UpdateMessage(context.Context, *UpdateMessageRequest) (*UpdateMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateMessage not implemented")
+}
+func (UnimplementedChatServiceServer) GetMessageRevisions(context.Context, *GetMessageRevisionsRequest) (*GetMessageRevisionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMessageRevisions not implemented")
 }
 func (UnimplementedChatServiceServer) DeleteMessage(context.Context, *DeleteMessageRequest) (*DeleteMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteMessage not implemented")
@@ -1480,6 +1500,24 @@ func _ChatService_UpdateMessage_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatServiceServer).UpdateMessage(ctx, req.(*UpdateMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_GetMessageRevisions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMessageRevisionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetMessageRevisions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_GetMessageRevisions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetMessageRevisions(ctx, req.(*GetMessageRevisionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2386,6 +2424,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateMessage",
 			Handler:    _ChatService_UpdateMessage_Handler,
+		},
+		{
+			MethodName: "GetMessageRevisions",
+			Handler:    _ChatService_GetMessageRevisions_Handler,
 		},
 		{
 			MethodName: "DeleteMessage",

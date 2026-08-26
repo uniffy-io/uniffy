@@ -25,7 +25,8 @@ import {
   createChannel,
   createAgentChat,
 } from "@/features/chat/store/chatThunks";
-import { selectAgentChats } from "@/features/chat/store/chatChannelsSlice";
+import { selectAgentChats, selectOrgChatPolicy } from "@/features/chat/store/chatChannelsSlice";
+import { MessageEditHistoryPopover } from "@/features/chat/components/channel/MessageEditHistoryPopover";
 import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
 import { navigateTo } from "@/shared/utils/navigation";
 import { setReplyToMessage, setEditingMessage } from "@/features/chat/store/chatUiSlice";
@@ -122,7 +123,37 @@ function MessageItemInner({
 
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showForwardDialog, setShowForwardDialog] = useState(false);
+  const [showEditHistory, setShowEditHistory] = useState(false);
   const addReactionRef = useRef<HTMLDivElement>(null);
+
+  const orgPolicy = useAppSelector(selectOrgChatPolicy);
+  const orgRole = useAppSelector((state) => state.auth.currentOrganizationRole);
+  const channelRole = useAppSelector(
+    (state) => state.chatChannels.byId[message.channelId]?.currentUserRole,
+  );
+
+  // The server enforces both gates; these only decide which affordances render.
+  // Called from the toolbar when its menu opens, so the clock read stays out
+  // of render and the window is re-checked on every open.
+  const isEditAllowed = useCallback(() => {
+    if (message.senderType !== "USER" || message.senderId !== currentUserId) return false;
+    const windowMinutes = orgPolicy?.editWindowMinutes;
+    if (windowMinutes === 0) return false;
+    // Unlimited window, or policy not loaded yet.
+    if (windowMinutes == null) return true;
+    return Date.now() - new Date(message.createdAt).getTime() < windowMinutes * 60_000;
+  }, [message.senderType, message.senderId, message.createdAt, currentUserId, orgPolicy]);
+
+  const isElevatedViewer =
+    orgRole === "OWNER" ||
+    orgRole === "ADMIN" ||
+    channelRole === "ADMIN" ||
+    channelRole === "OWNER";
+  const canViewEditHistory =
+    message.senderType === "USER" &&
+    (message.senderId === currentUserId ||
+      isElevatedViewer ||
+      orgPolicy?.editHistoryVisibleTo === "everyone");
 
   const [hoverCardVisible, setHoverCardVisible] = useState(false);
   const [hoverAnchor, setHoverAnchor] = useState({ top: 0, right: 0, bottom: 0, left: 0 });
@@ -364,6 +395,7 @@ function MessageItemInner({
         senderId={message.senderId}
         isPinned={message.isPinned}
         content={message.content}
+        isEditAllowed={isEditAllowed}
         onQuoteReply={handleQuoteReply}
         onEdit={handleStartEdit}
         onForward={handleForward}
@@ -506,11 +538,35 @@ function MessageItemInner({
               <MessageContent content={message.content} />
             )}
             {message.editedAt && (
-              <span
-                className="text-xs text-muted-foreground italic ml-1"
-                data-testid={`chat-message-edited-marker-${message.id}`}
-              >
-                (edited)
+              <span className="relative inline-block">
+                {canViewEditHistory ? (
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground italic ml-1 hover:text-foreground hover:underline cursor-pointer"
+                    title="View edit history"
+                    onClick={() => setShowEditHistory((prev) => !prev)}
+                    data-testid={`chat-message-edited-marker-${message.id}`}
+                  >
+                    (edited)
+                  </button>
+                ) : (
+                  <span
+                    className="text-xs text-muted-foreground italic ml-1"
+                    data-testid={`chat-message-edited-marker-${message.id}`}
+                  >
+                    (edited)
+                  </span>
+                )}
+                {showEditHistory && organizationId && (
+                  <MessageEditHistoryPopover
+                    organizationId={organizationId}
+                    channelId={message.channelId}
+                    messageId={message.id}
+                    currentContent={message.content}
+                    editedAt={message.editedAt}
+                    onClose={() => setShowEditHistory(false)}
+                  />
+                )}
               </span>
             )}
           </div>

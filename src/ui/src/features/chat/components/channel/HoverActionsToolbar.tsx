@@ -32,6 +32,8 @@ interface HoverActionsToolbarProps {
   senderId: string;
   isPinned: boolean;
   content: string;
+  /** Edit-window policy decision, evaluated when the menu opens; the server is the boundary. */
+  isEditAllowed?: () => boolean;
   onQuoteReply?: () => void;
   onEdit?: () => void;
   onForward?: () => void;
@@ -43,6 +45,7 @@ function HoverActionsToolbarInner({
   senderId,
   isPinned,
   content,
+  isEditAllowed,
   onQuoteReply,
   onEdit,
   onForward,
@@ -51,6 +54,7 @@ function HoverActionsToolbarInner({
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -234,7 +238,10 @@ function HoverActionsToolbarInner({
         <button
           className={buttonClass}
           title="More actions"
-          onClick={() => setShowMoreMenu((prev) => !prev)}
+          onClick={() => {
+            setCanEdit(isEditAllowed?.() ?? false);
+            setShowMoreMenu((prev) => !prev);
+          }}
           data-testid={`chat-message-more-button-${messageId}`}
           data-state={showMoreMenu ? "open" : "closed"}
         >
@@ -280,14 +287,16 @@ function HoverActionsToolbarInner({
             {isOwnMessage && (
               <>
                 <div className="my-1 border-t border-border" />
-                <button
-                  className={menuItemClass}
-                  onClick={handleEdit}
-                  data-testid={`chat-message-edit-button-${messageId}`}
-                >
-                  <Pencil size={14} />
-                  <span>Edit message</span>
-                </button>
+                {canEdit && (
+                  <button
+                    className={menuItemClass}
+                    onClick={handleEdit}
+                    data-testid={`chat-message-edit-button-${messageId}`}
+                  >
+                    <Pencil size={14} />
+                    <span>Edit message</span>
+                  </button>
+                )}
                 <button
                   className={cn(menuItemClass, "text-red-500 hover:text-red-500")}
                   onClick={handleDelete}

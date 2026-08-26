@@ -8,6 +8,9 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     ChatMessage as ProtoChatMessage,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
+    ChatMessageRevision as ProtoChatMessageRevision,
+)
+from uniffy_proto.chat.v1.chat_pb2 import (
     ForwardContext as ProtoForwardContext,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
@@ -29,6 +32,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKey, SenderType
+from uniffy.core.models.chat.message_revision import ChatMessageRevision
 from uniffy.core.models.chat.thread import ChatThreadStats
 
 SENDER_TYPE_TO_PROTO = {
@@ -172,4 +176,14 @@ def message_to_proto(
     if sender_avatar_url:
         proto.sender_avatar_url = sender_avatar_url
 
+    return proto
+
+
+def revision_to_proto(revision: ChatMessageRevision) -> ProtoChatMessageRevision:
+    proto = ProtoChatMessageRevision(
+        revision_no=revision.revision_no,
+        content=revision.content,
+        edited_by=str(revision.edited_by),
+    )
+    proto.edited_at.CopyFrom(datetime_to_timestamp(revision.edited_at))
     return proto

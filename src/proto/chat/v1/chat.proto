@@ -32,6 +32,9 @@ service ChatService {
   rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse) {}
   rpc GetMessage(GetMessageRequest) returns (GetMessageResponse) {}
   rpc UpdateMessage(UpdateMessageRequest) returns (UpdateMessageResponse) {}
+  // Prior contents of an edited message. The sender always may read them;
+  // other viewers are gated by ChatPolicy.edit_history_visible_to.
+  rpc GetMessageRevisions(GetMessageRevisionsRequest) returns (GetMessageRevisionsResponse) {}
   rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse) {}
   rpc PinMessage(PinMessageRequest) returns (PinMessageResponse) {}
   rpc UnpinMessage(UnpinMessageRequest) returns (UnpinMessageResponse) {}
@@ -152,12 +155,25 @@ enum ChatBroadcastMinRole {
   CHAT_BROADCAST_MIN_ROLE_ADMIN = 2;
 }
 
+// Who may view a message's edit history beyond its sender.
+enum ChatEditHistoryVisibility {
+  CHAT_EDIT_HISTORY_VISIBILITY_UNSPECIFIED = 0;
+  CHAT_EDIT_HISTORY_VISIBILITY_ADMINS = 1;
+  CHAT_EDIT_HISTORY_VISIBILITY_EVERYONE = 2;
+}
+
 message ChatPolicy {
   string organization_id = 1;
   ChatBroadcastMinRole broadcast_min_role = 2;
   // Member count above which the composer asks for confirmation before a
   // broadcast mention is sent.
   int32 broadcast_confirm_threshold = 3;
+  // Minutes after send during which the sender may edit a message.
+  // Absent = unlimited; 0 disables editing entirely.
+  optional int32 edit_window_minutes = 4;
+  ChatEditHistoryVisibility edit_history_visible_to = 5;
+  // The agents-in-chat integration for this org.
+  bool agents_enabled = 6;
 }
 
 message GetChatPolicyRequest {
@@ -172,6 +188,10 @@ message UpdateChatPolicyRequest {
   string organization_id = 1;
   ChatBroadcastMinRole broadcast_min_role = 2;
   int32 broadcast_confirm_threshold = 3;
+  // Absent = unlimited editing; 0 disables editing entirely.
+  optional int32 edit_window_minutes = 4;
+  ChatEditHistoryVisibility edit_history_visible_to = 5;
+  bool agents_enabled = 6;
 }
 
 message UpdateChatPolicyResponse {
@@ -631,6 +651,25 @@ message UpdateMessageRequest {
 
 message UpdateMessageResponse {
   ChatMessage message = 1;
+}
+
+// One superseded content state of an edited message, ordered by revision_no.
+message ChatMessageRevision {
+  int32 revision_no = 1;
+  // The content the message held before the edit at edited_at replaced it.
+  string content = 2;
+  string edited_by = 3;
+  google.protobuf.Timestamp edited_at = 4;
+}
+
+message GetMessageRevisionsRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string message_id = 3;
+}
+
+message GetMessageRevisionsResponse {
+  repeated ChatMessageRevision revisions = 1;
 }
 
 message DeleteMessageRequest {

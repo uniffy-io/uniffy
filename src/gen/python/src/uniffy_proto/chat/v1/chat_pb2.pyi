@@ -18,6 +18,12 @@ class ChatBroadcastMinRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CHAT_BROADCAST_MIN_ROLE_MEMBER: _ClassVar[ChatBroadcastMinRole]
     CHAT_BROADCAST_MIN_ROLE_ADMIN: _ClassVar[ChatBroadcastMinRole]
 
+class ChatEditHistoryVisibility(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    CHAT_EDIT_HISTORY_VISIBILITY_UNSPECIFIED: _ClassVar[ChatEditHistoryVisibility]
+    CHAT_EDIT_HISTORY_VISIBILITY_ADMINS: _ClassVar[ChatEditHistoryVisibility]
+    CHAT_EDIT_HISTORY_VISIBILITY_EVERYONE: _ClassVar[ChatEditHistoryVisibility]
+
 class ChannelType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     CHANNEL_TYPE_UNSPECIFIED: _ClassVar[ChannelType]
@@ -56,6 +62,9 @@ class AgentConfirmationDecision(int, metaclass=_enum_type_wrapper.EnumTypeWrappe
 CHAT_BROADCAST_MIN_ROLE_UNSPECIFIED: ChatBroadcastMinRole
 CHAT_BROADCAST_MIN_ROLE_MEMBER: ChatBroadcastMinRole
 CHAT_BROADCAST_MIN_ROLE_ADMIN: ChatBroadcastMinRole
+CHAT_EDIT_HISTORY_VISIBILITY_UNSPECIFIED: ChatEditHistoryVisibility
+CHAT_EDIT_HISTORY_VISIBILITY_ADMINS: ChatEditHistoryVisibility
+CHAT_EDIT_HISTORY_VISIBILITY_EVERYONE: ChatEditHistoryVisibility
 CHANNEL_TYPE_UNSPECIFIED: ChannelType
 CHANNEL_TYPE_PUBLIC: ChannelType
 CHANNEL_TYPE_PRIVATE: ChannelType
@@ -79,14 +88,20 @@ AGENT_CONFIRMATION_DECISION_APPROVE: AgentConfirmationDecision
 AGENT_CONFIRMATION_DECISION_DENY: AgentConfirmationDecision
 
 class ChatPolicy(_message.Message):
-    __slots__ = ("organization_id", "broadcast_min_role", "broadcast_confirm_threshold")
+    __slots__ = ("organization_id", "broadcast_min_role", "broadcast_confirm_threshold", "edit_window_minutes", "edit_history_visible_to", "agents_enabled")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     BROADCAST_MIN_ROLE_FIELD_NUMBER: _ClassVar[int]
     BROADCAST_CONFIRM_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    EDIT_WINDOW_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    EDIT_HISTORY_VISIBLE_TO_FIELD_NUMBER: _ClassVar[int]
+    AGENTS_ENABLED_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     broadcast_min_role: ChatBroadcastMinRole
     broadcast_confirm_threshold: int
-    def __init__(self, organization_id: _Optional[str] = ..., broadcast_min_role: _Optional[_Union[ChatBroadcastMinRole, str]] = ..., broadcast_confirm_threshold: _Optional[int] = ...) -> None: ...
+    edit_window_minutes: int
+    edit_history_visible_to: ChatEditHistoryVisibility
+    agents_enabled: bool
+    def __init__(self, organization_id: _Optional[str] = ..., broadcast_min_role: _Optional[_Union[ChatBroadcastMinRole, str]] = ..., broadcast_confirm_threshold: _Optional[int] = ..., edit_window_minutes: _Optional[int] = ..., edit_history_visible_to: _Optional[_Union[ChatEditHistoryVisibility, str]] = ..., agents_enabled: _Optional[bool] = ...) -> None: ...
 
 class GetChatPolicyRequest(_message.Message):
     __slots__ = ("organization_id",)
@@ -101,14 +116,20 @@ class GetChatPolicyResponse(_message.Message):
     def __init__(self, policy: _Optional[_Union[ChatPolicy, _Mapping]] = ...) -> None: ...
 
 class UpdateChatPolicyRequest(_message.Message):
-    __slots__ = ("organization_id", "broadcast_min_role", "broadcast_confirm_threshold")
+    __slots__ = ("organization_id", "broadcast_min_role", "broadcast_confirm_threshold", "edit_window_minutes", "edit_history_visible_to", "agents_enabled")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     BROADCAST_MIN_ROLE_FIELD_NUMBER: _ClassVar[int]
     BROADCAST_CONFIRM_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    EDIT_WINDOW_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    EDIT_HISTORY_VISIBLE_TO_FIELD_NUMBER: _ClassVar[int]
+    AGENTS_ENABLED_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     broadcast_min_role: ChatBroadcastMinRole
     broadcast_confirm_threshold: int
-    def __init__(self, organization_id: _Optional[str] = ..., broadcast_min_role: _Optional[_Union[ChatBroadcastMinRole, str]] = ..., broadcast_confirm_threshold: _Optional[int] = ...) -> None: ...
+    edit_window_minutes: int
+    edit_history_visible_to: ChatEditHistoryVisibility
+    agents_enabled: bool
+    def __init__(self, organization_id: _Optional[str] = ..., broadcast_min_role: _Optional[_Union[ChatBroadcastMinRole, str]] = ..., broadcast_confirm_threshold: _Optional[int] = ..., edit_window_minutes: _Optional[int] = ..., edit_history_visible_to: _Optional[_Union[ChatEditHistoryVisibility, str]] = ..., agents_enabled: _Optional[bool] = ...) -> None: ...
 
 class UpdateChatPolicyResponse(_message.Message):
     __slots__ = ("policy",)
@@ -699,6 +720,34 @@ class UpdateMessageResponse(_message.Message):
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: ChatMessage
     def __init__(self, message: _Optional[_Union[ChatMessage, _Mapping]] = ...) -> None: ...
+
+class ChatMessageRevision(_message.Message):
+    __slots__ = ("revision_no", "content", "edited_by", "edited_at")
+    REVISION_NO_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    EDITED_BY_FIELD_NUMBER: _ClassVar[int]
+    EDITED_AT_FIELD_NUMBER: _ClassVar[int]
+    revision_no: int
+    content: str
+    edited_by: str
+    edited_at: _timestamp_pb2.Timestamp
+    def __init__(self, revision_no: _Optional[int] = ..., content: _Optional[str] = ..., edited_by: _Optional[str] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetMessageRevisionsRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "message_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    message_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., message_id: _Optional[str] = ...) -> None: ...
+
+class GetMessageRevisionsResponse(_message.Message):
+    __slots__ = ("revisions",)
+    REVISIONS_FIELD_NUMBER: _ClassVar[int]
+    revisions: _containers.RepeatedCompositeFieldContainer[ChatMessageRevision]
+    def __init__(self, revisions: _Optional[_Iterable[_Union[ChatMessageRevision, _Mapping]]] = ...) -> None: ...
 
 class DeleteMessageRequest(_message.Message):
     __slots__ = ("organization_id", "channel_id", "message_id")

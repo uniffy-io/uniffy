@@ -5,7 +5,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +29,7 @@ from uniffy.core.models.chat.channel_member import (
     ChatNotificationLevel,
 )
 from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKind, SenderType
+from uniffy.core.models.chat.message_revision import ChatMessageRevision
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
@@ -45,7 +46,11 @@ from uniffy.domains.chat.messages.converters import (
     get_forward_metadata,
     public_message_metadata,
 )
-from uniffy.domains.chat.policy import BroadcastMinRole, resolve_chat_policy
+from uniffy.domains.chat.policy import (
+    BroadcastMinRole,
+    EditHistoryVisibility,
+    resolve_chat_policy,
+)
 from uniffy.domains.chat.rate_limits import SEND, check_chat_mutation_limit
 from uniffy.workers.tasks import JobName
 
@@ -53,7 +58,6 @@ logger = logger.bind(component="chat.messages.operations")
 
 
 MAX_MESSAGE_LENGTH = 30_000
-EDIT_WINDOW_MINUTES = 2
 
 
 async def bump_channel_message_stats(
@@ -1261,7 +1265,7 @@ class ChatMessageOperations:
         message_id: UUID,
         content: str,
     ) -> ChatMessage:
-        """Update a message; own messages only, within EDIT_WINDOW_MINUTES."""
+        """Update a message; own messages only, within the org's edit window policy."""
         if len(content) > MAX_MESSAGE_LENGTH:
             raise ValidationError("content", f"Message exceeds {MAX_MESSAGE_LENGTH} characters")
 
@@ -1278,6 +1282,11 @@ class ChatMessageOperations:
         if extract_broadcast_mentions_from_content(content):
             editor_member = await self.access.get_membership(channel_id, user_id)
             await self._require_broadcast_allowed(user_id, channel, editor_member)
+
+        if content == msg.content:
+            return msg
+
+        await self._record_revision(msg, edited_by=user_id)
 
         now = datetime.now(UTC)
         msg.content = content
@@ -1534,9 +1543,13 @@ class ChatMessageOperations:
         if action is ChatMessageAction.EDIT:
             if message.sender_id != user_id:
                 raise PermissionDeniedError("edit", "Can only edit own messages")
-            window = datetime.now(UTC) - timedelta(minutes=EDIT_WINDOW_MINUTES)
-            if message.created_at < window:
-                raise ValidationError("message", "Edit window has expired")
+            policy = await resolve_chat_policy(self.session, organization_id)
+            if policy.edit_window_minutes == 0:
+                raise PermissionDeniedError("edit", "Message editing is disabled")
+            if policy.edit_window_minutes is not None:
+                window = datetime.now(UTC) - timedelta(minutes=policy.edit_window_minutes)
+                if message.created_at < window:
+                    raise ValidationError("message", "Edit window has expired")
 
         elif action is ChatMessageAction.DELETE:
             if message.sender_id != user_id and not is_elevated:
@@ -1545,6 +1558,51 @@ class ChatMessageOperations:
         elif action is ChatMessageAction.PIN:
             if not is_elevated:
                 raise PermissionDeniedError("pin", "Requires channel admin")
+
+    async def get_message_revisions(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        message_id: UUID,
+    ) -> list[ChatMessageRevision]:
+        channel = await self.access.get_channel(channel_id, organization_id)
+        await self.access.check_access(user_id, organization_id, channel)
+
+        msg = await self._get_message_by_id(message_id)
+        if not msg or msg.channel_id != channel_id or msg.is_deleted:
+            raise NotFoundError("message", message_id)
+
+        if msg.sender_id != user_id:
+            policy = await resolve_chat_policy(self.session, organization_id)
+            if policy.edit_history_visible_to is not EditHistoryVisibility.EVERYONE and not (
+                await self.access.require_elevated(user_id, organization_id, channel_id)
+            ):
+                raise PermissionDeniedError("view", "Edit history is limited to admins")
+
+        result = await self.session.execute(
+            select(ChatMessageRevision)
+            .where(ChatMessageRevision.message_id == message_id)
+            .order_by(ChatMessageRevision.revision_no)
+        )
+        return list(result.scalars().all())
+
+    async def _record_revision(self, message: ChatMessage, *, edited_by: UUID) -> None:
+        """Snapshot the message's current content before an edit replaces it (caller commits)."""
+        result = await self.session.execute(
+            select(func.coalesce(func.max(ChatMessageRevision.revision_no), 0)).where(
+                ChatMessageRevision.message_id == message.id
+            )
+        )
+        next_no = int(result.scalar_one()) + 1
+        self.session.add(
+            ChatMessageRevision(
+                message_id=message.id,
+                revision_no=next_no,
+                content=message.content,
+                edited_by=edited_by,
+            )
+        )
 
     async def _get_message_by_id(self, message_id: UUID) -> ChatMessage | None:
         result = await self.session.execute(select(ChatMessage).where(ChatMessage.id == message_id))

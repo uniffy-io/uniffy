@@ -28,8 +28,17 @@ class BroadcastMinRole(StrEnum):
     ADMIN = "admin"
 
 
+class EditHistoryVisibility(StrEnum):
+    ADMINS = "admins"
+    EVERYONE = "everyone"
+
+
 DEFAULT_BROADCAST_MIN_ROLE = BroadcastMinRole.MEMBER
 DEFAULT_BROADCAST_CONFIRM_THRESHOLD = 25
+DEFAULT_EDIT_WINDOW_MINUTES = 60
+MAX_EDIT_WINDOW_MINUTES = 525_600
+DEFAULT_EDIT_HISTORY_VISIBLE_TO = EditHistoryVisibility.ADMINS
+DEFAULT_AGENTS_ENABLED = True
 
 
 @dataclass(frozen=True)
@@ -39,6 +48,10 @@ class ResolvedChatPolicy:
     organization_id: UUID
     broadcast_min_role: BroadcastMinRole = DEFAULT_BROADCAST_MIN_ROLE
     broadcast_confirm_threshold: int = DEFAULT_BROADCAST_CONFIRM_THRESHOLD
+    # None = unlimited; 0 = editing disabled.
+    edit_window_minutes: int | None = DEFAULT_EDIT_WINDOW_MINUTES
+    edit_history_visible_to: EditHistoryVisibility = DEFAULT_EDIT_HISTORY_VISIBLE_TO
+    agents_enabled: bool = DEFAULT_AGENTS_ENABLED
 
 
 def _from_blob(organization_id: UUID, blob: dict) -> ResolvedChatPolicy:
@@ -53,10 +66,28 @@ def _from_blob(organization_id: UUID, blob: dict) -> ResolvedChatPolicy:
         )
     except ValueError, TypeError:
         threshold = DEFAULT_BROADCAST_CONFIRM_THRESHOLD
+    # A stored null means unlimited; an absent key means the coded default.
+    raw_window = blob.get("edit_window_minutes", DEFAULT_EDIT_WINDOW_MINUTES)
+    if raw_window is None:
+        edit_window: int | None = None
+    else:
+        try:
+            edit_window = min(MAX_EDIT_WINDOW_MINUTES, max(0, int(raw_window)))
+        except ValueError, TypeError:
+            edit_window = DEFAULT_EDIT_WINDOW_MINUTES
+    try:
+        history_visibility = EditHistoryVisibility(
+            blob.get("edit_history_visible_to", DEFAULT_EDIT_HISTORY_VISIBLE_TO)
+        )
+    except ValueError:
+        history_visibility = DEFAULT_EDIT_HISTORY_VISIBLE_TO
     return ResolvedChatPolicy(
         organization_id=organization_id,
         broadcast_min_role=min_role,
         broadcast_confirm_threshold=threshold,
+        edit_window_minutes=edit_window,
+        edit_history_visible_to=history_visibility,
+        agents_enabled=bool(blob.get("agents_enabled", DEFAULT_AGENTS_ENABLED)),
     )
 
 
@@ -89,6 +120,9 @@ async def update_chat_policy(
     *,
     broadcast_min_role: BroadcastMinRole,
     broadcast_confirm_threshold: int,
+    edit_window_minutes: int | None,
+    edit_history_visible_to: EditHistoryVisibility,
+    agents_enabled: bool,
 ) -> ResolvedChatPolicy:
     checker = ChatAccessChecker(session)
     await checker.require_org_member(user_id, organization_id)
@@ -99,11 +133,19 @@ async def update_chat_policy(
             "broadcast_confirm_threshold",
             f"Must be between 0 and {MAX_BROADCAST_CONFIRM_THRESHOLD}",
         )
+    if edit_window_minutes is not None and not 0 <= edit_window_minutes <= MAX_EDIT_WINDOW_MINUTES:
+        raise ValidationError(
+            "edit_window_minutes",
+            f"Must be between 0 and {MAX_EDIT_WINDOW_MINUTES}",
+        )
     previous = await resolve_chat_policy(session, organization_id)
     policy = ResolvedChatPolicy(
         organization_id=organization_id,
         broadcast_min_role=broadcast_min_role,
         broadcast_confirm_threshold=broadcast_confirm_threshold,
+        edit_window_minutes=edit_window_minutes,
+        edit_history_visible_to=edit_history_visible_to,
+        agents_enabled=agents_enabled,
     )
     await save_chat_policy(session, policy=policy, updated_by_user_id=user_id)
     await write_audit_event(
@@ -116,8 +158,14 @@ async def update_chat_policy(
         details={
             "broadcast_min_role": policy.broadcast_min_role.value,
             "broadcast_confirm_threshold": policy.broadcast_confirm_threshold,
+            "edit_window_minutes": policy.edit_window_minutes,
+            "edit_history_visible_to": policy.edit_history_visible_to.value,
+            "agents_enabled": policy.agents_enabled,
             "previous_broadcast_min_role": previous.broadcast_min_role.value,
             "previous_broadcast_confirm_threshold": previous.broadcast_confirm_threshold,
+            "previous_edit_window_minutes": previous.edit_window_minutes,
+            "previous_edit_history_visible_to": previous.edit_history_visible_to.value,
+            "previous_agents_enabled": previous.agents_enabled,
         },
     )
     await session.commit()
@@ -138,6 +186,9 @@ async def save_chat_policy(
         value={
             "broadcast_min_role": policy.broadcast_min_role.value,
             "broadcast_confirm_threshold": policy.broadcast_confirm_threshold,
+            "edit_window_minutes": policy.edit_window_minutes,
+            "edit_history_visible_to": policy.edit_history_visible_to.value,
+            "agents_enabled": policy.agents_enabled,
         },
         updated_by_user_id=updated_by_user_id,
     )
