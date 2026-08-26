@@ -1,9 +1,7 @@
 """Organization CRUD, membership, and permission defaults."""
 
 import asyncio
-import copy
 from datetime import UTC, datetime
-from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -30,7 +28,6 @@ from uniffy.domains.chat.cache import (
 )
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
 from uniffy.domains.chat.search_acl import enqueue_chat_search_acl_refresh
-from uniffy.domains.organizations.defaults import DEFAULT_ORG_SETTINGS
 from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="org-ops")
@@ -65,7 +62,6 @@ class OrganizationOperations:
             slug=slug,
             domain=domain,
             plan=plan,
-            settings=copy.deepcopy(DEFAULT_ORG_SETTINGS),
         )
         self._session.add(org)
         await self._session.flush()
@@ -704,46 +700,6 @@ class OrganizationOperations:
             logger.opt(exception=True).warning("Failed to publish realtime defaults_changed event")
 
         return defaults
-
-    async def get_organization_settings(self, org_id: UUID) -> dict[str, Any]:
-        org = await self.get_by_id(org_id)
-        return dict(org.settings or {})
-
-    async def update_organization_settings(
-        self,
-        user_id: UUID,
-        org_id: UUID,
-        chat_agents_enabled: bool | None = None,
-    ) -> dict[str, Any]:
-        """Merge-update the settings JSONB; reassigned to a new dict so
-        SQLAlchemy detects the mutation.
-        """
-        await self.require_org_admin(user_id, org_id)
-        org = await self.get_by_id(org_id)
-        settings = dict(org.settings or {})
-        changed_keys: list[str] = []
-        if chat_agents_enabled is not None:
-            chat = dict(settings.get("chat") or {})
-            if chat.get("agents_enabled") != chat_agents_enabled:
-                chat["agents_enabled"] = chat_agents_enabled
-                settings["chat"] = chat
-                changed_keys.append("chat.agents_enabled")
-        org.settings = settings
-
-        if changed_keys:
-            await write_audit_event(
-                self._session,
-                organization_id=org_id,
-                actor_user_id=user_id,
-                action=Action.ORGANIZATION_SETTINGS_CHANGED,
-                resource_type=AuditResourceType.ORGANIZATION,
-                resource_id=org_id,
-                details={"changed_keys": changed_keys},
-            )
-
-        await self._session.commit()
-        await self._session.refresh(org)
-        return dict(org.settings or {})
 
     async def grant_domain_admin(
         self,

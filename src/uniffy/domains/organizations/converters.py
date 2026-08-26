@@ -1,15 +1,11 @@
 """Proto <-> domain converters for organizations domain."""
 
-from typing import Any
-
 from uniffy_proto.organizations.v1.organizations_pb2 import (
-    ChatSettings,
     ContentTypeCount,
     ContentTypeDefaults,
     MyOrganization,
     OrganizationDetail,
     OrganizationOverview,
-    OrganizationSettings,
 )
 
 from uniffy.core.converters import (
@@ -94,20 +90,10 @@ def permission_defaults_to_proto(
     return proto
 
 
-def organization_settings_to_proto(settings: dict[str, Any]) -> OrganizationSettings:
-    chat = settings.get("chat") or {}
-    return OrganizationSettings(
-        chat=ChatSettings(
-            agents_enabled=bool(chat.get("agents_enabled", False)),
-        ),
-    )
-
-
 __all__ = [
     "my_organization_to_proto",
     "organization_detail_to_proto",
     "organization_overview_to_proto",
-    "organization_settings_to_proto",
     "permission_defaults_to_proto",
     "member_info_to_proto",
     "org_info_to_proto",

@@ -92,55 +92,6 @@ export const fetchOrganizationOverview = createAsyncThunk<
   return serializeOrgOverview(response.overview);
 });
 
-export interface SerializedOrgSettings {
-  chat: {
-    agentsEnabled: boolean;
-  };
-}
-
-export const fetchOrganizationSettings = createAsyncThunk<
-  SerializedOrgSettings,
-  void,
-  { state: RootState }
->("admin/fetchOrganizationSettings", async (_, { getState }) => {
-  const { auth } = getState();
-  const organizationId = auth.currentOrganizationId;
-
-  if (!organizationId) {
-    throw new Error("No organization selected");
-  }
-
-  const response = await adminApi.getOrganizationSettings({ organizationId });
-  return {
-    chat: {
-      agentsEnabled: response.settings?.chat?.agentsEnabled ?? false,
-    },
-  };
-});
-
-export const updateOrganizationSettings = createAsyncThunk<
-  SerializedOrgSettings,
-  { chat?: { agentsEnabled: boolean } },
-  { state: RootState }
->("admin/updateOrganizationSettings", async (args, { getState }) => {
-  const { auth } = getState();
-  const organizationId = auth.currentOrganizationId;
-
-  if (!organizationId) {
-    throw new Error("No organization selected");
-  }
-
-  const response = await adminApi.updateOrganizationSettings({
-    organizationId,
-    chat: args.chat,
-  });
-  return {
-    chat: {
-      agentsEnabled: response.settings?.chat?.agentsEnabled ?? false,
-    },
-  };
-});
-
 export const fetchMembers = createAsyncThunk<
   { members: SerializedMemberInfo[]; totalCount: number },
   { page?: number; pageSize?: number; roleFilter?: number; search?: string },

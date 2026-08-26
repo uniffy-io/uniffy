@@ -33,9 +33,6 @@ import {
   setUserStorageQuotaOverride,
   removeUserStorageQuotaOverride,
   recalculateStorageUsage,
-  fetchOrganizationSettings,
-  updateOrganizationSettings,
-  type SerializedOrgSettings,
 } from "@/features/admin/store/adminThunks";
 
 export interface SerializedContentTypeDefaults {
@@ -256,10 +253,6 @@ export interface AdminState {
   userUsageList: SerializedStorageUsageInfo[];
   userUsageListLoading: boolean;
 
-  orgSettings: SerializedOrgSettings | null;
-  orgSettingsLoading: boolean;
-  orgSettingsSaving: boolean;
-
   error: string | null;
 }
 
@@ -291,9 +284,6 @@ const initialState: AdminState = {
   userOverridesLoading: false,
   userUsageList: [],
   userUsageListLoading: false,
-  orgSettings: null,
-  orgSettingsLoading: false,
-  orgSettingsSaving: false,
   error: null,
 };
 
@@ -528,29 +518,6 @@ const adminSlice = createSlice({
       }
     });
 
-    builder.addCase(fetchOrganizationSettings.pending, (state) => {
-      state.orgSettingsLoading = true;
-    });
-    builder.addCase(fetchOrganizationSettings.fulfilled, (state, action) => {
-      state.orgSettingsLoading = false;
-      state.orgSettings = action.payload;
-    });
-    builder.addCase(fetchOrganizationSettings.rejected, (state, action) => {
-      state.orgSettingsLoading = false;
-      state.error = action.error.message || "Failed to fetch organization settings";
-    });
-
-    builder.addCase(updateOrganizationSettings.pending, (state) => {
-      state.orgSettingsSaving = true;
-    });
-    builder.addCase(updateOrganizationSettings.fulfilled, (state, action) => {
-      state.orgSettingsSaving = false;
-      state.orgSettings = action.payload;
-    });
-    builder.addCase(updateOrganizationSettings.rejected, (state, action) => {
-      state.orgSettingsSaving = false;
-      state.error = action.error.message || "Failed to update organization settings";
-    });
   },
 });
 

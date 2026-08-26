@@ -233,21 +233,11 @@ the config page. Agents won't reply until a key is enabled.
 
 ## Enabling Agents in Chat
 
-Agents-in-chat is gated by an org-level flag. An org admin must turn it on
-before the **Agents** section appears in the New Message picker and before
-agents can reply to DMs.
-
-> **Current limitation:** There is no admin UI for this flag yet. It must be
-> toggled in the database. An admin-panel toggle is planned.
->
-> Until then, run:
->
-> ```sql
-> UPDATE login_organizations
-> SET settings = COALESCE(settings, '{}'::jsonb)
->              || '{"chat":{"agents_enabled":true}}'::jsonb
-> WHERE id = '<org_id>';
-> ```
+Agents-in-chat is gated by an org-level flag, on by default. Org admins toggle
+it under **Admin → Agents → General** ("Agents in chat"). When off, the
+**Agents** section disappears from the New Message picker and agents stop
+replying to DMs and mentions. The flag lives in the org chat policy alongside
+the other chat policy settings.
 
 ---
 
@@ -286,7 +276,6 @@ tool cards. The roadmap:
 
 | Feature | Status |
 |---|---|
-| Admin UI toggle for the `agents_enabled` flag | Planned |
 | Pending approvals that survive a page reload | Planned |
 | `@agent_name` mention inside regular channels to pull an agent into a group conversation | Phase 5 |
 | Thread replies that trigger an agent when its message is the root | Phase 5 |

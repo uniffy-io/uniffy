@@ -66,12 +66,6 @@ class OrganizationsService(Protocol):
     async def update_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def update_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def grant_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -252,26 +246,6 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_permission_defaults,
-                ),
-                "/organizations.v1.OrganizationsService/GetOrganizationSettings": Endpoint.unary(
-                    method=MethodInfo(
-                        name="GetOrganizationSettings",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.get_organization_settings,
-                ),
-                "/organizations.v1.OrganizationsService/UpdateOrganizationSettings": Endpoint.unary(
-                    method=MethodInfo(
-                        name="UpdateOrganizationSettings",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.update_organization_settings,
                 ),
                 "/organizations.v1.OrganizationsService/GrantDomainAdmin": Endpoint.unary(
                     method=MethodInfo(
@@ -657,46 +631,6 @@ class OrganizationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def get_organization_settings(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetOrganizationSettings",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def update_organization_settings(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="UpdateOrganizationSettings",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def grant_domain_admin(
         self,
         request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest,
@@ -833,10 +767,6 @@ class OrganizationsServiceSync(Protocol):
     def get_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetPermissionDefaultsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def update_permission_defaults(self, request: organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_organization_settings(self, request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def grant_domain_admin(self, request: organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminRequest, ctx: RequestContext) -> organizations_dot_v1_dot_organizations__pb2.GrantDomainAdminResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1013,26 +943,6 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_permission_defaults,
-                ),
-                "/organizations.v1.OrganizationsService/GetOrganizationSettings": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="GetOrganizationSettings",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.get_organization_settings,
-                ),
-                "/organizations.v1.OrganizationsService/UpdateOrganizationSettings": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="UpdateOrganizationSettings",
-                        service_name="organizations.v1.OrganizationsService",
-                        input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-                        output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.update_organization_settings,
                 ),
                 "/organizations.v1.OrganizationsService/GrantDomainAdmin": EndpointSync.unary(
                     method=MethodInfo(
@@ -1412,46 +1322,6 @@ class OrganizationsServiceClientSync(ConnectClientSync):
                 service_name="organizations.v1.OrganizationsService",
                 input=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsRequest,
                 output=organizations_dot_v1_dot_organizations__pb2.UpdatePermissionDefaultsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def get_organization_settings(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetOrganizationSettings",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.GetOrganizationSettingsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def update_organization_settings(
-        self,
-        request: organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="UpdateOrganizationSettings",
-                service_name="organizations.v1.OrganizationsService",
-                input=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsRequest,
-                output=organizations_dot_v1_dot_organizations__pb2.UpdateOrganizationSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

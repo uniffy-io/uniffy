@@ -47,10 +47,8 @@ import {
   currencySymbol,
   formatCurrency,
 } from "@/shared/utils/currencyFormatting";
-import {
-  fetchOrganizationSettings,
-  updateOrganizationSettings,
-} from "@/features/admin/store/adminThunks";
+import { fetchChatPolicy, updateChatPolicyThunk } from "@/features/chat/store/chatThunks";
+import { selectOrgChatPolicy } from "@/features/chat/store/chatChannelsSlice";
 import {
   fetchOrgBudget,
   updateOrgBudget,
@@ -296,20 +294,26 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
 function GeneralTab() {
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
-  const settings = useAppSelector((s) => s.admin.orgSettings);
-  const loading = useAppSelector((s) => s.admin.orgSettingsLoading);
-  const saving = useAppSelector((s) => s.admin.orgSettingsSaving);
+  const orgPolicy = useAppSelector(selectOrgChatPolicy);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (organizationId) {
-      dispatch(fetchOrganizationSettings());
+      dispatch(fetchChatPolicy());
     }
   }, [dispatch, organizationId]);
 
-  const agentsEnabled = settings?.chat.agentsEnabled ?? false;
+  const loading = orgPolicy === null;
+  const agentsEnabled = orgPolicy?.agentsEnabled ?? true;
 
-  const handleToggleAgents = (next: boolean) => {
-    dispatch(updateOrganizationSettings({ chat: { agentsEnabled: next } }));
+  const handleToggleAgents = async (next: boolean) => {
+    if (!orgPolicy || saving) return;
+    setSaving(true);
+    try {
+      await dispatch(updateChatPolicyThunk({ ...orgPolicy, agentsEnabled: next })).unwrap();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

@@ -197,23 +197,3 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
     assert removed[0].actor_user_id == admin
 
 
-async def test_update_organization_settings_emits_changed_keys() -> None:
-    org = _make_org()
-    org.settings = {"chat": {"agents_enabled": False}}
-    session = MagicMock()
-    session.add = MagicMock()
-    session.commit = AsyncMock()
-    session.refresh = AsyncMock()
-
-    ops = OrganizationOperations(session)
-
-    with (
-        patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)),
-        patch.object(OrganizationOperations, "get_by_id", AsyncMock(return_value=org)),
-    ):
-        await ops.update_organization_settings(generate_id(), org.id, chat_agents_enabled=True)
-
-    rows = _audit_rows(session)
-    assert len(rows) == 1
-    assert rows[0].action == Action.ORGANIZATION_SETTINGS_CHANGED
-    assert rows[0].details["changed_keys"] == ["chat.agents_enabled"]

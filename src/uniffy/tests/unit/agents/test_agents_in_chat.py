@@ -58,7 +58,7 @@ from uniffy.domains.agents.runtime.writers import (
     SessionMessageWriter,
     _metadata_kind_for,
 )
-from uniffy.domains.chat.feature_flags import is_chat_agents_enabled_on
+from uniffy.domains.chat.policy import _from_blob
 from uniffy.domains.chat.sender_resolver import SenderInfo, SenderResolver
 from uniffy.domains.chat.subjects import ChatSubject
 
@@ -157,25 +157,14 @@ class TestChatSubject:
 
 
 class TestFeatureFlag:
-    def test_missing_settings_returns_false(self) -> None:
-        org = MagicMock()
-        org.settings = None
-        assert is_chat_agents_enabled_on(org) is False
-
-    def test_missing_chat_key_returns_false(self) -> None:
-        org = MagicMock()
-        org.settings = {"notes": {"x": True}}
-        assert is_chat_agents_enabled_on(org) is False
+    def test_missing_key_defaults_to_enabled(self) -> None:
+        assert _from_blob(generate_id(), {}).agents_enabled is True
 
     def test_flag_on(self) -> None:
-        org = MagicMock()
-        org.settings = {"chat": {"agents_enabled": True}}
-        assert is_chat_agents_enabled_on(org) is True
+        assert _from_blob(generate_id(), {"agents_enabled": True}).agents_enabled is True
 
     def test_flag_explicit_false(self) -> None:
-        org = MagicMock()
-        org.settings = {"chat": {"agents_enabled": False}}
-        assert is_chat_agents_enabled_on(org) is False
+        assert _from_blob(generate_id(), {"agents_enabled": False}).agents_enabled is False
 
 
 class TestSenderResolver:
