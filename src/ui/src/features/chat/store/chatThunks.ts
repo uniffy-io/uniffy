@@ -5,7 +5,11 @@ import { chatApi } from "@/features/chat/api/chatApi";
 import { attachmentsApi } from "@/features/files/api/attachmentsApi";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import type { ChatChannel as ProtoChatChannel } from "@uniffy/proto/chat/v1/chat_pb";
-import { ChannelRole, ChatBroadcastMinRole } from "@uniffy/proto/chat/v1/chat_pb";
+import {
+  ChannelRole,
+  ChatBroadcastMinRole,
+  ChatEditHistoryVisibility,
+} from "@uniffy/proto/chat/v1/chat_pb";
 import {
   channelToPlain,
   messageToPlain,
@@ -33,8 +37,8 @@ import {
   setLoading,
   updateUnreadCounts,
   setActiveChannel,
-  setBroadcastPolicy,
-  type BroadcastPolicy,
+  setOrgChatPolicy,
+  type OrgChatPolicy,
 } from "@/features/chat/store/chatChannelsSlice";
 import {
   setMessages,
@@ -1302,13 +1306,20 @@ export const deleteCategoryThunk = createAsyncThunk<
   }
 });
 
-function broadcastPolicyToPlain(policy: {
+export function chatPolicyToPlain(policy: {
   broadcastMinRole: ChatBroadcastMinRole;
   broadcastConfirmThreshold: number;
-}): BroadcastPolicy {
+  editWindowMinutes?: number;
+  editHistoryVisibleTo: ChatEditHistoryVisibility;
+  agentsEnabled: boolean;
+}): OrgChatPolicy {
   return {
-    minRole: policy.broadcastMinRole === ChatBroadcastMinRole.ADMIN ? "admin" : "member",
-    confirmThreshold: policy.broadcastConfirmThreshold,
+    broadcastMinRole: policy.broadcastMinRole === ChatBroadcastMinRole.ADMIN ? "admin" : "member",
+    broadcastConfirmThreshold: policy.broadcastConfirmThreshold,
+    editWindowMinutes: policy.editWindowMinutes ?? null,
+    editHistoryVisibleTo:
+      policy.editHistoryVisibleTo === ChatEditHistoryVisibility.EVERYONE ? "everyone" : "admins",
+    agentsEnabled: policy.agentsEnabled,
   };
 }
 
@@ -1321,7 +1332,7 @@ export const fetchChatPolicy = createAsyncThunk<
     const organizationId = getOrganizationId(getState());
     const response = await chatApi.getChatPolicy({ organizationId });
     if (response.policy) {
-      dispatch(setBroadcastPolicy(broadcastPolicyToPlain(response.policy)));
+      dispatch(setOrgChatPolicy(chatPolicyToPlain(response.policy)));
     }
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch chat policy");
@@ -1330,7 +1341,7 @@ export const fetchChatPolicy = createAsyncThunk<
 
 export const updateChatPolicyThunk = createAsyncThunk<
   void,
-  BroadcastPolicy,
+  OrgChatPolicy,
   { state: RootState; rejectValue: string }
 >("chat/updateChatPolicy", async (policy, { getState, dispatch, rejectWithValue }) => {
   try {
@@ -1338,11 +1349,19 @@ export const updateChatPolicyThunk = createAsyncThunk<
     const response = await chatApi.updateChatPolicy({
       organizationId,
       broadcastMinRole:
-        policy.minRole === "admin" ? ChatBroadcastMinRole.ADMIN : ChatBroadcastMinRole.MEMBER,
-      broadcastConfirmThreshold: policy.confirmThreshold,
+        policy.broadcastMinRole === "admin"
+          ? ChatBroadcastMinRole.ADMIN
+          : ChatBroadcastMinRole.MEMBER,
+      broadcastConfirmThreshold: policy.broadcastConfirmThreshold,
+      editWindowMinutes: policy.editWindowMinutes ?? undefined,
+      editHistoryVisibleTo:
+        policy.editHistoryVisibleTo === "everyone"
+          ? ChatEditHistoryVisibility.EVERYONE
+          : ChatEditHistoryVisibility.ADMINS,
+      agentsEnabled: policy.agentsEnabled,
     });
     if (response.policy) {
-      dispatch(setBroadcastPolicy(broadcastPolicyToPlain(response.policy)));
+      dispatch(setOrgChatPolicy(chatPolicyToPlain(response.policy)));
     }
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to update chat policy");

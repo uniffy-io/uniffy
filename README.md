@@ -10,7 +10,7 @@
   <a href="https://github.com/uniffy-io/uniffy/actions/workflows/test.yml"><img src="https://github.com/uniffy-io/uniffy/actions/workflows/test.yml/badge.svg?branch=main" alt="CI status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--Apache--2.0-694aff" alt="License: FSL-1.1-Apache-2.0"></a>
   <a href="https://uniffy.io/docs/deployment/"><img src="https://img.shields.io/badge/self%20hosting-free%20and%20unlimited-01b77f" alt="Self hosting: free and unlimited"></a>
-  <a href="docs/TRANSPARENCY.md"><img src="https://img.shields.io/badge/telemetry-off%20by%20default-fd7eea" alt="Telemetry: off by default"></a>
+  <a href="docs/TRANSPARENCY.md"><img src="https://img.shields.io/badge/telemetry-off%20by%20default-fd7eea" alt="Telemetry: None"></a>
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@
 
 ---
 
-Notes, Diagrams, Chat, Files, Projects, Calendar. One private workspace, everything talks back. Plus an agent harness on top of it. Agents as work infrastructure.
+Notes, Diagrams, Chat, Files, Projects, Calendar. One private workspace, everything talks back. Plus an agent harness on top of it designed for Work Infrastructure
 
 Every piece of information can be referenced from anywhere with a universal `@` mention. Use it on our cloud or on your own hardware. Same code, same features, no user limit. No trackers, no data harvesting, no training on your data. AI agents are opt in and yours to control: you choose the model, the skills, and the permissions.
 

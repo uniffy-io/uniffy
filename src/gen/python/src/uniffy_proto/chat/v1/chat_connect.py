@@ -69,6 +69,9 @@ class ChatService(Protocol):
     async def update_message(self, request: chat_dot_v1_dot_chat__pb2.UpdateMessageRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_message_revisions(self, request: chat_dot_v1_dot_chat__pb2.GetMessageRevisionsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetMessageRevisionsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def delete_message(self, request: chat_dot_v1_dot_chat__pb2.DeleteMessageRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.DeleteMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -382,6 +385,16 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_message,
+                ),
+                "/chat.v1.ChatService/GetMessageRevisions": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetMessageRevisions",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.GetMessageRevisionsRequest,
+                        output=chat_dot_v1_dot_chat__pb2.GetMessageRevisionsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_message_revisions,
                 ),
                 "/chat.v1.ChatService/DeleteMessage": Endpoint.unary(
                     method=MethodInfo(
@@ -1191,6 +1204,26 @@ class ChatServiceClient(ConnectClient):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.UpdateMessageRequest,
                 output=chat_dot_v1_dot_chat__pb2.UpdateMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_message_revisions(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.GetMessageRevisionsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.GetMessageRevisionsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetMessageRevisions",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.GetMessageRevisionsRequest,
+                output=chat_dot_v1_dot_chat__pb2.GetMessageRevisionsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2156,6 +2189,8 @@ class ChatServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def update_message(self, request: chat_dot_v1_dot_chat__pb2.UpdateMessageRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_message_revisions(self, request: chat_dot_v1_dot_chat__pb2.GetMessageRevisionsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetMessageRevisionsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_message(self, request: chat_dot_v1_dot_chat__pb2.DeleteMessageRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.DeleteMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def pin_message(self, request: chat_dot_v1_dot_chat__pb2.PinMessageRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.PinMessageResponse:
@@ -2423,6 +2458,16 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_message,
+                ),
+                "/chat.v1.ChatService/GetMessageRevisions": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetMessageRevisions",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.GetMessageRevisionsRequest,
+                        output=chat_dot_v1_dot_chat__pb2.GetMessageRevisionsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_message_revisions,
                 ),
                 "/chat.v1.ChatService/DeleteMessage": EndpointSync.unary(
                     method=MethodInfo(
@@ -3232,6 +3277,26 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.UpdateMessageRequest,
                 output=chat_dot_v1_dot_chat__pb2.UpdateMessageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_message_revisions(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.GetMessageRevisionsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.GetMessageRevisionsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetMessageRevisions",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.GetMessageRevisionsRequest,
+                output=chat_dot_v1_dot_chat__pb2.GetMessageRevisionsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

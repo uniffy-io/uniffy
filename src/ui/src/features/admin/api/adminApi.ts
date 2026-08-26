@@ -3,7 +3,6 @@ import { unaryTransport } from "@/config/api";
 import {
   OrganizationsService,
   GetOrganizationOverviewRequestSchema,
-  GetOrganizationSettingsRequestSchema,
   GetPermissionDefaultsRequestSchema,
   GetUserDomainAdminsRequestSchema,
   GrantDomainAdminRequestSchema,
@@ -13,7 +12,6 @@ import {
   RevokeDomainAdminRequestSchema,
   RotateEncryptionKeyRequestSchema,
   UpdateMemberRoleRequestSchema,
-  UpdateOrganizationSettingsRequestSchema,
   UpdatePermissionDefaultsRequestSchema,
 } from "@uniffy/proto/organizations/v1/organizations_pb";
 import {
@@ -48,18 +46,6 @@ export const adminApi = {
     request: MessageInitShape<typeof GetOrganizationOverviewRequestSchema>,
   ) => {
     return organizationsClient.getOrganizationOverview(request);
-  },
-
-  getOrganizationSettings: async (
-    request: MessageInitShape<typeof GetOrganizationSettingsRequestSchema>,
-  ) => {
-    return organizationsClient.getOrganizationSettings(request);
-  },
-
-  updateOrganizationSettings: async (
-    request: MessageInitShape<typeof UpdateOrganizationSettingsRequestSchema>,
-  ) => {
-    return organizationsClient.updateOrganizationSettings(request);
   },
 
   listMembers: async (request: MessageInitShape<typeof ListMembersRequestSchema>) => {

@@ -1,11 +1,9 @@
 """Organization model."""
 
 from datetime import UTC, datetime
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Column, DateTime
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -23,7 +21,6 @@ class Organization(SQLModel, table=True):
     is_active: bool = Field(default=True, nullable=False)
     plan: str = Field(default="free", max_length=50, nullable=False)
     max_members: int | None = Field(default=None)
-    settings: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     is_suspended: bool = Field(default=False, nullable=False, index=True)
     suspended_at: datetime | None = Field(
         default=None,

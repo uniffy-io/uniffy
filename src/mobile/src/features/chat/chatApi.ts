@@ -17,6 +17,7 @@ import {
   UpdateChannelMemberRequestSchema,
   SendMessageRequestSchema,
   GetMessagesRequestSchema,
+  GetMessageRevisionsRequestSchema,
   UpdateMessageRequestSchema,
   DeleteMessageRequestSchema,
   PinMessageRequestSchema,
@@ -96,6 +97,8 @@ export const chatApi = {
   getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>) => client.getMessages(req),
   updateMessage: (req: MessageInitShape<typeof UpdateMessageRequestSchema>) =>
     client.updateMessage(req),
+  getMessageRevisions: (req: MessageInitShape<typeof GetMessageRevisionsRequestSchema>) =>
+    client.getMessageRevisions(req),
   deleteMessage: (req: MessageInitShape<typeof DeleteMessageRequestSchema>) =>
     client.deleteMessage(req),
   pinMessage: (req: MessageInitShape<typeof PinMessageRequestSchema>) => client.pinMessage(req),

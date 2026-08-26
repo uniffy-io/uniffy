@@ -14,6 +14,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     ForwardMessageResponse,
     GetMessageRequest,
     GetMessageResponse,
+    GetMessageRevisionsRequest,
+    GetMessageRevisionsResponse,
     GetMessagesRequest,
     GetMessagesResponse,
     GetPinnedMessagesRequest,
@@ -38,7 +40,7 @@ from uniffy.domains.auth.context import (
     resolve_organization_id,
 )
 from uniffy.domains.chat.access import ChatAccessChecker
-from uniffy.domains.chat.messages.converters import message_to_proto
+from uniffy.domains.chat.messages.converters import message_to_proto, revision_to_proto
 from uniffy.domains.chat.messages.forward_projection import ForwardProjectionResolver
 from uniffy.domains.chat.messages.forwarding import ChatMessageForwardingOperations
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
@@ -287,6 +289,29 @@ class MessageHandlers:
                     )
                 )
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
+    async def get_message_revisions(
+        self,
+        request: GetMessageRevisionsRequest,
+        ctx: RequestContext,
+    ) -> GetMessageRevisionsResponse:
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = resolve_organization_id(ctx, request.organization_id)
+            channel_id = UUID(request.channel_id)
+            message_id = UUID(request.message_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        try:
+            async with open_session() as session:
+                ops = ChatMessageOperations(session)
+                revisions = await ops.get_message_revisions(user_id, org_id, channel_id, message_id)
+                return GetMessageRevisionsResponse(
+                    revisions=[revision_to_proto(r) for r in revisions]
+                )
+        except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
     async def delete_message(

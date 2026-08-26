@@ -15,8 +15,6 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     GetOrganizationOverviewResponse,
     GetOrganizationRequest,
     GetOrganizationResponse,
-    GetOrganizationSettingsRequest,
-    GetOrganizationSettingsResponse,
     GetPermissionDefaultsRequest,
     GetPermissionDefaultsResponse,
     GetSecuritySettingsRequest,
@@ -50,8 +48,6 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     UpdateMemberRoleResponse,
     UpdateOrganizationRequest,
     UpdateOrganizationResponse,
-    UpdateOrganizationSettingsRequest,
-    UpdateOrganizationSettingsResponse,
     UpdatePermissionDefaultsRequest,
     UpdatePermissionDefaultsResponse,
     UpdateSecuritySettingsRequest,
@@ -93,7 +89,6 @@ from uniffy.domains.organizations.converters import (
     my_organization_to_proto,
     organization_detail_to_proto,
     organization_overview_to_proto,
-    organization_settings_to_proto,
     permission_defaults_to_proto,
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -467,69 +462,6 @@ class OrganizationsHandlers:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
             logger.exception(f"Error updating permission defaults: {e}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def get_organization_settings(
-        self,
-        request: GetOrganizationSettingsRequest,
-        ctx: RequestContext,
-    ) -> GetOrganizationSettingsResponse:
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
-        try:
-            async with open_session() as session:
-                ops = OrganizationOperations(session)
-                await ops.require_org_admin(user_id, org_id)
-                settings = await ops.get_organization_settings(org_id)
-                return GetOrganizationSettingsResponse(
-                    settings=organization_settings_to_proto(settings)
-                )
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except Exception as e:
-            logger.exception(f"Error getting organization settings: {e}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def update_organization_settings(
-        self,
-        request: UpdateOrganizationSettingsRequest,
-        ctx: RequestContext,
-    ) -> UpdateOrganizationSettingsResponse:
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
-        chat_agents_enabled: bool | None = None
-        if request.HasField("chat"):
-            chat_agents_enabled = request.chat.agents_enabled
-
-        try:
-            async with open_session() as session:
-                ops = OrganizationOperations(session)
-                settings = await ops.update_organization_settings(
-                    user_id=user_id,
-                    org_id=org_id,
-                    chat_agents_enabled=chat_agents_enabled,
-                )
-                return UpdateOrganizationSettingsResponse(
-                    settings=organization_settings_to_proto(settings)
-                )
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except NotFoundError as e:
-            raise ConnectError(Code.NOT_FOUND, str(e))
-        except Exception as e:
-            logger.exception(f"Error updating organization settings: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def grant_domain_admin(

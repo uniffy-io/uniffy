@@ -11,6 +11,7 @@ from uniffy.core.models.chat.channel_member import (
 from uniffy.core.models.chat.channel_resource import ChatChannelResource
 from uniffy.core.models.chat.draft import ChatDraft
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.chat.message_revision import ChatMessageRevision
 from uniffy.core.models.chat.reaction import ChatReaction
 from uniffy.core.models.chat.read_cursor import ChatReadCursor, ChatThreadReadCursor
 from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
@@ -26,6 +27,7 @@ __all__ = [
     "ChatChannelStats",
     "ChatDraft",
     "ChatMessage",
+    "ChatMessageRevision",
     "ChatReaction",
     "ChatReadCursor",
     "ChatSearchAclRefresh",

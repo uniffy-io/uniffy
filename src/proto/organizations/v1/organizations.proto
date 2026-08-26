@@ -39,10 +39,6 @@ service OrganizationsService {
   rpc GetPermissionDefaults(GetPermissionDefaultsRequest) returns (GetPermissionDefaultsResponse);
   rpc UpdatePermissionDefaults(UpdatePermissionDefaultsRequest) returns (UpdatePermissionDefaultsResponse);
 
-  // Organization settings (Org Admin) — org-scoped JSONB preferences.
-  rpc GetOrganizationSettings(GetOrganizationSettingsRequest) returns (GetOrganizationSettingsResponse);
-  rpc UpdateOrganizationSettings(UpdateOrganizationSettingsRequest) returns (UpdateOrganizationSettingsResponse);
-
   // Domain Admin management (Org Admin)
   rpc GrantDomainAdmin(GrantDomainAdminRequest) returns (GrantDomainAdminResponse);
   rpc RevokeDomainAdmin(RevokeDomainAdminRequest) returns (RevokeDomainAdminResponse);
@@ -192,35 +188,6 @@ message ContentTypeDefaults {
 
 // Organization Settings Messages (Org Admin)
 //
-// Wraps the org.settings JSONB blob. Each nested sub-message corresponds to a
-// top-level key. Unset sub-messages on update = "do not touch"; explicit empty
-// sub-messages are valid but currently have no effect.
-
-message OrganizationSettings {
-  ChatSettings chat = 1;
-}
-
-message ChatSettings {
-  bool agents_enabled = 1;
-}
-
-message GetOrganizationSettingsRequest {
-  string organization_id = 1;
-}
-
-message GetOrganizationSettingsResponse {
-  OrganizationSettings settings = 1;
-}
-
-message UpdateOrganizationSettingsRequest {
-  string organization_id = 1;
-  optional ChatSettings chat = 2;
-}
-
-message UpdateOrganizationSettingsResponse {
-  OrganizationSettings settings = 1;
-}
-
 // Domain Admin Messages (Org Admin)
 
 message GrantDomainAdminRequest {

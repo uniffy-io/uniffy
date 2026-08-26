@@ -77,6 +77,9 @@ const (
 	// ChatServiceUpdateMessageProcedure is the fully-qualified name of the ChatService's UpdateMessage
 	// RPC.
 	ChatServiceUpdateMessageProcedure = "/chat.v1.ChatService/UpdateMessage"
+	// ChatServiceGetMessageRevisionsProcedure is the fully-qualified name of the ChatService's
+	// GetMessageRevisions RPC.
+	ChatServiceGetMessageRevisionsProcedure = "/chat.v1.ChatService/GetMessageRevisions"
 	// ChatServiceDeleteMessageProcedure is the fully-qualified name of the ChatService's DeleteMessage
 	// RPC.
 	ChatServiceDeleteMessageProcedure = "/chat.v1.ChatService/DeleteMessage"
@@ -232,6 +235,9 @@ type ChatServiceClient interface {
 	GetMessages(context.Context, *connect.Request[v1.GetMessagesRequest]) (*connect.Response[v1.GetMessagesResponse], error)
 	GetMessage(context.Context, *connect.Request[v1.GetMessageRequest]) (*connect.Response[v1.GetMessageResponse], error)
 	UpdateMessage(context.Context, *connect.Request[v1.UpdateMessageRequest]) (*connect.Response[v1.UpdateMessageResponse], error)
+	// Prior contents of an edited message. The sender always may read them;
+	// other viewers are gated by ChatPolicy.edit_history_visible_to.
+	GetMessageRevisions(context.Context, *connect.Request[v1.GetMessageRevisionsRequest]) (*connect.Response[v1.GetMessageRevisionsResponse], error)
 	DeleteMessage(context.Context, *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error)
 	PinMessage(context.Context, *connect.Request[v1.PinMessageRequest]) (*connect.Response[v1.PinMessageResponse], error)
 	UnpinMessage(context.Context, *connect.Request[v1.UnpinMessageRequest]) (*connect.Response[v1.UnpinMessageResponse], error)
@@ -436,6 +442,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ChatServiceUpdateMessageProcedure,
 			connect.WithSchema(chatServiceMethods.ByName("UpdateMessage")),
+			connect.WithClientOptions(opts...),
+		),
+		getMessageRevisions: connect.NewClient[v1.GetMessageRevisionsRequest, v1.GetMessageRevisionsResponse](
+			httpClient,
+			baseURL+ChatServiceGetMessageRevisionsProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetMessageRevisions")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteMessage: connect.NewClient[v1.DeleteMessageRequest, v1.DeleteMessageResponse](
@@ -736,6 +748,7 @@ type chatServiceClient struct {
 	getMessages                      *connect.Client[v1.GetMessagesRequest, v1.GetMessagesResponse]
 	getMessage                       *connect.Client[v1.GetMessageRequest, v1.GetMessageResponse]
 	updateMessage                    *connect.Client[v1.UpdateMessageRequest, v1.UpdateMessageResponse]
+	getMessageRevisions              *connect.Client[v1.GetMessageRevisionsRequest, v1.GetMessageRevisionsResponse]
 	deleteMessage                    *connect.Client[v1.DeleteMessageRequest, v1.DeleteMessageResponse]
 	pinMessage                       *connect.Client[v1.PinMessageRequest, v1.PinMessageResponse]
 	unpinMessage                     *connect.Client[v1.UnpinMessageRequest, v1.UnpinMessageResponse]
@@ -867,6 +880,11 @@ func (c *chatServiceClient) GetMessage(ctx context.Context, req *connect.Request
 // UpdateMessage calls chat.v1.ChatService.UpdateMessage.
 func (c *chatServiceClient) UpdateMessage(ctx context.Context, req *connect.Request[v1.UpdateMessageRequest]) (*connect.Response[v1.UpdateMessageResponse], error) {
 	return c.updateMessage.CallUnary(ctx, req)
+}
+
+// GetMessageRevisions calls chat.v1.ChatService.GetMessageRevisions.
+func (c *chatServiceClient) GetMessageRevisions(ctx context.Context, req *connect.Request[v1.GetMessageRevisionsRequest]) (*connect.Response[v1.GetMessageRevisionsResponse], error) {
+	return c.getMessageRevisions.CallUnary(ctx, req)
 }
 
 // DeleteMessage calls chat.v1.ChatService.DeleteMessage.
@@ -1121,6 +1139,9 @@ type ChatServiceHandler interface {
 	GetMessages(context.Context, *connect.Request[v1.GetMessagesRequest]) (*connect.Response[v1.GetMessagesResponse], error)
 	GetMessage(context.Context, *connect.Request[v1.GetMessageRequest]) (*connect.Response[v1.GetMessageResponse], error)
 	UpdateMessage(context.Context, *connect.Request[v1.UpdateMessageRequest]) (*connect.Response[v1.UpdateMessageResponse], error)
+	// Prior contents of an edited message. The sender always may read them;
+	// other viewers are gated by ChatPolicy.edit_history_visible_to.
+	GetMessageRevisions(context.Context, *connect.Request[v1.GetMessageRevisionsRequest]) (*connect.Response[v1.GetMessageRevisionsResponse], error)
 	DeleteMessage(context.Context, *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error)
 	PinMessage(context.Context, *connect.Request[v1.PinMessageRequest]) (*connect.Response[v1.PinMessageResponse], error)
 	UnpinMessage(context.Context, *connect.Request[v1.UnpinMessageRequest]) (*connect.Response[v1.UnpinMessageResponse], error)
@@ -1321,6 +1342,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		ChatServiceUpdateMessageProcedure,
 		svc.UpdateMessage,
 		connect.WithSchema(chatServiceMethods.ByName("UpdateMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceGetMessageRevisionsHandler := connect.NewUnaryHandler(
+		ChatServiceGetMessageRevisionsProcedure,
+		svc.GetMessageRevisions,
+		connect.WithSchema(chatServiceMethods.ByName("GetMessageRevisions")),
 		connect.WithHandlerOptions(opts...),
 	)
 	chatServiceDeleteMessageHandler := connect.NewUnaryHandler(
@@ -1635,6 +1662,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceGetMessageHandler.ServeHTTP(w, r)
 		case ChatServiceUpdateMessageProcedure:
 			chatServiceUpdateMessageHandler.ServeHTTP(w, r)
+		case ChatServiceGetMessageRevisionsProcedure:
+			chatServiceGetMessageRevisionsHandler.ServeHTTP(w, r)
 		case ChatServiceDeleteMessageProcedure:
 			chatServiceDeleteMessageHandler.ServeHTTP(w, r)
 		case ChatServicePinMessageProcedure:
@@ -1802,6 +1831,10 @@ func (UnimplementedChatServiceHandler) GetMessage(context.Context, *connect.Requ
 
 func (UnimplementedChatServiceHandler) UpdateMessage(context.Context, *connect.Request[v1.UpdateMessageRequest]) (*connect.Response[v1.UpdateMessageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.UpdateMessage is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetMessageRevisions(context.Context, *connect.Request[v1.GetMessageRevisionsRequest]) (*connect.Response[v1.GetMessageRevisionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetMessageRevisions is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) DeleteMessage(context.Context, *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error) {

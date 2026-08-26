@@ -1,6 +1,6 @@
 """Initial permission defaults seeded into ``permissions_org_defaults`` on org creation."""
 
-from typing import Any, TypedDict
+from typing import TypedDict
 
 from uniffy.core.models.shared import AccessMode, ContentRole, ContentType
 
@@ -8,13 +8,6 @@ from uniffy.core.models.shared import AccessMode, ContentRole, ContentType
 class PermissionDefaults(TypedDict):
     default_access_mode: AccessMode
     default_baseline_role: ContentRole | None
-
-
-DEFAULT_ORG_SETTINGS: dict[str, Any] = {
-    "chat": {
-        "agents_enabled": True,
-    },
-}
 
 
 ORG_PERMISSION_DEFAULTS: dict[ContentType, PermissionDefaults] = {

@@ -707,6 +707,39 @@ can read the target channel.
 - [ ] Delete the source message: authorized target cards become restricted live and remain so
       after reload. Delete the verification forwards and channels afterward.
 
+## Chat edit window and edit history
+
+Run with an org admin and an ordinary member in isolated browsers. Policy lives in
+`/admin/chat`; defaults are a 60-minute window with history visible to the sender and admins.
+
+- [ ] Member edits their own fresh message: the change lands, the "(edited)" marker appears, and
+      clicking it shows the current version plus the original with timestamps.
+- [ ] A second edit adds a second prior version; revisions list oldest-last with the original
+      labeled. Saving the composer with unchanged content records no new revision.
+- [ ] Admin sets the edit window to 5 minutes. A message older than that loses the Edit action in
+      the hover menu, and a direct `UpdateMessage` call is rejected with `invalid_argument`
+      "Edit window has expired".
+- [ ] Admin sets the window to "Editing disabled": the Edit action disappears for fresh messages
+      too, and the server rejects an edit attempt with `permission_denied`. "Unlimited" re-enables
+      editing of old messages.
+- [ ] With history visibility "Sender and admins": the member cannot open another sender's edit
+      history (the "(edited)" marker still renders but degrades from a button to a plain span, and
+      a direct `GetMessageRevisions` call is denied); the org admin and the channel admin can.
+      Switching to "Everyone in the channel" makes another member's marker clickable and the RPC
+      succeed.
+- [ ] Policy changes persist across reload. A non-admin member cannot reach `/admin/chat`; the
+      admin route gate redirects them to `/`.
+- [ ] Editing a message in a DM behaves the same. Under "Sender and admins" the other participant
+      cannot open the sender's history; under "Everyone in the channel" they can.
+
+Mobile (dev client):
+
+- [ ] With the window at 5 minutes, long-pressing an old own message shows no "Edit message" row
+      in the action sheet; a fresh message still shows it. "Editing disabled" hides it everywhere.
+- [ ] Tapping "(edited)" on an own message opens the edit-history sheet with the current version
+      and prior versions; on another sender's message the tag is inert under "Sender and admins"
+      and tappable under "Everyone in the channel". Org admins and channel admins can always tap.
+
 ## Library (bookmarks + tags)
 
 `/library` is the one recall surface: the Bookmarks tab holds the user's private bookmarks, the

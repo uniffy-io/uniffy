@@ -5,19 +5,48 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { friendlyErrorMessage } from "@/config";
 import { chatApi } from "@/features/chat/api/chatApi";
-import { setBroadcastPolicy } from "@/features/chat/store/chatChannelsSlice";
+import { setOrgChatPolicy } from "@/features/chat/store/chatChannelsSlice";
+import { chatPolicyToPlain } from "@/features/chat/store/chatThunks";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, type SelectOption } from "@/components/ui/select";
-import { ChatBroadcastMinRole } from "@uniffy/proto/chat/v1/chat_pb";
+import { ChatBroadcastMinRole, ChatEditHistoryVisibility } from "@uniffy/proto/chat/v1/chat_pb";
 
 interface PolicyForm {
   broadcastMinRole: ChatBroadcastMinRole;
   broadcastConfirmThreshold: number;
+  editWindowMinutes: number | null;
+  editHistoryVisibleTo: ChatEditHistoryVisibility;
+  // Toggled on the admin Agents page; carried here so a full-policy save
+  // round-trips it (proto3 bool would otherwise reset it to false).
+  agentsEnabled: boolean;
 }
 
 const MIN_ROLE_OPTIONS: SelectOption<ChatBroadcastMinRole>[] = [
   { value: ChatBroadcastMinRole.MEMBER, label: "Every channel member" },
   { value: ChatBroadcastMinRole.ADMIN, label: "Channel and org admins only" },
+];
+
+const UNLIMITED_EDIT_WINDOW = "unlimited";
+
+const EDIT_WINDOW_PRESETS: SelectOption<string>[] = [
+  { value: "0", label: "Editing disabled" },
+  { value: "5", label: "5 minutes" },
+  { value: "15", label: "15 minutes" },
+  { value: "60", label: "1 hour" },
+  { value: "1440", label: "24 hours" },
+  { value: UNLIMITED_EDIT_WINDOW, label: "Unlimited" },
+];
+
+function editWindowOptions(current: number | null): SelectOption<string>[] {
+  if (current === null || EDIT_WINDOW_PRESETS.some((o) => o.value === String(current))) {
+    return EDIT_WINDOW_PRESETS;
+  }
+  return [...EDIT_WINDOW_PRESETS, { value: String(current), label: `${current} minutes` }];
+}
+
+const EDIT_HISTORY_OPTIONS: SelectOption<ChatEditHistoryVisibility>[] = [
+  { value: ChatEditHistoryVisibility.ADMINS, label: "Sender and admins" },
+  { value: ChatEditHistoryVisibility.EVERYONE, label: "Everyone in the channel" },
 ];
 
 export function ChatPolicySection() {
@@ -44,6 +73,9 @@ export function ChatPolicySection() {
           ? {
               broadcastMinRole: policy.broadcastMinRole,
               broadcastConfirmThreshold: policy.broadcastConfirmThreshold,
+              editWindowMinutes: policy.editWindowMinutes ?? null,
+              editHistoryVisibleTo: policy.editHistoryVisibleTo,
+              agentsEnabled: policy.agentsEnabled,
             }
           : null,
       );
@@ -66,20 +98,25 @@ export function ChatPolicySection() {
     if (!organizationId || !form || saving) return;
     setSaving(true);
     try {
-      const response = await chatApi.updateChatPolicy({ organizationId, ...form });
+      const response = await chatApi.updateChatPolicy({
+        organizationId,
+        broadcastMinRole: form.broadcastMinRole,
+        broadcastConfirmThreshold: form.broadcastConfirmThreshold,
+        editWindowMinutes: form.editWindowMinutes ?? undefined,
+        editHistoryVisibleTo: form.editHistoryVisibleTo,
+        agentsEnabled: form.agentsEnabled,
+      });
       const policy = response.policy;
       if (policy) {
         setForm({
           broadcastMinRole: policy.broadcastMinRole,
           broadcastConfirmThreshold: policy.broadcastConfirmThreshold,
+          editWindowMinutes: policy.editWindowMinutes ?? null,
+          editHistoryVisibleTo: policy.editHistoryVisibleTo,
+          agentsEnabled: policy.agentsEnabled,
         });
-        // Keep the composer's gate in sync without a reload.
-        dispatch(
-          setBroadcastPolicy({
-            minRole: policy.broadcastMinRole === ChatBroadcastMinRole.ADMIN ? "admin" : "member",
-            confirmThreshold: policy.broadcastConfirmThreshold,
-          }),
-        );
+        // Keep the chat surfaces' gates in sync without a reload.
+        dispatch(setOrgChatPolicy(chatPolicyToPlain(policy)));
       }
       toast.success("Chat policy saved");
     } catch (err) {
@@ -104,7 +141,8 @@ export function ChatPolicySection() {
         <p className="text-muted-foreground text-sm">
           Organization-wide chat behavior. Broadcast mentions (@channel, @here) notify a whole
           channel at once, so who may send them and when the composer asks for confirmation are
-          policy decisions.
+          policy decisions. Message editing follows the same idea: the edit window and edit-history
+          visibility apply to every channel.
         </p>
       </div>
 
@@ -169,6 +207,59 @@ export function ChatPolicySection() {
                   );
                 }}
                 className="w-28"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4 p-5">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-foreground">Message edit window</h3>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                How long senders may edit a message after posting it. Every edit keeps the prior
+                version in the message's edit history.
+              </p>
+            </div>
+            <div className="shrink-0">
+              <Select
+                value={
+                  form.editWindowMinutes === null
+                    ? UNLIMITED_EDIT_WINDOW
+                    : String(form.editWindowMinutes)
+                }
+                onChange={(v) =>
+                  setForm((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          editWindowMinutes: v === UNLIMITED_EDIT_WINDOW ? null : Number(v),
+                        }
+                      : prev,
+                  )
+                }
+                options={editWindowOptions(form.editWindowMinutes)}
+                disabled={disabled}
+                triggerClassName="w-full sm:w-64"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4 p-5">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-foreground">Who can view edit history</h3>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                The sender, channel admins, and org admins always can. Opening it to everyone lets
+                any member who can read the message see its prior versions.
+              </p>
+            </div>
+            <div className="shrink-0">
+              <Select
+                value={form.editHistoryVisibleTo}
+                onChange={(v) =>
+                  setForm((prev) => (prev ? { ...prev, editHistoryVisibleTo: v } : prev))
+                }
+                options={EDIT_HISTORY_OPTIONS}
+                disabled={disabled}
+                triggerClassName="w-full sm:w-64"
               />
             </div>
           </div>

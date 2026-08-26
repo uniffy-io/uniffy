@@ -8,9 +8,13 @@ import type {
 } from "@/features/chat/types";
 import type { RootState } from "@/app/store";
 
-export interface BroadcastPolicy {
-  minRole: "member" | "admin";
-  confirmThreshold: number;
+export interface OrgChatPolicy {
+  broadcastMinRole: "member" | "admin";
+  broadcastConfirmThreshold: number;
+  /** null = unlimited editing; 0 = editing disabled. */
+  editWindowMinutes: number | null;
+  editHistoryVisibleTo: "admins" | "everyone";
+  agentsEnabled: boolean;
 }
 
 // Channels are normalized (byId + ids) so per-channel mutations - unread
@@ -25,7 +29,7 @@ interface ChatChannelsState {
   channelPreferences: Record<string, ChannelPreferences>;
   categories: ChatChannelCategory[];
   agentFolders: ChatAgentFolder[];
-  broadcastPolicy: BroadcastPolicy | null;
+  orgPolicy: OrgChatPolicy | null;
   isLoading: boolean;
 }
 
@@ -38,7 +42,7 @@ const initialState: ChatChannelsState = {
   channelPreferences: {},
   categories: [],
   agentFolders: [],
-  broadcastPolicy: null,
+  orgPolicy: null,
   isLoading: false,
 };
 
@@ -140,8 +144,8 @@ export const chatChannelsSlice = createSlice({
         channel.memberCount = action.payload.members.length;
       }
     },
-    setBroadcastPolicy: (state, action: PayloadAction<BroadcastPolicy>) => {
-      state.broadcastPolicy = action.payload;
+    setOrgChatPolicy: (state, action: PayloadAction<OrgChatPolicy>) => {
+      state.orgPolicy = action.payload;
     },
     setMemberRole: (
       state,
@@ -248,7 +252,7 @@ export const {
   setSplitChannel,
   clearSplitChannel,
   clearChatChannels,
-  setBroadcastPolicy,
+  setOrgChatPolicy,
 } = chatChannelsSlice.actions;
 
 export const selectChannels = createSelector(
@@ -309,8 +313,8 @@ export const selectAgentFolders = (state: RootState): ChatAgentFolder[] =>
 
 export const selectIsLoading = (state: RootState): boolean => state.chatChannels.isLoading;
 
-export const selectBroadcastPolicy = (state: RootState): BroadcastPolicy | null =>
-  state.chatChannels.broadcastPolicy;
+export const selectOrgChatPolicy = (state: RootState): OrgChatPolicy | null =>
+  state.chatChannels.orgPolicy;
 
 export const selectChannelPreferences = (state: RootState): Record<string, ChannelPreferences> =>
   state.chatChannels.channelPreferences;

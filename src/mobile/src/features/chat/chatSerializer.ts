@@ -6,6 +6,7 @@ import {
   SenderType as ProtoSenderType,
   ChatNotificationLevel as ProtoNotificationLevel,
   ChatBroadcastMinRole as ProtoChatBroadcastMinRole,
+  ChatEditHistoryVisibility as ProtoChatEditHistoryVisibility,
 } from "@uniffy/proto/chat/v1/chat_pb";
 import { SubjectType as ProtoSubjectType } from "@uniffy/proto/common/v1/common_pb";
 import type {
@@ -391,15 +392,58 @@ export function notificationLevelToProto(level: NotificationLevel): ProtoNotific
 export interface SerializedChatPolicy {
   minRole: "member" | "admin";
   confirmThreshold: number;
+  /** null = unlimited editing; 0 = editing disabled. */
+  editWindowMinutes: number | null;
+  editHistoryVisibleTo: "admins" | "everyone";
+  agentsEnabled: boolean;
 }
 
 export function chatPolicyToPlain(proto: {
   broadcastMinRole: ProtoChatBroadcastMinRole;
   broadcastConfirmThreshold: number;
+  editWindowMinutes?: number;
+  editHistoryVisibleTo: ProtoChatEditHistoryVisibility;
+  agentsEnabled: boolean;
 }): SerializedChatPolicy {
   return {
     minRole: proto.broadcastMinRole === ProtoChatBroadcastMinRole.ADMIN ? "admin" : "member",
     confirmThreshold: proto.broadcastConfirmThreshold,
+    editWindowMinutes: proto.editWindowMinutes ?? null,
+    editHistoryVisibleTo:
+      proto.editHistoryVisibleTo === ProtoChatEditHistoryVisibility.EVERYONE
+        ? "everyone"
+        : "admins",
+    agentsEnabled: proto.agentsEnabled,
+  };
+}
+
+/** Whether the org edit-window policy still allows editing this message now. */
+export function editWindowAllows(
+  message: SerializedMessage,
+  policy: SerializedChatPolicy | null | undefined,
+): boolean {
+  const windowMinutes = policy?.editWindowMinutes;
+  if (windowMinutes === 0) return false;
+  // Unlimited window, or policy not loaded yet; the server is the boundary.
+  if (windowMinutes == null) return true;
+  return Date.now() / 1000 - message.createdAtSeconds < windowMinutes * 60;
+}
+
+export interface SerializedMessageRevision {
+  revisionNo: number;
+  content: string;
+  editedAtSeconds: number;
+}
+
+export function revisionToPlain(proto: {
+  revisionNo: number;
+  content: string;
+  editedAt?: Timestamp;
+}): SerializedMessageRevision {
+  return {
+    revisionNo: proto.revisionNo,
+    content: proto.content,
+    editedAtSeconds: tsToSeconds(proto.editedAt),
   };
 }
 

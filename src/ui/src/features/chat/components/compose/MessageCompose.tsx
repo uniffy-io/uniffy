@@ -48,7 +48,7 @@ import {
   type BroadcastKind,
 } from "@/features/chat/utils/broadcastMentions";
 import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
-import { selectBroadcastPolicy } from "@/features/chat/store/chatChannelsSlice";
+import { selectOrgChatPolicy } from "@/features/chat/store/chatChannelsSlice";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { uploadService } from "@/features/files/upload";
 import { attachmentsApi } from "@/features/files/api/attachmentsApi";
@@ -285,13 +285,13 @@ export function MessageCompose({
   const channelMembers = useAppSelector((s) =>
     channelId ? s.chatChannels.channelMembers[channelId] : undefined,
   );
-  const broadcastPolicy = useAppSelector(selectBroadcastPolicy);
+  const orgPolicy = useAppSelector(selectOrgChatPolicy);
 
   // The server enforces the same gate on send and edit; hiding the typeahead
   // entries is UX, not the boundary.
   const canBroadcast = useMemo(() => {
     if (!channelId) return false;
-    if (!broadcastPolicy || broadcastPolicy.minRole === "member") return true;
+    if (!orgPolicy || orgPolicy.broadcastMinRole === "member") return true;
     if (canManageChat) return true;
     // The channel payload carries the viewer's role, so this works before the
     // members roster is ever fetched; the roster row is the fallback.
@@ -302,7 +302,7 @@ export function MessageCompose({
     return mine?.role === "ADMIN" || mine?.role === "OWNER";
   }, [
     channelId,
-    broadcastPolicy,
+    orgPolicy,
     canManageChat,
     channel?.currentUserRole,
     channelMembers,
@@ -767,7 +767,7 @@ export function MessageCompose({
     if (broadcastKinds.length > 0) {
       const kind = effectiveBroadcastKind(broadcastKinds);
       const memberCount = channel?.memberCount ?? 0;
-      const threshold = broadcastPolicy?.confirmThreshold ?? DEFAULT_BROADCAST_CONFIRM_THRESHOLD;
+      const threshold = orgPolicy?.broadcastConfirmThreshold ?? DEFAULT_BROADCAST_CONFIRM_THRESHOLD;
       if (kind && memberCount > threshold) {
         setPendingBroadcastSend({ content, fileIds, metadata, kind, memberCount });
         return;
@@ -795,7 +795,7 @@ export function MessageCompose({
     runnableSkills,
     organizationId,
     channel?.memberCount,
-    broadcastPolicy?.confirmThreshold,
+    orgPolicy?.broadcastConfirmThreshold,
   ]);
 
   const handleTeamSendConfirm = useCallback(() => {
