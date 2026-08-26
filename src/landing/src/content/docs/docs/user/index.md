@@ -16,4 +16,6 @@ This guide is for everyone using Uniffy.
 
 [Agents](/docs/user/agents/) covers working with AI in Uniffy. What an agent can do for you, and why it can never read anything you cannot.
 
-Still to write: getting started, notes, files, chat, mentions and search, tasks and projects, calendar, bookmarks, tags, keyboard shortcuts, and the mobile app.
+[Library, tags and the knowledge graph](/docs/user/library/) covers finding your way back to your work. Private bookmarks, one tag vocabulary for the whole organization, and a graph drawn from your mentions.
+
+Still to write: getting started, notes, files, chat, mentions and search, tasks and projects, calendar, keyboard shortcuts, and the mobile app.
