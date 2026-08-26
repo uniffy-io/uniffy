@@ -218,7 +218,61 @@ The audit middleware captures every state-changing RPC. Each event row records a
 | Logs | stdout, JSON when `ENVIRONMENT!=development` | Container runtime collector. |
 | Traces | OpenTelemetry-compatible | Wire your collector at the OTLP endpoint. |
 
-Granian forks `WORKERS` children. Prometheus multiprocess mode is mandatory or each child only reports its own slice. The bootstrap helper in `uniffy._metrics_bootstrap` manages a per-component subdir under `PROMETHEUS_MULTIPROC_BASE_DIR`. Override only when the container needs a different writable path.
+Granian forks `WORKERS` children. Prometheus multiprocess mode is mandatory or each child only reports its own slice. The bootstrap helper in `uniffy._metrics_bootstrap` manages a component subdirectory under `PROMETHEUS_MULTIPROC_BASE_DIR`. Override only when the container needs a different writable path.
+
+### Worker signals
+
+The worker metrics separate four different problems. A fleet can be reachable but not ready. It can
+be ready with a growing queue. It can drain the queue while starting jobs too late. It can also reject
+a job before its handler runs.
+
+| Question | Metrics | Read it as |
+|---|---|---|
+| Is the fleet alive and connected? | `uniffy_worker_ready`, `uniffy_worker_last_heartbeat_timestamp_seconds`, `uniffy_worker_restarts_total` | Ready should be 1 and the heartbeat should remain newer than two health intervals. |
+| Is work backing up? | `uniffy_worker_queue_depth`, `uniffy_worker_job_start_delay_seconds` | Depth is every job in the sorted set, including deferred work. Start delay is time from queue eligibility to handler start. |
+| Are handlers healthy? | `uniffy_worker_jobs_started_total`, `uniffy_worker_jobs_completed_total`, `uniffy_worker_job_duration_seconds`, `uniffy_worker_jobs_in_progress` | Compare completion status and duration by queue and registered job name. Duration buckets extend through 900 seconds. |
+| Are producers reaching the queue? | `uniffy_worker_job_enqueue_total` | Outcomes are `enqueued`, `deduplicated`, `unavailable`, and `error`. This metric can be emitted by the backend or a worker, depending on where dispatch happens. |
+| Is ARQ refusing queued data? | `uniffy_worker_job_rejected_total` | Reasons cover expired or malformed payloads, missing functions, aborts before start, and exhausted retries. |
+
+Every worker replica reads the same Valkey sorted set. Aggregate queue depth with `max by (queue)`,
+not `sum`. Use the newest heartbeat across healthy replicas for the same reason. Counters and
+histograms still aggregate with `sum`.
+
+These PromQL examples are useful starting points. Tune the windows and thresholds for your traffic.
+
+```text
+# A fleet has no ready replica.
+max by (queue) (uniffy_worker_ready) < 1
+
+# No successful health cycle for 90 seconds.
+time() - max by (queue) (uniffy_worker_last_heartbeat_timestamp_seconds) > 90
+
+# Current backlog by fleet.
+max by (queue) (uniffy_worker_queue_depth)
+
+# 95th percentile eligibility to start delay.
+histogram_quantile(
+  0.95,
+  sum by (le, queue) (rate(uniffy_worker_job_start_delay_seconds_bucket[5m]))
+)
+
+# Failed or retried handler attempts.
+sum by (queue, status) (
+  rate(uniffy_worker_jobs_completed_total{status=~"failed|retry"}[5m])
+)
+
+# Queue dispatch could not complete.
+sum by (queue, outcome) (
+  rate(uniffy_worker_job_enqueue_total{outcome=~"unavailable|error"}[5m])
+) > 0
+
+# Jobs rejected before handler execution.
+sum by (queue, reason) (rate(uniffy_worker_job_rejected_total[5m])) > 0
+```
+
+Prometheus labels stay operational and bounded. They never include job ids, organization ids, user
+ids, arguments, results, or exception messages. Use structured logs when you need one job's exact
+identity or error context.
 
 ## Scaling
 
