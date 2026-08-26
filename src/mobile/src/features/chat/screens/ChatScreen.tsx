@@ -139,7 +139,12 @@ import {
   effectiveBroadcastKind,
 } from "@shared/mentions/broadcastMentions";
 import type { SerializedSearchResult } from "@features/search/searchSerializer";
-import { resolveChannelTitle, type SerializedMessage } from "@features/chat/chatSerializer";
+import {
+  editWindowAllows,
+  resolveChannelTitle,
+  type SerializedMessage,
+} from "@features/chat/chatSerializer";
+import { EditHistorySheet } from "@features/chat/components/EditHistorySheet";
 
 const GROUP_WINDOW_SECONDS = 300;
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "👀", "🙏"];
@@ -326,6 +331,8 @@ export function ChatConversationScreen() {
   );
   const mentionTypeahead = useMentionTypeahead(draft, cursor, broadcastSuggestions);
   const [actionMessage, setActionMessage] = useState<SerializedMessage | null>(null);
+  const [actionEditAllowed, setActionEditAllowed] = useState(false);
+  const [historyMessage, setHistoryMessage] = useState<SerializedMessage | null>(null);
   const [replyTo, setReplyTo] = useState<SerializedMessage | null>(null);
   const [editing, setEditing] = useState<SerializedMessage | null>(null);
   const [emojiTarget, setEmojiTarget] = useState<SerializedMessage | "compose" | null>(null);
@@ -814,7 +821,22 @@ export function ChatConversationScreen() {
   // Every per-row handler is stable and takes the message, so a screen re-render
   // hands MessageRow the same function identities and its memo holds. Inline
   // closures here would defeat it and re-parse every visible message's markdown.
-  const openActions = useCallback((message: SerializedMessage) => setActionMessage(message), []);
+  const openActions = useCallback(
+    (message: SerializedMessage) => {
+      // Evaluated when the sheet opens so the clock read stays out of render.
+      setActionEditAllowed(editWindowAllows(message, chatPolicy));
+      setActionMessage(message);
+    },
+    [chatPolicy],
+  );
+  const openEditHistory = useCallback(
+    (message: SerializedMessage) => setHistoryMessage(message),
+    [],
+  );
+  const elevatedHistoryViewer =
+    canManageChat ||
+    channelQuery.data?.currentUserRole === "ADMIN" ||
+    channelQuery.data?.currentUserRole === "OWNER";
   const openThreadFor = useCallback(
     (message: SerializedMessage) => openThread(message.id),
     [openThread],
@@ -901,6 +923,14 @@ export function ChatConversationScreen() {
               toolResultFor={toolResultFor}
               resolveUserName={resolveUserName}
               onLongPress={openActions}
+              onPressEdited={
+                message.senderType === "USER" &&
+                (message.senderId === user?.id ||
+                  elevatedHistoryViewer ||
+                  chatPolicy?.editHistoryVisibleTo === "everyone")
+                  ? openEditHistory
+                  : undefined
+              }
               onPressFailed={promptFailedSend}
               onPressThread={openThreadFor}
               onPressReplyContext={jumpToReplyContext}
@@ -926,6 +956,9 @@ export function ChatConversationScreen() {
       toolResultFor,
       resolveUserName,
       openActions,
+      openEditHistory,
+      elevatedHistoryViewer,
+      chatPolicy?.editHistoryVisibleTo,
       openThreadFor,
       presenceByUser,
       hideReplyContext,
@@ -1207,6 +1240,7 @@ export function ChatConversationScreen() {
         message={actionMessage}
         T={T}
         isOwn={actionMessage?.senderId === user?.id}
+        editAllowed={actionEditAllowed}
         onClose={() => setActionMessage(null)}
         onReact={(emoji) => {
           if (actionMessage) handleReact(actionMessage, emoji);
@@ -1253,6 +1287,8 @@ export function ChatConversationScreen() {
           ]);
         }}
       />
+
+      <EditHistorySheet message={historyMessage} T={T} onClose={() => setHistoryMessage(null)} />
 
       <EmojiPickerSheet
         visible={emojiTarget !== null}
@@ -1568,6 +1604,7 @@ const MessageRow = React.memo(function MessageRow({
   toolResultFor,
   resolveUserName,
   onLongPress,
+  onPressEdited,
   onPressFailed,
   onPressThread,
   onPressReplyContext,
@@ -1592,6 +1629,8 @@ const MessageRow = React.memo(function MessageRow({
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
   resolveUserName?: (userId: string) => string | undefined;
   onLongPress: (message: SerializedMessage) => void;
+  /** Present only when this viewer may read the message's edit history. */
+  onPressEdited?: (message: SerializedMessage) => void;
   onPressFailed: (message: SerializedMessage) => void;
   onPressThread: (message: SerializedMessage) => void;
   onPressReplyContext: (message: SerializedMessage) => void;
@@ -1832,7 +1871,13 @@ const MessageRow = React.memo(function MessageRow({
             />
           ) : null}
           {message.editedAtSeconds ? (
-            <Text style={[styles.editedTag, { color: T.textDim }]}>(edited)</Text>
+            <Text
+              style={[styles.editedTag, { color: T.textDim }]}
+              onPress={onPressEdited ? () => onPressEdited(message) : undefined}
+              suppressHighlighting
+            >
+              (edited)
+            </Text>
           ) : null}
           {failed ? (
             <View style={styles.failedRow}>
@@ -1905,6 +1950,7 @@ function MessageActionSheet({
   message,
   T,
   isOwn,
+  editAllowed,
   onClose,
   onReact,
   onMoreEmojis,
@@ -1918,6 +1964,8 @@ function MessageActionSheet({
   message: SerializedMessage | null;
   T: ThemeColors;
   isOwn: boolean;
+  /** Edit-window policy decision, evaluated when the sheet opened. */
+  editAllowed: boolean;
   onClose: () => void;
   onReact: (emoji: string) => void;
   onMoreEmojis: () => void;
@@ -1928,7 +1976,7 @@ function MessageActionSheet({
   onCopy: () => void;
   onDelete: () => void;
 }) {
-  const canEdit = isOwn && message?.senderType === "USER";
+  const canEdit = isOwn && message?.senderType === "USER" && editAllowed;
   return (
     <BottomSheet visible={!!message} onClose={onClose}>
       <View style={styles.emojiRow}>

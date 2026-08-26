@@ -17,7 +17,9 @@ import {
   draftToPlain,
   draftKey,
   chatPolicyToPlain,
+  revisionToPlain,
   type SerializedChatPolicy,
+  type SerializedMessageRevision,
   type SerializedChannel,
   type SerializedMessage,
   type SerializedMember,
@@ -240,7 +242,7 @@ export function useChannel(channelId: string | undefined) {
   });
 }
 
-/** Org broadcast-mention policy; gates the composer's @channel/@here suggestions. */
+/** Org chat policy; gates broadcast suggestions, the edit window, and edit history. */
 export function useChatPolicy() {
   const { organizationId } = useAuth();
   return useQuery({
@@ -249,6 +251,23 @@ export function useChatPolicy() {
     queryFn: async (): Promise<SerializedChatPolicy | null> => {
       const res = await chatApi.getChatPolicy({ organizationId: organizationId! });
       return res.policy ? chatPolicyToPlain(res.policy) : null;
+    },
+  });
+}
+
+/** Prior contents of an edited message; the server gates who may read them. */
+export function useMessageRevisions(channelId: string | undefined, messageId: string | undefined) {
+  const { organizationId } = useAuth();
+  return useQuery({
+    queryKey: ["chat", "revisions", organizationId, messageId],
+    enabled: !!organizationId && !!channelId && !!messageId,
+    queryFn: async (): Promise<SerializedMessageRevision[]> => {
+      const res = await chatApi.getMessageRevisions({
+        organizationId: organizationId!,
+        channelId: channelId!,
+        messageId: messageId!,
+      });
+      return res.revisions.map(revisionToPlain);
     },
   });
 }
