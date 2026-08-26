@@ -517,7 +517,6 @@ const adminSlice = createSlice({
         }
       }
     });
-
   },
 });
 

@@ -307,9 +307,7 @@ class MessageHandlers:
         try:
             async with open_session() as session:
                 ops = ChatMessageOperations(session)
-                revisions = await ops.get_message_revisions(
-                    user_id, org_id, channel_id, message_id
-                )
+                revisions = await ops.get_message_revisions(user_id, org_id, channel_id, message_id)
                 return GetMessageRevisionsResponse(
                     revisions=[revision_to_proto(r) for r in revisions]
                 )
