@@ -96,9 +96,16 @@ export function BottomSheet({
       setMounted(false);
       return;
     }
-    translateY.value = withTiming(sheetHeight, { duration: EXIT_MS }, (finished) => {
-      if (finished) runOnJS(setMounted)(false);
-    });
+    // A JS timer, not a withTiming completion callback: runOnJS from a
+    // completion callback is a use-after-free on Android - worklets frees the
+    // closure when the animation ends, and on a congested JS thread the queued
+    // call runs after the free and aborts the process (reanimated#9786). This
+    // sheet often exits at the busiest possible moment (a call just connected),
+    // which made that race a process death on a large share of call joins. The
+    // cleanup covers a reopen mid-exit, as the `finished` guard did before.
+    translateY.value = withTiming(sheetHeight, { duration: EXIT_MS });
+    const unmountTimer = setTimeout(() => setMounted(false), EXIT_MS);
+    return () => clearTimeout(unmountTimer);
   }, [visible, reducedMotion, sheetHeight, translateY]);
 
   const onSheetLayout = useCallback(
