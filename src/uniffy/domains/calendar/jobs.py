@@ -111,10 +111,14 @@ async def _process_due_reminders(session: AsyncSession) -> int:
                 NotificationEvent(
                     notification_type=NotificationType.CALENDAR_REMINDER,
                     organization_id=event.organization_id,
-                    actor_id=event.organizer_id,
+                    # A reminder is fired by the clock, not by a person. Naming the
+                    # organizer here made the fan-out drop them as the actor, so the
+                    # organizer never received a reminder for their own event.
+                    actor_id=None,
                     title=f"{event.title} starts {interval_text}",
                     source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                     target_user_ids=[reminder.user_id],
+                    metadata=({"channel_id": str(event.channel_id)} if event.channel_id else None),
                 )
             )
 

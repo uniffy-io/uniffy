@@ -39,6 +39,7 @@ import { formatDateFull } from "@/shared/utils/dateFormatting";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { SplitChannelPicker } from "@/features/chat/components/channel/SplitChannelPicker";
 import { PinnedMessagesPanel } from "@/features/chat/components/channel/PinnedMessagesPanel";
+import { ChannelNextMeeting } from "@/features/chat/components/channel/ChannelNextMeeting";
 import { selectPinnedCountForChannel } from "@/features/chat/store/chatMessagesSlice";
 import { Input } from "@/components/ui/input";
 import { renameAgentChat, jumpToChannelMessage } from "@/features/chat/store/chatThunks";
@@ -508,6 +509,8 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
           </div>
         </div>
       )}
+
+      <ChannelNextMeeting channelId={activeChannel.id} />
     </div>
   );
 }

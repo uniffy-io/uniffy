@@ -21,7 +21,7 @@ import { MainLayout } from "@/shared/layouts/MainLayout";
 import { SpotlightSearch } from "@/features/search";
 import { ZenModeHandler } from "@/components/layout/ZenModeHandler";
 import { StreamingProvider } from "@/components/streaming/StreamingProvider";
-import { notificationTargetPath } from "@/features/notifications/utils/notificationTarget";
+import { notificationHref } from "@/features/notifications/utils/notificationTarget";
 import { FileViewerModal } from "@/features/files";
 import { RoomViewerModal } from "@/features/rooms/components/detail/RoomViewerModal";
 import { UploadTray } from "@/features/files/components/upload/UploadTray";
@@ -375,7 +375,7 @@ function PushNotificationRedirect() {
     }
   }
 
-  const path = notificationTargetPath({
+  const path = notificationHref({
     notificationType: Number(searchParams.get("type") ?? 0),
     sourceUrn: searchParams.get("urn") ?? "",
     metadata,

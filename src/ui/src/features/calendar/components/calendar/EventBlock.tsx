@@ -7,6 +7,8 @@ import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { cn } from "@/shared/utils/cn";
 import { Warning, Users, ArrowsClockwise, AirplaneTilt, EyeSlash } from "@phosphor-icons/react";
 import { SubjectAvatar, SUBJECT_TYPE } from "@/components/subject";
+import { selectActiveCallForChannel } from "@/features/calls/store/callsSlice";
+import { LiveMeetingBadge } from "@/features/calendar/components/shared/LiveMeetingBadge";
 
 interface EventBlockProps {
   event: PositionedEvent;
@@ -22,6 +24,9 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const isSelected = selectedEventId === event.id;
   const isSharedEvent = event.organizerId !== currentUserId;
   const multiDayPosition = event.multiDayPosition ?? "single";
+  const activeCall = useAppSelector((state) =>
+    event.channelId ? selectActiveCallForChannel(state, event.channelId) : null,
+  );
 
   const currentUserAttendee = currentUserId
     ? event.attendees.find((a) => a.id === currentUserId)
@@ -35,6 +40,9 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const showContent = multiDayPosition === "start" || multiDayPosition === "single";
 
   const display = eventDisplayState(event);
+  // A private event must not advertise its meeting, and a cancelled one has
+  // nothing to join even when someone is sitting in the bound channel.
+  const showLive = !!activeCall && !display.cancelled && !display.detailsHidden;
 
   const category = event.categoryId ? categories[event.categoryId] : null;
   const categoryColor = category?.color ?? ACCENT_EVENT_COLOR;
@@ -220,6 +228,12 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
                   className="text-muted-foreground flex-shrink-0"
                 />
               </span>
+            )}
+            {showLive && (
+              <LiveMeetingBadge
+                variant={isShort ? "dot" : "full"}
+                participantCount={activeCall?.participants.length ?? 0}
+              />
             )}
             <span className={cn("truncate", (isDeclined || display.cancelled) && "line-through")}>
               {display.title}

@@ -7,7 +7,11 @@ import {
   markNotificationAsRead,
   type SerializedNotification,
 } from "@/features/notifications/store/notificationsSlice";
-import { notificationTargetPath } from "@/features/notifications/utils/notificationTarget";
+import {
+  meetingChannelIdFor,
+  notificationTargetPath,
+} from "@/features/notifications/utils/notificationTarget";
+import { prejoinOpened } from "@/features/calls/store/callsSlice";
 
 export function isReviewableAccessRequest(notification: SerializedNotification): boolean {
   return (
@@ -18,6 +22,7 @@ export function isReviewableAccessRequest(notification: SerializedNotification):
 
 export type NotificationAction =
   | { kind: "review_access_request"; requestId: string }
+  | { kind: "join_meeting"; channelId: string }
   | { kind: "navigate"; path: string }
   | { kind: "none" };
 
@@ -25,6 +30,11 @@ export function notificationActionFor(notification: SerializedNotification): Not
   if (notification.notificationType === NotificationType.ACCESS_REQUESTED) {
     const requestId = notification.metadata.request_id;
     return requestId ? { kind: "review_access_request", requestId } : { kind: "none" };
+  }
+
+  const meetingChannelId = meetingChannelIdFor(notification);
+  if (meetingChannelId) {
+    return { kind: "join_meeting", channelId: meetingChannelId };
   }
 
   const path = notificationTargetPath(notification);
@@ -48,6 +58,10 @@ export function useNotificationAction(
       const action = notificationActionFor(notification);
       if (action.kind === "review_access_request") {
         dispatch(openAccessRequestReviewDialog(action.requestId));
+      } else if (action.kind === "join_meeting") {
+        // The pre-join modal is global, so the meeting opens over whatever the
+        // user was doing instead of navigating them into the channel.
+        dispatch(prejoinOpened({ channelId: action.channelId }));
       } else if (action.kind === "navigate") {
         navigate(action.path);
       }

@@ -2690,7 +2690,10 @@ type GetEventsInRangeRequest struct {
 	// Optional calendar IDs to filter by (empty = all visible calendars)
 	CalendarIds []string `protobuf:"bytes,4,rep,name=calendar_ids,json=calendarIds,proto3" json:"calendar_ids,omitempty"`
 	// Optional category IDs to filter by
-	CategoryIds   []string `protobuf:"bytes,5,rep,name=category_ids,json=categoryIds,proto3" json:"category_ids,omitempty"`
+	CategoryIds []string `protobuf:"bytes,5,rep,name=category_ids,json=categoryIds,proto3" json:"category_ids,omitempty"`
+	// Optional chat channel filter: only events bound to this channel as an
+	// online meeting. Used by the channel next-meeting strip.
+	ChannelId     *string `protobuf:"bytes,6,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2758,6 +2761,13 @@ func (x *GetEventsInRangeRequest) GetCategoryIds() []string {
 		return x.CategoryIds
 	}
 	return nil
+}
+
+func (x *GetEventsInRangeRequest) GetChannelId() string {
+	if x != nil && x.ChannelId != nil {
+		return *x.ChannelId
+	}
+	return ""
 }
 
 // Response for events in range
@@ -5506,14 +5516,17 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1f\n" +
 	"\vtotal_pages\x18\x05 \x01(\x05R\n" +
-	"totalPages\"\xfa\x01\n" +
+	"totalPages\"\xad\x02\n" +
 	"\x17GetEventsInRangeRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
 	"\n" +
 	"start_date\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate\x125\n" +
 	"\bend_date\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\aendDate\x12!\n" +
 	"\fcalendar_ids\x18\x04 \x03(\tR\vcalendarIds\x12!\n" +
-	"\fcategory_ids\x18\x05 \x03(\tR\vcategoryIds\"I\n" +
+	"\fcategory_ids\x18\x05 \x03(\tR\vcategoryIds\x12\"\n" +
+	"\n" +
+	"channel_id\x18\x06 \x01(\tH\x00R\tchannelId\x88\x01\x01B\r\n" +
+	"\v_channel_id\"I\n" +
 	"\x18GetEventsInRangeResponse\x12-\n" +
 	"\x06events\x18\x01 \x03(\v2\x15.cal.v1.CalendarEventR\x06events\"\xc3\x02\n" +
 	"\bCategory\x12\x0e\n" +
@@ -6083,6 +6096,7 @@ func file_cal_v1_calendar_proto_init() {
 	file_cal_v1_calendar_proto_msgTypes[7].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[9].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[18].OneofWrappers = []any{}
+	file_cal_v1_calendar_proto_msgTypes[20].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[22].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[23].OneofWrappers = []any{}
 	file_cal_v1_calendar_proto_msgTypes[25].OneofWrappers = []any{}

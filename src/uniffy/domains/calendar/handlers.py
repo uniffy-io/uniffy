@@ -624,6 +624,10 @@ class CalendarHandlers:
         if request.category_ids:
             category_ids = [_parse_uuid(cid, "category_id") for cid in request.category_ids]
 
+        channel_id = None
+        if request.HasField("channel_id"):
+            channel_id = _parse_uuid(request.channel_id, "channel_id")
+
         try:
             async with open_session() as session:
                 ops = CalendarEventOperations(session)
@@ -634,6 +638,7 @@ class CalendarHandlers:
                     end_date=timestamp_to_datetime(request.end_date),
                     calendar_ids=calendar_ids,
                     category_ids=category_ids,
+                    channel_id=channel_id,
                 )
 
                 attendees_cache: dict[str, list] = {}

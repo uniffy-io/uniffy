@@ -11,6 +11,7 @@ import {
 import { ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
 import { displayParts, instantFromDisplayParts } from "@/features/calendar/utils";
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
+import { LiveMeetingBadge } from "@/features/calendar/components/shared/LiveMeetingBadge";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 
@@ -22,6 +23,9 @@ export function MonthView() {
   const categories = useAppSelector((state) => state.calendar.categories);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const draggedEventId = useAppSelector((state) => state.calendarUi.draggedEventId);
+  // Chips render inside a map, so the whole lookup is selected once here rather
+  // than one selector call per event.
+  const activeCallsByChannel = useAppSelector((state) => state.calls.activeByChannel);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   const weeks = useMemo(() => {
@@ -156,6 +160,10 @@ export function MonthView() {
                         attendee != null &&
                         (attendee.status === "pending" || attendee.status === "tentative");
                       const display = eventDisplayState(event);
+                      const activeCall = event.channelId
+                        ? activeCallsByChannel[event.channelId]
+                        : undefined;
+                      const showLive = !!activeCall && !display.cancelled && !display.detailsHidden;
                       return (
                         <div
                           key={event.id}
@@ -166,7 +174,8 @@ export function MonthView() {
                             e.stopPropagation();
                           }}
                           className={cn(
-                            "text-[10px] px-1.5 py-0.5 rounded truncate cursor-move hover:brightness-95 active:cursor-grabbing",
+                            "text-[10px] px-1.5 py-0.5 rounded cursor-move hover:brightness-95 active:cursor-grabbing",
+                            "flex items-center gap-1",
                             (declined || display.cancelled) && "line-through",
                           )}
                           style={{
@@ -180,7 +189,13 @@ export function MonthView() {
                                   : 1,
                           }}
                         >
-                          {display.title}
+                          {showLive && (
+                            <LiveMeetingBadge
+                              variant="dot"
+                              participantCount={activeCall?.participants.length ?? 0}
+                            />
+                          )}
+                          <span className="truncate">{display.title}</span>
                         </div>
                       );
                     })}

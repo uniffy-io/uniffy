@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.reminder import EventReminder
+from uniffy.core.models.shared import AttendeeStatus
 from uniffy.core.types import AccessMode, RecurrencePattern, generate_id
 from uniffy.domains.calendar.jobs import _process_due_reminders
 
@@ -36,12 +37,15 @@ def _reminder(event: CalendarEvent, scheduled_at: datetime, minutes: int = 15) -
     )
 
 
-def _session(rows: list, *, with_exceptions: bool) -> AsyncMock:
+def _session(rows: list, *, with_exceptions: bool, attendees: list | None = None) -> AsyncMock:
     session = AsyncMock()
     results = [SimpleNamespace(all=lambda: rows)]
     if with_exceptions:
         results.append(SimpleNamespace(all=list))
-    results.extend(SimpleNamespace(scalar_one_or_none=lambda: None) for _ in rows)
+    resolved = attendees if attendees is not None else [None] * len(rows)
+    results.extend(
+        SimpleNamespace(scalar_one_or_none=lambda a=attendee: a) for attendee in resolved
+    )
     session.execute.side_effect = results
     return session
 
@@ -111,4 +115,77 @@ async def test_non_recurring_reminder_emits_once_and_closes() -> None:
         await _process_due_reminders(session)
 
     emit.assert_awaited_once()
+    assert reminder.sent_at is not None
+
+
+async def _emitted_event(event: CalendarEvent, reminder: EventReminder) -> object:
+    session = _session([(reminder, event)], with_exceptions=False)
+    with patch("uniffy.domains.calendar.jobs.emit_notification", AsyncMock()) as emit:
+        await _process_due_reminders(session)
+    return emit.await_args.args[0]
+
+
+async def test_reminder_has_no_actor_so_the_organizer_is_not_filtered_out() -> None:
+    # The fan-out drops the actor from explicit targets, so naming the organizer
+    # here silently discarded every organizer's reminder for their own event.
+    base = datetime.now(UTC).replace(microsecond=0)
+    event = _daily_event(
+        start_time=base + timedelta(minutes=30),
+        recurrence_pattern=RecurrencePattern.NONE,
+        recurrence_config=None,
+    )
+    reminder = _reminder(event, scheduled_at=base - timedelta(minutes=1))
+    reminder.user_id = event.organizer_id
+
+    emitted = await _emitted_event(event, reminder)
+
+    assert emitted.actor_id is None
+    assert emitted.target_user_ids == [event.organizer_id]
+
+
+async def test_channel_bound_event_carries_the_channel_in_metadata() -> None:
+    base = datetime.now(UTC).replace(microsecond=0)
+    channel_id = generate_id()
+    event = _daily_event(
+        start_time=base + timedelta(minutes=30),
+        recurrence_pattern=RecurrencePattern.NONE,
+        recurrence_config=None,
+        channel_id=channel_id,
+    )
+    reminder = _reminder(event, scheduled_at=base - timedelta(minutes=1))
+
+    emitted = await _emitted_event(event, reminder)
+
+    assert emitted.metadata == {"channel_id": str(channel_id)}
+
+
+async def test_unbound_event_carries_no_metadata() -> None:
+    base = datetime.now(UTC).replace(microsecond=0)
+    event = _daily_event(
+        start_time=base + timedelta(minutes=30),
+        recurrence_pattern=RecurrencePattern.NONE,
+        recurrence_config=None,
+    )
+    reminder = _reminder(event, scheduled_at=base - timedelta(minutes=1))
+
+    emitted = await _emitted_event(event, reminder)
+
+    assert emitted.metadata is None
+
+
+async def test_declined_attendee_is_closed_without_emitting() -> None:
+    base = datetime.now(UTC).replace(microsecond=0)
+    event = _daily_event(
+        start_time=base + timedelta(minutes=30),
+        recurrence_pattern=RecurrencePattern.NONE,
+        recurrence_config=None,
+    )
+    reminder = _reminder(event, scheduled_at=base - timedelta(minutes=1))
+    declined = SimpleNamespace(status=AttendeeStatus.DECLINED)
+    session = _session([(reminder, event)], with_exceptions=False, attendees=[declined])
+
+    with patch("uniffy.domains.calendar.jobs.emit_notification", AsyncMock()) as emit:
+        await _process_due_reminders(session)
+
+    emit.assert_not_awaited()
     assert reminder.sent_at is not None
