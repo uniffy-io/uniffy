@@ -14,13 +14,13 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.crypto import OrgCipher
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
-from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.domains.calls.operations import kick_user_from_active_call
 from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
@@ -28,9 +28,9 @@ from uniffy.domains.chat.cache import (
 )
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
 from uniffy.domains.chat.search_acl import enqueue_chat_search_acl_refresh
-from uniffy.workers.tasks import JobName
+from uniffy.domains.permissions.job_contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
 
-logger = logger.bind(component="org-ops")
+logger = logger.bind(component="organizations.operations")
 
 
 class OrganizationOperations:
@@ -678,9 +678,8 @@ class OrganizationOperations:
         # later defaults mutation.
         try:
             reindex_run_id = str(int(defaults.updated_at.timestamp() * 1_000_000))
-            queue = get_queue(QueueName.CORE)
-            await queue.enqueue_job(
-                JobName.REINDEX_ORG_CONTENT_FOR_DEFAULTS,
+            await enqueue_job(
+                REINDEX_ORG_CONTENT_FOR_DEFAULTS,
                 str(org_id),
                 content_type.value,
                 None,

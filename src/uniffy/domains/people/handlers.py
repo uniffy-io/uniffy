@@ -15,11 +15,11 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
-from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.org_settings.operations import OrgSettingsOperations
@@ -38,6 +38,7 @@ from uniffy.domains.people.converters import (
     profile_to_proto,
     team_node_to_proto,
 )
+from uniffy.domains.people.directory.job_contracts import SYNC_IDENTITY_SOURCE
 from uniffy.domains.people.directory.registry import (
     IDENTITY_SECRET_NAMESPACE,
     capabilities_for,
@@ -55,7 +56,6 @@ from uniffy.domains.people.policy import (
     save_profile_policy,
 )
 from uniffy.domains.people.reader import PeopleReader, load_person_payload
-from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="people.handlers")
 
@@ -771,8 +771,7 @@ class PeopleHandlers:
                 source_id = source.id
 
             # Enqueue and return; a sync never runs on the request thread.
-            queue = get_queue(QueueName.EGRESS)
-            await queue.enqueue_job(JobName.SYNC_IDENTITY_SOURCE, str(source_id))
+            await enqueue_job(SYNC_IDENTITY_SOURCE, str(source_id))
             return pb.TriggerDirectorySyncResponse(enqueued=True)
         except ConnectError:
             raise

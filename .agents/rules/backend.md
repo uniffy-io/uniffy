@@ -198,13 +198,65 @@ Default is ConnectRPC. Plain FastAPI HTTP routes (`domains/{feature}/http_routes
 
 Attachments link a file to content via a generic `(content_type, content_id)` row; RPCs live on `files.v1.FilesService`. `AttachFile` copies the source file into an Attachments folder and writes one `Attachment` row (`file_id` unique - each attachment owns its copy). Folder + file policy follow the PARENT's effective access mode (`OPEN_TO_ORG` parent -> shared org attachments folder; otherwise the attacher's personal `OWNER_ONLY` folder). `DetachFile` deletes the row AND the file copy. Permissions: attach = VIEW on source + edit-equivalent on target (chat delegates to `ChatAccessChecker`); view/list = VIEW on parent; detach = attacher or EDIT on parent. Key files: `core/models/files/attachment.py`, `domains/files/attachments/`.
 
-## Background tasks (ARQ + Valkey)
+## Background jobs (ARQ + Valkey)
 
-- Enqueue from domain operations via `get_queue()`; a queue-unavailable `RuntimeError` is non-fatal (item stays PENDING).
-- Use `get_jobs_for_mime_type()` (`workers/utils/mime.py`) to pick jobs - hardcoded job names drift from the registry.
-- New task: function in `workers/tasks/{feature}.py` (retry with `raise Retry(defer=ctx["job_try"] * 10)`), register in `workers/settings.py::WorkerSettings.functions`, add MIME mapping if applicable.
-- Every job is idempotent (Valkey `SET NX` lock keyed by the natural identifier).
-- `ExtractionStatus` flow: `PENDING -> PROCESSING -> COMPLETED | FAILED (after 3 retries) | SKIPPED`.
+Job behavior and producer-facing contracts belong to the domain or core subsystem whose state and
+invariants they operate on: a small domain surface uses `domains/{feature}/job_contracts.py` +
+`jobs.py`, while a larger one uses `domains/{feature}/jobs/contracts.py` + focused handler modules.
+`core/jobs/` owns only the generic contract types and dispatch helpers; `workers/` is the composition
+root that validates registrations, builds the core and egress fleets, manages their resources, and
+renders the executable inventory.
+
+### Creating a job
+
+1. **Put the contract and handler beside their owner.** The contract exports `JobRef` constants and
+   imports neither handlers nor `workers/*`. Add every enqueueable ref to the owner's `*_JOB_REFS`
+   tuple and every scheduled ref to its `*_SCHEDULED_JOB_REFS` tuple so registry drift validation can
+   prove that both catalogs and their bindings agree. Export both tuples even when one is empty.
+   Core-owned subsystems follow the same owner-local split; never create a domain handler under
+   `workers/`.
+2. **Classify the ref explicitly.** Give it a stable ARQ `name`, a `JobWorkload`, its matching
+   `QueueName`, and a `JobReliability`. `CONTROL`, `DELIVERY`, and `MEDIA` run on `CORE`; `AGENT` and
+   `INTEGRATION` run on `EGRESS`. Scheduled refs use the `cron:` name prefix and a `_SCHEDULE`
+   constant; changing an existing name or queue is a compatibility migration, not a refactor.
+3. **Make durability concrete.** A `DURABLE` ref declares `JobRecovery` with the exact PostgreSQL
+   pending/outbox fact and the automatic sweep or schedule that retries it. Commit that fact before
+   enqueueing. Use `BEST_EFFORT` only when losing the job cannot leave authoritative state incomplete
+   or incorrect.
+4. **Keep the handler domain-shaped.** Handlers are async, accept ARQ `ctx` first, and receive only
+   primitive values or JSON strings. Reload authoritative rows inside the job, carry
+   `organization_id` for tenant work unless a single canonical payload row supplies it, enforce the
+   actor identity when work runs on a user's behalf, never invent an admin/content bypass, and make
+   repeated execution safe. Use `raise Retry(defer=ctx["job_try"] * 10)` only when replaying the same
+   fact is safe.
+5. **Dispatch through the typed boundary.** Business producers call
+   `core.jobs.enqueue_job(ref, *payload)`; use `enqueue_job_reconnecting` only when an unavailable
+   queue is deliberately non-fatal and the caller handles its `JobEnqueueResult.outcome`.
+   Worker-internal batch fan-out may reuse its existing queue connection, but still takes the name
+   from a `JobRef`, never a string literal. The owning operation decides whether enqueue failure is
+   returned, recovered from PostgreSQL, or safely dropped.
+6. **Bind once in `workers/registry.py`.** Import the ref and handler, then add `_bind(...)` to the
+   matching `*_JOB_REGISTRATIONS` tuple or `_bind_schedule(...)` to the matching
+   `*_SCHEDULED_REGISTRATIONS` tuple. Do not add domain jobs directly to `WorkerSettings.functions` or
+   `cron_jobs`; fleet settings consume the validated registry output. If the handler needs a process
+   resource its fleet does not already own, add it to the typed resource profile and lifecycle hooks
+   instead of initializing an undeclared global inside the handler.
+7. **Test behavior at the owner.** Cover the real effect, idempotent replay, retry/recovery path,
+   tenant scope, and the typed ref passed through the dispatch boundary. Keep only registry,
+   lifecycle, resource-topology, and queue mechanics under `tests/unit/workers/`; never snapshot job
+   names, cron strings, tuple lengths, or settings attributes. Render `uniffy.workers.inventory` from
+   the active backend or worker environment to inspect the live name/owner/workload/reliability/queue/
+   schedule/retry picture.
+
+Use `core.jobs.locks` only for ordinary token-owned `SET NX` leases with identical semantics. Domain
+claim/version algorithms stay with their owner; idempotency does not imply that every job needs a
+Valkey lock.
+
+File processing routes through `domains/files/jobs/mime.py::get_jobs_for_mime_type`; queue failure
+leaves PostgreSQL state recoverable by the bounded file-processing sweep. Thumbnail, extraction, and
+transcode handlers each own a separate persisted status, and the producer plus recovery sweep use one
+versioned `file-processing:` job id so queued work deduplicates across both paths. Thumbnail and
+extraction flows are `PENDING -> PROCESSING -> COMPLETED | FAILED (after 3 retries) | SKIPPED`.
 
 ## Shared systems (pointers)
 

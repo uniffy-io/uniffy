@@ -22,6 +22,16 @@ class ExtractionStatus(str, Enum):
     SKIPPED = "SKIPPED"
 
 
+class ThumbnailStatus(str, Enum):
+    """Thumbnail-generation pipeline state."""
+
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    SKIPPED = "SKIPPED"
+
+
 class TranscodeStatus(str, Enum):
     """Server-side transcode state.
 
@@ -95,6 +105,19 @@ class File(SQLModel, table=True):
             ),
             nullable=False,
             server_default="PENDING",
+        ),
+    )
+    thumbnail_status: ThumbnailStatus = Field(
+        default=ThumbnailStatus.SKIPPED,
+        sa_column=Column(
+            SAEnum(
+                ThumbnailStatus,
+                name="thumbnailstatus",
+                values_callable=lambda x: [e.value for e in x],
+                create_type=False,
+            ),
+            nullable=False,
+            server_default="SKIPPED",
         ),
     )
     transcode_status: TranscodeStatus = Field(

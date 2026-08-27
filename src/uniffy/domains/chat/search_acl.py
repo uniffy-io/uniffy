@@ -7,9 +7,9 @@ from loguru import logger
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
-from uniffy.core.valkey import QueueName, get_queue
-from uniffy.workers.tasks import JobName
+from uniffy.domains.chat.jobs.contracts import REFRESH_CHAT_SEARCH_ACL
 
 logger = logger.bind(component="chat.search_acl")
 
@@ -44,10 +44,7 @@ async def record_chat_search_acl_refresh(
 
 async def enqueue_chat_search_acl_refresh(channel_id: UUID) -> None:
     try:
-        await get_queue(QueueName.CORE).enqueue_job(
-            JobName.REFRESH_CHAT_SEARCH_ACL,
-            str(channel_id),
-        )
+        await enqueue_job(REFRESH_CHAT_SEARCH_ACL, str(channel_id))
     except RuntimeError:
         logger.warning(f"Search ACL refresh queued in DB only for channel {channel_id}")
     except Exception:

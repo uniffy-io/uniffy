@@ -48,7 +48,6 @@ class ValkeyConfig:
 
     @classmethod
     def from_env(cls) -> ValkeyConfig:
-        """Read ``VALKEY_HOST`` / ``_PORT`` / ``_PASSWORD`` / ``_DATABASE``."""
         return cls(
             host=os.getenv("VALKEY_HOST", "localhost"),
             port=int(os.getenv("VALKEY_PORT", "6380")),

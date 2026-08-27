@@ -22,6 +22,7 @@ from uniffy.core.errors import (
 )
 from uniffy.core.events.bus import emit_notification
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
@@ -36,8 +37,8 @@ from uniffy.core.models.platform.support_session import (
     SupportSessionState,
 )
 from uniffy.core.types import NotificationType
-from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
+from uniffy.domains.mail.job_contracts import SEND_EMAIL
 from uniffy.domains.platform.support_session.errors import (
     SupportSessionScopeError,
     SupportSessionTransitionError,
@@ -48,9 +49,8 @@ from uniffy.domains.platform.support_session.policy import (
     effective_consent_mode,
 )
 from uniffy.domains.users.operations import UserOperations
-from uniffy.workers.tasks import JobName
 
-logger = logger.bind(component="support_session")
+logger = logger.bind(component="platform.support_session.operations")
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 200
@@ -863,7 +863,6 @@ class SupportSessionOperations:
         except Exception:
             logger.warning(
                 "support_session fanout: in-app notification enqueue failed",
-                component="support_session",
                 session_id=str(row.id),
             )
 
@@ -909,21 +908,11 @@ class SupportSessionOperations:
             "app_url": os.getenv("UNIFFY_BASE_URL", "").rstrip("/"),
         }
 
-        try:
-            queue = get_queue(QueueName.CORE)
-        except RuntimeError:
-            logger.warning(
-                "support_session fanout: core queue not initialised",
-                component="support_session",
-                session_id=str(row.id),
-            )
-            return
-
         for user_id, email, _ in owners:
             idempotency_key = f"support_session/{row.id}/{event}/{user_id}"
             try:
-                await queue.enqueue_job(
-                    JobName.SEND_EMAIL,
+                await enqueue_job(
+                    SEND_EMAIL,
                     email,
                     template,
                     dumps_str(context),
@@ -931,10 +920,15 @@ class SupportSessionOperations:
                     idempotency_key=idempotency_key,
                     user_id=str(user_id),
                 )
+            except RuntimeError:
+                logger.warning(
+                    "support_session fanout: core queue not initialised",
+                    session_id=str(row.id),
+                )
+                return
             except Exception:
                 logger.warning(
                     "support_session fanout: email enqueue failed",
-                    component="support_session",
                     session_id=str(row.id),
                     event=event,
                 )

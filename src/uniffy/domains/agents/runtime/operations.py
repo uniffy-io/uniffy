@@ -95,6 +95,7 @@ from uniffy.domains.agents.sessions.operations import (
     SessionOperations,
     apply_emergency_truncation,
 )
+from uniffy.domains.agents.skills.job_contracts import SkillAnalysisDestination
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.skills.usage import record_skill_event, record_skill_injections
 from uniffy.domains.agents.tools.deferral import (
@@ -117,7 +118,6 @@ from uniffy.domains.integrations.tool_gate import (
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
-from uniffy.workers.tasks import SkillAnalysisDestination
 
 logger = logger.bind(component="agents.runtime.operations")
 

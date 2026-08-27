@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
@@ -14,11 +14,13 @@ export function ProjectSettingsPage() {
   const selectProject = useMemo(() => selectProjectById(projectId || ""), [projectId]);
   const project = useAppSelector(selectProject);
   const canManage = useMemo(() => roleCanManage(project?.userRole ?? null), [project?.userRole]);
+  const initializedProjectIdRef = useRef<string | null>(null);
 
   useDocumentTitle(project ? `${project.name} Settings` : "Project Settings");
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || initializedProjectIdRef.current === projectId) return;
+    initializedProjectIdRef.current = projectId;
     dispatch(setCurrentProject(projectId));
     if (!project) {
       dispatch(fetchProject(projectId));

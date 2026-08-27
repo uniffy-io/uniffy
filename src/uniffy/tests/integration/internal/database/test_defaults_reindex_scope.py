@@ -5,7 +5,7 @@ from sqlalchemy import delete
 
 from uniffy.core.models.notes.note import Note
 from uniffy.core.types import AccessMode, ContentRole, generate_id
-from uniffy.workers.tasks.permissions_reindex import _keyset_query
+from uniffy.domains.permissions.jobs import _keyset_query
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

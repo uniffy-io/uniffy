@@ -1,14 +1,4 @@
-"""Agent runtime RPC handlers - thin coordinators on top of the egress worker.
-
-The handler owns the synchronous preflight cliff: auth, UUID parse, org +
-session ownership checks, rate-limit, file permission load. Once those
-pass it mints a ``run_id``, writes the run state hash, enqueues
-:func:`uniffy.workers.tasks.agent_run.run_agent_session` to the egress
-queue, and subscribes to ``agent:run:{run_id}`` via XREAD. Each entry
-on the stream is decoded back into a domain event and re-encoded as a
-proto envelope for the client. The handler never touches the LLM
-itself - the worker drives that turn.
-"""
+"""Agent runtime RPC handlers and egress-run stream coordination."""
 
 import asyncio
 import os
@@ -49,11 +39,11 @@ from uniffy.core.errors import (
     RateLimitExceededError,
     ValidationError,
 )
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
-from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_agent_message_limits
 from uniffy.core.valkey.streams import (
     get_run_state,
@@ -78,6 +68,7 @@ from uniffy.domains.agents.runtime.file_loader import (
     _load_files,
 )
 from uniffy.domains.agents.runtime.image_regenerate import regenerate_image
+from uniffy.domains.agents.runtime.job_contracts import RUN_AGENT_SESSION
 from uniffy.domains.agents.runtime.settings import (
     ResolvedRuntimeSettings,
     get_runtime_settings,
@@ -91,7 +82,6 @@ from uniffy.observability.metrics import (
     AGENT_RUN_RECONNECT_TOTAL,
     AGENT_RUN_SUBSCRIBE_TIMEOUT_TOTAL,
 )
-from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="agents.runtime.handlers")
 
@@ -118,10 +108,8 @@ async def _enqueue_run(
     rerun_message_id: UUID | None = None,
     invoked_skill_id: UUID | None = None,
 ) -> None:
-    """Enqueue ``run_agent_session`` on the egress fleet."""
-    queue = get_queue(QueueName.EGRESS)
-    await queue.enqueue_job(
-        JobName.RUN_AGENT_SESSION,
+    await enqueue_job(
+        RUN_AGENT_SESSION,
         str(run_id),
         str(user_id),
         str(organization_id),

@@ -182,4 +182,3 @@ async def test_frequency_change_reschedules_pending_delivery() -> None:
     assert delivery.status == NotificationEmailStatus.PENDING
     assert delivery.frequency == "daily"
     assert delivery.scheduled_for == datetime(2026, 8, 21, 14, 0, tzinfo=UTC)
-

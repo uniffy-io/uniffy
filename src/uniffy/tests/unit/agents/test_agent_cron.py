@@ -1,11 +1,4 @@
-"""Cron tests: task listing access filters, the run-history tool, the worker's
-run-log stamping window, and the stale-pending sweep.
-
-The worker tests capture the UPDATE statement and run its
-WHERE clause against in-memory rows via SQLAlchemy's criteria evaluator (the
-engine behind ``synchronize_session="evaluate"``), so the filters are asserted
-behaviorally without a database.
-"""
+"""Agent cron behavior tests."""
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace as NS
@@ -165,7 +158,7 @@ class TestCronGetRunsTool:
 
 class TestStampRunLogs:
     async def _stamp(self):
-        from uniffy.workers.tasks.agent_cron import _stamp_run_logs
+        from uniffy.domains.agents.cron.jobs import _stamp_run_logs
 
         session, captured = _capture_session()
         session_id = generate_id()
@@ -217,7 +210,7 @@ class TestStampRunLogs:
 
 class TestSweepStalePendingRuns:
     async def test_only_old_pending_cron_rows_are_swept(self) -> None:
-        from uniffy.workers.tasks.agent_cron import (
+        from uniffy.domains.agents.cron.jobs import (
             STALE_PENDING_CUTOFF,
             _sweep_stale_pending_runs,
         )
@@ -239,7 +232,7 @@ class TestSweepStalePendingRuns:
         assert swept == 1
 
     async def test_sweep_marks_rows_as_error(self) -> None:
-        from uniffy.workers.tasks.agent_cron import _sweep_stale_pending_runs
+        from uniffy.domains.agents.cron.jobs import _sweep_stale_pending_runs
 
         session, captured = _capture_session()
         await _sweep_stale_pending_runs(session)

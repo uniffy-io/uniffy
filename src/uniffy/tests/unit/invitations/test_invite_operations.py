@@ -111,8 +111,8 @@ def _patch_queue():
     queue = AsyncMock()
     queue.enqueue_job = AsyncMock()
     return patch(
-        "uniffy.domains.invitations.operations.get_queue",
-        return_value=queue,
+        "uniffy.domains.invitations.operations.enqueue_job",
+        new=queue.enqueue_job,
     ), queue
 
 

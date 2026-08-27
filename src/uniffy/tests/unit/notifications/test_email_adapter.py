@@ -8,8 +8,8 @@ from uniffy.core.events.types import NotificationEvent
 from uniffy.core.types import NotificationType, generate_id
 from uniffy.domains.notifications.delivery.base import NotificationChannel
 from uniffy.domains.notifications.delivery.email import EmailAdapter, StagedEmailDelivery
+from uniffy.domains.notifications.jobs.contracts import SEND_NOTIFICATION_EMAIL
 from uniffy.domains.settings.defaults import EmailFrequency
-from uniffy.workers.tasks import JobName
 
 
 def _event(organization_id):
@@ -31,9 +31,7 @@ async def _fake_session(session_mock):
 async def test_stage_instant_email_returns_durable_delivery() -> None:
     delivery_id = generate_id()
     session = AsyncMock()
-    session.execute.return_value = MagicMock(
-        scalar_one_or_none=MagicMock(return_value=delivery_id)
-    )
+    session.execute.return_value = MagicMock(scalar_one_or_none=MagicMock(return_value=delivery_id))
     now = datetime(2026, 8, 21, 12, 0, tzinfo=UTC)
 
     staged = await EmailAdapter().stage_with_session(
@@ -62,14 +60,14 @@ async def test_instant_delivery_enqueues_stable_outbox_job() -> None:
     queue = AsyncMock()
 
     with patch(
-        "uniffy.domains.notifications.delivery.email.get_queue",
-        return_value=queue,
+        "uniffy.domains.notifications.delivery.email.enqueue_job",
+        new=queue.enqueue_job,
     ):
         result = await EmailAdapter().enqueue_if_due(delivery)
 
     assert result is True
     queue.enqueue_job.assert_awaited_once_with(
-        JobName.SEND_NOTIFICATION_EMAIL,
+        SEND_NOTIFICATION_EMAIL,
         str(delivery.id),
         _job_id=f"notification_email:{delivery.id}",
     )
@@ -84,8 +82,8 @@ async def test_digest_delivery_waits_for_dispatcher() -> None:
     queue = AsyncMock()
 
     with patch(
-        "uniffy.domains.notifications.delivery.email.get_queue",
-        return_value=queue,
+        "uniffy.domains.notifications.delivery.email.enqueue_job",
+        new=queue.enqueue_job,
     ):
         result = await EmailAdapter().enqueue_if_due(delivery)
 

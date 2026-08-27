@@ -46,6 +46,7 @@ import {
   appendMessage,
   updateMessage,
   deleteMessage,
+  clearChannelMessages,
   setHasMore,
   setUnreadSeparator,
   setChannelLoading,
@@ -84,6 +85,7 @@ import { sessionsApi } from "@/features/agents/api/sessionsApi";
 import { markNotificationsReadBySource } from "@/features/notifications/store/notificationsSlice";
 import type { RootState } from "@/app/store";
 import type { ChatMessage, ChatChannel, ChatChannelMember } from "@/features/chat/types";
+import { clearLastOpenedChannel } from "@/features/chat/utils/lastOpenedChannel";
 import {
   ChannelType as ProtoChannelType,
   ChatNotificationLevel,
@@ -97,6 +99,21 @@ const getOrganizationId = (state: RootState): string => {
     throw new Error("No organization selected");
   }
   return orgId;
+};
+
+const removeChannelLocally = (
+  state: RootState,
+  dispatch: Dispatch<UnknownAction>,
+  organizationId: string,
+  channelId: string,
+): void => {
+  if (state.chatChannels.activeChannelId === channelId && state.auth.user?.id) {
+    clearLastOpenedChannel(organizationId, state.auth.user.id);
+  }
+  dispatch(restrictForwardsFromChannel(channelId));
+  dispatch(restrictThreadForwardsFromChannel(channelId));
+  dispatch(clearChannelMessages(channelId));
+  dispatch(removeChannel(channelId));
 };
 
 const hydrateChannelTags = (
@@ -286,9 +303,7 @@ export const leaveChannel = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.leaveChannel({ organizationId, channelId });
-    dispatch(restrictForwardsFromChannel(channelId));
-    dispatch(restrictThreadForwardsFromChannel(channelId));
-    dispatch(removeChannel(channelId));
+    removeChannelLocally(getState(), dispatch, organizationId, channelId);
     return channelId;
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to leave channel");
@@ -303,9 +318,7 @@ export const archiveChannel = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.archiveChannel({ organizationId, channelId });
-    dispatch(restrictForwardsFromChannel(channelId));
-    dispatch(restrictThreadForwardsFromChannel(channelId));
-    dispatch(removeChannel(channelId));
+    removeChannelLocally(getState(), dispatch, organizationId, channelId);
     return channelId;
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to archive channel");
@@ -320,9 +333,7 @@ export const deleteChannel = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.deleteChannel({ organizationId, channelId });
-    dispatch(restrictForwardsFromChannel(channelId));
-    dispatch(restrictThreadForwardsFromChannel(channelId));
-    dispatch(removeChannel(channelId));
+    removeChannelLocally(getState(), dispatch, organizationId, channelId);
     return channelId;
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to delete channel");
@@ -335,7 +346,11 @@ export const fetchMessages = createAsyncThunk<
   { state: RootState; rejectValue: string }
 >("chat/fetchMessages", async (params, { getState, dispatch, rejectWithValue }) => {
   try {
-    const organizationId = getOrganizationId(getState());
+    const currentState = getState();
+    if (!currentState.chatChannels.byId[params.channelId]) {
+      return { messages: [], hasMore: false };
+    }
+    const organizationId = getOrganizationId(currentState);
     dispatch(setChannelLoading({ channelId: params.channelId, isLoading: true }));
     const response = await chatApi.getMessages({
       organizationId,

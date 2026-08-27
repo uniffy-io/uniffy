@@ -111,8 +111,8 @@ The backend runs two separate ARQ worker fleets. Each has its own tunables.
 Run the two fleets as separate processes or Deployments:
 
 ```sh
-arq uniffy.workers.settings.CoreWorkerSettings
-arq uniffy.workers.settings.EgressWorkerSettings
+python -m uniffy --worker-core
+python -m uniffy --worker-egress
 ```
 
 ## Object storage (S3-compatible)
@@ -203,4 +203,3 @@ All providers are reached through SMTP. For Resend, use the SMTP relay (`smtp.re
 | `SMTP_USERNAME` | empty | SMTP auth user. For Resend: `resend`. |
 | `SMTP_PASSWORD` | empty | SMTP auth password. For Resend: your API key. |
 | `SMTP_USE_TLS` | `true` | Use STARTTLS on connect. Disable only for plain-text dev relays. |
-

@@ -214,7 +214,7 @@ class TestResolveProviderAndModel:
 
 class TestCompactionWorkerNameOnlyAgent:
     async def test_worker_compacts_via_org_default(self) -> None:
-        from uniffy.workers.tasks import agent_compaction
+        from uniffy.domains.agents.sessions import jobs as agent_compaction
 
         org_id = generate_id()
         key_id = generate_id()
@@ -272,7 +272,7 @@ class TestCompactionWorkerNameOnlyAgent:
         assert kwargs["model"] == "org-default-model"
 
     async def test_worker_reports_error_without_any_default(self) -> None:
-        from uniffy.workers.tasks import agent_compaction
+        from uniffy.domains.agents.sessions import jobs as agent_compaction
 
         session_id = generate_id()
         agent_session_row = NS(

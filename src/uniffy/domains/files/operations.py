@@ -26,8 +26,9 @@ from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.core.models.files.file import ExtractionStatus, File, TranscodeStatus
+from uniffy.core.models.files.file import ExtractionStatus, File, ThumbnailStatus, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_part import MultipartPart
@@ -46,13 +47,18 @@ from uniffy.core.types import (
 )
 from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
 from uniffy.core.valkey.mentions import publish_mention_state
+from uniffy.domains.files.jobs.processing import (
+    file_processing_job_id,
+    initial_extraction_status,
+    initial_thumbnail_status,
+    pending_jobs_for_file,
+)
 from uniffy.domains.files.quota_operations import QuotaOperations
 from uniffy.domains.files.version_policy import (
     resolve_version_policy,
     select_versions_to_prune,
 )
 from uniffy.domains.tags import TagAssignment, TagOperations
-from uniffy.workers.utils.mime import get_jobs_for_mime_type, get_processable_mime_types
 
 logger = logger.bind(component="files.operations")
 
@@ -430,6 +436,7 @@ class FileOperations(BaseContentOperations[File]):
             )
 
         extraction_status = self._get_initial_extraction_status(upload.mime_type)
+        thumbnail_status = self._get_initial_thumbnail_status(upload.mime_type)
         transcode_status = self._get_initial_transcode_status(upload.mime_type, upload.filename)
 
         file = File(
@@ -445,6 +452,7 @@ class FileOperations(BaseContentOperations[File]):
             storage_bucket=upload.storage_bucket,
             folder_id=upload.folder_id,
             extraction_status=extraction_status,
+            thumbnail_status=thumbnail_status,
             transcode_status=transcode_status,
         )
 
@@ -531,7 +539,7 @@ class FileOperations(BaseContentOperations[File]):
             file.folder_id, file.organization_id
         )
 
-        if file.extraction_status == ExtractionStatus.PENDING:
+        if pending_jobs_for_file(file):
             await self._enqueue_processing_jobs(file)
 
         return file
@@ -582,6 +590,7 @@ class FileOperations(BaseContentOperations[File]):
         file.current_version_id = version.id
         file.version = new_version_number
         file.extraction_status = self._get_initial_extraction_status(file.mime_type)
+        file.thumbnail_status = self._get_initial_thumbnail_status(file.mime_type)
         file.transcode_status = self._get_initial_transcode_status(file.mime_type, file.filename)
         file.updated_at = datetime.now(UTC)
 
@@ -627,7 +636,7 @@ class FileOperations(BaseContentOperations[File]):
             file.folder_id, file.organization_id
         )
 
-        if file.extraction_status == ExtractionStatus.PENDING:
+        if pending_jobs_for_file(file):
             await self._enqueue_processing_jobs(file)
 
         await self.prune_file_versions(file)
@@ -699,6 +708,7 @@ class FileOperations(BaseContentOperations[File]):
         file.current_version_id = version.id
         file.version = new_version_number
         file.extraction_status = self._get_initial_extraction_status(file.mime_type)
+        file.thumbnail_status = self._get_initial_thumbnail_status(file.mime_type)
         file.transcode_status = self._get_initial_transcode_status(file.mime_type, file.filename)
         file.updated_at = datetime.now(UTC)
 
@@ -740,7 +750,7 @@ class FileOperations(BaseContentOperations[File]):
             file.folder_id, file.organization_id
         )
 
-        if file.extraction_status == ExtractionStatus.PENDING:
+        if pending_jobs_for_file(file):
             await self._enqueue_processing_jobs(file)
 
         await self.prune_file_versions(file)
@@ -799,26 +809,21 @@ class FileOperations(BaseContentOperations[File]):
 
     async def _enqueue_processing_jobs(self, file: File) -> None:
         """Enqueue MIME-type-driven processing jobs; non-fatal if queue unavailable."""
-        from loguru import logger
-
         try:
-            from uniffy.core.valkey import QueueName, get_queue
-
-            queue = get_queue(QueueName.CORE)
-            jobs = get_jobs_for_mime_type(file.mime_type)
-
-            for job_name in jobs:
-                await queue.enqueue_job(
-                    job_name,
+            for job_ref in pending_jobs_for_file(file):
+                await enqueue_job(
+                    job_ref,
                     str(file.id),
                     str(file.organization_id),
+                    _job_id=file_processing_job_id(job_ref, file.id, file.version),
                 )
-                logger.debug(f"Enqueued {job_name} for file {file.id}")
+                logger.debug(f"Enqueued {job_ref.name} for file {file.id}")
 
-        except RuntimeError:
-            from loguru import logger
-
-            logger.warning(f"Queue unavailable, skipping job enqueue for file {file.id}")
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Could not enqueue file-processing jobs",
+                file_id=str(file.id),
+            )
 
     async def abort_upload(self, upload_id: UUID, user_id: UUID) -> bool:
         """Abort an in-progress upload."""
@@ -847,11 +852,10 @@ class FileOperations(BaseContentOperations[File]):
         return TranscodeStatus.NOT_NEEDED
 
     def _get_initial_extraction_status(self, mime_type: str) -> ExtractionStatus:
-        """PENDING if MIME has background jobs; otherwise SKIPPED."""
-        processable = get_processable_mime_types()
-        if mime_type in processable:
-            return ExtractionStatus.PENDING
-        return ExtractionStatus.SKIPPED
+        return initial_extraction_status(mime_type)
+
+    def _get_initial_thumbnail_status(self, mime_type: str) -> ThumbnailStatus:
+        return initial_thumbnail_status(mime_type)
 
     async def update(
         self,

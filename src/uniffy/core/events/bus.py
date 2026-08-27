@@ -6,10 +6,10 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str, loads
 from uniffy.core.types import ContentType, NotificationType, generate_id
-from uniffy.core.valkey import QueueName, get_queue
-from uniffy.workers.tasks import JobName
+from uniffy.domains.notifications.jobs.contracts import PROCESS_NOTIFICATION_EVENT
 
 logger = logger.bind(component="events.bus")
 
@@ -72,9 +72,8 @@ def event_from_json(json_str: str) -> NotificationEvent:
 async def emit_notification(event: NotificationEvent) -> None:
     """Enqueue an ARQ job; never raises."""
     try:
-        queue = get_queue(QueueName.CORE)
         event_json = _event_to_json(event)
-        await queue.enqueue_job(JobName.PROCESS_NOTIFICATION_EVENT, event_json)
+        await enqueue_job(PROCESS_NOTIFICATION_EVENT, event_json)
     except RuntimeError:
         logger.warning("Notification queue unavailable, skipping event")
     except Exception:

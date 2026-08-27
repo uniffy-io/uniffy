@@ -1,14 +1,4 @@
-"""Permission gate tests for the agents domain.
-
-Each gate has a denial
-path and an allowed path. Allowed paths use a sentinel: the first collaborator
-after the gate raises ``_Reached`` so we prove control passed the gate without
-mocking the whole write tail.
-
-The builder gate (``is_agents_builder``) is exercised with a dispatching fake
-session that answers the org-role and domain-admin queries, so the resolution
-logic itself is under test rather than a mocked verdict.
-"""
+"""Permission gate behavior tests for the agents domain."""
 
 from contextlib import contextmanager
 from types import SimpleNamespace as NS
@@ -790,8 +780,8 @@ class TestCronExecutionIdentity:
         with (
             _authorization_context(),
             patch(
-                "uniffy.domains.agents.cron.operations.get_queue",
-                MagicMock(side_effect=_Reached()),
+                "uniffy.domains.agents.cron.operations.enqueue_job",
+                AsyncMock(side_effect=_Reached()),
             ),
         ):
             await ops.trigger_now(actor, task.organization_id, task.id)

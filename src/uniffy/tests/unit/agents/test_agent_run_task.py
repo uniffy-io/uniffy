@@ -1,19 +1,4 @@
-"""``run_agent_session`` ARQ task behaviour tests.
-
-Pins three load-bearing paths the W3 plan calls out:
-
-- Lock-loss returns ``{"status": "skipped"}`` and never touches the
-  runtime, so a duplicate enqueue cannot drive a second turn.
-- Driver exceptions publish a synthetic ERROR event and flip
-  the run state hash to ``status="error"`` *before* re-raising so the
-  ARQ failure record matches what the subscriber already saw.
-- The ``Done`` path schedules a deferred ``delete_run_stream`` cleanup
-  job on the egress valkey pool with a 60s defer.
-
-The collaborators (open_session, RuntimeOperations, SessionOperations,
-Valkey ops client, set_run_state) are stubbed out so the test runs
-without a live database or Valkey.
-"""
+"""Agent session job behavior tests."""
 
 from __future__ import annotations
 
@@ -29,7 +14,8 @@ import pytest
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
-from uniffy.workers.tasks import agent_run as agent_run_mod
+from uniffy.domains.agents.runtime import jobs as agent_run_mod
+from uniffy.domains.agents.runtime.job_contracts import DELETE_RUN_STREAM
 
 
 @pytest.fixture(autouse=True)
@@ -53,13 +39,19 @@ class _FakeOpsClient:
         self._lock_acquired = lock_acquired
         self.set_calls: list[tuple[str, dict[str, Any]]] = []
         self.delete_calls: list[str] = []
+        self._held: dict[str, str] = {}
 
     async def set(self, key: str, value: str, **kwargs: Any) -> bool:
         self.set_calls.append((key, kwargs))
+        if self._lock_acquired:
+            self._held[key] = value
         return self._lock_acquired
 
-    async def delete(self, key: str) -> int:
+    async def eval(self, _script: str, _numkeys: int, key: str, token: str) -> int:
         self.delete_calls.append(key)
+        if self._held.get(key) != token:
+            return 0
+        self._held.pop(key)
         return 1
 
 
@@ -113,9 +105,6 @@ def _install_runtime_stub(
     events: list[StreamEvent] | None = None,
     raises: BaseException | None = None,
 ) -> list[Any]:
-    """Install a ``RuntimeOperations`` factory whose ``stream_send_message``
-    yields ``events`` (optionally raising ``raises`` partway through).
-    """
     captured: list[Any] = []
 
     class _Stub:
@@ -289,7 +278,7 @@ class TestRunAgentSession:
         assert ops_client.delete_calls, "lock must be released after run"
         assert len(valkey.enqueued) == 1
         name, args, kwargs = valkey.enqueued[0]
-        assert name == "delete_run_stream"
+        assert name == DELETE_RUN_STREAM.name
         assert kwargs.get("_defer_by") == agent_run_mod._DELETE_DEFER_SECONDS
         assert args == (result["run_id"],)
         # Done event was the last published; intermediate token also seen.

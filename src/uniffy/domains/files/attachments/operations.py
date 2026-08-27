@@ -1,5 +1,6 @@
 """Attachment operations for linking files to content."""
 
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -9,8 +10,9 @@ from sqlalchemy.orm import selectinload
 
 from uniffy.core.auth.permissions import PermissionChecker, resolve_effective_policy
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.files.attachment import Attachment
-from uniffy.core.models.files.file import ExtractionStatus, File
+from uniffy.core.models.files.file import ExtractionStatus, File, ThumbnailStatus
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
@@ -24,17 +26,21 @@ from uniffy.core.types import (
     ContentType,
     generate_id,
 )
-from uniffy.core.valkey import QueueName, get_queue
 from uniffy.domains.files.attachments.access import AttachmentTargetAccess
+from uniffy.domains.files.jobs.processing import (
+    file_processing_job_id,
+    initial_extraction_status,
+    initial_thumbnail_status,
+    pending_jobs_for_file,
+)
 from uniffy.domains.permissions.resource_access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
     ResourceRowState,
 )
-from uniffy.workers.utils.mime import get_jobs_for_mime_type, supports_thumbnail
 
-logger = logger.bind(component="attachments.operations")
+logger = logger.bind(component="files.attachments.operations")
 
 ATTACHMENTS_FOLDER_NAME = "Attachments"
 ORG_ATTACHMENTS_FOLDER_NAME = "Organization Attachments"
@@ -678,15 +684,30 @@ class AttachmentOperations:
             content_type=source_file.mime_type,
         )
 
-        extraction_status = ExtractionStatus.SKIPPED
-        new_media_info: FileMediaInfo | None = None
+        extraction_status = initial_extraction_status(source_file.mime_type or "")
+        thumbnail_status = initial_thumbnail_status(source_file.mime_type or "")
         source_info = source_file.media_info
+        media_values: dict[str, Any] = {}
 
-        if (
-            source_file.extraction_status == ExtractionStatus.COMPLETED
-            and source_info
-            and source_info.thumbnail_key
-        ):
+        if source_info is not None and source_file.extraction_status == ExtractionStatus.COMPLETED:
+            media_values.update(
+                width=source_info.width,
+                height=source_info.height,
+                format=source_info.format,
+                color_mode=source_info.color_mode,
+                duration_seconds=source_info.duration_seconds,
+                page_count=source_info.page_count,
+                bitrate=source_info.bitrate,
+                sample_rate=source_info.sample_rate,
+                channels=source_info.channels,
+                exif=source_info.exif.copy() if source_info.exif else None,
+                extracted_text=source_info.extracted_text,
+            )
+            extraction_status = ExtractionStatus.COMPLETED
+        elif source_file.extraction_status == ExtractionStatus.SKIPPED:
+            extraction_status = ExtractionStatus.SKIPPED
+
+        if thumbnail_status == ThumbnailStatus.PENDING and source_info and source_info.thumbnail_key:
             new_thumb_key = f"{organization_id}/thumbnails/{new_file_id}.jpg"
 
             try:
@@ -695,48 +716,16 @@ class AttachmentOperations:
                     destination_key=new_thumb_key,
                     content_type="image/jpeg",
                 )
-                new_media_info = FileMediaInfo(
-                    file_id=new_file_id,
+                media_values.update(
                     thumbnail_key=new_thumb_key,
                     thumbnail_width=source_info.thumbnail_width,
                     thumbnail_height=source_info.thumbnail_height,
-                    width=source_info.width,
-                    height=source_info.height,
-                    format=source_info.format,
-                    color_mode=source_info.color_mode,
-                    duration_seconds=source_info.duration_seconds,
-                    page_count=source_info.page_count,
-                    exif=source_info.exif.copy() if source_info.exif else None,
                 )
-                extraction_status = ExtractionStatus.COMPLETED
+                thumbnail_status = ThumbnailStatus.COMPLETED
             except Exception as e:
                 logger.warning(f"Failed to copy thumbnail for attachment: {e}")
-                if source_info and (source_info.width or source_info.exif):
-                    new_media_info = FileMediaInfo(
-                        file_id=new_file_id,
-                        width=source_info.width,
-                        height=source_info.height,
-                        format=source_info.format,
-                        color_mode=source_info.color_mode,
-                        exif=source_info.exif.copy() if source_info.exif else None,
-                    )
-                if supports_thumbnail(source_file.mime_type or ""):
-                    extraction_status = ExtractionStatus.PENDING
-        elif source_info and (source_info.width or source_info.exif):
-            new_media_info = FileMediaInfo(
-                file_id=new_file_id,
-                width=source_info.width,
-                height=source_info.height,
-                format=source_info.format,
-                color_mode=source_info.color_mode,
-                duration_seconds=source_info.duration_seconds,
-                page_count=source_info.page_count,
-                exif=source_info.exif.copy() if source_info.exif else None,
-            )
-            if supports_thumbnail(source_file.mime_type or ""):
-                extraction_status = ExtractionStatus.PENDING
-        elif supports_thumbnail(source_file.mime_type or ""):
-            extraction_status = ExtractionStatus.PENDING
+
+        new_media_info = FileMediaInfo(file_id=new_file_id, **media_values) if media_values else None
 
         new_file = File(
             id=new_file_id,
@@ -753,6 +742,7 @@ class AttachmentOperations:
             folder_id=target_folder_id,
             description=source_file.description,
             extraction_status=extraction_status,
+            thumbnail_status=thumbnail_status,
         )
         self._session.add(new_file)
         await self._session.flush()
@@ -775,30 +765,29 @@ class AttachmentOperations:
         new_file.current_version_id = version.id
         await self._session.refresh(new_file)
 
-        if extraction_status == ExtractionStatus.PENDING:
-            await self._enqueue_processing_jobs(new_file)
-
         await self._index_attachment_file(new_file)
 
         return new_file
 
-    async def _enqueue_processing_jobs(self, file: File) -> None:
-        jobs = get_jobs_for_mime_type(file.mime_type or "")
+    async def enqueue_processing_jobs(self, file: File) -> None:
+        jobs = pending_jobs_for_file(file)
         if not jobs:
             return
 
         try:
-            queue = get_queue(QueueName.CORE)
-            for job_name in jobs:
-                await queue.enqueue_job(
-                    job_name,
+            for job_ref in jobs:
+                await enqueue_job(
+                    job_ref,
                     str(file.id),
                     str(file.organization_id),
+                    _job_id=file_processing_job_id(job_ref, file.id, file.version),
                 )
-                logger.debug(f"Enqueued {job_name} for attachment file {file.id}")
-        except RuntimeError as e:
-            # Queue not available; file stays PENDING.
-            logger.warning(f"Could not enqueue jobs for attachment {file.id}: {e}")
+                logger.debug(f"Enqueued {job_ref.name} for attachment file {file.id}")
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Could not enqueue attachment file-processing jobs",
+                file_id=str(file.id),
+            )
 
     async def _verify_content_access(
         self,

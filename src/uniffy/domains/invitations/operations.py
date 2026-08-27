@@ -23,6 +23,7 @@ from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.domain_admin import get_user_domain_admins
 from uniffy.core.errors import NotFoundError
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.invitation import Invitation
@@ -33,7 +34,6 @@ from uniffy.core.models.login.organization_member import (
 )
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
-from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.invitations.errors import (
     InvitationAlreadyUsedError,
@@ -42,9 +42,9 @@ from uniffy.domains.invitations.errors import (
     InvitationNotFoundError,
     InvitationRevokedError,
 )
-from uniffy.workers.tasks import JobName
+from uniffy.domains.mail.job_contracts import SEND_EMAIL
 
-logger = logger.bind(component="mail")
+logger = logger.bind(component="invitations.operations")
 
 # Loose per-IP + per-token caps. The token is high-entropy so the IP bucket
 # is mostly there to bound credential-stuffing scripts; the token bucket
@@ -610,7 +610,6 @@ class InvitationOperations:
         }
         idempotency = f"invite/{org.id}/{recipient}/{raw_token[:8]}"
         await self._enqueue(
-            JobName.SEND_EMAIL,
             recipient,
             _TEMPLATE_INVITATION,
             context,
@@ -636,7 +635,6 @@ class InvitationOperations:
         }
         idempotency = f"added/{org.id}/{user.id}"
         await self._enqueue(
-            JobName.SEND_EMAIL,
             recipient,
             _TEMPLATE_ADDED,
             context,
@@ -647,7 +645,6 @@ class InvitationOperations:
 
     async def _enqueue(
         self,
-        job_name: JobName,
         recipient: str,
         template: str,
         context: dict[str, Any],
@@ -657,20 +654,17 @@ class InvitationOperations:
         user_id: UUID | None = None,
     ) -> None:
         try:
-            queue = get_queue(QueueName.CORE)
+            await enqueue_job(
+                SEND_EMAIL,
+                recipient,
+                template,
+                dumps_str(context),
+                organization_id=str(org_id),
+                idempotency_key=idempotency_key,
+                user_id=str(user_id) if user_id else None,
+            )
         except RuntimeError:
             logger.warning(
                 "invitation email enqueue skipped: core queue not initialised",
-                component="mail",
                 org_id=str(org_id),
             )
-            return
-        await queue.enqueue_job(
-            job_name,
-            recipient,
-            template,
-            dumps_str(context),
-            organization_id=str(org_id),
-            idempotency_key=idempotency_key,
-            user_id=str(user_id) if user_id else None,
-        )

@@ -7,8 +7,14 @@ import time
 from loguru import logger
 from valkey.exceptions import ConnectionError as ValkeyConnectionError
 
+from uniffy.core.valkey.queue import QueueName
 from uniffy.observability import ObservabilityConfig, setup_observability
-from uniffy.observability.metrics import start_worker_metrics_server
+from uniffy.observability.metrics import (
+    WORKER_READY,
+    WORKER_RESTARTS_TOTAL,
+    WorkerRestartReason,
+    start_worker_metrics_server,
+)
 from uniffy.vendor.arq import run_worker
 
 logger = logger.bind(component="runner")
@@ -17,11 +23,22 @@ _MAX_BACKOFF = 30.0
 _STABLE_THRESHOLD = 60.0
 
 
+def _restart_reason(exc: BaseException) -> WorkerRestartReason:
+    if isinstance(exc, ValkeyConnectionError):
+        return WorkerRestartReason.VALKEY_CONNECTION
+    if isinstance(exc, ConnectionError):
+        return WorkerRestartReason.CONNECTION
+    if isinstance(exc, OSError):
+        return WorkerRestartReason.OS_ERROR
+    return WorkerRestartReason.RUNTIME_ERROR
+
+
 def run_worker_with_restart(
     settings_cls: type,
     *,
     app_name: str,
     metrics_port: int,
+    queue: QueueName,
 ) -> None:
     """Run an ARQ worker class with a connection-loss restart loop."""
     setup_observability(
@@ -34,6 +51,7 @@ def run_worker_with_restart(
         )
     )
     start_worker_metrics_server(metrics_port)
+    WORKER_READY.labels(queue=queue).set(0)
 
     backoff = 1.0
     while True:
@@ -45,6 +63,8 @@ def run_worker_with_restart(
             break
         except (ValkeyConnectionError, ConnectionError, OSError, RuntimeError) as exc:
             uptime = time.monotonic() - started_at
+            WORKER_READY.labels(queue=queue).set(0)
+            WORKER_RESTARTS_TOTAL.labels(queue=queue, reason=_restart_reason(exc)).inc()
             logger.warning(
                 "Worker lost Valkey connection, restarting in "
                 "{delay:.1f}s (uptime was {uptime:.0f}s, app={app}): {err}",

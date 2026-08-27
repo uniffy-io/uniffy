@@ -36,19 +36,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.password_reset_token import PasswordResetToken
 from uniffy.core.models.login.user import User
-from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.auth.passwords import hash_password
+from uniffy.domains.mail.job_contracts import SEND_EMAIL
 from uniffy.domains.security.operations import SecurityOperations
-from uniffy.workers.tasks import JobName
 
-logger = logger.bind(component="auth")
+logger = logger.bind(component="auth.password_reset")
 
 _TOKEN_TTL = timedelta(minutes=30)
 _TEMPLATE = "auth/password_reset"
@@ -351,20 +351,17 @@ class PasswordResetOperations:
             "expires_in_minutes": int(_TOKEN_TTL.total_seconds() // 60),
         }
         try:
-            queue = get_queue(QueueName.CORE)
+            await enqueue_job(
+                SEND_EMAIL,
+                user.email,
+                _TEMPLATE,
+                dumps_str(context),
+                organization_id=str(org.id) if org else None,
+                idempotency_key=f"password-reset/{token_record_id}",
+                user_id=str(user.id),
+            )
         except RuntimeError:
             logger.warning(
                 "password reset email enqueue skipped: core queue not initialised",
-                component="auth",
                 user_id=str(user.id),
             )
-            return
-        await queue.enqueue_job(
-            JobName.SEND_EMAIL,
-            user.email,
-            _TEMPLATE,
-            dumps_str(context),
-            organization_id=str(org.id) if org else None,
-            idempotency_key=f"password-reset/{token_record_id}",
-            user_id=str(user.id),
-        )

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import email_hash, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.mail.config import MAIL_FROM_ADDRESS_KEY, MAIL_NAMESPACE, MailConfig
 from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
@@ -32,14 +33,13 @@ from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.realtime.publisher import publish_token_revoke
 from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
-from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.auth.password_policy import validate_password
 from uniffy.domains.auth.passwords import hash_password, normalize_email
 from uniffy.domains.auth.revocation import mark_token_version_revoked
+from uniffy.domains.mail.job_contracts import SEND_EMAIL
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
-from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="platform.directory.operations")
 
@@ -1436,14 +1436,6 @@ class PlatformDirectoryOperations:
         ).all()
         if not owners:
             return
-        try:
-            queue = get_queue(QueueName.CORE)
-        except RuntimeError:
-            logger.warning(
-                "platform org_deleted email enqueue skipped: core queue not initialised",
-                org_id=str(org.id),
-            )
-            return
         context: dict[str, Any] = {
             "org_name": org.name,
             "deleted_at": org.deleted_at.strftime("%B %d, %Y at %H:%M UTC"),
@@ -1453,12 +1445,19 @@ class PlatformDirectoryOperations:
         }
         for owner_id, email in owners:
             idempotency_key = f"platform_org_deleted/{org.id}/{owner_id}"
-            await queue.enqueue_job(
-                JobName.SEND_EMAIL,
-                email,
-                "platform/org_deleted",
-                dumps_str(context),
-                organization_id=str(org.id),
-                idempotency_key=idempotency_key,
-                user_id=str(owner_id),
-            )
+            try:
+                await enqueue_job(
+                    SEND_EMAIL,
+                    email,
+                    "platform/org_deleted",
+                    dumps_str(context),
+                    organization_id=str(org.id),
+                    idempotency_key=idempotency_key,
+                    user_id=str(owner_id),
+                )
+            except RuntimeError:
+                logger.warning(
+                    "platform org_deleted email enqueue skipped: core queue not initialised",
+                    org_id=str(org.id),
+                )
+                return

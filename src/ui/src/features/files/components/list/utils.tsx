@@ -36,7 +36,7 @@ export function renderFileIcon(mimeType: string, size: number, className: string
 
 export { formatProtoDate as formatDate, formatFileSize } from "@/shared/utils/dateFormatting";
 
-/** Keep in sync with backend workers/utils/mime.py THUMBNAIL_MIME_TYPES. */
+/** Keep in sync with backend domains/files/jobs/mime.py THUMBNAIL_MIME_TYPES. */
 const THUMBNAIL_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",

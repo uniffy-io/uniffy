@@ -12,17 +12,17 @@ import pycrdt
 from loguru import logger
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import get_realtime_adapter
+from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.state import DocKey, YDocSession
 from uniffy.core.types import ContentType
-from uniffy.core.valkey.queue import QueueName, get_queue_safe
 from uniffy.db.session import open_session
 from uniffy.observability.metrics import (
     REALTIME_SNAPSHOT_DROPPED_TOTAL,
     REALTIME_SNAPSHOT_DURATION,
 )
-from uniffy.workers.tasks import JobName
 
 DEBOUNCE_SECONDS = 5.0
 # Continuous edits re-arm the debounce forever; cap how long a doc may stay unflushed.
@@ -157,8 +157,21 @@ class SnapshotWriter:
             )
             return
 
-        queue = await get_queue_safe(QueueName.CORE)
-        if queue is None:
+        # Dedup keyed on the payload hash, not just ``(content_type, content_id)``.
+        # ARQ caches completed-job results for ``WORKER_KEEP_RESULT`` seconds; a
+        # static id would silently drop every subsequent enqueue for that window
+        # and freeze persistence.
+        content_hash = hashlib.sha256(update_bytes).hexdigest()[:16]
+        enqueue_result = await enqueue_job_reconnecting(
+            SAVE_REALTIME_SNAPSHOT,
+            content_type.value,
+            str(content_id),
+            str(session.organization_id),
+            base64.b64encode(update_bytes).decode("ascii"),
+            base64.b64encode(state_vector).decode("ascii"),
+            _job_id=f"snapshot:{content_type_label}:{content_id}:{content_hash}",
+        )
+        if enqueue_result.outcome is JobEnqueueOutcome.UNAVAILABLE:
             REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
                 content_type=content_type_label, reason="queue_unavailable"
             ).inc()
@@ -167,21 +180,6 @@ class SnapshotWriter:
                 component=LOGGER_COMPONENT,
             )
             return
-
-        # Dedup keyed on the payload hash, not just ``(content_type, content_id)``.
-        # ARQ caches completed-job results for ``WORKER_KEEP_RESULT`` seconds; a
-        # static id would silently drop every subsequent enqueue for that window
-        # and freeze persistence.
-        content_hash = hashlib.sha256(update_bytes).hexdigest()[:16]
-        await queue.enqueue_job(
-            JobName.SAVE_REALTIME_SNAPSHOT,
-            content_type.value,
-            str(content_id),
-            str(session.organization_id),
-            base64.b64encode(update_bytes).decode("ascii"),
-            base64.b64encode(state_vector).decode("ascii"),
-            _job_id=f"snapshot:{content_type_label}:{content_id}:{content_hash}",
-        )
         REALTIME_SNAPSHOT_DURATION.labels(content_type=content_type_label).observe(
             time.perf_counter() - started
         )

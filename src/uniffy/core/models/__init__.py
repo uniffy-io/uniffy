@@ -49,7 +49,7 @@ from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.crypto.deployment_encryption_key import DeploymentEncryptionKey
 from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
 from uniffy.core.models.files.attachment import Attachment
-from uniffy.core.models.files.file import ExtractionStatus, File
+from uniffy.core.models.files.file import ExtractionStatus, File, ThumbnailStatus, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
@@ -162,6 +162,8 @@ __all__ = [
     "FileVersion",
     "MultipartUpload",
     "ExtractionStatus",
+    "ThumbnailStatus",
+    "TranscodeStatus",
     "UploadStatus",
     # Bookmarks
     "Bookmark",

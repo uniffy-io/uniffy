@@ -25,9 +25,9 @@ from uniffy.domains.permissions.access_requests import (
     ContentAccessRequestOperations,
     RequestAccessOutcome,
 )
+from uniffy.domains.projects.jobs import search_acl as project_search_acl
 from uniffy.domains.projects.operations import TaskOperations
 from uniffy.domains.projects.search_acl import record_project_search_acl_refresh
-from uniffy.workers.tasks import project_search_acl
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

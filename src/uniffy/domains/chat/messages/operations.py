@@ -52,7 +52,6 @@ from uniffy.domains.chat.policy import (
     resolve_chat_policy,
 )
 from uniffy.domains.chat.rate_limits import SEND, check_chat_mutation_limit
-from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="chat.messages.operations")
 
@@ -501,12 +500,14 @@ class ChatMessageOperations:
             )
 
             try:
-                from uniffy.core.valkey.queue import QueueName, get_queue
+                from uniffy.core.jobs import enqueue_job
+                from uniffy.domains.agents.chat_integration.job_contracts import (
+                    RESPOND_TO_CHAT_MESSAGE,
+                )
 
-                queue = get_queue(QueueName.EGRESS)
                 for m in matches:
-                    await queue.enqueue_job(
-                        JobName.RESPOND_TO_CHAT_MESSAGE,
+                    await enqueue_job(
+                        RESPOND_TO_CHAT_MESSAGE,
                         str(channel.id),
                         str(message.id),
                         str(m.agent_id),

@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.mail import MailConfig
 from uniffy.core.mail.config import MAIL_NAMESPACE
 from uniffy.core.models.notifications.email_delivery import (
@@ -21,17 +22,16 @@ from uniffy.core.models.notifications.email_delivery import (
     NotificationEmailStatus,
 )
 from uniffy.core.models.settings.org_setting import OrgSetting
-from uniffy.core.valkey.queue import QueueName, get_queue
 from uniffy.db import open_session
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter, NotificationChannel
 from uniffy.domains.notifications.delivery.timing import next_email_delivery_at
+from uniffy.domains.notifications.jobs.contracts import SEND_NOTIFICATION_EMAIL
 from uniffy.domains.notifications.preferences import (
     get_delivery_preferences,
     resolve_email_frequency,
 )
 from uniffy.domains.settings.defaults import EmailFrequency
 from uniffy.domains.settings.operations import get_user_timezone
-from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="notifications.delivery.email")
 
@@ -122,16 +122,14 @@ class EmailAdapter(DeliveryAdapter):
         if delivery.scheduled_for > datetime.now(UTC):
             return True
         try:
-            queue = get_queue(QueueName.CORE)
-        except RuntimeError:
-            logger.warning(f"Email delivery {delivery.id} remains pending: queue unavailable")
-            return False
-        try:
-            await queue.enqueue_job(
-                JobName.SEND_NOTIFICATION_EMAIL,
+            await enqueue_job(
+                SEND_NOTIFICATION_EMAIL,
                 str(delivery.id),
                 _job_id=f"notification_email:{delivery.id}",
             )
+        except RuntimeError:
+            logger.warning(f"Email delivery {delivery.id} remains pending: queue unavailable")
+            return False
         except Exception:
             logger.opt(exception=True).warning(
                 f"Email delivery {delivery.id} remains pending: enqueue failed"

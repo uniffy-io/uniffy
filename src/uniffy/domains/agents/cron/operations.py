@@ -19,15 +19,15 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     ValidationError,
 )
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronRunStatus, AgentCronTask
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
-from uniffy.core.valkey import QueueName, get_queue
 from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.workers.tasks import JobName
+from uniffy.domains.agents.cron.job_contracts import EXECUTE_SINGLE_AGENT_CRON_TASK
 
 MAX_CRON_TASKS_PER_USER = 20
 MIN_INTERVAL_SECONDS = 300  # 5 minutes
@@ -472,9 +472,8 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         await self.session.refresh(run_log)
 
         try:
-            queue = get_queue(QueueName.EGRESS)
-            await queue.enqueue_job(
-                JobName.EXECUTE_SINGLE_AGENT_CRON_TASK,
+            await enqueue_job(
+                EXECUTE_SINGLE_AGENT_CRON_TASK,
                 str(task.id),
                 str(run_log.id),
             )

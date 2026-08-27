@@ -10,7 +10,7 @@
   <a href="https://github.com/uniffy-io/uniffy/actions/workflows/test.yml"><img src="https://github.com/uniffy-io/uniffy/actions/workflows/test.yml/badge.svg?branch=main" alt="CI status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--Apache--2.0-694aff" alt="License: FSL-1.1-Apache-2.0"></a>
   <a href="https://uniffy.io/docs/deployment/"><img src="https://img.shields.io/badge/self%20hosting-free%20and%20unlimited-01b77f" alt="Self hosting: free and unlimited"></a>
-  <a href="docs/TRANSPARENCY.md"><img src="https://img.shields.io/badge/telemetry-off%20by%20default-fd7eea" alt="Telemetry: None"></a>
+  <a href="docs/TRANSPARENCY.md"><img src="https://img.shields.io/badge/telemetry-none-fd7eea" alt="Telemetry: None"></a>
 </p>
 
 <p align="center">

@@ -17,7 +17,7 @@ from uniffy.core.models.notifications.email_delivery import (
 from uniffy.core.types import NotificationType, generate_id
 from uniffy.domains.notifications.email_outbox import RecipientContext
 from uniffy.vendor.arq import Retry
-from uniffy.workers.tasks.notification_email import (
+from uniffy.domains.notifications.jobs.email import (
     send_notification_digest,
     send_notification_email,
 )
@@ -76,18 +76,18 @@ async def test_instant_worker_marks_successful_delivery_sent() -> None:
 
     with (
         patch(
-            "uniffy.workers.tasks.notification_email.open_session",
+            "uniffy.domains.notifications.jobs.email.open_session",
             new=lambda: _session_context(session),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.claim_email_delivery",
+            "uniffy.domains.notifications.jobs.email.claim_email_delivery",
             new=AsyncMock(return_value=delivery),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.prepare_email_recipient",
+            "uniffy.domains.notifications.jobs.email.prepare_email_recipient",
             new=AsyncMock(return_value=recipient),
         ),
-        patch("uniffy.workers.tasks.notification_email._get_sender", return_value=sender),
+        patch("uniffy.domains.notifications.jobs.email._get_sender", return_value=sender),
     ):
         result = await send_notification_email({}, str(delivery.id))
 
@@ -107,22 +107,22 @@ async def test_instant_worker_defers_during_quiet_hours() -> None:
 
     with (
         patch(
-            "uniffy.workers.tasks.notification_email.open_session",
+            "uniffy.domains.notifications.jobs.email.open_session",
             new=lambda: _session_context(session),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.claim_email_delivery",
+            "uniffy.domains.notifications.jobs.email.claim_email_delivery",
             new=AsyncMock(return_value=delivery),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.prepare_email_recipient",
+            "uniffy.domains.notifications.jobs.email.prepare_email_recipient",
             new=AsyncMock(return_value=recipient),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.quiet_hours_end_at",
+            "uniffy.domains.notifications.jobs.email.quiet_hours_end_at",
             return_value=quiet_end,
         ),
-        patch("uniffy.workers.tasks.notification_email._get_sender", return_value=sender),
+        patch("uniffy.domains.notifications.jobs.email._get_sender", return_value=sender),
     ):
         result = await send_notification_email({}, str(delivery.id))
 
@@ -153,22 +153,22 @@ async def test_digest_worker_sends_all_claimed_items_together() -> None:
 
     with (
         patch(
-            "uniffy.workers.tasks.notification_email.open_session",
+            "uniffy.domains.notifications.jobs.email.open_session",
             new=lambda: _session_context(session),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.claim_email_digest",
+            "uniffy.domains.notifications.jobs.email.claim_email_digest",
             new=AsyncMock(return_value=[first, second]),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.prepare_email_recipient",
+            "uniffy.domains.notifications.jobs.email.prepare_email_recipient",
             new=AsyncMock(return_value=recipient),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.presence_get_bulk",
+            "uniffy.domains.notifications.jobs.email.presence_get_bulk",
             new=AsyncMock(return_value={}),
         ),
-        patch("uniffy.workers.tasks.notification_email._get_sender", return_value=sender),
+        patch("uniffy.domains.notifications.jobs.email._get_sender", return_value=sender),
     ):
         result = await send_notification_digest(
             {},
@@ -193,18 +193,18 @@ async def test_provider_failure_releases_delivery_before_retry() -> None:
 
     with (
         patch(
-            "uniffy.workers.tasks.notification_email.open_session",
+            "uniffy.domains.notifications.jobs.email.open_session",
             new=lambda: _session_context(session),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.claim_email_delivery",
+            "uniffy.domains.notifications.jobs.email.claim_email_delivery",
             new=AsyncMock(return_value=delivery),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.prepare_email_recipient",
+            "uniffy.domains.notifications.jobs.email.prepare_email_recipient",
             new=AsyncMock(return_value=recipient),
         ),
-        patch("uniffy.workers.tasks.notification_email._get_sender", return_value=sender),
+        patch("uniffy.domains.notifications.jobs.email._get_sender", return_value=sender),
         pytest.raises(Retry),
     ):
         await send_notification_email({"job_try": 2}, str(delivery.id))
@@ -224,18 +224,18 @@ async def test_provider_failure_becomes_terminal_after_max_attempts() -> None:
 
     with (
         patch(
-            "uniffy.workers.tasks.notification_email.open_session",
+            "uniffy.domains.notifications.jobs.email.open_session",
             new=lambda: _session_context(session),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.claim_email_delivery",
+            "uniffy.domains.notifications.jobs.email.claim_email_delivery",
             new=AsyncMock(return_value=delivery),
         ),
         patch(
-            "uniffy.workers.tasks.notification_email.prepare_email_recipient",
+            "uniffy.domains.notifications.jobs.email.prepare_email_recipient",
             new=AsyncMock(return_value=recipient),
         ),
-        patch("uniffy.workers.tasks.notification_email._get_sender", return_value=sender),
+        patch("uniffy.domains.notifications.jobs.email._get_sender", return_value=sender),
     ):
         result = await send_notification_email({"job_try": 5}, str(delivery.id))
 

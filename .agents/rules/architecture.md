@@ -20,7 +20,7 @@ paths:
 | Redux Toolkit | State management |
 | Tailwind CSS 4 | Styling framework |
 | ConnectRPC | API layer (Protocol Buffers + Connect) - not REST |
-| ARQ + Valkey | Background task queue |
+| ARQ + Valkey | Background job queue |
 | Alembic | Database migrations |
 
 ---
@@ -37,7 +37,11 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 
 **Permission system**: Every content row carries an `access_mode` + optional `baseline_role`, resolved by `PermissionChecker.effective_role`. Personal content is private until shared - org/domain admins get no content bypass. Full model, enforcement points, caching, search/tag filtering, chat's separate model, and the hard rules live in **`.agents/rules/permissions.md`** (the single source of truth - do not duplicate it here).
 
-**Background tasks**: ARQ workers with Valkey for async job processing (file processing, indexing, etc.).
+**Background jobs:** The domain or core subsystem that owns the state and invariants also owns its
+typed job contracts and handlers, normally under `domains/{feature}/jobs.py` or
+`domains/{feature}/jobs/`. `core/jobs/` is the generic type and dispatch boundary, while `workers/`
+only composes owner-defined jobs into the validated core and egress ARQ fleets and manages their
+process lifecycle.
 
 ---
 
@@ -56,7 +60,7 @@ uniffy/
 │   │   ├── domains/      # Domain modules (vertical slices)
 │   │   ├── data/         # Shipped content: agent templates, skills, prompts, model catalog, assets
 │   │   ├── db/           # Database session, migrations, seeding
-│   │   ├── workers/      # Background task workers (ARQ)
+│   │   ├── workers/      # ARQ fleet composition, registry, lifecycle
 │   │   └── factory.py    # App factory mounting services
 │   ├── ui/               # React frontend (TypeScript + Vite)
 │   │   └── src/

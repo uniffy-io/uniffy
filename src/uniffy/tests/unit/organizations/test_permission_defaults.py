@@ -4,9 +4,8 @@ from uniffy.core.models.permissions.org_permission_defaults import (
     OrganizationPermissionDefaults,
 )
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
-from uniffy.core.valkey.queue import QueueName
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.workers.tasks import JobName
+from uniffy.domains.permissions.job_contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
 
 
 async def test_defaults_change_enqueues_content_reindex_on_core_queue() -> None:
@@ -27,10 +26,9 @@ async def test_defaults_change_enqueues_content_reindex_on_core_queue() -> None:
     operations._session = session
     operations.require_org_admin = AsyncMock()
 
-    queue = MagicMock()
-    queue.enqueue_job = AsyncMock()
+    enqueue = AsyncMock()
     with (
-        patch("uniffy.domains.organizations.operations.get_queue", return_value=queue) as get_queue,
+        patch("uniffy.domains.organizations.operations.enqueue_job", enqueue),
         patch(
             "uniffy.domains.organizations.operations.write_audit_event",
             new=AsyncMock(),
@@ -49,10 +47,9 @@ async def test_defaults_change_enqueues_content_reindex_on_core_queue() -> None:
         )
 
     assert updated is defaults
-    get_queue.assert_called_once_with(QueueName.CORE)
     run_id = str(int(defaults.updated_at.timestamp() * 1_000_000))
-    queue.enqueue_job.assert_awaited_once_with(
-        JobName.REINDEX_ORG_CONTENT_FOR_DEFAULTS,
+    enqueue.assert_awaited_once_with(
+        REINDEX_ORG_CONTENT_FOR_DEFAULTS,
         str(organization_id),
         ContentType.NOTE.value,
         None,

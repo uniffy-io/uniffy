@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from loguru import logger
 from sqlalchemy import delete, select, update
 
+from uniffy.cli import MFA_RESET_FLAG
 from uniffy.core.audit.actions import Action
 from uniffy.core.audit.writer import write_audit_event
 from uniffy.core.models.audit.event import AuditResourceType
@@ -27,7 +28,6 @@ from uniffy.db.session import open_session
 
 ENV_GATE = "ENABLE_BREAK_GLASS_CLI"
 OPERATOR_ENV = "UNIFFY_BREAK_GLASS_OPERATOR"
-MFA_RESET_FLAG = "--mfa-reset"
 
 
 def run() -> None:

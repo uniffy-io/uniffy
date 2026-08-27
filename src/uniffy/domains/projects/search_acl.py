@@ -7,9 +7,9 @@ from loguru import logger
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.projects.search_acl_refresh import ProjectSearchAclRefresh
-from uniffy.core.valkey import QueueName, get_queue
-from uniffy.workers.tasks import JobName
+from uniffy.domains.projects.jobs.contracts import REFRESH_PROJECT_SEARCH_ACL
 
 logger = logger.bind(component="projects.search_acl")
 
@@ -43,10 +43,7 @@ async def record_project_search_acl_refresh(
 
 async def enqueue_project_search_acl_refresh(project_id: UUID) -> None:
     try:
-        await get_queue(QueueName.CORE).enqueue_job(
-            JobName.REFRESH_PROJECT_SEARCH_ACL,
-            str(project_id),
-        )
+        await enqueue_job(REFRESH_PROJECT_SEARCH_ACL, str(project_id))
     except RuntimeError:
         logger.warning(f"Search ACL refresh queued in DB only for project {project_id}")
     except Exception:

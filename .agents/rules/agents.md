@@ -197,7 +197,7 @@ One flat `StreamEvent` dataclass + `EventType` StrEnum (`providers/base.py`) tra
 
 ## Sessions and compaction
 
-- Compaction never runs on the request path: a probe of the latest non-compacted assistant row's provider-reported `input_tokens + output_tokens` enqueues ARQ `compact_session(session_id)` on overage; the worker takes a Valkey `SET NX compaction_lock:{session_id}` (5-min TTL, lock-loss is a no-op), summarises the oldest slice into a `role="summary"` row, marks originals `is_compacted=True` in one batched UPDATE. There is no manual-compaction RPC.
+- Compaction never runs on the request path: a probe of the latest non-compacted assistant row's provider-reported `input_tokens + output_tokens` enqueues ARQ `compact_session(session_id)` on overage; the worker takes an owned Valkey `SET NX compaction_lock:{session_id}` lease whose TTL exceeds the registered job timeout, summarises the oldest slice into a `role="summary"` row, and marks originals `is_compacted=True` in one batched UPDATE. There is no manual-compaction RPC.
 - Context loading returns the most recent summaries (capped at `MAX_CONTEXT_SUMMARIES`) then the most recent non-summary rows (capped at `MAX_CONTEXT_RECENT_MESSAGES`); sizing is row-count based since provider token counts exist only on assistant rows. The compaction worker keeps the active set bounded.
 - If the worker hasn't caught up, `apply_emergency_truncation` drops oldest `role="tool"` rows in-memory; `_build_llm_messages` synthesises an "interrupted" tool_result for any orphaned `tool_use` id.
 - Channel-scoped (chat) agent compaction is a separate path (`chat_integration/context.py`); the runtime writer is a no-op for chat destinations.

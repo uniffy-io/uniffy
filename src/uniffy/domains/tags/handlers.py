@@ -41,8 +41,8 @@ from uniffy.core.errors import (
     UNIFFYError,
     ValidationError,
 )
+from uniffy.core.jobs import enqueue_job_reconnecting
 from uniffy.core.types import ContentType
-from uniffy.core.valkey.queue import QueueName, get_queue_safe
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
     get_user_id_from_context,
@@ -57,6 +57,7 @@ from uniffy.domains.tags.converters import (
     tags_to_proto_list,
 )
 from uniffy.domains.tags.filters.converters import criteria_from_proto
+from uniffy.domains.tags.job_contracts import REINDEX_TAG_URNS
 from uniffy.domains.tags.operations import (
     SOURCE_MANUAL,
     TagLimitExceededError,
@@ -64,7 +65,6 @@ from uniffy.domains.tags.operations import (
     TagSlugCollisionError,
 )
 from uniffy.domains.tags.target_access import TagTargetAccess
-from uniffy.workers.tasks import JobName
 
 logger = logger.bind(component="tags.handlers")
 
@@ -157,19 +157,14 @@ class TagsHandlers:
                 count = await ops._get_usage_count(organization_id, tag.id)
 
             if affected_urns:
-                queue = await get_queue_safe(QueueName.CORE)
-                if queue is not None:
-                    try:
-                        await queue.enqueue_job(
-                            JobName.REINDEX_TAG_URNS,
-                            str(organization_id),
-                            affected_urns,
-                        )
-                    except Exception:
-                        logger.warning(
-                            "Failed to enqueue reindex_tag_urns after rename",
-                            component="tags.handlers",
-                        )
+                try:
+                    await enqueue_job_reconnecting(
+                        REINDEX_TAG_URNS,
+                        str(organization_id),
+                        affected_urns,
+                    )
+                except Exception:
+                    logger.warning("Failed to enqueue reindex_tag_urns after rename")
             return UpdateTagResponse(tag=tag_to_proto(tag, usage_count=count))
         except ConnectError:
             raise
@@ -195,19 +190,14 @@ class TagsHandlers:
                     tag_id=tag_id,
                 )
             if affected_urns:
-                queue = await get_queue_safe(QueueName.CORE)
-                if queue is not None:
-                    try:
-                        await queue.enqueue_job(
-                            JobName.REINDEX_TAG_URNS,
-                            str(organization_id),
-                            affected_urns,
-                        )
-                    except Exception:
-                        logger.warning(
-                            "Failed to enqueue reindex_tag_urns after tag delete",
-                            component="tags.handlers",
-                        )
+                try:
+                    await enqueue_job_reconnecting(
+                        REINDEX_TAG_URNS,
+                        str(organization_id),
+                        affected_urns,
+                    )
+                except Exception:
+                    logger.warning("Failed to enqueue reindex_tag_urns after tag delete")
             return DeleteTagResponse(success=True)
         except ConnectError:
             raise
@@ -496,19 +486,14 @@ class TagsHandlers:
                 count = await ops._get_usage_count(organization_id, target.id)
 
             if affected:
-                queue = await get_queue_safe(QueueName.CORE)
-                if queue is not None:
-                    try:
-                        await queue.enqueue_job(
-                            JobName.REINDEX_TAG_URNS,
-                            str(organization_id),
-                            affected,
-                        )
-                    except Exception:
-                        logger.warning(
-                            "Failed to enqueue reindex_tag_urns after merge",
-                            component="tags.handlers",
-                        )
+                try:
+                    await enqueue_job_reconnecting(
+                        REINDEX_TAG_URNS,
+                        str(organization_id),
+                        affected,
+                    )
+                except Exception:
+                    logger.warning("Failed to enqueue reindex_tag_urns after merge")
             return MergeTagsResponse(tag=tag_to_proto(target, usage_count=count))
         except ConnectError:
             raise

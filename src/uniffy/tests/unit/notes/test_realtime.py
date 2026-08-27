@@ -17,6 +17,7 @@ from uuid import UUID
 import pycrdt
 import pytest
 
+from uniffy.core.jobs import JobEnqueueOutcome, JobEnqueueResult
 from uniffy.core.realtime import ydoc_manager as ydoc_manager_module
 from uniffy.core.realtime.adapter import (
     _adapters,
@@ -30,6 +31,7 @@ from uniffy.core.realtime.auth import (
     extract_bearer_from_auth_header,
     origin_is_allowed,
 )
+from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.snapshot import SNAPSHOT_MAX_DELAY, SnapshotWriter
 from uniffy.core.realtime.wire import (
     YMessageType,
@@ -47,6 +49,7 @@ from uniffy.core.realtime.ydoc_manager import (
     YDocSession,
 )
 from uniffy.core.types import ContentRole, ContentType, NodeType, generate_id
+from uniffy.observability.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
 
 _conn_id_seq = 0
 
@@ -390,10 +393,10 @@ class TestSnapshotForceFlush:
             session.ydoc["markdown"] = pycrdt.Text("hello")
 
             persist = AsyncMock(return_value=True)
-            get_queue = AsyncMock()
+            enqueue = AsyncMock()
             with (
                 patch("uniffy.core.realtime.snapshot.persist_snapshot", persist),
-                patch("uniffy.core.realtime.snapshot.get_queue_safe", get_queue),
+                patch("uniffy.core.realtime.snapshot.enqueue_job_reconnecting", enqueue),
             ):
                 await writer.flush(session, force=True)
 
@@ -403,7 +406,7 @@ class TestSnapshotForceFlush:
             assert args[1] == session.key[1]
             assert args[2] == session.organization_id
             assert args[3]
-            get_queue.assert_not_called()
+            enqueue.assert_not_awaited()
 
         await go()
 
@@ -414,16 +417,48 @@ class TestSnapshotForceFlush:
             session.ydoc["markdown"] = pycrdt.Text("hello")
 
             persist = AsyncMock(return_value=True)
-            queue = AsyncMock()
-            get_queue = AsyncMock(return_value=queue)
+            enqueue = AsyncMock(
+                return_value=JobEnqueueResult(
+                    job=object(),
+                    outcome=JobEnqueueOutcome.ENQUEUED,
+                )
+            )
             with (
                 patch("uniffy.core.realtime.snapshot.persist_snapshot", persist),
-                patch("uniffy.core.realtime.snapshot.get_queue_safe", get_queue),
+                patch("uniffy.core.realtime.snapshot.enqueue_job_reconnecting", enqueue),
             ):
                 await writer.flush(session)
 
             persist.assert_not_called()
-            queue.enqueue_job.assert_awaited_once()
+            enqueue.assert_awaited_once()
+            assert enqueue.await_args.args[0] is SAVE_REALTIME_SNAPSHOT
+            assert enqueue.await_args.args[1] == session.key[0].value
+            assert enqueue.await_args.args[2] == str(session.key[1])
+            assert enqueue.await_args.args[3] == str(session.organization_id)
+
+        await go()
+
+    async def test_deduplicated_snapshot_is_not_counted_as_dropped(self) -> None:
+        async def go() -> None:
+            writer = SnapshotWriter(debounce_seconds=60.0)
+            session = _make_router_session()
+            session.ydoc["markdown"] = pycrdt.Text("hello")
+            dropped = REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
+                content_type=ContentType.NOTE.value,
+                reason="queue_unavailable",
+            )
+            before = dropped._value.get()
+            enqueue = AsyncMock(
+                return_value=JobEnqueueResult(
+                    job=None,
+                    outcome=JobEnqueueOutcome.DEDUPLICATED,
+                )
+            )
+
+            with patch("uniffy.core.realtime.snapshot.enqueue_job_reconnecting", enqueue):
+                await writer.flush(session)
+
+            assert dropped._value.get() == before
 
         await go()
 

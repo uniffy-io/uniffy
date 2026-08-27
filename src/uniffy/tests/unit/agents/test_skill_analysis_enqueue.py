@@ -9,7 +9,7 @@ from uniffy.domains.agents.sessions.operations import (
     SKILL_ANALYSIS_DEBOUNCE_SECONDS,
     _skill_analysis_job_id,
 )
-from uniffy.workers.tasks import agent_skill_analysis as task_mod
+from uniffy.domains.agents.skills import jobs as task_mod
 
 
 class TestJobIdSalt:
@@ -97,13 +97,19 @@ class TestLatestActivityAt:
 class _FakeOpsClient:
     def __init__(self, *, lock_acquired: bool = True) -> None:
         self._lock_acquired = lock_acquired
-        self.delete_calls: list[str] = []
+        self._held: dict[str, str] = {}
 
     async def set(self, key: str, value: str, **kwargs: Any) -> bool:
+        if key in self._held:
+            return False
+        if self._lock_acquired:
+            self._held[key] = value
         return self._lock_acquired
 
-    async def delete(self, key: str) -> int:
-        self.delete_calls.append(key)
+    async def eval(self, _script: str, _numkeys: int, key: str, token: str) -> int:
+        if self._held.get(key) != token:
+            return 0
+        self._held.pop(key)
         return 1
 
 

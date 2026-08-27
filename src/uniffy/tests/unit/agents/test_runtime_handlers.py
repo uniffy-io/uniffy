@@ -1,10 +1,4 @@
-"""``RuntimeHandlers`` coordinator behaviour tests.
-
-Pins the new shape introduced in W4: the handler runs synchronous
-preflight + enqueue, then drives a stream subscriber while the egress
-worker owns the LLM turn. The collaborators are stubbed (no DB / no
-Valkey) so the suite asserts the contract, not the integration.
-"""
+"""Agent runtime coordinator behavior tests."""
 
 from __future__ import annotations
 
@@ -29,12 +23,14 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     RateLimitExceededError,
 )
+from uniffy.core.jobs import JobRef
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime import handlers as handlers_mod
 from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.handlers import RuntimeHandlers
+from uniffy.domains.agents.runtime.job_contracts import RUN_AGENT_SESSION
 
 
 @pytest.fixture(autouse=True)
@@ -52,10 +48,10 @@ def _runtime_settings(monkeypatch):
 
 class _FakeQueue:
     def __init__(self) -> None:
-        self.enqueued: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
+        self.enqueued: list[tuple[JobRef, tuple[Any, ...], dict[str, Any]]] = []
 
-    async def enqueue_job(self, name: str, *args: Any, **kwargs: Any) -> None:
-        self.enqueued.append((name, args, kwargs))
+    async def enqueue_job(self, ref: JobRef, *args: Any, **kwargs: Any) -> None:
+        self.enqueued.append((ref, args, kwargs))
 
 
 class _FakeOrgOps:
@@ -202,7 +198,7 @@ def _install_state(monkeypatch) -> list[dict[str, Any]]:
 
 def _install_queue(monkeypatch) -> _FakeQueue:
     queue = _FakeQueue()
-    monkeypatch.setattr(handlers_mod, "get_queue", lambda name: queue)
+    monkeypatch.setattr(handlers_mod, "enqueue_job", queue.enqueue_job)
     return queue
 
 
@@ -459,8 +455,8 @@ class TestStreamSendMessage:
         collected = await run()
 
         assert len(queue.enqueued) == 1
-        name, args, kwargs = queue.enqueued[0]
-        assert name == "run_agent_session"
+        ref, args, kwargs = queue.enqueued[0]
+        assert ref is RUN_AGENT_SESSION
         assert args[0] == str(run_id)
         assert args[1] == str(user_id)
         assert args[2] == str(org_id)

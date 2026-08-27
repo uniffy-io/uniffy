@@ -196,4 +196,3 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
     assert removed[0].details["previous_role"] == "MEMBER"
     assert removed[0].actor_user_id == admin
 
-

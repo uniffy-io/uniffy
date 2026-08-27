@@ -72,10 +72,15 @@ export const chatChannelsSlice = createSlice({
       };
     },
     removeChannel: (state, action: PayloadAction<string>) => {
-      if (state.byId[action.payload]) {
-        delete state.byId[action.payload];
-        state.ids = state.ids.filter((id) => id !== action.payload);
+      const channelId = action.payload;
+      if (state.byId[channelId]) {
+        delete state.byId[channelId];
+        state.ids = state.ids.filter((id) => id !== channelId);
       }
+      if (state.activeChannelId === channelId) state.activeChannelId = null;
+      if (state.splitChannelId === channelId) state.splitChannelId = null;
+      delete state.channelMembers[channelId];
+      delete state.channelPreferences[channelId];
     },
     setActiveChannel: (state, action: PayloadAction<string | null>) => {
       state.activeChannelId = action.payload;

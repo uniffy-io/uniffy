@@ -31,7 +31,13 @@ class _LoguruAdapter:
                 text = text % args  # arq formats with %-args; resolve here so loguru gets a final string
             except Exception:
                 text = f"{text} {args!r}"
-        _loguru.opt(depth=2, exception=kwargs.get("exc_info", False)).log(level, text)
+        structured = {"component": "vendor.arq"}
+        extra = kwargs.get("extra")
+        if isinstance(extra, dict):
+            structured.update(extra)
+        _loguru.bind(**structured).opt(depth=2, exception=kwargs.get("exc_info", False)).log(
+            level, text
+        )
 
     def debug(self, msg: object, *args: Any, **kwargs: Any) -> None:
         self._emit("DEBUG", msg, args, kwargs)

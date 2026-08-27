@@ -6,6 +6,8 @@ import sys
 
 from dotenv import load_dotenv
 
+from uniffy.cli import MFA_RESET_FLAG
+
 
 def _run_backend() -> None:
     from uniffy._metrics_bootstrap import bootstrap_multiproc_metrics
@@ -55,6 +57,7 @@ def _run_worker_core() -> None:
         CoreWorkerSettings,
         app_name="uniffy-worker-core",
         metrics_port=port,
+        queue=CoreWorkerSettings.resource_profile.queue,
     )
 
 
@@ -71,6 +74,7 @@ def _run_worker_egress() -> None:
         EgressWorkerSettings,
         app_name="uniffy-worker-egress",
         metrics_port=port,
+        queue=EgressWorkerSettings.resource_profile.queue,
     )
 
 
@@ -84,10 +88,9 @@ _MODES = {
 def main() -> None:
     load_dotenv()
 
-    from uniffy.cli.mfa import MFA_RESET_FLAG
-    from uniffy.cli.mfa import run as _run_mfa_reset
-
     if MFA_RESET_FLAG in sys.argv:
+        from uniffy.cli.mfa import run as _run_mfa_reset
+
         _run_mfa_reset()
         return
 

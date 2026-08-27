@@ -367,7 +367,7 @@ async def test_generated_image_file_uses_requested_space(
         ),
         patch("uniffy.domains.agents.pricing.get_pricing", return_value=None),
         patch(
-            "uniffy.workers.utils.mime.get_jobs_for_mime_type",
+            "uniffy.domains.files.jobs.mime.get_jobs_for_mime_type",
             return_value=[],
         ),
         patch(

@@ -36,3 +36,4 @@ class FileMediaInfo(SQLModel, table=True):
     exif: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     extracted_text: str | None = Field(default=None, sa_column=Column("extracted_text", Text))
     extraction_error: str | None = Field(default=None, max_length=2000)
+    thumbnail_error: str | None = Field(default=None, max_length=2000)

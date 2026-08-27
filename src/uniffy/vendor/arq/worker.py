@@ -8,12 +8,13 @@ from datetime import datetime, timedelta, timezone
 from functools import partial
 from signal import Signals
 from time import time
-from typing import TYPE_CHECKING, Any, Callable, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Final, Optional, Union, cast
 
 from valkey.exceptions import ResponseError, WatchError
 
 from .cron import CronJob
 from .jobs import Deserializer, JobResult, SerializationError, Serializer, deserialize_job_raw, serialize_result
+from .typing import JobRejectionReason
 
 from .connections import ArqValkey, ValkeySettings, create_pool, log_valkey_info
 from .constants import (
@@ -24,12 +25,12 @@ from .constants import (
     health_check_key_suffix,
     in_progress_key_prefix,
     job_key_prefix,
+    job_start_delay_ctx_key,
     keep_cronjob_progress,
     result_key_prefix,
     retry_key_prefix,
 )
 from .utils import (
-    args_to_string,
     import_string,
     ms_to_datetime,
     poll,
@@ -37,14 +38,45 @@ from .utils import (
     to_ms,
     to_seconds,
     to_unix_ms,
-    truncate,
 )
 
 if TYPE_CHECKING:
-    from .typing import SecondsTimedelta, StartupShutdown, WorkerCoroutine, WorkerSettingsType
+    from .typing import (
+        HealthCheck,
+        JobRejected,
+        SecondsTimedelta,
+        StartupShutdown,
+        WorkerCoroutine,
+        WorkerSettingsType,
+    )
 
 from ._logging import logger
 no_result = object()
+
+_WORKER_COMPONENT: Final = "vendor.arq.worker"
+_JOB_STARTED_EVENT: Final = "worker.job.started"
+_JOB_COMPLETED_EVENT: Final = "worker.job.completed"
+_JOB_RETRIED_EVENT: Final = "worker.job.retried"
+_JOB_ABORTED_EVENT: Final = "worker.job.aborted"
+_JOB_FAILED_EVENT: Final = "worker.job.failed"
+_JOB_REJECTED_EVENT: Final = "worker.job.rejected"
+_WORKER_HEALTH_EVENT: Final = "worker.health.recorded"
+_JOB_STATUS_SUCCESS: Final = "success"
+_JOB_STATUS_RETRY: Final = "retry"
+_JOB_STATUS_ABORTED: Final = "aborted"
+_JOB_STATUS_FAILED: Final = "failed"
+
+
+def _job_log_fields(ctx: dict[Any, Any], event: str, **fields: Any) -> dict[str, Any]:
+    return {
+        "component": _WORKER_COMPONENT,
+        "event": event,
+        "job_id": ctx["job_id"],
+        "job_name": ctx["job_name"],
+        "queue": str(ctx.get("queue") or ctx["job_queue"]),
+        "job_try": ctx["job_try"],
+        **fields,
+    }
 
 
 @dataclass
@@ -153,6 +185,8 @@ class Worker:
     :param on_job_start: coroutine function to run on job start
     :param on_job_end: coroutine function to run on job end
     :param after_job_end: coroutine function to run after job has ended and results have been recorded
+    :param on_health_check: coroutine function to run after a successful worker health cycle
+    :param on_job_rejected: coroutine function to run when a job is rejected before handler execution
     :param handle_signals: default true, register signal handlers,
       set to false when running inside other async framework
     :param job_completion_wait: time to wait before cancelling tasks after a signal.
@@ -179,8 +213,7 @@ class Worker:
      after which the job expires, defaults to 1 day in ms.
     :param timezone: timezone used for evaluation of cron schedules,
         defaults to system timezone
-    :param log_results: when set to true (default) results for successful jobs
-      will be logged
+    :param log_results: retained for API compatibility; job result payloads are not written to logs
     """
 
     def __init__(
@@ -197,6 +230,8 @@ class Worker:
         on_job_start: Optional['StartupShutdown'] = None,
         on_job_end: Optional['StartupShutdown'] = None,
         after_job_end: Optional['StartupShutdown'] = None,
+        on_health_check: Optional['HealthCheck'] = None,
+        on_job_rejected: Optional['JobRejected'] = None,
         handle_signals: bool = True,
         job_completion_wait: int = 0,
         max_jobs: int = 10,
@@ -239,6 +274,8 @@ class Worker:
         self.on_job_start = on_job_start
         self.on_job_end = on_job_end
         self.after_job_end = after_job_end
+        self.on_health_check = on_health_check
+        self.on_job_rejected = on_job_rejected
 
         self.max_jobs = max_jobs
         self.sem = asyncio.BoundedSemaphore(max_jobs + 1)
@@ -510,8 +547,31 @@ class Worker:
             )
             await asyncio.shield(self.finish_failed_job(job_id, result_data_))
 
+        async def report_job_rejected(reason: JobRejectionReason) -> dict[Any, Any]:
+            rejection_ctx = {
+                **self.ctx,
+                'job_id': job_id,
+                'job_name': function_name,
+                'job_queue': self.queue_name,
+                'job_try': job_try,
+            }
+            if self.on_job_rejected:
+                await self.on_job_rejected(rejection_ctx, reason=reason)
+            return rejection_ctx
+
         if not v:
-            logger.warning('job %s expired', job_id)
+            reason = JobRejectionReason.EXPIRED
+            rejection_ctx = await report_job_rejected(reason)
+            logger.warning(
+                'Rejected job %s before start: expired',
+                job_id,
+                extra=_job_log_fields(
+                    rejection_ctx,
+                    _JOB_REJECTED_EVENT,
+                    job_status=_JOB_STATUS_FAILED,
+                    rejection_reason=reason,
+                ),
+            )
             return await job_failed(JobExecutionFailed('job expired'))
 
         try:
@@ -519,18 +579,51 @@ class Worker:
                 v, deserializer=self.job_deserializer
             )
         except SerializationError as e:
-            logger.exception('deserializing job %s failed', job_id)
+            reason = JobRejectionReason.DESERIALIZATION_FAILED
+            rejection_ctx = await report_job_rejected(reason)
+            logger.exception(
+                'Rejected job %s before start: deserialization failed',
+                job_id,
+                extra=_job_log_fields(
+                    rejection_ctx,
+                    _JOB_REJECTED_EVENT,
+                    job_status=_JOB_STATUS_FAILED,
+                    rejection_reason=reason,
+                ),
+            )
             return await job_failed(e)
 
         if abort_job:
-            t = (timestamp_ms() - enqueue_time_ms) / 1000
-            logger.info('%6.2fs ⊘ %s:%s aborted before start', t, job_id, function_name)
+            reason = JobRejectionReason.ABORTED_BEFORE_START
+            rejection_ctx = await report_job_rejected(reason)
+            logger.info(
+                'Aborted job %s before start',
+                function_name,
+                extra=_job_log_fields(
+                    rejection_ctx,
+                    _JOB_ABORTED_EVENT,
+                    job_status=_JOB_STATUS_ABORTED,
+                    rejection_reason=reason,
+                ),
+            )
             return await job_failed(asyncio.CancelledError())
 
         try:
             function: Union[Function, CronJob] = self.functions[function_name]
         except KeyError:
-            logger.warning('job %s, function %r not found', job_id, function_name)
+            reason = JobRejectionReason.FUNCTION_NOT_FOUND
+            rejection_ctx = await report_job_rejected(reason)
+            logger.warning(
+                'Rejected job %s before start: function %s is not registered',
+                job_id,
+                function_name,
+                extra=_job_log_fields(
+                    rejection_ctx,
+                    _JOB_REJECTED_EVENT,
+                    job_status=_JOB_STATUS_FAILED,
+                    rejection_reason=reason,
+                ),
+            )
             return await job_failed(JobExecutionFailed(f'function {function_name!r} not found'))
 
         if hasattr(function, 'next_run'):
@@ -545,10 +638,32 @@ class Worker:
             job_try = enqueue_job_try
             await self.pool.setex(retry_key_prefix + job_id, 88400, str(job_try))
 
+        job_ctx = {
+            'job_id': job_id,
+            'job_name': function_name,
+            'job_queue': self.queue_name,
+            'job_try': job_try,
+            'enqueue_time': ms_to_datetime(enqueue_time_ms),
+            'score': score,
+        }
+        ctx = {**self.ctx, **job_ctx}
+
         max_tries = self.max_tries if function.max_tries is None else function.max_tries
         if job_try > max_tries:
-            t = (timestamp_ms() - enqueue_time_ms) / 1000
-            logger.warning('%6.2fs ! %s max retries %d exceeded', t, ref, max_tries)
+            reason = JobRejectionReason.MAX_RETRIES_EXCEEDED
+            rejection_ctx = await report_job_rejected(reason)
+            logger.warning(
+                'Rejected job %s before start: maximum retries exceeded (%d)',
+                function_name,
+                max_tries,
+                extra=_job_log_fields(
+                    rejection_ctx,
+                    _JOB_REJECTED_EVENT,
+                    job_status=_JOB_STATUS_FAILED,
+                    rejection_reason=reason,
+                    max_tries=max_tries,
+                ),
+            )
             self.jobs_failed += 1
             result_data = serialize_result(
                 function_name,
@@ -572,28 +687,29 @@ class Worker:
         finish = False
         timeout_s = self.job_timeout_s if function.timeout_s is None else function.timeout_s
         incr_score: Optional[int] = None
-        job_ctx = {
-            'job_id': job_id,
-            'job_try': job_try,
-            'enqueue_time': ms_to_datetime(enqueue_time_ms),
-            'score': score,
-        }
-        ctx = {**self.ctx, **job_ctx}
 
+        start_ms = timestamp_ms()
+        queue_delay_ms = max(0, start_ms - enqueue_time_ms)
+        start_delay_ms = max(0, start_ms - score)
+        ctx[job_start_delay_ctx_key] = start_delay_ms
         if self.on_job_start:
             await self.on_job_start(ctx)
 
-        start_ms = timestamp_ms()
         success = False
+        job_status = _JOB_STATUS_FAILED
         try:
-            s = args_to_string(args, kwargs)
-            extra = f' try={job_try}' if job_try > 1 else ''
-            if (start_ms - score) > 1200:
-                extra += f' delayed={(start_ms - score) / 1000:0.2f}s'
-            logger.info('%6.2fs → %s(%s)%s', (start_ms - enqueue_time_ms) / 1000, ref, s, extra)
+            logger.info(
+                'Started job %s',
+                function_name,
+                extra=_job_log_fields(
+                    ctx,
+                    _JOB_STARTED_EVENT,
+                    queue_delay_ms=queue_delay_ms,
+                    start_delay_ms=start_delay_ms,
+                ),
+            )
             self.job_tasks[job_id] = task = self.loop.create_task(function.coroutine(ctx, *args, **kwargs))
 
-            # run repr(result) and extra inside try/except as they can raise exceptions
             try:
                 result = await asyncio.wait_for(task, timeout_s)
             except (Exception, asyncio.CancelledError) as e:
@@ -601,40 +717,93 @@ class Worker:
                 if callable(exc_extra):
                     exc_extra = exc_extra()
                 raise
-            else:
-                result_str = '' if result is None or not self.log_results else truncate(repr(result))
             finally:
                 del self.job_tasks[job_id]
 
         except (Exception, asyncio.CancelledError) as e:
             finished_ms = timestamp_ms()
-            t = (finished_ms - start_ms) / 1000
             if self.retry_jobs and isinstance(e, Retry):
                 incr_score = e.defer_score
-                logger.info('%6.2fs ↻ %s retrying job in %0.2fs', t, ref, (e.defer_score or 0) / 1000)
+                job_status = _JOB_STATUS_RETRY
+                logger.info(
+                    'Retrying job %s in %0.2fs',
+                    function_name,
+                    (e.defer_score or 0) / 1000,
+                    extra=_job_log_fields(
+                        ctx,
+                        _JOB_RETRIED_EVENT,
+                        job_status=job_status,
+                        duration_ms=max(0, finished_ms - start_ms),
+                        retry_delay_ms=e.defer_score or 0,
+                    ),
+                )
                 if e.defer_score:
                     incr_score = e.defer_score + (timestamp_ms() - score)
                 self.jobs_retried += 1
             elif job_id in self.aborting_tasks and isinstance(e, asyncio.CancelledError):
-                logger.info('%6.2fs ⊘ %s aborted', t, ref)
+                job_status = _JOB_STATUS_ABORTED
+                logger.info(
+                    'Aborted job %s',
+                    function_name,
+                    extra=_job_log_fields(
+                        ctx,
+                        _JOB_ABORTED_EVENT,
+                        job_status=job_status,
+                        duration_ms=max(0, finished_ms - start_ms),
+                    ),
+                )
                 result = e
                 finish = True
                 self.aborting_tasks.remove(job_id)
                 self.jobs_failed += 1
             elif self.retry_jobs and isinstance(e, (asyncio.CancelledError, RetryJob)):
-                logger.info('%6.2fs ↻ %s cancelled, will be run again', t, ref)
+                job_status = _JOB_STATUS_RETRY
+                logger.info(
+                    'Retrying cancelled job %s',
+                    function_name,
+                    extra=_job_log_fields(
+                        ctx,
+                        _JOB_RETRIED_EVENT,
+                        job_status=job_status,
+                        duration_ms=max(0, finished_ms - start_ms),
+                    ),
+                )
                 self.jobs_retried += 1
             else:
+                job_status = _JOB_STATUS_FAILED
+                log_fields = _job_log_fields(
+                    ctx,
+                    _JOB_FAILED_EVENT,
+                    job_status=job_status,
+                    duration_ms=max(0, finished_ms - start_ms),
+                    error_type=e.__class__.__name__,
+                )
+                if exc_extra is not None:
+                    log_fields['error_context'] = exc_extra
                 logger.exception(
-                    '%6.2fs ! %s failed, %s: %s', t, ref, e.__class__.__name__, e, extra={'extra': exc_extra}
+                    'Job %s failed, %s: %s',
+                    function_name,
+                    e.__class__.__name__,
+                    e,
+                    extra=log_fields,
                 )
                 result = e
                 finish = True
                 self.jobs_failed += 1
         else:
             success = True
+            job_status = _JOB_STATUS_SUCCESS
             finished_ms = timestamp_ms()
-            logger.info('%6.2fs ← %s ● %s', (finished_ms - start_ms) / 1000, ref, result_str)
+            logger.info(
+                'Finished job %s',
+                function_name,
+                extra=_job_log_fields(
+                    ctx,
+                    _JOB_COMPLETED_EVENT,
+                    job_status=job_status,
+                    duration_ms=max(0, finished_ms - start_ms),
+                ),
+            )
             finish = True
             self.jobs_complete += 1
 
@@ -660,6 +829,8 @@ class Worker:
                 serializer=self.job_serializer,
             )
 
+        ctx['job_status'] = job_status
+        ctx['job_duration_ms'] = max(0, finished_ms - start_ms)
         if self.on_job_end:
             await self.on_job_end(ctx)
 
@@ -783,9 +954,28 @@ class Worker:
         await self.pool.psetex(  # type: ignore[no-untyped-call]
             self.health_check_key, int((self.health_check_interval + 1) * 1000), info.encode()
         )
+        if self.on_health_check:
+            await self.on_health_check(
+                self.ctx,
+                queue_depth=queued,
+                heartbeat_timestamp=time(),
+            )
         log_suffix = info[info.index('j_complete=') :]
         if self._last_health_check_log and log_suffix != self._last_health_check_log:
-            logger.info('recording health: %s', info)
+            logger.info(
+                'recording health: %s',
+                info,
+                extra={
+                    'component': _WORKER_COMPONENT,
+                    'event': _WORKER_HEALTH_EVENT,
+                    'queue': str(self.ctx.get('queue', self.queue_name)),
+                    'jobs_complete': self.jobs_complete,
+                    'jobs_failed': self.jobs_failed,
+                    'jobs_retried': self.jobs_retried,
+                    'jobs_ongoing': pending_tasks,
+                    'jobs_queued': queued,
+                },
+            )
             self._last_health_check_log = log_suffix
         elif not self._last_health_check_log:
             self._last_health_check_log = log_suffix
@@ -816,7 +1006,7 @@ class Worker:
                 self._job_completion_wait,
             )
         logger.info(
-            'shutdown on %s, wait complete ◆ %d jobs complete ◆ %d failed ◆ %d retries ◆ %d ongoing to cancel',
+            'shutdown on %s, wait complete, %d jobs complete, %d failed, %d retries, %d ongoing to cancel',
             signum.name,
             self.jobs_complete,
             self.jobs_failed,
@@ -839,7 +1029,7 @@ class Worker:
         logger.info('Setting allow_pick_jobs to `False`')
         self.allow_pick_jobs = False
         logger.info(
-            'shutdown on %s ◆ %d jobs complete ◆ %d failed ◆ %d retries ◆ %d to be completed',
+            'shutdown on %s, %d jobs complete, %d failed, %d retries, %d to be completed',
             sig.name,
             self.jobs_complete,
             self.jobs_failed,
@@ -851,7 +1041,7 @@ class Worker:
     def handle_sig(self, signum: Signals) -> None:
         sig = Signals(signum)
         logger.info(
-            'shutdown on %s ◆ %d jobs complete ◆ %d failed ◆ %d retries ◆ %d ongoing to cancel',
+            'shutdown on %s, %d jobs complete, %d failed, %d retries, %d ongoing to cancel',
             sig.name,
             self.jobs_complete,
             self.jobs_failed,

@@ -55,7 +55,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
 
     from uniffy.core.models.agents.agent import Agent
     from uniffy.core.models.agents.run_log import AgentRunLog
-    from uniffy.core.models.files.file import ExtractionStatus, File
+    from uniffy.core.models.files.file import ExtractionStatus, File, ThumbnailStatus
     from uniffy.core.models.files.file_version import FileVersion
     from uniffy.core.search.indexer import build_content_urn
     from uniffy.core.storage import get_s3_client
@@ -192,6 +192,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         storage_bucket=bucket_name,
         folder_id=folder.id,
         extraction_status=ExtractionStatus.PENDING,
+        thumbnail_status=ThumbnailStatus.PENDING,
         description=f"AI-generated image: {prompt[:200]}",
         access_mode=access_mode,
         baseline_role=None,
@@ -344,26 +345,32 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     # Enqueue thumbnail/extraction jobs only after the file row is committed, so
     # the core worker can load it - mirrors FileOperations._enqueue_processing_jobs.
     # This runs inside the EGRESS worker, which only initialises its own pool, so
-    # it has to reach the core queue through the lazy-reconnect accessor; the
-    # raising one would leave every generated image without a thumbnail.
-    from uniffy.core.valkey import QueueName, get_queue_safe
-    from uniffy.workers.utils.mime import get_jobs_for_mime_type
+    # core dispatch must reconnect before enqueueing the file jobs.
+    from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
+    from uniffy.domains.files.jobs.processing import (
+        file_processing_job_id,
+        pending_jobs_for_file,
+    )
 
-    jobs = get_jobs_for_mime_type(mime_type)
-    if jobs:
-        queue = await get_queue_safe(QueueName.CORE)
-        if queue is None:
-            logger.warning(
-                "Core queue unavailable; generated image has no thumbnail",
-                file_id=str(file_id),
+    try:
+        for job_ref in pending_jobs_for_file(file_record):
+            enqueue_result = await enqueue_job_reconnecting(
+                job_ref,
+                str(file_id),
+                str(ctx.organization_id),
+                _job_id=file_processing_job_id(job_ref, file_id, file_record.version),
             )
-        else:
-            for job_name in jobs:
-                await queue.enqueue_job(
-                    job_name,
-                    str(file_id),
-                    str(ctx.organization_id),
+            if enqueue_result.outcome is JobEnqueueOutcome.UNAVAILABLE:
+                logger.warning(
+                    "Core queue unavailable; generated image processing will be recovered",
+                    file_id=str(file_id),
                 )
+                break
+    except Exception:
+        logger.opt(exception=True).warning(
+            "Could not enqueue generated-image processing jobs; recovery will retry",
+            file_id=str(file_id),
+        )
 
     try:
         await check_and_fire_alerts(

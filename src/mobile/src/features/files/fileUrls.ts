@@ -17,7 +17,7 @@ export function buildMediaUrl(organizationId: string, fileId: string): string {
   return `${getApiBaseUrl()}/media/${organizationId}/${fileId}`;
 }
 
-// Mirrors the backend THUMBNAIL_MIME_TYPES (workers/utils/mime.py): only these
+// Mirrors the backend THUMBNAIL_MIME_TYPES (domains/files/jobs/mime.py): only these
 // types have a server-generated thumbnail, so only these should attempt the
 // thumbnail route - everything else falls straight back to an icon/badge.
 const THUMBNAIL_MIME_TYPES = new Set([

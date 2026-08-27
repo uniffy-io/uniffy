@@ -83,8 +83,8 @@ This means most changes touch a single domain. Cross-cutting work (search indexi
 Two ARQ workers run as separate processes (or separate Kubernetes Deployments). One image, two entrypoints:
 
 ```sh
-arq uniffy.workers.settings.CoreWorkerSettings
-arq uniffy.workers.settings.EgressWorkerSettings
+python -m uniffy --worker-core
+python -m uniffy --worker-egress
 ```
 
 | Fleet | Default concurrency | Default timeout | Typical work |

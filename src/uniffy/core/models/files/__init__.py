@@ -1,7 +1,7 @@
 """Files domain models."""
 
 from uniffy.core.models.files.attachment import Attachment
-from uniffy.core.models.files.file import ExtractionStatus, File, TranscodeStatus
+from uniffy.core.models.files.file import ExtractionStatus, File, ThumbnailStatus, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
@@ -21,6 +21,7 @@ __all__ = [
     "MultipartPart",
     "MultipartUpload",
     "ExtractionStatus",
+    "ThumbnailStatus",
     "TranscodeStatus",
     "UploadStatus",
     "SavedFileFilter",

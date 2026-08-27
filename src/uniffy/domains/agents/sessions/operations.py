@@ -10,19 +10,23 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
 from uniffy.core.models.agents.message_feedback import AgentFeedbackRating, AgentMessageFeedback
 from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import generate_id
-from uniffy.core.valkey.queue import QueueName, get_queue_safe
 from uniffy.core.valkey.streams import session_has_active_run
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.runtime.compactor import summarise_conversation
+from uniffy.domains.agents.sessions.job_contracts import COMPACT_SESSION
+from uniffy.domains.agents.skills.job_contracts import (
+    ANALYZE_SESSION_FOR_SKILLS,
+    SkillAnalysisDestination,
+)
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.workers.tasks import JobName, SkillAnalysisDestination
 
 logger = logger.bind(component="agents.sessions.operations")
 
@@ -684,21 +688,19 @@ class SessionOperations:
         if active_tokens <= token_budget:
             return False
 
-        queue = await get_queue_safe(QueueName.EGRESS)
-        if queue is None:
+        try:
+            enqueue_result = await enqueue_job_reconnecting(COMPACT_SESSION, str(session_id))
+        except Exception:
+            logger.opt(exception=True).warning(
+                "compact_session enqueue failed", session_id=str(session_id)
+            )
+            return False
+        if enqueue_result.outcome is JobEnqueueOutcome.UNAVAILABLE:
             logger.warning(
                 "Compaction queue unavailable; session over budget but no enqueue",
                 session_id=str(session_id),
                 active_tokens=active_tokens,
                 token_budget=token_budget,
-            )
-            return False
-
-        try:
-            await queue.enqueue_job(JobName.COMPACT_SESSION, str(session_id))
-        except Exception:
-            logger.opt(exception=True).warning(
-                "compact_session enqueue failed", session_id=str(session_id)
             )
             return False
         return True
@@ -718,9 +720,6 @@ class SessionOperations:
         daily budget before any LLM work, so enqueuing is safe even when
         evolution is disabled.
         """
-        queue = await get_queue_safe(QueueName.EGRESS)
-        if queue is None:
-            return False
         # A fresh salt per trigger gives each turn its own job id. ARQ never
         # extends the defer of an existing id and caches a finished job's result
         # for WORKER_KEEP_RESULT seconds, so a reused id would fire against a
@@ -728,8 +727,8 @@ class SessionOperations:
         # worker self-debounces the resulting burst down to one real run.
         job_id = _skill_analysis_job_id(destination_kind, destination_id, uuid4().hex)
         try:
-            await queue.enqueue_job(
-                JobName.ANALYZE_SESSION_FOR_SKILLS,
+            enqueue_result = await enqueue_job_reconnecting(
+                ANALYZE_SESSION_FOR_SKILLS,
                 destination_kind,
                 str(destination_id),
                 str(user_id),
@@ -738,6 +737,8 @@ class SessionOperations:
                 _job_id=job_id,
                 _defer_by=SKILL_ANALYSIS_DEBOUNCE_SECONDS,
             )
+            if enqueue_result.outcome is JobEnqueueOutcome.UNAVAILABLE:
+                return False
         except Exception:
             logger.opt(exception=True).warning(
                 "analyze_session_for_skills enqueue failed",

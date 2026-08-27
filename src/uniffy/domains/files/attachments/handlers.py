@@ -81,6 +81,8 @@ class AttachmentsHandlersMixin:
                 owner = row[1] if row else None
 
                 await session.commit()
+                if file is not None:
+                    await ops.enqueue_processing_jobs(file)
 
                 # The caller supplied the source id and passed the access check
                 # on it inside attach_file, so echoing it back reveals nothing.

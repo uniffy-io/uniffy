@@ -50,4 +50,3 @@ def test_daily_digest_rolls_to_the_next_local_day() -> None:
     )
 
     assert scheduled == datetime(2026, 8, 22, 5, 0, tzinfo=UTC)
-
