@@ -21,6 +21,7 @@ import {
   loadLivekitClient,
   setupLiveKit,
   startCallAudio,
+  startCallMicService,
   stopCallAudio,
   setSpeakerphoneOn,
 } from "@features/calls/livekit";
@@ -511,7 +512,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setSession({ ...IDLE_SESSION, status: "connecting", channelId });
       try {
         const join = await request();
-        await startCallAudio(media.camera);
+        await startCallAudio(media.camera, media.mic);
         await connectRoom(join, media);
         setMinimized(false);
       } catch (error) {
@@ -646,6 +647,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // Device/permission failure: leave the mic state untouched.
       return;
     }
+    // A call joined listen-only has no microphone service yet; unmuting is the
+    // first moment the app holds RecordAudio and may start one. It stays up for
+    // the rest of the call, since muting again does not drop the permission.
+    if (next) startCallMicService();
     setSession((prev) => ({ ...prev, micEnabled: next, secondDeviceMuted: false }));
     scheduleMediaReport();
   }, [scheduleMediaReport]);
