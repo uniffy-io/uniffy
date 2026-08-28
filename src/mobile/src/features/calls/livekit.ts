@@ -2,7 +2,7 @@
 // react-native-web (`run.sh mobile-dev`), so calls are unavailable there and
 // every hook below is a no-op. Metro picks livekit.native.ts on iOS/Android.
 import type { ComponentType } from "react";
-import type { VideoTrackViewProps } from "@features/calls/livekitTypes";
+import type { LocalVideoPreviewProps, VideoTrackViewProps } from "@features/calls/livekitTypes";
 
 export const callsSupported = false;
 
@@ -18,6 +18,16 @@ export function startCallMicService(): void {}
 
 export async function stopCallAudio(): Promise<void> {}
 
-export async function setSpeakerphoneOn(_on: boolean): Promise<void> {}
+export async function startPreviewAudio(): Promise<void> {}
+
+export async function stopPreviewAudio(): Promise<void> {}
+
+export async function getAudioOutputs(): Promise<string[]> {
+  return [];
+}
+
+export async function selectAudioOutput(_deviceId: string): Promise<void> {}
 
 export const VideoTrackView: ComponentType<VideoTrackViewProps> = () => null;
+
+export const LocalVideoPreview: ComponentType<LocalVideoPreviewProps> = () => null;

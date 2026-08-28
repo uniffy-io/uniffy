@@ -24,7 +24,9 @@
       },
       "permissions": [
         "android.permission.BLUETOOTH_CONNECT",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"
       ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
@@ -41,7 +43,15 @@
       "expo-web-browser",
       ["expo-secure-store", { "faceIDPermission": false }],
       "expo-audio",
-      "@livekit/react-native-expo-plugin",
+      [
+        "@livekit/react-native-expo-plugin",
+        {
+          "android": {
+            "audioType": "communication",
+            "enableScreenShareService": true
+          }
+        }
+      ],
       [
         "@config-plugins/react-native-webrtc",
         {
