@@ -11,15 +11,23 @@ import {
   Alert,
 } from "react-native";
 import {
+  ArrowsClockwise,
+  Bell,
   CalendarBlank,
-  Clock,
-  MapPin,
-  Palette,
-  VideoCamera,
-  Prohibit,
-  Link,
   CaretDown,
   Check,
+  Clock,
+  Copy,
+  Crosshair,
+  Door,
+  Link,
+  MapPin,
+  Palette,
+  Prohibit,
+  Sliders,
+  Tag,
+  Users,
+  VideoCamera,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@shared/components/BottomSheet";
@@ -36,8 +44,24 @@ import { RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
 import { getEffectiveTimeZone } from "@core/datetimePrefs";
 import { instantFromZonedWall, zonedParts } from "@shared/lib/zonedTime";
 import { userFacingError } from "@shared/lib/userFacingError";
-import { useCategories, useEvent } from "@features/calendar/useCalendar";
+import { useCategories, useEvent, useEventTemplates } from "@features/calendar/useCalendar";
 import { useCreateEvent, useUpdateEvent } from "@features/calendar/useCalendarMutations";
+import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
+import { useDirectory } from "@shared/directory/useDirectory";
+import { TagPickerSheet } from "@features/tags/components/TagPickerSheet";
+import { useTags } from "@features/tags/useTags";
+import { RoomPickerSheet } from "@features/rooms/components/RoomPickerSheet";
+import { useRooms } from "@features/rooms/useRooms";
+import { EventStateOptions } from "@features/calendar/components/EventStateOptions";
+import type { EventStateValue } from "@features/calendar/components/EventStateOptions";
+import { ReminderChips } from "@features/calendar/components/ReminderChips";
+import { RecurrenceSheet } from "@features/calendar/components/RecurrenceSheet";
+import { TemplatePickerSheet } from "@features/calendar/components/TemplatePickerSheet";
+import { recurrenceLabel } from "@features/calendar/eventDisplay";
+import type {
+  SerializedRecurrence,
+  SerializedTemplate,
+} from "@features/calendar/calendarSerializer";
 
 type MeetingMode = "none" | "link" | "channel";
 
@@ -122,6 +146,28 @@ export function CreateEventScreen() {
   const [channelAutoCreated, setChannelAutoCreated] = useState(false);
   const [isAllDay, setIsAllDay] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
+  const [attendeeIds, setAttendeeIds] = useState<string[]>([]);
+  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [isFocusTime, setIsFocusTime] = useState(false);
+  const [reminders, setReminders] = useState<number[]>([]);
+  const [recurrence, setRecurrence] = useState<SerializedRecurrence | undefined>(undefined);
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [eventState, setEventState] = useState<EventStateValue>({
+    status: "confirmed",
+    visibility: "standard",
+    transparency: "opaque",
+    isOutOfOffice: false,
+  });
+  const [attendeePickerOpen, setAttendeePickerOpen] = useState(false);
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [recurrenceSheetOpen, setRecurrenceSheetOpen] = useState(false);
+  const [roomPickerOpen, setRoomPickerOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+
+  const { byId: subjectsById } = useDirectory();
+  const tagsQuery = useTags("");
+  const roomsQuery = useRooms();
+  const templatesQuery = useEventTemplates();
 
   // Prefill editable fields once the event to edit loads. Adjusting state during
   // render (guarded to run once) avoids an effect that would cascade a second render.
@@ -148,6 +194,20 @@ export function CreateEventScreen() {
     setMeetingMode(event.channelId ? "channel" : event.meetingUrl ? "link" : "none");
     setIsAllDay(event.isAllDay);
     setSelectedCategoryId(event.categoryId || undefined);
+    // Attendees are deliberately not prefilled: adding and removing people on
+    // an existing event lives on the detail screen, where roles and responses
+    // survive; a replace-the-list save here would drop both.
+    setTagIds(event.tags.map((t) => t.id));
+    setIsFocusTime(event.isFocusTime);
+    setReminders([...event.reminders]);
+    setRecurrence(event.recurrence);
+    setRoomId(event.roomId ?? null);
+    setEventState({
+      status: event.status,
+      visibility: event.visibility,
+      transparency: event.transparency,
+      isOutOfOffice: event.isOutOfOffice,
+    });
   }
 
   // The description is an uncontrolled ref; seed it once off the render path.
@@ -173,6 +233,38 @@ export function CreateEventScreen() {
     if (mode !== "channel") {
       setSelectedChannelId(null);
       setChannelAutoCreated(false);
+    }
+  };
+
+  const attendeeNames = attendeeIds.map((id) => subjectsById.get(id)?.name ?? "…").join(", ");
+  const tagNameById = new Map<string, string>();
+  tagsQuery.data?.forEach((t) => tagNameById.set(t.id, t.name));
+  eventQuery.data?.tags.forEach((t) => tagNameById.set(t.id, t.name));
+  const selectedTagNames = tagIds.map((id) => tagNameById.get(id) ?? "…").join(", ");
+  const selectedRoomName = roomId
+    ? (roomsQuery.data?.find((r) => r.id === roomId)?.name ??
+      eventQuery.data?.roomName ??
+      "Selected")
+    : null;
+  const slotStartIso = parseDateTime(dateStr, startTime).toISOString();
+  const slotEndIso = parseDateTime(dateStr, endTime).toISOString();
+
+  const applyTemplate = (template: SerializedTemplate) => {
+    setTitle(template.title);
+    if (template.description) {
+      descriptionRef.current = template.description;
+      setInitialDescription(template.description);
+    }
+    if (template.location) setLocation(template.location);
+    if (template.meetingUrl) {
+      setMeetingMode("link");
+      setMeetingUrl(template.meetingUrl);
+    }
+    if (template.categoryId) setSelectedCategoryId(template.categoryId);
+    if (template.durationMinutes > 0) {
+      const start = parseDateTime(dateStr, startTime);
+      const end = new Date(start.getTime() + template.durationMinutes * 60 * 1000);
+      setEndTime(formatTimeForInput(end));
     }
   };
 
@@ -215,6 +307,17 @@ export function CreateEventScreen() {
         // it only when it changed so an unrelated edit does not thrash it.
         const prevChannelId = eventQuery.data?.channelId || "";
         const desiredChannel = channelOut || "";
+        const prev = eventQuery.data;
+        const prevTagIds = (prev?.tags ?? []).map((t) => t.id);
+        const tagsChanged =
+          tagIds.length !== prevTagIds.length || tagIds.some((id) => !prevTagIds.includes(id));
+        const prevReminders = prev?.reminders ?? [];
+        const remindersChanged =
+          reminders.length !== prevReminders.length ||
+          reminders.some((r) => !prevReminders.includes(r));
+        const recurrenceChanged =
+          JSON.stringify(recurrence ?? null) !== JSON.stringify(prev?.recurrence ?? null);
+        const prevRoomId = prev?.roomId ?? "";
         await updateEvent.mutateAsync({
           eventId,
           title: title.trim(),
@@ -229,6 +332,22 @@ export function CreateEventScreen() {
           channelAutoCreated: channelOut ? channelAutoCreated : undefined,
           recurrenceEditScope: scope,
           occurrenceDate,
+          isFocusTime: isFocusTime !== prev?.isFocusTime ? isFocusTime : undefined,
+          reminders: remindersChanged ? reminders : undefined,
+          // Dropping the rule cannot travel as "unset" (that means untouched),
+          // so a cleared recurrence goes over as an explicit NONE.
+          recurrence: recurrenceChanged
+            ? (recurrence ?? { pattern: "NONE", interval: 1, daysOfWeek: [] })
+            : undefined,
+          roomId: (roomId ?? "") !== prevRoomId ? (roomId ?? "") : undefined,
+          tagIds: tagsChanged ? tagIds : undefined,
+          status: eventState.status !== prev?.status ? eventState.status : undefined,
+          visibility:
+            eventState.visibility !== prev?.visibility ? eventState.visibility : undefined,
+          transparency:
+            eventState.transparency !== prev?.transparency ? eventState.transparency : undefined,
+          isOutOfOffice:
+            eventState.isOutOfOffice !== prev?.isOutOfOffice ? eventState.isOutOfOffice : undefined,
         });
       } else {
         // calendarId is omitted - the backend resolves the user's default
@@ -245,6 +364,17 @@ export function CreateEventScreen() {
           channelId: channelOut || undefined,
           channelAutoCreated: channelOut ? channelAutoCreated : undefined,
           timezone: getEffectiveTimeZone(),
+          attendees: attendeeIds.map((userId) => ({ userId })),
+          tagIds,
+          isFocusTime,
+          // Empty means the server applies the user's reminder defaults.
+          reminders: reminders.length > 0 ? reminders : undefined,
+          recurrence,
+          roomId: roomId ?? undefined,
+          status: eventState.status !== "confirmed" ? eventState.status : undefined,
+          visibility: eventState.visibility !== "standard" ? eventState.visibility : undefined,
+          transparency: eventState.transparency !== "opaque" ? eventState.transparency : undefined,
+          isOutOfOffice: eventState.isOutOfOffice,
         });
       }
       router.back();
@@ -292,6 +422,19 @@ export function CreateEventScreen() {
           autoFocus={!isEditing}
           returnKeyType="next"
         />
+
+        {!isEditing && (templatesQuery.data?.length ?? 0) > 0 && (
+          <TouchableOpacity
+            style={styles.templateRow}
+            onPress={() => setTemplatePickerOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Use a template"
+          >
+            <Copy size={15} color={T.accent} weight="duotone" />
+            <Text style={[styles.templateRowText, { color: T.accent }]}>Use a template</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Date & Time */}
         <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
@@ -390,6 +533,111 @@ export function CreateEventScreen() {
           </View>
         )}
 
+        {!isEditing && (
+          <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <TouchableOpacity
+              style={styles.fieldRow}
+              onPress={() => setAttendeePickerOpen(true)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Invitees: ${attendeeIds.length}. Change`}
+            >
+              <Users size={18} color={T.textDim} weight="duotone" />
+              <Text style={[styles.fieldLabel, { color: T.textBright }]}>Invitees</Text>
+              <Text style={[styles.fieldValue, { color: T.textDim }]} numberOfLines={1}>
+                {attendeeIds.length > 0 ? attendeeNames : "None"}
+              </Text>
+              <CaretDown size={14} color={T.textDim} weight="bold" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <TouchableOpacity
+            style={styles.fieldRow}
+            onPress={() => setRoomPickerOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Room: ${selectedRoomName ?? "None"}. Change`}
+          >
+            <Door size={18} color={T.textDim} weight="duotone" />
+            <Text style={[styles.fieldLabel, { color: T.textBright }]}>Room</Text>
+            <Text style={[styles.fieldValue, { color: T.textDim }]} numberOfLines={1}>
+              {selectedRoomName ?? "None"}
+            </Text>
+            <CaretDown size={14} color={T.textDim} weight="bold" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <TouchableOpacity
+            style={styles.fieldRow}
+            onPress={() => setRecurrenceSheetOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Repeat rule. Change"
+          >
+            <ArrowsClockwise size={18} color={T.textDim} weight="duotone" />
+            <Text style={[styles.fieldLabel, { color: T.textBright }]}>Repeat</Text>
+            <Text style={[styles.fieldValue, { color: T.textDim }]} numberOfLines={1}>
+              {recurrence ? recurrenceLabel(recurrence) : "Never"}
+            </Text>
+            <CaretDown size={14} color={T.textDim} weight="bold" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <View style={styles.fieldRow}>
+            <Bell size={18} color={T.textDim} weight="duotone" />
+            <Text style={[styles.fieldLabel, { color: T.textBright }]}>Reminders</Text>
+          </View>
+          <View style={styles.chipsBody}>
+            <ReminderChips
+              value={reminders}
+              onChange={setReminders}
+              lockLast={isEditing && (eventQuery.data?.reminders.length ?? 0) > 0}
+            />
+            {!isEditing && reminders.length === 0 ? (
+              <Text style={[styles.hintText, { color: T.textDim }]}>
+                Your default reminders apply unless set
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
+        <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <TouchableOpacity
+            style={styles.fieldRow}
+            onPress={() => setTagPickerOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Tags: ${tagIds.length}. Change`}
+          >
+            <Tag size={18} color={T.textDim} weight="duotone" />
+            <Text style={[styles.fieldLabel, { color: T.textBright }]}>Tags</Text>
+            <Text style={[styles.fieldValue, { color: T.textDim }]} numberOfLines={1}>
+              {tagIds.length > 0 ? selectedTagNames : "None"}
+            </Text>
+            <CaretDown size={14} color={T.textDim} weight="bold" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <TouchableOpacity
+            style={styles.toggleRow}
+            onPress={() => setIsFocusTime((v) => !v)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Focus time: ${isFocusTime ? "on" : "off"}`}
+          >
+            <Crosshair size={18} color={T.textDim} weight="duotone" />
+            <Text style={[styles.fieldLabel, { color: T.textBright }]}>Focus time</Text>
+            <View style={[styles.toggleTrack, isFocusTime && { backgroundColor: T.accent }]}>
+              <View style={[styles.toggleThumb, isFocusTime && styles.toggleThumbOn]} />
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* Location */}
         <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
           <View style={styles.fieldRow}>
@@ -457,6 +705,14 @@ export function CreateEventScreen() {
               />
             </View>
           )}
+        </View>
+
+        <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <View style={styles.fieldRow}>
+            <Sliders size={18} color={T.textDim} weight="duotone" />
+            <Text style={[styles.fieldLabel, { color: T.textBright }]}>Options</Text>
+          </View>
+          <EventStateOptions value={eventState} onChange={setEventState} />
         </View>
 
         {/* Description */}
@@ -531,6 +787,55 @@ export function CreateEventScreen() {
           );
         })}
       </BottomSheet>
+
+      <SubjectPickerSheet
+        visible={attendeePickerOpen}
+        onClose={() => setAttendeePickerOpen(false)}
+        title="Invite people"
+        accentColor={T.accent}
+        selectedIds={attendeeIds}
+        onToggle={(userId) =>
+          setAttendeeIds((prev) =>
+            prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+          )
+        }
+      />
+
+      <TagPickerSheet
+        visible={tagPickerOpen}
+        onClose={() => setTagPickerOpen(false)}
+        selectedIds={tagIds}
+        onToggle={(tagId) =>
+          setTagIds((prev) =>
+            prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId],
+          )
+        }
+      />
+
+      <RecurrenceSheet
+        visible={recurrenceSheetOpen}
+        onClose={() => setRecurrenceSheetOpen(false)}
+        value={recurrence}
+        onChange={setRecurrence}
+        accentColor={T.accent}
+      />
+
+      <RoomPickerSheet
+        visible={roomPickerOpen}
+        onClose={() => setRoomPickerOpen(false)}
+        selectedRoomId={roomId}
+        onSelect={setRoomId}
+        startIso={slotStartIso}
+        endIso={slotEndIso}
+        accentColor={T.accent}
+      />
+
+      <TemplatePickerSheet
+        visible={templatePickerOpen}
+        onClose={() => setTemplatePickerOpen(false)}
+        onApply={applyTemplate}
+        accentColor={T.accent}
+      />
     </View>
   );
 }
@@ -557,8 +862,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
-  fieldLabel: { fontSize: 14, fontFamily: FONT.medium, flex: 1 },
-  fieldValue: { fontSize: 14, fontFamily: FONT.medium },
+  // The label grows to push toggles right but never shrinks below its own
+  // width - a long value ("Weekly on Mon, Fri · 10 times") truncates instead.
+  fieldLabel: { fontSize: 14, fontFamily: FONT.medium, flexGrow: 1, flexShrink: 0 },
+  fieldValue: { fontSize: 14, fontFamily: FONT.medium, flexShrink: 1 },
   fieldInput: { fontSize: 14, fontFamily: FONT.regular, flex: 1 },
   fieldDivider: { height: StyleSheet.hairlineWidth, marginLeft: 44 },
   toggleRow: {
@@ -636,4 +943,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  templateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+  },
+  templateRowText: { fontSize: 13, fontFamily: FONT.semibold },
+  chipsBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  hintText: { fontSize: 12, fontFamily: FONT.regular },
 });

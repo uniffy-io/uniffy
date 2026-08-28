@@ -11,7 +11,18 @@ import {
   Alert,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { DotsThree, Clock, MapPin, Video, ArrowsClockwise } from "phosphor-react-native";
+import {
+  ArrowsClockwise,
+  Bell,
+  CaretDown,
+  CaretRight,
+  Clock,
+  Door,
+  DotsThree,
+  MapPin,
+  Users,
+  Video,
+} from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
@@ -30,36 +41,25 @@ import { useAuth } from "@core/providers/AuthContext";
 import { roleCanDelete, roleCanEdit } from "@shared/permissions/contentRoles";
 import { userFacingError } from "@shared/lib/userFacingError";
 import { useEvent, useCategories } from "@features/calendar/useCalendar";
-import { formatCalendarDate } from "@features/calendar/calendarSerializer";
+import { formatCalendarDate, OCCURRENCE_SEPARATOR } from "@features/calendar/calendarSerializer";
+import { zonedDayKey } from "@shared/lib/zonedTime";
+import { RSVP_COLORS, RSVP_OPTIONS } from "@features/calendar/rsvp";
+import { eventDisplayState, recurrenceLabel } from "@features/calendar/eventDisplay";
 import {
   useAddAttendees,
+  useCreateEventTemplate,
   useDeleteEvent,
   useRemoveAttendees,
   useUpdateAttendeeStatus,
+  useUpdateEvent,
 } from "@features/calendar/useCalendarMutations";
+import { BottomSheet } from "@shared/components/BottomSheet";
+import { SheetHeader } from "@shared/components/SheetHeader";
+import { ReminderChips, reminderLabel } from "@features/calendar/components/ReminderChips";
+import { EventActivityList } from "@features/calendar/components/EventActivityList";
 import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
 import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
 import { useActiveCall } from "@features/calls/useCallsState";
-
-const RSVP_COLORS: Record<string, string> = {
-  accepted: "#40C057",
-  tentative: "#FAB005",
-  pending: "#909296",
-  declined: "#E64980",
-};
-
-const RSVP_OPTIONS: { status: string; proto: AttendeeStatus; label: string }[] = [
-  { status: "accepted", proto: AttendeeStatus.ACCEPTED, label: "Going" },
-  { status: "tentative", proto: AttendeeStatus.TENTATIVE, label: "Maybe" },
-  { status: "declined", proto: AttendeeStatus.DECLINED, label: "Decline" },
-];
-
-// An occurrence of a recurring event is addressed as
-// `{masterId}__occurrence__{date}` - a virtual id the calendar domain expands
-// from the one row that actually exists. Anything naming the event AS CONTENT
-// (its URN, a bookmark, a mention pasted into a note) has to name that row, or
-// it points at a key nothing will ever resolve.
-const OCCURRENCE_SEPARATOR = "__occurrence__";
 
 export function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -71,6 +71,9 @@ export function EventDetailScreen() {
   const [prejoinOpen, setPrejoinOpen] = useState(false);
   const [invitePickerOpen, setInvitePickerOpen] = useState(false);
   const [scopeAction, setScopeAction] = useState<"edit" | "delete" | null>(null);
+  const [reminderSheetOpen, setReminderSheetOpen] = useState(false);
+  const [draftReminders, setDraftReminders] = useState<number[]>([]);
+  const [activityOpen, setActivityOpen] = useState(false);
   const { user } = useAuth();
   const eventQuery = useEvent(id);
   const categoriesQuery = useCategories();
@@ -78,6 +81,8 @@ export function EventDetailScreen() {
   const addAttendees = useAddAttendees();
   const removeAttendees = useRemoveAttendees();
   const updateAttendeeStatus = useUpdateAttendeeStatus();
+  const updateEvent = useUpdateEvent();
+  const createTemplate = useCreateEventTemplate();
   const activeMeetingCall = useActiveCall(eventQuery.data?.channelId ?? undefined);
 
   // The route param is the only place the occurrence survives: GetEvent parses
@@ -148,28 +153,46 @@ export function EventDetailScreen() {
   const canDelete = roleCanDelete(event.userRole);
   const ownAttendee = event.attendees.find((a) => a.id === user?.id);
 
+  const display = eventDisplayState(event);
   const hasMeetingUrl = !!event.meetingUrl;
   const hasChannel = !!event.channelId;
   const isRecurring = !!event.recurrence;
-  const recurrenceLabel = event.recurrence ? `Recurring ${event.recurrence.pattern}` : "";
+  const recurrenceText = recurrenceLabel(event.recurrence);
 
-  // Only an expanded occurrence can be narrowed - it is the one that knows
-  // which date it stands for. Acting on the series row itself has no "this
-  // one" to mean, so it keeps going straight through.
-  const needsScope = isRecurring && !!occurrenceDate;
+  const stateBadges: { label: string; color: string }[] = [
+    ...(display.cancelled ? [{ label: "Cancelled", color: T.red }] : []),
+    ...(display.tentative ? [{ label: "Tentative", color: T.yellow }] : []),
+    ...(event.visibility === "private" ? [{ label: "Private", color: T.textDim }] : []),
+    ...(display.free ? [{ label: "Free", color: T.textDim }] : []),
+    ...(display.outOfOffice ? [{ label: "Out of office", color: T.accent }] : []),
+  ];
+
+  // The series' own first date arrives under the plain master id, so the
+  // occurrence suffix alone cannot decide: every recurring event asks for a
+  // scope, and without a suffix "this event" means the first occurrence.
+  const needsScope = isRecurring;
+  const scopeDate = occurrenceDate ?? zonedDayKey(event.startTime);
 
   // The series row carries the date the recurrence STARTED, so an occurrence
   // opened from any later day would otherwise be labelled with the first one -
   // and "This event" in the scope sheet would name a day that is not on screen.
   const dateLabel = occurrenceDate ? formatCalendarDate(occurrenceDate) : event.dateFormatted;
 
+  // An all-day event has no clock face: its hours are midnight-to-midnight
+  // bookkeeping, so the span reads as dates and the hour count is dropped.
+  const endDayKey = event.endTime ? zonedDayKey(event.endTime) : undefined;
+  const allDayLabel =
+    endDayKey && endDayKey !== zonedDayKey(event.startTime)
+      ? `${dateLabel} – ${formatCalendarDate(endDayKey)}`
+      : dateLabel;
+
   const editEvent = (scope?: RecurrenceEditScope) =>
     router.push({
       pathname: "/calendar/create",
       params: {
         eventId: id,
-        ...(scope !== undefined && occurrenceDate
-          ? { recurrenceEditScope: String(scope), occurrenceDate }
+        ...(scope !== undefined
+          ? { recurrenceEditScope: String(scope), occurrenceDate: scopeDate }
           : {}),
       },
     });
@@ -179,7 +202,7 @@ export function EventDetailScreen() {
       {
         eventId: id,
         recurrenceEditScope: scope,
-        occurrenceDate: scope === undefined ? undefined : occurrenceDate,
+        occurrenceDate: scope === undefined ? undefined : scopeDate,
       },
       {
         onSuccess: () => router.back(),
@@ -195,6 +218,17 @@ export function EventDetailScreen() {
       {
         onError: (error) =>
           Alert.alert("Could not respond", userFacingError(error, "Your response was not saved.")),
+      },
+    );
+  };
+
+  const saveReminders = () => {
+    updateEvent.mutate(
+      { eventId: event.id, reminders: draftReminders },
+      {
+        onSuccess: () => setReminderSheetOpen(false),
+        onError: (error) =>
+          Alert.alert("Could not save", userFacingError(error, "The reminders were not saved.")),
       },
     );
   };
@@ -234,7 +268,15 @@ export function EventDetailScreen() {
         <View style={styles.titleSection}>
           <View style={[styles.colorBar, { backgroundColor: eventColor }]} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.title, { color: T.textBright }]}>{event.title}</Text>
+            <Text
+              style={[
+                styles.title,
+                { color: T.textBright },
+                display.cancelled && styles.struckTitle,
+              ]}
+            >
+              {display.title}
+            </Text>
             {isRecurring && (
               <View
                 style={[
@@ -243,7 +285,7 @@ export function EventDetailScreen() {
                 ]}
               >
                 <ArrowsClockwise size={10} color={T.textDim} weight="duotone" />
-                <Text style={[styles.recurringText, { color: T.textDim }]}>{recurrenceLabel}</Text>
+                <Text style={[styles.recurringText, { color: T.textDim }]}>{recurrenceText}</Text>
               </View>
             )}
           </View>
@@ -262,6 +304,19 @@ export function EventDetailScreen() {
           </View>
         )}
 
+        {stateBadges.length > 0 && (
+          <View style={styles.stateBadgeRow}>
+            {stateBadges.map((badge) => (
+              <View
+                key={badge.label}
+                style={[styles.stateBadge, { backgroundColor: badge.color + "1E" }]}
+              >
+                <Text style={[styles.stateBadgeText, { color: badge.color }]}>{badge.label}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         <View style={[styles.infoCard, { backgroundColor: T.surface, borderColor: T.border }]}>
           <View style={styles.infoRow}>
             <View style={[styles.infoIcon, { backgroundColor: eventColor + "20" }]}>
@@ -269,10 +324,12 @@ export function EventDetailScreen() {
             </View>
             <View>
               <Text style={[styles.infoMain, { color: T.textBright }]}>
-                {event.startTimeFormatted} – {event.endTimeFormatted}
+                {event.isAllDay
+                  ? "All day"
+                  : `${event.startTimeFormatted} – ${event.endTimeFormatted}`}
               </Text>
               <Text style={[styles.infoSub, { color: T.textDim }]}>
-                {dateLabel} · {event.duration}
+                {event.isAllDay ? allDayLabel : `${dateLabel} · ${event.duration}`}
               </Text>
             </View>
           </View>
@@ -317,9 +374,75 @@ export function EventDetailScreen() {
               </View>
             </>
           )}
+          {event.reminders.length > 0 || canEdit ? (
+            <>
+              <View style={[styles.infoDivider, { backgroundColor: T.border }]} />
+              <TouchableOpacity
+                style={styles.infoRow}
+                disabled={!canEdit}
+                onPress={() => {
+                  setDraftReminders([...event.reminders]);
+                  setReminderSheetOpen(true);
+                }}
+                activeOpacity={0.7}
+                accessibilityRole={canEdit ? "button" : undefined}
+                accessibilityLabel="Reminders"
+              >
+                <View style={[styles.infoIcon, { backgroundColor: T.accent + "20" }]}>
+                  <Bell size={14} color={T.accent} weight="duotone" />
+                </View>
+                <Text style={[styles.infoMain, { color: T.textBright, flex: 1 }]}>
+                  {event.reminders.length > 0
+                    ? event.reminders.map(reminderLabel).join(", ")
+                    : "No reminders"}
+                </Text>
+                {canEdit ? <CaretDown size={14} color={T.textDim} weight="bold" /> : null}
+              </TouchableOpacity>
+            </>
+          ) : null}
         </View>
 
-        {ownAttendee && (
+        {event.roomName ? (
+          <View style={[styles.roomCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <View style={styles.roomHeader}>
+              <Door size={16} color={T.accent} weight="duotone" />
+              <Text style={[styles.roomName, { color: T.textBright }]}>{event.roomName}</Text>
+            </View>
+            <View style={styles.roomMetaRow}>
+              {event.roomLocation ? (
+                <View style={styles.roomMeta}>
+                  <MapPin size={12} color={T.textDim} />
+                  <Text style={[styles.roomMetaText, { color: T.textDim }]}>
+                    {event.roomLocation}
+                  </Text>
+                </View>
+              ) : null}
+              {event.roomCapacity && event.roomCapacity > 0 ? (
+                <View style={styles.roomMeta}>
+                  <Users size={12} color={T.textDim} />
+                  <Text style={[styles.roomMetaText, { color: T.textDim }]}>
+                    {event.roomCapacity} {event.roomCapacity === 1 ? "person" : "people"}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+            {event.roomAmenities.length > 0 ? (
+              <View style={styles.roomAmenities}>
+                {event.roomAmenities.map((amenity) => (
+                  <View
+                    key={amenity}
+                    style={[styles.amenityChip, { backgroundColor: T.accentSoft }]}
+                  >
+                    <Text style={[styles.amenityText, { color: T.textDim }]}>{amenity}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* The server refuses responses on cancelled events, so no bar to tap. */}
+        {ownAttendee && !display.cancelled && (
           <View style={{ gap: 10 }}>
             <Text style={[styles.sectionLabel, { color: T.textDim }]}>YOUR RESPONSE</Text>
             <View style={styles.rsvpRow}>
@@ -404,20 +527,38 @@ export function EventDetailScreen() {
             <Text style={[styles.sectionLabel, { color: T.textDim }]}>TAGS</Text>
             <View style={styles.tagsRow}>
               {event.tags.map((tag) => (
-                <View key={tag} style={[styles.tag, { backgroundColor: T.accentSoft }]}>
-                  <Text style={[styles.tagText, { color: T.accent }]}>{tag}</Text>
+                <View key={tag.id} style={[styles.tag, { backgroundColor: tag.color + "22" }]}>
+                  <Text style={[styles.tagText, { color: tag.color }]}>{tag.name}</Text>
                 </View>
               ))}
             </View>
           </View>
         )}
+
+        <View style={{ gap: 8 }}>
+          <TouchableOpacity
+            style={styles.activityToggle}
+            onPress={() => setActivityOpen((v) => !v)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={activityOpen ? "Hide activity" : "Show activity"}
+          >
+            {activityOpen ? (
+              <CaretDown size={12} color={T.textDim} weight="bold" />
+            ) : (
+              <CaretRight size={12} color={T.textDim} weight="bold" />
+            )}
+            <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACTIVITY</Text>
+          </TouchableOpacity>
+          <EventActivityList eventId={masterId} enabled={activityOpen} />
+        </View>
       </ScrollView>
 
       <ActionSheet
         visible={sheetOpen}
         onClose={() => setSheetOpen(false)}
         title={event.title}
-        subtitle={`${event.startTimeFormatted} · ${event.duration}`}
+        subtitle={event.isAllDay ? allDayLabel : `${event.startTimeFormatted} · ${event.duration}`}
         icon="calendar"
         iconColor={eventColor}
         actions={[
@@ -489,6 +630,41 @@ export function EventDetailScreen() {
             color: bookmarked ? T.accent : undefined,
             onPress: () => toggleBookmark.mutate(eventUrn),
           },
+          ...(canEdit
+            ? [
+                {
+                  icon: "copy" as const,
+                  label: "Save as template",
+                  onPress: () =>
+                    createTemplate.mutate(
+                      {
+                        title: event.title,
+                        description: event.description || undefined,
+                        durationMinutes: Math.max(
+                          5,
+                          Math.round(
+                            (new Date(event.endTime).getTime() -
+                              new Date(event.startTime).getTime()) /
+                              60000,
+                          ),
+                        ),
+                        location: event.location || undefined,
+                        meetingUrl: event.meetingUrl || undefined,
+                        categoryId: event.categoryId || undefined,
+                      },
+                      {
+                        onSuccess: () =>
+                          Alert.alert("Template saved", "New events can now start from it."),
+                        onError: (error) =>
+                          Alert.alert(
+                            "Could not save template",
+                            userFacingError(error, "The template was not saved."),
+                          ),
+                      },
+                    ),
+                },
+              ]
+            : []),
           ...(canDelete
             ? [
                 {
@@ -525,6 +701,27 @@ export function EventDetailScreen() {
         busy={addAttendees.isPending || removeAttendees.isPending}
         onToggle={(userId) => toggleAttendee(userId, attendeeIds.includes(userId))}
       />
+
+      <BottomSheet visible={reminderSheetOpen} onClose={() => setReminderSheetOpen(false)}>
+        <SheetHeader
+          title="Reminders"
+          accentColor={eventColor}
+          busy={updateEvent.isPending}
+          actions={[{ label: "Save", onPress: saveReminders, disabled: updateEvent.isPending }]}
+        />
+        <View style={styles.reminderSheetBody}>
+          <ReminderChips
+            value={draftReminders}
+            onChange={setDraftReminders}
+            lockLast={event.reminders.length > 0}
+          />
+          {event.reminders.length > 0 ? (
+            <Text style={[styles.reminderHint, { color: T.textDim }]}>
+              An event that has reminders keeps at least one.
+            </Text>
+          ) : null}
+        </View>
+      </BottomSheet>
 
       {event.channelId ? (
         <PreJoinSheet
@@ -625,4 +822,25 @@ const styles = StyleSheet.create({
   },
   categoryBadgeDot: { width: 8, height: 8, borderRadius: 4 },
   categoryBadgeText: { fontSize: 13, fontFamily: FONT.semibold },
+  struckTitle: { textDecorationLine: "line-through", opacity: 0.7 },
+  stateBadgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  stateBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  stateBadgeText: { fontSize: 12, fontFamily: FONT.medium },
+  roomCard: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    gap: 8,
+  },
+  roomHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  roomName: { fontSize: 14, fontFamily: FONT.semibold },
+  roomMetaRow: { flexDirection: "row", flexWrap: "wrap", gap: 14, paddingLeft: 24 },
+  roomMeta: { flexDirection: "row", alignItems: "center", gap: 4 },
+  roomMetaText: { fontSize: 12, fontFamily: FONT.regular },
+  roomAmenities: { flexDirection: "row", flexWrap: "wrap", gap: 6, paddingLeft: 24 },
+  amenityChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  amenityText: { fontSize: 11, fontFamily: FONT.medium },
+  activityToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
+  reminderSheetBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  reminderHint: { fontSize: 12, fontFamily: FONT.regular },
 });

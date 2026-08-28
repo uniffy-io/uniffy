@@ -535,6 +535,126 @@ worker, so set a reminder offset that lands within a few minutes. (both products
 Mobile push reminders are not testable yet - the mobile app has no push channel, so the
 notifications list above is the only mobile entry point.
 
+## Calendar mobile parity
+
+The mobile calendar carries the web feature set. Needs two mobile-reachable accounts
+(organizer A, invitee B), at least one bookable room, one tag, and one event template.
+(both products)
+
+Respond to an invitation
+
+- [ ] B opens A's invite from the event screen: Going / Maybe / Decline save and reflect in
+      the attendee list.
+- [ ] B answers straight from the notifications list: the calendar-invite row carries inline
+      Going / Maybe / Decline buttons; tapping one saves without opening the event and marks
+      the row read.
+- [ ] On a cancelled event the RSVP bar is gone from the event screen, and answering from a
+      stale notification surfaces the server's refusal.
+
+Reminders
+
+- [ ] Creating an event with reminder chips picked stores them; with no chips picked the
+      server's defaults apply (the hint under the chips says so).
+- [ ] The event screen lists reminders; an editor taps the row, changes the set, saves.
+- [ ] Deliberate difference: the last reminder on an event cannot be removed (the wire cannot
+      express "clear all"); the sheet keeps one chip selected.
+
+Recurrence
+
+- [ ] A recurrence rule can be CREATED on the create screen (pattern, interval, days, day of
+      month, ends never / after N / on a date) - not only scoped when editing a series.
+- [ ] Editing a series still asks for scope, and the rule can be changed or cleared
+      ("Does not repeat").
+
+Rooms
+
+- [ ] The room picker on create/edit lists active rooms with location, capacity and
+      amenities; rooms busy for the picked slot read "Busy" but stay selectable (the server
+      rejects a real clash).
+- [ ] The event screen shows the booked room's name, location, capacity, and amenity chips -
+      for every viewer, not only editors.
+
+Creation parity
+
+- [ ] Attendees, tags, focus time, reminders, recurrence, room, and the state options
+      (tentative / private / free / out of office) can all be set while creating; they all
+      round-trip when the event is reopened.
+- [ ] Deliberate difference: attendee changes on an EXISTING event stay on the event screen
+      (Invite more people / attendee picker), not on the edit screen, so roles and responses
+      survive.
+
+Agenda
+
+- [ ] The "List" view mode groups the next 30 days from the selected day under Today /
+      Tomorrow / dated headers with time, location, attendee count, and a recurring glyph.
+
+Live meetings
+
+- [ ] While a bound channel's call runs, the event carries a red live dot in day, week, and
+      month, and a "Live" pill in the agenda; cancelled and details-hidden events never
+      show it.
+
+Conflicts
+
+- [ ] Overlapping timed events are flagged in day view (red border + warning glyph), week
+      view (red border), and month view (red dot on the day cell). Cancelled and "free"
+      events do not count as conflicts.
+
+Multi-day
+
+- [ ] A three-day event appears on all three days in day, week, month, and agenda; in week
+      view the title renders only on the first day of the span.
+
+Move by dragging
+
+- [ ] Long-press an event in day view and drag: it snaps in 15-minute steps and saves on
+      release; a recurring occurrence asks for scope first.
+- [ ] Deliberate difference: drag-to-move is day-view only (week and month blocks are below
+      touch-target size); a non-editor's long-press does nothing.
+
+Filters
+
+- [ ] The filter sheet matches web: categories (with an Uncategorised row), tags (AND
+      semantics), focus-time only, and title/description search; Clear resets everything.
+
+Templates
+
+- [ ] "Save as template" on an event's action sheet stores it; "Use a template" on the
+      create screen applies title, duration, location, meeting link, and category.
+
+Event states on mobile
+
+- [ ] A details-hidden event renders "Busy" / "Out of office" instead of a blank title on
+      every mobile surface - the four calendar views, the event screen, and the home
+      Upcoming list - with no description, location, or attendees leaking.
+- [ ] Cancelled events render struck through and faded, tentative faded, free events sit
+      lighter on the grid, and out of office carries its glyph and badge.
+- [ ] An event-cancelled notification shows the calendar icon in the danger tone.
+
+Activity
+
+- [ ] "Activity" on the event screen expands to the change log with actor names and
+      relative times.
+
+Period rail
+
+- [ ] The rail's pills follow the view: days in day view, weeks ("24 - 30") in week view,
+      months in month and agenda. Switching views swaps the unit and centres the current
+      period.
+- [ ] Tapping a pill keeps your place in the period: the same weekday in another week, the
+      same date in another month (clamped, so 31 Jan -> Feb lands on the 28th or 29th).
+      Agenda is the exception and lists from the 1st, or from today in the current month.
+- [ ] The pinned label at the left names what the pills cannot: the month in day and week
+      views, the year in month and agenda. It follows the leftmost visible pill while
+      scrolling, spells out a year outside the current one ("Jan 2028"), and rollovers are
+      also marked inline between the pills.
+- [ ] Scrolling the rail alone changes nothing - no refetch, no view change - until a pill
+      is tapped.
+- [ ] "Today" from a distant period returns and recentres the rail.
+- [ ] With the largest system font size at 360dp, no pill or marker clips.
+- [ ] Flipping the week-start preference between Monday and Sunday reshapes the week pills
+      and the day letters.
+
 ## Chat synced drafts
 
 Unsent composer text syncs across devices per channel and per thread. Needs one user logged in

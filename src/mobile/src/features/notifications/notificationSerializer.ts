@@ -27,6 +27,9 @@ export interface SerializedNotification {
   route: string | null;
   iconKind: NotificationIconKind;
   tone: "danger" | "warning" | null;
+  notificationType: number;
+  /** For a calendar invite: the event to answer, so the row can RSVP inline. */
+  eventId: string | null;
 }
 
 function tsToSeconds(ts: Timestamp | undefined): number {
@@ -49,6 +52,7 @@ const TYPE_META: Record<number, TypeMeta> = {
   [NotificationType.CALENDAR_REMINDER]: { kind: "calendar" },
   [NotificationType.CALENDAR_INVITE]: { kind: "calendar" },
   [NotificationType.CALENDAR_RESPONSE]: { kind: "calendar" },
+  [NotificationType.CALENDAR_CANCELLED]: { kind: "calendar", tone: "danger" },
   [NotificationType.PERMISSION_GRANTED]: { kind: "permission" },
   [NotificationType.PERMISSION_REVOKED]: { kind: "permission", tone: "danger" },
   [NotificationType.SYSTEM_ANNOUNCEMENT]: { kind: "system", tone: "warning" },
@@ -103,6 +107,14 @@ function routeForNotification(proto: ProtoNotification): string | null {
   return routeFromUrn(proto.sourceUrn);
 }
 
+/** Event id an invite points at, so the row can answer without opening it. */
+function inviteEventId(proto: ProtoNotification): string | null {
+  if (proto.notificationType !== NotificationType.CALENDAR_INVITE) return null;
+  const parts = proto.sourceUrn.split(":");
+  if (parts[3] !== "CALENDAR_EVENT") return null;
+  return parts[parts.length - 1] || null;
+}
+
 export function notificationToPlain(proto: ProtoNotification): SerializedNotification {
   const meta = TYPE_META[proto.notificationType] ?? {
     kind: "system" as const,
@@ -121,5 +133,7 @@ export function notificationToPlain(proto: ProtoNotification): SerializedNotific
     route: routeForNotification(proto),
     iconKind: meta.kind,
     tone: meta.tone ?? null,
+    notificationType: proto.notificationType,
+    eventId: inviteEventId(proto),
   };
 }

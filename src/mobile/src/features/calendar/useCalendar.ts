@@ -3,7 +3,12 @@ import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import { useAuth } from "@core/providers/AuthContext";
 import { calendarApi } from "@features/calendar/calendarApi";
-import { eventToPlain, categoryToPlain } from "@features/calendar/calendarSerializer";
+import {
+  activityToPlain,
+  eventToPlain,
+  categoryToPlain,
+  templateToPlain,
+} from "@features/calendar/calendarSerializer";
 
 function isoToTimestamp(iso: string) {
   const date = new Date(iso);
@@ -44,6 +49,38 @@ export function useEvent(eventId: string | undefined) {
       return eventToPlain(response.event);
     },
     enabled: !!organizationId && !!eventId,
+  });
+}
+
+export function useEventTemplates() {
+  const { organizationId } = useAuth();
+
+  return useQuery({
+    queryKey: ["event-templates", organizationId],
+    queryFn: async () => {
+      const response = await calendarApi.listEventTemplates({
+        organizationId: organizationId!,
+      });
+      return response.templates.map(templateToPlain);
+    },
+    enabled: !!organizationId,
+  });
+}
+
+export function useEventActivities(eventId: string | undefined, enabled = true) {
+  const { organizationId } = useAuth();
+
+  return useQuery({
+    queryKey: ["event-activities", organizationId, eventId],
+    queryFn: async () => {
+      const response = await calendarApi.listEventActivities({
+        organizationId: organizationId!,
+        eventId: eventId!,
+        pagination: { page: 1, pageSize: 50 },
+      });
+      return response.activities.map(activityToPlain);
+    },
+    enabled: !!organizationId && !!eventId && enabled,
   });
 }
 
