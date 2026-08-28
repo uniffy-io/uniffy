@@ -34,6 +34,7 @@ import { CallIndicator } from "@features/calls/components/CallIndicator";
 import { CallScreen } from "@features/calls/components/CallScreen";
 import { IncomingCallBanner } from "@features/calls/components/IncomingCallBanner";
 import { CallEndedNotice } from "@features/calls/components/CallEndedNotice";
+import { CallRestorePrompt } from "@features/calls/components/CallRestorePrompt";
 import { LoginSplash } from "@shared/components/LoginSplash";
 import { BRAND } from "@theme/theme";
 
@@ -229,6 +230,7 @@ function RootLayoutNav() {
       {showAppChrome && <AtOverlay />}
       {showAppChrome && <IncomingCallBanner />}
       {showAppChrome && <CallEndedNotice />}
+      {showAppChrome && <CallRestorePrompt />}
       {loginSplashVisible && (
         <LoginSplash
           onReveal={() => setHoldNavigation(false)}

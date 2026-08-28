@@ -35,6 +35,7 @@ import {
   X,
   Gauge,
   Phone,
+  PhoneSlash,
   ThumbsUp,
   ThumbsDown,
 } from "phosphor-react-native";
@@ -64,6 +65,8 @@ import { ChannelDetailsSheet } from "@features/chat/components/ChannelDetailsShe
 import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
 import { useCall } from "@features/calls/CallContext";
 import { useActiveCall } from "@features/calls/useCallsState";
+import { useChannelActiveCall } from "@features/calls/useChannelActiveCall";
+import { showCallsUnavailable } from "@features/calls/callsUnavailable";
 import { usePresences } from "@shared/presence/usePresence";
 import { useTheme } from "@shared/hooks/useTheme";
 import type { ThemeColors } from "@theme/theme";
@@ -344,7 +347,13 @@ export function ChatConversationScreen() {
   const [prejoinOpen, setPrejoinOpen] = useState(false);
   const openPrejoin = useCallback(() => setPrejoinOpen(true), []);
   useJoinCallParam(channelId, openPrejoin);
-  const { session: callSession, setMinimized, available: callsAvailable } = useCall();
+  const {
+    session: callSession,
+    setMinimized,
+    available: callsAvailable,
+    callsDisabledMessage,
+  } = useCall();
+  useChannelActiveCall(channelId);
   const activeCall = useActiveCall(channelId);
   const inCallHere = callSession.channelId === channelId && callSession.status !== "idle";
   const attachments = useComposerAttachments();
@@ -1001,14 +1010,32 @@ export function ChatConversationScreen() {
           }
           rightActions={
             <>
-              {callsAvailable && channel && !channel.isAgentDm ? (
+              {channel && !channel.isAgentDm ? (
                 <TouchableOpacity
-                  onPress={() => (inCallHere ? setMinimized(false) : setPrejoinOpen(true))}
+                  onPress={() => {
+                    // The button stays put when calls are off so there is
+                    // something to tap that says why.
+                    if (callsDisabledMessage) {
+                      showCallsUnavailable(callsDisabledMessage);
+                      return;
+                    }
+                    if (inCallHere) setMinimized(false);
+                    else setPrejoinOpen(true);
+                  }}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
-                  accessibilityLabel={activeCall ? "Join live call" : "Start call"}
+                  accessibilityState={{ disabled: !callsAvailable }}
+                  accessibilityLabel={
+                    callsDisabledMessage
+                      ? "Calls unavailable"
+                      : activeCall
+                        ? "Join live call"
+                        : "Start call"
+                  }
                 >
-                  {activeCall ? (
+                  {callsDisabledMessage ? (
+                    <PhoneSlash size={18} color={T.textDim} weight="bold" />
+                  ) : activeCall ? (
                     <View style={styles.liveCallAction}>
                       <Phone size={18} color={T.green} weight="fill" />
                       <Text style={[styles.liveCallCount, { color: T.green }]}>

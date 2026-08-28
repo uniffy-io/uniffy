@@ -11,6 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Pressable,
   Alert,
   BackHandler,
 } from "react-native";
@@ -65,7 +66,10 @@ import {
 import { useChatStream } from "@features/chat/useChatStream";
 import { useAgents, useCreateAgentChat } from "@features/agents/useAgents";
 import type { SerializedAgent } from "@features/agents/agentSerializer";
-import { useActiveCall } from "@features/calls/useCallsState";
+import { useActiveCall, useActiveCalls } from "@features/calls/useCallsState";
+import { useActiveCallsSnapshot } from "@features/calls/useChannelActiveCall";
+import { useCall } from "@features/calls/CallContext";
+import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
 import { useDirectory } from "@shared/directory/useDirectory";
 import { usePresences } from "@shared/presence/usePresence";
 import { useAuth } from "@core/providers/AuthContext";
@@ -106,8 +110,10 @@ export function ChatListScreen() {
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [newDmOpen, setNewDmOpen] = useState(false);
   const [newAgentChatOpen, setNewAgentChatOpen] = useState(false);
+  const [callTarget, setCallTarget] = useState<SerializedChannel | null>(null);
 
   useChatStream();
+  useActiveCallsSnapshot();
   const { channels, isLoading, isFetching, refetch } = useChannels();
   const { agentChats: agentChatList } = useAgentChats();
   const categories = useCategories();
@@ -154,6 +160,21 @@ export function ChatListScreen() {
   );
 
   const openChannel = useCallback((id: string) => router.push(`/chat/${id}` as any), []);
+
+  const { session: callSession, setMinimized, available: callsAvailable } = useCall();
+  const activeCalls = useActiveCalls();
+  // Tapping the live pill acts on the call rather than opening the channel and
+  // leaving the user to find it again.
+  const joinCallOn = useCallback(
+    (channel: SerializedChannel) => {
+      if (callSession.channelId === channel.id && callSession.status !== "idle") {
+        setMinimized(false);
+        return;
+      }
+      setCallTarget(channel);
+    },
+    [callSession.channelId, callSession.status, setMinimized],
+  );
 
   // Agent chats arrive via both ListChannels (is_agent_dm) and ListAgentChats; merge + dedupe.
   const agentChats = useMemo(() => {
@@ -418,6 +439,7 @@ export function ChatListScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <ChannelRow
+              onJoinCall={callsAvailable ? joinCallOn : undefined}
               channel={item}
               T={T}
               onPress={() => openChannel(item.id)}
@@ -466,7 +488,13 @@ export function ChatListScreen() {
             onAdd={() => router.push("/chat/create" as any)}
           >
             {uncategorized.map((c) => (
-              <ChannelRow key={c.id} channel={c} T={T} onPress={() => openChannel(c.id)} />
+              <ChannelRow
+                onJoinCall={callsAvailable ? joinCallOn : undefined}
+                key={c.id}
+                channel={c}
+                T={T}
+                onPress={() => openChannel(c.id)}
+              />
             ))}
           </CategorySection>
 
@@ -482,7 +510,13 @@ export function ChatListScreen() {
               onAdd={() => router.push("/chat/create" as any)}
             >
               {catChannels.map((c) => (
-                <ChannelRow key={c.id} channel={c} T={T} onPress={() => openChannel(c.id)} />
+                <ChannelRow
+                  onJoinCall={callsAvailable ? joinCallOn : undefined}
+                  key={c.id}
+                  channel={c}
+                  T={T}
+                  onPress={() => openChannel(c.id)}
+                />
               ))}
             </CategorySection>
           ))}
@@ -511,6 +545,7 @@ export function ChatListScreen() {
                 >
                   {folderChats.map((c) => (
                     <ChannelRow
+                      onJoinCall={callsAvailable ? joinCallOn : undefined}
                       key={c.id}
                       channel={c}
                       T={T}
@@ -523,6 +558,7 @@ export function ChatListScreen() {
             })}
             {agentChatsByFolder.unfiled.map((c) => (
               <ChannelRow
+                onJoinCall={callsAvailable ? joinCallOn : undefined}
                 key={c.id}
                 channel={c}
                 T={T}
@@ -542,6 +578,7 @@ export function ChatListScreen() {
           >
             {dms.map((c) => (
               <ChannelRow
+                onJoinCall={callsAvailable ? joinCallOn : undefined}
                 key={c.id}
                 channel={c}
                 T={T}
@@ -666,6 +703,16 @@ export function ChatListScreen() {
           })
         }
       />
+      {callTarget ? (
+        <PreJoinSheet
+          visible
+          T={T}
+          channelId={callTarget.id}
+          channelName={callTarget.displayName}
+          callId={activeCalls[callTarget.id]?.id}
+          onClose={() => setCallTarget(null)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -1157,6 +1204,7 @@ function ChannelRow({
   T,
   onPress,
   onLongPress,
+  onJoinCall,
   presence,
   peer,
 }: {
@@ -1164,6 +1212,7 @@ function ChannelRow({
   T: ThemeColors;
   onPress: () => void;
   onLongPress?: () => void;
+  onJoinCall?: (channel: SerializedChannel) => void;
   presence?: string | null;
   peer?: { name: string; avatarUrl?: string } | null;
 }) {
@@ -1203,10 +1252,19 @@ function ChannelRow({
       </View>
       <View style={styles.rowRight}>
         {liveCall ? (
-          <View style={[styles.liveCallPill, { backgroundColor: T.green }]}>
+          <Pressable
+            style={[styles.liveCallPill, { backgroundColor: T.green }]}
+            onPress={() => onJoinCall?.(channel)}
+            disabled={!onJoinCall}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Join the live call in ${channel.displayName}, ${liveCall.participants.length} ${
+              liveCall.participants.length === 1 ? "person" : "people"
+            }`}
+          >
             <Phone size={10} color="#ffffff" weight="fill" />
             <Text style={styles.liveCallPillText}>{liveCall.participants.length}</Text>
-          </View>
+          </Pressable>
         ) : null}
         {channel.lastMessageAtSeconds ? (
           <Text style={[styles.rowTime, { color: hasUnread ? T.accent : T.textDim }]}>
