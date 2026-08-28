@@ -28,28 +28,35 @@ from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.comments.comment import Comment
 from uniffy.core.models.comments.comment_reaction import CommentReaction
+from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
-from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.permissions.content_access_request import ContentAccessRequest
+from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
+from uniffy.core.models.platform.support_session import SupportSession
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
-from uniffy.core.models.platform.support_session import SupportSession
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
 from uniffy.core.valkey.ops import close_ops_client, init_ops_client
 from uniffy.db import close_db, init_db, open_session
 from uniffy.db.session import get_database_url
+from uniffy.domains.files.registration import register_file_content
+from uniffy.domains.notes.registration import register_note_content
+from uniffy.domains.projects.registration import register_project_content
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def database():
     """Bring up the real engine once, or skip the suite when nothing answers."""
+    register_file_content()
+    register_note_content()
+    register_project_content()
     try:
         await init_db(skip_migrations=True)
     except Exception as exc:
@@ -250,11 +257,11 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
     await db_session.rollback()
     await db_session.execute(delete(Bookmark).where(Bookmark.organization_id.in_(env.org_ids)))
     comment_ids = (
-        await db_session.execute(
-            select(Comment.id).where(Comment.organization_id.in_(env.org_ids))
-        )
+        await db_session.execute(select(Comment.id).where(Comment.organization_id.in_(env.org_ids)))
     ).scalars()
-    await db_session.execute(delete(CommentReaction).where(CommentReaction.comment_id.in_(comment_ids)))
+    await db_session.execute(
+        delete(CommentReaction).where(CommentReaction.comment_id.in_(comment_ids))
+    )
     await db_session.execute(delete(Comment).where(Comment.organization_id.in_(env.org_ids)))
     await db_session.execute(
         delete(SupportSession).where(SupportSession.organization_id.in_(env.org_ids))
@@ -283,9 +290,7 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
         delete(ContentMember).where(ContentMember.organization_id.in_(env.org_ids))
     )
     await db_session.execute(
-        delete(ContentAccessRequest).where(
-            ContentAccessRequest.organization_id.in_(env.org_ids)
-        )
+        delete(ContentAccessRequest).where(ContentAccessRequest.organization_id.in_(env.org_ids))
     )
     await db_session.execute(delete(Note).where(Note.organization_id.in_(env.org_ids)))
     await db_session.execute(delete(Task).where(Task.organization_id.in_(env.org_ids)))
@@ -305,6 +310,7 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
     await db_session.execute(delete(Calendar).where(Calendar.organization_id.in_(env.org_ids)))
     await db_session.execute(delete(GroupMember).where(GroupMember.group_id.in_(env.group_ids)))
     await db_session.execute(delete(Group).where(Group.organization_id.in_(env.org_ids)))
+    await db_session.execute(delete(Folder).where(Folder.organization_id.in_(env.org_ids)))
     # audit_events is append-only; teardown is maintenance, so it opts out.
     await db_session.execute(text("SET LOCAL uniffy.audit_maintenance = 'on'"))
     await db_session.execute(delete(AuditEvent).where(AuditEvent.organization_id.in_(env.org_ids)))

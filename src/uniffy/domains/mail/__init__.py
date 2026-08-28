@@ -2,8 +2,8 @@
 
 from uniffy.domains.mail.operations import OrgMailOperations
 from uniffy.domains.mail.service import OrgMailServiceImpl
-from uniffy.domains.mail.system_operations import SystemMailOperations
-from uniffy.domains.mail.system_service import SystemMailServiceImpl
+from uniffy.domains.mail.system.operations import SystemMailOperations
+from uniffy.domains.mail.system.service import SystemMailServiceImpl
 
 __all__ = [
     "OrgMailOperations",

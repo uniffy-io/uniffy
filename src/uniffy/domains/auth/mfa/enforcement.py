@@ -44,7 +44,7 @@ from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.domains.auth.mfa.policy import MfaPolicyOperations
-from uniffy.domains.security.operations import SecurityOperations
+from uniffy.domains.organizations.security import SecurityOperations
 
 logger = logger.bind(component="auth.mfa.enforcement")
 

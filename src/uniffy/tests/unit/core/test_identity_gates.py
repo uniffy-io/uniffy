@@ -45,12 +45,12 @@ def test_rpc_handlers_do_not_parse_request_organization_scope_directly() -> None
 
 
 def test_request_organization_must_match_authenticated_scope() -> None:
-    from uniffy.domains.auth import context
+    from uniffy.core.auth import principal
 
     other_org = generate_id()
-    with patch.object(context, "get_organization_id_from_context", return_value=ORG):
+    with patch.object(principal, "current_organization_id", return_value=ORG):
         with pytest.raises(ConnectError) as exc_info:
-            context.resolve_organization_id(MagicMock(), str(other_org))
+            principal.resolve_organization_id(str(other_org))
 
     assert exc_info.value.code == Code.PERMISSION_DENIED
 
@@ -93,10 +93,10 @@ def _upload_status_ctx(session):
 
     return (
         patch(
-            "uniffy.domains.files.handlers.get_user_id_from_context",
+            "uniffy.domains.files.rpc.uploads.current_user_id",
             MagicMock(return_value=ACTOR),
         ),
-        patch("uniffy.domains.files.handlers.open_session", fake_open_session),
+        patch("uniffy.domains.files.rpc.uploads.open_session", fake_open_session),
     )
 
 
@@ -124,7 +124,7 @@ async def test_get_upload_status_hides_another_users_upload() -> None:
     with (
         patch_user,
         patch_session,
-        patch("uniffy.domains.files.handlers.FileOperations", MagicMock(return_value=ops)),
+        patch("uniffy.domains.files.rpc.uploads.FileOperations", MagicMock(return_value=ops)),
         pytest.raises(ConnectError) as exc_info,
     ):
         await FilesHandlers().get_upload_status(

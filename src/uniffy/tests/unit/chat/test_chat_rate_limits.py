@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock
 
 from uniffy.core.types import generate_id
-from uniffy.domains.chat import rate_limits
+from uniffy.domains.chat import limits as rate_limits
 
 
 async def test_chat_rate_limit_uses_org_and_user_scoped_bucket(monkeypatch) -> None:

@@ -8,6 +8,7 @@ call the gates with a real deactivated row and check what happens.
 """
 
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
@@ -276,7 +277,13 @@ class TestAccessFilterMembershipGate:
 
 
 class TestAddMemberReactivation:
-    async def test_readd_reactivates_and_applies_the_incoming_role(self, session, access) -> None:
+    async def test_readd_reactivates_and_applies_the_incoming_role(
+        self, session, access, monkeypatch
+    ) -> None:
+        monkeypatch.setattr(
+            "uniffy.domains.users.search.UserSearchIndexer.index_for_organization",
+            AsyncMock(),
+        )
         ops = OrganizationOperations(session)
         await ops.add_member(access.ghost_id, access.org_id, OrganizationRole.ADMIN)
 
@@ -284,12 +291,22 @@ class TestAddMemberReactivation:
         assert membership.is_active is True
         assert membership.role is OrganizationRole.ADMIN
 
-    async def test_reactivation_restores_the_org_gate(self, session, access) -> None:
+    async def test_reactivation_restores_the_org_gate(self, session, access, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "uniffy.domains.users.search.UserSearchIndexer.index_for_organization",
+            AsyncMock(),
+        )
         ops = OrganizationOperations(session)
         await ops.add_member(access.ghost_id, access.org_id, OrganizationRole.MEMBER)
         assert await ops.require_org_member(access.ghost_id, access.org_id) is not None
 
-    async def test_readd_leaves_exactly_one_membership_row(self, session, access) -> None:
+    async def test_readd_leaves_exactly_one_membership_row(
+        self, session, access, monkeypatch
+    ) -> None:
+        monkeypatch.setattr(
+            "uniffy.domains.users.search.UserSearchIndexer.index_for_organization",
+            AsyncMock(),
+        )
         await OrganizationOperations(session).add_member(
             access.ghost_id, access.org_id, OrganizationRole.MEMBER
         )

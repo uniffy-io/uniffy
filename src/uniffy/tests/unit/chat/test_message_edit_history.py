@@ -14,7 +14,7 @@ from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.message_revision import ChatMessageRevision
 from uniffy.core.types import generate_id
 from uniffy.domains.chat.messages.operations import ChatMessageAction, ChatMessageOperations
-from uniffy.domains.chat.policy import EditHistoryVisibility, ResolvedChatPolicy
+from uniffy.domains.chat.policies.operations import EditHistoryVisibility, ResolvedChatPolicy
 
 ORG = generate_id()
 CHANNEL_ID = generate_id()

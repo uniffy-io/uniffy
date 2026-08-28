@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.currency_rate import AgentCurrencyRate
-from uniffy.domains.agents.runtime.settings import (
+from uniffy.domains.agents.runtime.settings.operations import (
     DEFAULT_DISPLAY_CURRENCY,
     get_runtime_settings,
 )

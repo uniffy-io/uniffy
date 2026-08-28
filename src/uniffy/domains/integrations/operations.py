@@ -165,9 +165,6 @@ class ConnectionOperations:
 
         await self._run_probe(row, provider_obj, credential)
 
-        await self._session.commit()
-        await self._session.refresh(row)
-
         await write_audit_event(
             self._session,
             organization_id=organization_id,
@@ -183,10 +180,14 @@ class ConnectionOperations:
                 "allow_writes": allow_writes,
             },
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+        await self._session.refresh(row)
 
-        await publish_connection_invalidation(row.id)
-        await invalidate_org_connections_meta(organization_id)
+        await self._invalidate_connection_after_commit(row.id, organization_id)
 
         return row
 
@@ -269,8 +270,6 @@ class ConnectionOperations:
             return row
 
         row.updated_at = datetime.now(UTC)
-        await self._session.commit()
-        await self._session.refresh(row)
 
         await write_audit_event(
             self._session,
@@ -285,12 +284,36 @@ class ConnectionOperations:
                 "changed": changed,
             },
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+        await self._session.refresh(row)
 
-        await publish_connection_invalidation(row.id)
-        await invalidate_org_connections_meta(organization_id)
+        await self._invalidate_connection_after_commit(row.id, organization_id)
 
         return row
+
+    async def _invalidate_connection_after_commit(
+        self,
+        connection_id: UUID,
+        organization_id: UUID,
+    ) -> None:
+        try:
+            await publish_connection_invalidation(connection_id)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Integration connection changed with stale executor cache",
+                connection_id=str(connection_id),
+            )
+        try:
+            await invalidate_org_connections_meta(organization_id)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Integration connection changed with stale metadata cache",
+                connection_id=str(connection_id),
+            )
 
     async def remove_connection(
         self,

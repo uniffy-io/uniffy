@@ -23,7 +23,7 @@ from uniffy.domains.people.cache import (
     invalidate_org_people,
     invalidate_person,
 )
-from uniffy.domains.people.search_sync import sync_people_search
+from uniffy.domains.people.search import sync_people_search
 
 _ADMIN_ROLES = (OrganizationRole.OWNER, OrganizationRole.ADMIN)
 
@@ -109,6 +109,20 @@ class GroupOperations:
         )
         self._session.add(group)
         try:
+            await self._session.flush()
+            await write_audit_event(
+                self._session,
+                organization_id=organization_id,
+                actor_user_id=created_by_user_id,
+                action=Action.GROUP_CREATED,
+                resource_type=AuditResourceType.GROUP,
+                resource_id=group.id,
+                details={
+                    "name": name,
+                    "is_private": is_private,
+                    "kind": kind.value,
+                },
+            )
             await self._session.commit()
         except IntegrityError:
             # Concurrent create raced the pre-check; same answer, typed.
@@ -117,22 +131,10 @@ class GroupOperations:
                 "name",
                 f'a team or group named "{name}" already exists in this organization',
             ) from None
+        except Exception:
+            await self._session.rollback()
+            raise
         await self._session.refresh(group)
-
-        await write_audit_event(
-            self._session,
-            organization_id=organization_id,
-            actor_user_id=created_by_user_id,
-            action=Action.GROUP_CREATED,
-            resource_type=AuditResourceType.GROUP,
-            resource_id=group.id,
-            details={
-                "name": name,
-                "is_private": is_private,
-                "kind": kind.value,
-            },
-        )
-        await self._session.commit()
 
         if kind is GroupKind.TEAM:
             await invalidate_chart(organization_id)
@@ -468,19 +470,21 @@ class GroupOperations:
         else:
             membership = GroupMember(group_id=group_id, user_id=user_id, role=role)
             self._session.add(membership)
-        await self._session.commit()
+        try:
+            await write_audit_event(
+                self._session,
+                organization_id=group.organization_id,
+                actor_user_id=actor_user_id,
+                action=Action.GROUP_MEMBER_ADDED,
+                resource_type=AuditResourceType.GROUP,
+                resource_id=group_id,
+                details={"target_user_id": str(user_id), "role": role.value},
+            )
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
         await self._session.refresh(membership)
-
-        await write_audit_event(
-            self._session,
-            organization_id=group.organization_id,
-            actor_user_id=actor_user_id,
-            action=Action.GROUP_MEMBER_ADDED,
-            resource_type=AuditResourceType.GROUP,
-            resource_id=group_id,
-            details={"target_user_id": str(user_id), "role": role.value},
-        )
-        await self._session.commit()
 
         await self._invalidate_team_membership(group, user_id)
 

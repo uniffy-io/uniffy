@@ -1,6 +1,6 @@
 """Unified, in-tree model catalog: capabilities, pricing, and reasoning levels."""
 
-from uniffy.domains.agents.providers.catalog.image_params import (
+from uniffy.domains.agents.providers.catalog.images import (
     clamp_image_params,
     resolve_image_params,
     strip_unsupported_image_params,

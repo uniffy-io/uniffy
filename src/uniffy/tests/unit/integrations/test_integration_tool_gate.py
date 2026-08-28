@@ -10,15 +10,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import uniffy.domains.integrations.client_cache as client_cache_mod
+import uniffy.domains.integrations.clients as client_cache_mod
 from uniffy.core.types import generate_id
-from uniffy.domains.integrations import tool_gate
+from uniffy.domains.integrations import tools as tool_gate
 from uniffy.domains.integrations.base import (
     IntegrationDescriptor,
     IntegrationProbeResult,
     IntegrationProvider,
 )
-from uniffy.domains.integrations.client_cache import IntegrationClientLRU
+from uniffy.domains.integrations.clients import IntegrationClientLRU
 from uniffy.domains.integrations.registry import IntegrationRegistry
 
 READ_SCHEMA = {"name": "github-search_issues"}

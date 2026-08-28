@@ -21,7 +21,7 @@ from uniffy.domains.chat.streaming.events import (
 )
 from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
 
-logger = logger.bind(component="chat.drafts")
+logger = logger.bind(component="chat.drafts.operations")
 
 MAX_CLIENT_SESSION_ID_LENGTH = 64
 LIST_DRAFTS_LIMIT = 200

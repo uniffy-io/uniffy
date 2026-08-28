@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from uniffy.domains.chat.jobs.contracts import REFRESH_CHAT_SEARCH_ACL
-from uniffy.domains.chat.jobs.search_acl import flush_chat_search_acl_refreshes
+from uniffy.domains.chat.jobs.jobs import flush_chat_search_acl_refreshes
 
 
 async def test_flush_uses_worker_valkey_pool() -> None:
@@ -18,7 +18,7 @@ async def test_flush_uses_worker_valkey_pool() -> None:
         yield session
 
     valkey = AsyncMock()
-    with patch("uniffy.domains.chat.jobs.search_acl.open_session", open_session):
+    with patch("uniffy.domains.chat.jobs.jobs.open_session", open_session):
         result = await flush_chat_search_acl_refreshes({"valkey": valkey})
 
     assert result == {"status": "complete", "enqueued": 1, "failed": 0}

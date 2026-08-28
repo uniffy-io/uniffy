@@ -23,8 +23,8 @@ from uniffy.core.types import NotificationType
 from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS
 from uniffy.domains.notifications.delivery.base import NotificationChannel
 from uniffy.domains.notifications.delivery.email import EmailAdapter
-from uniffy.domains.notifications.delivery.in_app import InAppAdapter
-from uniffy.domains.notifications.jobs.delivery import process_notification_event
+from uniffy.domains.notifications.delivery.app import InAppAdapter
+from uniffy.domains.notifications.jobs.jobs import process_notification_event
 from uniffy.domains.notifications.jobs.email import send_notification_email
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")

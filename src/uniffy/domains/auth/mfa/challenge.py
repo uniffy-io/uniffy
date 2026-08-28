@@ -31,7 +31,7 @@ from uuid import UUID
 
 import jwt
 
-from uniffy.domains.auth.tokens import get_secret_key
+from uniffy.core.auth.tokens import get_secret_key
 
 TOKEN_TYPE_MFA_CHALLENGE = "mfa_challenge"
 TOKEN_TYPE_ENROLLMENT_ONLY = "enrollment_only"

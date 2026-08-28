@@ -24,7 +24,7 @@ from uniffy.core.valkey import (
     init_queue,
 )
 from uniffy.db.session import init_db, open_session
-from uniffy.domains.chat.rate_limits import (
+from uniffy.domains.chat.limits import (
     CHANNEL_CREATE,
     MEMBER_ADD,
     REACTION_ADD,
@@ -204,7 +204,7 @@ async def _wait_for_bootstrap() -> None:
 
 
 async def _sentinel_present() -> bool:
-    from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
+    from uniffy.core.config.settings import DeploymentSettingsOperations
 
     async with open_session() as session:
         namespace = await DeploymentSettingsOperations(session).get_namespace(SENTINEL_NAMESPACE)
@@ -212,7 +212,7 @@ async def _sentinel_present() -> bool:
 
 
 async def _write_sentinel() -> None:
-    from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
+    from uniffy.core.config.settings import DeploymentSettingsOperations
 
     async with open_session() as session:
         await DeploymentSettingsOperations(session).set(

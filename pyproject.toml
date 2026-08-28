@@ -75,6 +75,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "import-linter>=2.13",
   "pip-licenses>=5.5.0",
   "protoc-gen-connectrpc>=0.10.0",
   "pytest>=8.0.0",
@@ -177,3 +178,13 @@ skip-magic-trailing-comma = false
 
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
+
+[tool.importlinter]
+root_package = "uniffy"
+
+[[tool.importlinter.contracts]]
+name = "Core must not import domains"
+type = "forbidden"
+source_modules = ["uniffy.core"]
+forbidden_modules = ["uniffy.domains"]
+allow_indirect_imports = true

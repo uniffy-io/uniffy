@@ -43,6 +43,7 @@ from uniffy_proto.agents.v1.skills_pb2 import (
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
 from uniffy.domains.agents.skills.converters import (
@@ -52,7 +53,6 @@ from uniffy.domains.agents.skills.converters import (
     skill_version_to_proto,
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
-from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 
 logger = logger.bind(component="agents.skills.handlers")
 
@@ -80,10 +80,10 @@ class SkillsHandlers:
             The created skill.
 
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -133,10 +133,10 @@ class SkillsHandlers:
             The skill.
 
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -184,10 +184,10 @@ class SkillsHandlers:
             Paginated list of skills.
 
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -251,10 +251,10 @@ class SkillsHandlers:
             The updated skill.
 
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -303,10 +303,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> ListRunnableSkillsResponse:
         """Handle list_runnable_skills RPC call (slash-command menu)."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             agent_id = UUID(request.agent_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -339,10 +339,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> CreateSkillDraftResponse:
         """Handle create_skill_draft RPC call."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -391,10 +391,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> GetSkillDraftResponse:
         """Handle get_skill_draft RPC call."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             draft_id = UUID(request.draft_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -425,10 +425,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> ListSkillDraftsResponse:
         """Handle list_skill_drafts RPC call (drafts inbox)."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -477,10 +477,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> SaveSkillDraftResponse:
         """Handle save_skill_draft RPC call: draft -> skill version."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             draft_id = UUID(request.draft_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -527,10 +527,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> DiscardSkillDraftResponse:
         """Handle discard_skill_draft RPC call."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             draft_id = UUID(request.draft_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -563,10 +563,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> ListSkillVersionsResponse:
         """Handle list_skill_versions RPC call (version history timeline)."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -621,10 +621,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> GetSkillVersionResponse:
         """Handle get_skill_version RPC call."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -656,10 +656,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> SetMainSkillVersionResponse:
         """Handle set_main_skill_version RPC call (pin / follow latest)."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -699,10 +699,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> RevertSkillResponse:
         """Handle revert_skill RPC call (copy an earlier version to the head)."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -740,10 +740,10 @@ class SkillsHandlers:
         ctx: RequestContext,
     ) -> GetSkillMetricsResponse:
         """Handle get_skill_metrics RPC call (org-admin metrics view)."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
@@ -799,10 +799,10 @@ class SkillsHandlers:
             Success response.
 
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             skill_id = UUID(request.skill_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")

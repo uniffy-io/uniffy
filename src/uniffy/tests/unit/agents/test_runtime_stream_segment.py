@@ -17,7 +17,7 @@ from uniffy.domains.agents.providers.base import (
     EventType,
     StreamEvent,
 )
-from uniffy.domains.agents.runtime.model_calls import (
+from uniffy.domains.agents.runtime.models.calls import (
     ModelCallController,
     ModelCallTarget,
 )
@@ -25,8 +25,8 @@ from uniffy.domains.agents.runtime.operations import (
     RuntimeOperations,
     _StreamSegmentResult,
 )
-from uniffy.domains.agents.runtime.run_usage import RunUsageAccumulator
-from uniffy.domains.agents.runtime.settings import ResolvedRuntimeSettings
+from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
+from uniffy.domains.agents.runtime.settings.operations import ResolvedRuntimeSettings
 
 
 def _placeholder() -> AgentMessage:

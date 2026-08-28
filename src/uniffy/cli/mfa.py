@@ -94,7 +94,7 @@ def run() -> None:
 
 
 async def _reset(email: str, reason: str, *, operator: str) -> None:
-    from uniffy.domains.auth.passwords import normalize_email
+    from uniffy.core.auth.emails import normalize_email
 
     normalized = normalize_email(email)
     async with open_session() as session:

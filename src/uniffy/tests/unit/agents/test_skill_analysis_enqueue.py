@@ -9,7 +9,7 @@ from uniffy.domains.agents.sessions.operations import (
     SKILL_ANALYSIS_DEBOUNCE_SECONDS,
     _skill_analysis_job_id,
 )
-from uniffy.domains.agents.skills import jobs as task_mod
+from uniffy.domains.agents.skills.jobs import jobs as task_mod
 
 
 class TestJobIdSalt:

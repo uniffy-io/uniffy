@@ -198,7 +198,7 @@ class TestRestore:
 
 class TestChatInvocationRefusesDeletedAgent:
     async def test_no_run_is_started(self) -> None:
-        from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
+        from uniffy.domains.agents.bridge.operations import AgentChatBridge
 
         org_id = generate_id()
         channel_id = generate_id()
@@ -272,7 +272,7 @@ class TestQueriesExcludeDeletedAgents:
 
     async def test_mention_detection_joins_the_agent_row(self) -> None:
         from uniffy.core.models.chat.channel import ChannelType
-        from uniffy.domains.agents.chat_integration.mention_detector import (
+        from uniffy.domains.agents.bridge.mentions import (
             detect_agent_mentions,
         )
 

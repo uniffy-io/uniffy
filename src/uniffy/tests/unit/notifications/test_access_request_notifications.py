@@ -9,8 +9,8 @@ from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequestState,
 )
 from uniffy.core.types import ContentType, NotificationType, generate_id
-from uniffy.domains.permissions.access_request_notifications import AccessRequestNotifier
-from uniffy.domains.permissions.resource_access.targets import (
+from uniffy.domains.permissions.requests.notifications import AccessRequestNotifier
+from uniffy.domains.permissions.access.targets import (
     AccessGrantKind,
     AccessRequestTarget,
 )
@@ -49,7 +49,7 @@ async def test_requested_notification_targets_owner_and_keeps_source_urn() -> No
     emit = AsyncMock()
 
     with patch(
-        "uniffy.domains.permissions.access_request_notifications.emit_notification",
+        "uniffy.domains.permissions.requests.notifications.emit_notification",
         emit,
     ):
         await AccessRequestNotifier(MagicMock()).notify_requested(
@@ -72,7 +72,7 @@ async def test_denial_notification_omits_source_urn() -> None:
     emit = AsyncMock()
 
     with patch(
-        "uniffy.domains.permissions.access_request_notifications.emit_notification",
+        "uniffy.domains.permissions.requests.notifications.emit_notification",
         emit,
     ):
         await AccessRequestNotifier(MagicMock()).notify_denied(request, reviewer_id)
@@ -92,7 +92,7 @@ async def test_denied_state_stream_includes_cooldown() -> None:
     publish = AsyncMock()
 
     with patch(
-        "uniffy.domains.permissions.access_request_notifications.publish_access_request_changed",
+        "uniffy.domains.permissions.requests.notifications.publish_access_request_changed",
         publish,
     ):
         await AccessRequestNotifier(MagicMock()).publish_state(request)

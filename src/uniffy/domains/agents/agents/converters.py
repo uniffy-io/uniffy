@@ -11,10 +11,10 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.agents.templates import AgentTemplate
 from uniffy.domains.agents.tools.catalog import ToolCatalogEntry
-from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
 

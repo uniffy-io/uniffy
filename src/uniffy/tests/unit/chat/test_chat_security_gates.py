@@ -266,6 +266,7 @@ def _denied_operations() -> tuple[ChatChannelOperations, tuple[UUID, UUID]]:
     operations = ChatChannelOperations.__new__(ChatChannelOperations)
     operations.session = MagicMock()
     operations.session.execute = AsyncMock()
+    operations.session.rollback = AsyncMock()
     operations.access = access
     return operations, (user_id, organization_id)
 
@@ -282,6 +283,7 @@ async def test_non_member_cannot_create_channel() -> None:
         )
 
     operations.session.execute.assert_not_awaited()
+    operations.session.rollback.assert_awaited_once()
 
 
 async def test_non_member_cannot_create_user_dm() -> None:

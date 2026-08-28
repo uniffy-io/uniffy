@@ -20,7 +20,7 @@ async def test_refresh_parent_folder_computes_metadata_once(session, env, monkey
     async def capture(organization_id, urn, changes):
         published.append(dict(changes))
 
-    monkeypatch.setattr("uniffy.domains.notes.operations.publish_mention_state", capture)
+    monkeypatch.setattr("uniffy.domains.notes.content.projections.publish_mention_state", capture)
 
     calls = 0
     original = NoteOperations._get_search_metadata_async

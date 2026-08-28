@@ -13,6 +13,7 @@ from uniffy.core.auth.permissions.defaults import (
     resolve_effective_policy,
 )
 from uniffy.core.extraction import UnsupportedFormatError, extract_text
+from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
@@ -21,7 +22,8 @@ from uniffy.core.storage.s3_client import get_s3_client
 from uniffy.core.types import ContentType
 from uniffy.core.valkey import NotificationPayloadType, publish_notification
 from uniffy.db.session import open_session
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.files.attachments.folders import is_attachment_staging_folder
+from uniffy.domains.tags.operations import TagOperations
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="files.jobs.content")
@@ -155,9 +157,6 @@ async def _is_staged_attachment(session: Any, file: File) -> bool:
     """Unclaimed upload in a staging folder - attached files DO carry a doc."""
     if file.folder_id is None:
         return False
-    from uniffy.core.models.files.attachment import Attachment
-    from uniffy.domains.files.attachments.operations import is_attachment_staging_folder
-
     folder = (
         await session.execute(select(Folder).where(Folder.id == file.folder_id))
     ).scalar_one_or_none()

@@ -27,21 +27,21 @@ from uniffy.core.models.shared import EventVisibility
 from uniffy.core.models.tags.tag import TagAssignment
 from uniffy.core.search.meilisearch import SearchCandidateScope
 from uniffy.core.types import AccessMode, ContentType
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
     ResourceRowState,
 )
-from uniffy.domains.search.authorized_search import AuthorizedSearch, AuthorizedSearchQuery
-from uniffy.domains.search.content_graph import GRAPH_MAX_ROWS_PER_TYPE, build_content_graph
+from uniffy.domains.search.authorization import AuthorizedSearch, AuthorizedSearchQuery
+from uniffy.domains.search.graph import GRAPH_MAX_ROWS_PER_TYPE, build_content_graph
 from uniffy.domains.search.queries import (
     SearchResult,
     UrnAvailability,
     execute_search,
     get_raw_documents_by_urns,
 )
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.tags.operations import TagOperations
 
 logger = logger.bind(component="search.operations")
 

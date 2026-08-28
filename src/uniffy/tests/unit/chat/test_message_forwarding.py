@@ -16,7 +16,7 @@ from uniffy.core.models.chat.message import (
 from uniffy.core.types import generate_id
 from uniffy.domains.chat.messages import forwarding as forwarding_module
 from uniffy.domains.chat.messages.converters import forward_context_to_proto, message_to_proto
-from uniffy.domains.chat.messages.forward_projection import ForwardProjectionResolver
+from uniffy.domains.chat.messages.projection import ForwardProjectionResolver
 from uniffy.domains.chat.messages.forwarding import ChatMessageForwardingOperations
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
 from uniffy.domains.chat.streaming import publisher as streaming_publisher

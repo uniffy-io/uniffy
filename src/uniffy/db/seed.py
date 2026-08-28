@@ -26,9 +26,9 @@ async def seed_initial_data() -> None:
 
 async def _seed_initial_data_locked() -> None:
     # Lazy imports avoid the auth-module circular dependency.
+    from uniffy.core.auth.passwords.crypto import hash_password
     from uniffy.core.models import Organization, User
     from uniffy.db.session import open_session
-    from uniffy.domains.auth.passwords import hash_password
 
     logger.info("Checking for existing data...")
 
@@ -136,7 +136,7 @@ async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
         VAPID_PRIVATE_KEY,
         VAPID_PUBLIC_KEY,
     )
-    from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
+    from uniffy.core.config.settings import DeploymentSettingsOperations
 
     settings = DeploymentSettingsOperations(session)
 

@@ -3,6 +3,7 @@
 """
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
@@ -36,7 +37,7 @@ from uniffy.core.valkey.tags import (
     EVENT_TAG_UPDATED,
     publish_tag_event,
 )
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
@@ -85,6 +86,17 @@ class TagLimitExceededError(UNIFFYError):
         self.content_urn = content_urn
         self.limit = limit
         super().__init__(f"Tag limit exceeded for {content_urn!r}: max {limit} manual tags")
+
+
+@dataclass(frozen=True)
+class StagedManualTagReplacement:
+    organization_id: UUID
+    content_urn: str
+    content_type: ContentType
+    current_rows: tuple[TagAssignment, ...]
+    affected_tag_ids: tuple[UUID, ...]
+    added_tag_ids: tuple[UUID, ...]
+    removed_tag_ids: tuple[UUID, ...]
 
 
 def _content_type_from_urn(urn: str) -> ContentType:
@@ -669,6 +681,31 @@ class TagOperations:
         rows, batch INSERT / merge for additions, one ``last_used_at``
         bump, one commit.
         """
+        staged = await self.stage_manual_tags(
+            actor_id=actor_id,
+            organization_id=organization_id,
+            content_urn=content_urn,
+            tag_ids=tag_ids,
+        )
+        if not staged.affected_tag_ids:
+            return list(staged.current_rows)
+
+        try:
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        return await self.finish_manual_tags_after_commit(staged)
+
+    async def stage_manual_tags(
+        self,
+        *,
+        actor_id: UUID,
+        organization_id: UUID,
+        content_urn: str,
+        tag_ids: Iterable[UUID],
+    ) -> StagedManualTagReplacement:
+        """Reconcile manual assignments without committing the caller's transaction."""
         desired = list(dict.fromkeys(tag_ids))
         content_type = _content_type_from_urn(content_urn)
 
@@ -691,7 +728,15 @@ class TagOperations:
             raise TagLimitExceededError(content_urn)
 
         if not to_remove and not to_add:
-            return current_rows
+            return StagedManualTagReplacement(
+                organization_id=organization_id,
+                content_urn=content_urn,
+                content_type=content_type,
+                current_rows=tuple(current_rows),
+                affected_tag_ids=(),
+                added_tag_ids=(),
+                removed_tag_ids=(),
+            )
 
         now = datetime.now(UTC)
         affected_tag_ids: set[UUID] = set()
@@ -742,28 +787,42 @@ class TagOperations:
                 update(Tag).where(Tag.id.in_(list(affected_tag_ids))).values(last_used_at=now)
             )
 
-        await self.session.commit()
+        return StagedManualTagReplacement(
+            organization_id=organization_id,
+            content_urn=content_urn,
+            content_type=content_type,
+            current_rows=tuple(current_rows),
+            affected_tag_ids=tuple(affected_tag_ids),
+            added_tag_ids=tuple(added_tag_ids),
+            removed_tag_ids=tuple(removed_tag_ids),
+        )
 
-        if affected_tag_ids:
-            await self._invalidate_counts(organization_id, affected_tag_ids)
-        affected_id_list = list(affected_tag_ids)
-        tag_counts = await self._reindex_tag_docs(organization_id, affected_id_list)
+    async def finish_manual_tags_after_commit(
+        self,
+        staged: StagedManualTagReplacement,
+    ) -> list[TagAssignment]:
+        if not staged.affected_tag_ids:
+            return list(staged.current_rows)
+
+        await self._invalidate_counts(staged.organization_id, staged.affected_tag_ids)
+        affected_id_list = list(staged.affected_tag_ids)
+        tag_counts = await self._reindex_tag_docs(staged.organization_id, affected_id_list)
 
         await publish_tag_event(
-            organization_id,
+            staged.organization_id,
             EVENT_TAG_ASSIGNMENT_CHANGED,
             {
-                "content_urn": content_urn,
-                "content_type": content_type.value,
-                "added": [str(tid) for tid in added_tag_ids],
-                "removed": [str(tid) for tid in removed_tag_ids],
+                "content_urn": staged.content_urn,
+                "content_type": staged.content_type.value,
+                "added": [str(tid) for tid in staged.added_tag_ids],
+                "removed": [str(tid) for tid in staged.removed_tag_ids],
                 "source": SOURCE_MANUAL,
                 "tag_counts": {str(tid): tag_counts.get(tid, 0) for tid in affected_id_list},
                 "tag_urns": {str(tid): _tag_urn(tid) for tid in affected_id_list},
             },
         )
 
-        return await self._fetch_assignments(content_urn, None)
+        return await self._fetch_assignments(staged.content_urn, None)
 
     async def get_for_urns(
         self,

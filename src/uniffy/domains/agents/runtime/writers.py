@@ -653,7 +653,7 @@ class ChatChannelMessageWriter:
         only the current agent's own rows stay as `role="assistant"`.
         Envelopes are in-memory; `session_id` is a sentinel.
         """
-        from uniffy.domains.chat.sender_resolver import SenderResolver
+        from uniffy.domains.chat.senders import SenderResolver
 
         binding_row = (
             await self._session.execute(

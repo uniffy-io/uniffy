@@ -78,6 +78,7 @@ from uniffy_proto.projects.v1.projects_pb2 import (
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
@@ -91,8 +92,7 @@ from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
+from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.converters import (
     activity_to_proto,
@@ -112,7 +112,7 @@ from uniffy.domains.projects.operations import (
     WatcherOperations,
 )
 from uniffy.domains.projects.statuses import parse_task_status_semantics
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.tags.operations import TagOperations
 
 logger = logger.bind(component="projects.handlers")
 
@@ -242,7 +242,7 @@ class ProjectsHandlers:
         request: CreateProjectRequest,
         ctx: RequestContext,
     ) -> CreateProjectResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
@@ -298,7 +298,7 @@ class ProjectsHandlers:
         request: GetProjectRequest,
         ctx: RequestContext,
     ) -> GetProjectResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -346,7 +346,7 @@ class ProjectsHandlers:
         request: UpdateProjectRequest,
         ctx: RequestContext,
     ) -> UpdateProjectResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -423,7 +423,7 @@ class ProjectsHandlers:
         request: DeleteProjectRequest,
         ctx: RequestContext,
     ) -> DeleteProjectResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -442,7 +442,7 @@ class ProjectsHandlers:
         request: ListProjectsRequest,
         ctx: RequestContext,
     ) -> ListProjectsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         page = 1
@@ -537,7 +537,7 @@ class ProjectsHandlers:
         request: CreateTaskRequest,
         ctx: RequestContext,
     ) -> CreateTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -630,7 +630,7 @@ class ProjectsHandlers:
         request: GetTaskRequest,
         ctx: RequestContext,
     ) -> GetTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -659,7 +659,7 @@ class ProjectsHandlers:
         request: UpdateTaskRequest,
         ctx: RequestContext,
     ) -> UpdateTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -768,7 +768,7 @@ class ProjectsHandlers:
         request: MoveTaskRequest,
         ctx: RequestContext,
     ) -> MoveTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -835,7 +835,7 @@ class ProjectsHandlers:
         request: BulkUpdateTasksRequest,
         ctx: RequestContext,
     ) -> BulkUpdateTasksResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         changes: dict = {}
@@ -882,7 +882,7 @@ class ProjectsHandlers:
         request: DeleteTaskRequest,
         ctx: RequestContext,
     ) -> DeleteTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -901,7 +901,7 @@ class ProjectsHandlers:
         request: DeleteTasksRequest,
         ctx: RequestContext,
     ) -> DeleteTasksResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
@@ -928,7 +928,7 @@ class ProjectsHandlers:
         request: ListTasksRequest,
         ctx: RequestContext,
     ) -> ListTasksResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1040,7 +1040,7 @@ class ProjectsHandlers:
         request: CreateFieldRequest,
         ctx: RequestContext,
     ) -> CreateFieldResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1083,7 +1083,7 @@ class ProjectsHandlers:
         request: UpdateFieldRequest,
         ctx: RequestContext,
     ) -> UpdateFieldResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1134,7 +1134,7 @@ class ProjectsHandlers:
         request: DeleteFieldRequest,
         ctx: RequestContext,
     ) -> DeleteFieldResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1171,7 +1171,7 @@ class ProjectsHandlers:
         request: CreateViewRequest,
         ctx: RequestContext,
     ) -> CreateViewResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1212,7 +1212,7 @@ class ProjectsHandlers:
         request: UpdateViewRequest,
         ctx: RequestContext,
     ) -> UpdateViewResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1257,7 +1257,7 @@ class ProjectsHandlers:
         request: DeleteViewRequest,
         ctx: RequestContext,
     ) -> DeleteViewResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1291,7 +1291,7 @@ class ProjectsHandlers:
         request: ListActivitiesRequest,
         ctx: RequestContext,
     ) -> ListActivitiesResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -1339,7 +1339,7 @@ class SprintHandlers:
         request: CreateSprintRequest,
         ctx: RequestContext,
     ) -> CreateSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1366,7 +1366,7 @@ class SprintHandlers:
         request: UpdateSprintRequest,
         ctx: RequestContext,
     ) -> UpdateSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
@@ -1393,7 +1393,7 @@ class SprintHandlers:
         request: StartSprintRequest,
         ctx: RequestContext,
     ) -> StartSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
@@ -1418,7 +1418,7 @@ class SprintHandlers:
         request: CompleteSprintRequest,
         ctx: RequestContext,
     ) -> CompleteSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
@@ -1441,7 +1441,7 @@ class SprintHandlers:
         request: DeleteSprintRequest,
         ctx: RequestContext,
     ) -> DeleteSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
@@ -1464,7 +1464,7 @@ class SprintHandlers:
         request: ListSprintsRequest,
         ctx: RequestContext,
     ) -> ListSprintsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1502,7 +1502,7 @@ class WatcherHandlers:
         request: ToggleTaskWatcherRequest,
         ctx: RequestContext,
     ) -> ToggleTaskWatcherResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -1525,7 +1525,7 @@ class WatcherHandlers:
         request: ListTaskWatchersRequest,
         ctx: RequestContext,
     ) -> ListTaskWatchersResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -1552,7 +1552,7 @@ class WatcherHandlers:
         request: BulkCheckTaskWatchersRequest,
         ctx: RequestContext,
     ) -> BulkCheckTaskWatchersResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         _parse_uuid(request.organization_id, "organization_id")
 
         try:

@@ -56,7 +56,7 @@ async def _list_keys_as(*, org_admin: bool, keys: list) -> tuple[list, AsyncMock
     async def run():
         with (
             patch(
-                "uniffy.domains.agents.providers.handlers.get_user_id_from_context",
+                "uniffy.domains.agents.providers.handlers.current_user_id",
                 MagicMock(return_value=generate_id()),
             ),
             patch(

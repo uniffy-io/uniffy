@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from uniffy.core.types import ContentType, generate_id
-from uniffy.domains.notifications.tag_relay import (
+from uniffy.domains.notifications.tags import (
     TagEventRelay,
     _normalize_tag_state,
 )

@@ -13,6 +13,8 @@ from uniffy_proto.people.v1 import people_pb2 as pb
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
+from uniffy.core.config.settings.organization import OrgSettingsOperations
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.jobs import enqueue_job
@@ -21,8 +23,6 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
-from uniffy.domains.org_settings.operations import OrgSettingsOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.people import teams as team_ops
 from uniffy.domains.people.access import ViewerRelation, relation_for
@@ -38,7 +38,7 @@ from uniffy.domains.people.converters import (
     profile_to_proto,
     team_node_to_proto,
 )
-from uniffy.domains.people.directory.job_contracts import SYNC_IDENTITY_SOURCE
+from uniffy.domains.people.directory.jobs.contracts import SYNC_IDENTITY_SOURCE
 from uniffy.domains.people.directory.registry import (
     IDENTITY_SECRET_NAMESPACE,
     capabilities_for,
@@ -164,8 +164,8 @@ class PeopleHandlers:
         request: pb.ListPeopleRequest,
         ctx: RequestContext,
     ) -> pb.ListPeopleResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -229,8 +229,8 @@ class PeopleHandlers:
         request: pb.GetPersonRequest,
         ctx: RequestContext,
     ) -> pb.GetPersonResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             target_id = UUID(request.user_id)
@@ -266,8 +266,8 @@ class PeopleHandlers:
         request: pb.UpdateMyProfileRequest,
         ctx: RequestContext,
     ) -> pb.UpdateMyProfileResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             changes = _profile_changes(
@@ -298,8 +298,8 @@ class PeopleHandlers:
         request: pb.UpdatePersonProfileRequest,
         ctx: RequestContext,
     ) -> pb.UpdatePersonProfileResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             target_id = UUID(request.user_id)
@@ -336,8 +336,8 @@ class PeopleHandlers:
         request: pb.SetManagerRequest,
         ctx: RequestContext,
     ) -> pb.SetManagerResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             target_id = UUID(request.user_id)
@@ -374,8 +374,8 @@ class PeopleHandlers:
         request: pb.GetOrgChartRequest,
         ctx: RequestContext,
     ) -> pb.GetOrgChartResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -403,8 +403,8 @@ class PeopleHandlers:
         request: pb.ListTeamsRequest,
         ctx: RequestContext,
     ) -> pb.ListTeamsResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -424,8 +424,8 @@ class PeopleHandlers:
         request: pb.GetTeamRequest,
         ctx: RequestContext,
     ) -> pb.GetTeamResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             group_id = UUID(request.group_id)
@@ -450,8 +450,8 @@ class PeopleHandlers:
         request: pb.UpdateTeamRequest,
         ctx: RequestContext,
     ) -> pb.UpdateTeamResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             group_id = UUID(request.group_id)
@@ -496,8 +496,8 @@ class PeopleHandlers:
         request: pb.GetProfilePolicyRequest,
         ctx: RequestContext,
     ) -> pb.GetProfilePolicyResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -518,8 +518,8 @@ class PeopleHandlers:
         request: pb.UpdateProfilePolicyRequest,
         ctx: RequestContext,
     ) -> pb.UpdateProfilePolicyResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -548,8 +548,8 @@ class PeopleHandlers:
         request: pb.ListIdentitySourcesRequest,
         ctx: RequestContext,
     ) -> pb.ListIdentitySourcesResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -581,8 +581,8 @@ class PeopleHandlers:
         request: pb.CreateIdentitySourceRequest,
         ctx: RequestContext,
     ) -> pb.CreateIdentitySourceResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             kind = SOURCE_KIND_FROM_PROTO.get(request.kind)
@@ -640,8 +640,8 @@ class PeopleHandlers:
         request: pb.UpdateIdentitySourceRequest,
         ctx: RequestContext,
     ) -> pb.UpdateIdentitySourceResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -706,8 +706,8 @@ class PeopleHandlers:
         request: pb.DeleteIdentitySourceRequest,
         ctx: RequestContext,
     ) -> pb.DeleteIdentitySourceResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -751,8 +751,8 @@ class PeopleHandlers:
         request: pb.TriggerDirectorySyncRequest,
         ctx: RequestContext,
     ) -> pb.TriggerDirectorySyncResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:

@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.emails import normalize_email
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group
@@ -28,7 +29,6 @@ from uniffy.core.models.people.identity import IdentityLink, IdentitySource
 from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.core.types import SubjectType, generate_id
 from uniffy.core.valkey.mentions import publish_mention_state
-from uniffy.domains.auth.passwords import normalize_email
 from uniffy.domains.groups.naming import dedupe_name, resolve_slug
 from uniffy.domains.groups.search import TeamSearchIndexer
 from uniffy.domains.organizations.operations import (
@@ -41,7 +41,7 @@ from uniffy.domains.people.directory.types import (
     DirectoryUser,
     ReconcileReport,
 )
-from uniffy.domains.people.search_sync import sync_people_search
+from uniffy.domains.people.search import sync_people_search
 from uniffy.domains.users.search import UserSearchIndexer
 
 logger = logger.bind(component="people.directory.reconcile")

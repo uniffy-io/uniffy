@@ -19,10 +19,10 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     SaveDraftResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.draft import ChatDraft
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.chat.drafts.operations import ChatDraftOperations
 
 logger = logger.bind(component="chat.drafts.handlers")
@@ -68,9 +68,9 @@ class DraftHandlers:
         request: SaveDraftRequest,
         ctx: RequestContext,
     ) -> SaveDraftResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             channel_id = UUID(request.channel_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -96,10 +96,10 @@ class DraftHandlers:
         request: DeleteDraftRequest,
         ctx: RequestContext,
     ) -> DeleteDraftResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
             channel_id = UUID(request.channel_id)
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
         root_message_id = _parse_root_message_id(request)
@@ -123,9 +123,9 @@ class DraftHandlers:
         request: ListDraftsRequest,
         ctx: RequestContext,
     ) -> ListDraftsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 

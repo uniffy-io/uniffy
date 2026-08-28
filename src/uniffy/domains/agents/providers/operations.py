@@ -16,7 +16,7 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.agents.cache import publish_provider_key_invalidation
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo
 from uniffy.domains.agents.providers.catalog import provider_for_model
-from uniffy.domains.agents.providers.client_cache import (
+from uniffy.domains.agents.providers.clients import (
     get_provider_lru,
     record_lru_hit,
     record_lru_miss,
@@ -102,9 +102,6 @@ class ProviderOperations:
             key.last_validated_at = datetime.now(UTC)
             key.last_error = str(e)
 
-        await self._session.commit()
-        await self._session.refresh(key)
-
         await write_audit_event(
             self._session,
             organization_id=organization_id,
@@ -118,9 +115,20 @@ class ProviderOperations:
                 "key_hint": key.key_hint,
             },
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+        await self._session.refresh(key)
 
-        await publish_provider_key_invalidation(key.id)
+        try:
+            await publish_provider_key_invalidation(key.id)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Provider key created with stale cache state",
+                key_id=str(key.id),
+            )
 
         return key
 

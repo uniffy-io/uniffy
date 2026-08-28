@@ -42,16 +42,16 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_pinned_messages,
     set_cached_pinned_message_ids,
 )
+from uniffy.domains.chat.limits import SEND, check_chat_mutation_limit
 from uniffy.domains.chat.messages.converters import (
     get_forward_metadata,
     public_message_metadata,
 )
-from uniffy.domains.chat.policy import (
+from uniffy.domains.chat.policies.operations import (
     BroadcastMinRole,
     EditHistoryVisibility,
     resolve_chat_policy,
 )
-from uniffy.domains.chat.rate_limits import SEND, check_chat_mutation_limit
 
 logger = logger.bind(component="chat.messages.operations")
 
@@ -345,7 +345,7 @@ class ChatMessageOperations:
 
         reply_context: dict[str, str] | None = None
         if reply_to_msg:
-            from uniffy.domains.chat.sender_resolver import SenderResolver
+            from uniffy.domains.chat.senders import SenderResolver
 
             resolver = SenderResolver(self.session)
             reply_info = await resolver.resolve_one(reply_to_msg.sender_type, reply_to_msg.sender_id)
@@ -437,7 +437,7 @@ class ChatMessageOperations:
         # Sending marks the sender read up to their own message, so the badge
         # never lights up in the sender's other sessions or devices.
         if message.sender_type == SenderType.USER:
-            from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
+            from uniffy.domains.chat.reads.operations import ChatReadStateOperations
 
             read_ops = ChatReadStateOperations(self.session)
             try:
@@ -481,10 +481,10 @@ class ChatMessageOperations:
     async def _maybe_trigger_agents(self, message: ChatMessage, channel: ChatChannel) -> None:
         """Detect agent mentions and enqueue respond_to_chat_message ARQ jobs; non-fatal."""
         try:
-            from uniffy.domains.agents.chat_integration import (
+            from uniffy.domains.agents.bridge import (
                 detect_agent_mentions,
             )
-            from uniffy.domains.chat.feature_flags import is_chat_agents_enabled
+            from uniffy.domains.chat.features import is_chat_agents_enabled
 
             if not await is_chat_agents_enabled(self.session, channel.organization_id):
                 return
@@ -501,7 +501,7 @@ class ChatMessageOperations:
 
             try:
                 from uniffy.core.jobs import enqueue_job
-                from uniffy.domains.agents.chat_integration.job_contracts import (
+                from uniffy.domains.agents.bridge.jobs.contracts import (
                     RESPOND_TO_CHAT_MESSAGE,
                 )
 
@@ -829,7 +829,7 @@ class ChatMessageOperations:
 
             # SenderResolver handles AGENT-authored messages too (avoids "Unknown" fallback).
             if not sender_name:
-                from uniffy.domains.chat.sender_resolver import SenderResolver
+                from uniffy.domains.chat.senders import SenderResolver
 
                 resolver = SenderResolver(self.session)
                 info = await resolver.resolve_one(message.sender_type, message.sender_id)

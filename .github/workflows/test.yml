@@ -121,7 +121,9 @@ jobs:
 
       - name: Run Python linters
         shell: bash
-        run: uv run ruff check src/uniffy/ --exclude src/gen
+        run: |
+          uv run lint-imports
+          uv run ruff check src/uniffy/ --exclude src/gen
 
       - name: Check Python formatting
         shell: bash

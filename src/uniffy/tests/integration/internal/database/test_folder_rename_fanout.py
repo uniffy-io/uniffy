@@ -19,7 +19,14 @@ async def _capture_publishes(monkeypatch) -> list[tuple[str, dict]]:
     async def capture(organization_id, urn, changes):
         published.append((urn, dict(changes)))
 
-    monkeypatch.setattr("uniffy.domains.files.operations.publish_mention_state", capture)
+    monkeypatch.setattr(
+        "uniffy.domains.files.folders.mutations.publish_mention_state",
+        capture,
+    )
+    monkeypatch.setattr(
+        "uniffy.domains.files.folders.projection.publish_mention_state",
+        capture,
+    )
     return published
 
 

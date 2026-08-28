@@ -5,11 +5,11 @@ from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.events.job_contracts import PROCESS_NOTIFICATION_EVENT
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str, loads
 from uniffy.core.types import ContentType, NotificationType, generate_id
-from uniffy.domains.notifications.jobs.contracts import PROCESS_NOTIFICATION_EVENT
 
 logger = logger.bind(component="events.bus")
 

@@ -70,7 +70,7 @@ class OrgCipher:
         unless ``allow_support_session_bridge=True``. A bridge-attempt audit row
         is written either way so the org owner sees every exposure attempt.
         """
-        from uniffy.domains.platform.support_session.context import (
+        from uniffy.core.auth.support_session import (
             get_active_support_session,
         )
 

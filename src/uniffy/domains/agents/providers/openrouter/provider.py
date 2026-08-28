@@ -16,7 +16,7 @@ from uniffy.domains.agents.providers.catalog import (
 )
 from uniffy.domains.agents.providers.openai.provider import OpenAIProvider
 
-logger = logger.bind(component="agents.providers.openrouter")
+logger = logger.bind(component="agents.providers.openrouter.provider")
 
 KEY_INFO_URL = "https://openrouter.ai/api/v1/key"
 REQUEST_TIMEOUT_SECONDS = 10.0

@@ -21,12 +21,12 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     UpdateCategoryResponse,
 )
 
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
-from uniffy.domains.auth.context import (
-    get_user_id_from_context,
+from uniffy.core.auth.principal import (
+    current_user_id,
     resolve_organization_id,
 )
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.db import open_session
 from uniffy.domains.chat.categories.operations import ChatCategoryOperations
 from uniffy.domains.chat.channels.converters import category_to_proto, channel_to_proto
 
@@ -50,9 +50,9 @@ class CategoryHandlers:
         request: CreateCategoryRequest,
         ctx: RequestContext,
     ) -> CreateCategoryResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
@@ -69,9 +69,9 @@ class CategoryHandlers:
         request: UpdateCategoryRequest,
         ctx: RequestContext,
     ) -> UpdateCategoryResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             cat_id = UUID(request.category_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -91,9 +91,9 @@ class CategoryHandlers:
         request: DeleteCategoryRequest,
         ctx: RequestContext,
     ) -> DeleteCategoryResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             cat_id = UUID(request.category_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -111,8 +111,8 @@ class CategoryHandlers:
         request: ListCategoriesRequest,
         ctx: RequestContext,
     ) -> ListCategoriesResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -127,9 +127,9 @@ class CategoryHandlers:
         request: ReorderCategoriesRequest,
         ctx: RequestContext,
     ) -> ReorderCategoriesResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             cat_ids = [UUID(c) for c in request.category_ids]
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -147,9 +147,9 @@ class CategoryHandlers:
         request: MoveChannelToCategoryRequest,
         ctx: RequestContext,
     ) -> MoveChannelToCategoryResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             channel_id = UUID(request.channel_id)
             cat_id = None
             if request.HasField("category_id") and request.category_id:

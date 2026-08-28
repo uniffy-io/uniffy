@@ -66,7 +66,10 @@ def compose_project() -> str:
     """The docker compose project name - the prefix on every volume and network."""
     out = subprocess.run(
         ["docker", "compose", "config", "--format", "json"],
-        cwd=ROOT, capture_output=True, text=True, check=True,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     return json.loads(out)["name"]
 
@@ -75,8 +78,19 @@ def container_running(service: str) -> bool:
     # Enable every profile: a bare `compose ps` hides services whose profile is
     # not active (e.g. mobile), so a running container would read as stopped.
     return sh_ok([
-        "docker", "compose", "--profile", "core", "--profile", "dev", "--profile", "mobile",
-        "ps", "-q", "--status", "running", service,
+        "docker",
+        "compose",
+        "--profile",
+        "core",
+        "--profile",
+        "dev",
+        "--profile",
+        "mobile",
+        "ps",
+        "-q",
+        "--status",
+        "running",
+        service,
     ])
 
 
@@ -96,10 +110,21 @@ def docker_pnpm(
         # exec cannot add port mappings, so anything with `publish` gets a
         # one-off container even while the dev service is running.
         port_flags = [flag for port in publish for flag in ("--publish", port)]
-        sh(compose(
-            "run", "--rm", "--no-deps", *env_flags, *port_flags,
-            svc, "pnpm", "--filter", filter_, *args, profiles=[profile],
-        ))
+        sh(
+            compose(
+                "run",
+                "--rm",
+                "--no-deps",
+                *env_flags,
+                *port_flags,
+                svc,
+                "pnpm",
+                "--filter",
+                filter_,
+                *args,
+                profiles=[profile],
+            )
+        )
 
 
 def docker_uv(args: list[str]) -> None:
@@ -138,7 +163,10 @@ def deps():
 
 
 service_option = click.option(
-    "--service", "-s", type=click.Choice(["backend", "ui", "mobile", "landing", "all"]), default="all"
+    "--service",
+    "-s",
+    type=click.Choice(["backend", "ui", "mobile", "landing", "all"]),
+    default="all",
 )
 stack_option = click.option("--stack", type=Stack, default="docker", show_default=True)
 
@@ -188,7 +216,10 @@ def deps_install(service: str, stack: str):
     if stack == "docker":
         if service == "all":
             toolbox_run(["true"])
-            for svc, profile in [*BACKEND_COMPOSE_SERVICES, *((s, p) for s, _, p in NODE_SERVICES.values())]:
+            for svc, profile in [
+                *BACKEND_COMPOSE_SERVICES,
+                *((s, p) for s, _, p in NODE_SERVICES.values()),
+            ]:
                 if container_running(svc):
                     sh(compose("restart", svc, profiles=[profile]))
         elif service == "backend":
@@ -211,7 +242,11 @@ def deps_install(service: str, stack: str):
 
 def _mutate(service: str, stack: str, verb: str, packages: tuple[str, ...], dev: bool):
     if service == "backend":
-        args = ["add" if verb == "add" else verb, *(["--dev"] if dev and verb == "add" else []), *packages]
+        args = [
+            "add" if verb == "add" else verb,
+            *(["--dev"] if dev and verb == "add" else []),
+            *packages,
+        ]
         workspace_cmd("backend", stack, args)
     else:
         args = [verb, *(["--save-dev"] if dev and verb == "add" else []), *packages]
@@ -222,7 +257,9 @@ def _mutate(service: str, stack: str, verb: str, packages: tuple[str, ...], dev:
 
 @deps.command("add")
 @click.argument("packages", nargs=-1, required=True)
-@click.option("--service", "-s", type=click.Choice(["backend", "ui", "mobile", "landing"]), required=True)
+@click.option(
+    "--service", "-s", type=click.Choice(["backend", "ui", "mobile", "landing"]), required=True
+)
 @stack_option
 @click.option("--dev", is_flag=True, help="Add as a dev dependency.")
 def deps_add(packages, service, stack, dev):
@@ -232,7 +269,9 @@ def deps_add(packages, service, stack, dev):
 
 @deps.command("remove")
 @click.argument("packages", nargs=-1, required=True)
-@click.option("--service", "-s", type=click.Choice(["backend", "ui", "mobile", "landing"]), required=True)
+@click.option(
+    "--service", "-s", type=click.Choice(["backend", "ui", "mobile", "landing"]), required=True
+)
 @stack_option
 def deps_remove(packages, service, stack):
     """Remove packages from a workspace."""
@@ -241,7 +280,9 @@ def deps_remove(packages, service, stack):
 
 @deps.command("update")
 @click.argument("packages", nargs=-1)
-@click.option("--service", "-s", type=click.Choice(["backend", "ui", "mobile", "landing"]), required=True)
+@click.option(
+    "--service", "-s", type=click.Choice(["backend", "ui", "mobile", "landing"]), required=True
+)
 @stack_option
 def deps_update(packages, service, stack):
     """Update packages (all in range when none given)."""
@@ -261,7 +302,9 @@ def deps_update(packages, service, stack):
 
 @deps.command("run", context_settings=PASSTHROUGH)
 @click.argument("args", nargs=-1, required=True, type=click.UNPROCESSED)
-@click.option("--service", "-s", type=click.Choice(["backend", "ui", "mobile", "landing"]), required=True)
+@click.option(
+    "--service", "-s", type=click.Choice(["backend", "ui", "mobile", "landing"]), required=True
+)
 @stack_option
 def deps_run(args, service, stack):
     """Raw pnpm (node) or uv (backend) passthrough for a workspace."""
@@ -357,8 +400,16 @@ def stack_recreate(ctx, services, profiles, detach, no_build, yes):
     orphans, then run the `stack up` flow.
     """
     if services:
-        sh(compose("up", "-d", "--force-recreate", "--no-deps", *services,
-                   profiles=["core", "dev", "mobile"]))
+        sh(
+            compose(
+                "up",
+                "-d",
+                "--force-recreate",
+                "--no-deps",
+                *services,
+                profiles=["core", "dev", "mobile"],
+            )
+        )
         return
     if not yes:
         click.confirm(
@@ -375,7 +426,13 @@ def stack_reset_data():
     prefix = compose_project()
     volumes = [
         f"{prefix}_{suffix}"
-        for suffix in ("postgres_data", "valkey_data", "meilisearch_data", "rustfs_data", "rustfs_logs")
+        for suffix in (
+            "postgres_data",
+            "valkey_data",
+            "meilisearch_data",
+            "rustfs_data",
+            "rustfs_logs",
+        )
     ]
     click.echo("This will WIPE these docker volumes (data is gone):")
     for volume in volumes:
@@ -399,7 +456,16 @@ def serve():
 
 
 def _watch(target: str) -> list[str]:
-    return ["uv", "run", "watchfiles", "--filter", "python", f"python -m uniffy --{target}", "src/uniffy/", "src/gen/python/"]
+    return [
+        "uv",
+        "run",
+        "watchfiles",
+        "--filter",
+        "python",
+        f"python -m uniffy --{target}",
+        "src/uniffy/",
+        "src/gen/python/",
+    ]
 
 
 @serve.command("backend")
@@ -417,7 +483,11 @@ def serve_worker_core(reload):
 @serve.command("worker-egress")
 @click.option("--reload/--no-reload", default=True, show_default=True)
 def serve_worker_egress(reload):
-    sh(_watch("worker-egress") if reload else ["uv", "run", "python", "-m", "uniffy", "--worker-egress"])
+    sh(
+        _watch("worker-egress")
+        if reload
+        else ["uv", "run", "python", "-m", "uniffy", "--worker-egress"]
+    )
 
 
 @serve.command("ui")
@@ -442,11 +512,15 @@ def serve_all():
     """Backend + both workers + vite, all native with hot reload."""
     LOG_DIR.mkdir(exist_ok=True)
     click.echo("Backend :8000, Frontend :5173, workers core + egress")
-    click.echo("Backend/worker output goes to .logs/*.log - tail with: ./manage.py logs --stack local")
+    click.echo(
+        "Backend/worker output goes to .logs/*.log - tail with: ./manage.py logs --stack local"
+    )
     procs = []
     for target in ("backend", "worker-core", "worker-egress"):
         log = (LOG_DIR / f"{target}.log").open("ab")
-        procs.append(subprocess.Popen(_watch(target), cwd=ROOT, stdout=log, stderr=subprocess.STDOUT))
+        procs.append(
+            subprocess.Popen(_watch(target), cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+        )
     try:
         sh(["pnpm", "--filter", "uniffy-ui", "dev"])
     finally:
@@ -456,7 +530,9 @@ def serve_all():
 
 @cli.command()
 @click.option("--stack", type=Stack, default="docker", show_default=True)
-@click.option("--profile", "-p", "profiles", multiple=True, help="Extra compose profiles (e.g. -p mobile).")
+@click.option(
+    "--profile", "-p", "profiles", multiple=True, help="Extra compose profiles (e.g. -p mobile)."
+)
 @click.pass_context
 def start(ctx, stack, profiles):
     """One-command first start: docker = full containerized stack, local = host deps + infra containers + native processes."""
@@ -464,8 +540,11 @@ def start(ctx, stack, profiles):
         # --build is a cached no-op when Dockerfiles are unchanged, so start
         # always reflects the current image definitions
         sh(compose("up", "-d", "--build", profiles=["core", "dev", *profiles]))
-        click.secho("Stack running detached. Ctrl+C stops this log tail, not the stack "
-                    "(stop with: ./manage.py stack down)", fg="green")
+        click.secho(
+            "Stack running detached. Ctrl+C stops this log tail, not the stack "
+            "(stop with: ./manage.py stack down)",
+            fg="green",
+        )
         # tail app services only; infra (core profile) logs via ./manage.py logs
         sh(compose("logs", "-f", profiles=["dev", *profiles]), check=False)
         return
@@ -476,8 +555,13 @@ def start(ctx, stack, profiles):
 
 
 @cli.command()
-@click.option("--service", "-s", "services", multiple=True,
-              help="Service(s) to tail; repeatable (-s backend -s ui). Omit for all.")
+@click.option(
+    "--service",
+    "-s",
+    "services",
+    multiple=True,
+    help="Service(s) to tail; repeatable (-s backend -s ui). Omit for all.",
+)
 @click.option("--stack", type=Stack, default="docker", show_default=True)
 def logs(services, stack):
     """Tail logs. docker = compose services; local = processes started by `serve all`."""
@@ -487,7 +571,9 @@ def logs(services, stack):
     files = [LOG_DIR / f"{s}.log" for s in services] if services else sorted(LOG_DIR.glob("*.log"))
     files = [f for f in files if f.exists()]
     if not files:
-        raise click.ClickException("No local log files in .logs/ - start processes with ./manage.py serve all")
+        raise click.ClickException(
+            "No local log files in .logs/ - start processes with ./manage.py serve all"
+        )
     sh(["tail", "-n", "100", "-F", *(str(f) for f in files)])
 
 
@@ -541,17 +627,35 @@ def licenses(stack):
         "## Python Dependencies\n\n"
     )
     python_rows = subprocess.run(
-        ["uv", "run", "pip-licenses", "--format=markdown", "--with-urls", "--ignore-packages", "uniffy"],
-        cwd=ROOT, check=True, capture_output=True, text=True,
+        [
+            "uv",
+            "run",
+            "pip-licenses",
+            "--format=markdown",
+            "--with-urls",
+            "--ignore-packages",
+            "uniffy",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout
     node_json = subprocess.run(
         ["pnpm", "licenses", "list", "--prod", "--json"],
-        cwd=ROOT / "src/ui", check=True, capture_output=True, text=True,
+        cwd=ROOT / "src/ui",
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout
     rows = []
     for license_name, pkgs in json.loads(node_json).items():
         for pkg in pkgs:
-            rows.append((f"{pkg['name']}@{pkg['versions'][0]}", license_name, pkg.get("homepage", "")))
+            rows.append((
+                f"{pkg['name']}@{pkg['versions'][0]}",
+                license_name,
+                pkg.get("homepage", ""),
+            ))
     node_table = "\n".join(f"| {name} | {lic} | {home} |" for name, lic, home in sorted(rows))
     out.write_text(
         f"{header}{python_rows}\n## Node.js Dependencies\n\n"
@@ -569,16 +673,38 @@ def clean():
             sh(["rm", "-rf", f"src/gen/typescript/{pkg.name}"])
     sh(["find", "src/gen/go", "-name", "*.go", "-delete"], check=False)
     sh(["rm", "-rf", "src/ui/dist", "src/ui/node_modules/.vite"])
-    sh(["find", "src/uniffy", "-type", "d", "-name", "__pycache__", "-exec", "rm", "-rf", "{}", "+"], check=False)
+    sh(
+        [
+            "find",
+            "src/uniffy",
+            "-type",
+            "d",
+            "-name",
+            "__pycache__",
+            "-exec",
+            "rm",
+            "-rf",
+            "{}",
+            "+",
+        ],
+        check=False,
+    )
 
 
 @cli.command()
-@click.option("--service", "-s", type=click.Choice(["all", "backend", "ui", "mobile", "cli"]), default="all")
+@click.option(
+    "--service", "-s", type=click.Choice(["all", "backend", "ui", "mobile", "cli"]), default="all"
+)
 @stack_option
 def lint(service, stack):
     """Run linters (all = backend + ui + cli, matching pre-commit expectations)."""
     if service in ("backend", "all"):
-        workspace_cmd("backend", stack, ["run", "ruff", "check", "src/uniffy/", "--exclude", "src/gen", "--fix"])
+        workspace_cmd("backend", stack, ["run", "lint-imports"])
+        workspace_cmd(
+            "backend",
+            stack,
+            ["run", "ruff", "check", "src/uniffy/", "--exclude", "src/gen", "--fix"],
+        )
         workspace_cmd(
             "backend",
             stack,
@@ -605,12 +731,16 @@ def gitleaks(stack):
 
 
 @cli.command("format")
-@click.option("--service", "-s", type=click.Choice(["all", "backend", "ui", "mobile"]), default="all")
+@click.option(
+    "--service", "-s", type=click.Choice(["all", "backend", "ui", "mobile"]), default="all"
+)
 @stack_option
 def format_cmd(service, stack):
     """Format code (ruff for backend, oxfmt for the node workspaces)."""
     if service in ("backend", "all"):
-        workspace_cmd("backend", stack, ["run", "ruff", "format", "src/uniffy/", "--exclude", "src/gen"])
+        workspace_cmd(
+            "backend", stack, ["run", "ruff", "format", "src/uniffy/", "--exclude", "src/gen"]
+        )
     if service in ("ui", "all"):
         workspace_cmd("ui", stack, ["format"])
     if service == "mobile":
@@ -618,7 +748,13 @@ def format_cmd(service, stack):
 
 
 @cli.command()
-@click.option("--service", "-s", type=click.Choice(["backend", "ui", "cli", "integration"]), default="backend", show_default=True)
+@click.option(
+    "--service",
+    "-s",
+    type=click.Choice(["backend", "ui", "cli", "integration"]),
+    default="backend",
+    show_default=True,
+)
 @stack_option
 def test(service, stack):
     """Run tests for a service (integration needs live services; the provider suite costs money)."""
@@ -636,11 +772,19 @@ def test(service, stack):
 @stack_option
 def bench(stack):
     """Run backend performance benchmarks."""
-    workspace_cmd("backend", stack, [
-        "run", "pytest", "src/uniffy/tests/benchmarks/",
-        "--benchmark-only", "--benchmark-group-by=func", "--benchmark-sort=mean",
-        "--benchmark-columns=min,max,mean,stddev,rounds",
-    ])
+    workspace_cmd(
+        "backend",
+        stack,
+        [
+            "run",
+            "pytest",
+            "src/uniffy/tests/benchmarks/",
+            "--benchmark-only",
+            "--benchmark-group-by=func",
+            "--benchmark-sort=mean",
+            "--benchmark-columns=min,max,mean,stddev,rounds",
+        ],
+    )
 
 
 @cli.group()
@@ -656,7 +800,9 @@ def db_shell():
 @db.command("migrate")
 @stack_option
 def db_migrate(stack):
-    workspace_cmd("backend", stack, ["run", "alembic", "-c", "src/uniffy/alembic.ini", "upgrade", "head"])
+    workspace_cmd(
+        "backend", stack, ["run", "alembic", "-c", "src/uniffy/alembic.ini", "upgrade", "head"]
+    )
 
 
 @cli.group("cli")
@@ -738,11 +884,25 @@ def landing_deploy(ctx, stack):
             "CLOUDFLARE_API_TOKEN is not set. The container cannot reach a host "
             "Wrangler login, so export the token or deploy with --stack local."
         )
-    if stack == "local" and not token and not (Path.home() / ".wrangler/config/default.toml").exists():
-        click.secho("Warning: CLOUDFLARE_API_TOKEN not set and no Wrangler login detected.", fg="yellow")
+    if (
+        stack == "local"
+        and not token
+        and not (Path.home() / ".wrangler/config/default.toml").exists()
+    ):
+        click.secho(
+            "Warning: CLOUDFLARE_API_TOKEN not set and no Wrangler login detected.", fg="yellow"
+        )
     ctx.invoke(landing_build, stack=stack)
-    deploy_args = ["pages", "deploy", "dist",
-                   "--project-name", "uniffy-landing", "--branch", "main", "--commit-dirty=true"]
+    deploy_args = [
+        "pages",
+        "deploy",
+        "dist",
+        "--project-name",
+        "uniffy-landing",
+        "--branch",
+        "main",
+        "--commit-dirty=true",
+    ]
     if stack == "docker":
         docker_pnpm("landing", ["exec", "wrangler", *deploy_args], env_keys=LANDING_DEPLOY_ENV)
     else:

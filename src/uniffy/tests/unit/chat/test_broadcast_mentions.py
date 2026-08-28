@@ -18,7 +18,7 @@ from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.types import SubjectType, generate_id
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
-from uniffy.domains.chat.policy import BroadcastMinRole, ResolvedChatPolicy
+from uniffy.domains.chat.policies.operations import BroadcastMinRole, ResolvedChatPolicy
 
 ORG = generate_id()
 

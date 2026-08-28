@@ -41,9 +41,9 @@ from uniffy_proto.superadmin.v1.system_directory_pb2 import (
     UpdateUserResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.platform.directory.converters import (
     org_detail_to_proto,
     org_summary_to_proto,
@@ -83,7 +83,7 @@ class SystemOrganizationsHandlers:
     async def list_organizations(
         self, request: ListOrganizationsRequest, ctx: RequestContext
     ) -> ListOrganizationsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
             async with open_session() as session:
                 page = await PlatformDirectoryOperations(session).list_organizations(
@@ -108,7 +108,7 @@ class SystemOrganizationsHandlers:
     async def get_organization(
         self, request: GetOrganizationRequest, ctx: RequestContext
     ) -> GetOrganizationResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
@@ -124,7 +124,7 @@ class SystemOrganizationsHandlers:
     async def create_organization(
         self, request: CreateOrganizationRequest, ctx: RequestContext
     ) -> CreateOrganizationResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
             async with open_session() as session:
                 detail = await PlatformDirectoryOperations(session).create_organization(
@@ -144,7 +144,7 @@ class SystemOrganizationsHandlers:
     async def update_organization(
         self, request: UpdateOrganizationRequest, ctx: RequestContext
     ) -> UpdateOrganizationResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
@@ -167,7 +167,7 @@ class SystemOrganizationsHandlers:
     async def suspend_organization(
         self, request: SuspendOrganizationRequest, ctx: RequestContext
     ) -> SuspendOrganizationResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
@@ -185,7 +185,7 @@ class SystemOrganizationsHandlers:
     async def unsuspend_organization(
         self, request: UnsuspendOrganizationRequest, ctx: RequestContext
     ) -> UnsuspendOrganizationResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
@@ -203,7 +203,7 @@ class SystemOrganizationsHandlers:
     async def delete_organization(
         self, request: DeleteOrganizationRequest, ctx: RequestContext
     ) -> DeleteOrganizationResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
@@ -222,7 +222,7 @@ class SystemOrganizationsHandlers:
     async def restore_organization(
         self, request: RestoreOrganizationRequest, ctx: RequestContext
     ) -> RestoreOrganizationResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
@@ -240,7 +240,7 @@ class SystemOrganizationsHandlers:
 
 class SystemUsersHandlers:
     async def list_users(self, request: ListUsersRequest, ctx: RequestContext) -> ListUsersResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
             async with open_session() as session:
                 page = await PlatformDirectoryOperations(session).list_users(
@@ -263,7 +263,7 @@ class SystemUsersHandlers:
         )
 
     async def get_user(self, request: GetUserRequest, ctx: RequestContext) -> GetUserResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         target_id = _parse_uuid(request.user_id, "user_id")
         try:
             async with open_session() as session:
@@ -279,7 +279,7 @@ class SystemUsersHandlers:
     async def create_user(
         self, request: CreateUserRequest, ctx: RequestContext
     ) -> CreateUserResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = (
             _parse_uuid(request.organization_id, "organization_id")
             if request.organization_id
@@ -308,7 +308,7 @@ class SystemUsersHandlers:
     async def update_user(
         self, request: UpdateUserRequest, ctx: RequestContext
     ) -> UpdateUserResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         target_id = _parse_uuid(request.user_id, "user_id")
         try:
             async with open_session() as session:
@@ -334,7 +334,7 @@ class SystemUsersHandlers:
     async def force_logout_user(
         self, request: ForceLogoutUserRequest, ctx: RequestContext
     ) -> ForceLogoutUserResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         target_id = _parse_uuid(request.user_id, "user_id")
         try:
             async with open_session() as session:
@@ -352,7 +352,7 @@ class SystemUsersHandlers:
     async def set_system_admin(
         self, request: SetSystemAdminRequest, ctx: RequestContext
     ) -> SetSystemAdminResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         target_id = _parse_uuid(request.user_id, "user_id")
         try:
             async with open_session() as session:

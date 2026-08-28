@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uniffy.core.content.team_mentions import TeamExpansion
 from uniffy.core.models.projects.task import Task
 from uniffy.core.types import generate_id
-from uniffy.domains.projects.operations import TaskOperations
+from uniffy.domains.projects.tasks.notifications import TaskNotifications
 
 ORG = generate_id()
 
@@ -26,19 +26,18 @@ def _team_urn(team_id) -> str:
 
 async def _emit(actor, old_refs, new_refs, expansions):
     emitted: list = []
-    ops = TaskOperations.__new__(TaskOperations)
-    ops.session = MagicMock()
+    notifications = TaskNotifications(MagicMock())
     with (
         patch(
-            "uniffy.domains.projects.operations.emit_notification",
+            "uniffy.domains.projects.tasks.notifications.emit_notification",
             AsyncMock(side_effect=lambda event: emitted.append(event)),
         ),
         patch(
-            "uniffy.domains.projects.operations.expand_team_mentions",
+            "uniffy.domains.projects.tasks.notifications.expand_team_mentions",
             AsyncMock(return_value=expansions),
         ) as expander,
     ):
-        await ops._emit_mention_notifications(_task(), actor, old_refs, new_refs)
+        await notifications.emit_mention_notifications(_task(), actor, old_refs, new_refs)
     return emitted, expander
 
 

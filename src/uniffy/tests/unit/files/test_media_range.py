@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from uniffy.domains.files.http_routes import _parse_range
+from uniffy.domains.files.routes import _parse_range
 
 _TOTAL = 1000
 

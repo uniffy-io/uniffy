@@ -23,6 +23,7 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
 
 from uniffy.core.types import generate_id
 from uniffy.core.valkey import NotificationPayloadType
+from uniffy.domains.auth.interceptors import AuthenticationInterceptor
 from uniffy.domains.notifications.handlers import NotificationsHandlers
 
 USER = generate_id()
@@ -37,7 +38,7 @@ def _jwt_secret(monkeypatch):
 
 
 def _token(organization_id=None) -> str:
-    from uniffy.domains.auth.tokens import create_access_token
+    from uniffy.core.auth.tokens import create_access_token
 
     return create_access_token(USER, organization_id=organization_id)
 
@@ -78,8 +79,15 @@ async def _consume(stream) -> list[StreamNotificationsResponse]:
     return [response async for response in stream]
 
 
-def _stream(request: StreamNotificationsRequest, token: str):
-    return NotificationsHandlers().stream_notifications(request, _ctx(token))
+async def _stream(request: StreamNotificationsRequest, token: str):
+    ctx = _ctx(token)
+    interceptor = AuthenticationInterceptor()
+    reset_token = await interceptor.on_start(ctx)
+    try:
+        async for response in NotificationsHandlers().stream_notifications(request, ctx):
+            yield response
+    finally:
+        await interceptor.on_end(reset_token, ctx, None)
 
 
 async def test_a_token_bound_to_org_a_cannot_stream_org_b() -> None:

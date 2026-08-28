@@ -1,5 +1,6 @@
 """Agent operations."""
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -13,8 +14,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.avatars import delete_avatar as s3_delete_avatar
 from uniffy.core.avatars import upload_avatar as s3_upload_avatar
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.content.members import (
-    ContentMembersOperations,
+from uniffy.core.content.registry import (
     register_content_loader,
     register_manage_override,
 )
@@ -24,6 +24,7 @@ from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.integrations.connection import IntegrationConnection
+from uniffy.core.models.tags.tag import TagAssignment
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.users.cache import invalidate_agent_profile
@@ -36,8 +37,8 @@ from uniffy.domains.agents.cache import (
     set_cached_agent,
     track_agent_skill_refs,
 )
-from uniffy.domains.agents.content_policy import check_admin_content
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
+from uniffy.domains.agents.policy import check_admin_content
 from uniffy.domains.agents.providers.catalog import (
     provider_for_model,
     strip_unsupported_image_params,
@@ -46,9 +47,20 @@ from uniffy.domains.agents.providers.catalog import (
 )
 from uniffy.domains.integrations.registry import get_integration_registry
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.tags import TagAssignment, TagOperations
+from uniffy.domains.permissions.members import (
+    ContentMembersOperations,
+    StagedContentMemberAdd,
+)
+from uniffy.domains.tags.operations import StagedManualTagReplacement, TagOperations
 
 logger = logger.bind(component="agents.agents.operations")
+
+
+@dataclass(frozen=True)
+class _StagedAgentCreate:
+    agent: Agent
+    members: tuple[StagedContentMemberAdd, ...]
+    tags: StagedManualTagReplacement | None
 
 
 def _check_model_params(model_id: str, params: dict | None) -> None:
@@ -350,48 +362,111 @@ class AgentOperations(BaseContentOperations[Agent]):
             integration_connections=integration_connections or {},
         )
         self.session.add(agent)
-        await self.session.commit()
-        await self.session.refresh(agent)
-
-        if group_ids:
+        staged_members: list[StagedContentMemberAdd] = []
+        staged_tags = None
+        try:
+            await self.session.flush()
             members_ops = ContentMembersOperations(self.session)
-            for gid in group_ids:
-                await members_ops.add_member(
-                    actor_user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=self.content_type,
-                    content_id=agent.id,
-                    subject_type=SubjectType.GROUP,
-                    subject_id=gid,
-                    role=ContentRole.VIEWER,
+            for gid in group_ids or []:
+                staged_members.append(
+                    await members_ops.stage_member(
+                        actor_user_id=user_id,
+                        organization_id=organization_id,
+                        content_type=self.content_type,
+                        content_id=agent.id,
+                        subject_type=SubjectType.GROUP,
+                        subject_id=gid,
+                        role=ContentRole.VIEWER,
+                    )
                 )
 
-        await self._sync_agent_tags(
-            actor_id=user_id,
-            agent=agent,
-            tag_ids=tag_ids,
+            if tag_ids is not None:
+                staged_tags = await TagOperations(self.session).stage_manual_tags(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    content_urn=build_content_urn(self.content_type, agent.id),
+                    tag_ids=tag_ids,
+                )
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.AGENT_CREATED,
+                resource_type=AuditResourceType.AGENT,
+                resource_id=agent.id,
+                details={"name": agent.name},
+            )
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        await self.session.refresh(agent)
+
+        await self._finish_agent_create_after_commit(
+            _StagedAgentCreate(agent, tuple(staged_members), staged_tags)
         )
-
-        await self._index_for_search(agent, skip_member_lookup=not group_ids)
-        await self.session.commit()
-
-        await write_audit_event(
-            self.session,
-            organization_id=organization_id,
-            actor_user_id=user_id,
-            action=Action.AGENT_CREATED,
-            resource_type=AuditResourceType.AGENT,
-            resource_id=agent.id,
-            details={"name": agent.name},
-        )
-        await self.session.commit()
-
-        await set_cached_agent(agent)
-        added_skill_uuids = _coerce_uuid_list(agent.enabled_skills)
-        if added_skill_uuids:
-            await track_agent_skill_refs(agent.id, added_skill_ids=added_skill_uuids)
 
         return agent
+
+    async def _finish_agent_create_after_commit(self, staged: _StagedAgentCreate) -> None:
+        agent = staged.agent
+        members_ops = ContentMembersOperations(self.session)
+        for member in staged.members:
+            try:
+                await members_ops.finish_member_add_after_commit(member)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Agent created with degraded initial member fanout",
+                    agent_id=str(agent.id),
+                )
+
+        if staged.tags is not None:
+            try:
+                await TagOperations(self.session).finish_manual_tags_after_commit(staged.tags)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Agent created with degraded tag projection",
+                    agent_id=str(agent.id),
+                )
+
+        try:
+            await self._index_for_search(agent, skip_member_lookup=not staged.members)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Agent created with stale search projection",
+                agent_id=str(agent.id),
+            )
+
+        try:
+            effective_mode, _ = await self._effective_policy(agent.organization_id, agent)
+            await self._broadcast_open_to_org_create(
+                agent.organization_id,
+                agent.id,
+                effective_mode,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Agent created with degraded access fanout",
+                agent_id=str(agent.id),
+            )
+
+        try:
+            await set_cached_agent(agent)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Agent created with stale profile cache",
+                agent_id=str(agent.id),
+            )
+
+        added_skill_uuids = _coerce_uuid_list(agent.enabled_skills)
+        if added_skill_uuids:
+            try:
+                await track_agent_skill_refs(agent.id, added_skill_ids=added_skill_uuids)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Agent created with stale skill reference cache",
+                    agent_id=str(agent.id),
+                )
 
     async def list_agents(
         self,

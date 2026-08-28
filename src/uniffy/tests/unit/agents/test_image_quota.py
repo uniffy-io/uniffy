@@ -13,12 +13,12 @@ from uniffy.core.errors import BudgetExceededError
 from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.models.agents.user_quota import AgentUserQuota
 from uniffy.core.types import generate_id
-from uniffy.domains.agents.budgets import image_quota as mod
+from uniffy.domains.agents.budgets import images as mod
 from uniffy.domains.agents.budgets.defaults import (
     DEFAULT_DAILY_IMAGE_LIMIT_PER_USER,
     DEFAULT_MONTHLY_IMAGE_LIMIT_PER_ORG,
 )
-from uniffy.domains.agents.budgets.image_quota import check_image_quota
+from uniffy.domains.agents.budgets.images import check_image_quota
 from uniffy.domains.agents.budgets.period import month_window as _month_window
 
 

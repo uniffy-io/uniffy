@@ -26,8 +26,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.config.settings import DeploymentSettingsOperations
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
 
 MFA_NAMESPACE = "mfa"
 _KEY_REQUIRED_FOR_SYSTEM_ADMINS = "required_for_system_admins"

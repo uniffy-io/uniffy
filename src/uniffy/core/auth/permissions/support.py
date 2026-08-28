@@ -5,6 +5,10 @@ from uuid import UUID
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.support_session import (
+    ActiveSupportSession,
+    active_support_session_var,
+)
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
@@ -12,10 +16,6 @@ from uniffy.core.models.platform.support_session import (
     SupportSession,
     SupportSessionScope,
     SupportSessionState,
-)
-from uniffy.domains.platform.support_session.context import (
-    ActiveSupportSession,
-    active_support_session_var,
 )
 
 

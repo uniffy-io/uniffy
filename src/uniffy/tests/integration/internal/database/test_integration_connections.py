@@ -10,10 +10,13 @@ import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy import func, select
 
 from uniffy.core.crypto import OrgCipher
 from uniffy.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.integrations.connection import IntegrationConnection
 from uniffy.core.types import generate_id
+from uniffy.db import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.integrations.base import (
     IntegrationDescriptor,
@@ -138,6 +141,59 @@ async def test_probe_reported_failure_still_stores_the_row_as_invalid(session, e
     assert [r.id for r in rows] == [row.id]
     assert row.is_valid is False
     assert row.last_error == "bad credentials"
+
+
+async def test_add_connection_rolls_back_when_required_audit_fails(session, env) -> None:
+    name = f"audit-rollback-{generate_id().hex[:10]}"
+    with (
+        _registry(FakeGitHubProvider()),
+        patch(
+            "uniffy.domains.integrations.operations.write_audit_event",
+            new=AsyncMock(side_effect=RuntimeError("integration audit unavailable")),
+        ),
+        pytest.raises(RuntimeError, match="integration audit unavailable"),
+    ):
+        await _add(session, env, name=name)
+
+    async with open_session() as isolated:
+        count = await isolated.scalar(
+            select(func.count())
+            .select_from(IntegrationConnection)
+            .where(
+                IntegrationConnection.organization_id == env.org_id,
+                IntegrationConnection.name == name,
+            )
+        )
+
+    assert count == 0
+
+
+async def test_update_connection_rolls_back_when_required_audit_fails(session, env) -> None:
+    original_name = f"before-audit-{generate_id().hex[:10]}"
+    changed_name = f"after-audit-{generate_id().hex[:10]}"
+    with _registry(FakeGitHubProvider()):
+        row = await _add(session, env, name=original_name)
+    connection_id = row.id
+
+    with (
+        patch(
+            "uniffy.domains.integrations.operations.write_audit_event",
+            new=AsyncMock(side_effect=RuntimeError("integration audit unavailable")),
+        ),
+        pytest.raises(RuntimeError, match="integration audit unavailable"),
+    ):
+        await ConnectionOperations(session).update_connection(
+            user_id=env.admin_id,
+            organization_id=env.org_id,
+            connection_id=connection_id,
+            name=changed_name,
+        )
+
+    async with open_session() as isolated:
+        persisted = await isolated.get(IntegrationConnection, connection_id)
+
+    assert persisted is not None
+    assert persisted.name == original_name
 
 
 async def test_duplicate_name_for_the_same_org_and_provider_conflicts(session, env) -> None:

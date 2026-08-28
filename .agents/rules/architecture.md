@@ -27,7 +27,8 @@ paths:
 
 Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 
-- **Backend**: `src/uniffy/domains/{feature}/` with operations, handlers, service, converters
+- **Backend**: `src/uniffy/domains/{feature}/` or
+  `src/uniffy/domains/{context}/{subdomain}/` with operations, handlers, service, converters
 - **Frontend**: `src/ui/src/features/{feature}/` with api, store, components, pages, hooks
 - **Proto**: `src/proto/{service}/v1/{service}.proto` defines the API contract
 
@@ -37,11 +38,11 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 
 **Permission system**: Every content row carries an `access_mode` + optional `baseline_role`, resolved by `PermissionChecker.effective_role`. Personal content is private until shared - org/domain admins get no content bypass. Full model, enforcement points, caching, search/tag filtering, chat's separate model, and the hard rules live in **`.agents/rules/permissions.md`** (the single source of truth - do not duplicate it here).
 
-**Background jobs:** The domain or core subsystem that owns the state and invariants also owns its
-typed job contracts and handlers, normally under `domains/{feature}/jobs.py` or
-`domains/{feature}/jobs/`. `core/jobs/` is the generic type and dispatch boundary, while `workers/`
-only composes owner-defined jobs into the validated core and egress ARQ fleets and manages their
-process lifecycle.
+**Background jobs:** The domain that owns the state and invariants also owns its typed contracts and
+handlers under `domains/{feature}/jobs/contracts.py` and `domains/{feature}/jobs/jobs.py`. Large job
+surfaces may keep additional focused, one-word collaborators beside those canonical files.
+`core/jobs/` is the generic type and dispatch boundary, while `workers/` only composes owner-defined
+jobs into the validated core and egress ARQ fleets and manages their process lifecycle.
 
 ---
 

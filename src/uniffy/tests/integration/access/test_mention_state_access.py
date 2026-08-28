@@ -2,7 +2,7 @@
 
 import pytest
 
-from uniffy.domains.notifications.tag_relay import TagEventRelay
+from uniffy.domains.notifications.tags import TagEventRelay
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

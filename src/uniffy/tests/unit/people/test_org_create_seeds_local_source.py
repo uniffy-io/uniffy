@@ -1,8 +1,7 @@
-"""Org creation seeds the LOCAL identity source in the org's first transaction."""
+"""Organization staging includes the local identity source."""
 
-from unittest.mock import AsyncMock, MagicMock
-
-import pytest
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
@@ -10,23 +9,54 @@ from uniffy.core.types import generate_id
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 
-class _FirstCommit(Exception):
-    """Raised by the mocked first commit so the test sees exactly the rows
-    staged in the org's initial transaction and nothing later."""
-
-
 class TestOrgCreateSeedsLocalSource:
-    async def test_local_source_staged_before_first_commit(self) -> None:
+    async def test_local_source_staged_with_owner_membership(self) -> None:
         session = MagicMock()
         session.add = MagicMock()
+        session.add_all = MagicMock()
         session.flush = AsyncMock()
-        session.commit = AsyncMock(side_effect=_FirstCommit)
-        ops = OrganizationOperations(session)
+        owner_id = generate_id()
+        owner_lookup = MagicMock()
+        owner_lookup.scalar_one_or_none.return_value = SimpleNamespace(id=owner_id)
+        session.execute = AsyncMock(return_value=owner_lookup)
+        ops = OrganizationOperations.__new__(OrganizationOperations)
+        ops._session = session
 
-        with pytest.raises(_FirstCommit):
-            await ops.create("Acme", "acme", generate_id())
+        cipher = MagicMock()
+        cipher.provision = AsyncMock()
+        channels = MagicMock()
+        channels.stage_channel = AsyncMock(return_value=MagicMock())
 
-        added = [call.args[0] for call in session.add.call_args_list]
+        with (
+            patch("uniffy.domains.organizations.operations.OrgCipher", return_value=cipher),
+            patch(
+                "uniffy.domains.organizations.operations.stage_personal_attachments_folder",
+                AsyncMock(),
+            ),
+            patch(
+                "uniffy.domains.organizations.operations.create_default_presets",
+                AsyncMock(),
+            ),
+            patch(
+                "uniffy.domains.organizations.operations.create_default_tag_filter_presets",
+                AsyncMock(),
+            ),
+            patch(
+                "uniffy.domains.organizations.operations.ChatChannelOperations",
+                return_value=channels,
+            ),
+            patch(
+                "uniffy.domains.organizations.operations.stage_default_agent",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "uniffy.domains.organizations.operations.write_audit_event",
+                AsyncMock(),
+            ),
+        ):
+            await ops.stage_organization("Acme", "acme", owner_id)
+
+        added = [row for call in session.add_all.call_args_list for row in call.args[0]]
         sources = [row for row in added if isinstance(row, IdentitySource)]
         memberships = [row for row in added if isinstance(row, OrganizationMember)]
         assert len(sources) == 1

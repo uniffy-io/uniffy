@@ -19,7 +19,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.people.cache import invalidate_chart, invalidate_person
-from uniffy.domains.people.search_sync import sync_people_search
+from uniffy.domains.people.search import sync_people_search
 
 DEFAULT_PAGE_SIZE = 200
 MAX_PAGE_SIZE = 500

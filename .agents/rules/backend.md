@@ -11,7 +11,8 @@ Rules and load-bearing conventions for the Python backend. Domain-specific invar
 
 ## Vertical slices
 
-Each feature is self-contained in `src/uniffy/domains/{feature}/`:
+Each bounded context is self-contained at `src/uniffy/domains/{feature}/` or, when several cohesive
+subdomains share a parent context, `src/uniffy/domains/{context}/{subdomain}/`:
 
 ```
 domains/{feature}/
@@ -31,6 +32,20 @@ Adding a new domain:
 4. Mount in `factory.py`: `app.mount("/feature.v1.FeatureService", FeatureServiceASGIApplication(service))`
 5. New searchable content type: complete the Search Integration Checklist in `architecture.md`
 
+## Dependency boundaries
+
+- `core` is the shared kernel and infrastructure layer and never imports `domains`. The Import
+  Linter contract in `pyproject.toml` enforces this for every module below `core/` with no
+  exceptions. Move a shared dependency to core or invert the integration at the application
+  composition root.
+- Domain-to-domain imports use an owner-approved package export or a narrow `context`, `http`,
+  `contracts`, `ports`, `policy`, `projection`, or `types` module. Another domain's handlers,
+  services, converters, queries, caches, and operations are implementation details.
+- Web and worker entry points perform explicit composition. Importing a package solely to trigger
+  registration is not a supported integration mechanism.
+- Parent namespaces group cohesive bounded contexts without flattening their subdomains. Package
+  count is not an architecture quality metric.
+
 ## Core patterns
 
 - **Async everywhere.** Database I/O goes through `AsyncSession`; the rest of the stack composes around it.
@@ -44,6 +59,22 @@ Adding a new domain:
 - **Type hints** on all functions; docstring discipline per `comment-discipline.md`.
 - **Internal and domain vocabularies use enums or typed constants colocated with their owner.** States, actions, event kinds, selectors, and job or queue names must not be passed or compared as raw strings.
 - **Raw string comparisons are boundary-only:** external protocol values, parser tokens, MIME/schema metadata, and CLI or environment inputs. Mark an intentional comparison with a narrow `# noqa: PLR2004` and a short reason; never suppress the whole file.
+
+## Transaction boundaries
+
+- An externally callable mutation owns its authoritative transaction. Domain rows and every required
+  audit row commit together; a failure before that commit leaves neither fact behind.
+- Reusable helpers that join a caller's transaction use a focused `stage_*` operation. A staging
+  operation validates its own invariants, adds or changes its owned rows, and may flush for generated
+  identifiers, but it never commits. Do not add generic `commit=False` flags.
+- Search, cache invalidation, realtime publication, email, and other external effects run only after
+  the authoritative commit. A required durable effect uses an owner-defined typed job contract backed
+  by a PostgreSQL recovery fact; an in-memory retry or a queue call alone is not durable.
+- PostgreSQL authorization facts remain authoritative when a post-commit projection or notification
+  fails. Degraded external effects are logged and retried through their owner where a recovery path
+  exists; they never cause a second write to weaken or roll back an already committed access fact.
+- Transaction correctness is proven with behavior tests for rollback, concurrent mutation, and
+  post-commit degradation. Commit-call counts may guide diagnosis but are not an architectural test.
 
 ## JSON serialization
 
@@ -106,13 +137,16 @@ Exactly **two generic settings stores**. Do NOT add per-domain settings/policy/c
 | Deployment | `deployment_settings` | `DeploymentSettingsOperations` | whole install | `DeploymentCipher` |
 | Per-org | `org_settings` | `OrgSettingsOperations` | one tenant | `OrgCipher` |
 
+The generic store implementations live in `core/config/settings/deployment.py` and
+`core/config/settings/organization.py`.
+
 Both are `(namespace, key) -> value` KV rows: plaintext JSONB `value`, or `value_encrypted` when `is_secret=true` (CHECK constraint enforces exclusivity).
 
 - **Pick by scope.** Operator config (registration policy, VAPID keys, system mail relay) -> `deployment_settings`. Tenant config (per-org mail, security, MFA, call policy, agent runtime knobs) -> `org_settings`. Per-**user** preferences stay in `settings_profiles`, not the KV stores.
 - **One namespace per domain** (`namespace='calls'`, `namespace='mail'`, ...), one JSON blob or key-per-setting within it.
-- **Wrap the blob in a frozen dataclass with code-level defaults.** Reference: `domains/calls/policy.py::ResolvedCallPolicy`, `domains/agents/runtime/settings.py::ResolvedRuntimeSettings`. The loader never returns a raw dict; a missing row resolves to defaults.
+- **Wrap the blob in a frozen dataclass with code-level defaults.** Reference: `domains/calls/policy.py::ResolvedCallPolicy`, `domains/agents/runtime/settings/operations.py::ResolvedRuntimeSettings`. The loader never returns a raw dict; a missing row resolves to defaults.
 - **Secrets:** `is_secret=True` encrypts through the tenant/deployment cipher; reads are opt-in via `get_secret(...)`. The `ReEncryptingConsumer` registered per table rotates every `is_secret` row automatically. Never plaintext, never a hand-rolled shared-key Fernet path.
-- **Resolution chain:** per-org row -> env default -> coded default -> typed error. Canonical: `core/mail/resolver.py`, `domains/system_config/operations.py`.
+- **Resolution chain:** per-org row -> env default -> coded default -> typed error. Canonical: `core/mail/resolver.py`, `core/config/registration.py`.
 - **Audit operator-facing writes** in the same transaction (`write_audit_event`).
 - **A real table is still right** for high-cardinality, relational, or hot-path-indexed config (`permissions_org_defaults` is the reference counter-example: materialized policy, not operator config).
 
@@ -124,7 +158,7 @@ Content we author and ship with the build - prompts, agent templates, bundled sk
 |---|---|---|
 | Agent templates | `data/catalog/*.md` | `domains/agents/templates.py` |
 | Bundled agent skills | `data/skills/*.md` | `db/bundled_skills.py` |
-| Platform prompts | `data/prompts/*.md` | `domains/agents/runtime/workspace_prompt.py` |
+| Platform prompts | `data/prompts/*.md` | `domains/agents/runtime/workspace.py` |
 | Model catalog | `data/models/catalog.json` | `domains/agents/providers/catalog/loader.py` |
 | Seed assets | `data/assets/` | `db/seed.py` |
 
@@ -187,12 +221,15 @@ JWT access/refresh pattern; users authenticate globally, then select an org cont
 - `auth.v1.AuthService` is **authentication only** (Register, Login, RefreshToken, GetCurrentUser, Logout). User / org / group management live on their own services.
 - Access token carries `user_id`, `org_id`, `token_version`; refresh token has no org context.
 - `User.token_version` revokes: incrementing it invalidates all existing tokens; validated on every refresh.
-- Key files: `domains/auth/operations.py`, `domains/auth/tokens.py`, `core/models/login/user.py`.
+- The ConnectRPC interceptor decodes a protected request once and publishes an immutable
+  `AuthenticatedPrincipal` through `core/auth/principal.py`; handlers consume that request-scoped identity.
+- Key files: `domains/auth/operations.py`, `domains/auth/interceptors.py`, `core/auth/principal.py`,
+  `core/auth/tokens.py`, `core/models/login/user.py`.
 - The asset-read cookie (GET asset reads for `<img>`/`<video>`/`<audio>`) is owned by `.agents/rules/files-domain.md` - do not add cookie handling elsewhere.
 
 ## HTTP routes vs ConnectRPC
 
-Default is ConnectRPC. Plain FastAPI HTTP routes (`domains/{feature}/http_routes.py`, mounted in `factory.py` under `/api`) exist for GET asset reads that need browser caching or Range requests: files, thumbnails, media, avatars. Identity comes from `get_current_user_id` (`domains/auth/http_deps.py`), which accepts Bearer OR the asset cookie; permission gating stays in the route handler via the domain operations. Media seeking is a native HTTP Range route - do NOT reintroduce a ConnectRPC media stream. Full contract: `.agents/rules/files-domain.md`.
+Default is ConnectRPC. Plain FastAPI HTTP routes (`domains/{feature}/routes.py`, mounted in `factory.py` under `/api`) exist for GET asset reads that need browser caching or Range requests: files, thumbnails, media, avatars. Identity comes from `get_current_user_id` (`core/auth/http.py`), which accepts Bearer OR the asset cookie; permission gating stays in the route handler via the domain operations. Media seeking is a native HTTP Range route - do NOT reintroduce a ConnectRPC media stream. Full contract: `.agents/rules/files-domain.md`.
 
 ## Attachments (sub-feature of files)
 
@@ -201,11 +238,11 @@ Attachments link a file to content via a generic `(content_type, content_id)` ro
 ## Background jobs (ARQ + Valkey)
 
 Job behavior and producer-facing contracts belong to the domain or core subsystem whose state and
-invariants they operate on: a small domain surface uses `domains/{feature}/job_contracts.py` +
-`jobs.py`, while a larger one uses `domains/{feature}/jobs/contracts.py` + focused handler modules.
-`core/jobs/` owns only the generic contract types and dispatch helpers; `workers/` is the composition
-root that validates registrations, builds the core and egress fleets, manages their resources, and
-renders the executable inventory.
+invariants they operate on. Every domain uses `domains/{feature}/jobs/contracts.py` and
+`domains/{feature}/jobs/jobs.py`; a large surface may keep additional focused, one-word collaborators
+beside those files rather than breaching the 500-line soft cap. `core/jobs/` owns only the generic
+contract types and dispatch helpers; `workers/` is the composition root that validates registrations,
+builds the core and egress fleets, manages their resources, and renders the executable inventory.
 
 ### Creating a job
 

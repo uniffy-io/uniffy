@@ -8,7 +8,7 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.shared import AttendeeStatus
 from uniffy.core.types import AccessMode, RecurrencePattern, generate_id
-from uniffy.domains.calendar.jobs import _process_due_reminders
+from uniffy.domains.calendar.jobs.jobs import _process_due_reminders
 
 
 def _daily_event(start_time: datetime, **overrides: object) -> CalendarEvent:
@@ -57,7 +57,7 @@ async def test_fresh_recurring_reminder_emits_and_rolls_forward() -> None:
     reminder = _reminder(event, scheduled_at=target - timedelta(minutes=15))
     session = _session([(reminder, event)], with_exceptions=True)
 
-    with patch("uniffy.domains.calendar.jobs.emit_notification", AsyncMock()) as emit:
+    with patch("uniffy.domains.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
         processed = await _process_due_reminders(session)
 
     assert processed == 1
@@ -74,7 +74,7 @@ async def test_stale_recurring_reminder_reanchors_without_emitting() -> None:
     reminder = _reminder(event, scheduled_at=stale_target - timedelta(minutes=15))
     session = _session([(reminder, event)], with_exceptions=True)
 
-    with patch("uniffy.domains.calendar.jobs.emit_notification", AsyncMock()) as emit:
+    with patch("uniffy.domains.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
         await _process_due_reminders(session)
 
     emit.assert_not_awaited()
@@ -94,7 +94,7 @@ async def test_ended_series_closes_the_row() -> None:
     reminder = _reminder(event, scheduled_at=base - timedelta(days=2))
     session = _session([(reminder, event)], with_exceptions=True)
 
-    with patch("uniffy.domains.calendar.jobs.emit_notification", AsyncMock()) as emit:
+    with patch("uniffy.domains.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
         await _process_due_reminders(session)
 
     emit.assert_not_awaited()
@@ -111,7 +111,7 @@ async def test_non_recurring_reminder_emits_once_and_closes() -> None:
     reminder = _reminder(event, scheduled_at=base - timedelta(minutes=1))
     session = _session([(reminder, event)], with_exceptions=False)
 
-    with patch("uniffy.domains.calendar.jobs.emit_notification", AsyncMock()) as emit:
+    with patch("uniffy.domains.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
         await _process_due_reminders(session)
 
     emit.assert_awaited_once()
@@ -120,7 +120,7 @@ async def test_non_recurring_reminder_emits_once_and_closes() -> None:
 
 async def _emitted_event(event: CalendarEvent, reminder: EventReminder) -> object:
     session = _session([(reminder, event)], with_exceptions=False)
-    with patch("uniffy.domains.calendar.jobs.emit_notification", AsyncMock()) as emit:
+    with patch("uniffy.domains.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
         await _process_due_reminders(session)
     return emit.await_args.args[0]
 
@@ -184,7 +184,7 @@ async def test_declined_attendee_is_closed_without_emitting() -> None:
     declined = SimpleNamespace(status=AttendeeStatus.DECLINED)
     session = _session([(reminder, event)], with_exceptions=False, attendees=[declined])
 
-    with patch("uniffy.domains.calendar.jobs.emit_notification", AsyncMock()) as emit:
+    with patch("uniffy.domains.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
         await _process_due_reminders(session)
 
     emit.assert_not_awaited()

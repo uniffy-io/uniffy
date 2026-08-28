@@ -20,13 +20,13 @@ from uniffy_proto.presence.v1.presence_pb2 import (
     UserPresence,
 )
 
-from uniffy.core.converters.proto import timestamp_to_datetime
-from uniffy.db import open_session
-from uniffy.domains.auth.context import (
-    get_organization_id_from_context,
-    get_user_id_from_context,
+from uniffy.core.auth.principal import (
+    current_organization_id,
+    current_user_id,
     resolve_organization_id,
 )
+from uniffy.core.converters.proto import timestamp_to_datetime
+from uniffy.db import open_session
 from uniffy.domains.presence.converters import (
     proto_status_to_string,
     string_to_proto_status,
@@ -43,9 +43,9 @@ class PresenceHandlers:
         ctx: RequestContext,
     ) -> SetPresenceResponse:
         """Heartbeat; publishes a change event when the status differs from the previous value."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        organization_id = resolve_organization_id(request.organization_id)
 
         status_string = proto_status_to_string(request.status)
         client = request.client or "web"
@@ -67,9 +67,9 @@ class PresenceHandlers:
         request: GetBulkPresenceRequest,
         ctx: RequestContext,
     ) -> GetBulkPresenceResponse:
-        get_user_id_from_context(ctx)
+        current_user_id()
 
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        organization_id = resolve_organization_id(request.organization_id)
 
         if len(request.user_ids) > 200:
             raise ConnectError(
@@ -125,8 +125,8 @@ class PresenceHandlers:
         request: SetCustomStatusRequest,
         ctx: RequestContext,
     ) -> SetCustomStatusResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = get_organization_id_from_context(ctx)
+        user_id = current_user_id()
+        organization_id = current_organization_id()
 
         if not request.text and not request.emoji:
             raise ConnectError(
@@ -171,8 +171,8 @@ class PresenceHandlers:
         request: ClearCustomStatusRequest,
         ctx: RequestContext,
     ) -> ClearCustomStatusResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = get_organization_id_from_context(ctx)
+        user_id = current_user_id()
+        organization_id = current_organization_id()
 
         try:
             async with open_session() as session:

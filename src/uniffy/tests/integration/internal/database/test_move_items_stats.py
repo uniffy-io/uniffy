@@ -56,9 +56,15 @@ async def test_move_items_refreshes_each_affected_folder_once(session, env, monk
         target_folder_id=str(target.id),
     )
     try:
-        with patch(
-            "uniffy.domains.files.handlers.get_user_id_from_context",
-            MagicMock(return_value=env.admin_id),
+        with (
+            patch(
+                "uniffy.domains.files.rpc.bulk.current_user_id",
+                MagicMock(return_value=env.admin_id),
+            ),
+            patch(
+                "uniffy.domains.files.rpc.bulk.resolve_organization_id",
+                MagicMock(return_value=env.org_id),
+            ),
         ):
             response = await FilesHandlers().move_items(request, MagicMock())
 

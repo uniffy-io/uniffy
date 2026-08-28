@@ -18,7 +18,7 @@ from uniffy.domains.agents.providers.catalog import (
     resolve_image_params,
 )
 from uniffy.domains.agents.providers.catalog.schema import ParamAudience
-from uniffy.domains.agents.tools.builtin.content_space import (
+from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
     space_for_access_mode,
@@ -101,7 +101,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     image_model = agent.image_model
 
     from uniffy.core.valkey.rate_limit import check_image_generation_limits
-    from uniffy.domains.agents.budgets.image_quota import check_image_quota
+    from uniffy.domains.agents.budgets.images import check_image_quota
 
     await check_image_generation_limits(
         ctx.session,
@@ -237,7 +237,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         metadata={"mime_type": mime_type, "image_model": image_model},
     )
 
-    from uniffy.domains.agents.budget_alerts import check_and_fire_alerts
+    from uniffy.domains.agents.budgets.alerts import check_and_fire_alerts
     from uniffy.domains.agents.currency import (
         convert as convert_currency,
     )

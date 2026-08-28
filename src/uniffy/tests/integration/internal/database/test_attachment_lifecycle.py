@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import delete, select, update
 
 from uniffy.core.auth.permissions import PermissionChecker
-from uniffy.core.content.members import ContentMembersOperations
+from uniffy.domains.permissions.members import ContentMembersOperations
 from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.file_version import FileVersion
@@ -27,7 +27,7 @@ from uniffy.domains.files.attachments import operations as attachments_module
 from uniffy.domains.files.attachments.operations import AttachmentOperations
 from uniffy.domains.files.operations import FileOperations
 from uniffy.domains.notes.operations import NoteOperations
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
@@ -104,7 +104,9 @@ async def _staged_setup(session, env, ops: AttachmentOperations) -> tuple[Folder
     return staging, staged
 
 
-async def test_staged_file_links_in_place_and_stays_private(session, env, s3_mock, quiet_search) -> None:
+async def test_staged_file_links_in_place_and_stays_private(
+    session, env, s3_mock, quiet_search
+) -> None:
     ops = AttachmentOperations(session)
     try:
         staging, staged = await _staged_setup(session, env, ops)
@@ -334,9 +336,7 @@ async def test_purge_removes_attachment_and_file_rows(session, env, s3_mock, qui
         )
         await session.commit()
 
-        removed = await ops.purge_attachments_for_content(
-            env.org_id, ContentType.NOTE, [note.id]
-        )
+        removed = await ops.purge_attachments_for_content(env.org_id, ContentType.NOTE, [note.id])
         await session.commit()
 
         assert removed == 1

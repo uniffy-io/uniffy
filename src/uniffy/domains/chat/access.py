@@ -30,6 +30,18 @@ class ChatAccessChecker:
         self._domain_admin_cache: dict[tuple[UUID, UUID], bool] = {}
         self._org_member_cache: dict[tuple[UUID, UUID], bool] = {}
 
+    @staticmethod
+    def can_view_from_facts(
+        *,
+        is_active_member: bool,
+        is_moderator: bool,
+        channel_type: ChannelType,
+        has_membership: bool,
+    ) -> bool:
+        return is_active_member and (
+            is_moderator or channel_type == ChannelType.PUBLIC or has_membership
+        )
+
     async def get_channel(self, channel_id: UUID, organization_id: UUID) -> ChatChannel:
         if channel_id in self._channel_cache:
             return self._channel_cache[channel_id]
@@ -117,14 +129,18 @@ class ChatAccessChecker:
         channel: ChatChannel,
     ) -> None:
         await self.require_org_member(user_id, organization_id)
-        if await self.is_org_admin(user_id, organization_id):
-            return
-        if await self.is_chat_domain_admin(user_id, organization_id):
-            return
-        if channel.channel_type == ChannelType.PUBLIC:
-            return
-        member = await self.get_membership(channel.id, user_id)
-        if not member:
+        is_moderator = await self.is_org_admin(
+            user_id, organization_id
+        ) or await self.is_chat_domain_admin(user_id, organization_id)
+        has_membership = False
+        if not is_moderator and channel.channel_type != ChannelType.PUBLIC:
+            has_membership = await self.get_membership(channel.id, user_id) is not None
+        if not self.can_view_from_facts(
+            is_active_member=True,
+            is_moderator=is_moderator,
+            channel_type=channel.channel_type,
+            has_membership=has_membership,
+        ):
             raise PermissionDeniedError("access", "channel")
 
     async def filter_viewers(

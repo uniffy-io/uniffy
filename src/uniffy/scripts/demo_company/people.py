@@ -7,6 +7,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.organization_member import (
@@ -14,12 +15,11 @@ from uniffy.core.models.login.organization_member import (
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
-from uniffy.domains.auth.passwords import hash_password
 from uniffy.domains.groups.naming import slugify
 from uniffy.domains.groups.operations import GroupOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.people.operations import PeopleOperations
-from uniffy.domains.people.search_sync import sync_people_search
+from uniffy.domains.people.search import sync_people_search
 from uniffy.scripts.demo_company.context import DemoContext, DomainResult, SeedReport
 from uniffy.scripts.demo_company.loader import (
     DemoUser,

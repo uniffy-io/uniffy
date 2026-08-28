@@ -12,8 +12,8 @@ try:
 except ImportError:
     logger.warning("FastAPI is not installed, skipping request logging")
 
-from uniffy.domains.auth.cookies import resolve_asset_cookie_config
-from uniffy.domains.auth.tokens import decode_access_token, decode_asset_read_token
+from uniffy.core.auth.cookies import resolve_asset_cookie_config
+from uniffy.core.auth.tokens import decode_access_token, decode_asset_read_token
 from uniffy.observability.crpc import http_version_var
 from uniffy.observability.metrics import HTTP_REQUEST_DURATION, HTTP_REQUESTS_TOTAL
 

@@ -19,7 +19,7 @@ from uniffy.domains.bookmarks.pagination import (
     encode_bookmark_cursor,
 )
 from uniffy.domains.bookmarks.types import BookmarkItem, BookmarkItemsPage
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,

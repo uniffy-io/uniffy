@@ -12,7 +12,7 @@ from uniffy.core.models.files.file import (
     TranscodeStatus,
 )
 from uniffy.core.types import generate_id
-from uniffy.domains.files.jobs.recovery import pending_file_processing_query
+from uniffy.domains.files.jobs.jobs import pending_file_processing_query
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

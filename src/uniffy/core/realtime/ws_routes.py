@@ -14,6 +14,8 @@ from fastapi import APIRouter, Query, WebSocket
 from loguru import logger
 
 from uniffy.core.auth.membership import is_active_member
+from uniffy.core.auth.revocation import is_access_token_revoked, is_session_revoked
+from uniffy.core.auth.tokens import decode_access_token
 from uniffy.core.realtime.auth import (
     CANONICAL_SUBPROTOCOL,
     WS_CLOSE_FORBIDDEN,
@@ -25,8 +27,6 @@ from uniffy.core.realtime.auth import (
 )
 from uniffy.core.realtime.session import run_multiplexed_session
 from uniffy.core.realtime.state import WSSession
-from uniffy.domains.auth.revocation import is_access_token_revoked, is_session_revoked
-from uniffy.domains.auth.tokens import decode_access_token
 from uniffy.observability.metrics import REALTIME_AUTH_FAILURES_TOTAL
 
 LOGGER_COMPONENT = "realtime.ws"

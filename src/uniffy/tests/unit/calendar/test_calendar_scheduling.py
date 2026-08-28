@@ -7,8 +7,8 @@ import pytest
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.types import generate_id
-from uniffy.domains.calendar.availability import BusyInterval
 from uniffy.domains.calendar.scheduling import (
+    BusyInterval,
     Suggestion,
     intersect_intervals,
     subtract_intervals,

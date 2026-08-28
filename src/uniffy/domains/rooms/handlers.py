@@ -34,6 +34,7 @@ from uniffy_proto.rooms.v1.rooms_pb2 import (
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
@@ -44,8 +45,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
+from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.rooms.converters import (
     BOOKING_STATUS_FROM_PROTO,
     booking_to_proto,
@@ -102,7 +102,7 @@ class RoomHandlers:
         request: CreateRoomRequest,
         ctx: RequestContext,
     ) -> CreateRoomResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
@@ -171,7 +171,7 @@ class RoomHandlers:
         request: GetRoomRequest,
         ctx: RequestContext,
     ) -> GetRoomResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
 
@@ -203,7 +203,7 @@ class RoomHandlers:
         request: UpdateRoomRequest,
         ctx: RequestContext,
     ) -> UpdateRoomResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
 
@@ -262,7 +262,7 @@ class RoomHandlers:
         request: DeleteRoomRequest,
         ctx: RequestContext,
     ) -> DeleteRoomResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
 
@@ -287,7 +287,7 @@ class RoomHandlers:
         request: ListRoomsRequest,
         ctx: RequestContext,
     ) -> ListRoomsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         room_type = None
@@ -369,7 +369,7 @@ class BookingHandlers:
         request: CreateBookingRequest,
         ctx: RequestContext,
     ) -> CreateBookingResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
 
@@ -406,7 +406,7 @@ class BookingHandlers:
         request: GetBookingRequest,
         ctx: RequestContext,
     ) -> GetBookingResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         booking_id = _parse_uuid(request.booking_id, "booking_id")
 
@@ -428,7 +428,7 @@ class BookingHandlers:
         request: CancelBookingRequest,
         ctx: RequestContext,
     ) -> CancelBookingResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         booking_id = _parse_uuid(request.booking_id, "booking_id")
 
@@ -452,7 +452,7 @@ class BookingHandlers:
         request: ListBookingsRequest,
         ctx: RequestContext,
     ) -> ListBookingsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         room_id = None
@@ -510,7 +510,7 @@ class BookingHandlers:
         request: CheckAvailabilityRequest,
         ctx: RequestContext,
     ) -> CheckAvailabilityResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
 
@@ -553,7 +553,7 @@ class BookingHandlers:
         request: FindAvailableRoomsRequest,
         ctx: RequestContext,
     ) -> FindAvailableRoomsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         min_capacity = request.min_capacity if request.HasField("min_capacity") else None

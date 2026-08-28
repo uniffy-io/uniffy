@@ -1,7 +1,7 @@
 """Default-deny authentication across every ConnectRPC method.
 
 Authentication used to be opt-in per handler, so a forgotten
-``get_user_id_from_context`` left an RPC reachable with no credentials.
+``current_user_id`` left an RPC reachable with no credentials.
 These tests pin the inverse: a method is private unless it appears in
 ``PUBLIC_METHODS``, and every entry in that allowlist names a method that
 actually exists.
@@ -9,12 +9,16 @@ actually exists.
 
 import pathlib
 import re
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from connectrpc.errors import ConnectError
 from connectrpc.method import IdempotencyLevel, MethodInfo
 from connectrpc.request import Headers, RequestContext
 
+from uniffy.core.auth.principal import current_principal
+from uniffy.core.auth.tokens import create_access_token, create_refresh_token, decode_access_token
+from uniffy.core.types import generate_id
 from uniffy.domains.auth.interceptors import PUBLIC_METHODS, AuthenticationInterceptor
 
 _GEN_ROOT = pathlib.Path("src/gen/python/src/uniffy_proto")
@@ -104,16 +108,125 @@ def test_every_mounted_service_carries_the_interceptors() -> None:
 
 
 async def test_a_refresh_token_does_not_authenticate_a_private_method(monkeypatch) -> None:
-    """``get_user_id_from_context`` pins ``type == "access"``; refresh and
+    """``current_user_id`` pins ``type == "access"``; refresh and
     access tokens share a secret, so only the type claim separates them.
     """
-    from uniffy.core.types import generate_id
-    from uniffy.domains.auth.tokens import create_refresh_token
-
-    # The unit tier signs its own token: it must not depend on a developer's .env.
     monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes")
     token = create_refresh_token(generate_id())
     with pytest.raises(ConnectError):
         await AuthenticationInterceptor().on_start(
             _ctx("notes.v1.NotesService/ListNotes", bearer=token)
         )
+
+
+async def test_private_request_publishes_one_decoded_principal(monkeypatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes")
+    user_id = generate_id()
+    organization_id = generate_id()
+    session_id = generate_id()
+    bearer = create_access_token(
+        user_id,
+        organization_id,
+        token_version=7,
+        session_id=session_id,
+        full_name="Ada Lovelace",
+        avatar_key="avatars/ada.png",
+    )
+    interceptor = AuthenticationInterceptor()
+    ctx = _ctx("notes.v1.NotesService/ListNotes", bearer=bearer)
+
+    with (
+        patch(
+            "uniffy.domains.auth.interceptors.is_access_token_revoked",
+            AsyncMock(return_value=False),
+        ),
+        patch(
+            "uniffy.domains.auth.interceptors.is_session_revoked",
+            AsyncMock(return_value=False),
+        ),
+        patch(
+            "uniffy.core.auth.principal.decode_access_token",
+            wraps=decode_access_token,
+        ) as decode,
+    ):
+        reset_token = await interceptor.on_start(ctx)
+        try:
+            principal = current_principal()
+            assert principal.user_id == user_id
+            assert principal.organization_id == organization_id
+            assert principal.session_id == session_id
+            assert principal.token_version == 7
+            assert principal.full_name == "Ada Lovelace"
+            assert principal.avatar_key == "avatars/ada.png"
+            assert decode.call_count == 1
+        finally:
+            await interceptor.on_end(reset_token, ctx, None)
+
+    with pytest.raises(ConnectError):
+        current_principal()
+
+
+async def test_public_wrong_kind_token_still_obeys_revocation(monkeypatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes")
+    token = create_refresh_token(generate_id(), token_version=2)
+
+    with (
+        patch(
+            "uniffy.domains.auth.interceptors.is_access_token_revoked",
+            AsyncMock(return_value=True),
+        ),
+        pytest.raises(ConnectError) as exc_info,
+    ):
+        await AuthenticationInterceptor().on_start(
+            _ctx("auth.v1.AuthService/RefreshToken", bearer=token)
+        )
+
+    assert exc_info.value.code.name == "UNAUTHENTICATED"
+
+
+async def test_revoked_session_never_publishes_a_principal(monkeypatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes")
+    bearer = create_access_token(generate_id(), session_id=generate_id())
+
+    with (
+        patch(
+            "uniffy.domains.auth.interceptors.is_access_token_revoked",
+            AsyncMock(return_value=False),
+        ),
+        patch(
+            "uniffy.domains.auth.interceptors.is_session_revoked",
+            AsyncMock(return_value=True),
+        ),
+        pytest.raises(ConnectError) as exc_info,
+    ):
+        await AuthenticationInterceptor().on_start(
+            _ctx("notes.v1.NotesService/ListNotes", bearer=bearer)
+        )
+
+    assert exc_info.value.code.name == "UNAUTHENTICATED"
+    with pytest.raises(ConnectError):
+        current_principal()
+
+
+async def test_public_enrollment_rpc_accepts_an_access_principal(monkeypatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes")
+    user_id = generate_id()
+    bearer = create_access_token(user_id)
+    interceptor = AuthenticationInterceptor()
+    ctx = _ctx("auth.v1.MfaService/BeginEnrollment", bearer=bearer)
+
+    with (
+        patch(
+            "uniffy.domains.auth.interceptors.is_access_token_revoked",
+            AsyncMock(return_value=False),
+        ),
+        patch(
+            "uniffy.domains.auth.interceptors.is_session_revoked",
+            AsyncMock(return_value=False),
+        ),
+    ):
+        reset_token = await interceptor.on_start(ctx)
+        try:
+            assert current_principal().user_id == user_id
+        finally:
+            await interceptor.on_end(reset_token, ctx, None)

@@ -20,7 +20,14 @@ async def test_folder_delete_tombstones_and_restore_republishes(session, env, mo
     async def capture(organization_id, urn, changes):
         published.append((urn, dict(changes)))
 
-    monkeypatch.setattr("uniffy.domains.files.operations.publish_mention_state", capture)
+    monkeypatch.setattr(
+        "uniffy.domains.files.folders.trash.publish_mention_state",
+        capture,
+    )
+    monkeypatch.setattr(
+        "uniffy.domains.files.folders.projection.publish_mention_state",
+        capture,
+    )
 
     folder_ops = FolderOperations(session)
     try:

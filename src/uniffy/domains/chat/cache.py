@@ -18,7 +18,7 @@ from uniffy.core.valkey.cache import (
     cache_set,
 )
 
-logger = logger.bind(component="chat-cache")
+logger = logger.bind(component="chat.cache")
 
 _MEMBER_LIST_TTL_SECONDS = 300
 _DM_PEERS_TTL_SECONDS = 3600

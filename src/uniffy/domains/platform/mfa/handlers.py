@@ -26,10 +26,10 @@ from uniffy_proto.superadmin.v1.system_mfa_pb2 import (
     PendingPeerReset as PendingPeerResetProto,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.auth.mfa.operations import MfaOperations
 
 logger = logger.bind(component="platform.mfa.handlers")
@@ -41,7 +41,7 @@ class SystemMfaHandlers:
         request: ResetUserMfaRequest,
         ctx: RequestContext,
     ) -> ResetUserMfaResponse:
-        actor_id = get_user_id_from_context(ctx)
+        actor_id = current_user_id()
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
@@ -64,7 +64,7 @@ class SystemMfaHandlers:
         request: RequestPeerResetRequest,
         ctx: RequestContext,
     ) -> RequestPeerResetResponse:
-        actor_id = get_user_id_from_context(ctx)
+        actor_id = current_user_id()
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
@@ -92,7 +92,7 @@ class SystemMfaHandlers:
         ctx: RequestContext,
     ) -> ListPeerResetsResponse:
         del request
-        actor_id = get_user_id_from_context(ctx)
+        actor_id = current_user_id()
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
@@ -122,7 +122,7 @@ class SystemMfaHandlers:
         request: ApprovePeerResetRequest,
         ctx: RequestContext,
     ) -> ApprovePeerResetResponse:
-        actor_id = get_user_id_from_context(ctx)
+        actor_id = current_user_id()
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)

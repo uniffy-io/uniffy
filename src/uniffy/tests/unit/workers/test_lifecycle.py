@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 from uniffy.core.valkey.queue import QueueName
 from uniffy.observability.metrics import (
@@ -44,9 +44,11 @@ def _patch_shared_resources(monkeypatch):
 async def test_core_lifecycle_opens_and_closes_its_runtime_resources(monkeypatch) -> None:
     resources = _patch_shared_resources(monkeypatch)
     adapter = AsyncMock()
+    register_realtime = MagicMock()
     provision = AsyncMock()
     load_vapid = AsyncMock()
     monkeypatch.setattr(lifecycle, "provision_audit_partitions", provision)
+    monkeypatch.setattr(lifecycle, "register_note_realtime_adapter", register_realtime)
     monkeypatch.setattr("uniffy.core.config.push.load_vapid_config", load_vapid)
     monkeypatch.setattr(
         "uniffy.domains.notifications.delivery.DELIVERY_ADAPTERS",
@@ -61,6 +63,7 @@ async def test_core_lifecycle_opens_and_closes_its_runtime_resources(monkeypatch
     assert ctx["queue"] is QueueName.CORE
     assert WORKER_READY.labels(queue=QueueName.CORE)._value.get() == 0
     resources["init_db"].assert_awaited_once_with(skip_migrations=True)
+    register_realtime.assert_called_once_with()
     resources["init_queue"].assert_awaited_once_with(QueueName.CORE)
     load_vapid.assert_awaited_once_with()
     provision.assert_awaited_once_with(ctx)

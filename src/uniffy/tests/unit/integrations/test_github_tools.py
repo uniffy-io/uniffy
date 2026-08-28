@@ -20,8 +20,8 @@ from uniffy.domains.integrations.providers.github.tools import (
     _execute_search_repos,
 )
 
-_RESOLVE = "uniffy.domains.integrations.tool_gate.resolve_connection_client"
-_DEMOTE = "uniffy.domains.integrations.tool_gate.demote_connection_on_auth_error"
+_RESOLVE = "uniffy.domains.integrations.tools.resolve_connection_client"
+_DEMOTE = "uniffy.domains.integrations.tools.demote_connection_on_auth_error"
 _SOURCE_LINE = 'Source: github connection "work" (api.github.com)'
 
 
@@ -313,11 +313,11 @@ class TestPinnedConnectionResolution:
         lru.get = AsyncMock(return_value=("credential", http))
         return ops, (
             patch(
-                "uniffy.domains.integrations.tool_gate.ConnectionOperations",
+                "uniffy.domains.integrations.tools.ConnectionOperations",
                 return_value=ops,
             ),
             patch(
-                "uniffy.domains.integrations.tool_gate.get_integration_client_lru",
+                "uniffy.domains.integrations.tools.get_integration_client_lru",
                 return_value=lru,
             ),
         )

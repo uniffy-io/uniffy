@@ -76,40 +76,34 @@ async def test_update_with_no_changes_skips_audit() -> None:
 
 async def test_add_member_emits_member_added() -> None:
     session = MagicMock()
-    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
+    org = _make_org()
+    locked_org = MagicMock()
+    locked_org.scalar_one_or_none.return_value = org
+    session.execute = AsyncMock(return_value=locked_org)
     session.add = MagicMock()
     session.commit = AsyncMock()
+    session.flush = AsyncMock()
     session.refresh = AsyncMock()
-    indexer = MagicMock()
-    indexer.index_for_organization = AsyncMock(return_value=None)
 
     ops = OrganizationOperations(session)
-    ops._user_indexer = indexer
 
-    org_id = generate_id()
+    org_id = org.id
     target = generate_id()
     actor = generate_id()
 
-    attachment_ops_instance = MagicMock()
-    attachment_ops_instance.get_or_create_attachments_folder = AsyncMock(return_value=MagicMock())
-    attachment_factory = MagicMock(return_value=attachment_ops_instance)
-
-    chat_ops_instance = MagicMock()
-    chat_ops_instance.join_default_channels = AsyncMock(return_value=None)
-    chat_factory = MagicMock(return_value=chat_ops_instance)
-
     with (
         patch.object(OrganizationOperations, "get_membership", AsyncMock(return_value=None)),
+        patch.object(OrganizationOperations, "_require_member_capacity", AsyncMock()),
         patch(
-            "uniffy.domains.files.attachments.operations.AttachmentOperations",
-            attachment_factory,
+            "uniffy.domains.organizations.operations.stage_personal_attachments_folder",
+            AsyncMock(),
         ),
         patch(
-            "uniffy.domains.chat.channels.operations.ChatChannelOperations",
-            chat_factory,
+            "uniffy.domains.organizations.operations.stage_default_channel_memberships",
+            AsyncMock(return_value=[]),
         ),
     ):
-        await ops.add_member(target, org_id, OrganizationRole.ADMIN, actor_user_id=actor)
+        await ops.stage_member(target, org_id, OrganizationRole.ADMIN, actor_user_id=actor)
 
     rows = _audit_rows(session)
     added = [r for r in rows if r.action == Action.ORGANIZATION_MEMBER_ADDED]
@@ -117,6 +111,7 @@ async def test_add_member_emits_member_added() -> None:
     assert added[0].actor_user_id == actor
     assert added[0].resource_id == target
     assert added[0].details["role"] == "ADMIN"
+    session.commit.assert_not_awaited()
 
 
 async def test_update_member_role_emits_role_changed_with_previous_role() -> None:
@@ -195,4 +190,3 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
     assert len(removed) == 1
     assert removed[0].details["previous_role"] == "MEMBER"
     assert removed[0].actor_user_id == admin
-

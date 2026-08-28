@@ -3,12 +3,6 @@
 from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
 from uniffy.core.valkey.queue import QueueName
 
-PROCESS_NOTIFICATION_EVENT = JobRef(
-    name="process_notification_event",
-    queue=QueueName.CORE,
-    workload=JobWorkload.DELIVERY,
-    reliability=JobReliability.BEST_EFFORT,
-)
 DELIVER_PUSH_NOTIFICATION = JobRef(
     name="deliver_push_notification",
     queue=QueueName.CORE,
@@ -57,7 +51,6 @@ DISPATCH_NOTIFICATION_EMAILS_SCHEDULE = JobRef(
 )
 
 NOTIFICATION_JOB_REFS = (
-    PROCESS_NOTIFICATION_EVENT,
     DELIVER_PUSH_NOTIFICATION,
     SEND_NOTIFICATION_EMAIL,
     SEND_NOTIFICATION_DIGEST,

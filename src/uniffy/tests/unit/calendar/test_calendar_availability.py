@@ -8,7 +8,7 @@ import pytest
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.types import AccessMode, RecurrencePattern, generate_id
-from uniffy.domains.calendar.availability import (
+from uniffy.domains.calendar.scheduling import (
     MAX_FREE_BUSY_USERS,
     BusyInterval,
     get_busy_intervals,

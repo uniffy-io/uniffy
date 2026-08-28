@@ -21,14 +21,14 @@ from uniffy.domains.agents.tools.builtin.args import (
     parse_uuid,
     parse_uuid_list,
 )
-from uniffy.domains.agents.tools.builtin.content_space import (
+from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
     resolve_parent_access_mode,
     space_for_access_mode,
 )
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.tags.operations import TagOperations
 
 # Maximum bytes to download for on-demand extraction (10 MB).
 _MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024

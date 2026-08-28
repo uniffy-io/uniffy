@@ -5,7 +5,7 @@ from uniffy.core.models.permissions.org_permission_defaults import (
 )
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.permissions.job_contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
+from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
 
 
 async def test_defaults_change_enqueues_content_reindex_on_core_queue() -> None:

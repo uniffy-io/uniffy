@@ -23,15 +23,20 @@ from uniffy.core.valkey import (
 )
 from uniffy.core.valkey.queue import QueueName
 from uniffy.db import close_db, init_db
-from uniffy.domains.agents.providers.client_cache import (
+from uniffy.domains.agents.providers.clients import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
 )
-from uniffy.domains.audit.jobs import provision_audit_partitions
-from uniffy.domains.integrations.client_cache import (
+from uniffy.domains.audit.jobs.jobs import provision_audit_partitions
+from uniffy.domains.calendar.events.registration import register_calendar_content
+from uniffy.domains.files.registration import register_file_content
+from uniffy.domains.integrations.clients import (
     close_integration_invalidation_subscriber,
     init_integration_invalidation_subscriber,
 )
+from uniffy.domains.notes.adapter import register_note_realtime_adapter
+from uniffy.domains.notes.registration import register_note_content
+from uniffy.domains.projects.registration import register_project_content
 from uniffy.observability.metrics import (
     WORKER_JOB_DURATION,
     WORKER_JOB_REJECTED_TOTAL,
@@ -103,6 +108,10 @@ async def _on_startup_shared(
     profile: FleetResourceProfile,
 ) -> None:
     """Boot the resources every worker fleet needs."""
+    register_calendar_content()
+    register_file_content()
+    register_note_content()
+    register_project_content()
     queue_name = profile.queue
     ctx["queue"] = queue_name
     logger.info(f"Worker starting up (queue={queue_name})...")
@@ -169,6 +178,7 @@ async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
 
 async def core_on_startup(ctx: dict[str, Any]) -> None:
     """Startup hook for the core fleet (shared stack + VAPID for push)."""
+    register_note_realtime_adapter()
     await _on_startup_shared(ctx, CORE_RESOURCE_PROFILE)
 
     try:

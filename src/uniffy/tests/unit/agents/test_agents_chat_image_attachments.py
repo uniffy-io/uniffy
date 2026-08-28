@@ -17,9 +17,9 @@ import pytest
 
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.types import generate_id
-from uniffy.domains.agents.chat_integration import operations as bridge_mod
-from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
-from uniffy.domains.agents.runtime.file_loader import FileContext
+from uniffy.domains.agents.bridge import operations as bridge_mod
+from uniffy.domains.agents.bridge.operations import AgentChatBridge
+from uniffy.domains.agents.runtime.files import FileContext
 
 
 def _file_context(*, file_id: str = "", media_type: str = "image/png") -> FileContext:
@@ -124,7 +124,7 @@ class TestSafeLoadFiles:
     """Pin down per-file permission tolerance shared by the bridge + future callers."""
 
     async def test_skips_files_the_user_cannot_view(self, monkeypatch) -> None:
-        from uniffy.domains.agents.runtime import file_loader
+        from uniffy.domains.agents.runtime import files as file_loader
 
         ok = _file_context(file_id="ok")
         call_count = {"n": 0}
@@ -144,7 +144,7 @@ class TestSafeLoadFiles:
         assert call_count["n"] == 2
 
     async def test_returns_empty_list_for_no_file_ids(self) -> None:
-        from uniffy.domains.agents.runtime import file_loader
+        from uniffy.domains.agents.runtime import files as file_loader
 
         result = await file_loader._safe_load_files(MagicMock(), generate_id(), generate_id(), [])
         assert result == []

@@ -11,7 +11,7 @@ from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 from uniffy.core.types import SubjectType
-from uniffy.domains.chat.search_acl import record_chat_search_acl_refresh
+from uniffy.domains.chat.search import record_chat_search_acl_refresh
 
 
 @dataclass(frozen=True)

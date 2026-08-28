@@ -15,8 +15,8 @@ from uniffy.domains.notifications.delivery.suppression import (
     should_suppress_interruptive_delivery,
 )
 from uniffy.domains.notifications.delivery.base import NotificationChannel
-from uniffy.domains.notifications.delivery.in_app import InAppAdapter
-from uniffy.domains.notifications.jobs import delivery as notification_tasks
+from uniffy.domains.notifications.delivery.app import InAppAdapter
+from uniffy.domains.notifications.jobs import jobs as notification_tasks
 
 
 def _quiet_hours(start: str = "22:00", end: str = "08:00") -> dict[str, str]:

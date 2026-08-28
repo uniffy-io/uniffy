@@ -4,9 +4,9 @@ from dataclasses import fields
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.config.settings.organization import OrgSettingsOperations
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
-from uniffy.domains.org_settings.operations import OrgSettingsOperations
 from uniffy.domains.people.directory.base import (
     DirectorySyncProvider,
     LdapSourceConfig,

@@ -32,7 +32,7 @@ from uniffy.core.valkey.cache import (
 )
 from uniffy.core.valkey.ops import _get_ops_client
 
-logger = logger.bind(component="cache")
+logger = logger.bind(component="agents.cache")
 
 _AGENT_TTL_SECONDS = 900
 _SKILLS_TTL_SECONDS = 900

@@ -13,8 +13,8 @@ from sqlalchemy.exc import IntegrityError
 
 from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.types import NotificationType, generate_id
-from uniffy.domains.agents import budget_alerts as mod
-from uniffy.domains.agents.budget_alerts import (
+from uniffy.domains.agents.budgets import alerts as mod
+from uniffy.domains.agents.budgets.alerts import (
     _compute_crossings,
     check_and_fire_alerts,
 )

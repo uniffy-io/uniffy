@@ -3,39 +3,41 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import delete, event
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.chat.agent_folder import ChatAgentFolder
-from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage
+from uniffy.core.models.login.user import User
 from uniffy.core.models.permissions.content_member import ContentMember
+from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.platform.support_session import (
     SupportSession,
     SupportSessionScope,
     SupportSessionState,
 )
 from uniffy.core.models.projects.project import Project
-from uniffy.core.models.projects.sprint import Sprint as _Sprint
+from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401 - FK metadata
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.tags.tag import Tag, TagAssignment
-from uniffy.core.models.login.user import User
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
     ContentType,
+    DomainType,
     SubjectType,
     generate_id,
 )
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
     ResourceRowState,
 )
-from uniffy.domains.notes.operations import NoteOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -161,11 +163,11 @@ async def test_search_sharing_snapshot_omits_expired_allow_and_blocked_rows(
     ])
     await session.commit()
 
-    shared_users, shared_groups, blocked_users, blocked_groups = (
-        await NoteOperations(session)._get_member_id_lists(
-            access.org_id,
-            access.private_note_id,
-        )
+    shared_users, shared_groups, blocked_users, blocked_groups = await NoteOperations(
+        session
+    )._get_member_id_lists(
+        access.org_id,
+        access.private_note_id,
     )
 
     assert shared_users == [access.owner_id]
@@ -201,6 +203,9 @@ async def test_tasks_inherit_live_project_access_and_request_target(session, acc
     assert decisions[key].request_target is not None
     assert decisions[key].request_target.content_type is ContentType.PROJECT
     assert decisions[key].request_target.content_id == project.id
+    assert decisions[key].target_policy is not None
+    assert decisions[key].target_policy.content_type is ContentType.PROJECT
+    assert decisions[key].target_policy.access_mode is AccessMode.OPEN_TO_ORG
 
 
 async def test_chat_messages_inherit_current_channel_membership(session, access) -> None:
@@ -237,6 +242,80 @@ async def test_chat_messages_inherit_current_channel_membership(session, access)
 
     await session.execute(delete(ChatMessage).where(ChatMessage.id == message.id))
     await session.commit()
+
+
+async def test_chat_policy_keeps_org_and_domain_moderation_access(session, access) -> None:
+    channel = ChatChannel(
+        organization_id=access.org_id,
+        owner_id=access.member_id,
+        name="Resolver moderated private",
+        slug=f"resolver-moderated-{generate_id().hex[:8]}",
+        channel_type=ChannelType.PRIVATE,
+    )
+    session.add(channel)
+    await session.commit()
+    key = ResourceKey(ContentType.CHAT, channel.id)
+
+    admin = await _resolve(session, access, access.admin_id, [key])
+    denied = await _resolve(session, access, access.peer_id, [key])
+    session.add(
+        DomainAdmin(
+            organization_id=access.org_id,
+            user_id=access.peer_id,
+            domain=DomainType.CHAT,
+            granted_by=access.owner_id,
+        )
+    )
+    await session.commit()
+    domain_admin = await _resolve(session, access, access.peer_id, [key])
+
+    assert admin[key].can_view is True
+    assert denied[key].can_view is False
+    assert domain_admin[key].can_view is True
+
+
+async def test_calendar_override_inherits_master_policy(session, access) -> None:
+    now = datetime.now(UTC)
+    calendar = Calendar(
+        organization_id=access.org_id,
+        owner_id=access.member_id,
+        name="Resolver recurrence calendar",
+    )
+    session.add(calendar)
+    await session.flush()
+    master = CalendarEvent(
+        organization_id=access.org_id,
+        organizer_id=access.member_id,
+        calendar_id=calendar.id,
+        title="Private series",
+        start_time=now,
+        end_time=now + timedelta(hours=1),
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    session.add(master)
+    await session.flush()
+    override = CalendarEvent(
+        organization_id=access.org_id,
+        organizer_id=access.peer_id,
+        calendar_id=calendar.id,
+        recurrence_id=master.id,
+        title="Misleading open override",
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, hours=1),
+        access_mode=AccessMode.OPEN_TO_ORG,
+        baseline_role=ContentRole.EDITOR,
+    )
+    session.add(override)
+    await session.commit()
+    key = ResourceKey(ContentType.CALENDAR_EVENT, override.id)
+
+    peer = await _resolve(session, access, access.peer_id, [key])
+    owner = await _resolve(session, access, access.member_id, [key])
+
+    assert peer[key].can_view is False
+    assert owner[key].role is ContentRole.OWNER
+    assert owner[key].target_policy is not None
+    assert owner[key].target_policy.access_mode is AccessMode.OWNER_ONLY
 
 
 async def test_calendar_attendee_access_yields_to_explicit_block(session, access) -> None:
@@ -313,12 +392,10 @@ async def test_calendar_attendee_floor_does_not_demote_higher_roles(session, acc
     )
     session.add_all([own_event, invited_event])
     await session.flush()
-    session.add_all(
-        [
-            EventAttendee(event_id=own_event.id, user_id=access.peer_id),
-            EventAttendee(event_id=invited_event.id, user_id=access.peer_id),
-        ]
-    )
+    session.add_all([
+        EventAttendee(event_id=own_event.id, user_id=access.peer_id),
+        EventAttendee(event_id=invited_event.id, user_id=access.peer_id),
+    ])
     await session.commit()
     own_key = ResourceKey(ContentType.CALENDAR_EVENT, own_event.id)
     invited_key = ResourceKey(ContentType.CALENDAR_EVENT, invited_event.id)
@@ -464,9 +541,7 @@ async def test_statement_count_does_not_grow_with_candidate_count(session, acces
             access.group_note_id,
         )
     ]
-    all_keys.extend(
-        ResourceKey(ContentType.NOTE, generate_id()) for _ in range(60 - len(all_keys))
-    )
+    all_keys.extend(ResourceKey(ContentType.NOTE, generate_id()) for _ in range(60 - len(all_keys)))
     engine = session.bind.sync_engine
 
     async def statement_count(keys):

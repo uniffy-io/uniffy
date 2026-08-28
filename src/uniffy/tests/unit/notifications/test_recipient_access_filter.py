@@ -7,8 +7,8 @@ import pytest
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.types import ContentRole, ContentType, generate_id
-from uniffy.domains.permissions.resource_access import AUDIENCE_CONTENT_TYPES
-from uniffy.domains.notifications.jobs import delivery as task
+from uniffy.domains.permissions.access import AUDIENCE_CONTENT_TYPES
+from uniffy.domains.notifications.jobs import jobs as task
 
 ORG = generate_id()
 ACTOR = generate_id()

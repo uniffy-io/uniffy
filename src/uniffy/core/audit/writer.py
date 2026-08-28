@@ -93,7 +93,7 @@ def _merge_support_session_tag(details: dict, organization_id: UUID | None) -> N
     fact about the request, not a hint the caller can drop. The caller's prior
     value (if any) moves to ``actor_kind_pre`` so no information is lost.
     """
-    from uniffy.domains.platform.support_session.context import (
+    from uniffy.core.auth.support_session import (
         get_active_support_session,
     )
 

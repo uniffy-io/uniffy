@@ -1,171 +1,51 @@
-"""Note operations."""
+"""Stable note operations façade."""
 
-import copy
-import re
-from dataclasses import dataclass
-from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from loguru import logger
-from sqlalchemy import String, cast, func, or_, select
-from sqlalchemy import delete as sql_delete
-from sqlalchemy import update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.audit import write_audit_event
-from uniffy.core.audit.actions import Action
-from uniffy.core.auth.permissions import modes_at_least_as_open
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.content.cascade import propagate_rename
-from uniffy.core.content.members import (
-    ContentMembersOperations,
-    register_attachment_cascade_loader,
-    register_content_loader,
-)
-from uniffy.core.content.references import (
-    CanvasNodeType,
-    extract_all_outgoing_references,
-    extract_all_outgoing_references_from_canvas,
-)
-from uniffy.core.content.team_mentions import expand_team_mentions
-from uniffy.core.errors import ConflictError, NotFoundError, ValidationError
-from uniffy.core.events import (
-    NotificationEvent,
-    emit_notification,
-    extract_mentioned_team_ids,
-    extract_mentioned_user_ids,
-)
-from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.core.models.login.group import Group
-from uniffy.core.models.login.group_member import GroupMember
-from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
-from uniffy.core.models.permissions.content_member import ContentMember
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.publisher import publish_content_replace
-from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
     ContentType,
     NodeType,
-    NotificationType,
     ParentSelection,
     SortOrder,
-    SubjectType,
 )
-from uniffy.core.valkey.mentions import publish_mention_state
-from uniffy.domains.notes import queries
-from uniffy.domains.tags import (
-    TagAssignment,
-    TagOperations,
-    sync_inline_tags,
+from uniffy.domains.notes.browse.operations import NoteBrowser
+from uniffy.domains.notes.content.creation import NoteCreation
+from uniffy.domains.notes.content.fields import (
+    NoteContentFields,
+    extract_canvas_text,
+    extract_content_fields,
 )
-from uniffy.observability.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
+from uniffy.domains.notes.content.notifications import NoteNotifications
+from uniffy.domains.notes.content.projections import NoteProjections
+from uniffy.domains.notes.content.realtime import NoteRealtimePersistence
+from uniffy.domains.notes.content.updates import NoteUpdates
+from uniffy.domains.notes.hierarchy.operations import NoteHierarchy
+from uniffy.domains.notes.registration import register_note_content
+from uniffy.domains.notes.sharing.operations import NoteSharing
+from uniffy.domains.notes.sharing.queries import NoteSharingInfo, NoteSharingQueries
 
-logger = logger.bind(component="notes.operations")
-
-_MAX_TREE_DEPTH = 64
-
-_MENTION_ESCAPED_RE = re.compile(r"\\?\[\\?\[\\?\[([^\[\]|]+)\|[^\]]+\\?\]\\?\]\\?\]")
-_MENTION_RE = re.compile(r"\[\[\[([^\[\]|]+)\|[^\]]+\]\]\]")
-_IMAGE_RE = re.compile(r"!\[([^\]]*)\]\([^)]+\)")
-_LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]+\)")
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
-_FENCED_CODE_RE = re.compile(r"```[\s\S]*?```")
-_INLINE_CODE_RE = re.compile(r"`([^`]+)`")
-_HEADER_RE = re.compile(r"^#{1,6}\s+", re.MULTILINE)
-_BOLD_STAR_RE = re.compile(r"\*\*([^*]+)\*\*")
-_ITALIC_STAR_RE = re.compile(r"\*([^*]+)\*")
-_BOLD_UNDER_RE = re.compile(r"__([^_]+)__")
-_ITALIC_UNDER_RE = re.compile(r"_([^_]+)_")
-_STRIKE_RE = re.compile(r"~~([^~]+)~~")
-_BLOCKQUOTE_RE = re.compile(r"^>\s+", re.MULTILINE)
-_UL_MARKER_RE = re.compile(r"^[\s]*[-*+]\s+", re.MULTILINE)
-_OL_MARKER_RE = re.compile(r"^[\s]*\d+\.\s+", re.MULTILINE)
-_TABLE_SEP_RE = re.compile(r"^\|?[\s:]*[-]{2,}[\s:]*(\|[\s:]*[-]{2,}[\s:]*)*\|?\s*$", re.MULTILINE)
-_HR_RE = re.compile(r"^[-*_]{3,}\s*$", re.MULTILINE)
-_WS_RE = re.compile(r"\s+")
-
-
-def _strip_markdown(text: str) -> str:
-    """Strip markdown + URN mention syntax; mirrors frontend ``stripMarkdown``."""
-    if not text:
-        return ""
-    s = _MENTION_ESCAPED_RE.sub(r"\1", text)
-    s = _MENTION_RE.sub(r"\1", s)
-    s = _IMAGE_RE.sub(r"\1", s)
-    s = _LINK_RE.sub(r"\1", s)
-    s = _HTML_TAG_RE.sub(" ", s)
-    s = _FENCED_CODE_RE.sub(" ", s)
-    s = _INLINE_CODE_RE.sub(r"\1", s)
-    s = _HEADER_RE.sub("", s)
-    s = _BOLD_STAR_RE.sub(r"\1", s)
-    s = _ITALIC_STAR_RE.sub(r"\1", s)
-    s = _BOLD_UNDER_RE.sub(r"\1", s)
-    s = _ITALIC_UNDER_RE.sub(r"\1", s)
-    s = _STRIKE_RE.sub(r"\1", s)
-    s = _BLOCKQUOTE_RE.sub("", s)
-    s = _UL_MARKER_RE.sub("", s)
-    s = _OL_MARKER_RE.sub("", s)
-    s = _TABLE_SEP_RE.sub("", s)
-    s = s.replace("|", " ")
-    s = _HR_RE.sub("", s)
-    s = _WS_RE.sub(" ", s)
-    return s.strip()
-
-
-@dataclass
-class NoteSharingInfo:
-    """Sharing info for a note: ``shared_with`` for owners, ``owner_info`` for shares."""
-
-    owner_info: dict | None = None
-    shared_with: list[dict] | None = None
-
-
-@dataclass
-class _NoteContentFields:
-    """Content-derived columns staged by ``_extract_content_fields``."""
-
-    content: str
-    canvas_content: dict[str, Any] | None
-    outgoing_references: list[str] | None
-    parsed_inline_tag_names: list[str]
-
-
-_FILE_URN_PREFIX = f"urn:uniffy:content:{ContentType.FILE.value}:"
-
-
-def _referenced_file_ids(outgoing_references: list[str] | None) -> set[UUID]:
-    ids: set[UUID] = set()
-    for urn in outgoing_references or []:
-        if urn.startswith(_FILE_URN_PREFIX):
-            try:
-                ids.add(UUID(urn[len(_FILE_URN_PREFIX) :]))
-            except ValueError:
-                continue
-    return ids
+_NoteContentFields = NoteContentFields
 
 
 class NoteOperations(BaseContentOperations[Note]):
-    """Note CRUD with permissions, search indexing, and notifications."""
+    """Public note API composed from cohesive domain collaborators."""
 
     content_type = ContentType.NOTE
     model_class = Note
 
     def __init__(self, session: AsyncSession) -> None:
+        register_note_content()
         super().__init__(session)
 
     def _build_search_keywords(self, model: Note) -> str:
-        # Tag slugs go through ``_get_search_tags_async``; canvas pulls
-        # text-node content and shape labels.
-        parts = [model.title]
-        if model.node_type == NodeType.CANVAS and model.canvas_content:
-            parts.extend(self._extract_canvas_text(model.canvas_content))
-        elif model.content:
-            parts.append(model.content)
-        return " ".join(parts)
+        return NoteProjections(self).build_search_keywords(model)
 
     def _get_search_title(self, model: Note) -> str:
         return model.title
@@ -174,107 +54,27 @@ class NoteOperations(BaseContentOperations[Note]):
         return f"/notes/{model.id}"
 
     def _get_search_description(self, model: Note) -> str | None:
-        # Strip markdown before slicing so chips render plain text.
-        if model.node_type == NodeType.CANVAS:
-            texts = self._extract_canvas_text(model.canvas_content or {})
-            if not texts:
-                return None
-            joined = " ".join(texts).strip()
-            return joined[:200] if joined else None
-        if model.content:
-            stripped = _strip_markdown(model.content)
-            return stripped[:200] if stripped else None
-        return None
+        return NoteProjections(self).get_search_description(model)
 
     async def _get_search_tags_async(self, model: Note) -> list[str] | None:
-        tag_ops = TagOperations(self.session)
-        urn = build_content_urn(self.content_type, model.id)
-        bulk = await tag_ops.get_for_urns(
-            organization_id=model.organization_id,
-            content_urns=[urn],
-        )
-        slugs = sorted({tag.slug for tag in bulk.get(urn, [])})
-        return slugs or None
+        return await NoteProjections(self).get_search_tags(model)
 
     def _get_search_metadata(self, model: Note) -> dict[str, str] | None:
-        # node_type lets search results badge folders and canvases as such.
         return {"node_type": model.node_type.value}
 
     async def _get_search_metadata_async(self, model: Note) -> dict[str, str] | None:
-        # Adds parent-folder title so mention chips show a breadcrumb.
-        meta = dict(self._get_search_metadata(model) or {})
-        if model.parent_id:
-            result = await self.session.execute(select(Note.title).where(Note.id == model.parent_id))
-            title = result.scalar_one_or_none()
-            if title:
-                meta["parent_label"] = title
-        if model.node_type == NodeType.FOLDER:
-            # The chip renders "N notes" and the number reaches everyone who
-            # can resolve the folder: only actual notes count, and children
-            # with a narrower effective mode stay uncounted.
-            folder_mode, _ = await self._effective_policy(model.organization_id, model)
-            allowed = modes_at_least_as_open(folder_mode)
-            default_mode, _ = await self.permission_checker.get_org_defaults(
-                model.organization_id, ContentType.NOTE
-            )
-            visible = Note.access_mode.in_(allowed)
-            if (default_mode or AccessMode.OWNER_ONLY) in allowed:
-                visible = or_(visible, Note.access_mode.is_(None))
-            count = (
-                await self.session.execute(
-                    select(func.count(Note.id)).where(
-                        Note.parent_id == model.id,
-                        Note.organization_id == model.organization_id,
-                        Note.is_deleted == False,  # noqa: E712
-                        Note.node_type == NodeType.NOTE,
-                        visible,
-                    )
-                )
-            ).scalar_one()
-            meta["child_count"] = str(count or 0)
-        return meta or None
+        return await NoteProjections(self).get_search_metadata(model)
 
     async def _refresh_parent_folder(
         self,
         parent_id: UUID | None,
         organization_id: UUID,
     ) -> None:
-        """A child create/delete/restore/move changes the parent folder's
-        indexed ``child_count``; re-index and broadcast so folder chips
-        update without a refresh.
-        """
-        if parent_id is None:
-            return
-        parent = await self._fetch_by_id(parent_id, organization_id)
-        if not parent or parent.is_deleted or parent.node_type != NodeType.FOLDER:
-            return
-        try:
-            meta = await self._index_for_search(parent) or {}
-            await publish_mention_state(
-                organization_id=organization_id,
-                urn=build_content_urn(self.content_type, parent.id),
-                changes={"title": parent.title, **meta},
-            )
-        except Exception:
-            logger.opt(exception=True).warning(
-                f"Failed to refresh note folder stats for {parent_id}"
-            )
+        await NoteProjections(self).refresh_parent_folder(parent_id, organization_id)
 
     @staticmethod
     def _extract_canvas_text(canvas_data: dict) -> list[str]:
-        texts: list[str] = []
-        for node in canvas_data.get("nodes", []):
-            node_data = node.get("data", {})
-            kind = node_data.get("type", "")
-            if kind == CanvasNodeType.TEXT:
-                content = node_data.get("content", "")
-                if content:
-                    texts.append(content)
-            elif kind in ("shape", "mindmap"):
-                label = node_data.get("label", "")
-                if label:
-                    texts.append(label)
-        return texts
+        return extract_canvas_text(canvas_data)
 
     async def create(
         self,
@@ -292,68 +92,21 @@ class NoteOperations(BaseContentOperations[Note]):
         metadata: dict[str, Any] | None = None,
         group_ids: list[UUID] | None = None,
     ) -> Note:
-        """Create a note; ``None`` access fields inherit live from org defaults."""
-        access_mode, baseline_role = await self._resolve_access_policy(
-            organization_id, access_mode, baseline_role
-        )
-
-        slug = await self._unique_slug(slug or queries.slugify(title), organization_id)
-        fields = self._extract_content_fields(node_type, content, canvas_content, organization_id)
-
-        note = Note(
+        return await NoteCreation(self).create(
+            user_id=user_id,
             organization_id=organization_id,
-            owner_id=user_id,
             title=title,
-            content=fields.content,
-            canvas_content=fields.canvas_content,
+            content=content,
+            canvas_content=canvas_content,
             slug=slug,
             access_mode=access_mode,
             baseline_role=baseline_role,
             node_type=node_type,
             parent_id=parent_id,
-            note_metadata=metadata,
-            outgoing_references=fields.outgoing_references,
-        )
-        self.session.add(note)
-        await self.session.commit()
-        await self.session.refresh(note)
-
-        # Group seeding goes through the canonical members API so audit captures it.
-        if group_ids:
-            members_ops = ContentMembersOperations(self.session)
-            for gid in group_ids:
-                await members_ops.add_member(
-                    actor_user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=self.content_type,
-                    content_id=note.id,
-                    subject_type=SubjectType.GROUP,
-                    subject_id=gid,
-                    role=ContentRole.VIEWER,
-                )
-
-        await self._sync_tags_after_save(
-            user_id=user_id,
-            organization_id=organization_id,
-            note=note,
             tag_ids=tag_ids,
-            parsed_inline_names=fields.parsed_inline_tag_names,
+            metadata=metadata,
+            group_ids=group_ids,
         )
-
-        await self._index_for_search(note, skip_member_lookup=not group_ids)
-        await self.session.commit()
-
-        effective_mode, _ = await self._effective_policy(organization_id, note)
-        if effective_mode != AccessMode.OWNER_ONLY or group_ids:
-            await self._emit_shared_notification(user_id, organization_id, note)
-        await self._broadcast_open_to_org_create(organization_id, note.id, effective_mode)
-        await self._notify_new_mentions(
-            user_id, organization_id, note, old_refs=None, writer_id=user_id
-        )
-
-        await self._refresh_parent_folder(parent_id, organization_id)
-
-        return note
 
     async def update(
         self,
@@ -364,210 +117,22 @@ class NoteOperations(BaseContentOperations[Note]):
         content: str | None = None,
         canvas_content: dict[str, Any] | None = None,
         slug: str | None = None,
-        parent_id: UUID | None | str = None,  # "" means clear
+        parent_id: UUID | None | str = None,
         tag_ids: list[UUID] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> Note:
-        """Update title/body/metadata. Policy changes go via MembersService."""
-        note = await self._fetch_by_id(note_id, organization_id)
-        if not note:
-            raise NotFoundError("Note", note_id)
-
-        await self._require_edit(user_id, organization_id, note)
-
-        if isinstance(parent_id, UUID):
-            await self._require_moveable_under(note_id, parent_id, organization_id)
-
-        is_canvas = note.node_type == NodeType.CANVAS
-        content_changed = canvas_content is not None if is_canvas else content is not None
-
-        fields: _NoteContentFields | None = None
-        if content_changed:
-            fields = self._extract_content_fields(
-                note.node_type, content or "", canvas_content, organization_id
-            )
-        parsed_inline_names = fields.parsed_inline_tag_names if fields else None
-
-        title_changed = False
-        old_refs: list[str] | None = None
-
-        for attempt in range(3):
-            if attempt:
-                refreshed = (
-                    await self.session.execute(
-                        select(Note)
-                        .where(
-                            Note.id == note_id,
-                            Note.organization_id == organization_id,
-                        )
-                        .execution_options(populate_existing=True)
-                    )
-                ).scalar_one_or_none()
-                if refreshed is None:
-                    raise NotFoundError("Note", note_id)
-                note = refreshed
-
-            title_changed = title is not None and title != note.title
-            old_refs = note.outgoing_references if content_changed else None
-            previous_parent_id = note.parent_id
-            parent_changed = False
-
-            values: dict[str, Any] = {"updated_at": datetime.now(UTC)}
-            if title is not None:
-                values["title"] = title
-            if fields is not None:
-                values["content"] = fields.content
-                values["canvas_content"] = fields.canvas_content
-                values["outgoing_references"] = fields.outgoing_references
-                # Only content writes bump ``version``; metadata-only edits must
-                # not starve the realtime save CAS.
-                values["version"] = note.version + 1
-            if slug is not None:
-                values["slug"] = slug
-            if parent_id == "":
-                parent_changed = note.parent_id is not None
-                values["parent_id"] = None
-            elif parent_id is not None:
-                parent_changed = note.parent_id != parent_id
-                values["parent_id"] = parent_id
-            if metadata is not None:
-                merged = copy.deepcopy(note.note_metadata) if note.note_metadata else {}
-                merged.update(metadata)
-                values["note_metadata"] = merged
-
-            result = await self.session.execute(
-                sql_update(Note)
-                .where(
-                    Note.id == note_id,
-                    Note.organization_id == organization_id,
-                    Note.version == note.version,
-                )
-                .values(**values)
-                .execution_options(synchronize_session=False)
-            )
-            if result.rowcount:
-                if content_changed:
-                    # Drop the snapshot row so the next cold realtime open
-                    # re-hydrates from the fresh column; live docs get the
-                    # content grafted in via the content-replace fanout below.
-                    await self.session.execute(
-                        sql_delete(RealtimeYjsSnapshot).where(
-                            RealtimeYjsSnapshot.content_type == self.content_type,
-                            RealtimeYjsSnapshot.content_id == note_id,
-                        )
-                    )
-                if parent_changed:
-                    await write_audit_event(
-                        self.session,
-                        organization_id=organization_id,
-                        actor_user_id=user_id,
-                        action=Action.NOTE_MOVED,
-                        resource_type=AuditResourceType.NOTE,
-                        resource_id=note.id,
-                        details={
-                            "previous_parent_id": (
-                                str(previous_parent_id) if previous_parent_id else None
-                            ),
-                            "new_parent_id": (None if parent_id == "" else str(parent_id)),
-                        },
-                    )
-                await self.session.commit()
-                break
-            # Lost the version CAS (usually a realtime save); re-read and re-apply.
-            await self.session.rollback()
-        else:
-            raise ConflictError("Note", f"concurrent edits on {note_id}")
-
-        await self.session.refresh(note)
-
-        if content_changed and not is_canvas and fields is not None:
-            # A doc live in any replica's memory grafts this write in as a CRDT
-            # edit; without it a later stale-doc snapshot flush would silently
-            # overwrite the column.
-            await publish_content_replace(self.content_type, note_id, fields.content)
-
-        if content_changed and fields is not None:
-            from uniffy.domains.files.attachments.operations import AttachmentOperations
-
-            referenced_file_ids = _referenced_file_ids(fields.outgoing_references)
-            await AttachmentOperations(self.session).reconcile_inline_attachments(
-                organization_id,
-                self.content_type,
-                note_id,
-                referenced_file_ids,
-            )
-            await self.session.commit()
-
-        await self._sync_tags_after_save(
+        return await NoteUpdates(self).update(
             user_id=user_id,
             organization_id=organization_id,
-            note=note,
+            note_id=note_id,
+            title=title,
+            content=content,
+            canvas_content=canvas_content,
+            slug=slug,
+            parent_id=parent_id,
             tag_ids=tag_ids,
-            parsed_inline_names=parsed_inline_names if content_changed else None,
+            metadata=metadata,
         )
-
-        await self._index_for_search(note)
-        await self.session.commit()
-
-        if title_changed:
-            await self._propagate_title_to_mentions(organization_id, note)
-            if note.node_type == NodeType.FOLDER:
-                await self._refresh_children_parent_label(note)
-
-        if parent_changed:
-            await self._refresh_parent_folder(previous_parent_id, organization_id)
-            await self._refresh_parent_folder(note.parent_id, organization_id)
-
-        effective_mode, _ = await self._effective_policy(organization_id, note)
-        if effective_mode != AccessMode.OWNER_ONLY:
-            await emit_notification(
-                NotificationEvent(
-                    notification_type=NotificationType.CONTENT_EDITED,
-                    organization_id=organization_id,
-                    actor_id=user_id,
-                    title=f"Edited note: {note.title}",
-                    source_urn=build_content_urn(self.content_type, note.id),
-                    content_type=self.content_type,
-                    content_id=note.id,
-                )
-            )
-
-        if content_changed:
-            await self._notify_new_mentions(
-                user_id, organization_id, note, old_refs=old_refs, writer_id=user_id
-            )
-
-        return note
-
-    async def _require_moveable_under(
-        self,
-        note_id: UUID,
-        parent_id: UUID,
-        organization_id: UUID,
-    ) -> None:
-        """Refuse a move that would detach a subtree from the tree by filing a
-        folder under itself or under one of its own descendants.
-        """
-        if parent_id == note_id:
-            raise ValidationError("parent_id", "A note cannot be its own parent")
-
-        current: UUID | None = parent_id
-        # Bounded so a cycle already present in the data cannot spin here.
-        for _ in range(_MAX_TREE_DEPTH):
-            if current is None:
-                return
-            if current == note_id:
-                raise ValidationError("parent_id", "Cannot move a folder into its own subtree")
-            current = (
-                await self.session.execute(
-                    select(Note.parent_id).where(
-                        Note.id == current,
-                        Note.organization_id == organization_id,
-                    )
-                )
-            ).scalar_one_or_none()
-
-        raise ValidationError("parent_id", "Folder nesting is too deep")
 
     async def delete(
         self,
@@ -576,62 +141,12 @@ class NoteOperations(BaseContentOperations[Note]):
         note_id: UUID,
         permanent: bool = False,
     ) -> bool:
-        """Delete a note (soft by default, recursive for folders)."""
-        note = await self._fetch_by_id(note_id, organization_id)
-        if not note:
-            raise NotFoundError("Note", note_id)
-
-        await self._require_delete(user_id, organization_id, note)
-
-        parent_folder_id = note.parent_id
-
-        # Snapshot descendants before mutation so search cleanup is correct.
-        removed_ids = await self._collect_descendant_ids(note)
-
-        if permanent:
-            # Trash keeps attachment bytes for restore; a permanent delete is
-            # the end of the parent, so its attachment files go with it.
-            from uniffy.domains.files.attachments.operations import AttachmentOperations
-
-            await AttachmentOperations(self.session).purge_attachments_for_content(
-                organization_id,
-                self.content_type,
-                removed_ids,
-            )
-            await queries.permanent_delete_recursive(self.session, note)
-        else:
-            await queries.soft_delete_recursive(self.session, note)
-
-        if permanent:
-            tag_ops = TagOperations(self.session)
-            for nid in removed_ids:
-                await tag_ops.unassign_all_for_urn(
-                    actor_id=user_id,
-                    organization_id=organization_id,
-                    content_urn=build_content_urn(self.content_type, nid),
-                )
-
-        for nid in removed_ids:
-            await self.search_indexer.remove(build_content_urn(self.content_type, nid))
-
-        await write_audit_event(
-            self.session,
-            organization_id=organization_id,
-            actor_user_id=user_id,
-            action=(Action.NOTE_PERMANENTLY_DELETED if permanent else Action.NOTE_DELETED),
-            resource_type=AuditResourceType.NOTE,
-            resource_id=note_id,
-            details={
-                "title": note.title,
-                "node_type": note.node_type.value,
-                "descendant_count": max(0, len(removed_ids) - 1),
-            },
+        return await NoteHierarchy(self).delete(
+            user_id,
+            organization_id,
+            note_id,
+            permanent,
         )
-        await self.session.commit()
-
-        await self._refresh_parent_folder(parent_folder_id, organization_id)
-
-        return True
 
     async def restore(
         self,
@@ -639,35 +154,7 @@ class NoteOperations(BaseContentOperations[Note]):
         organization_id: UUID,
         note_id: UUID,
     ) -> Note:
-        note = await self._fetch_by_id(note_id, organization_id)
-        if not note:
-            raise NotFoundError("Note", note_id)
-
-        await self._require_edit(user_id, organization_id, note)
-
-        note.is_deleted = False
-        note.deleted_at = None
-        note.updated_at = datetime.now(UTC)
-
-        await write_audit_event(
-            self.session,
-            organization_id=organization_id,
-            actor_user_id=user_id,
-            action=Action.NOTE_RESTORED,
-            resource_type=AuditResourceType.NOTE,
-            resource_id=note_id,
-            details={"title": note.title, "node_type": note.node_type.value},
-        )
-
-        await self.session.commit()
-        await self.session.refresh(note)
-
-        await self._index_for_search(note)
-        await self.session.commit()
-
-        await self._refresh_parent_folder(note.parent_id, organization_id)
-
-        return note
+        return await NoteHierarchy(self).restore(user_id, organization_id, note_id)
 
     async def realtime_save(
         self,
@@ -676,103 +163,12 @@ class NoteOperations(BaseContentOperations[Note]):
         content: str,
         canvas_content: dict[str, Any] | None,
     ) -> Note | None:
-        """CAS-persist the rendered snapshot; ``owner_id`` stands in as actor
-        because a snapshot has no single editor."""
-        note = (
-            await self.session.execute(
-                select(Note).where(
-                    Note.id == note_id,
-                    Note.organization_id == organization_id,
-                    Note.is_deleted == False,  # noqa: E712
-                )
-            )
-        ).scalar_one_or_none()
-        if not note:
-            return None
-
-        fields = self._extract_content_fields(
-            note.node_type, content, canvas_content, organization_id
+        return await NoteRealtimePersistence(self).save(
+            organization_id,
+            note_id,
+            content,
+            canvas_content,
         )
-
-        if note.content and not fields.content:
-            # A cleared editor legitimately persists ""; count it so a
-            # regression in the frontend blank guard stays visible.
-            REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL.labels(
-                content_type=self.content_type.value
-            ).inc()
-            logger.warning(
-                "realtime save is replacing non-empty note content with empty content",
-                note_id=str(note_id),
-                organization_id=str(organization_id),
-                old_content_length=len(note.content),
-            )
-
-        for attempt in range(3):
-            if attempt:
-                # Lost the version CAS; re-read for a fresh attempt.
-                note = (
-                    await self.session.execute(
-                        select(Note)
-                        .where(
-                            Note.id == note_id,
-                            Note.organization_id == organization_id,
-                            Note.is_deleted == False,  # noqa: E712
-                        )
-                        .execution_options(populate_existing=True)
-                    )
-                ).scalar_one_or_none()
-                if not note:
-                    return None
-
-            old_refs = note.outgoing_references
-            result = await self.session.execute(
-                sql_update(Note)
-                .where(
-                    Note.id == note_id,
-                    Note.organization_id == organization_id,
-                    Note.is_deleted == False,  # noqa: E712
-                    Note.version == note.version,
-                )
-                .values(
-                    content=fields.content,
-                    canvas_content=fields.canvas_content,
-                    outgoing_references=fields.outgoing_references,
-                    version=note.version + 1,
-                    updated_at=datetime.now(UTC),
-                )
-                .execution_options(synchronize_session=False)
-            )
-            await self.session.commit()
-            if result.rowcount:
-                break
-        else:
-            logger.warning(
-                "realtime save lost the version CAS after 3 attempts",
-                note_id=str(note_id),
-                organization_id=str(organization_id),
-            )
-            return None
-
-        await self.session.refresh(note)
-        actor_id = note.owner_id
-
-        await self._sync_tags_after_save(
-            user_id=actor_id,
-            organization_id=organization_id,
-            note=note,
-            tag_ids=None,
-            parsed_inline_names=fields.parsed_inline_tag_names,
-        )
-
-        await self._index_for_search(note)
-        await self.session.commit()
-
-        # No acting user on the snapshot path, so nobody is excluded as the writer.
-        await self._notify_new_mentions(
-            actor_id, organization_id, note, old_refs=old_refs, writer_id=None
-        )
-
-        return note
 
     async def move(
         self,
@@ -783,39 +179,14 @@ class NoteOperations(BaseContentOperations[Note]):
         target_baseline_role: ContentRole | None = None,
         target_group_ids: list[UUID] | None = None,
     ) -> Note:
-        """Change a note's access mode (optionally seeding group viewers)."""
-        members_ops = ContentMembersOperations(self.session)
-        await members_ops.set_access_mode(
-            actor_user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id=note_id,
-            new_access_mode=target_access_mode,
-            new_baseline_role=target_baseline_role,
-            remove_members_on_narrow=False,
+        return await NoteSharing(self).move(
+            user_id,
+            organization_id,
+            note_id,
+            target_access_mode,
+            target_baseline_role,
+            target_group_ids,
         )
-
-        if target_group_ids:
-            for gid in target_group_ids:
-                await members_ops.add_member(
-                    actor_user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=self.content_type,
-                    content_id=note_id,
-                    subject_type=SubjectType.GROUP,
-                    subject_id=gid,
-                    role=ContentRole.VIEWER,
-                )
-
-        note = await self._fetch_by_id(note_id, organization_id)
-        if note is None:
-            raise NotFoundError("Note", note_id)
-
-        effective_mode, _ = await self._effective_policy(organization_id, note)
-        if effective_mode != AccessMode.OWNER_ONLY:
-            await self._emit_shared_notification(user_id, organization_id, note)
-
-        return note
 
     async def get_backlinks(
         self,
@@ -823,85 +194,10 @@ class NoteOperations(BaseContentOperations[Note]):
         organization_id: UUID,
         note_id: UUID,
     ) -> list[Note]:
-        """Return visible backlinks to ``note_id``."""
-        note = await self._fetch_by_id(note_id, organization_id)
-        if not note:
-            raise NotFoundError("Note", note_id)
+        return await NoteBrowser(self).get_backlinks(user_id, organization_id, note_id)
 
-        await self._require_view(user_id, organization_id, note)
-
-        access_filter = await self.access_query.build_accessible_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id_column=Note.id,
-            owner_id_column=Note.owner_id,
-            access_mode_column=Note.access_mode,
-            baseline_role_column=Note.baseline_role,
-        )
-        return await queries.get_backlinks(
-            self.session,
-            note_id,
-            organization_id,
-            access_filter,
-        )
-
-    async def empty_trash(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-    ) -> int:
-        """Permanently delete the caller's soft-deleted notes."""
-        access_filter = await self.access_query.build_accessible_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id_column=Note.id,
-            owner_id_column=Note.owner_id,
-            access_mode_column=Note.access_mode,
-            baseline_role_column=Note.baseline_role,
-        )
-        trash_ids_result = await self.session.execute(
-            select(Note.id).where(
-                Note.organization_id == organization_id,
-                Note.owner_id == user_id,
-                Note.is_deleted == True,  # noqa: E712
-                access_filter,
-            )
-        )
-        trash_ids = list(trash_ids_result.scalars().all())
-
-        from uniffy.domains.files.attachments.operations import AttachmentOperations
-
-        await AttachmentOperations(self.session).purge_attachments_for_content(
-            organization_id,
-            self.content_type,
-            trash_ids,
-        )
-
-        count = await queries.empty_trash(self.session, organization_id, trash_ids)
-
-        tag_ops = TagOperations(self.session)
-        for nid in trash_ids:
-            urn = build_content_urn(self.content_type, nid)
-            await tag_ops.unassign_all_for_urn(
-                actor_id=user_id,
-                organization_id=organization_id,
-                content_urn=urn,
-            )
-            await self.search_indexer.remove(urn)
-            await write_audit_event(
-                self.session,
-                organization_id=organization_id,
-                actor_user_id=user_id,
-                action=Action.NOTE_PERMANENTLY_DELETED,
-                resource_type=AuditResourceType.NOTE,
-                resource_id=nid,
-                details={"source": "empty_trash"},
-            )
-        await self.session.commit()
-
-        return count
+    async def empty_trash(self, user_id: UUID, organization_id: UUID) -> int:
+        return await NoteHierarchy(self).empty_trash(user_id, organization_id)
 
     async def list_notes(
         self,
@@ -919,80 +215,31 @@ class NoteOperations(BaseContentOperations[Note]):
         sort_by: str = "updated_at",
         sort_order: SortOrder = SortOrder.DESCENDING,
     ) -> tuple[list[Note], int]:
-        """List notes the user can access. Bookmarks go through BookmarksService."""
-        query = select(Note).where(Note.organization_id == organization_id)
-        if node_types:
-            query = query.where(Note.node_type.in_(node_types))
-        query = await self._apply_access_filter(
-            query, user_id, organization_id, personal_only=personal_only
+        return await NoteBrowser(self).list_notes(
+            user_id=user_id,
+            organization_id=organization_id,
+            parent_id=parent_id,
+            access_mode=access_mode,
+            group_id=group_id,
+            personal_only=personal_only,
+            include_deleted=include_deleted,
+            tag_ids=tag_ids,
+            node_types=node_types,
+            page=page,
+            page_size=page_size,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
-
-        if group_id is not None:
-            query = query.where(Note.id.in_(self._group_member_subquery(organization_id, group_id)))
-        if parent_id == ParentSelection.ROOT:
-            query = query.where(Note.parent_id.is_(None))
-        elif parent_id:
-            query = query.where(Note.parent_id == parent_id)
-        if access_mode is not None:
-            query = query.where(Note.access_mode == access_mode)
-        if not include_deleted:
-            query = query.where(Note.is_deleted == False)  # noqa: E712
-        if tag_ids:
-            query = query.where(Note.id.in_(self._tag_filter_subquery(tag_ids)))
-
-        total = (
-            await self.session.execute(select(func.count()).select_from(query.subquery()))
-        ).scalar() or 0
-
-        sort_col = getattr(Note, sort_by, Note.updated_at)
-        query = query.order_by(
-            sort_col.asc() if sort_order == SortOrder.ASCENDING else sort_col.desc()
-        )
-        query = query.offset((page - 1) * page_size).limit(page_size)
-
-        result = await self.session.execute(query)
-        return list(result.scalars().all()), total
 
     async def get_notes_sharing_info(
         self,
         notes: list[Note],
         current_user_id: UUID,
     ) -> dict[UUID, NoteSharingInfo]:
-        """Owned notes get ``shared_with``; non-owned get ``owner_info``."""
-        result: dict[UUID, NoteSharingInfo] = {}
-
-        owned_notes = [n for n in notes if n.owner_id == current_user_id]
-        shared_notes = [n for n in notes if n.owner_id != current_user_id]
-
-        if shared_notes:
-            owners = await self._load_owners({n.owner_id for n in shared_notes})
-            for note in shared_notes:
-                owner = owners.get(note.owner_id)
-                result[note.id] = NoteSharingInfo(
-                    owner_info=self._owner_info_dict(note.owner_id, owner)
-                )
-
-        if owned_notes:
-            members_by_note = await self._load_members_by_note([n.id for n in owned_notes])
-            user_lookup, group_lookup, group_counts = await self._load_subject_lookups(
-                members_by_note
-            )
-            for note in owned_notes:
-                shared_with = self._build_shared_with(
-                    members_by_note.get(note.id, []),
-                    user_lookup,
-                    group_lookup,
-                    group_counts,
-                )
-                result[note.id] = NoteSharingInfo(shared_with=shared_with if shared_with else None)
-
-        return result
+        return await NoteSharingQueries(self).get_notes_sharing_info(notes, current_user_id)
 
     async def _unique_slug(self, base: str, organization_id: UUID) -> str:
-        existing = await queries.get_by_slug(self.session, base, organization_id)
-        if not existing:
-            return base
-        return f"{base}-{int(datetime.now(UTC).timestamp())}"
+        return await NoteCreation(self).unique_slug(base, organization_id)
 
     def _extract_content_fields(
         self,
@@ -1000,33 +247,8 @@ class NoteOperations(BaseContentOperations[Note]):
         content: str,
         canvas_content: dict[str, Any] | None,
         organization_id: UUID,
-    ) -> _NoteContentFields:
-        if node_type == NodeType.CANVAS:
-            outgoing = (
-                extract_all_outgoing_references_from_canvas(canvas_content, organization_id)
-                if canvas_content
-                else None
-            ) or None
-            parsed = (
-                queries.extract_inline_tags_from_canvas(canvas_content) if canvas_content else []
-            )
-            return _NoteContentFields(
-                content="",
-                canvas_content=canvas_content,
-                outgoing_references=outgoing,
-                parsed_inline_tag_names=parsed,
-            )
-
-        outgoing = (
-            extract_all_outgoing_references(content, organization_id) if content else None
-        ) or None
-        parsed = queries.extract_inline_tags_from_content(content) if content else []
-        return _NoteContentFields(
-            content=content,
-            canvas_content=None,
-            outgoing_references=outgoing,
-            parsed_inline_tag_names=parsed,
-        )
+    ) -> NoteContentFields:
+        return extract_content_fields(node_type, content, canvas_content, organization_id)
 
     async def _sync_tags_after_save(
         self,
@@ -1037,37 +259,12 @@ class NoteOperations(BaseContentOperations[Note]):
         tag_ids: list[UUID] | None,
         parsed_inline_names: list[str] | None,
     ) -> None:
-        # ``None`` for either side leaves that side untouched.
-        urn = build_content_urn(self.content_type, note.id)
-        tag_ops = TagOperations(self.session)
-
-        if tag_ids is not None:
-            await tag_ops.replace_manual_tags(
-                actor_id=user_id,
-                organization_id=organization_id,
-                content_urn=urn,
-                tag_ids=tag_ids,
-            )
-
-        if parsed_inline_names is not None:
-            await sync_inline_tags(
-                self.session,
-                content_urn=urn,
-                organization_id=organization_id,
-                actor_id=user_id,
-                parsed_names=parsed_inline_names,
-            )
-
-    def _tag_filter_subquery(self, tag_ids: list[UUID]):
-        # Subquery: notes that carry every tag in ``tag_ids`` (AND via HAVING COUNT).
-        urn_prefix = "urn:uniffy:content:NOTE:"
-        urn_expr = func.concat(urn_prefix, cast(Note.id, String))
-        return (
-            select(Note.id)
-            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
-            .where(TagAssignment.tag_id.in_(tag_ids))
-            .group_by(Note.id)
-            .having(func.count(func.distinct(TagAssignment.tag_id)) == len(tag_ids))
+        await NoteUpdates(self).sync_tags_after_save(
+            user_id=user_id,
+            organization_id=organization_id,
+            note=note,
+            tag_ids=tag_ids,
+            parsed_inline_names=parsed_inline_names,
         )
 
     async def _notify_new_mentions(
@@ -1078,62 +275,13 @@ class NoteOperations(BaseContentOperations[Note]):
         old_refs: list[str] | None,
         writer_id: UUID | None = None,
     ) -> None:
-        # ``old_refs=None`` on create -> every mention counts as new. Self-mentions
-        # skipped, but only when the writer is actually known: the realtime
-        # snapshot path has no acting user and attributes the save to the owner,
-        # so discarding on that value would drop the owner from a notification an
-        # editor wrote for them.
-        new_mentioned = extract_mentioned_user_ids(note.outgoing_references)
-        if writer_id is not None:
-            new_mentioned.discard(writer_id)
-        if old_refs is not None:
-            new_mentioned -= extract_mentioned_user_ids(old_refs)
-
-        source_urn = build_content_urn(self.content_type, note.id)
-
-        if new_mentioned:
-            await emit_notification(
-                NotificationEvent(
-                    notification_type=NotificationType.CONTENT_MENTIONED,
-                    organization_id=organization_id,
-                    actor_id=user_id,
-                    title=f"Mentioned you in: {note.title}",
-                    source_urn=source_urn,
-                    target_user_ids=list(new_mentioned),
-                )
-            )
-
-        new_teams = extract_mentioned_team_ids(note.outgoing_references)
-        if old_refs is not None:
-            already_mentioned = set(extract_mentioned_team_ids(old_refs))
-            new_teams = [tid for tid in new_teams if tid not in already_mentioned]
-        if not new_teams:
-            return
-
-        # Per-recipient access is the notification worker's job for NOTE; here we
-        # only avoid telling someone twice about the same edit.
-        notified = set(new_mentioned)
-        if writer_id is not None:
-            notified.add(writer_id)
-        for expansion in await expand_team_mentions(self.session, organization_id, new_teams):
-            targets = [uid for uid in expansion.member_ids if uid not in notified]
-            if not targets:
-                continue
-            await emit_notification(
-                NotificationEvent(
-                    notification_type=NotificationType.CONTENT_MENTIONED,
-                    organization_id=organization_id,
-                    actor_id=user_id,
-                    title=f"Mentioned {expansion.name} in: {note.title}",
-                    source_urn=source_urn,
-                    target_user_ids=targets,
-                    metadata={
-                        "team_id": str(expansion.team_id),
-                        "team_name": expansion.name,
-                    },
-                )
-            )
-            notified.update(targets)
+        await NoteNotifications(self).notify_new_mentions(
+            user_id,
+            organization_id,
+            note,
+            old_refs,
+            writer_id,
+        )
 
     async def _emit_shared_notification(
         self,
@@ -1141,75 +289,28 @@ class NoteOperations(BaseContentOperations[Note]):
         organization_id: UUID,
         note: Note,
     ) -> None:
-        """Emit ``CONTENT_SHARED`` when a note opens beyond its owner."""
-        await emit_notification(
-            NotificationEvent(
-                notification_type=NotificationType.CONTENT_SHARED,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Shared note: {note.title}",
-                source_urn=build_content_urn(self.content_type, note.id),
-                content_type=self.content_type,
-                content_id=note.id,
-            )
-        )
+        await NoteNotifications(self).emit_shared(user_id, organization_id, note)
 
     async def _refresh_children_parent_label(self, parent: Note) -> None:
-        """Re-index children + broadcast ``parent_label`` after a folder rename."""
-        result = await self.session.execute(
-            select(Note).where(
-                Note.parent_id == parent.id,
-                Note.is_deleted == False,  # noqa: E712
-            )
-        )
-        children = list(result.scalars().all())
-        for child in children:
-            try:
-                await self._index_for_search(child)
-            except Exception:
-                logger.warning(f"Failed to re-index child note {child.id} after folder rename")
-            try:
-                await publish_mention_state(
-                    organization_id=child.organization_id,
-                    urn=build_content_urn(self.content_type, child.id),
-                    changes={"parent_label": parent.title},
-                )
-            except Exception:
-                logger.warning(f"Failed to publish parent_label for note {child.id}")
+        await NoteProjections(self).refresh_children_parent_label(parent)
 
     async def _propagate_title_to_mentions(
         self,
         organization_id: UUID,
         note: Note,
     ) -> None:
-        # Best-effort: rewrite mention labels of this note across other content.
-        try:
-            await propagate_rename(
-                session=self.session,
-                organization_id=organization_id,
-                target_urn=build_content_urn(self.content_type, note.id),
-                new_label=note.title,
-            )
-            await self.session.commit()
-        except Exception:
-            logger.opt(exception=True).warning(
-                "Failed to propagate note rename to mentions", note_id=str(note.id)
-            )
+        await NoteProjections(self).propagate_title(organization_id, note)
+
+    async def _require_moveable_under(
+        self,
+        note_id: UUID,
+        parent_id: UUID,
+        organization_id: UUID,
+    ) -> None:
+        await NoteHierarchy(self).require_moveable_under(note_id, parent_id, organization_id)
 
     async def _collect_descendant_ids(self, note: Note) -> list[UUID]:
-        ids = [note.id]
-        if note.node_type != NodeType.FOLDER:
-            return ids
-
-        result = await self.session.execute(
-            select(Note).where(
-                Note.parent_id == note.id,
-                Note.is_deleted == False,  # noqa: E712
-            )
-        )
-        for child in result.scalars().all():
-            ids.extend(await self._collect_descendant_ids(child))
-        return ids
+        return await NoteHierarchy(self).collect_descendant_ids(note)
 
     async def _apply_access_filter(
         self,
@@ -1219,195 +320,20 @@ class NoteOperations(BaseContentOperations[Note]):
         *,
         personal_only: bool,
     ) -> Any:
-        access_filter = await self.access_query.build_accessible_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id_column=Note.id,
-            owner_id_column=Note.owner_id,
-            access_mode_column=Note.access_mode,
-            baseline_role_column=Note.baseline_role,
+        return await NoteBrowser(self).apply_access_filter(
+            query,
+            user_id,
+            organization_id,
+            personal_only=personal_only,
         )
-        query = query.where(access_filter)
-        if personal_only:
-            query = query.where(Note.owner_id == user_id)
-        return query
-
-    def _group_member_subquery(self, organization_id: UUID, group_id: UUID):
-        now = datetime.now(UTC)
-        return select(ContentMember.content_id).where(
-            ContentMember.organization_id == organization_id,
-            ContentMember.content_type == self.content_type,
-            ContentMember.subject_type == SubjectType.GROUP,
-            ContentMember.subject_id == group_id,
-            ContentMember.role != ContentRole.BLOCKED,
-            or_(
-                ContentMember.expires_at.is_(None),
-                ContentMember.expires_at > now,
-            ),
-        )
-
-    async def _load_owners(self, owner_ids: set[UUID]) -> dict[UUID, User]:
-        if not owner_ids:
-            return {}
-        result = await self.session.execute(select(User).where(User.id.in_(owner_ids)))
-        return {u.id: u for u in result.scalars().all()}
 
     @staticmethod
-    def _owner_info_dict(owner_id: UUID, owner: User | None) -> dict | None:
-        if owner is None:
-            return None
-        return {
-            "id": str(owner_id),
-            "name": owner.full_name or owner.username,
-            "email": owner.email,
-        }
-
-    async def _load_members_by_note(
-        self,
-        note_ids: list[UUID],
-    ) -> dict[UUID, list[ContentMember]]:
-        if not note_ids:
-            return {}
-        now = datetime.now(UTC)
-        result = await self.session.execute(
-            select(ContentMember)
-            .where(ContentMember.content_type == self.content_type)
-            .where(ContentMember.content_id.in_(note_ids))
-            .where(ContentMember.role != ContentRole.BLOCKED)
-            .where(
-                or_(
-                    ContentMember.expires_at.is_(None),
-                    ContentMember.expires_at > now,
-                )
-            )
-        )
-        members_by_note: dict[UUID, list[ContentMember]] = {nid: [] for nid in note_ids}
-        for member in result.scalars().all():
-            members_by_note[member.content_id].append(member)
-        return members_by_note
-
-    async def _load_subject_lookups(
-        self,
-        members_by_note: dict[UUID, list[ContentMember]],
-    ) -> tuple[dict[UUID, User], dict[UUID, Group], dict[UUID, int]]:
-        user_ids: set[UUID] = set()
-        group_ids: set[UUID] = set()
-        for members in members_by_note.values():
-            for m in members:
-                if m.subject_type == SubjectType.USER:
-                    user_ids.add(m.subject_id)
-                elif m.subject_type == SubjectType.GROUP:
-                    group_ids.add(m.subject_id)
-
-        user_lookup: dict[UUID, User] = {}
-        if user_ids:
-            users_result = await self.session.execute(select(User).where(User.id.in_(user_ids)))
-            user_lookup = {u.id: u for u in users_result.scalars().all()}
-
-        group_lookup: dict[UUID, Group] = {}
-        group_counts: dict[UUID, int] = {}
-        if group_ids:
-            groups_result = await self.session.execute(select(Group).where(Group.id.in_(group_ids)))
-            group_lookup = {g.id: g for g in groups_result.scalars().all()}
-
-            counts_result = await self.session.execute(
-                select(
-                    GroupMember.group_id,
-                    func.count(GroupMember.id).label("count"),
-                )
-                .where(GroupMember.group_id.in_(group_ids))
-                .where(GroupMember.is_active == True)  # noqa: E712
-                .group_by(GroupMember.group_id)
-            )
-            for row in counts_result.all():
-                group_counts[row[0]] = row[1]
-
-        return user_lookup, group_lookup, group_counts
+    def _tag_filter_subquery(tag_ids: list[UUID]):
+        return NoteBrowser.tag_filter_subquery(tag_ids)
 
     @staticmethod
-    def _build_shared_with(
-        members: list[ContentMember],
-        user_lookup: dict[UUID, User],
-        group_lookup: dict[UUID, Group],
-        group_counts: dict[UUID, int],
-    ) -> list[dict]:
-        shared_with: list[dict] = []
-        for member in members:
-            if member.subject_type == SubjectType.USER:
-                user = user_lookup.get(member.subject_id)
-                if user is None:
-                    continue
-                shared_with.append({
-                    "id": str(user.id),
-                    "type": "user",
-                    "name": user.full_name or user.username,
-                    "email": user.email,
-                    "member_count": 0,
-                    "role": member.role.value,
-                })
-            elif member.subject_type == SubjectType.GROUP:
-                group = group_lookup.get(member.subject_id)
-                if group is None:
-                    continue
-                shared_with.append({
-                    "id": str(group.id),
-                    "type": "group",
-                    "name": group.name,
-                    "email": "",
-                    "member_count": group_counts.get(group.id, 0),
-                    "role": member.role.value,
-                })
-        return shared_with
+    def _group_member_subquery(organization_id: UUID, group_id: UUID):
+        return NoteBrowser.group_member_subquery(organization_id, group_id)
 
 
-async def _load_note(
-    session: AsyncSession,
-    organization_id: UUID,
-    content_id: UUID,
-) -> Note | None:
-    result = await session.execute(
-        select(Note).where(
-            Note.id == content_id,
-            Note.organization_id == organization_id,
-        )
-    )
-    return result.scalar_one_or_none()
-
-
-register_content_loader(ContentType.NOTE, _load_note)
-
-
-async def _note_attachment_cascade(
-    session: AsyncSession,
-    organization_id: UUID,
-    parent_id: UUID,
-) -> list[tuple[ContentType, UUID]]:
-    affected: list[tuple[ContentType, UUID]] = []
-    stack: list[UUID] = [parent_id]
-    seen: set[UUID] = set()
-    while stack:
-        current = stack.pop()
-        rows = (
-            (
-                await session.execute(
-                    select(Note.id).where(
-                        Note.parent_id == current,
-                        Note.organization_id == organization_id,
-                        Note.is_deleted == False,  # noqa: E712
-                    )
-                )
-            )
-            .scalars()
-            .all()
-        )
-        for child_id in rows:
-            if child_id in seen:
-                continue
-            seen.add(child_id)
-            affected.append((ContentType.NOTE, child_id))
-            stack.append(child_id)
-    return affected
-
-
-register_attachment_cascade_loader(ContentType.NOTE, _note_attachment_cascade)
+__all__ = ["NoteOperations", "NoteSharingInfo"]

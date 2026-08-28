@@ -26,24 +26,24 @@ from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import SenderType
 from uniffy.core.types import SubjectType, generate_id
-from uniffy.domains.agents.chat_integration import (
-    context_handlers as context_handlers_mod,
+from uniffy.domains.agents.bridge import (
+    contexts as context_handlers_mod,
 )
-from uniffy.domains.agents.chat_integration.context import (
+from uniffy.domains.agents.bridge.context import (
     ChatAgentContextOperations,
     ContextStats,
     _format_chat_entry,
 )
-from uniffy.domains.agents.chat_integration.context_handlers import (
+from uniffy.domains.agents.bridge.contexts import (
     _parse_ids,
     _stats_to_proto,
 )
-from uniffy.domains.agents.chat_integration.mention_detector import (
+from uniffy.domains.agents.bridge.mentions import (
     detect_agent_mentions,
 )
-from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
+from uniffy.domains.agents.bridge.operations import AgentChatBridge
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
-from uniffy.domains.agents.runtime import model_resolver as model_resolver_mod
+from uniffy.domains.agents.runtime.models import resolver as model_resolver_mod
 from uniffy.domains.agents.runtime import operations as runtime_ops_mod
 from uniffy.domains.agents.runtime.approvals import ApprovalStore
 from uniffy.domains.agents.runtime.compactor import (
@@ -58,8 +58,8 @@ from uniffy.domains.agents.runtime.writers import (
     SessionMessageWriter,
     _metadata_kind_for,
 )
-from uniffy.domains.chat.policy import _from_blob
-from uniffy.domains.chat.sender_resolver import SenderInfo, SenderResolver
+from uniffy.domains.chat.policies.operations import _from_blob
+from uniffy.domains.chat.senders import SenderInfo, SenderResolver
 from uniffy.domains.chat.subjects import ChatSubject
 
 
@@ -869,8 +869,8 @@ def _install_config_handler_env(
     monkeypatch.setattr(context_handlers_mod, "is_chat_agents_enabled", fake_flag)
     monkeypatch.setattr(
         context_handlers_mod,
-        "get_user_id_from_context",
-        lambda _ctx: user_id or generate_id(),
+        "current_user_id",
+        lambda: user_id or generate_id(),
     )
     monkeypatch.setattr(context_handlers_mod, "ChatAgentContextOperations", lambda _session: ops)
     return ops

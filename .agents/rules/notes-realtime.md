@@ -4,7 +4,6 @@ paths:
   - "src/uniffy/core/models/realtime/**/*.py"
   - "src/uniffy/domains/notes/**/*.py"
   - "src/uniffy/core/models/notes/**/*.py"
-  - "src/uniffy/domains/realtime/jobs.py"
   - "src/proto/notes/**/*.proto"
   - "src/ui/src/features/notes/**/*.ts"
   - "src/ui/src/features/notes/**/*.tsx"
@@ -39,7 +38,7 @@ Browser tab ────► ONE WebSocket  /api/realtime?org_id=<uuid>
          core/realtime/adapter.py        get_realtime_adapter(NOTE)
                        │                       │
                        ▼                       │
-         domains/notes/realtime_adapter.py     │
+         domains/notes/adapter.py     │
             authorize / hydrate_ydoc /         │
             render_and_persist                 │
                        │                       │
@@ -52,7 +51,7 @@ Browser tab ────► ONE WebSocket  /api/realtime?org_id=<uuid>
             SnapshotWriter.schedule            │
                        │                       │
                        ▼                       │
-         domains/realtime/jobs.py              │
+         core/realtime/jobs.py                 │
             save_realtime_snapshot (ARQ)       │
             UPSERT realtime_yjs_snapshots      │
             adapter.render_and_persist         │
@@ -87,7 +86,9 @@ class RealtimeContentAdapter(Protocol):
     async def render_and_persist(session, ydoc, content_id, organization_id) -> None: ...
 ```
 
-Notes adapter at `domains/notes/realtime_adapter.py`. Self-registers at module import; `domains/notes/__init__.py` imports it so the existing notes-service import chain triggers registration at boot.
+The notes adapter lives at `domains/notes/adapter.py`. `factory.create_app` and the core
+worker startup hook call `register_note_realtime_adapter()` explicitly; importing the notes package
+does not mutate the registry.
 
 Adapter rules:
 - `authorize` returns `None` (rather than raising) for no access / missing row. Reach for `PermissionChecker.effective_role(...)` directly; `_require_view` raises and is the wrong fit here.
@@ -156,8 +157,8 @@ Failure isolation: multiplexed transport has head-of-line blocking (slow doc can
 
 ## 6. Permission revoke / token revoke fanout
 
-- `core/content/members.py` publishes `realtime:perm:{content_type}:{content_id}` after every commit in `add_member`, `update_member_role`, `remove_member`, `set_access_mode`, `transfer_ownership`. Targeted user_id when the subject is a USER; content-wide (`user_id=None`) for GROUP / access-mode / ownership changes (re-authorizes every active client).
-- `domains/users/operations.py::update_user` fires `publish_token_revoke(user_id, new_version)` after every `token_version` bump (deactivation + password change). The single home for realtime fanouts is `core/realtime/publisher.py` - splitting it into `core/auth/revocation.py` tends to scatter the contract.
+- `domains/permissions/members.py` publishes `realtime:perm:{content_type}:{content_id}` after every commit in `add_member`, `update_member_role`, `remove_member`, `set_access_mode`, `transfer_ownership`. Targeted user_id when the subject is a USER; content-wide (`user_id=None`) for GROUP / access-mode / ownership changes (re-authorizes every active client).
+- `domains/users/operations.py::update_user` publishes the realtime token-revoke fanout after every `token_version` bump (deactivation + password change). `core/auth/revocation.py` owns the Valkey-backed token and session revocation facts; `core/realtime/publisher.py` owns realtime channel publication.
 - Decision matrix (`_enforce_role_change` in `ydoc_manager.py`):
   - BLOCKED / None / unknown role value -> `4403` close.
   - Otherwise `handle.can_edit = role_can_edit(role)` - the same EDITOR floor as attach-time, so VIEWER and COMMENTER are read-only in place.
@@ -168,7 +169,7 @@ Failure isolation: multiplexed transport has head-of-line blocking (slow doc can
 ## 7. Snapshot pipeline
 
 - `SnapshotWriter` lives in `core/realtime/snapshot.py`. `schedule(session)` re-arms a 5s per-key debounce, capped by `SNAPSHOT_MAX_DELAY` (30s): once a key's pending window exceeds the cap, the flush runs immediately instead of re-arming, so continuous typing cannot starve persistence. `flush(session)` encodes `ydoc.get_update()` + `ydoc.get_state()` under `session.lock`, base64-wraps, enqueues `save_realtime_snapshot` on the `core` ARQ queue; `flush(session, force=True)` persists in-process via the shared `persist_snapshot()` (UPSERT + render) with no queue dependency. The debounce task must never cancel itself when it is the one flushing (`task is not asyncio.current_task()` guard).
-- The `SAVE_REALTIME_SNAPSHOT` contract lives in `core/realtime/job_contracts.py`; its `save_realtime_snapshot(ctx, content_type, content_id, organization_id, update_b64, state_vector_b64)` handler lives in `domains/realtime/jobs.py` and `workers/registry.py` binds the pair to the core fleet. The handler UPSERTs `realtime_yjs_snapshots` (composite PK `(content_type, content_id)`), then calls `adapter.render_and_persist`.
+- The `SAVE_REALTIME_SNAPSHOT` contract lives in `core/realtime/job_contracts.py`; its `save_realtime_snapshot(ctx, content_type, content_id, organization_id, update_b64, state_vector_b64)` handler lives in `core/realtime/jobs.py` and `workers/registry.py` binds the pair to the core fleet. The handler UPSERTs `realtime_yjs_snapshots` (composite PK `(content_type, content_id)`), then calls `adapter.render_and_persist`.
 - `_job_id` is `snapshot:{ct}:{id}:{sha256(update_bytes)[:16]}`. Hashing the payload (rather than just the key) is part of the contract - ARQ caches completed job results for `WORKER_KEEP_RESULT` seconds and a static id silently drops every subsequent enqueue. Reusing `snapshot:NOTE:<id>` froze `notes_notes.content` mid-session in an earlier revision.
 - `YDocManager.apply_local_update` AND `_apply_remote_pubsub_update` both call `snapshot_writer.schedule(session)` so the pipeline runs whichever replica receives the edit.
 - `YDocManager._evict_after_idle` force-flushes in-process while the session STAYS registered, then re-checks for attached clients under the global lock before removal. A concurrent acquire finds the live session and never hydrates from the pre-flush snapshot row.
@@ -255,7 +256,7 @@ Origin-replica dedup (backend): every fanout payload carries `origin_replica_id`
 
 ## 11. Common pitfalls
 
-- **Importing `core/realtime` from inside `domains/*` is fine; the reverse breaks the layering.** The CI guard is manual review for v1. If you find yourself wanting to import a domain class into `core/realtime`, writing an adapter method is the right fit.
+- **Importing `core/realtime` from inside `domains/*` is fine; the reverse breaks the layering.** The root Import Linter contract checks every backend module and rejects a direct `core -> domains` import. If core needs domain behavior, extend the adapter contract and wire the implementation explicitly at the web and worker roots.
 - **A fresh Valkey `subscribe_*` task for any new realtime fanout regresses the scale collapse** - extend `RealtimeRouter` instead, or the connection count grows from 9 back to thousands.
 - **Touching `state.py` shapes means checking `router.py` + `ydoc_manager.py` + `snapshot.py` + `session.py` + `ws_routes.py`** - they all consume the dataclasses directly. The split is intentional to break cycles, not because the data has multiple owners.
 - **Adding a y-prosemirror plugin or a Milkdown listener that reads document content?** Verify it fires for `ySync`-driven PM transactions. The default Milkdown `markdownUpdated` listener does not. A `$prose` plugin that hooks `view.update` is a better fit for universal observation.

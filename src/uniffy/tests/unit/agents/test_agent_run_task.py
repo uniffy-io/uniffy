@@ -14,8 +14,8 @@ import pytest
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
-from uniffy.domains.agents.runtime import jobs as agent_run_mod
-from uniffy.domains.agents.runtime.job_contracts import DELETE_RUN_STREAM
+from uniffy.domains.agents.runtime.jobs import jobs as agent_run_mod
+from uniffy.domains.agents.runtime.jobs.contracts import DELETE_RUN_STREAM
 
 
 @pytest.fixture(autouse=True)

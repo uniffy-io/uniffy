@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import pytest
 
 from uniffy.core.types import generate_id
-from uniffy.domains.agents.runtime.file_loader import FileContext
+from uniffy.domains.agents.runtime.files import FileContext
 from uniffy.domains.agents.runtime.operations import (
     _file_context_to_content_block,
     _resolve_supports_vision,

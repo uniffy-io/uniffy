@@ -8,7 +8,7 @@ import pytest
 
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.types import generate_id
-from uniffy.domains.agents.runtime.model_resolver import (
+from uniffy.domains.agents.runtime.models.resolver import (
     resolve_model,
     resolve_provider_and_model,
 )
@@ -72,7 +72,7 @@ def _provider_ops(provider, pk, *, model_lookup=True):
     )
 
 
-_SETTINGS_PATCH = "uniffy.domains.agents.runtime.model_resolver.get_runtime_settings"
+_SETTINGS_PATCH = "uniffy.domains.agents.runtime.models.resolver.get_runtime_settings"
 
 
 class TestResolveProviderAndModel:
@@ -214,7 +214,7 @@ class TestResolveProviderAndModel:
 
 class TestCompactionWorkerNameOnlyAgent:
     async def test_worker_compacts_via_org_default(self) -> None:
-        from uniffy.domains.agents.sessions import jobs as agent_compaction
+        from uniffy.domains.agents.sessions.jobs import jobs as agent_compaction
 
         org_id = generate_id()
         key_id = generate_id()
@@ -272,7 +272,7 @@ class TestCompactionWorkerNameOnlyAgent:
         assert kwargs["model"] == "org-default-model"
 
     async def test_worker_reports_error_without_any_default(self) -> None:
-        from uniffy.domains.agents.sessions import jobs as agent_compaction
+        from uniffy.domains.agents.sessions.jobs import jobs as agent_compaction
 
         session_id = generate_id()
         agent_session_row = NS(

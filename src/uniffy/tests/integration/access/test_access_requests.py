@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy import func, select
 
-from uniffy.core.content.members import ContentMembersOperations
+from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.permissions.content_access_request import (
@@ -20,14 +20,15 @@ from uniffy.core.models.projects.task import Task
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.db import open_session
 from uniffy.domains.notes.operations import NoteOperations
-from uniffy.domains.permissions.access_requests import (
+from uniffy.domains.permissions.requests.operations import (
     AccessRequestDecision,
     ContentAccessRequestOperations,
     RequestAccessOutcome,
 )
-from uniffy.domains.projects.jobs import search_acl as project_search_acl
+from uniffy.domains.permissions.members import ContentMembersOperations
+from uniffy.domains.projects.jobs import jobs as project_search_acl
 from uniffy.domains.projects.operations import TaskOperations
-from uniffy.domains.projects.search_acl import record_project_search_acl_refresh
+from uniffy.domains.projects.search.access import record_project_search_acl_refresh
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -173,9 +174,105 @@ async def test_owner_approval_uses_canonical_member_operations(session, access) 
             )
         ).scalars()
     )
-    assert "permissions.access_requested" in actions
-    assert "permissions.access_request_approved" in actions
-    assert "permissions.member_added" in actions
+    assert Action.PERMISSIONS_ACCESS_REQUESTED in actions
+    assert Action.PERMISSIONS_ACCESS_REQUEST_APPROVED in actions
+    assert Action.PERMISSIONS_MEMBER_ADDED in actions
+
+
+async def test_approval_rolls_back_grant_when_request_audit_fails(session, access) -> None:
+    operations = ContentAccessRequestOperations(session)
+    created = await operations.request_access(
+        requester_id=access.peer_id,
+        organization_id=access.org_id,
+        requested_urn=_note_urn(access.private_note_id),
+        message="",
+    )
+    assert created.view is not None
+    request_id = created.view.request.id
+
+    with (
+        patch.object(
+            operations,
+            "_write_audit",
+            new=AsyncMock(side_effect=RuntimeError("audit unavailable")),
+        ),
+        pytest.raises(RuntimeError, match="audit unavailable"),
+    ):
+        await operations.respond(
+            actor_user_id=access.member_id,
+            organization_id=access.org_id,
+            request_id=request_id,
+            decision=AccessRequestDecision.APPROVE,
+            approved_role=ContentRole.VIEWER,
+            decision_note="",
+        )
+
+    async with open_session() as isolated:
+        request = await isolated.get(ContentAccessRequest, request_id)
+        member = (
+            await isolated.execute(
+                select(ContentMember).where(
+                    ContentMember.organization_id == access.org_id,
+                    ContentMember.content_type == ContentType.NOTE,
+                    ContentMember.content_id == access.private_note_id,
+                    ContentMember.subject_type == SubjectType.USER,
+                    ContentMember.subject_id == access.peer_id,
+                )
+            )
+        ).scalar_one_or_none()
+        note = await isolated.get(NoteOperations.model_class, access.private_note_id)
+
+    assert request is not None
+    assert request.state == ContentAccessRequestState.PENDING
+    assert member is None
+    assert note is not None
+    assert note.access_mode == AccessMode.OWNER_ONLY
+
+
+async def test_approval_survives_post_commit_fanout_failure(session, access) -> None:
+    operations = ContentAccessRequestOperations(session)
+    created = await operations.request_access(
+        requester_id=access.peer_id,
+        organization_id=access.org_id,
+        requested_urn=_note_urn(access.private_note_id),
+        message="",
+    )
+    assert created.view is not None
+    request_id = created.view.request.id
+
+    with patch.object(
+        operations,
+        "_finish_access_grant_after_commit",
+        new=AsyncMock(side_effect=RuntimeError("projection unavailable")),
+    ):
+        approved = await operations.respond(
+            actor_user_id=access.member_id,
+            organization_id=access.org_id,
+            request_id=request_id,
+            decision=AccessRequestDecision.APPROVE,
+            approved_role=ContentRole.VIEWER,
+            decision_note="",
+        )
+
+    assert approved.request.state == ContentAccessRequestState.APPROVED
+    async with open_session() as isolated:
+        request = await isolated.get(ContentAccessRequest, request_id)
+        member = (
+            await isolated.execute(
+                select(ContentMember).where(
+                    ContentMember.organization_id == access.org_id,
+                    ContentMember.content_type == ContentType.NOTE,
+                    ContentMember.content_id == access.private_note_id,
+                    ContentMember.subject_type == SubjectType.USER,
+                    ContentMember.subject_id == access.peer_id,
+                )
+            )
+        ).scalar_one_or_none()
+
+    assert request is not None
+    assert request.state == ContentAccessRequestState.APPROVED
+    assert member is not None
+    assert member.role == ContentRole.VIEWER
 
 
 async def test_org_admin_cannot_review_private_standard_content(session, access) -> None:
@@ -392,7 +489,7 @@ async def test_concurrent_duplicate_requests_create_one_pending_row(session, acc
             )
 
     with patch(
-        "uniffy.domains.permissions.access_requests.AccessRequestNotifier",
+        "uniffy.domains.permissions.requests.operations.AccessRequestNotifier",
         return_value=notifier,
     ):
         first, second = await asyncio.gather(submit(), submit())
@@ -423,7 +520,7 @@ async def test_concurrent_duplicate_requests_create_one_pending_row(session, acc
             .select_from(AuditEvent)
             .where(
                 AuditEvent.organization_id == access.org_id,
-                AuditEvent.action == "permissions.access_requested",
+                AuditEvent.action == Action.PERMISSIONS_ACCESS_REQUESTED,
                 AuditEvent.resource_id == access.private_note_id,
             )
         )

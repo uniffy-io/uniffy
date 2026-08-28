@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import uniffy.domains.people as people_package
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.scalar import ScalarAuthorizationFacts
-from uniffy.core.content.members import _manage_overrides
+from uniffy.core.content.registry import find_manage_override
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
 from uniffy.domains.people.access import ViewerRelation, relation_for
@@ -31,7 +31,11 @@ FORBIDDEN_NAMES = frozenset({
     "register_manage_override",
     "ContentAccessQuery",
 })
-FORBIDDEN_IMPORT_ROOTS = ("uniffy.core.auth.permissions", "uniffy.core.content.members")
+FORBIDDEN_IMPORT_ROOTS = (
+    "uniffy.core.auth.permissions",
+    "uniffy.core.content.registry",
+    "uniffy.domains.permissions.members",
+)
 
 
 def _content_path_references(tree: ast.AST) -> set[str]:
@@ -188,7 +192,7 @@ class TestNoContentBypass:
         assert role is None
 
     def test_people_registers_no_manage_override(self) -> None:
-        assert ContentType.USER not in _manage_overrides
+        assert find_manage_override(ContentType.USER) is None
 
     def test_people_domain_never_reaches_for_the_content_path(self) -> None:
         offenders = {}

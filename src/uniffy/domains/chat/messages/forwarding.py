@@ -15,7 +15,7 @@ from uniffy.core.models.chat.message import (
 from uniffy.core.types import ContentType
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
-from uniffy.domains.chat.sender_resolver import SenderResolver
+from uniffy.domains.chat.senders import SenderResolver
 from uniffy.domains.files.attachments.operations import AttachmentOperations
 
 

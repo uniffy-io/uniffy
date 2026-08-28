@@ -6,7 +6,7 @@ import pytest
 
 from uniffy.core.search.meilisearch import SearchCandidateScope
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessDecision,
     ResourceKey,
     ResourceRowState,

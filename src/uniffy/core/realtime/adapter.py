@@ -1,4 +1,4 @@
-"""``RealtimeContentAdapter`` protocol + registry; domains self-register at import time."""
+"""Extension point between generic realtime state and domain persistence."""
 
 from typing import Protocol
 from uuid import UUID

@@ -13,7 +13,7 @@ from uniffy.core.models.chat.reaction import ChatReaction
 from uniffy.core.types import SubjectType
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import fetch_channel_members
-from uniffy.domains.chat.rate_limits import REACTION_ADD, check_chat_mutation_limit
+from uniffy.domains.chat.limits import REACTION_ADD, check_chat_mutation_limit
 
 
 class ChatReactionOperations:

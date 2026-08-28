@@ -88,7 +88,7 @@ class TestPromptSplit:
         assert "[[[Display Label|urn:uniffy:content:TYPE:uuid]]]" in prompt
 
     def test_workspace_prompt_loaded_from_asset(self) -> None:
-        from uniffy.domains.agents.runtime.workspace_prompt import WORKSPACE_PROMPT
+        from uniffy.domains.agents.runtime.workspace import WORKSPACE_PROMPT
 
         assert WORKSPACE_PROMPT.strip()
 
@@ -241,7 +241,7 @@ class TestRunnableSkills:
         assert "content" not in proto.DESCRIPTOR.fields_by_name
 
     def test_parse_invoked_skill_id_from_metadata(self) -> None:
-        from uniffy.domains.agents.chat_integration.operations import _parse_invoked_skill_id
+        from uniffy.domains.agents.bridge.operations import _parse_invoked_skill_id
 
         sid = generate_id()
         assert _parse_invoked_skill_id({"invoked_skill_id": str(sid)}) == sid
@@ -1710,7 +1710,7 @@ class TestRunAnalysis:
 
 class TestEvolutionOptIn:
     async def test_disabled_by_default(self, monkeypatch) -> None:
-        import uniffy.domains.org_settings.operations as os_mod
+        import uniffy.core.config.settings.organization as os_mod
         from uniffy.domains.agents.skills.analysis import is_skill_evolution_enabled
 
         monkeypatch.delenv("AGENT_SKILL_EVOLUTION_ENABLED", raising=False)
@@ -1720,7 +1720,7 @@ class TestEvolutionOptIn:
         assert await is_skill_evolution_enabled(MagicMock(), generate_id()) is False
 
     async def test_per_org_flag_enables(self, monkeypatch) -> None:
-        import uniffy.domains.org_settings.operations as os_mod
+        import uniffy.core.config.settings.organization as os_mod
         from uniffy.domains.agents.skills.analysis import is_skill_evolution_enabled
 
         monkeypatch.delenv("AGENT_SKILL_EVOLUTION_ENABLED", raising=False)

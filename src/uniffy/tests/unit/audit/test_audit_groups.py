@@ -1,7 +1,4 @@
-"""Audit emissions for the groups domain.
-
-Covers create / update / delete plus the three member mutations.
-"""
+"""Audit emissions for group and membership mutations."""
 
 from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -35,9 +32,6 @@ def _make_group() -> Group:
 
 
 def _permitted(group: Group | None = None) -> ExitStack:
-    """Stub the org gates and the org-scoped row load so the test observes
-    only the audit behavior.
-    """
     stack = ExitStack()
     stack.enter_context(
         patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None))
@@ -53,7 +47,9 @@ def _permitted(group: Group | None = None) -> ExitStack:
 async def test_create_emits_group_created() -> None:
     session = MagicMock()
     session.add = MagicMock()
+    session.flush = AsyncMock()
     session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     session.refresh = AsyncMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 

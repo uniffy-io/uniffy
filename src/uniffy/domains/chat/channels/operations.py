@@ -1,6 +1,7 @@
 """Chat channel operations; access is membership-based, not access_mode/baseline_role."""
 
 import base64
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -38,6 +39,7 @@ from uniffy.core.models.chat.channel_member import (
 )
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
+from uniffy.core.models.tags.tag import TagAssignment
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
@@ -58,18 +60,18 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
 )
-from uniffy.domains.chat.rate_limits import (
+from uniffy.domains.chat.limits import (
     CHANNEL_CREATE,
     MEMBER_ADD,
     check_chat_mutation_limit,
 )
-from uniffy.domains.chat.search_acl import (
+from uniffy.domains.chat.search import (
     enqueue_chat_search_acl_refresh,
     record_chat_search_acl_refresh,
 )
-from uniffy.domains.chat.sender_resolver import SenderResolver
+from uniffy.domains.chat.senders import SenderResolver
 from uniffy.domains.chat.subjects import ChatSubject
-from uniffy.domains.tags import TagAssignment, TagOperations
+from uniffy.domains.tags.operations import TagOperations
 
 logger = logger.bind(component="chat.channels.operations")
 
@@ -77,6 +79,22 @@ DEFAULT_PAGE_SIZE = 200
 MAX_PAGE_SIZE = 500
 # Past this size a group chat must become a channel.
 GROUP_DM_MAX_PARTICIPANTS = 4
+
+
+@dataclass(frozen=True)
+class StagedChatMembersAdd:
+    channel: ChatChannel
+    actor_user_id: UUID
+    organization_id: UUID
+    added: tuple[ChatChannelMember, ...]
+
+
+@dataclass(frozen=True)
+class StagedChatChannelCreate:
+    channel: ChatChannel
+    actor_user_id: UUID
+    initial_member_ids: tuple[UUID, ...]
+    tag_ids: tuple[UUID, ...] | None
 
 
 def _encode_cursor(payload: dict[str, Any]) -> str:
@@ -337,6 +355,40 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         member_ids: list[UUID] | None = None,
         tag_ids: list[UUID] | None = None,
     ) -> ChatChannel:
+        try:
+            staged = await self.stage_channel(
+                user_id=user_id,
+                organization_id=organization_id,
+                name=name,
+                channel_type=channel_type,
+                description=description,
+                icon=icon,
+                is_default=is_default,
+                category_id=category_id,
+                member_ids=member_ids,
+                tag_ids=tag_ids,
+            )
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        await self.session.refresh(staged.channel)
+        await self.finish_channel_create_after_commit(staged)
+        return staged.channel
+
+    async def stage_channel(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        name: str,
+        channel_type: ChannelType,
+        description: str = "",
+        icon: str = "",
+        is_default: bool = False,
+        category_id: UUID | None = None,
+        member_ids: list[UUID] | None = None,
+        tag_ids: list[UUID] | None = None,
+    ) -> StagedChatChannelCreate:
         """Create a channel with stats row and initial membership."""
         await self.access.require_org_member(user_id, organization_id)
         initial_member_ids = list(dict.fromkeys(member_ids or []))
@@ -421,14 +473,20 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 "is_default": is_default,
             },
         )
-
-        await self.session.commit()
-        await self.session.refresh(channel)
-
-        await self._sync_channel_tags(
-            actor_id=user_id,
+        await self.session.flush()
+        return StagedChatChannelCreate(
             channel=channel,
-            tag_ids=tag_ids,
+            actor_user_id=user_id,
+            initial_member_ids=tuple(initial_member_ids),
+            tag_ids=tuple(tag_ids) if tag_ids is not None else None,
+        )
+
+    async def finish_channel_create_after_commit(self, staged: StagedChatChannelCreate) -> None:
+        channel = staged.channel
+        await self._sync_channel_tags(
+            actor_id=staged.actor_user_id,
+            channel=channel,
+            tag_ids=list(staged.tag_ids) if staged.tag_ids is not None else None,
         )
 
         try:
@@ -439,12 +497,14 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self._publish_channel_created(channel.id)
         await self._notify_membership_changed(
             channel,
-            actor_user_id=user_id,
-            target_user_ids=[mid for mid in initial_member_ids if mid != user_id],
+            actor_user_id=staged.actor_user_id,
+            target_user_ids=[
+                member_id
+                for member_id in staged.initial_member_ids
+                if member_id != staged.actor_user_id
+            ],
             added=True,
         )
-
-        return channel
 
     async def create_dm(
         self,
@@ -989,41 +1049,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         return channel
 
-    async def join_default_channels(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-    ) -> None:
-        """Auto-join a user to all default channels in an organization."""
-        result = await self.session.execute(
-            select(ChatChannel).where(
-                ChatChannel.organization_id == organization_id,
-                ChatChannel.is_default.is_(True),
-                ChatChannel.is_deleted.is_(False),
-            )
-        )
-        default_channels = result.scalars().all()
-
-        for channel in default_channels:
-            existing = await self.access.get_membership(channel.id, user_id)
-            if existing:
-                continue
-
-            member = ChatChannelMember(
-                channel_id=channel.id,
-                subject_type=SubjectType.USER,
-                subject_id=user_id,
-                user_id=user_id,
-                role=ChannelRole.MEMBER,
-            )
-            self.session.add(member)
-
-            await self.session.execute(
-                update(ChatChannelStats)
-                .where(ChatChannelStats.channel_id == channel.id)
-                .values(member_count=ChatChannelStats.member_count + 1)
-            )
-
     async def leave_channel(
         self,
         user_id: UUID,
@@ -1100,6 +1125,25 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
         member_user_ids: list[UUID],
     ) -> list[ChatChannelMember]:
+        staged = await self.stage_members(
+            user_id,
+            organization_id,
+            channel_id,
+            member_user_ids,
+        )
+        if not staged.added:
+            return []
+        await self.session.commit()
+        await self.finish_members_add_after_commit(staged)
+        return list(staged.added)
+
+    async def stage_members(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        member_user_ids: list[UUID],
+    ) -> StagedChatMembersAdd:
         """Add members; one ON CONFLICT DO NOTHING RETURNING tells us who was actually inserted."""
         channel = await self.get_by_id(user_id, organization_id, channel_id)
         await self._require_edit(user_id, organization_id, channel)
@@ -1108,7 +1152,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             raise ValidationError("channel", "Cannot add members to DMs")
 
         if not member_user_ids:
-            return []
+            return StagedChatMembersAdd(channel, user_id, organization_id, ())
 
         await self._require_active_user_subjects(organization_id, member_user_ids)
         await check_chat_mutation_limit(
@@ -1166,28 +1210,28 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                     channel_id=channel_id,
                 )
 
-            await self.session.commit()
+            await self.session.flush()
 
-            if channel.channel_type != ChannelType.PUBLIC:
-                await enqueue_chat_search_acl_refresh(channel_id)
+        return StagedChatMembersAdd(channel, user_id, organization_id, tuple(added))
 
-            await invalidate_cached_member_ids(channel_id)
+    async def finish_members_add_after_commit(self, staged: StagedChatMembersAdd) -> None:
+        if not staged.added:
+            return
 
-            await self._publish_members_changed(
-                channel_id,
-                [m.user_id for m in added if m.user_id is not None],
-                added=True,
-            )
-            await self._notify_membership_changed(
-                channel,
-                actor_user_id=user_id,
-                target_user_ids=[m.user_id for m in added if m.user_id is not None],
-                added=True,
-            )
+        channel_id = staged.channel.id
+        if staged.channel.channel_type != ChannelType.PUBLIC:
+            await enqueue_chat_search_acl_refresh(channel_id)
 
-            await self._refresh_channel_live_state(channel)
-
-        return added
+        await invalidate_cached_member_ids(channel_id)
+        added_user_ids = [m.user_id for m in staged.added if m.user_id is not None]
+        await self._publish_members_changed(channel_id, added_user_ids, added=True)
+        await self._notify_membership_changed(
+            staged.channel,
+            actor_user_id=staged.actor_user_id,
+            target_user_ids=added_user_ids,
+            added=True,
+        )
+        await self._refresh_channel_live_state(staged.channel)
 
     async def remove_members(
         self,

@@ -1,6 +1,8 @@
 from unittest.mock import AsyncMock
 
+from uniffy.core.events import bus as event_bus
 from uniffy.core.events.bus import _event_to_json, event_from_json
+from uniffy.core.events.job_contracts import PROCESS_NOTIFICATION_EVENT
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.json_codec import loads
 from uniffy.core.types import ContentType, NotificationType, generate_id
@@ -49,3 +51,20 @@ def test_notification_event_codec_accepts_pre_outbox_payloads() -> None:
     assert event.organization_id == organization_id
     assert event.actor_id is None
     assert event.event_id is not None
+
+
+async def test_notification_event_bus_dispatches_through_core_contract(monkeypatch) -> None:
+    enqueue = AsyncMock()
+    monkeypatch.setattr(event_bus, "enqueue_job", enqueue)
+    event = NotificationEvent(
+        notification_type=NotificationType.SYSTEM_ANNOUNCEMENT,
+        organization_id=generate_id(),
+        actor_id=None,
+        title="Maintenance",
+    )
+
+    await event_bus.emit_notification(event)
+
+    ref, payload = enqueue.await_args.args
+    assert ref is PROCESS_NOTIFICATION_EVENT
+    assert event_from_json(payload) == event

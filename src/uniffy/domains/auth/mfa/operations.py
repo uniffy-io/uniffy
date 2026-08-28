@@ -18,11 +18,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.devices import parse_device_label
+from uniffy.core.auth.revocation import mark_token_version_revoked
+from uniffy.core.auth.tokens import create_access_token, create_refresh_token
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
+from uniffy.domains.auth.contracts import hash_refresh_token
 from uniffy.domains.auth.errors import (
     AuthenticationError,
     MfaRateLimitedError,
@@ -40,15 +44,13 @@ from uniffy.domains.auth.mfa.crypto import (
     encrypt_totp_secret,
     generate_totp_secret,
 )
-from uniffy.domains.auth.mfa.rate_limit import (
+from uniffy.domains.auth.mfa.limits import (
     RateLimitVerdict,
     is_verify_locked,
     mark_code_used,
     record_verify_attempt,
     totp_counter_now,
 )
-from uniffy.domains.auth.revocation import mark_token_version_revoked
-from uniffy.domains.auth.tokens import create_access_token, create_refresh_token
 
 logger = logger.bind(component="auth.mfa.operations")
 
@@ -193,7 +195,6 @@ class MfaOperations:
         )
 
         from uniffy.core.models.login.user_session import UserSession
-        from uniffy.domains.auth.context import parse_device_label
 
         session_record = UserSession(
             user_id=user.id,
@@ -218,9 +219,7 @@ class MfaOperations:
             token_version=user.token_version,
             session_id=session_record.id,
         )
-        from uniffy.domains.auth.operations import _hash_refresh_token
-
-        session_record.refresh_token_hash = _hash_refresh_token(refresh)
+        session_record.refresh_token_hash = hash_refresh_token(refresh)
 
         await self._audit_mfa_self_event(
             user_id=user_id,
@@ -313,7 +312,6 @@ class MfaOperations:
         mfa.last_used_at = datetime.now(UTC)
 
         from uniffy.core.models.login.user_session import UserSession
-        from uniffy.domains.auth.context import parse_device_label
 
         bound_org_id, bound_slug, bound_role, bound_admin_domains = await self._resolve_pending_org(
             user.id, organization_id
@@ -342,9 +340,7 @@ class MfaOperations:
             token_version=user.token_version,
             session_id=session_record.id,
         )
-        from uniffy.domains.auth.operations import _hash_refresh_token
-
-        session_record.refresh_token_hash = _hash_refresh_token(refresh)
+        session_record.refresh_token_hash = hash_refresh_token(refresh)
 
         await write_audit_event(
             self._session,
@@ -705,13 +701,13 @@ class MfaOperations:
         org_name_for_mail: str = "Uniffy",
     ) -> None:
         """Shared reset path: delete rows, bump tkv, audit, best-effort mail."""
+        from uniffy.core.auth.revocation import mark_sessions_revoked
         from uniffy.core.mail.errors import (
             MailNotConfiguredError,
             MailSuppressedError,
         )
         from uniffy.core.mail.sender import MailSender
         from uniffy.core.models.login.user_session import UserSession
-        from uniffy.domains.auth.revocation import mark_sessions_revoked
 
         await self._session.execute(
             delete(UserRecoveryCode).where(UserRecoveryCode.user_id == target.id)

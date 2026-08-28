@@ -17,9 +17,9 @@ from uniffy_proto.search.v1.search_pb2 import (
     SearchResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.search.converters import (
     proto_to_entity_type,
     search_result_to_proto,
@@ -37,8 +37,8 @@ class SearchHandlers:
         request: SearchRequest,
         ctx: RequestContext,
     ) -> SearchResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         parsed = parse_search_query(request.query)
         query_text = parsed.text
@@ -134,8 +134,8 @@ class SearchHandlers:
         ctx: RequestContext,
     ) -> GetReferencesResponse:
         # Universal backlinks: returns content whose outgoing_references contain target_urn.
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         if not request.target_urn:
             raise ConnectError(Code.INVALID_ARGUMENT, "target_urn is required")
@@ -178,8 +178,8 @@ class SearchHandlers:
         request: GetContentGraphRequest,
         ctx: RequestContext,
     ) -> GetContentGraphResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -209,8 +209,8 @@ class SearchHandlers:
     ) -> ResolveUrnsResponse:
         # URNs the user cannot view or that are missing are returned as tombstones
         # by SearchOperations.resolve_urns so chip rendering can show a deleted state.
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         if not request.urns:
             return ResolveUrnsResponse(resolved={})

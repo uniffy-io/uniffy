@@ -8,6 +8,10 @@ from connectrpc.request import RequestContext
 from uniffy_proto.common.v1 import common_pb2 as common
 from uniffy_proto.groups.v1 import groups_pb2 as pb
 
+from uniffy.core.auth.principal import (
+    current_user_id,
+    resolve_organization_id,
+)
 from uniffy.core.converters import (
     group_info_to_proto,
     group_kind_from_proto,
@@ -18,10 +22,6 @@ from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.login.group import GroupKind
 from uniffy.core.models.login.group_member import GroupRole
 from uniffy.db import open_session
-from uniffy.domains.auth.context import (
-    get_user_id_from_context,
-    resolve_organization_id,
-)
 from uniffy.domains.groups.converters import group_with_count_to_proto
 from uniffy.domains.groups.operations import UNSET, GroupOperations
 
@@ -34,8 +34,8 @@ class GroupsHandlers:
         request: pb.ListGroupsRequest,
         ctx: RequestContext,
     ) -> pb.ListGroupsResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         page = 1
         page_size = 20
@@ -71,8 +71,8 @@ class GroupsHandlers:
         request: pb.GetGroupRequest,
         ctx: RequestContext,
     ) -> pb.GetGroupResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
@@ -86,8 +86,8 @@ class GroupsHandlers:
         request: pb.CreateGroupRequest,
         ctx: RequestContext,
     ) -> pb.CreateGroupResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -120,8 +120,8 @@ class GroupsHandlers:
         request: pb.UpdateGroupRequest,
         ctx: RequestContext,
     ) -> pb.UpdateGroupResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         group_id = UUID(request.group_id)
 
         if request.clear_parent_group:
@@ -163,8 +163,8 @@ class GroupsHandlers:
         request: pb.DeleteGroupRequest,
         ctx: RequestContext,
     ) -> pb.DeleteGroupResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
@@ -178,8 +178,8 @@ class GroupsHandlers:
         request: pb.ListGroupMembersRequest,
         ctx: RequestContext,
     ) -> pb.ListGroupMembersResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         group_id = UUID(request.group_id)
 
         page = 1
@@ -218,8 +218,8 @@ class GroupsHandlers:
         request: pb.AddGroupMemberRequest,
         ctx: RequestContext,
     ) -> pb.AddGroupMemberResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
         role = group_role_from_proto(request.role) or GroupRole.MEMBER
@@ -242,8 +242,8 @@ class GroupsHandlers:
         request: pb.UpdateGroupMemberRequest,
         ctx: RequestContext,
     ) -> pb.UpdateGroupMemberResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
         role = group_role_from_proto(request.role)
@@ -268,8 +268,8 @@ class GroupsHandlers:
         request: pb.RemoveGroupMemberRequest,
         ctx: RequestContext,
     ) -> pb.RemoveGroupMemberResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
 
@@ -284,8 +284,8 @@ class GroupsHandlers:
         request: pb.GetUserGroupsRequest,
         ctx: RequestContext,
     ) -> pb.GetUserGroupsResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         target_user_id = UUID(request.user_id)
 
         async with open_session() as session:

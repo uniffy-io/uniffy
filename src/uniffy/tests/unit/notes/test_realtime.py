@@ -49,6 +49,7 @@ from uniffy.core.realtime.ydoc_manager import (
     YDocSession,
 )
 from uniffy.core.types import ContentRole, ContentType, NodeType, generate_id
+from uniffy.domains.notes.adapter import register_note_realtime_adapter
 from uniffy.observability.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
 
 _conn_id_seq = 0
@@ -490,7 +491,7 @@ class TestCanvasRender:
     """``_render_canvas_content`` round-trip via ``pycrdt`` Y types."""
 
     def test_canvas_render_emits_expected_shape(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import _render_canvas_content
+        from uniffy.domains.notes.adapter import _render_canvas_content
 
         ydoc = pycrdt.Doc()
         ydoc["nodes"] = pycrdt.Map({
@@ -512,7 +513,7 @@ class TestCanvasRender:
         assert "order" not in result
 
     def test_canvas_render_returns_none_when_roots_missing(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import _render_canvas_content
+        from uniffy.domains.notes.adapter import _render_canvas_content
 
         ydoc = pycrdt.Doc()
         assert _render_canvas_content(ydoc) is None
@@ -520,7 +521,7 @@ class TestCanvasRender:
 
 class TestMarkdownRender:
     def test_markdown_render_reads_y_text(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import _render_markdown
+        from uniffy.domains.notes.adapter import _render_markdown
 
         ydoc = pycrdt.Doc()
         ydoc["markdown"] = pycrdt.Text("# hello\n\nworld")
@@ -528,7 +529,7 @@ class TestMarkdownRender:
         assert _render_markdown(ydoc) == "# hello\n\nworld"
 
     def test_markdown_render_returns_empty_when_root_missing(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import _render_markdown
+        from uniffy.domains.notes.adapter import _render_markdown
 
         ydoc = pycrdt.Doc()
         assert _render_markdown(ydoc) == ""
@@ -543,7 +544,7 @@ class TestCanvasHydration:
     """
 
     def test_seed_canvas_ydoc_populates_y_types_from_content(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import (
+        from uniffy.domains.notes.adapter import (
             _render_canvas_content,
             _seed_canvas_ydoc,
         )
@@ -584,7 +585,7 @@ class TestCanvasHydration:
         """Per-node text field seeds as ``pycrdt.Text`` so concurrent
         same-cell typing merges char-by-char; the render path coerces
         back to ``str`` via ``pycrdt.Map.to_py``."""
-        from uniffy.domains.notes.realtime_adapter import (
+        from uniffy.domains.notes.adapter import (
             _render_canvas_content,
             _seed_canvas_ydoc,
         )
@@ -636,7 +637,7 @@ class TestCanvasHydration:
     def test_seed_skips_text_wrap_for_non_text_nodes(self) -> None:
         """Nodes without a text field upgrade ``data`` to ``pycrdt.Map``
         for structural merges but leave no field as ``pycrdt.Text``."""
-        from uniffy.domains.notes.realtime_adapter import _seed_canvas_ydoc
+        from uniffy.domains.notes.adapter import _seed_canvas_ydoc
 
         existing = {
             "version": 1,
@@ -674,7 +675,7 @@ class TestCanvasHydration:
         renders as ``None`` so the snapshot pipeline preserves disk
         state instead of clobbering ``canvas_content``.
         """
-        from uniffy.domains.notes.realtime_adapter import (
+        from uniffy.domains.notes.adapter import (
             _render_canvas_content,
             _seed_canvas_ydoc,
         )
@@ -1210,7 +1211,7 @@ class TestContentReplaceGraft:
 
     async def test_graft_replaces_markdown_and_fans_out(self) -> None:
         async def go() -> None:
-            from uniffy.domains.notes import realtime_adapter  # noqa: F401  (registers NOTE)
+            register_note_realtime_adapter()
 
             manager = YDocManager()
             session = _make_router_session()
@@ -1238,7 +1239,7 @@ class TestContentReplaceGraft:
 
     async def test_graft_is_noop_when_content_matches(self) -> None:
         async def go() -> None:
-            from uniffy.domains.notes import realtime_adapter  # noqa: F401
+            register_note_realtime_adapter()
 
             manager = YDocManager()
             session = _make_router_session()
@@ -1265,7 +1266,7 @@ class TestContentReplaceGraft:
         snapshot instead of wiping it (CRDT delete-by-id, not by index)."""
 
         async def go() -> None:
-            from uniffy.domains.notes import realtime_adapter  # noqa: F401
+            register_note_realtime_adapter()
 
             manager = YDocManager()
             session = _make_router_session()

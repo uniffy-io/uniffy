@@ -32,6 +32,7 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     SubscribeToRunResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import (
     BudgetExceededError,
     NotFoundError,
@@ -62,20 +63,19 @@ from uniffy.domains.agents.runtime.converters import (
     send_message_response_to_proto,
     usage_stats_to_proto,
 )
-from uniffy.domains.agents.runtime.file_loader import (
+from uniffy.domains.agents.runtime.files import (
     FileContext,
     _file_contexts_to_payload,
     _load_files,
 )
-from uniffy.domains.agents.runtime.image_regenerate import regenerate_image
-from uniffy.domains.agents.runtime.job_contracts import RUN_AGENT_SESSION
-from uniffy.domains.agents.runtime.settings import (
+from uniffy.domains.agents.runtime.images.regenerate import regenerate_image
+from uniffy.domains.agents.runtime.jobs.contracts import RUN_AGENT_SESSION
+from uniffy.domains.agents.runtime.settings.operations import (
     ResolvedRuntimeSettings,
     get_runtime_settings,
 )
 from uniffy.domains.agents.runtime.usage import UsageOperations
 from uniffy.domains.agents.sessions.operations import SessionOperations
-from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.observability.metrics import (
     AGENT_RUN_ENQUEUE_FAILURES_TOTAL,
@@ -227,10 +227,10 @@ class RuntimeHandlers:
         terminal ERROR event becomes ``ConnectError(INTERNAL)``; the
         120s wall budget surfaces as ``ConnectError(DEADLINE_EXCEEDED)``.
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -319,10 +319,10 @@ class RuntimeHandlers:
         client. The wall budget belongs to ``_subscribe_runtime_events``;
         cancellation by the client is logged and exits cleanly.
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -385,10 +385,10 @@ class RuntimeHandlers:
         enqueues a run job, then relays per-run events. Mirrors the shape
         of ``stream_send_message`` so the frontend can reuse its handler.
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             message_id = UUID(request.message_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -497,11 +497,11 @@ class RuntimeHandlers:
         PERMISSION_DENIED.
         """
         AGENT_RUN_RECONNECT_TOTAL.inc()
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             run_id = UUID(request.run_id)
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -555,10 +555,10 @@ class RuntimeHandlers:
         already-finished or expired run reports ``cancelled=false``
         without raising.
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
             run_id = UUID(request.run_id)
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -671,10 +671,10 @@ class RuntimeHandlers:
         refuse rather than fall through to the in-process event, since
         the local event carries no identity.
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -712,10 +712,10 @@ class RuntimeHandlers:
         ctx: RequestContext,
     ) -> GetUsageStatsResponse:
         """Aggregated usage statistics for an organization."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -760,9 +760,9 @@ class RuntimeHandlers:
         ctx: RequestContext,
     ) -> RegenerateImageResponse:
         """Re-run a generated image with adjusted parameters."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:

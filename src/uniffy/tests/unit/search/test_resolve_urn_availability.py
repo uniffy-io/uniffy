@@ -5,7 +5,7 @@ import pytest
 from uniffy_proto.search.v1.search_pb2 import UrnAvailability as ProtoUrnAvailability
 
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     AccessGrantKind,
     RequestTarget,
     ResourceAccessDecision,

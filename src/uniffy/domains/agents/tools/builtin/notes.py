@@ -15,14 +15,14 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
 from uniffy.core.types import ContentType
 from uniffy.domains.agents.tools.builtin.args import MAX_PAGE, clamp_int, clamp_page, parse_uuid
-from uniffy.domains.agents.tools.builtin.content_space import (
+from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
     resolve_parent_access_mode,
     space_for_access_mode,
 )
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.tags.operations import TagOperations
 
 _MAX_NOTE_CONTENT_CHARS = 50_000
 

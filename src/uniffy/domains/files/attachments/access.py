@@ -1,31 +1,39 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.roles import role_can_edit
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.chat.channel import ChannelType
-from uniffy.core.models.chat.message import ChatMessage
-from uniffy.core.models.projects.project import Project
 from uniffy.core.types import AccessMode, ContentRole, ContentType
-from uniffy.domains.calendar.operations import CalendarEventOperations
-from uniffy.domains.chat.access import ChatAccessChecker
-from uniffy.domains.files.operations import FileOperations
-from uniffy.domains.notes.operations import NoteOperations
-from uniffy.domains.projects.operations import ProjectOperations, TaskOperations
+from uniffy.domains.chat.attachments import require_message_attachment_edit
+from uniffy.domains.permissions.access import (
+    ResourceAccessPurpose,
+    ResourceAccessResolver,
+    ResourceKey,
+    ResourceRowState,
+)
+
+STANDARD_ATTACHMENT_TARGET_TYPES = frozenset({
+    ContentType.NOTE,
+    ContentType.FILE,
+    ContentType.CALENDAR_EVENT,
+    ContentType.PROJECT,
+    ContentType.TASK,
+})
 
 
 @dataclass(frozen=True, slots=True)
 class AttachmentTargetPolicy:
     content_type: ContentType
-    access_mode: AccessMode | None
+    access_mode: AccessMode
     baseline_role: ContentRole | None
 
 
 class AttachmentTargetAccess:
     def __init__(self, session: AsyncSession) -> None:
-        self.session = session
+        self._session = session
+        self._resources = ResourceAccessResolver(session)
 
     async def require_edit(
         self,
@@ -34,85 +42,58 @@ class AttachmentTargetAccess:
         content_type: ContentType,
         content_id: UUID,
     ) -> AttachmentTargetPolicy:
-        if content_type == ContentType.NOTE:
-            note = await NoteOperations(self.session).get_for_edit(
-                user_id, organization_id, content_id
-            )
-            return AttachmentTargetPolicy(content_type, note.access_mode, note.baseline_role)
-
-        if content_type == ContentType.FILE:
-            file = await FileOperations(self.session).get_for_edit(
-                user_id, organization_id, content_id
-            )
-            return AttachmentTargetPolicy(content_type, file.access_mode, file.baseline_role)
-
-        if content_type == ContentType.CALENDAR_EVENT:
-            event = await CalendarEventOperations(self.session).get_for_edit(
-                user_id, organization_id, content_id
-            )
-            return AttachmentTargetPolicy(content_type, event.access_mode, event.baseline_role)
-
-        if content_type == ContentType.PROJECT:
-            project = await ProjectOperations(self.session).get_for_edit(
-                user_id, organization_id, content_id
-            )
-            return AttachmentTargetPolicy(content_type, project.access_mode, project.baseline_role)
-
-        if content_type == ContentType.TASK:
-            task = await TaskOperations(self.session).get_for_edit(
-                user_id, organization_id, content_id
-            )
-            project = await self.session.get(Project, task.project_id)
-            if project is None or project.is_deleted:
-                raise NotFoundError("Project", str(task.project_id))
-            return AttachmentTargetPolicy(
-                ContentType.PROJECT,
-                project.access_mode,
-                project.baseline_role,
-            )
-
         if content_type == ContentType.CHAT_MESSAGE:
-            return await self._require_chat_message_edit(
-                user_id,
-                organization_id,
-                content_id,
+            policy = await require_message_attachment_edit(
+                self._session,
+                user_id=user_id,
+                organization_id=organization_id,
+                message_id=content_id,
             )
-
-        raise NotFoundError("Content", str(content_id))
-
-    async def _require_chat_message_edit(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        message_id: UUID,
-    ) -> AttachmentTargetPolicy:
-        row = (
-            await self.session.execute(
-                select(ChatMessage.channel_id, ChatMessage.sender_id).where(
-                    ChatMessage.id == message_id,
-                    ChatMessage.is_deleted.is_(False),
-                )
-            )
-        ).one_or_none()
-        if not row:
-            raise NotFoundError("ChatMessage", str(message_id))
-
-        checker = ChatAccessChecker(self.session)
-        channel = await checker.get_channel(row.channel_id, organization_id)
-        await checker.check_access(user_id, organization_id, channel)
-        if row.sender_id != user_id:
-            is_elevated = await checker.require_elevated(
-                user_id,
-                organization_id,
-                channel.id,
-            )
-            if not is_elevated:
-                raise PermissionDeniedError("edit", "chat message")
-
-        if channel.channel_type == ChannelType.PUBLIC:
             return AttachmentTargetPolicy(
                 ContentType.CHAT,
-                AccessMode.OPEN_TO_ORG,
-                ContentRole.VIEWER,
+                policy.access_mode,
+                policy.baseline_role,
             )
-        return AttachmentTargetPolicy(ContentType.CHAT, AccessMode.OWNER_ONLY, None)
+
+        if content_type not in STANDARD_ATTACHMENT_TARGET_TYPES:
+            raise NotFoundError("Content", str(content_id))
+
+        key = ResourceKey(content_type, content_id)
+        decision = (
+            await self._resources.resolve(
+                actor_id=user_id,
+                organization_id=organization_id,
+                keys=[key],
+                purpose=ResourceAccessPurpose.REFERENCE,
+            )
+        )[key]
+        if decision.row_state != ResourceRowState.LIVE:
+            raise NotFoundError("Content", str(content_id))
+        if not role_can_edit(decision.role):
+            raise PermissionDeniedError("edit", "content")
+        if decision.target_policy is None:
+            raise RuntimeError(f"Missing target policy for {content_type.value}")
+        return AttachmentTargetPolicy(
+            decision.target_policy.content_type,
+            decision.target_policy.access_mode,
+            decision.target_policy.baseline_role,
+        )
+
+
+async def can_view_attached_file(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    organization_id: UUID,
+    file_id: UUID,
+) -> bool:
+    key = ResourceKey(ContentType.FILE, file_id)
+    decision = (
+        await ResourceAccessResolver(session).resolve(
+            actor_id=user_id,
+            organization_id=organization_id,
+            keys=[key],
+            purpose=ResourceAccessPurpose.REFERENCE,
+        )
+    )[key]
+    return decision.can_view

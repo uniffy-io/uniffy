@@ -35,6 +35,7 @@ from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
@@ -42,6 +43,7 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
@@ -66,11 +68,10 @@ from uniffy.domains.agents.templates import AGENT_TEMPLATES
 from uniffy.domains.agents.tools.catalog import list_tool_catalog
 from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
 from uniffy.domains.agents.tools.registry import get_tool_registry
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.integrations.tool_gate import filter_integration_tool_schemas
+from uniffy.domains.integrations.tools import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
-from uniffy.domains.tags import Tag, TagOperations
+from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
+from uniffy.domains.tags.operations import TagOperations
 from uniffy.domains.users.operations import UserOperations
 
 logger = logger.bind(component="agents.agents.handlers")
@@ -174,7 +175,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> CreateAgentResponse:
         """Create a new agent."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         soul_prompt = request.soul_prompt if request.HasField("soul_prompt") else ""
@@ -279,7 +280,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> GetAgentResponse:
         """Get an agent by ID."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
@@ -314,7 +315,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> ListAgentsResponse:
         """List agents with filters and pagination."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
@@ -395,7 +396,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> ListAgentTemplatesResponse:
         """List the shipped templates with their bundled skills resolved to ids."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
@@ -433,7 +434,7 @@ class AgentsHandlers:
         with no tenant data in it, and the chat tool-activity pane labels tool
         steps for every member, not just builders.
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
@@ -454,7 +455,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> UpdateAgentResponse:
         """Update an agent configuration."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
@@ -567,7 +568,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> DeleteAgentResponse:
         """Delete an agent."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
@@ -591,7 +592,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> RestoreAgentResponse:
         """Bring a deleted agent back; its automations stay disabled."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
@@ -630,7 +631,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> UploadAgentAvatarResponse:
         """Upload and set an agent avatar."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         if not request.image_data:
             raise ConnectError(Code.INVALID_ARGUMENT, "Image data is required")
@@ -679,7 +680,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> DeleteAgentAvatarResponse:
         """Delete an agent avatar."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
@@ -718,7 +719,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> PreviewSystemPromptResponse:
         """Assemble the runtime system prompt for an agent."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 

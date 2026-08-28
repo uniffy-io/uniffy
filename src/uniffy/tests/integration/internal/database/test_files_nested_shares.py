@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy import delete
 
-from uniffy.core.content.members import ContentMembersOperations
+from uniffy.domains.permissions.members import ContentMembersOperations
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.permissions.content_member import ContentMember
@@ -107,9 +107,7 @@ async def test_direct_folder_grant_reaches_nested_folder(session, env, quiet_sea
         private_parent = _folder(env, access_mode=AccessMode.OWNER_ONLY)
         session.add(private_parent)
         await session.flush()
-        nested = _folder(
-            env, access_mode=AccessMode.EXPLICIT_MEMBERS, parent_id=private_parent.id
-        )
+        nested = _folder(env, access_mode=AccessMode.EXPLICIT_MEMBERS, parent_id=private_parent.id)
         session.add(nested)
         await session.commit()
 

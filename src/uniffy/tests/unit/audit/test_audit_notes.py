@@ -104,7 +104,7 @@ async def test_permanent_delete_emits_note_permanently_deleted() -> None:
             AsyncMock(return_value=None),
         ),
         patch(
-            "uniffy.domains.notes.operations.TagOperations",
+            "uniffy.domains.notes.hierarchy.operations.ContentTagContext",
             MagicMock(return_value=tag_ops_mock),
         ),
         patch(

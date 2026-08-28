@@ -11,7 +11,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.domains.org_settings.operations import OrgSettingsOperations
+from uniffy.core.config.settings.organization import OrgSettingsOperations
 
 PEOPLE_NAMESPACE = "people"
 POLICY_KEY = "profile_policy"

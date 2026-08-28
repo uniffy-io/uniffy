@@ -5,10 +5,10 @@ import pytest
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.scalar import ScalarAuthorizationFacts
+from uniffy.core.auth.support_session import active_support_session_var
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.platform.support_session import SupportSessionScope
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
-from uniffy.domains.platform.support_session.context import active_support_session_var
 
 
 def _facts(**changes) -> ScalarAuthorizationFacts:
@@ -157,10 +157,7 @@ async def test_non_member_system_admin_requires_active_support_session(scope, ex
 
 
 async def test_system_admin_without_support_session_is_denied() -> None:
-    assert (
-        await _resolve(_facts(is_system_admin=True, organization_role=None))
-        is None
-    )
+    assert await _resolve(_facts(is_system_admin=True, organization_role=None)) is None
 
 
 async def test_system_admin_member_uses_ordinary_member_policy() -> None:

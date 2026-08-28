@@ -69,7 +69,6 @@ class Action:
     ORGANIZATION_PURGED = "organization.purged"
     ORGANIZATION_PURGE_WARNING_SENT = "organization.purge_warning_sent"
 
-    # Permissions (sourced via core/content/members.py emissions)
     PERMISSIONS_MEMBER_ADDED = "permissions.member_added"
     PERMISSIONS_MEMBER_REMOVED = "permissions.member_removed"
     PERMISSIONS_MEMBER_ROLE_CHANGED = "permissions.member_role_changed"

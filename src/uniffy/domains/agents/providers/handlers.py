@@ -23,6 +23,7 @@ from uniffy_proto.agents.v1.providers_pb2 import (
     ValidateProviderKeyResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
 from uniffy.domains.agents.access import is_org_admin
@@ -31,7 +32,6 @@ from uniffy.domains.agents.providers.converters import (
     provider_key_to_proto,
 )
 from uniffy.domains.agents.providers.operations import ProviderOperations
-from uniffy.domains.auth.context import get_user_id_from_context
 
 logger = logger.bind(component="agents.providers.handlers")
 
@@ -67,7 +67,7 @@ class ProvidersHandlers:
         ctx: RequestContext,
     ) -> AddProviderKeyResponse:
         """Add a new provider key."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
@@ -95,7 +95,7 @@ class ProvidersHandlers:
         ctx: RequestContext,
     ) -> ListProviderKeysResponse:
         """List provider keys for an organization."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         provider = request.provider if request.HasField("provider") else None
@@ -123,7 +123,7 @@ class ProvidersHandlers:
         ctx: RequestContext,
     ) -> RemoveProviderKeyResponse:
         """Remove a provider key."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         key_id = _parse_uuid(request.key_id, "key_id")
 
@@ -147,7 +147,7 @@ class ProvidersHandlers:
         ctx: RequestContext,
     ) -> ValidateProviderKeyResponse:
         """Validate a provider key against the provider API."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         key_id = _parse_uuid(request.key_id, "key_id")
 
@@ -174,7 +174,7 @@ class ProvidersHandlers:
         ctx: RequestContext,
     ) -> ListAvailableModelsResponse:
         """List models exposed by all provider keys in the org."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         provider = request.provider if request.HasField("provider") else None
@@ -201,7 +201,7 @@ class ProvidersHandlers:
         ctx: RequestContext,
     ) -> ToggleProviderKeyResponse:
         """Enable or disable a provider key."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         key_id = _parse_uuid(request.key_id, "key_id")
 
@@ -229,7 +229,7 @@ class ProvidersHandlers:
         ctx: RequestContext,
     ) -> ListModelsForKeyResponse:
         """List models exposed by a specific provider key."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         key_id = _parse_uuid(request.key_id, "key_id")
 

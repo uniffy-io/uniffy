@@ -34,7 +34,7 @@ from uniffy.domains.agents.cache import (
     invalidate_agents_using_skill,
     invalidate_org_always_active_skills,
 )
-from uniffy.domains.agents.content_policy import check_admin_content
+from uniffy.domains.agents.policy import check_admin_content
 from uniffy.domains.agents.skills.validation import (
     SKILL_CONTENT_MAX,
     SKILL_DESCRIPTION_MAX,
@@ -128,8 +128,6 @@ class SkillOperations:
         self._session.add(skill)
         await self._session.flush()
         await self._snapshot_version(skill, author_id=user_id, author_kind="user")
-        await self._session.commit()
-        await self._session.refresh(skill)
 
         await write_audit_event(
             self._session,
@@ -144,7 +142,12 @@ class SkillOperations:
                 "always_active": always_active,
             },
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+        await self._session.refresh(skill)
 
         return skill
 

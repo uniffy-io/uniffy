@@ -5,8 +5,8 @@ import pytest
 
 from uniffy.core.errors import NotFoundError
 from uniffy.core.types import ContentType, generate_id
-from uniffy.domains.tags import target_access as access_module
-from uniffy.domains.tags.target_access import TagTargetAccess
+from uniffy.domains.tags import targets as access_module
+from uniffy.domains.tags.targets import TagTargetAccess
 
 
 @pytest.mark.asyncio

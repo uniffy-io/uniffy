@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from uniffy.core.models.search import SearchRemovalQueue
-from uniffy.domains.search.jobs import flush_search_removals
+from uniffy.domains.search.jobs.jobs import flush_search_removals
 
 
 async def test_failed_acknowledgement_remains_queued() -> None:
@@ -27,16 +27,16 @@ async def test_failed_acknowledgement_remains_queued() -> None:
     release_lock = AsyncMock()
     with (
         patch(
-            "uniffy.domains.search.jobs._acquire_lock",
+            "uniffy.domains.search.jobs.jobs._acquire_lock",
             AsyncMock(return_value="owner-token"),
         ),
         patch(
-            "uniffy.domains.search.jobs._release_lock",
+            "uniffy.domains.search.jobs.jobs._release_lock",
             release_lock,
         ),
-        patch("uniffy.domains.search.jobs.open_session", open_session),
+        patch("uniffy.domains.search.jobs.jobs.open_session", open_session),
         patch(
-            "uniffy.domains.search.jobs.get_meilisearch_client",
+            "uniffy.domains.search.jobs.jobs.get_meilisearch_client",
             return_value=meili,
         ),
     ):

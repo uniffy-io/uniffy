@@ -11,6 +11,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import (
     AuthenticationError,
     BudgetExceededError,
@@ -104,11 +105,9 @@ def _rpc_labels(ctx: RequestContext) -> tuple[str, str]:
     return service_name, method_name
 
 
-def _rpc_user_id(ctx: RequestContext) -> str:
+def _rpc_user_id() -> str:
     try:
-        from uniffy.domains.auth.context import get_user_id_from_context
-
-        return str(get_user_id_from_context(ctx))
+        return str(current_user_id())
     except Exception:
         # Unauthenticated endpoints (login, register) reach here too.
         return "unauthenticated"
@@ -155,7 +154,7 @@ class LoggingInterceptor:
     ) -> Any:
         start_time = time.time()
         service_name, method_name = _rpc_labels(ctx)
-        user_id = _rpc_user_id(ctx)
+        user_id = _rpc_user_id()
 
         try:
             response = await call_next(request, ctx)
@@ -258,7 +257,7 @@ class LoggingInterceptor:
         """Streams bypass the unary path; without this, an exception escaping a
         stream handler reaches the wire as UNKNOWN + raw `str(exc)`."""
         service_name, method_name = _rpc_labels(ctx)
-        user_id = _rpc_user_id(ctx)
+        user_id = _rpc_user_id()
         start_time = time.time()
         code = "OK"
         try:
@@ -289,7 +288,7 @@ class LoggingInterceptor:
         ctx: RequestContext,
     ) -> Any:
         service_name, method_name = _rpc_labels(ctx)
-        user_id = _rpc_user_id(ctx)
+        user_id = _rpc_user_id()
         try:
             async for response in call_next(request, ctx):
                 yield response
@@ -305,7 +304,7 @@ class LoggingInterceptor:
         ctx: RequestContext,
     ) -> Any:
         service_name, method_name = _rpc_labels(ctx)
-        user_id = _rpc_user_id(ctx)
+        user_id = _rpc_user_id()
         try:
             return await call_next(request, ctx)
         except ConnectError:

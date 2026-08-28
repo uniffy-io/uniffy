@@ -28,12 +28,11 @@ from uniffy.core.models.chat.message import SenderType as ChatSenderType
 from uniffy.core.types import SubjectType
 from uniffy.db.session import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.agents.budget_alerts import check_and_fire_alerts
+from uniffy.domains.agents.budgets.alerts import check_and_fire_alerts
 from uniffy.domains.agents.cache import (
     fetch_agent_skills,
     fetch_memory_index,
 )
-from uniffy.domains.agents.content_policy import check_user_message
 from uniffy.domains.agents.currency import convert as convert_currency
 from uniffy.domains.agents.currency import get_display_currency
 from uniffy.domains.agents.memories.bridge import is_personal_bridge_enabled
@@ -44,6 +43,7 @@ from uniffy.domains.agents.memories.recall import (
     render_recall_block,
 )
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
+from uniffy.domains.agents.policy import check_user_message
 from uniffy.domains.agents.pricing import PRICING_CURRENCY
 from uniffy.domains.agents.providers.base import (
     CanonicalContentBlockType,
@@ -60,18 +60,18 @@ from uniffy.domains.agents.runtime.destinations import (
     RuntimeDestination,
     SessionDestination,
 )
-from uniffy.domains.agents.runtime.file_loader import FileContext
-from uniffy.domains.agents.runtime.image_config import (
+from uniffy.domains.agents.runtime.files import FileContext
+from uniffy.domains.agents.runtime.images.config import (
     apply_image_tool_schema,
     resolve_image_config,
 )
-from uniffy.domains.agents.runtime.model_calls import (
+from uniffy.domains.agents.runtime.models.calls import (
     CircuitOpenError,
     FailoverTransition,
     ModelCallController,
     ModelCallTarget,
 )
-from uniffy.domains.agents.runtime.model_resolver import resolve_provider_and_model
+from uniffy.domains.agents.runtime.models.resolver import resolve_provider_and_model
 from uniffy.domains.agents.runtime.prompt import (
     SKILL_VIEW_TOOL,
     MemoryScopeBlock,
@@ -83,8 +83,8 @@ from uniffy.domains.agents.runtime.prompt import (
     skill_passes_activation,
     to_skill_prompt_entry,
 )
-from uniffy.domains.agents.runtime.run_usage import RunUsageAccumulator
-from uniffy.domains.agents.runtime.settings import get_runtime_settings
+from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
+from uniffy.domains.agents.runtime.settings.operations import get_runtime_settings
 from uniffy.domains.agents.runtime.writers import (
     ChatChannelMessageWriter,
     MessageWriter,
@@ -95,7 +95,7 @@ from uniffy.domains.agents.sessions.operations import (
     SessionOperations,
     apply_emergency_truncation,
 )
-from uniffy.domains.agents.skills.job_contracts import SkillAnalysisDestination
+from uniffy.domains.agents.skills.jobs.contracts import SkillAnalysisDestination
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.skills.usage import record_skill_event, record_skill_injections
 from uniffy.domains.agents.tools.deferral import (
@@ -111,8 +111,8 @@ from uniffy.domains.agents.tools.registry import (
     get_tool_registry,
     to_api_name,
 )
-from uniffy.domains.chat.sender_resolver import SenderResolver
-from uniffy.domains.integrations.tool_gate import (
+from uniffy.domains.chat.senders import SenderResolver
+from uniffy.domains.integrations.tools import (
     filter_integration_tool_schemas,
     has_advertised_integration_tools,
 )

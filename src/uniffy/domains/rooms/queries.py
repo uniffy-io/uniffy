@@ -10,7 +10,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.models.shared import BookingStatus, RoomStatus, RoomType
-from uniffy.domains.calendar.availability import merge_intervals
+from uniffy.domains.calendar.scheduling import merge_intervals
 
 
 async def check_booking_conflict(

@@ -38,11 +38,11 @@ async def _notify(note, actor, old_refs, expansions, writer_id=None):
     ops = _ops()
     with (
         patch(
-            "uniffy.domains.notes.operations.emit_notification",
+            "uniffy.domains.notes.content.notifications.emit_notification",
             AsyncMock(side_effect=lambda event: emitted.append(event)),
         ),
         patch(
-            "uniffy.domains.notes.operations.expand_team_mentions",
+            "uniffy.domains.notes.content.notifications.expand_team_mentions",
             AsyncMock(return_value=expansions),
         ) as expander,
     ):

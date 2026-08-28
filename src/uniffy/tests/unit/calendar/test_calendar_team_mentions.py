@@ -33,11 +33,11 @@ async def _emit(team_ids, excluded, expansions):
     ops = _ops()
     with (
         patch(
-            "uniffy.domains.calendar.operations.emit_notification",
+            "uniffy.domains.calendar.events.notifications.emit_notification",
             AsyncMock(side_effect=lambda event: emitted.append(event)),
         ),
         patch(
-            "uniffy.domains.calendar.operations.expand_team_mentions",
+            "uniffy.domains.calendar.events.notifications.expand_team_mentions",
             AsyncMock(return_value=expansions),
         ) as expander,
     ):

@@ -3,7 +3,7 @@
 import contextlib
 from uuid import UUID
 
-from uniffy.domains.agents.tools.builtin.content_space import (
+from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
     space_for_access_mode,

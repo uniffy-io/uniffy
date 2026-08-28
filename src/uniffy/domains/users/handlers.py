@@ -13,9 +13,9 @@ from uniffy_proto.users.v1.users_pb2 import (
     UploadAvatarResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.users.converters import user_to_profile
 from uniffy.domains.users.operations import UserOperations
 
@@ -28,7 +28,7 @@ class UsersHandlers:
         request: GetMyProfileRequest,
         ctx: RequestContext,
     ) -> GetMyProfileResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
@@ -46,7 +46,7 @@ class UsersHandlers:
         request: UpdateMyProfileRequest,
         ctx: RequestContext,
     ) -> UpdateMyProfileResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
@@ -71,7 +71,7 @@ class UsersHandlers:
         request: UploadAvatarRequest,
         ctx: RequestContext,
     ) -> UploadAvatarResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         if not request.image_data:
             raise ConnectError(Code.INVALID_ARGUMENT, "Image data is required")
@@ -100,7 +100,7 @@ class UsersHandlers:
         request: DeleteAvatarRequest,
         ctx: RequestContext,
     ) -> DeleteAvatarResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:

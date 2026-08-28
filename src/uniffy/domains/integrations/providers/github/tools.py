@@ -127,7 +127,7 @@ def _file_change_line(entry: dict) -> str:
 async def _reject_credential(
     ctx: ToolContext, meta: dict[str, Any], exc: IntegrationAuthError
 ) -> ToolResult:
-    from uniffy.domains.integrations.tool_gate import demote_connection_on_auth_error
+    from uniffy.domains.integrations.tools import demote_connection_on_auth_error
 
     await demote_connection_on_auth_error(ctx, meta, exc)
     return ToolResult(
@@ -142,7 +142,7 @@ async def _reject_credential(
 
 async def _execute_search_issues(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     query = args.get("query", "")
     if not query:
@@ -188,7 +188,7 @@ async def _execute_search_issues(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_search_repos(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     query = args.get("query", "")
     if not query:
@@ -228,7 +228,7 @@ async def _execute_search_repos(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_repos(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     limit = _clamp_limit(args)
     page = _clamp_page(args)
@@ -258,7 +258,7 @@ async def _execute_list_repos(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_get_issue(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -305,7 +305,7 @@ async def _execute_get_issue(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_pull_requests(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -341,7 +341,7 @@ async def _execute_list_pull_requests(ctx: ToolContext, args: dict) -> ToolResul
 
 async def _execute_get_pull_request(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -395,7 +395,7 @@ async def _execute_get_file(ctx: ToolContext, args: dict) -> ToolResult:
         GitHubClient,
         decode_file_content,
     )
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -433,7 +433,7 @@ async def _execute_get_file(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_get_pull_request_diff(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -482,7 +482,7 @@ async def _execute_get_pull_request_diff(ctx: ToolContext, args: dict) -> ToolRe
 
 async def _execute_list_commits(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -515,7 +515,7 @@ async def _execute_list_commits(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_get_commit(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -557,7 +557,7 @@ async def _execute_get_commit(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_get_checks(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -592,7 +592,7 @@ async def _execute_get_checks(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_pr_reviews(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -636,7 +636,7 @@ async def _execute_list_pr_reviews(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_search_code(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     query = args.get("query", "")
     if not query:
@@ -664,7 +664,7 @@ async def _execute_search_code(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_compare(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -701,7 +701,7 @@ async def _execute_compare(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_get_repo(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -742,7 +742,7 @@ async def _execute_get_repo(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_branches(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")
@@ -773,7 +773,7 @@ async def _execute_list_branches(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_releases(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.integrations.providers.github.client import GitHubClient
-    from uniffy.domains.integrations.tool_gate import resolve_connection_client
+    from uniffy.domains.integrations.tools import resolve_connection_client
 
     owner = args.get("owner", "")
     repo = args.get("repo", "")

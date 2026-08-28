@@ -5,12 +5,12 @@ from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from croniter import croniter
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.content.members import (
-    ContentMembersOperations,
+from uniffy.core.content.registry import (
     register_content_loader,
     register_ownership_transfer_hook,
 )
@@ -27,7 +27,13 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.agents.cron.job_contracts import EXECUTE_SINGLE_AGENT_CRON_TASK
+from uniffy.domains.agents.cron.jobs.contracts import EXECUTE_SINGLE_AGENT_CRON_TASK
+from uniffy.domains.permissions.members import (
+    ContentMembersOperations,
+    StagedContentMemberAdd,
+)
+
+logger = logger.bind(component="agents.cron.operations")
 
 MAX_CRON_TASKS_PER_USER = 20
 MIN_INTERVAL_SECONDS = 300  # 5 minutes
@@ -114,24 +120,53 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
             baseline_role=baseline_role,
         )
         self.session.add(task)
-        await self.session.commit()
+        staged_members: list[StagedContentMemberAdd] = []
+        try:
+            await self.session.flush()
+            members_ops = ContentMembersOperations(self.session)
+            for gid in group_ids or []:
+                staged_members.append(
+                    await members_ops.stage_member(
+                        actor_user_id=user_id,
+                        organization_id=organization_id,
+                        content_type=self.content_type,
+                        content_id=task.id,
+                        subject_type=SubjectType.GROUP,
+                        subject_id=gid,
+                        role=ContentRole.VIEWER,
+                    )
+                )
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
         await self.session.refresh(task)
 
-        if group_ids:
-            members_ops = ContentMembersOperations(self.session)
-            for gid in group_ids:
-                await members_ops.add_member(
-                    actor_user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=self.content_type,
-                    content_id=task.id,
-                    subject_type=SubjectType.GROUP,
-                    subject_id=gid,
-                    role=ContentRole.VIEWER,
+        for staged in staged_members:
+            try:
+                await members_ops.finish_member_add_after_commit(staged)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Cron task created with degraded initial member fanout",
+                    task_id=str(task.id),
                 )
 
-        await self._index_for_search(task, skip_member_lookup=not group_ids)
-        await self.session.commit()
+        try:
+            await self._index_for_search(task, skip_member_lookup=not staged_members)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Cron task created with stale search projection",
+                task_id=str(task.id),
+            )
+
+        try:
+            effective_mode, _ = await self._effective_policy(organization_id, task)
+            await self._broadcast_open_to_org_create(organization_id, task.id, effective_mode)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Cron task created with degraded access fanout",
+                task_id=str(task.id),
+            )
 
         return task
 

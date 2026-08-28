@@ -22,7 +22,7 @@ from uniffy.domains.notes.operations import NoteOperations
 def publish_mock(monkeypatch):
     """Content updates fan out over Valkey; keep unit tests off the wire."""
     mock = AsyncMock()
-    monkeypatch.setattr("uniffy.domains.notes.operations.publish_content_replace", mock)
+    monkeypatch.setattr("uniffy.domains.notes.content.updates.publish_content_replace", mock)
     return mock
 
 
@@ -200,7 +200,7 @@ class TestRealtimeSave:
         ]
 
         with patch(
-            "uniffy.domains.notes.operations.REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL"
+            "uniffy.domains.notes.content.realtime.REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL"
         ) as counter:
             result = await ops.realtime_save(
                 organization_id=note.organization_id,
@@ -225,7 +225,7 @@ class TestRealtimeSave:
         ]
 
         with patch(
-            "uniffy.domains.notes.operations.REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL"
+            "uniffy.domains.notes.content.realtime.REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL"
         ) as counter:
             await ops.realtime_save(
                 organization_id=note.organization_id,

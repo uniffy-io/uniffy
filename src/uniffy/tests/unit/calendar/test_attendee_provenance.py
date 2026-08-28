@@ -89,7 +89,7 @@ async def test_add_attendees_stamps_new_rows_with_source_group() -> None:
         patch.object(CalendarEventOperations, "_log_activity", AsyncMock()),
         patch.object(CalendarEventOperations, "_refresh_search_attendees", AsyncMock()),
         patch.object(CalendarEventOperations, "_sync_auto_created_room_members", AsyncMock()),
-        patch("uniffy.domains.calendar.operations.emit_notification", AsyncMock()),
+        patch("uniffy.domains.calendar.events.attendees.emit_notification", AsyncMock()),
     ):
         await ops.add_attendees(ACTOR, ORG, event.id, [group_id])
 

@@ -1,8 +1,4 @@
-"""Unit tests for parent-chain validation on tasks.
-
-Exercises ``_validate_no_circular_parent`` on the update and create paths
-against a ``MagicMock`` session.
-"""
+"""Task parent-chain validation tests."""
 
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
@@ -11,13 +7,11 @@ import pytest
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.types import generate_id
-from uniffy.domains.projects.operations import TaskOperations
+from uniffy.domains.projects.tasks.validation import TaskValidator
 
 
-def _make_ops() -> TaskOperations:
-    ops = TaskOperations.__new__(TaskOperations)
-    ops.session = MagicMock()
-    return ops
+def _make_ops() -> TaskValidator:
+    return TaskValidator(MagicMock())
 
 
 def _chain_session(parents_by_id: dict[UUID, UUID | None]) -> AsyncMock:
@@ -50,7 +44,7 @@ class TestValidateNoCircularParent:
         ops = _make_ops()
         task_id = generate_id()
         with pytest.raises(ValidationError, match="own parent"):
-            await ops._validate_no_circular_parent(task_id, task_id)
+            await ops.validate_no_circular_parent(task_id, task_id)
 
     async def test_two_node_cycle_rejected(self) -> None:
         ops = _make_ops()
@@ -59,7 +53,7 @@ class TestValidateNoCircularParent:
         # parent_id's parent is task_id - completing the cycle one hop up.
         ops.session.execute = _chain_session({parent_id: task_id})
         with pytest.raises(ValidationError, match="loop"):
-            await ops._validate_no_circular_parent(task_id, parent_id)
+            await ops.validate_no_circular_parent(task_id, parent_id)
 
     async def test_five_node_cycle_rejected(self) -> None:
         ops = _make_ops()
@@ -70,7 +64,7 @@ class TestValidateNoCircularParent:
             {a: b, b: c, c: d, d: task_id},
         )
         with pytest.raises(ValidationError, match="loop"):
-            await ops._validate_no_circular_parent(task_id, a)
+            await ops.validate_no_circular_parent(task_id, a)
 
     async def test_depth_five_chain_allowed(self) -> None:
         ops = _make_ops()
@@ -88,7 +82,7 @@ class TestValidateNoCircularParent:
         ops.session.execute = _chain_session(
             {p1: p2, p2: p3, p3: p4, p4: p5, p5: None},
         )
-        await ops._validate_no_circular_parent(task_id, p1)
+        await ops.validate_no_circular_parent(task_id, p1)
 
     async def test_depth_six_chain_rejected(self) -> None:
         ops = _make_ops()
@@ -98,7 +92,7 @@ class TestValidateNoCircularParent:
             {p1: p2, p2: p3, p3: p4, p4: p5, p5: p6, p6: None},
         )
         with pytest.raises(ValidationError, match="depth"):
-            await ops._validate_no_circular_parent(task_id, p1)
+            await ops.validate_no_circular_parent(task_id, p1)
 
     async def test_existing_chain_cycle_rejected(self) -> None:
         ops = _make_ops()
@@ -108,7 +102,7 @@ class TestValidateNoCircularParent:
         # bail out instead of spinning forever.
         ops.session.execute = _chain_session({a: b, b: a})
         with pytest.raises(ValidationError, match="cycle"):
-            await ops._validate_no_circular_parent(task_id, a)
+            await ops.validate_no_circular_parent(task_id, a)
 
     async def test_create_path_skips_cycle_check(self) -> None:
         ops = _make_ops()
@@ -117,7 +111,7 @@ class TestValidateNoCircularParent:
         # because the new task is not yet anyone's ancestor.
         parent = generate_id()
         ops.session.execute = _chain_session({parent: None})
-        await ops._validate_no_circular_parent(None, parent)
+        await ops.validate_no_circular_parent(None, parent)
 
     async def test_create_path_still_enforces_depth(self) -> None:
         ops = _make_ops()
@@ -126,4 +120,4 @@ class TestValidateNoCircularParent:
             {p1: p2, p2: p3, p3: p4, p4: p5, p5: p6, p6: None},
         )
         with pytest.raises(ValidationError, match="depth"):
-            await ops._validate_no_circular_parent(None, p1)
+            await ops.validate_no_circular_parent(None, p1)

@@ -5,6 +5,7 @@ A NULL ``access_mode`` on a content row inherits from
 chain: org-default row -> ``ORG_PERMISSION_DEFAULTS`` -> ``(OWNER_ONLY, None)``.
 """
 
+from typing import TypedDict
 from uuid import UUID
 
 from sqlalchemy import select
@@ -15,6 +16,39 @@ from uniffy.core.models.permissions.org_permission_defaults import (
     OrganizationPermissionDefaults,
 )
 from uniffy.core.types import AccessMode, ContentRole, ContentType
+
+
+class PermissionDefaults(TypedDict):
+    default_access_mode: AccessMode
+    default_baseline_role: ContentRole | None
+
+
+ORG_PERMISSION_DEFAULTS: dict[ContentType, PermissionDefaults] = {
+    ContentType.NOTE: {
+        "default_access_mode": AccessMode.OPEN_TO_ORG,
+        "default_baseline_role": ContentRole.EDITOR,
+    },
+    ContentType.FILE: {
+        "default_access_mode": AccessMode.OPEN_TO_ORG,
+        "default_baseline_role": ContentRole.VIEWER,
+    },
+    ContentType.PROJECT: {
+        "default_access_mode": AccessMode.OPEN_TO_ORG,
+        "default_baseline_role": ContentRole.EDITOR,
+    },
+    ContentType.AGENT: {
+        "default_access_mode": AccessMode.OPEN_TO_ORG,
+        "default_baseline_role": ContentRole.VIEWER,
+    },
+    ContentType.ROOM: {
+        "default_access_mode": AccessMode.OPEN_TO_ORG,
+        "default_baseline_role": ContentRole.VIEWER,
+    },
+    ContentType.AGENT_CRON_TASK: {
+        "default_access_mode": AccessMode.OWNER_ONLY,
+        "default_baseline_role": None,
+    },
+}
 
 
 async def resolve_content_defaults(
@@ -37,8 +71,6 @@ async def resolve_content_defaults(
 
     if row is not None:
         return row[0], row[1]
-
-    from uniffy.domains.organizations.defaults import ORG_PERMISSION_DEFAULTS
 
     fallback = ORG_PERMISSION_DEFAULTS.get(content_type)
     if fallback is not None:

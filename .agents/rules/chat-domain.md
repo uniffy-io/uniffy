@@ -28,7 +28,7 @@ Chat uses **channel membership**, not `access_mode`. `ChatAccessChecker` (`domai
 
 ## Performance discipline (chat-specific)
 
-- Hot reads go through `domains/chat/cache.py` helpers (channel rows, members, pinned-message ids, DM peer lists, channel-resources head) and `domains/chat/sender_resolver.py` for profile resolution. Raw PG on these paths is a regression.
+- Hot reads go through `domains/chat/cache.py` helpers (channel rows, members, pinned-message ids, DM peer lists, channel-resources head) and `domains/chat/senders.py` for profile resolution. Raw PG on these paths is a regression.
 - The send pipeline fetches member ids ONCE and threads the list into publisher / indexer / notifier. Same shape for reactions and member events.
 - Mention counting uses `mentioned_urns @> ARRAY[...]` against the partial GIN index - no `LIKE` scans.
 - Multi-channel aggregates (unread counts) are single queries with `unnest(...)` joins, never UNION-per-channel.
@@ -51,5 +51,5 @@ Chat uses **channel membership**, not `access_mode`. `ChatAccessChecker` (`domai
 | `src/uniffy/domains/chat/access.py` | `ChatAccessChecker` - the single access gate |
 | `src/uniffy/domains/chat/cache.py` | Valkey helpers for hot reads |
 | `src/uniffy/domains/chat/streaming/handlers.py` | User-stream fanout, `_CHANNEL_EVENT_TYPES` |
-| `src/uniffy/domains/chat/sender_resolver.py` | Batch user/agent profile resolution |
+| `src/uniffy/domains/chat/senders.py` | Batch user/agent profile resolution |
 | `src/uniffy/core/models/chat/` | Channel, member, message, thread, reaction, read cursor models |

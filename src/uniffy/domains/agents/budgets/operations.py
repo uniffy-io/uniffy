@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.membership import get_active_membership
+from uniffy.core.config.settings.organization import OrgSettingsOperations
 from uniffy.core.errors import (
     BudgetExceededError,
     NotFoundError,
@@ -37,12 +38,11 @@ from uniffy.core.models.agents.user_quota import AgentUserQuota
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.domains.agents.budgets.period import day_window, month_window
 from uniffy.domains.agents.currency import get_display_currency
-from uniffy.domains.agents.runtime.settings import (
+from uniffy.domains.agents.runtime.settings.operations import (
     AGENTS_NAMESPACE,
     RUNTIME_KEY,
     invalidate_runtime_settings_cache,
 )
-from uniffy.domains.org_settings.operations import OrgSettingsOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 logger = logger.bind(component="agents.budgets.operations")
@@ -176,9 +176,6 @@ class BudgetsOperations:
             row.updated_at = now
             action = Action.AGENT_BUDGET_UPDATED
 
-        await self._session.commit()
-        await self._session.refresh(row)
-
         await write_audit_event(
             self._session,
             organization_id=organization_id,
@@ -193,7 +190,12 @@ class BudgetsOperations:
                 "reset_day": resolved_day,
             },
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+        await self._session.refresh(row)
         return row
 
     async def delete_org_budget(
@@ -212,7 +214,6 @@ class BudgetsOperations:
             raise NotFoundError("AgentBudget", str(organization_id))
         row_id = row.id
         await self._session.delete(row)
-        await self._session.commit()
 
         await write_audit_event(
             self._session,
@@ -222,7 +223,11 @@ class BudgetsOperations:
             resource_type=AuditResourceType.BUDGET,
             resource_id=row_id,
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
 
     async def get_user_quota(
         self,
@@ -335,9 +340,6 @@ class BudgetsOperations:
             row.updated_at = now
             action = Action.AGENT_USER_QUOTA_UPDATED
 
-        await self._session.commit()
-        await self._session.refresh(row)
-
         await write_audit_event(
             self._session,
             organization_id=organization_id,
@@ -352,7 +354,12 @@ class BudgetsOperations:
                 "hard_limit": hard_limit,
             },
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+        await self._session.refresh(row)
         return row
 
     async def delete_user_quota(
@@ -375,7 +382,6 @@ class BudgetsOperations:
             raise NotFoundError("AgentUserQuota", str(target_user_id))
         row_id = row.id
         await self._session.delete(row)
-        await self._session.commit()
 
         await write_audit_event(
             self._session,
@@ -386,7 +392,11 @@ class BudgetsOperations:
             resource_id=row_id,
             details={"target_user_id": str(target_user_id)},
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
 
     async def get_current_spend(
         self,
@@ -688,9 +698,6 @@ class BudgetsOperations:
             existing.rate = rate_value
             existing.updated_at = datetime.now(UTC)
             row = existing
-        await self._session.commit()
-        await self._session.refresh(row)
-
         await write_audit_event(
             self._session,
             organization_id=organization_id,
@@ -700,7 +707,12 @@ class BudgetsOperations:
             resource_id=row.id,
             details={"from": from_cur, "to": to_cur, "rate": str(rate_value)},
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+        await self._session.refresh(row)
         return row
 
     async def delete_currency_rate(
@@ -727,7 +739,6 @@ class BudgetsOperations:
             raise NotFoundError("AgentCurrencyRate", f"{from_currency}->{to_currency}")
         row_id = row.id
         await self._session.delete(row)
-        await self._session.commit()
 
         await write_audit_event(
             self._session,
@@ -738,7 +749,11 @@ class BudgetsOperations:
             resource_id=row_id,
             details={"from": from_currency, "to": to_currency},
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
 
     async def get_display_currency(
         self,
@@ -771,8 +786,6 @@ class BudgetsOperations:
             patch={"display_currency": cur},
             updated_by_user_id=user_id,
         )
-        await self._session.commit()
-        invalidate_runtime_settings_cache(organization_id)
 
         await write_audit_event(
             self._session,
@@ -783,5 +796,10 @@ class BudgetsOperations:
             resource_id=organization_id,
             details={"display_currency": cur},
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+        invalidate_runtime_settings_cache(organization_id)
         return cur

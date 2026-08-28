@@ -88,7 +88,7 @@ Gate operations with these predicates, never with raw role comparisons:
 
 ## Mutating access - `ContentMembersOperations` only
 
-All member and access-mode changes go through `ContentMembersOperations` (`core/content/members.py`), surfaced as `permissions.v1.MembersService`:
+All member and access-mode changes go through `ContentMembersOperations` (`domains/permissions/members.py`), surfaced as `permissions.v1.MembersService`:
 
 | RPC | Effect |
 |---|---|
@@ -123,7 +123,7 @@ Granting or revoking a `DomainAdmin` row commits the PostgreSQL fact and publish
 
 ### Manage override (`register_manage_override`)
 
-`ContentMembersOperations._require_manage` consults a per-content-type override when the actor's content role fails: `register_manage_override(content_type, check)` in `core/content/members.py`. A passing check yields `ContentRole.ADMIN` for that mutation only - member CRUD, `SetAccessMode` - never for transfer, and never inside `effective_role`, so reads/lists/search stay unaffected. Registered: `AGENT` -> `is_agents_builder`. This is the sanctioned shape for domain-level management powers; adding an override for personal-content types would re-introduce god-mode - don't.
+`ContentMembersOperations._require_manage` consults a per-content-type override when the actor's content role fails: `register_manage_override(content_type, check)` in `core/content/registry.py`. A passing check yields `ContentRole.ADMIN` for that mutation only - member CRUD, `SetAccessMode` - never for transfer, and never inside `effective_role`, so reads/lists/search stay unaffected. Registered: `AGENT` -> `is_agents_builder`. This is the sanctioned shape for domain-level management powers; adding an override for personal-content types would re-introduce god-mode - don't.
 
 ## Chat (separate access model)
 
@@ -146,8 +146,8 @@ The consequence that matters here: an org admin editing someone's profile gains 
 - Permission checks live inside domain operations (the access policy is well-typed there).
 - Change `access_mode` / members only through `ContentMembersOperations` (audit + fanout + cache invalidation ride along).
 - `BLOCKED` always wins, even over ownership-of-content and even for admins.
-- Adding a content type to the system: extend `BaseContentOperations`, register a loader with `ContentMembersOperations`, add it to `_CONTENT_TYPE_TO_DOMAIN` in `checker.py` if it has a domain admin, seed `ORG_PERMISSION_DEFAULTS`, and index the sharing fields.
+- Adding a content type to the system: extend `BaseContentOperations`, register its loader in `core/content/registry.py`, add it to `_CONTENT_TYPE_TO_DOMAIN` in `checker.py` if it has a domain admin, seed `ORG_PERMISSION_DEFAULTS`, and index the sharing fields.
 
-Guard tests, unit: `tests/unit/core/test_effective_role.py`, `tests/unit/core/test_access_query.py`, `tests/unit/core/test_visible_sets.py`, `tests/unit/core/test_member_ops.py`, `tests/unit/people/test_people_access.py`.
+Guard tests, unit: `tests/unit/core/test_effective_role.py`, `tests/unit/core/test_access_query.py`, `tests/unit/core/test_visible_sets.py`, `tests/unit/permissions/test_member_ops.py`, `tests/unit/people/test_people_access.py`.
 
 Guard tests, integration (`tests/integration/access/`, real Postgres): the filters are asserted on the ROWS they return, never on the text of the generated SQL - a query string can read correct and still leak. `test_notes_access_filter.py` proves an org admin's `list_notes` excludes another member's `OWNER_ONLY` note; `test_deactivated_membership.py` proves a deactivated member reaches nothing.

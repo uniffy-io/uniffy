@@ -21,7 +21,7 @@ from uniffy.domains.agents.providers.catalog.schema import (
     ProviderCatalog,
 )
 
-logger = logger.bind(component="agents.providers.catalog")
+logger = logger.bind(component="agents.providers.catalog.loader")
 
 _CATALOG_PATH = DATA_DIR / "models" / "catalog.json"
 

@@ -14,10 +14,10 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.models import Organization, User
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.db.session import close_db, init_db, open_session
-from uniffy.domains.auth.passwords import hash_password
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 _PLANS = ["free", "pro", "team", "business", "enterprise"]

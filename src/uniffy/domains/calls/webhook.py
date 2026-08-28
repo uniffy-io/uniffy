@@ -14,7 +14,7 @@ from uniffy.core.json_codec import loads
 from uniffy.core.models.calls import Call, CallEndReason
 from uniffy.db import open_session
 from uniffy.domains.calls.config import get_livekit_config
-from uniffy.domains.calls.livekit_client import LiveKitApiError, get_livekit_admin_client
+from uniffy.domains.calls.livekit import LiveKitApiError, get_livekit_admin_client
 from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.calls.tokens import LiveKitTokenMinter, parse_room_call_id
 

@@ -100,7 +100,7 @@ async def is_skill_evolution_enabled(session, organization_id: UUID) -> bool:
     Off by default so self-hosted/air-gapped deployments never call an LLM for
     background analysis without the operator turning it on.
     """
-    from uniffy.domains.org_settings.operations import OrgSettingsOperations
+    from uniffy.core.config.settings.organization import OrgSettingsOperations
 
     settings = await OrgSettingsOperations(session).get_namespace(organization_id, _OPT_IN_NAMESPACE)
     row = settings.get(_OPT_IN_KEY)

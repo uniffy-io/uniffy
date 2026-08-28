@@ -1,6 +1,6 @@
 """Process-wide watcher that kicks streaming RPCs on token / session revoke.
 
-ConnectRPC's ``AuthRevocationInterceptor`` runs once at stream open. A
+ConnectRPC's authentication interceptor runs once at stream open. A
 long-lived server-streaming method (chat stream, notifications, agent
 runtime) authenticates there and then runs until the client disconnects
 - a mid-stream ``token_version`` bump or per-session revoke never kicks

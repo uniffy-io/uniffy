@@ -37,7 +37,7 @@ from uniffy.domains.calls.config import (
     get_livekit_config,
 )
 from uniffy.domains.calls.converters import call_to_event_dict, participant_to_event_dict
-from uniffy.domains.calls.livekit_client import LiveKitApiError, get_livekit_admin_client
+from uniffy.domains.calls.livekit import LiveKitApiError, get_livekit_admin_client
 from uniffy.domains.calls.policy import (
     DEFAULT_MAX_PARTICIPANTS,
     ResolvedCallPolicy,
@@ -53,7 +53,7 @@ from uniffy.domains.calls.tokens import (
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import fetch_channel_members
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
-from uniffy.domains.chat.sender_resolver import SenderInfo, SenderResolver
+from uniffy.domains.chat.senders import SenderInfo, SenderResolver
 from uniffy.domains.chat.streaming import events as evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 

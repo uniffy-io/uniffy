@@ -229,7 +229,7 @@ class TestRateLimitsOperationsValidation:
     """Input validation on RateLimitsOperations.upsert."""
 
     def _make_ops(self):
-        from uniffy.domains.agents.rate_limits.operations import RateLimitsOperations
+        from uniffy.domains.agents.limits.operations import RateLimitsOperations
 
         session = MagicMock()
         ops = RateLimitsOperations(session)
@@ -287,7 +287,7 @@ class TestConverters:
     """Proto round-trip for RateLimitKind and RateLimitRow."""
 
     def test_kind_round_trip_all_values(self) -> None:
-        from uniffy.domains.agents.rate_limits.converters import (
+        from uniffy.domains.agents.limits.converters import (
             rate_limit_kind_from_proto,
             rate_limit_kind_to_proto,
         )
@@ -305,15 +305,15 @@ class TestConverters:
     def test_unspecified_returns_none(self) -> None:
         from uniffy_proto.common.v1.common_pb2 import RATE_LIMIT_KIND_UNSPECIFIED
 
-        from uniffy.domains.agents.rate_limits.converters import (
+        from uniffy.domains.agents.limits.converters import (
             rate_limit_kind_from_proto,
         )
 
         assert rate_limit_kind_from_proto(RATE_LIMIT_KIND_UNSPECIFIED) is None
 
     def test_row_to_proto_default_row(self) -> None:
-        from uniffy.domains.agents.rate_limits.converters import rate_limit_row_to_proto
-        from uniffy.domains.agents.rate_limits.operations import RateLimitRow
+        from uniffy.domains.agents.limits.converters import rate_limit_row_to_proto
+        from uniffy.domains.agents.limits.operations import RateLimitRow
 
         row = RateLimitRow(
             kind=AGENT_MSG_USER,

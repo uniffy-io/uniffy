@@ -16,7 +16,7 @@ from uniffy.domains.bookmarks.operations import (
 )
 from uniffy.domains.bookmarks.pagination import decode_bookmark_cursor
 from uniffy.domains.bookmarks.types import BookmarkItem
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessDecision,
     ResourceAccessResolver,
     ResourceKey,

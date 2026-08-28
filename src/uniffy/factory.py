@@ -85,6 +85,7 @@ from uniffy.core.realtime import realtime_router
 from uniffy.core.realtime.router import router as realtime_pubsub_router
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
+from uniffy.core.streaming.disconnect import StreamDisconnectMiddleware
 from uniffy.core.streaming.middleware import StreamRevokeWatchMiddleware
 from uniffy.core.streaming.revoke_coordinator import coordinator as stream_revoke_coordinator
 from uniffy.core.valkey import (
@@ -107,31 +108,29 @@ from uniffy.db import (
     seed_initial_data,
     sync_bundled_skills,
 )
-from uniffy.domains.agents.agents.http_routes import agent_avatars_router
+from uniffy.domains.agents.agents.routes import agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
 from uniffy.domains.agents.budgets.service import BudgetsServiceImpl
 from uniffy.domains.agents.cron.service import CronServiceImpl
+from uniffy.domains.agents.limits.service import RateLimitsServiceImpl
 from uniffy.domains.agents.memories.service import MemoriesServiceImpl
-from uniffy.domains.agents.providers.client_cache import (
+from uniffy.domains.agents.providers.clients import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
 )
 from uniffy.domains.agents.providers.service import ProvidersServiceImpl
-from uniffy.domains.agents.rate_limits.service import RateLimitsServiceImpl
 from uniffy.domains.agents.runtime.service import RuntimeServiceImpl
-from uniffy.domains.agents.runtime.settings_handlers import (
+from uniffy.domains.agents.runtime.settings.handlers import (
     RuntimeSettingsServiceImpl,
 )
 from uniffy.domains.agents.sessions.service import SessionsServiceImpl
 from uniffy.domains.agents.skills.service import SkillsServiceImpl
 from uniffy.domains.audit.service import AuditServiceImpl
-from uniffy.domains.auth.interceptors import (
-    AuthenticationInterceptor,
-    AuthRevocationInterceptor,
-)
+from uniffy.domains.auth.interceptors import AuthenticationInterceptor
 from uniffy.domains.auth.mfa.service import MfaServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
+from uniffy.domains.calendar.events.registration import register_calendar_content
 from uniffy.domains.calendar.service import CalendarServiceImpl
 from uniffy.domains.calls.config import LiveKitConfigError
 from uniffy.domains.calls.service import CallServiceImpl
@@ -139,45 +138,48 @@ from uniffy.domains.calls.webhook import LiveKitWebhookProvider
 from uniffy.domains.chat.service import ChatServiceImpl
 from uniffy.domains.chat.streaming.service import ChatStreamServiceImpl
 from uniffy.domains.comments.service import CommentsServiceImpl
-from uniffy.domains.files.http_routes import (
+from uniffy.domains.files.registration import register_file_content
+from uniffy.domains.files.routes import (
     files_router,
     media_router,
     thumbnails_router,
 )
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
-from uniffy.domains.integrations.client_cache import (
+from uniffy.domains.integrations.clients import (
     close_integration_invalidation_subscriber,
     init_integration_invalidation_subscriber,
 )
 from uniffy.domains.integrations.service import IntegrationsServiceImpl
 from uniffy.domains.mail.service import OrgMailServiceImpl
-from uniffy.domains.mail.system_service import SystemMailServiceImpl
+from uniffy.domains.mail.system.service import SystemMailServiceImpl
+from uniffy.domains.notes.adapter import register_note_realtime_adapter
+from uniffy.domains.notes.registration import register_note_content
 from uniffy.domains.notes.service import NotesServiceImpl
-from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
 from uniffy.domains.notifications.service import NotificationsServiceImpl
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
 from uniffy.domains.people.service import PeopleServiceImpl
 from uniffy.domains.permissions.service import MembersServiceImpl
 from uniffy.domains.platform.audit.service import PlatformAuditServiceImpl
+from uniffy.domains.platform.config.service import SystemConfigServiceImpl
 from uniffy.domains.platform.directory.service import (
     SystemOrganizationsServiceImpl,
     SystemUsersServiceImpl,
 )
+from uniffy.domains.platform.encryption.service import SystemEncryptionServiceImpl
 from uniffy.domains.platform.mfa.service import SystemMfaServiceImpl
-from uniffy.domains.platform.support_session.consent_service import (
+from uniffy.domains.platform.support.consent import (
     SupportConsentServiceImpl,
 )
-from uniffy.domains.platform.support_session.service import SupportServiceImpl
+from uniffy.domains.platform.support.service import SupportServiceImpl
 from uniffy.domains.presence.service import PresenceServiceImpl
+from uniffy.domains.projects.registration import register_project_content
 from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.rooms.service import RoomsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
-from uniffy.domains.system_config.service import SystemConfigServiceImpl
-from uniffy.domains.system_encryption.service import SystemEncryptionServiceImpl
 from uniffy.domains.tags.service import TagsServiceImpl
-from uniffy.domains.users.http_routes import avatars_router
+from uniffy.domains.users.routes import avatars_router
 from uniffy.domains.users.service import UsersServiceImpl
 from uniffy.observability import ObservabilityConfig, setup_observability
 from uniffy.observability.crpc import LoggingInterceptor, http_version_var, strict_request_codecs
@@ -459,6 +461,11 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    register_note_realtime_adapter()
+    register_note_content()
+    register_calendar_content()
+    register_file_content()
+    register_project_content()
     _setup_observability()
 
     app = FastAPI(
@@ -508,16 +515,9 @@ def create_app() -> FastAPI:
 
 def _create_api_dispatcher() -> ConnectRPCDispatcher:
     logging_interceptor = LoggingInterceptor()
-    # AuthenticationInterceptor runs FIRST and denies by default, so a handler
-    # that forgets its own identity check is not reachable without a token.
-    # Revocation follows, so a revoked access token never reaches handler code.
-    # LoggingInterceptor still gets the access log line because ConnectRPC
-    # unwinds interceptors in reverse order on raise.
     authentication_interceptor = AuthenticationInterceptor()
-    auth_revocation_interceptor = AuthRevocationInterceptor()
     interceptors = [
         authentication_interceptor,
-        auth_revocation_interceptor,
         logging_interceptor,
     ]
     codecs = strict_request_codecs()

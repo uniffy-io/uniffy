@@ -35,8 +35,8 @@ from uniffy.core.models.chat.channel_member import (
     ChatNotificationLevel,
 )
 from uniffy.core.models.login.user import User
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import SubjectType
-from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
 _SUBJECT_TYPE_TO_PROTO = {

@@ -13,11 +13,11 @@ from uniffy_proto.bookmarks.v1.bookmarks_pb2 import (
     ToggleBookmarkResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters.common_proto import CONTENT_TYPE_FROM_PROTO
 from uniffy.core.errors import UNIFFYError
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.bookmarks.converters import bookmark_item_to_proto, bookmark_to_proto
 from uniffy.domains.bookmarks.operations import (
     DEFAULT_PAGE_SIZE,
@@ -34,8 +34,8 @@ class BookmarksHandlers:
         request: ToggleBookmarkRequest,
         ctx: RequestContext,
     ) -> ToggleBookmarkResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
         if not request.urn:
             raise ConnectError(Code.INVALID_ARGUMENT, "URN is required")
 
@@ -61,8 +61,8 @@ class BookmarksHandlers:
         request: ListBookmarkItemsRequest,
         ctx: RequestContext,
     ) -> ListBookmarkItemsResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
         content_types = _content_types_from_proto(request.content_types)
         page_size = min(request.page_size or DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
         page_token = request.page_token if request.HasField("page_token") else None
@@ -93,8 +93,8 @@ class BookmarksHandlers:
         request: BulkCheckBookmarksRequest,
         ctx: RequestContext,
     ) -> BulkCheckBookmarksResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
         urns = list(request.urns)[:100]
 
         try:

@@ -9,10 +9,7 @@ from sqlalchemy.orm import aliased
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.content.members import (
-    ContentMembersOperations,
-    register_content_loader,
-)
+from uniffy.core.content.registry import register_content_loader
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
@@ -34,6 +31,7 @@ from uniffy.core.types import (
 )
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.permissions.members import ContentMembersOperations
 from uniffy.domains.rooms import queries
 
 logger = logger.bind(component="rooms.operations")
@@ -122,35 +120,48 @@ class RoomOperations(BaseContentOperations[Room]):
             baseline_role=baseline_role,
         )
         self.session.add(room)
-        await self.session.commit()
-        await self.session.refresh(room)
-
-        await write_audit_event(
-            self.session,
-            organization_id=organization_id,
-            actor_user_id=user_id,
-            action=Action.ROOM_CREATED,
-            resource_type=AuditResourceType.ROOM,
-            resource_id=room.id,
-            details={"name": room.name, "room_type": room_type.value},
-        )
-        await self.session.commit()
-
-        if group_ids:
+        staged_members = []
+        try:
+            await self.session.flush()
+            await write_audit_event(
+                self.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.ROOM_CREATED,
+                resource_type=AuditResourceType.ROOM,
+                resource_id=room.id,
+                details={"name": room.name, "room_type": room_type.value},
+            )
             members_ops = ContentMembersOperations(self.session)
-            for gid in group_ids:
-                await members_ops.add_member(
+            for group_id in group_ids or []:
+                staged = await members_ops.stage_member(
                     actor_user_id=user_id,
                     organization_id=organization_id,
                     content_type=self.content_type,
                     content_id=room.id,
                     subject_type=SubjectType.GROUP,
-                    subject_id=gid,
+                    subject_id=group_id,
                     role=ContentRole.VIEWER,
                 )
+                staged_members.append(staged)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        await self.session.refresh(room)
 
-        await self._index_for_search(room, skip_member_lookup=not group_ids)
-        await self.session.commit()
+        for staged in staged_members:
+            try:
+                await members_ops.finish_member_add_after_commit(staged)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    f"Failed to publish initial room access for {room.id}"
+                )
+
+        try:
+            await self._index_for_search(room, skip_member_lookup=not staged_members)
+        except Exception:
+            logger.opt(exception=True).warning(f"Failed to index room {room.id}")
 
         return room
 
@@ -227,8 +238,10 @@ class RoomOperations(BaseContentOperations[Room]):
         await self.session.commit()
         await self.session.refresh(room)
 
-        await self._index_for_search(room)
-        await self.session.commit()
+        try:
+            await self._index_for_search(room)
+        except Exception:
+            logger.opt(exception=True).warning(f"Failed to index room {room_id}")
 
         if changed_keys:
             try:
@@ -302,10 +315,12 @@ class RoomOperations(BaseContentOperations[Room]):
 
         await self.session.commit()
 
-        await self.search_indexer.remove(
-            build_content_urn(self.content_type, room_id), organization_id
-        )
-        await self.session.commit()
+        try:
+            await self.search_indexer.remove(
+                build_content_urn(self.content_type, room_id), organization_id
+            )
+        except Exception:
+            logger.opt(exception=True).warning(f"Failed to remove room {room_id} from search")
 
         try:
             await publish_mention_state(
@@ -397,8 +412,51 @@ class BookingOperations:
         notes: str = "",
         event_id: UUID | None = None,
     ) -> RoomBooking:
+        booking = await self.stage_booking(
+            user_id=user_id,
+            organization_id=organization_id,
+            room_id=room_id,
+            start_time=start_time,
+            end_time=end_time,
+            title=title,
+            notes=notes,
+            event_id=event_id,
+        )
+        try:
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        await self.session.refresh(booking)
+        return booking
+
+    async def stage_booking(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        room_id: UUID,
+        start_time: datetime,
+        end_time: datetime,
+        title: str = "",
+        notes: str = "",
+        event_id: UUID | None = None,
+    ) -> RoomBooking:
+        """Validate and stage a booking while serializing writers for its room."""
         room_ops = RoomOperations(self.session)
-        room = await room_ops.get_by_id(user_id, organization_id, room_id)
+        room = (
+            await self.session.execute(
+                select(Room)
+                .where(
+                    Room.id == room_id,
+                    Room.organization_id == organization_id,
+                    Room.is_deleted.is_(False),
+                )
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+        if room is None:
+            raise NotFoundError("Room", room_id)
+        await room_ops._require_view(user_id, organization_id, room)
         if room.status != RoomStatus.ACTIVE:
             raise ValidationError(
                 "room",
@@ -427,9 +485,6 @@ class BookingOperations:
         )
         self.session.add(booking)
         await self.session.flush()
-        await self.session.commit()
-        await self.session.refresh(booking)
-
         return booking
 
     async def cancel_booking(

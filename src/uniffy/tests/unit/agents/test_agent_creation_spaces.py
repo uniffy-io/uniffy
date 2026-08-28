@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from uniffy.core.types import AccessMode, generate_id
-from uniffy.domains.agents.runtime.workspace_prompt import WORKSPACE_PROMPT
-from uniffy.domains.agents.tools.builtin.content_space import (
+from uniffy.domains.agents.runtime.workspace import WORKSPACE_PROMPT
+from uniffy.domains.agents.tools.builtin.content import (
     parse_creation_space,
     space_for_access_mode,
 )
@@ -354,7 +354,7 @@ async def test_generated_image_file_uses_requested_space(
             new=AsyncMock(),
         ),
         patch(
-            "uniffy.domains.agents.budgets.image_quota.check_image_quota",
+            "uniffy.domains.agents.budgets.images.check_image_quota",
             new=AsyncMock(),
         ),
         patch(
@@ -371,7 +371,7 @@ async def test_generated_image_file_uses_requested_space(
             return_value=[],
         ),
         patch(
-            "uniffy.domains.agents.budget_alerts.check_and_fire_alerts",
+            "uniffy.domains.agents.budgets.alerts.check_and_fire_alerts",
             new=AsyncMock(),
         ),
         patch(

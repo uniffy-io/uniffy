@@ -27,6 +27,7 @@ from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
@@ -40,8 +41,7 @@ from uniffy.domains.agents.cron.converters import (
     cron_task_to_proto,
 )
 from uniffy.domains.agents.cron.operations import CronTaskOperations
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
+from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 
 logger = logger.bind(component="agents.cron.handlers")
 
@@ -95,7 +95,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> CreateCronTaskResponse:
         """Create a new cron task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
@@ -146,7 +146,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> GetCronTaskResponse:
         """Get a cron task by ID."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -179,7 +179,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> ListCronTasksResponse:
         """List cron tasks."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         agent_id = None
@@ -249,7 +249,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> UpdateCronTaskResponse:
         """Update a cron task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -304,7 +304,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> DeleteCronTaskResponse:
         """Delete a cron task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -328,7 +328,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> ListCronRunLogsResponse:
         """List cron run logs for a task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -369,7 +369,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> TriggerCronTaskResponse:
         """Trigger immediate execution of a scheduled task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 

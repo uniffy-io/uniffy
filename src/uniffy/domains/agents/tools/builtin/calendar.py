@@ -8,7 +8,7 @@ from uniffy.core.types import EventStatus, EventTransparency, RecurrencePattern
 from uniffy.domains.agents.tools.builtin.args import parse_uuid, parse_uuid_list
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 from uniffy.domains.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.tags.operations import TagOperations
 
 _RECURRENCE_VALUES = ("NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "YEARLY")
 _ATTENDEE_ROLE_VALUES = ("REQUIRED", "OPTIONAL")
@@ -1067,7 +1067,7 @@ def _fmt_local(dt: datetime, tz: ZoneInfo) -> str:
 
 
 async def _execute_get_free_busy(ctx: ToolContext, args: dict) -> ToolResult:
-    from uniffy.domains.calendar.availability import get_busy_intervals
+    from uniffy.domains.calendar.scheduling import get_busy_intervals
 
     raw_users = args.get("user_ids")
     if not raw_users or not isinstance(raw_users, list):
@@ -1110,8 +1110,7 @@ async def _execute_get_free_busy(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_find_time(ctx: ToolContext, args: dict) -> ToolResult:
-    from uniffy.domains.calendar.availability import get_busy_intervals
-    from uniffy.domains.calendar.scheduling import suggest_meeting_times
+    from uniffy.domains.calendar.scheduling import get_busy_intervals, suggest_meeting_times
     from uniffy.domains.settings.operations import get_users_scheduling_context
 
     raw_attendees = args.get("attendee_ids")
