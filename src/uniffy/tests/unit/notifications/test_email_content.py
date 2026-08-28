@@ -59,3 +59,27 @@ def test_access_loss_email_does_not_link_to_revoked_content() -> None:
     )
 
     assert notification_action_path(delivery) == "/notifications"
+
+
+def test_meeting_reminder_email_opens_the_join_surface() -> None:
+    channel_id = generate_id()
+    event_id = generate_id()
+    delivery = _delivery(
+        notification_type=NotificationType.CALENDAR_REMINDER.value,
+        content_type=ContentType.CALENDAR_EVENT,
+        content_id=event_id,
+        notification_metadata={"channel_id": str(channel_id)},
+    )
+
+    assert notification_action_path(delivery) == f"/chat/{channel_id}?call=join"
+
+
+def test_unbound_reminder_email_still_opens_the_event() -> None:
+    event_id = generate_id()
+    delivery = _delivery(
+        notification_type=NotificationType.CALENDAR_REMINDER.value,
+        content_type=ContentType.CALENDAR_EVENT,
+        content_id=event_id,
+    )
+
+    assert notification_action_path(delivery) == f"/calendar/{event_id}"

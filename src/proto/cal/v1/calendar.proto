@@ -579,6 +579,9 @@ message GetEventsInRangeRequest {
   repeated string calendar_ids = 4;
   // Optional category IDs to filter by
   repeated string category_ids = 5;
+  // Optional chat channel filter: only events bound to this channel as an
+  // online meeting. Used by the channel next-meeting strip.
+  optional string channel_id = 6;
 }
 
 // Response for events in range

@@ -31,6 +31,11 @@ _CONTENT_ROUTES = {
 }
 _WHITESPACE_RE = re.compile(r"\s+")
 
+# Opens the channel's pre-join surface on arrival. Mail and browser push land from
+# outside the app, so the join intent has to survive as a URL; the web client
+# consumes this once and strips it.
+JOIN_CALL_QUERY = "call=join"
+
 
 def notification_action_url(delivery: NotificationEmailDelivery) -> str:
     return f"{uniffy_base_url()}{notification_action_path(delivery)}"
@@ -48,6 +53,11 @@ def notification_action_path(delivery: NotificationEmailDelivery) -> str:
         if channel_id:
             suffix = f"#{message_id}" if message_id else ""
             return f"/chat/{channel_id}{suffix}"
+
+    if notification_type is NotificationType.CALENDAR_REMINDER:
+        channel_id = metadata.get("channel_id")
+        if channel_id:
+            return f"/chat/{channel_id}?{JOIN_CALL_QUERY}"
 
     target = _delivery_content_target(delivery)
     if target is None:

@@ -1,4 +1,5 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { JOIN_CALL_PARAM, JOIN_CALL_VALUE } from "@features/chat/useJoinCallParam";
 import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 import type { Notification as ProtoNotification } from "@uniffy/proto/notifications/v1/notifications_pb";
 import { NotificationType } from "@uniffy/proto/notifications/v1/notifications_pb";
@@ -88,6 +89,15 @@ function routeForNotification(proto: ProtoNotification): string | null {
     const channelId = proto.metadata.channel_id;
     if (rootMessageId && channelId) {
       return `/chat/thread/${rootMessageId}?channelId=${channelId}`;
+    }
+  }
+  // A reminder for an event bound to a channel opens that channel ready to join,
+  // rather than the event page the URN points at. Reminders for unbound events
+  // keep the ordinary route.
+  if (proto.notificationType === NotificationType.CALENDAR_REMINDER) {
+    const channelId = proto.metadata.channel_id;
+    if (channelId) {
+      return `/chat/${channelId}?${JOIN_CALL_PARAM}=${JOIN_CALL_VALUE}`;
     }
   }
   return routeFromUrn(proto.sourceUrn);

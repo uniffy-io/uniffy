@@ -5,6 +5,7 @@ import { prejoinOpened, selectActiveCallForChannel } from "@/features/calls/stor
 import { chatApi } from "@/features/chat/api/chatApi";
 import { navigateTo } from "@/shared/utils/navigation";
 import { Button } from "@/components/ui/button";
+import { LiveMeetingBadge } from "@/features/calendar/components/shared/LiveMeetingBadge";
 import { cn } from "@/shared/utils/cn";
 import type { RootState } from "@/app/store";
 
@@ -56,15 +57,7 @@ export function EventMeetingJoin({ channelId }: EventMeetingJoinProps) {
       <div className="flex items-center gap-2">
         <VideoCamera size={16} weight="duotone" className="text-muted-foreground shrink-0" />
         <span className="text-sm font-medium text-foreground truncate">{label}</span>
-        {isLive && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-600 dark:text-rose-400">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
-            </span>
-            Live{participantCount > 0 ? ` · ${participantCount}` : ""}
-          </span>
-        )}
+        {isLive && <LiveMeetingBadge participantCount={participantCount} />}
       </div>
 
       {hasAccess === false ? (

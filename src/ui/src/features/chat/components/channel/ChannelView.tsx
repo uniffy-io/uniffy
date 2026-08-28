@@ -23,6 +23,7 @@ import {
 import { useBookmarkStatuses } from "@/features/bookmarks";
 import { selectMessagesForChannel } from "@/features/chat/store/chatMessagesSlice";
 import { useDraftSync } from "@/features/chat/hooks/useDraftSync";
+import { useJoinCallParam } from "@/features/chat/hooks/useJoinCallParam";
 import { attachmentsApi } from "@/features/files/api/attachmentsApi";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { CallSection } from "@/features/calls/components/CallView";
@@ -48,6 +49,8 @@ export function ChannelView({
   const activeChannelIdFromRedux = useAppSelector((state) => state.chatChannels.activeChannelId);
   const effectiveChannelId = channelIdProp ?? activeChannelIdFromRedux;
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+
+  useJoinCallParam(effectiveChannelId);
 
   const activeChannel = useAppSelector((state) =>
     effectiveChannelId ? state.chatChannels.byId[effectiveChannelId] : undefined,

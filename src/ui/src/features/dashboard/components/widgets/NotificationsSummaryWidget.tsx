@@ -9,13 +9,11 @@ import {
   WidgetSkeleton,
 } from "@/features/dashboard/components/widgets/WidgetCard";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
-import { urnToPath } from "@/shared/utils/urn";
+import { notificationHref } from "@/features/notifications/utils/notificationTarget";
 import type { SerializedNotification } from "@/features/notifications/store/notificationsSlice";
 
 function NotificationItem({ notification }: { notification: SerializedNotification }) {
-  const path = notification.sourceUrn
-    ? (urnToPath(notification.sourceUrn) ?? "/notifications")
-    : "/notifications";
+  const path = notificationHref(notification) ?? "/notifications";
 
   return (
     <Link

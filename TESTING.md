@@ -494,6 +494,47 @@ Date & time), and give B custom working hours (Settings > Appearance > Working h
 - [ ] Ask an agent to find a meeting time for A+B+C without naming hours: the suggestions
       respect each person's saved working hours; passing explicit hours overrides them.
 
+## Calendar meeting polish and reminder deep links
+
+Needs an organizer (A) and an attendee (B), and an event bound to a chat channel as a Uniffy
+meeting (event editor > Online meeting > Uniffy meeting). Reminders fire from the per-minute
+worker, so set a reminder offset that lands within a few minutes. (both products)
+
+- [ ] A creates a bound meeting with a reminder and is an attendee of their own event: when
+      the reminder fires, A receives it. (The organizer used to be filtered out silently.)
+- [ ] Clicking that reminder in the notification panel opens the pre-join modal for the
+      meeting and does NOT navigate away from the current page.
+- [ ] A reminder for an event with no channel binding still opens the event at
+      `/calendar/{id}`.
+- [ ] Visiting `/chat/{channelId}?call=join` opens pre-join once and the URL loses the
+      `call` parameter; reloading afterwards does not re-open it.
+- [ ] Turn on email for "Event reminder" (Settings > Notifications) and confirm the delivered
+      mail's action link is `/chat/{channelId}?call=join` for a bound meeting. With email left
+      at its default the reminder arrives in-app only, never twice.
+- [ ] B joins the meeting call: A's calendar grid chip for that event shows a live indicator
+      with the participant count, in week/day and in month view; it clears when the call ends.
+      On a chip too short for the label the indicator is a bare dot and the count is in its
+      tooltip.
+- [ ] Mark the event private (details hidden) or cancel it: no live indicator appears on the
+      chip even while the call is running.
+- [ ] Open the bound channel: the header shows a next-meeting strip with the title and a
+      countdown, and a Join action; while the call is live it reads "Join now" with the live
+      badge.
+- [ ] The strip is absent in a channel with no upcoming bound meeting, and disappears once
+      the meeting's end time passes.
+- [ ] Bind a recurring event to a channel: the strip counts down to the next occurrence, not
+      to the series master's original start.
+- [ ] Mobile: tapping that same reminder in the notifications list opens the bound channel with
+      the pre-join sheet already up. Dismiss it, leave the channel and come back - the sheet
+      stays closed.
+- [ ] Mobile: a reminder for an unbound event still opens `/calendar/{id}`.
+
+- [ ] Mobile: from that reminder's channel, start the call leaving the mic toggle OFF. The call
+      connects and the app stays up. Unmute during the call and it keeps running.
+
+Mobile push reminders are not testable yet - the mobile app has no push channel, so the
+notifications list above is the only mobile entry point.
+
 ## Chat synced drafts
 
 Unsent composer text syncs across devices per channel and per thread. Needs one user logged in

@@ -1100,6 +1100,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         end_date: datetime,
         calendar_ids: list[UUID] | None = None,
         category_ids: list[UUID] | None = None,
+        channel_id: UUID | None = None,
     ) -> list[CalendarEvent]:
         """Get events the user can access in a date range.
 
@@ -1129,6 +1130,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             base_filters.append(CalendarEvent.calendar_id.in_(calendar_ids))
         if category_ids:
             base_filters.append(CalendarEvent.category_id.in_(category_ids))
+        if channel_id:
+            base_filters.append(CalendarEvent.channel_id == channel_id)
 
         query = (
             select(CalendarEvent)

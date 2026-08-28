@@ -59,7 +59,7 @@ type CallForegroundService = { start(): void; stop(): void };
 const foregroundService =
   requireOptionalNativeModule<CallForegroundService>("CallForegroundService");
 
-export async function startCallAudio(videoEnabled: boolean): Promise<void> {
+export async function startCallAudio(videoEnabled: boolean, micEnabled: boolean): Promise<void> {
   const lk = loadSdk();
   if (!lk) return;
   await lk.AudioSession.configureAudio({
@@ -67,9 +67,21 @@ export async function startCallAudio(videoEnabled: boolean): Promise<void> {
     ios: { defaultOutput: videoEnabled ? "speaker" : "earpiece" },
   });
   await lk.AudioSession.startAudioSession();
-  // RECORD_AUDIO is while-in-use, so the service has to start here - on the
-  // connect path, with the app still foregrounded. Starting it from the
-  // AppState background handler is already too late.
+  if (micEnabled) startCallMicService();
+}
+
+/**
+ * The service declares the "microphone" foreground type, which Android 14+ only
+ * lets an app start while it actually HOLDS RecordAudio - the manifest
+ * permission alone is not enough. Starting it for a listen-only call throws
+ * SecurityException on a binder thread and takes the whole process down, so it
+ * stays off until the mic is genuinely on.
+ *
+ * RECORD_AUDIO is while-in-use, so this still has to happen with the app
+ * foregrounded: on the connect path, or on the tap that unmutes. Starting it
+ * from the AppState background handler is already too late.
+ */
+export function startCallMicService(): void {
   foregroundService?.start();
 }
 

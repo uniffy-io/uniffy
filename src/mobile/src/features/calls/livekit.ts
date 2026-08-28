@@ -12,7 +12,9 @@ export function loadLivekitClient(): typeof import("livekit-client") | null {
 
 export function setupLiveKit(): void {}
 
-export async function startCallAudio(_videoEnabled: boolean): Promise<void> {}
+export async function startCallAudio(_videoEnabled: boolean, _micEnabled: boolean): Promise<void> {}
+
+export function startCallMicService(): void {}
 
 export async function stopCallAudio(): Promise<void> {}
 

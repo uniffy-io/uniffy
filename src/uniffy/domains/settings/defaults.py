@@ -136,6 +136,9 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
     NotificationType.CONTENT_SHARED: {"in_app": True, "browser": True, "email": True},
     NotificationType.CONTENT_MENTIONED: {"in_app": True, "browser": True, "email": True},
     NotificationType.CONTENT_EDITED: {"in_app": True, "browser": False, "email": False},
+    # Email stays off: a reminder fires per occurrence, so a daily meeting alone
+    # is hundreds of mails a year, and in-app plus browser already cover the
+    # timely channel. Users who want it can turn it on per type.
     NotificationType.CALENDAR_REMINDER: {"in_app": True, "browser": True, "email": False},
     NotificationType.CALENDAR_INVITE: {"in_app": True, "browser": True, "email": True},
     NotificationType.CALENDAR_RESPONSE: {"in_app": True, "browser": False, "email": False},

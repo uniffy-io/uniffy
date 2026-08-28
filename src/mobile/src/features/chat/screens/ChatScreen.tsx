@@ -120,6 +120,7 @@ import { useComposerAttachments } from "@features/chat/useComposerAttachments";
 import { useChannelAgentConfig } from "@features/chat/useChannelAgentConfig";
 import { useChatPermissions } from "@features/chat/useChatPermissions";
 import { useDraftSync } from "@features/chat/useDraftSync";
+import { useJoinCallParam } from "@features/chat/useJoinCallParam";
 import { useScreenFocusRef } from "@shared/hooks/useScreenFocusRef";
 import { chatApi } from "@features/chat/chatApi";
 import {
@@ -341,6 +342,8 @@ export function ChatConversationScreen() {
   const [modelSheetOpen, setModelSheetOpen] = useState(false);
   const [contextAgentId, setContextAgentId] = useState<string | null>(null);
   const [prejoinOpen, setPrejoinOpen] = useState(false);
+  const openPrejoin = useCallback(() => setPrejoinOpen(true), []);
+  useJoinCallParam(channelId, openPrejoin);
   const { session: callSession, setMinimized, available: callsAvailable } = useCall();
   const activeCall = useActiveCall(channelId);
   const inCallHere = callSession.channelId === channelId && callSession.status !== "idle";

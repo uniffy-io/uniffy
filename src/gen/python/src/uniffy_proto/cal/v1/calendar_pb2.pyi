@@ -535,18 +535,20 @@ class ListEventsResponse(_message.Message):
     def __init__(self, events: _Optional[_Iterable[_Union[CalendarEvent, _Mapping]]] = ..., total_count: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., total_pages: _Optional[int] = ...) -> None: ...
 
 class GetEventsInRangeRequest(_message.Message):
-    __slots__ = ("organization_id", "start_date", "end_date", "calendar_ids", "category_ids")
+    __slots__ = ("organization_id", "start_date", "end_date", "calendar_ids", "category_ids", "channel_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     START_DATE_FIELD_NUMBER: _ClassVar[int]
     END_DATE_FIELD_NUMBER: _ClassVar[int]
     CALENDAR_IDS_FIELD_NUMBER: _ClassVar[int]
     CATEGORY_IDS_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     start_date: _timestamp_pb2.Timestamp
     end_date: _timestamp_pb2.Timestamp
     calendar_ids: _containers.RepeatedScalarFieldContainer[str]
     category_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, organization_id: _Optional[str] = ..., start_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., calendar_ids: _Optional[_Iterable[str]] = ..., category_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    channel_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., start_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., calendar_ids: _Optional[_Iterable[str]] = ..., category_ids: _Optional[_Iterable[str]] = ..., channel_id: _Optional[str] = ...) -> None: ...
 
 class GetEventsInRangeResponse(_message.Message):
     __slots__ = ("events",)
