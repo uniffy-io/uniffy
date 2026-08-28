@@ -114,6 +114,7 @@ export default defineConfig({
       files: [
         'src/features/calendar/screens/CalendarScreen.tsx',
         'src/features/calls/components/DraggablePip.tsx',
+        'src/features/calls/components/ZoomableStage.tsx',
         'src/features/chat/components/SwipeToReply.tsx',
         'src/features/files/components/FullscreenViewer.tsx',
         'src/features/notes/components/NoteDrag.tsx',

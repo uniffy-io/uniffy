@@ -64,7 +64,12 @@ export function DraggablePip({
 
   return (
     <GestureDetector gesture={pan}>
-      <Animated.View style={[styles.pip, { width, height }, style]}>{children}</Animated.View>
+      <Animated.View
+        style={[styles.pip, { width, height }, style]}
+        accessibilityLabel="Your camera, drag to move"
+      >
+        {children}
+      </Animated.View>
     </GestureDetector>
   );
 }

@@ -37,6 +37,9 @@ export function SheetRow({
       style={[styles.row, { borderBottomColor: T.border }]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
     >
       {leading}
       <View style={styles.labels}>
