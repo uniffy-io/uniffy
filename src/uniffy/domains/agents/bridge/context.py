@@ -38,7 +38,7 @@ from uniffy.domains.agents.runtime.compactor import summarise_conversation
 from uniffy.domains.agents.runtime.models.resolver import (
     resolve_provider_and_model,
 )
-from uniffy.domains.agents.runtime.operations import _get_model_context_window
+from uniffy.domains.agents.runtime.models.window import resolve_context_window
 from uniffy.domains.agents.sessions.operations import (
     DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO,
     FALLBACK_CONTEXT_WINDOW,
@@ -584,7 +584,7 @@ class ChatAgentContextOperations:
 
     async def _resolve_window_for_provider(self, provider: object, model_id: str) -> int:
         try:
-            return await _get_model_context_window(provider, model_id)
+            return await resolve_context_window(provider, model_id)
         except Exception:
             return FALLBACK_CONTEXT_WINDOW
 
@@ -700,7 +700,7 @@ class ChatAgentContextOperations:
                     organization_id=organization_id,
                     model_id=agent.primary_model,
                 )
-            return await _get_model_context_window(provider, agent.primary_model)
+            return await resolve_context_window(provider, agent.primary_model)
         except Exception:
             return FALLBACK_CONTEXT_WINDOW
 

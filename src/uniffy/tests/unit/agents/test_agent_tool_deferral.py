@@ -8,13 +8,13 @@ import pytest
 from uniffy.core.errors import ValidationError
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import CompletionResult, ToolCall
-from uniffy.domains.agents.runtime.operations import (
-    MAX_LOAD_ONLY_ITERATIONS,
-    RuntimeOperations,
-    _expand_loaded_schemas,
-    _is_load_only_turn,
-)
 from uniffy.domains.agents.runtime.prompt import build_system_prompt
+from uniffy.domains.agents.runtime.runs.complete import CompletionToolLoop
+from uniffy.domains.agents.runtime.tooling import (
+    MAX_LOAD_ONLY_ITERATIONS,
+    expand_loaded_schemas,
+    is_load_only_turn,
+)
 from uniffy.domains.agents.tools.builtin.discovery import load_group, load_group_tool
 from uniffy.domains.agents.tools.deferral import (
     LOAD_GROUP_TOOL,
@@ -196,9 +196,9 @@ class TestLoopHelpers:
     def test_is_load_only_turn(self) -> None:
         load_call = ToolCall(id="1", name=LOAD_API_NAME, input={"group": "Notes"})
         other = ToolCall(id="2", name="notes-tool_0", input={})
-        assert _is_load_only_turn([load_call])
-        assert not _is_load_only_turn([load_call, other])
-        assert not _is_load_only_turn([])
+        assert is_load_only_turn([load_call])
+        assert not is_load_only_turn([load_call, other])
+        assert not is_load_only_turn([])
 
     def test_expand_pops_pool_and_extends_schemas(self) -> None:
         schemas = [{"name": LOAD_API_NAME}]
@@ -211,22 +211,21 @@ class TestLoopHelpers:
             ),
             "2": ToolResult(success=True, data="no metadata"),
         }
-        _expand_loaded_schemas(schemas, pool, results)
+        expand_loaded_schemas(schemas, pool, results)
         assert _names(schemas) == [LOAD_API_NAME, "notes-tool_0"]
         assert pool == {}
         # A second pass with the same results is a no-op.
-        _expand_loaded_schemas(schemas, pool, results)
+        expand_loaded_schemas(schemas, pool, results)
         assert _names(schemas) == [LOAD_API_NAME, "notes-tool_0"]
 
 
-def _loop_ops() -> RuntimeOperations:
+def _tool_loop() -> CompletionToolLoop:
     @asynccontextmanager
     async def session_factory():
         yield AsyncMock()
 
-    ops = RuntimeOperations(MagicMock(), MagicMock(), MagicMock(), session_factory)
-    ops._session_ops = MagicMock(add_message=AsyncMock(return_value=MagicMock()))
-    return ops
+    session_operations = MagicMock(add_message=AsyncMock(return_value=MagicMock()))
+    return CompletionToolLoop(session_operations, session_factory)
 
 
 class TestRunToolLoopExpansion:
@@ -256,7 +255,7 @@ class TestRunToolLoopExpansion:
                 stop_reason="tool_use",
                 tool_calls=[ToolCall(id="t1", name=LOAD_API_NAME, input={"group": "Notes"})],
             )
-            result = await _loop_ops()._run_tool_loop(
+            result = await _tool_loop().run(
                 user_id=ctx.user_id,
                 organization_id=ctx.organization_id,
                 session_id=ctx.session_id,
@@ -311,7 +310,7 @@ class TestRunToolLoopExpansion:
                     return _load_result(counter["n"])
 
             with pytest.raises(ValidationError):
-                await _loop_ops()._run_tool_loop(
+                await _tool_loop().run(
                     user_id=ctx.user_id,
                     organization_id=ctx.organization_id,
                     session_id=ctx.session_id,

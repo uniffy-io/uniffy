@@ -905,12 +905,12 @@ class TestAgentToolAuthorization:
     ``effective_role``."""
 
     def test_allowed_set_is_derived_from_the_resolved_schemas(self) -> None:
-        from uniffy.domains.agents.runtime.operations import _allowed_tool_names
+        from uniffy.domains.agents.runtime.tooling import allowed_tool_names
 
         # Post-filter schemas carry API names; the executor compares internal ones.
-        allowed = _allowed_tool_names([{"name": "notes-read_note"}, {"name": "github-list_issues"}])
+        allowed = allowed_tool_names([{"name": "notes-read_note"}, {"name": "github-list_issues"}])
         assert allowed == frozenset({"notes.read_note", "github.list_issues"})
-        assert _allowed_tool_names(None) == frozenset()
+        assert allowed_tool_names(None) == frozenset()
 
 
 def test_access_mode_enum_present() -> None:

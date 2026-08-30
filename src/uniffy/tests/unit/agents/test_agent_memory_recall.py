@@ -36,7 +36,7 @@ from uniffy.domains.agents.memories.scoring import (
     TrigramMemoryScorer,
     script_class,
 )
-from uniffy.domains.agents.runtime.operations import RuntimeOperations
+from uniffy.domains.agents.runtime.context.memory import MemoryContextBuilder
 from uniffy.domains.agents.runtime.prompt import MemoryScopeBlock, build_memory_block
 
 
@@ -337,14 +337,12 @@ class TestRuntimeRecallRefs:
             return None
 
         monkeypatch.setattr(
-            "uniffy.domains.agents.runtime.operations.build_memory_recall",
+            "uniffy.domains.agents.runtime.context.memory.build_memory_recall",
             fake_build,
         )
         agent_id = generate_id()
         surface = MemoryScopeRef.channel(generate_id())
-        fake_self = SimpleNamespace(_session=MagicMock())
-        result = await RuntimeOperations._build_memory_recall_block(
-            fake_self,
+        result = await MemoryContextBuilder(MagicMock()).build_recall(
             agent_id=agent_id,
             organization_id=generate_id(),
             scope_ref=surface,
@@ -368,12 +366,10 @@ class TestRuntimeRecallRefs:
             return None
 
         monkeypatch.setattr(
-            "uniffy.domains.agents.runtime.operations.build_memory_recall",
+            "uniffy.domains.agents.runtime.context.memory.build_memory_recall",
             fake_build,
         )
-        fake_self = SimpleNamespace(_session=MagicMock())
-        result = await RuntimeOperations._build_memory_recall_block(
-            fake_self,
+        result = await MemoryContextBuilder(MagicMock()).build_recall(
             agent_id=generate_id(),
             organization_id=generate_id(),
             scope_ref=MemoryScopeRef.user(generate_id()),

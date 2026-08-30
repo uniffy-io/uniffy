@@ -344,17 +344,16 @@ async def test_bridge_disabled_when_flag_false() -> None:
 
     from uniffy.core.models.agents.memory import MemoryScope
     from uniffy.domains.agents.memories.scope import MemoryScopeRef
-    from uniffy.domains.agents.runtime.operations import RuntimeOperations
+    from uniffy.domains.agents.runtime.context.memory import MemoryContextBuilder
 
-    ops = object.__new__(RuntimeOperations)
-    ops._session = MagicMock()
+    session = MagicMock()
 
     async def run() -> None:
         with patch(
-            "uniffy.domains.agents.runtime.operations.get_runtime_settings",
+            "uniffy.domains.agents.runtime.context.memory.get_runtime_settings",
             AsyncMock(return_value=NS(personal_memory_bridge_enabled=False)),
         ):
-            result = await ops._resolve_memory_bridge(
+            result = await MemoryContextBuilder(session).resolve_bridge(
                 scope_ref=MemoryScopeRef(MemoryScope.CHANNEL, generate_id()),
                 user_id=generate_id(),
                 organization_id=generate_id(),

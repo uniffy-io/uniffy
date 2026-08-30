@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import time
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
@@ -24,6 +25,11 @@ from uniffy.domains.agents.runtime.failover import (
 )
 from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
 from uniffy.domains.agents.runtime.settings.operations import ResolvedRuntimeSettings
+
+
+def safety_identifier(*, organization_id: UUID, user_id: UUID) -> str:
+    value = f"uniffy:{organization_id}:{user_id}".encode()
+    return hashlib.sha256(value).hexdigest()
 
 
 @dataclass(slots=True)

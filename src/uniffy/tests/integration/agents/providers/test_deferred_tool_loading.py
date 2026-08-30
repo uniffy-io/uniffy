@@ -1,10 +1,4 @@
-"""Deferred tool loading against live provider APIs.
-
-Verifies the two mechanics the runtime relies on, per provider:
-a plain tool round trip, and appending new tool schemas between tool-loop
-iterations while the history already references the meta tool. The message
-shapes mirror what the runtime builds in ``_run_tool_loop``.
-"""
+"""Tests deferred tool-schema expansion against live provider APIs."""
 
 import asyncio
 
