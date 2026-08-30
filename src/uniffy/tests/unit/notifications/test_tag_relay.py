@@ -1,6 +1,6 @@
 """Tag and mention-state recipient projection tests."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -12,7 +12,7 @@ from uniffy.domains.notifications.tags import (
 
 
 def _make_relay() -> TagEventRelay:
-    relay = TagEventRelay(generate_id(), generate_id())
+    relay = TagEventRelay(generate_id(), generate_id(), MagicMock())
     relay._can_view_content = AsyncMock(return_value=True)
     relay._tag_visible = AsyncMock(return_value=True)
     relay._is_active_recipient = AsyncMock(return_value=True)

@@ -7,12 +7,15 @@ enqueues become a no-op and only the current owner can release the lock.
 import asyncio
 import time
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.core.valkey.streams import (
     get_run_state,
@@ -24,7 +27,11 @@ from uniffy.core.valkey.streams import (
     set_run_state,
     stream_delete,
 )
-from uniffy.db.session import open_session
+from uniffy.domains.agents.metrics import (
+    AGENT_RUN_ACTIVE,
+    AGENT_RUN_DURATION,
+    AGENT_RUN_QUEUE_LAG,
+)
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.destinations import SessionDestination
 from uniffy.domains.agents.runtime.files import FileContext
@@ -33,11 +40,6 @@ from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.publishers import RunStreamPublisher
 from uniffy.domains.agents.runtime.settings.operations import get_runtime_settings
 from uniffy.domains.agents.sessions.operations import SessionOperations
-from uniffy.observability.metrics import (
-    AGENT_RUN_ACTIVE,
-    AGENT_RUN_DURATION,
-    AGENT_RUN_QUEUE_LAG,
-)
 
 logger = logger.bind(component="agents.runtime.jobs.jobs")
 
@@ -150,7 +152,8 @@ async def run_agent_session(
     await session_active_run_add(sid, rid)
 
     try:
-        async with open_session() as session:
+        session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
+        async with session_factory() as session:
             session_ops = SessionOperations(session)
             await session_ops.get_session(
                 user_id=uid,
@@ -158,7 +161,13 @@ async def run_agent_session(
                 session_id=sid,
             )
 
-            runtime_ops = RuntimeOperations(session)
+            storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
+            runtime_ops = RuntimeOperations(
+                session,
+                storage,
+                ctx[SEARCH_INDEXER_CTX_KEY],
+                session_factory,
+            )
             runtime_settings = await get_runtime_settings(session, oid)
             destination = SessionDestination(session_id=sid)
             done_seen = False

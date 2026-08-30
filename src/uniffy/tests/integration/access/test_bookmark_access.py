@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy import delete, select
@@ -8,10 +9,19 @@ from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.notes.note import Note
+from uniffy.core.search.workspace import DocumentLookupResult, WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.domains.bookmarks.operations import BookmarksOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+
+def _operations(session: AsyncSession) -> BookmarksOperations:
+    search = MagicMock(spec=WorkspaceSearch)
+    search.get_documents_by_urns = AsyncMock(
+        return_value=DocumentLookupResult(documents={}, failed_urns=frozenset())
+    )
+    return BookmarksOperations(session, search)
 
 
 async def test_bookmark_listing_tracks_live_resource_access(
@@ -23,9 +33,10 @@ async def test_bookmark_listing_tracks_live_resource_access(
     note_urn = f"urn:uniffy:content:{ContentType.NOTE.value}:{note.id}"
     original_access_mode = note.access_mode
     original_baseline_role = note.baseline_role
+    operations = _operations(session)
 
     try:
-        added, bookmark = await BookmarksOperations(session).toggle(
+        added, bookmark = await operations.toggle(
             access.peer_id,
             access.org_id,
             note_urn,
@@ -33,7 +44,7 @@ async def test_bookmark_listing_tracks_live_resource_access(
         assert added is True
         assert bookmark is not None
 
-        initial = await BookmarksOperations(session).list_bookmark_items(
+        initial = await operations.list_bookmark_items(
             access.peer_id,
             access.org_id,
         )
@@ -44,7 +55,7 @@ async def test_bookmark_listing_tracks_live_resource_access(
         session.add(note)
         await session.commit()
 
-        revoked = await BookmarksOperations(session).list_bookmark_items(
+        revoked = await operations.list_bookmark_items(
             access.peer_id,
             access.org_id,
         )
@@ -55,7 +66,7 @@ async def test_bookmark_listing_tracks_live_resource_access(
         session.add(note)
         await session.commit()
 
-        restored = await BookmarksOperations(session).list_bookmark_items(
+        restored = await operations.list_bookmark_items(
             access.peer_id,
             access.org_id,
         )
@@ -65,7 +76,7 @@ async def test_bookmark_listing_tracks_live_resource_access(
         assert private_note is not None
         private_urn = f"urn:uniffy:content:{ContentType.NOTE.value}:{private_note.id}"
         with pytest.raises(PermissionDeniedError):
-            await BookmarksOperations(session).toggle(
+            await operations.toggle(
                 access.peer_id,
                 access.org_id,
                 private_urn,
@@ -95,14 +106,15 @@ async def test_same_user_urn_can_be_bookmarked_independently_across_organization
     )
     session.add(second_membership)
     await session.commit()
+    operations = _operations(session)
 
     try:
-        first_added, _ = await BookmarksOperations(session).toggle(
+        first_added, _ = await operations.toggle(
             access.peer_id,
             access.org_id,
             user_urn,
         )
-        second_added, _ = await BookmarksOperations(session).toggle(
+        second_added, _ = await operations.toggle(
             access.peer_id,
             access.other_org_id,
             user_urn,
@@ -110,29 +122,29 @@ async def test_same_user_urn_can_be_bookmarked_independently_across_organization
 
         assert first_added is True
         assert second_added is True
-        assert await BookmarksOperations(session).is_bookmarked(
+        assert await operations.is_bookmarked(
             access.peer_id,
             access.org_id,
             user_urn,
         )
-        assert await BookmarksOperations(session).is_bookmarked(
+        assert await operations.is_bookmarked(
             access.peer_id,
             access.other_org_id,
             user_urn,
         )
 
-        first_removed, _ = await BookmarksOperations(session).toggle(
+        first_removed, _ = await operations.toggle(
             access.peer_id,
             access.org_id,
             user_urn,
         )
         assert first_removed is False
-        assert not await BookmarksOperations(session).is_bookmarked(
+        assert not await operations.is_bookmarked(
             access.peer_id,
             access.org_id,
             user_urn,
         )
-        assert await BookmarksOperations(session).is_bookmarked(
+        assert await operations.is_bookmarked(
             access.peer_id,
             access.other_org_id,
             user_urn,
@@ -162,14 +174,15 @@ async def test_urn_aliases_cannot_create_duplicate_rows_for_one_content_item(
         f"urn:uniffy:content:{ContentType.USER.value}:{{{peer}}}",
         f"urn:uniffy:content:{ContentType.USER.value}:urn:uuid:{peer}",
     ]
+    operations = _operations(session)
 
     try:
-        added, _ = await BookmarksOperations(session).toggle(peer, access.org_id, canonical)
+        added, _ = await operations.toggle(peer, access.org_id, canonical)
         assert added is True
 
         for alias in aliases:
-            assert await BookmarksOperations(session).is_bookmarked(peer, access.org_id, alias)
-            checks = await BookmarksOperations(session).bulk_check(peer, access.org_id, [alias])
+            assert await operations.is_bookmarked(peer, access.org_id, alias)
+            checks = await operations.bulk_check(peer, access.org_id, [alias])
             assert checks == {alias: True}
 
         rows = (
@@ -184,9 +197,9 @@ async def test_urn_aliases_cannot_create_duplicate_rows_for_one_content_item(
         assert rows[0].content_type is ContentType.USER
 
         # Toggling through an alias removes the canonical row rather than adding another.
-        removed, _ = await BookmarksOperations(session).toggle(peer, access.org_id, aliases[0])
+        removed, _ = await operations.toggle(peer, access.org_id, aliases[0])
         assert removed is False
-        assert not await BookmarksOperations(session).is_bookmarked(peer, access.org_id, canonical)
+        assert not await operations.is_bookmarked(peer, access.org_id, canonical)
     finally:
         await session.execute(
             delete(Bookmark).where(

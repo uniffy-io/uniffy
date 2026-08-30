@@ -26,13 +26,13 @@ from uniffy.domains.agents.memories.scoring import (
     TrigramMemoryScorer,
     script_class,
 )
-from uniffy.domains.agents.providers.base import CanonicalContentBlockType
-from uniffy.observability.metrics import (
+from uniffy.domains.agents.metrics import (
     AGENT_MEMORY_RECALL_OVERFLOW_TOTAL,
     AGENT_MEMORY_RECALL_PROMOTED_TOTAL,
     AGENT_MEMORY_RECALL_RUNS_TOTAL,
     AGENT_MEMORY_RECALL_SECONDS,
 )
+from uniffy.domains.agents.providers.base import CanonicalContentBlockType
 
 logger = logger.bind(component="agents.memories.recall")
 

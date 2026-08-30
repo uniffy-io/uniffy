@@ -20,6 +20,8 @@ from uniffy.core.content.references import (
 )
 from uniffy.core.content.team_mentions import TeamExpansion, expand_team_mentions
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.jobs import enqueue_job
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
@@ -32,16 +34,18 @@ from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKind
 from uniffy.core.models.chat.message_revision import ChatMessageRevision
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.core.valkey.presence import PRESENCE_STATUS_ONLINE, presence_get_bulk
-from uniffy.db import open_session
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
     get_cached_pinned_message_ids,
     invalidate_cached_pinned_messages,
     set_cached_pinned_message_ids,
 )
+from uniffy.domains.chat.jobs.contracts import POST_SEND_CHAT_MESSAGE
 from uniffy.domains.chat.limits import SEND, check_chat_mutation_limit
 from uniffy.domains.chat.messages.converters import (
     get_forward_metadata,
@@ -229,9 +233,23 @@ async def drop_thread_reply(session: AsyncSession, root_message_id: UUID) -> Non
 class ChatMessageOperations:
     """Message CRUD with two-phase transaction and thread auto-creation."""
 
-    def __init__(self, session: AsyncSession, access: ChatAccessChecker | None = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        access: ChatAccessChecker | None = None,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self.session = session
         self.access = access or ChatAccessChecker(session)
+        self.storage = storage
+        self._search_indexer = search_indexer
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("Search indexing is required for chat message mutations")
+        return self._search_indexer
 
     async def send_message(
         self,
@@ -247,7 +265,7 @@ class ChatMessageOperations:
         sender_avatar: str = "",
         attachment_file_ids: list[UUID] | None = None,
     ) -> tuple[ChatMessage, str, str]:
-        """Send a message; Phase 1 DB transaction, Phase 2 post-commit publish/fan-out."""
+        """Persist a message before publishing its non-authoritative effects."""
         if len(content) > MAX_MESSAGE_LENGTH:
             raise ValidationError("content", f"Message exceeds {MAX_MESSAGE_LENGTH} characters")
 
@@ -318,7 +336,11 @@ class ChatMessageOperations:
         if attachment_file_ids:
             from uniffy.domains.files.attachments.operations import AttachmentOperations
 
-            att_ops = AttachmentOperations(self.session)
+            att_ops = AttachmentOperations(
+                self.session,
+                self.storage,
+                self.search_indexer,
+            )
             for file_id in attachment_file_ids:
                 await att_ops.attach_file(
                     user_id=user_id,
@@ -431,9 +453,7 @@ class ChatMessageOperations:
         sender_avatar: str,
         reply_context: dict[str, str] | None = None,
     ) -> None:
-        """Post-commit: synchronous publish, then background tasks. One member-id fetch shared."""
-        import asyncio
-
+        """Publish the committed message and enqueue its remaining projections."""
         # Sending marks the sender read up to their own message, so the badge
         # never lights up in the sender's other sessions or devices.
         if message.sender_type == SenderType.USER:
@@ -462,21 +482,23 @@ class ChatMessageOperations:
             reply_context,
         )
 
-        # Agent detection runs before the background spawn: both touch self.session and
-        # concurrent use of the same asyncpg connection trips an "operation in progress" error.
+        # Agent detection finishes on this session before background work begins.
         await self._maybe_trigger_agents(message, channel)
 
-        # Background opens its own session; the request handler's session is already closed.
-        asyncio.create_task(
-            _run_background_post_send(
-                message_id=message.id,
-                channel_id=channel.id,
-                user_id=user_id,
-                root_id=root_id,
-                sender_name=sender_name,
-                member_ids=member_ids,
+        try:
+            await enqueue_job(
+                POST_SEND_CHAT_MESSAGE,
+                str(message.id),
+                str(channel.id),
+                str(user_id),
+                str(root_id) if root_id is not None else None,
+                sender_name,
+                dumps_str([str(member_id) for member_id in member_ids]),
             )
-        )
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"Background post-send work was not queued for message {message.id}"
+            )
 
     async def _maybe_trigger_agents(self, message: ChatMessage, channel: ChatChannel) -> None:
         """Detect agent mentions and enqueue respond_to_chat_message ARQ jobs; non-fatal."""
@@ -530,9 +552,7 @@ class ChatMessageOperations:
         sender_name: str,
         member_ids: list[UUID],
     ) -> None:
-        """Background post-send: index, resources, notifications; each step
-        independent and non-fatal.
-        """
+        """Run the independent, non-authoritative post-send projections."""
         from uniffy.core.content.references import extract_mentioned_user_ids_from_content
 
         # Membership and join messages embed a mention urn for the member the
@@ -799,7 +819,6 @@ class ChatMessageOperations:
         member_ids: list[UUID],
         sender_name: str = "",
     ) -> None:
-        """Index message to Meilisearch; caller threads member_ids from the fan-out path."""
         # System messages (joined/left channel, call started/ended, member
         # added) are UI narration, not content; they only pollute search.
         if message.sender_type == SenderType.SYSTEM:
@@ -813,20 +832,13 @@ class ChatMessageOperations:
 
         if is_mention_only_content(message.content):
             try:
-                from uniffy.core.search.indexer import SearchIndexer
-
-                indexer = SearchIndexer(self.session)
                 urn = f"urn:uniffy:content:CHAT_MESSAGE:{message.id}"
-                await indexer.remove(urn)
+                await self.search_indexer.remove(urn)
             except Exception:
                 logger.warning(f"Search remove failed for mention-only message {message.id}")
             return
 
         try:
-            from uniffy.core.search.indexer import SearchIndexer
-
-            indexer = SearchIndexer(self.session)
-
             # SenderResolver handles AGENT-authored messages too (avoids "Unknown" fallback).
             if not sender_name:
                 from uniffy.domains.chat.senders import SenderResolver
@@ -847,7 +859,7 @@ class ChatMessageOperations:
                 shared_user_ids = member_ids if member_ids else None
 
             urn = f"urn:uniffy:content:CHAT_MESSAGE:{message.id}"
-            await indexer.index(
+            await self.search_indexer.index(
                 urn=urn,
                 organization_id=channel.organization_id,
                 title=plain[:120],
@@ -885,7 +897,7 @@ class ChatMessageOperations:
             except Exception:
                 logger.warning(f"Failed to publish mention state for message {message.id}")
         except Exception:
-            logger.warning(f"Meilisearch index failed for message {message.id}")
+            logger.warning(f"Search indexing failed for message {message.id}")
 
     async def _update_resources(
         self,
@@ -1357,7 +1369,11 @@ class ChatMessageOperations:
 
         from uniffy.domains.files.attachments.operations import AttachmentOperations
 
-        await AttachmentOperations(self.session).detach_all_for_content(
+        await AttachmentOperations(
+            self.session,
+            self.storage,
+            self.search_indexer,
+        ).detach_all_for_content(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.CHAT_MESSAGE,
@@ -1429,11 +1445,8 @@ class ChatMessageOperations:
             logger.warning(f"Valkey publish failed for message delete {msg.id}")
 
         try:
-            from uniffy.core.search.indexer import SearchIndexer
-
-            indexer = SearchIndexer(self.session)
             urn = f"urn:uniffy:content:CHAT_MESSAGE:{msg.id}"
-            await indexer.remove(urn)
+            await self.search_indexer.remove(urn)
         except Exception:
             logger.warning(f"Search remove failed for message {msg.id}")
 
@@ -1608,32 +1621,3 @@ class ChatMessageOperations:
     async def _get_message_by_id(self, message_id: UUID) -> ChatMessage | None:
         result = await self.session.execute(select(ChatMessage).where(ChatMessage.id == message_id))
         return result.scalar_one_or_none()
-
-
-async def _run_background_post_send(
-    *,
-    message_id: UUID,
-    channel_id: UUID,
-    user_id: UUID,
-    root_id: UUID | None,
-    sender_name: str,
-    member_ids: list[UUID],
-) -> None:
-    """Fire-and-forget post-send; opens its own session because the request session is closed."""
-    try:
-        async with open_session() as session:
-            message = await session.get(ChatMessage, message_id)
-            channel = await session.get(ChatChannel, channel_id)
-            if message is None or channel is None:
-                return
-            ops = ChatMessageOperations(session)
-            await ops._background_post_send(
-                message,
-                channel,
-                user_id,
-                root_id,
-                sender_name,
-                member_ids,
-            )
-    except Exception:
-        logger.exception(f"background post-send failed for message {message_id}")

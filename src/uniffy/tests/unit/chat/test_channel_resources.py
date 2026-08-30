@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 from uniffy.domains.chat.channels.handlers import ChannelHandlers
@@ -24,7 +24,9 @@ async def test_resource_titles_include_only_authorized_previews() -> None:
         "uniffy.domains.chat.channels.handlers.SearchOperations.resolve_urns",
         AsyncMock(return_value=resolved),
     ) as resolve:
-        titles = await ChannelHandlers()._resolve_resource_titles(
+        handlers = ChannelHandlers()
+        handlers.search_indexer = MagicMock()
+        titles = await handlers._resolve_resource_titles(
             AsyncMock(),
             [SimpleNamespace(urn=available_urn), SimpleNamespace(urn=restricted_urn)],
             uuid4(),

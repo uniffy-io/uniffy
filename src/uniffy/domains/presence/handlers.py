@@ -26,12 +26,12 @@ from uniffy.core.auth.principal import (
     resolve_organization_id,
 )
 from uniffy.core.converters.proto import timestamp_to_datetime
-from uniffy.db import open_session
 from uniffy.domains.presence.converters import (
     proto_status_to_string,
     string_to_proto_status,
 )
 from uniffy.domains.presence.operations import PresenceOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="presence.handlers")
 

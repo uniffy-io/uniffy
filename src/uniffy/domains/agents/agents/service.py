@@ -1,12 +1,13 @@
 """Agent agents service wrapper for ConnectRPC mounting."""
 
+from uniffy.core.storage import ObjectStorage
 from uniffy.domains.agents.agents.handlers import AgentsHandlers
 
 
 class AgentsServiceImpl(AgentsHandlers):
-    """Combined agents service implementation.
+    def __init__(self, storage: ObjectStorage, search_indexer: SearchIndexer) -> None:
+        self.storage = storage
+        self.search_indexer = search_indexer
 
-    Inherits from handlers to provide service that can be mounted on ConnectRPC.
-    """
 
-    pass
+from uniffy.core.search import SearchIndexer

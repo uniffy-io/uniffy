@@ -13,6 +13,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.login.group import Group
+from uniffy.core.search import SearchIndexer
 from uniffy.core.types import generate_id
 from uniffy.domains.people.teams import (
     get_team,
@@ -27,10 +28,13 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 def _no_search():
-    """Team structure writes re-index; the search doc is not what is under test."""
     indexer = MagicMock()
     indexer.index_team = AsyncMock()
     return patch("uniffy.domains.people.teams.TeamSearchIndexer", return_value=indexer)
+
+
+def _search_indexer() -> SearchIndexer:
+    return MagicMock(spec=SearchIndexer)
 
 
 async def _audit_actions(session, org_id, resource_id) -> list[str]:
@@ -163,6 +167,7 @@ class TestUpdateTeam:
         with _no_search():
             node = await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.infra_id,
@@ -177,6 +182,7 @@ class TestUpdateTeam:
         with _no_search():
             node = await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.platform_id,
@@ -188,6 +194,7 @@ class TestUpdateTeam:
         with _no_search(), pytest.raises(ValidationError):
             await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.infra_id,
@@ -198,6 +205,7 @@ class TestUpdateTeam:
         with _no_search(), pytest.raises(ValidationError):
             await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.infra_id,
@@ -208,6 +216,7 @@ class TestUpdateTeam:
         with _no_search():
             await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.infra_id,
@@ -215,6 +224,7 @@ class TestUpdateTeam:
             )
             node = await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.infra_id,
@@ -229,6 +239,7 @@ class TestUpdateTeam:
         with _no_search(), pytest.raises(ValidationError):
             await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.infra_id,
@@ -240,6 +251,7 @@ class TestUpdateTeam:
         with _no_search(), pytest.raises(ValidationError):
             await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.platform_id,
@@ -250,6 +262,7 @@ class TestUpdateTeam:
         with _no_search(), pytest.raises(ValidationError):
             await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.infra_id,
@@ -260,6 +273,7 @@ class TestUpdateTeam:
         with _no_search(), pytest.raises(NotFoundError):
             await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.access_group_id,
@@ -270,6 +284,7 @@ class TestUpdateTeam:
         with _no_search():
             await update_team(
                 session,
+                _search_indexer(),
                 people.org_id,
                 people.ceo_id,
                 people.platform_id,

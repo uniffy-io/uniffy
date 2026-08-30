@@ -99,7 +99,7 @@ async def _format_event_result(
         if OCCURRENCE_ID_SEPARATOR in raw:
             master_id = UUID(raw.split(OCCURRENCE_ID_SEPARATOR)[0])
         urn = f"urn:uniffy:content:CALENDAR_EVENT:{master_id}"
-        tag_ops = TagOperations(ctx.session)
+        tag_ops = TagOperations(ctx.session, ctx.search_indexer)
         tags_by_urn = await tag_ops.get_for_urns(
             organization_id=ctx.organization_id,
             content_urns=[urn],
@@ -189,7 +189,7 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
         if err:
             return ToolResult(success=False, data="", error=err)
 
-    ops = CalendarEventOperations(ctx.session)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
     events = await ops.get_events_in_range(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -246,7 +246,7 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = CalendarEventOperations(ctx.session)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
     event, attendees = await ops.get_event_with_attendees(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -410,7 +410,7 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
         ctx.user_id,
     )
 
-    ops = CalendarEventOperations(ctx.session)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
     event = await ops.create(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -503,7 +503,7 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one field to update is required",
         )
 
-    ops = CalendarEventOperations(ctx.session)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
     event = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -529,7 +529,7 @@ async def _execute_delete_event(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = CalendarEventOperations(ctx.session)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
     await ops.delete(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -578,7 +578,7 @@ async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
             )
         role = AttendeeRole(role_upper)
 
-    ops = CalendarEventOperations(ctx.session)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
     event = await ops.add_attendees(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -620,7 +620,7 @@ async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
     if att_err:
         return ToolResult(success=False, data="", error=att_err)
 
-    ops = CalendarEventOperations(ctx.session)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
     event = await ops.remove_attendees(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -662,7 +662,7 @@ async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
             error=f"Invalid status: {raw_status}. Must be one of: {', '.join(_RSVP_VALUES)}",
         )
 
-    ops = CalendarEventOperations(ctx.session)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
     await ops.update_attendee_status(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,

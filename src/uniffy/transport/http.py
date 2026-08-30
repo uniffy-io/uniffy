@@ -5,6 +5,9 @@ import time
 from collections.abc import Callable
 
 from loguru import logger
+from prometheus_client import Counter, Histogram
+
+logger = logger.bind(component="transport.http")
 
 try:
     from fastapi import FastAPI, Request
@@ -14,8 +17,19 @@ except ImportError:
 
 from uniffy.core.auth.cookies import resolve_asset_cookie_config
 from uniffy.core.auth.tokens import decode_access_token, decode_asset_read_token
-from uniffy.observability.crpc import http_version_var
-from uniffy.observability.metrics import HTTP_REQUEST_DURATION, HTTP_REQUESTS_TOTAL
+from uniffy.transport.rpc import http_version_var
+
+HTTP_REQUESTS_TOTAL = Counter(
+    "uniffy_http_requests_total",
+    "Total HTTP requests",
+    ["method", "path", "status"],
+)
+
+HTTP_REQUEST_DURATION = Histogram(
+    "uniffy_http_request_duration_seconds",
+    "HTTP request duration in seconds",
+    ["method", "path"],
+)
 
 # UUIDs collapse to `:id` so Prometheus path labels stay bounded.
 _UUID_PATTERN = re.compile(

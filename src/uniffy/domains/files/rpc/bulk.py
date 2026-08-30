@@ -23,9 +23,9 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.files.operations import FileOperations, FolderOperations
 from uniffy.domains.permissions.members import ContentMembersOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.rpc.bulk")
 
@@ -85,9 +85,9 @@ class BulkHandlers:
             folders_moved = 0
 
             async with open_session() as session:
-                file_ops = FileOperations(session)
-                folder_ops = FolderOperations(session)
-                members_ops = ContentMembersOperations(session)
+                file_ops = FileOperations(session, self.storage, self.search_indexer)
+                folder_ops = FolderOperations(session, self.storage, self.search_indexer)
+                members_ops = ContentMembersOperations(session, self.search_indexer)
 
                 # Per-item stat refreshes are skipped and each affected folder
                 # is refreshed once after the loops: a 200-file move must not

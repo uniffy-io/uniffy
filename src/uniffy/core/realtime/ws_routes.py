@@ -25,9 +25,9 @@ from uniffy.core.realtime.auth import (
     get_ws_origin_allowlist,
     origin_is_allowed,
 )
+from uniffy.core.realtime.metrics import REALTIME_AUTH_FAILURES_TOTAL
 from uniffy.core.realtime.session import run_multiplexed_session
 from uniffy.core.realtime.state import WSSession
-from uniffy.observability.metrics import REALTIME_AUTH_FAILURES_TOTAL
 
 LOGGER_COMPONENT = "realtime.ws"
 

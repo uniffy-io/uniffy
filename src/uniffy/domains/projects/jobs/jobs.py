@@ -21,11 +21,11 @@ from uniffy.core.models.projects.search_acl_refresh import ProjectSearchAclRefre
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.search.meilisearch import get_meilisearch_client
+from uniffy.core.search.workspace import WORKSPACE_SEARCH_CTX_KEY, WorkspaceSearch
 from uniffy.core.types import ContentRole, ContentType, SubjectType
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db import open_session
 from uniffy.domains.projects.jobs.contracts import REFRESH_PROJECT_SEARCH_ACL
+from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="projects.jobs.jobs")
@@ -77,7 +77,10 @@ async def _record_failure(project_id: UUID, version: int) -> None:
         await session.commit()
 
 
-async def _process_project(project_id: UUID) -> dict[str, Any]:
+async def _process_project(
+    project_id: UUID,
+    search: WorkspaceSearch,
+) -> dict[str, Any]:
     async with open_session() as session:
         row = (
             await session.execute(
@@ -147,7 +150,7 @@ async def _process_project(project_id: UUID) -> dict[str, Any]:
         )
 
         try:
-            updated = await get_meilisearch_client().update_task_sharing(
+            updated = await search.update_task_sharing(
                 organization_id=row.organization_id,
                 project_id=project_id,
                 owner_id=project.owner_id,
@@ -184,7 +187,10 @@ async def refresh_project_search_acl(
     if lock_token is None:
         return {"status": "locked"}
     try:
-        return await _process_project(parsed_project_id)
+        return await _process_project(
+            parsed_project_id,
+            ctx[WORKSPACE_SEARCH_CTX_KEY],
+        )
     except Exception as exc:
         logger.opt(exception=True).warning(
             f"Project search ACL refresh failed for project {parsed_project_id}"

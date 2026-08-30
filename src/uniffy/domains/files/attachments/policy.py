@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import File
+from uniffy.core.search import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.domains.files.attachments.folders import (
     get_or_create_org_attachments_folder,
@@ -17,6 +18,7 @@ from uniffy.domains.files.search import FileSearchOperations
 
 async def migrate_attachment_policy(
     session: AsyncSession,
+    search_indexer: SearchIndexer,
     organization_id: UUID,
     affected: list[tuple[ContentType, UUID]],
     effective_mode: AccessMode,
@@ -66,7 +68,7 @@ async def migrate_attachment_policy(
             file_row.access_mode = target_mode
             file_row.baseline_role = target_baseline
             await session.flush()
-            await FileSearchOperations(session)._index_for_search(
+            await FileSearchOperations(session, search_indexer)._index_for_search(
                 model=file_row,
                 skip_member_lookup=True,
             )

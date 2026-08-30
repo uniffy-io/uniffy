@@ -86,7 +86,10 @@ class NoteCreation:
         staged_manual_tags = None
         try:
             await self.operations.session.flush()
-            members = ContentMembersOperations(self.operations.session)
+            members = ContentMembersOperations(
+                self.operations.session,
+                self.operations.search_indexer,
+            )
             for group_id in group_ids or []:
                 staged_members.append(
                     await members.stage_member(
@@ -135,7 +138,10 @@ class NoteCreation:
 
     async def finish_after_commit(self, staged: StagedNoteCreate) -> None:
         note = staged.note
-        members = ContentMembersOperations(self.operations.session)
+        members = ContentMembersOperations(
+            self.operations.session,
+            self.operations.search_indexer,
+        )
         for member in staged.members:
             try:
                 await members.finish_member_add_after_commit(member)

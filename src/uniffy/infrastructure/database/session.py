@@ -1,4 +1,4 @@
-"""Database session management and initialization."""
+"""PostgreSQL engine, migration, and session lifecycle."""
 
 import os
 import time
@@ -15,10 +15,9 @@ from sqlalchemy.pool import AsyncAdaptedQueuePool
 from sqlalchemy.sql import text
 
 from uniffy.core.json_codec import dumps_str, loads
-from uniffy.observability import logger as obs_logger
-from uniffy.observability.metrics import DB_POOL_TIMEOUT_TOTAL
+from uniffy.infrastructure.database.metrics import DB_POOL_TIMEOUT_TOTAL
 
-logger = logger.bind(component="db.session")
+logger = logger.bind(component="infrastructure.database.session")
 
 # Stable 64-bit advisory-lock ids serialise idempotent startup steps across
 # Granian workers. Add new ids here, never reuse.
@@ -26,7 +25,7 @@ MIGRATION_LOCK_ID = 0x756E_6966_6679_4D31  # "unifyM1"
 SEED_LOCK_ID = 0x756E_6966_6679_5331  # "unifyS1"
 
 ALEMBIC_INI_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "alembic.ini"
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "alembic.ini"
 )
 
 
@@ -125,7 +124,7 @@ def run_migrations() -> None:
     logger.info("Migrations completed successfully")
 
 
-async def init_db(*, skip_migrations: bool = False) -> None:
+async def init_db(*, skip_migrations: bool = False, application_name: str = "uniffy") -> None:
     """Initialise the engine, create extensions, and optionally run migrations.
 
     Workers pass ``skip_migrations=True`` so only the backend process upgrades
@@ -162,9 +161,7 @@ async def init_db(*, skip_migrations: bool = False) -> None:
             "command_timeout": command_timeout_seconds,
             # TCP keepalive catches dead connections through firewalls/LBs.
             "server_settings": {
-                # Resolved here, after setup_observability has run, so each
-                # process shows its own name in pg_stat_activity.
-                "application_name": obs_logger.app_name,
+                "application_name": application_name,
                 # Bare date/timestamp literals and date_trunc() resolve in the
                 # session TimeZone; pin it so a non-UTC server default cannot
                 # shift bucketing or partition bounds.
@@ -180,7 +177,7 @@ async def init_db(*, skip_migrations: bool = False) -> None:
         },
     )
 
-    from uniffy.observability.metrics import register_db_pool
+    from uniffy.infrastructure.database.metrics import register_db_pool
 
     register_db_pool(_engine.pool)
 

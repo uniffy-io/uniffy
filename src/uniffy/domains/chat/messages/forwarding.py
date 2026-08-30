@@ -12,6 +12,8 @@ from uniffy.core.models.chat.message import (
     ChatMessageVisibility,
     SenderType,
 )
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import ContentType
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
@@ -20,9 +22,17 @@ from uniffy.domains.files.attachments.operations import AttachmentOperations
 
 
 class ChatMessageForwardingOperations:
-    def __init__(self, session: AsyncSession, access: ChatAccessChecker | None = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        access: ChatAccessChecker | None = None,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self.session = session
         self.access = access or ChatAccessChecker(session)
+        self.storage = storage
+        self.search_indexer = search_indexer
 
     async def forward_message(
         self,
@@ -46,7 +56,10 @@ class ChatMessageForwardingOperations:
             source.sender_type,
             source.sender_id,
         )
-        attachment_rows = await AttachmentOperations(self.session).list_attachments(
+        attachment_rows = await AttachmentOperations(
+            self.session,
+            search_indexer=self.search_indexer,
+        ).list_attachments(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.CHAT_MESSAGE,
@@ -78,7 +91,12 @@ class ChatMessageForwardingOperations:
             }
         }
 
-        return await ChatMessageOperations(self.session, self.access).send_message(
+        return await ChatMessageOperations(
+            self.session,
+            self.access,
+            self.storage,
+            self.search_indexer,
+        ).send_message(
             user_id=user_id,
             organization_id=organization_id,
             channel_id=target_channel_id,

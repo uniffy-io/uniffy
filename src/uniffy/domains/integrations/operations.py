@@ -22,9 +22,9 @@ from uniffy.domains.integrations.cache import (
     invalidate_org_connections_meta,
     publish_connection_invalidation,
 )
+from uniffy.domains.integrations.metrics import INTEGRATION_CONNECTION_VALIDATIONS_TOTAL
 from uniffy.domains.integrations.registry import get_integration_registry
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.observability.metrics import INTEGRATION_CONNECTION_VALIDATIONS_TOTAL
 
 logger = logger.bind(component="integrations.operations")
 

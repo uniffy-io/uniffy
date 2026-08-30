@@ -28,7 +28,7 @@ async def sync_bundled_skills() -> None:
     Runs on every startup, ahead of the initial seed, so a release that adds or
     edits a skill reaches deployments that were provisioned long ago.
     """
-    from uniffy.db.session import open_session, startup_advisory_lock
+    from uniffy.infrastructure.database.session import open_session, startup_advisory_lock
 
     with startup_advisory_lock(BUNDLED_LOCK_ID, "bundled skills sync"):
         async with open_session() as session:

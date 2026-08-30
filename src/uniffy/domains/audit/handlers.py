@@ -27,7 +27,6 @@ from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.db import open_session
 from uniffy.domains.audit.converters import audit_event_to_proto
 from uniffy.domains.audit.export import ExportFilter, ExportFormat, ExportOperations
 from uniffy.domains.audit.operations import (
@@ -35,6 +34,7 @@ from uniffy.domains.audit.operations import (
     ListEventsFilter,
     SortOrder,
 )
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="audit.handlers")
 

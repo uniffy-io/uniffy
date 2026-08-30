@@ -49,7 +49,7 @@ def _build_session() -> MagicMock:
 async def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
     note = _make_note()
     session = _build_session()
-    ops = NoteOperations(session)
+    ops = NoteOperations(session, AsyncMock())
 
     with (
         patch.object(NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)),
@@ -85,7 +85,7 @@ async def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
 async def test_permanent_delete_emits_note_permanently_deleted() -> None:
     note = _make_note()
     session = _build_session()
-    ops = NoteOperations(session)
+    ops = NoteOperations(session, AsyncMock())
     ops.search_indexer = MagicMock(remove=AsyncMock())
 
     tag_ops_mock = MagicMock()
@@ -122,7 +122,7 @@ async def test_permanent_delete_emits_note_permanently_deleted() -> None:
 async def test_restore_emits_note_restored() -> None:
     note = _make_note(is_deleted=True)
     session = _build_session()
-    ops = NoteOperations(session)
+    ops = NoteOperations(session, search_indexer=MagicMock())
 
     with (
         patch.object(NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)),

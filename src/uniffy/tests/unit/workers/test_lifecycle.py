@@ -1,7 +1,10 @@
 from unittest.mock import AsyncMock, MagicMock
 
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, WORKSPACE_SEARCH_CTX_KEY
 from uniffy.core.valkey.queue import QueueName
-from uniffy.observability.metrics import (
+from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS_CTX_KEY
+from uniffy.workers.metrics import (
     WORKER_JOB_START_DELAY,
     WORKER_JOB_REJECTED_TOTAL,
     WORKER_JOBS_COMPLETED_TOTAL,
@@ -19,8 +22,6 @@ from uniffy.workers import lifecycle
 def _patch_shared_resources(monkeypatch):
     functions = (
         "init_db",
-        "init_s3",
-        "init_meilisearch",
         "init_queue",
         "init_pubsub",
         "init_ops_client",
@@ -29,8 +30,6 @@ def _patch_shared_resources(monkeypatch):
         "close_ops_client",
         "close_queue",
         "close_pubsub",
-        "close_meilisearch",
-        "close_s3",
         "close_db",
     )
     patched = {}
@@ -38,6 +37,18 @@ def _patch_shared_resources(monkeypatch):
         mock = AsyncMock()
         monkeypatch.setattr(lifecycle, name, mock)
         patched[name] = mock
+    storage = AsyncMock()
+    storage_factory = MagicMock(return_value=storage)
+    monkeypatch.setattr(lifecycle, "S3Storage", storage_factory)
+    search_engine = MagicMock()
+    search_engine.startup = AsyncMock()
+    search_engine.shutdown = AsyncMock()
+    search_engine_factory = MagicMock(return_value=search_engine)
+    monkeypatch.setattr(lifecycle, "MeiliSearchEngine", search_engine_factory)
+    patched["storage"] = storage
+    patched["storage_factory"] = storage_factory
+    patched["search_engine"] = search_engine
+    patched["search_engine_factory"] = search_engine_factory
     return patched
 
 
@@ -50,10 +61,8 @@ async def test_core_lifecycle_opens_and_closes_its_runtime_resources(monkeypatch
     monkeypatch.setattr(lifecycle, "provision_audit_partitions", provision)
     monkeypatch.setattr(lifecycle, "register_note_realtime_adapter", register_realtime)
     monkeypatch.setattr("uniffy.core.config.push.load_vapid_config", load_vapid)
-    monkeypatch.setattr(
-        "uniffy.domains.notifications.delivery.DELIVERY_ADAPTERS",
-        {"test": adapter},
-    )
+    adapter_builder = MagicMock(return_value={"test": adapter})
+    monkeypatch.setattr(lifecycle, "build_delivery_adapters", adapter_builder)
     ctx = {}
 
     await lifecycle.core_on_startup(ctx)
@@ -62,11 +71,25 @@ async def test_core_lifecycle_opens_and_closes_its_runtime_resources(monkeypatch
 
     assert ctx["queue"] is QueueName.CORE
     assert WORKER_READY.labels(queue=QueueName.CORE)._value.get() == 0
-    resources["init_db"].assert_awaited_once_with(skip_migrations=True)
-    register_realtime.assert_called_once_with()
+    resources["init_db"].assert_awaited_once_with(
+        skip_migrations=True,
+        application_name="uniffy-worker-core",
+    )
+    resources["storage_factory"].assert_called_once_with()
+    resources["storage"].startup.assert_awaited_once_with()
+    resources["storage"].shutdown.assert_awaited_once_with()
+    resources["search_engine_factory"].assert_called_once_with()
+    resources["search_engine"].startup.assert_awaited_once()
+    resources["search_engine"].shutdown.assert_awaited_once_with()
+    assert WORKSPACE_SEARCH_CTX_KEY not in ctx
+    assert SEARCH_INDEXER_CTX_KEY not in ctx
+    assert SESSION_FACTORY_CTX_KEY not in ctx
+    assert DELIVERY_ADAPTERS_CTX_KEY not in ctx
+    register_realtime.assert_called_once()
     resources["init_queue"].assert_awaited_once_with(QueueName.CORE)
     load_vapid.assert_awaited_once_with()
     provision.assert_awaited_once_with(ctx)
+    adapter_builder.assert_called_once_with(lifecycle.open_session)
     adapter.startup.assert_awaited_once_with()
     adapter.shutdown.assert_awaited_once_with()
     resources["close_queue"].assert_awaited_once_with(QueueName.CORE)
@@ -91,6 +114,10 @@ async def test_egress_lifecycle_owns_provider_and_integration_subscribers(monkey
 
     assert ctx["queue"] is QueueName.EGRESS
     assert WORKER_READY.labels(queue=QueueName.EGRESS)._value.get() == 0
+    resources["init_db"].assert_awaited_once_with(
+        skip_migrations=True,
+        application_name="uniffy-worker-egress",
+    )
     resources["init_queue"].assert_awaited_once_with(QueueName.EGRESS)
     provider_start.assert_awaited_once_with()
     integration_start.assert_awaited_once_with()

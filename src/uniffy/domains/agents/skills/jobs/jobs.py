@@ -20,7 +20,6 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db.session import open_session
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.models.resolver import resolve_provider_and_model
 from uniffy.domains.agents.sessions.operations import SKILL_ANALYSIS_DEBOUNCE_SECONDS
@@ -30,6 +29,7 @@ from uniffy.domains.agents.skills.analysis import (
     is_skill_evolution_enabled,
 )
 from uniffy.domains.agents.skills.jobs.contracts import SkillAnalysisDestination
+from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="agents.skills.jobs.jobs")
 

@@ -18,7 +18,7 @@ from loguru import logger
 
 from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
 from uniffy.core.valkey.config import ValkeyConfig
-from uniffy.observability.metrics import PUBSUB_ACTIVE_SUBSCRIBERS
+from uniffy.core.valkey.metrics import PUBSUB_ACTIVE_SUBSCRIBERS
 
 _CLEANUP_TIMEOUT = 3.0
 

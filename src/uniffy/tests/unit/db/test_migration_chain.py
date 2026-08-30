@@ -14,7 +14,7 @@ import pytest
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 
-from uniffy.db.session import ALEMBIC_INI_PATH
+from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH
 
 VERSIONS_DIR = Path(ALEMBIC_INI_PATH).parent / "db" / "migrations" / "versions"
 

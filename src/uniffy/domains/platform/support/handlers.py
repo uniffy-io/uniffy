@@ -33,7 +33,6 @@ from uniffy_proto.support.v1.support_consent_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.platform.support.converters import (
     consent_mode_from_proto,
     consent_view_to_proto,
@@ -44,6 +43,7 @@ from uniffy.domains.platform.support.converters import (
 from uniffy.domains.platform.support.operations import (
     SupportSessionOperations,
 )
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="platform.support.handlers")
 

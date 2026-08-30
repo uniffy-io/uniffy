@@ -14,11 +14,11 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.agents.runtime.settings.operations import (
     ResolvedRuntimeSettings,
     RuntimeSettingsOperations,
 )
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.runtime.settings.handlers")
 

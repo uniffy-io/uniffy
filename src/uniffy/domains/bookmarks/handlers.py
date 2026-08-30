@@ -17,13 +17,13 @@ from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters.common_proto import CONTENT_TYPE_FROM_PROTO
 from uniffy.core.errors import UNIFFYError
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.bookmarks.converters import bookmark_item_to_proto, bookmark_to_proto
 from uniffy.domains.bookmarks.operations import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
     BookmarksOperations,
 )
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="bookmarks.handlers")
 
@@ -41,7 +41,9 @@ class BookmarksHandlers:
 
         try:
             async with open_session() as session:
-                is_bookmarked, bookmark = await BookmarksOperations(session).toggle(
+                is_bookmarked, bookmark = await BookmarksOperations(
+                    session, self.search_indexer.search
+                ).toggle(
                     user_id,
                     organization_id,
                     request.urn,
@@ -69,7 +71,9 @@ class BookmarksHandlers:
 
         try:
             async with open_session() as session:
-                page = await BookmarksOperations(session).list_bookmark_items(
+                page = await BookmarksOperations(
+                    session, self.search_indexer.search
+                ).list_bookmark_items(
                     user_id,
                     organization_id,
                     content_types=content_types,
@@ -99,7 +103,9 @@ class BookmarksHandlers:
 
         try:
             async with open_session() as session:
-                bookmarked_urns = await BookmarksOperations(session).bulk_check(
+                bookmarked_urns = await BookmarksOperations(
+                    session, self.search_indexer.search
+                ).bulk_check(
                     user_id,
                     organization_id,
                     urns,

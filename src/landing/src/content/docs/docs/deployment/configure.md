@@ -17,8 +17,9 @@ This page documents every variable.
 | `HOST` | `0.0.0.0` | Bind address for the HTTP server. |
 | `PORT` | `8000` | TCP port the backend listens on. |
 | `WORKERS` | `1` | Number of Granian worker processes. Use `1` for Kubernetes and Docker deployments since pods and containers scale horizontally. Use `NUM_CPU / 2` if the backend runs on VM instances. |
-| `LOG_LEVEL` | `debug` | One of `debug`, `info`, `warning`, `error`, `critical`. |
-| `ENVIRONMENT` | `development` | One of `development`, `staging`, `production`. Used by logging and observability. |
+| `LOG_LEVEL` | `info` | One of `debug`, `info`, `warning`, `error`, `critical`. |
+| `LOG_FORMAT` | `console` | Use `console` for human readable output or `json` for structured logs. |
+| `ENVIRONMENT` | `development` | One of `development`, `staging`, `production`. Controls deployment sensitive safety defaults. |
 | `CORS_ORIGINS` | `*` | Comma-separated list of allowed origins, or `*`. Use `*` only in development. |
 
 ## PostgreSQL
@@ -177,7 +178,7 @@ Optional. Off by default in compose (profile `calls-turn`); most local dev does 
 
 ## Prometheus metrics
 
-Granian forks `WORKERS` children. Without multiprocess mode, each child owns a private metrics registry and a `/metrics` scrape returns one child's slice only. The bootstrap helper in `uniffy._metrics_bootstrap` manages a per-component subdir under `PROMETHEUS_MULTIPROC_BASE_DIR` so backend and worker each get their own clean directory on startup.
+Granian forks `WORKERS` children. Without multiprocess mode, each child owns a private metrics registry and a `/metrics` scrape returns one child's slice only. The bootstrap helper in `uniffy.infrastructure.observability.bootstrap` manages a per-component subdir under `PROMETHEUS_MULTIPROC_BASE_DIR` so backend and worker each get their own clean directory on startup.
 
 | Variable | Default | Purpose |
 |---|---|---|

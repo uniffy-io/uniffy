@@ -112,7 +112,7 @@ async def _resolve_folder_arg(
     if err:
         return None, err
 
-    ops = NoteOperations(ctx.session)
+    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
     try:
         folder = await ops.get_by_id(ctx.user_id, ctx.organization_id, folder_id)  # type: ignore[arg-type]
     except NotFoundError, PermissionDeniedError:
@@ -151,7 +151,7 @@ async def _execute_search_notes(ctx: ToolContext, args: dict) -> ToolResult:
 
     limit = clamp_int(args.get("limit", 10), 10, 1, 20)
 
-    ops = SearchOperations(ctx.session)
+    ops = SearchOperations(ctx.session, ctx.search)
     results, _has_more, _next_offset = await ops.search(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -218,7 +218,7 @@ async def _execute_list_notes(ctx: ToolContext, args: dict) -> ToolResult:
             parent_id = folder_id
             scope = "this folder"
 
-    ops = NoteOperations(ctx.session)
+    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
     notes, total = await ops.list_notes(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -270,7 +270,7 @@ async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
             parent_id = folder_id
             scope = "this folder"
 
-    ops = NoteOperations(ctx.session)
+    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
     folders, total = await ops.list_notes(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -321,7 +321,7 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session)
+    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
     note = await ops.get_by_id(ctx.user_id, ctx.organization_id, note_id)  # type: ignore[arg-type]
 
     if note.node_type == NodeType.FOLDER:
@@ -340,7 +340,7 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
         note_content = note_content[:_MAX_NOTE_CONTENT_CHARS]
 
     urn = _note_urn(note.id)
-    tag_ops = TagOperations(ctx.session)
+    tag_ops = TagOperations(ctx.session, ctx.search_indexer)
     tags_by_urn = await tag_ops.get_for_urns(
         organization_id=ctx.organization_id,
         content_urns=[urn],
@@ -392,7 +392,7 @@ async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
         if err:
             return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session)
+    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
     if parent_id is not None:
         parent = await ops.get_by_id(ctx.user_id, ctx.organization_id, parent_id)
         access_mode, err = await resolve_parent_access_mode(
@@ -446,7 +446,7 @@ async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
         if err:
             return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session)
+    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
     if parent_id is not None:
         parent = await ops.get_by_id(ctx.user_id, ctx.organization_id, parent_id)
         access_mode, err = await resolve_parent_access_mode(
@@ -503,7 +503,7 @@ async def _execute_update_note(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one of title or content must be provided",
         )
 
-    ops = NoteOperations(ctx.session)
+    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
     note = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -542,7 +542,7 @@ async def _execute_move_note(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session)
+    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
     note = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -574,7 +574,7 @@ async def _execute_delete_note(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session)
+    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
     note = await ops.get_by_id(ctx.user_id, ctx.organization_id, note_id)  # type: ignore[arg-type]
     is_folder = note.node_type == NodeType.FOLDER
 

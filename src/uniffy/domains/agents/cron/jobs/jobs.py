@@ -1,15 +1,17 @@
 """Run agent cron tasks: scheduled via ARQ cron plus on-demand via "Run Now"."""
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.models.agents.cron_task import AgentCronRunStatus
 from uniffy.core.models.agents.run_log import AgentRunKind, AgentRunStatus
 from uniffy.core.models.agents.session import AgentSessionKind
-from uniffy.db import open_session
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 
 logger = logger.bind(component="agents.cron.jobs.jobs")
 
@@ -98,12 +100,14 @@ async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
     """ARQ cron tick: execute every due agent task and update its run log."""
     executed = 0
     errors = 0
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
+    session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
 
     try:
-        async with open_session() as session:
+        async with session_factory() as session:
             from uniffy.domains.agents.cron.operations import CronTaskOperations
 
-            ops = CronTaskOperations(session)
+            ops = CronTaskOperations(session, ctx[SEARCH_INDEXER_CTX_KEY])
             swept = await _sweep_stale_pending_runs(session)
             if swept:
                 logger.warning(f"Marked {swept} stale pending cron run(s) as error")
@@ -117,7 +121,13 @@ async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
 
             for task in due_tasks:
                 try:
-                    await _execute_single_cron_task(session, task)
+                    await _execute_single_cron_task(
+                        session,
+                        task,
+                        storage,
+                        ctx[SEARCH_INDEXER_CTX_KEY],
+                        session_factory,
+                    )
                     await ops.mark_completed(task.id, status=AgentCronRunStatus.SUCCESS)
                     executed += 1
                 except Exception as exc:
@@ -159,9 +169,11 @@ async def execute_single_agent_cron_task(
 
     task_uuid = UUID(task_id)
     log_uuid = UUID(run_log_id)
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
+    session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
 
     try:
-        async with open_session() as session:
+        async with session_factory() as session:
             result = await session.execute(
                 select(AgentCronTask).where(AgentCronTask.id == task_uuid)
             )
@@ -214,7 +226,12 @@ async def execute_single_agent_cron_task(
 
             send_started_at = datetime.now(UTC)
             try:
-                runtime_ops = RuntimeOperations(session)
+                runtime_ops = RuntimeOperations(
+                    session,
+                    storage,
+                    ctx[SEARCH_INDEXER_CTX_KEY],
+                    session_factory,
+                )
                 await runtime_ops.send_message(
                     user_id=task.execution_user_id,
                     organization_id=task.organization_id,
@@ -223,7 +240,7 @@ async def execute_single_agent_cron_task(
                 )
                 await _resolve_pending(error=None, since=send_started_at)
 
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, ctx[SEARCH_INDEXER_CTX_KEY])
                 await ops.mark_completed(task.id, status=AgentCronRunStatus.SUCCESS)
 
                 logger.info(f"On-demand cron task {task_id} ({task.name!r}) completed successfully")
@@ -244,7 +261,7 @@ async def execute_single_agent_cron_task(
                 elif not stamped:
                     await _write_error_log(session, task, session_id, str(exc))
 
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, ctx[SEARCH_INDEXER_CTX_KEY])
                 await ops.mark_completed(
                     task.id,
                     status=AgentCronRunStatus.ERROR,
@@ -259,7 +276,13 @@ async def execute_single_agent_cron_task(
         return {"status": "error", "task_id": task_id}
 
 
-async def _execute_single_cron_task(session, task) -> None:
+async def _execute_single_cron_task(
+    session,
+    task,
+    storage: ObjectStorage,
+    search_indexer,
+    session_factory: SessionFactory,
+) -> None:
     """Execute one cron task; its run log rows land in ``agents_run_logs``."""
     from uniffy.domains.agents.runtime.operations import RuntimeOperations
     from uniffy.domains.agents.sessions.operations import SessionOperations
@@ -287,7 +310,12 @@ async def _execute_single_cron_task(session, task) -> None:
 
     send_started_at = datetime.now(UTC)
     try:
-        runtime_ops = RuntimeOperations(session)
+        runtime_ops = RuntimeOperations(
+            session,
+            storage,
+            search_indexer,
+            session_factory,
+        )
         await runtime_ops.send_message(
             user_id=task.execution_user_id,
             organization_id=task.organization_id,

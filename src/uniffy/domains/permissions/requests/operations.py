@@ -19,6 +19,7 @@ from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequest,
     ContentAccessRequestState,
 )
+from uniffy.core.search import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
 from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.chat.channels.operations import (
@@ -76,8 +77,9 @@ class StagedAccessGrant:
 
 
 class ContentAccessRequestOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, search_indexer: SearchIndexer) -> None:
         self.session = session
+        self.search_indexer = search_indexer
         self.targets = AccessRequestTargetResolver(session)
         self.queries = AccessRequestQueries(session, self.targets)
         self.notifier = AccessRequestNotifier(session)
@@ -398,7 +400,10 @@ class ContentAccessRequestOperations:
         approved_role: ContentRole | None,
     ) -> StagedAccessGrant:
         if target.grant_kind == AccessGrantKind.CHAT:
-            staged_chat = await ChatChannelOperations(self.session).stage_members(
+            staged_chat = await ChatChannelOperations(
+                self.session,
+                search_indexer=self.search_indexer,
+            ).stage_members(
                 actor_user_id,
                 request.organization_id,
                 target.canonical_content_id,
@@ -421,7 +426,7 @@ class ContentAccessRequestOperations:
             default_mode,
             default_baseline,
         )
-        members = ContentMembersOperations(self.session)
+        members = ContentMembersOperations(self.session, self.search_indexer)
         staged_access_mode: StagedAccessModeChange | None = None
         if effective_mode == AccessMode.OWNER_ONLY:
             staged_access_mode = await members.stage_access_mode(
@@ -449,12 +454,13 @@ class ContentAccessRequestOperations:
 
     async def _finish_access_grant_after_commit(self, staged: StagedAccessGrant) -> None:
         if staged.chat_members is not None:
-            await ChatChannelOperations(self.session).finish_members_add_after_commit(
-                staged.chat_members
-            )
+            await ChatChannelOperations(
+                self.session,
+                search_indexer=self.search_indexer,
+            ).finish_members_add_after_commit(staged.chat_members)
             return
 
-        members = ContentMembersOperations(self.session)
+        members = ContentMembersOperations(self.session, self.search_indexer)
         if staged.access_mode is not None:
             await members.finish_access_mode_after_commit(staged.access_mode)
         if staged.content_member is not None:

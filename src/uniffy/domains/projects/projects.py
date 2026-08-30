@@ -17,7 +17,9 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.engine import SearchTerm, all_of
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -54,9 +56,21 @@ class ProjectOperations(BaseContentOperations[Project]):
     content_type = ContentType.PROJECT
     model_class = Project
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         register_project_content()
-        super().__init__(session)
+        super().__init__(session, search_indexer)
+        self._storage = storage
+
+    @property
+    def storage(self) -> ObjectStorage:
+        if self._storage is None:
+            raise RuntimeError("Object storage is required for project attachment mutations")
+        return self._storage
 
     def _build_search_keywords(self, model: Project) -> str:
         parts = [model.name]
@@ -76,7 +90,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         return None
 
     async def _get_search_tags_async(self, model: Project) -> list[str] | None:
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.search_indexer)
         urn = build_content_urn(self.content_type, model.id)
         bulk = await tag_ops.get_for_urns(
             organization_id=model.organization_id,
@@ -95,7 +109,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         """``tag_ids=None`` leaves manual assignments untouched."""
         if tag_ids is None:
             return
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.search_indexer)
         await tag_ops.replace_manual_tags(
             actor_id=actor_id,
             organization_id=project.organization_id,
@@ -145,7 +159,7 @@ class ProjectOperations(BaseContentOperations[Project]):
             await stage_default_project_fields(self.session, project.id)
             project.default_view_id = await stage_default_project_views(self.session, project.id)
 
-            members_ops = ContentMembersOperations(self.session)
+            members_ops = ContentMembersOperations(self.session, self.search_indexer)
             for gid in group_ids or []:
                 staged_members.append(
                     await members_ops.stage_member(
@@ -160,7 +174,10 @@ class ProjectOperations(BaseContentOperations[Project]):
                 )
 
             if tag_ids is not None:
-                staged_tags = await TagOperations(self.session).stage_manual_tags(
+                staged_tags = await TagOperations(
+                    self.session,
+                    self.search_indexer,
+                ).stage_manual_tags(
                     actor_id=user_id,
                     organization_id=organization_id,
                     content_urn=build_content_urn(self.content_type, project.id),
@@ -180,7 +197,7 @@ class ProjectOperations(BaseContentOperations[Project]):
 
     async def _finish_project_create_after_commit(self, staged: _StagedProjectCreate) -> None:
         project = staged.project
-        members_ops = ContentMembersOperations(self.session)
+        members_ops = ContentMembersOperations(self.session, self.search_indexer)
         for member in staged.members:
             try:
                 await members_ops.finish_member_add_after_commit(member)
@@ -192,7 +209,10 @@ class ProjectOperations(BaseContentOperations[Project]):
 
         if staged.tags is not None:
             try:
-                await TagOperations(self.session).finish_manual_tags_after_commit(staged.tags)
+                await TagOperations(
+                    self.session,
+                    self.search_indexer,
+                ).finish_manual_tags_after_commit(staged.tags)
             except Exception:
                 logger.opt(exception=True).warning(
                     "Project created with degraded tag projection",
@@ -283,7 +303,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         await self._require_delete(user_id, organization_id, project)
 
         if permanent:
-            tag_ops = TagOperations(self.session)
+            tag_ops = TagOperations(self.session, self.search_indexer)
             project_urn = build_content_urn(self.content_type, project_id)
             await tag_ops.unassign_all_for_urn(
                 actor_id=user_id,
@@ -303,12 +323,16 @@ class ProjectOperations(BaseContentOperations[Project]):
 
             await purge_attachments_for_content(
                 self.session,
+                self.storage,
+                self.search_indexer,
                 organization_id=organization_id,
                 content_type=self.content_type,
                 content_ids=[project_id],
             )
             await purge_attachments_for_content(
                 self.session,
+                self.storage,
+                self.search_indexer,
                 organization_id=organization_id,
                 content_type=ContentType.TASK,
                 content_ids=task_ids,
@@ -336,7 +360,10 @@ class ProjectOperations(BaseContentOperations[Project]):
         )
         # Drop tasks indexed under this project; ``metadata.project_id`` is filterable.
         await self.search_indexer.remove_by_filter(
-            f'entity_type = "task" AND metadata.project_id = "{project_id}"'
+            all_of(
+                SearchTerm("entity_type", "task"),
+                SearchTerm("metadata.project_id", str(project_id)),
+            )
         )
         return True
 

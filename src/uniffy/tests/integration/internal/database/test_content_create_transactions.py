@@ -63,12 +63,14 @@ async def _delete_calendar(session, calendar_id) -> None:
     await session.execute(delete(Calendar).where(Calendar.id == calendar_id))
 
 
-async def test_project_create_rolls_back_defaults_when_tag_validation_fails(session, env) -> None:
+async def test_project_create_rolls_back_defaults_when_tag_validation_fails(
+    session, env, search_indexer
+) -> None:
     name = f"Rollback project {generate_id().hex[:10]}"
 
     try:
         with pytest.raises(NotFoundError):
-            await ProjectOperations(session).create(
+            await ProjectOperations(session, search_indexer=search_indexer).create(
                 user_id=env.admin_id,
                 organization_id=env.org_id,
                 name=name,
@@ -89,12 +91,14 @@ async def test_project_create_rolls_back_defaults_when_tag_validation_fails(sess
         await session.commit()
 
 
-async def test_note_create_rolls_back_when_tag_validation_fails(session, env) -> None:
+async def test_note_create_rolls_back_when_tag_validation_fails(
+    session, env, search_indexer
+) -> None:
     title = f"Rollback note {generate_id().hex[:10]}"
 
     try:
         with pytest.raises(NotFoundError):
-            await NoteOperations(session).create(
+            await NoteOperations(session, search_indexer=search_indexer).create(
                 user_id=env.admin_id,
                 organization_id=env.org_id,
                 title=title,
@@ -120,6 +124,7 @@ async def test_note_create_rolls_back_when_tag_validation_fails(session, env) ->
 async def test_file_upload_rolls_back_before_storage_completion_when_tag_validation_fails(
     session,
     env,
+    search_indexer,
 ) -> None:
     upload = MultipartUpload(
         organization_id=env.org_id,
@@ -148,7 +153,7 @@ async def test_file_upload_rolls_back_before_storage_completion_when_tag_validat
     session.add(part)
     await session.commit()
 
-    operations = FileOperations(session)
+    operations = FileOperations(session, search_indexer=search_indexer)
     operations.s3 = MagicMock()
     operations.s3.complete_multipart_upload = AsyncMock()
 
@@ -181,6 +186,7 @@ async def test_file_upload_rolls_back_before_storage_completion_when_tag_validat
 async def test_calendar_event_create_rolls_back_children_when_tag_validation_fails(
     session,
     env,
+    search_indexer,
 ) -> None:
     calendar = Calendar(
         organization_id=env.org_id,
@@ -195,7 +201,7 @@ async def test_calendar_event_create_rolls_back_children_when_tag_validation_fai
 
     try:
         with pytest.raises(NotFoundError):
-            await CalendarEventOperations(session).create(
+            await CalendarEventOperations(session, search_indexer).create(
                 user_id=env.admin_id,
                 organization_id=env.org_id,
                 title=title,
@@ -227,6 +233,7 @@ async def test_calendar_event_create_rolls_back_children_when_tag_validation_fai
 async def test_calendar_event_and_room_booking_roll_back_together_on_late_conflict(
     session,
     env,
+    search_indexer,
 ) -> None:
     calendar = Calendar(
         organization_id=env.org_id,
@@ -256,7 +263,7 @@ async def test_calendar_event_and_room_booking_roll_back_together_on_late_confli
             ),
             pytest.raises(ValidationError, match="already booked"),
         ):
-            await CalendarEventOperations(session).create(
+            await CalendarEventOperations(session, search_indexer).create(
                 user_id=env.admin_id,
                 organization_id=env.org_id,
                 title=title,

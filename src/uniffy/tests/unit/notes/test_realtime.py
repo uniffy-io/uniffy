@@ -10,7 +10,7 @@ is covered separately by the live-stack harness.
 import asyncio
 import base64
 import time
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import quote
 from uuid import UUID
 
@@ -50,7 +50,7 @@ from uniffy.core.realtime.ydoc_manager import (
 )
 from uniffy.core.types import ContentRole, ContentType, NodeType, generate_id
 from uniffy.domains.notes.adapter import register_note_realtime_adapter
-from uniffy.observability.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
+from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
 
 _conn_id_seq = 0
 
@@ -1211,7 +1211,7 @@ class TestContentReplaceGraft:
 
     async def test_graft_replaces_markdown_and_fans_out(self) -> None:
         async def go() -> None:
-            register_note_realtime_adapter()
+            register_note_realtime_adapter(MagicMock())
 
             manager = YDocManager()
             session = _make_router_session()
@@ -1239,7 +1239,7 @@ class TestContentReplaceGraft:
 
     async def test_graft_is_noop_when_content_matches(self) -> None:
         async def go() -> None:
-            register_note_realtime_adapter()
+            register_note_realtime_adapter(MagicMock())
 
             manager = YDocManager()
             session = _make_router_session()
@@ -1266,7 +1266,7 @@ class TestContentReplaceGraft:
         snapshot instead of wiping it (CRDT delete-by-id, not by index)."""
 
         async def go() -> None:
-            register_note_realtime_adapter()
+            register_note_realtime_adapter(MagicMock())
 
             manager = YDocManager()
             session = _make_router_session()

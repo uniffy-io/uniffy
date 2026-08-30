@@ -2,10 +2,12 @@
 
 import contextlib
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
+
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 
 LOGGER_COMPONENT = "chat.reads.flush"
 
@@ -17,8 +19,9 @@ async def flush_chat_read_cursors(ctx: dict[str, Any]) -> dict[str, Any]:
     if client is None:
         return {"status": "skipped", "reason": "valkey not available"}
 
-    channel_count = await _flush_channel_cursors(client)
-    thread_count = await _flush_thread_cursors(client)
+    session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
+    channel_count = await _flush_channel_cursors(client, session_factory)
+    thread_count = await _flush_thread_cursors(client, session_factory)
 
     if channel_count > 0 or thread_count > 0:
         logger.info(
@@ -33,7 +36,7 @@ async def flush_chat_read_cursors(ctx: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def _flush_channel_cursors(client: Any) -> int:
+async def _flush_channel_cursors(client: Any, session_factory: SessionFactory) -> int:
     dirty_set_key = "chat:dirty_read_cursors"
 
     try:
@@ -93,10 +96,8 @@ async def _flush_channel_cursors(client: Any) -> int:
             await client.srem(dirty_set_key, *members)
         return 0
 
-    from uniffy.db import open_session
-
     flushed = 0
-    async with open_session() as session:
+    async with session_factory() as session:
         try:
             from sqlalchemy.dialects.postgresql import insert
 
@@ -131,7 +132,7 @@ async def _flush_channel_cursors(client: Any) -> int:
     return flushed
 
 
-async def _flush_thread_cursors(client: Any) -> int:
+async def _flush_thread_cursors(client: Any, session_factory: SessionFactory) -> int:
     dirty_set_key = "chat:dirty_thread_cursors"
 
     try:
@@ -187,10 +188,8 @@ async def _flush_thread_cursors(client: Any) -> int:
             await client.srem(dirty_set_key, *members)
         return 0
 
-    from uniffy.db import open_session
-
     flushed = 0
-    async with open_session() as session:
+    async with session_factory() as session:
         try:
             from sqlalchemy.dialects.postgresql import insert
 

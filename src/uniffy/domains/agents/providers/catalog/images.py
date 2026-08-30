@@ -10,9 +10,9 @@ from enum import StrEnum
 
 from loguru import logger
 
+from uniffy.domains.agents.metrics import AGENT_IMAGE_PARAM_DROPPED_TOTAL
 from uniffy.domains.agents.providers.catalog.loader import get_catalog, get_model
 from uniffy.domains.agents.providers.catalog.schema import ParamAudience
-from uniffy.observability.metrics import AGENT_IMAGE_PARAM_DROPPED_TOTAL
 
 logger = logger.bind(component="agents.providers.catalog.images")
 

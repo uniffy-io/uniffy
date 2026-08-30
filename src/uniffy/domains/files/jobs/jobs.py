@@ -14,9 +14,9 @@ from uniffy.core.models.files.file import (
     ThumbnailStatus,
     TranscodeStatus,
 )
-from uniffy.db import open_session
 from uniffy.domains.files.jobs.processing import file_processing_job_id, pending_jobs_for_file
 from uniffy.domains.files.jobs.transcode import TRANSCODE_JOB_TIMEOUT_SECONDS
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.jobs.jobs")
 

@@ -21,9 +21,9 @@ from uniffy.core.converters import (
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.login.group import GroupKind
 from uniffy.core.models.login.group_member import GroupRole
-from uniffy.db import open_session
 from uniffy.domains.groups.converters import group_with_count_to_proto
 from uniffy.domains.groups.operations import UNSET, GroupOperations
+from uniffy.infrastructure.database import open_session
 
 
 class GroupsHandlers:
@@ -44,7 +44,7 @@ class GroupsHandlers:
             page_size = request.pagination.page_size or 20
 
         async with open_session() as session:
-            ops = GroupOperations(session)
+            ops = GroupOperations(session, self.search_indexer)
             groups_with_counts, total = await ops.list_in_organization(
                 organization_id=org_id,
                 actor_user_id=user_id,
@@ -76,7 +76,7 @@ class GroupsHandlers:
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
-            ops = GroupOperations(session)
+            ops = GroupOperations(session, self.search_indexer)
             group = await ops.get_by_id(group_id, org_id, user_id)
 
         return pb.GetGroupResponse(group=group_info_to_proto(group))
@@ -91,7 +91,7 @@ class GroupsHandlers:
 
         try:
             async with open_session() as session:
-                ops = GroupOperations(session)
+                ops = GroupOperations(session, self.search_indexer)
                 group = await ops.create(
                     organization_id=org_id,
                     name=request.name,
@@ -139,7 +139,7 @@ class GroupsHandlers:
 
         try:
             async with open_session() as session:
-                ops = GroupOperations(session)
+                ops = GroupOperations(session, self.search_indexer)
                 group = await ops.update(
                     group_id=group_id,
                     organization_id=org_id,
@@ -168,7 +168,7 @@ class GroupsHandlers:
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
-            ops = GroupOperations(session)
+            ops = GroupOperations(session, self.search_indexer)
             await ops.delete(group_id, org_id, actor_user_id=user_id)
 
         return pb.DeleteGroupResponse(success=True)
@@ -193,7 +193,7 @@ class GroupsHandlers:
             role_filter = group_role_from_proto(request.role_filter)
 
         async with open_session() as session:
-            ops = GroupOperations(session)
+            ops = GroupOperations(session, self.search_indexer)
             members, total = await ops.list_members(
                 group_id=group_id,
                 organization_id=org_id,
@@ -225,7 +225,7 @@ class GroupsHandlers:
         role = group_role_from_proto(request.role) or GroupRole.MEMBER
 
         async with open_session() as session:
-            ops = GroupOperations(session)
+            ops = GroupOperations(session, self.search_indexer)
             membership = await ops.add_member(
                 group_id=group_id,
                 organization_id=org_id,
@@ -251,7 +251,7 @@ class GroupsHandlers:
             raise ValidationError("role", "A group role is required")
 
         async with open_session() as session:
-            ops = GroupOperations(session)
+            ops = GroupOperations(session, self.search_indexer)
             membership = await ops.update_member_role(
                 group_id=group_id,
                 organization_id=org_id,
@@ -274,7 +274,7 @@ class GroupsHandlers:
         target_user_id = UUID(request.user_id)
 
         async with open_session() as session:
-            ops = GroupOperations(session)
+            ops = GroupOperations(session, self.search_indexer)
             await ops.remove_member(group_id, org_id, target_user_id, actor_user_id=user_id)
 
         return pb.RemoveGroupMemberResponse(success=True)
@@ -289,7 +289,7 @@ class GroupsHandlers:
         target_user_id = UUID(request.user_id)
 
         async with open_session() as session:
-            ops = GroupOperations(session)
+            ops = GroupOperations(session, self.search_indexer)
             groups = await ops.get_user_groups(target_user_id, org_id, user_id)
 
         return pb.GetUserGroupsResponse(

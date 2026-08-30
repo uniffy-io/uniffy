@@ -117,6 +117,8 @@ async def test_missing_space_creates_an_owner_only_note() -> None:
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        storage=MagicMock(),
+        search_indexer=MagicMock(),
     )
     ops = MagicMock()
     ops.create = AsyncMock(return_value=SimpleNamespace(id=generate_id(), title="Ambiguous"))
@@ -144,6 +146,8 @@ async def test_note_creation_passes_explicit_access_mode(
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        storage=MagicMock(),
+        search_indexer=MagicMock(),
     )
     note = SimpleNamespace(id=generate_id(), title="Trip summary")
     ops = MagicMock()
@@ -164,6 +168,7 @@ async def test_note_without_space_inherits_organization_parent() -> None:
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        search_indexer=MagicMock(),
     )
     folder_id = generate_id()
     ops = MagicMock()
@@ -197,6 +202,7 @@ async def test_explicit_space_conflict_with_parent_refuses_creation() -> None:
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        search_indexer=MagicMock(),
     )
     folder_id = generate_id()
     ops = MagicMock()
@@ -253,6 +259,8 @@ async def test_folder_creation_passes_personal_access_mode(
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        storage=MagicMock(),
+        search_indexer=MagicMock(),
     )
     folder = SimpleNamespace(id=generate_id(), **{result_name: "Research"})
     ops = MagicMock()
@@ -270,6 +278,8 @@ async def test_project_creation_passes_organization_access_mode() -> None:
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        storage=MagicMock(),
+        search_indexer=MagicMock(),
     )
     project = SimpleNamespace(id=generate_id(), name="Launch")
     ops = MagicMock()
@@ -335,8 +345,11 @@ async def test_generated_image_file_uses_requested_space(
     )
     s3 = MagicMock()
     s3.upload_bytes = AsyncMock()
+    s3.bucket_name = "test-bucket"
+    ctx.storage = s3
     indexer = MagicMock()
     indexer.index = AsyncMock()
+    ctx.search_indexer = indexer
 
     with (
         patch(
@@ -347,7 +360,6 @@ async def test_generated_image_file_uses_requested_space(
             "uniffy.domains.files.attachments.operations.AttachmentOperations",
             return_value=attachments,
         ),
-        patch("uniffy.core.storage.get_s3_client", return_value=s3),
         patch("uniffy.core.search.indexer.SearchIndexer", return_value=indexer),
         patch(
             "uniffy.core.valkey.rate_limit.check_image_generation_limits",

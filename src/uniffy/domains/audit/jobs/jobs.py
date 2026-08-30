@@ -9,7 +9,7 @@ from loguru import logger
 from uniffy.core.audit.partitions import ensure_audit_partitions
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db.session import open_session
+from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="audit.jobs.jobs")
 

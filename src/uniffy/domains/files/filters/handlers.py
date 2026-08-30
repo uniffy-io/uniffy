@@ -21,13 +21,13 @@ from uniffy_proto.files.v1.files_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import open_session
 from uniffy.domains.files.filters.converters import (
     criteria_from_proto,
     icon_from_proto,
     saved_filter_to_proto,
 )
 from uniffy.domains.files.filters.operations import SavedFilterOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.filters.handlers")
 

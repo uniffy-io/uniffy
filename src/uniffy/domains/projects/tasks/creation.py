@@ -52,7 +52,10 @@ class TaskCreateOperations:
         **kwargs,
     ) -> Task:
         """Requires EDIT on the parent project."""
-        project_ops = ProjectOperations(self.session)
+        project_ops = ProjectOperations(
+            self.session,
+            search_indexer=self.content.search_indexer,
+        )
         project = await project_ops.get_by_id(user_id, organization_id, project_id)
         await project_ops._require_edit(user_id, organization_id, project)
 

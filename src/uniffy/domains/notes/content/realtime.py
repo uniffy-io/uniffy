@@ -13,7 +13,7 @@ from sqlalchemy import update as sql_update
 from uniffy.core.models.notes.note import Note
 from uniffy.core.types import ContentType
 from uniffy.domains.notes.content.fields import extract_content_fields
-from uniffy.observability.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
+from uniffy.domains.notes.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 
 if TYPE_CHECKING:
     from uniffy.domains.notes.operations import NoteOperations

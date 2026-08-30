@@ -28,7 +28,6 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.models.notes.note import Note
 from uniffy.core.types import NodeType
-from uniffy.db import open_session
 from uniffy.domains.notes.converters import node_type_from_proto, note_to_proto
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.notes.rpc.support import (
@@ -40,6 +39,7 @@ from uniffy.domains.notes.rpc.support import (
     resolve_user_role,
 )
 from uniffy.domains.tags.context import ContentTagContext
+from uniffy.infrastructure.database import open_session
 
 
 async def _note_proto(
@@ -102,7 +102,11 @@ class NoteMutationHandlers:
 
         try:
             async with open_session() as session:
-                note = await NoteOperations(session).create(
+                note = await NoteOperations(
+                    session,
+                    self.storage,
+                    self.search_indexer,
+                ).create(
                     user_id=user_id,
                     organization_id=organization_id,
                     title=request.title,
@@ -149,7 +153,11 @@ class NoteMutationHandlers:
 
         try:
             async with open_session() as session:
-                note = await NoteOperations(session).update(
+                note = await NoteOperations(
+                    session,
+                    self.storage,
+                    self.search_indexer,
+                ).update(
                     user_id=user_id,
                     organization_id=organization_id,
                     note_id=note_id,
@@ -179,7 +187,11 @@ class NoteMutationHandlers:
         note_id = parse_uuid(request.note_id, "note_id")
         try:
             async with open_session() as session:
-                await NoteOperations(session).delete(
+                await NoteOperations(
+                    session,
+                    self.storage,
+                    self.search_indexer,
+                ).delete(
                     user_id=user_id,
                     organization_id=organization_id,
                     note_id=note_id,
@@ -202,7 +214,11 @@ class NoteMutationHandlers:
         note_id = parse_uuid(request.note_id, "note_id")
         try:
             async with open_session() as session:
-                note = await NoteOperations(session).restore(user_id, organization_id, note_id)
+                note = await NoteOperations(
+                    session,
+                    self.storage,
+                    self.search_indexer,
+                ).restore(user_id, organization_id, note_id)
                 return RestoreNoteResponse(
                     note=await _note_proto(session, user_id, organization_id, note)
                 )
@@ -220,7 +236,11 @@ class NoteMutationHandlers:
         organization_id = parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                count = await NoteOperations(session).empty_trash(user_id, organization_id)
+                count = await NoteOperations(
+                    session,
+                    self.storage,
+                    self.search_indexer,
+                ).empty_trash(user_id, organization_id)
                 return EmptyTrashResponse(
                     deleted_count=count,
                     success=True,
@@ -248,7 +268,11 @@ class NoteMutationHandlers:
         )
         try:
             async with open_session() as session:
-                note = await NoteOperations(session).move(
+                note = await NoteOperations(
+                    session,
+                    self.storage,
+                    self.search_indexer,
+                ).move(
                     user_id=user_id,
                     organization_id=organization_id,
                     note_id=note_id,

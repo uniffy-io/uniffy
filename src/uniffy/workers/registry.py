@@ -92,11 +92,13 @@ from uniffy.domains.chat.jobs.contracts import (
     CHAT_SCHEDULED_JOB_REFS,
     FLUSH_CHAT_READ_CURSORS_SCHEDULE,
     FLUSH_CHAT_SEARCH_ACL_REFRESHES_SCHEDULE,
+    POST_SEND_CHAT_MESSAGE,
     REFRESH_CHAT_SEARCH_ACL,
 )
 from uniffy.domains.chat.jobs.jobs import (
     auto_unmute_channels,
     flush_chat_search_acl_refreshes,
+    post_send_chat_message,
     refresh_chat_search_acl,
 )
 from uniffy.domains.chat.reads.flush import flush_chat_read_cursors
@@ -274,6 +276,7 @@ CORE_JOB_REGISTRATIONS = (
         timeout=FLUSH_SEARCH_REMOVALS_JOB_TIMEOUT_SECONDS,
     ),
     _bind(REFRESH_CHAT_SEARCH_ACL, refresh_chat_search_acl),
+    _bind(POST_SEND_CHAT_MESSAGE, post_send_chat_message),
     _bind(REFRESH_PROJECT_SEARCH_ACL, refresh_project_search_acl),
 )
 

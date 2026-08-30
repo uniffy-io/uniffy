@@ -25,13 +25,13 @@ from uniffy_proto.agents.v1.providers_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.agents.access import is_org_admin
 from uniffy.domains.agents.providers.converters import (
     model_info_to_proto,
     provider_key_to_proto,
 )
 from uniffy.domains.agents.providers.operations import ProviderOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.providers.handlers")
 

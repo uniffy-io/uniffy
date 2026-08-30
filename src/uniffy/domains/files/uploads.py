@@ -18,7 +18,8 @@ from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_part import MultipartPart
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -74,10 +75,16 @@ class FileUploadOperations:
     def __init__(self, files: object) -> None:
         self.files = files
         self.session = files.session
-        self.s3 = files.s3
         self.content_type = files.content_type
         self.access_query = files.access_query
-        self.search_indexer = files.search_indexer
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        return self.files.search_indexer
+
+    @property
+    def storage(self) -> ObjectStorage:
+        return self.files.storage
 
     async def initiate_upload(
         self,
@@ -98,7 +105,11 @@ class FileUploadOperations:
         """
         folder = None
         if folder_id is not None:
-            folder_ops = FolderOperations(self.session)
+            folder_ops = FolderOperations(
+                self.session,
+                self.files.storage,
+                self.search_indexer,
+            )
             folder = await folder_ops.get_by_id(folder_id, organization_id)
             if not folder or folder.is_deleted:
                 raise NotFoundError("Folder", folder_id)
@@ -127,7 +138,7 @@ class FileUploadOperations:
 
         storage_key = f"{organization_id}/{user_id}/{generate_id()}/{filename}"
 
-        s3_upload_id = await self.s3.create_multipart_upload(
+        s3_upload_id = await self.storage.create_multipart_upload(
             key=storage_key,
             content_type=mime_type,
         )
@@ -146,7 +157,7 @@ class FileUploadOperations:
             user_id=user_id,
             s3_upload_id=s3_upload_id,
             storage_key=storage_key,
-            storage_bucket=self.s3.config.bucket_name,
+            storage_bucket=self.storage.bucket_name,
             filename=filename,
             mime_type=mime_type,
             total_size=stored_total_size,
@@ -257,7 +268,7 @@ class FileUploadOperations:
         actual_size = sum(row.size for row in part_rows)
 
         if upload.total_size and upload.total_size > 0 and actual_size > upload.total_size:
-            await self.s3.abort_multipart_upload(
+            await self.storage.abort_multipart_upload(
                 key=upload.storage_key,
                 upload_id=upload.s3_upload_id,
             )
@@ -277,7 +288,7 @@ class FileUploadOperations:
                 additional_bytes=actual_size,
             )
             if not quota_result.allowed:
-                await self.s3.abort_multipart_upload(
+                await self.storage.abort_multipart_upload(
                     key=upload.storage_key,
                     upload_id=upload.s3_upload_id,
                 )
@@ -287,7 +298,7 @@ class FileUploadOperations:
                 raise ValidationError("quota", quota_result.reason)
 
         if version_of_file_id is not None:
-            await self.s3.complete_multipart_upload(
+            await self.storage.complete_multipart_upload(
                 key=upload.storage_key,
                 upload_id=upload.s3_upload_id,
                 parts=[{"PartNumber": row.part_number, "ETag": row.etag} for row in part_rows],
@@ -326,14 +337,17 @@ class FileUploadOperations:
             await self.session.flush()
 
             if tag_ids:
-                staged_tags = await TagOperations(self.session).stage_manual_tags(
+                staged_tags = await TagOperations(
+                    self.session,
+                    self.search_indexer,
+                ).stage_manual_tags(
                     actor_id=user_id,
                     organization_id=file.organization_id,
                     content_urn=build_content_urn(self.content_type, file.id),
                     tag_ids=tag_ids,
                 )
 
-            await self.s3.complete_multipart_upload(
+            await self.storage.complete_multipart_upload(
                 key=upload.storage_key,
                 upload_id=upload.s3_upload_id,
                 parts=[{"PartNumber": row.part_number, "ETag": row.etag} for row in part_rows],
@@ -378,7 +392,10 @@ class FileUploadOperations:
 
         if staged_tags is not None:
             try:
-                await TagOperations(self.session).finish_manual_tags_after_commit(staged_tags)
+                await TagOperations(
+                    self.session,
+                    self.search_indexer,
+                ).finish_manual_tags_after_commit(staged_tags)
             except Exception:
                 await self.session.rollback()
                 logger.opt(exception=True).warning(
@@ -422,9 +439,11 @@ class FileUploadOperations:
                 effective_mode,
             )
 
-        await FolderOperations(self.session).refresh_folder_stats(
-            file.folder_id, file.organization_id
-        )
+        await FolderOperations(
+            self.session,
+            self.files.storage,
+            self.search_indexer,
+        ).refresh_folder_stats(file.folder_id, file.organization_id)
 
         if pending_jobs_for_file(file):
             await self._enqueue_processing_jobs(file)
@@ -459,7 +478,7 @@ class FileUploadOperations:
         if upload.user_id != user_id:
             raise PermissionDeniedError("abort", "upload")
 
-        await self.s3.abort_multipart_upload(
+        await self.storage.abort_multipart_upload(
             key=upload.storage_key,
             upload_id=upload.s3_upload_id,
         )

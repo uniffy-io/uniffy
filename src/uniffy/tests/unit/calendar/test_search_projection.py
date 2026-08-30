@@ -20,7 +20,7 @@ async def test_private_event_projection_does_not_publish_display_state() -> None
         patch.object(search_projection, "CalendarEventOperations", return_value=operations),
         patch.object(search_projection, "publish_mention_state", publish),
     ):
-        await search_projection.refresh_event_search_projection(AsyncMock(), event)
+        await search_projection.refresh_event_search_projection(AsyncMock(), event, MagicMock())
 
     operations._index_for_search.assert_awaited_once_with(event)
     publish.assert_not_awaited()

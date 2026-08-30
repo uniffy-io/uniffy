@@ -71,7 +71,6 @@ from uniffy.core.converters import (
 )
 from uniffy.core.errors import RateLimitExceededError, ValidationError
 from uniffy.core.models.shared import DomainType
-from uniffy.db import open_session
 from uniffy.domains.auth.converters import session_to_proto, user_to_proto
 from uniffy.domains.auth.errors import (
     AuthenticationError,
@@ -99,6 +98,7 @@ from uniffy.domains.organizations.invitations import (
     InvitationOperations,
     InvitationRevokedError,
 )
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="auth.handlers")
 

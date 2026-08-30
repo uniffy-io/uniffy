@@ -1,6 +1,6 @@
 """Private-chat access requests delegate to canonical channel membership."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import func, select
@@ -15,6 +15,7 @@ from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequest,
     ContentAccessRequestState,
 )
+from uniffy.core.search import SearchIndexer
 from uniffy.core.types import SubjectType, generate_id
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.permissions.requests.operations import (
@@ -55,7 +56,7 @@ async def test_private_message_request_grants_canonical_channel_access(session, 
     session.add(message)
     await session.commit()
 
-    operations = ContentAccessRequestOperations(session)
+    operations = ContentAccessRequestOperations(session, MagicMock(spec=SearchIndexer))
     message_urn = f"urn:uniffy:content:CHAT_MESSAGE:{message.id}"
     created = await operations.request_access(
         requester_id=access.peer_id,
@@ -131,7 +132,7 @@ async def test_chat_approval_rolls_back_membership_and_request_together(session,
     ])
     await session.commit()
 
-    operations = ContentAccessRequestOperations(session)
+    operations = ContentAccessRequestOperations(session, MagicMock(spec=SearchIndexer))
     created = await operations.request_access(
         requester_id=access.peer_id,
         organization_id=access.org_id,

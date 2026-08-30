@@ -14,13 +14,13 @@ from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_loc
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db.session import open_session
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.models.resolver import resolve_provider_and_model
 from uniffy.domains.agents.sessions.operations import (
     FALLBACK_CONTEXT_WINDOW,
     SessionOperations,
 )
+from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="agents.sessions.jobs.jobs")
 

@@ -27,7 +27,10 @@ class NoteSharing:
         target_baseline_role: ContentRole | None = None,
         target_group_ids: list[UUID] | None = None,
     ) -> Note:
-        members = ContentMembersOperations(self.operations.session)
+        members = ContentMembersOperations(
+            self.operations.session,
+            self.operations.search_indexer,
+        )
         await members.set_access_mode(
             actor_user_id=user_id,
             organization_id=organization_id,

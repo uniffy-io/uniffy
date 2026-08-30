@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
@@ -17,8 +18,9 @@ from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.search_acl_refresh import ProjectSearchAclRefresh
 from uniffy.core.models.projects.task import Task
+from uniffy.core.search import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
-from uniffy.db import open_session
+from uniffy.infrastructure.database import open_session
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.permissions.requests.operations import (
     AccessRequestDecision,
@@ -37,8 +39,12 @@ def _note_urn(note_id) -> str:
     return f"urn:uniffy:content:NOTE:{note_id}"
 
 
+def _operations(session: AsyncSession) -> ContentAccessRequestOperations:
+    return ContentAccessRequestOperations(session, MagicMock(spec=SearchIndexer))
+
+
 async def test_owner_approval_uses_canonical_member_operations(session, access) -> None:
-    operations = ContentAccessRequestOperations(session)
+    operations = _operations(session)
     urn = _note_urn(access.private_note_id)
 
     with pytest.raises(PermissionDeniedError):
@@ -138,7 +144,7 @@ async def test_owner_approval_uses_canonical_member_operations(session, access) 
     ).scalar_one()
     assert member.role == ContentRole.VIEWER
 
-    await ContentMembersOperations(session).remove_member(
+    await ContentMembersOperations(session, operations.search_indexer).remove_member(
         actor_user_id=access.member_id,
         organization_id=access.org_id,
         content_type=ContentType.NOTE,
@@ -180,7 +186,7 @@ async def test_owner_approval_uses_canonical_member_operations(session, access) 
 
 
 async def test_approval_rolls_back_grant_when_request_audit_fails(session, access) -> None:
-    operations = ContentAccessRequestOperations(session)
+    operations = _operations(session)
     created = await operations.request_access(
         requester_id=access.peer_id,
         organization_id=access.org_id,
@@ -230,7 +236,7 @@ async def test_approval_rolls_back_grant_when_request_audit_fails(session, acces
 
 
 async def test_approval_survives_post_commit_fanout_failure(session, access) -> None:
-    operations = ContentAccessRequestOperations(session)
+    operations = _operations(session)
     created = await operations.request_access(
         requester_id=access.peer_id,
         organization_id=access.org_id,
@@ -276,7 +282,7 @@ async def test_approval_survives_post_commit_fanout_failure(session, access) -> 
 
 
 async def test_org_admin_cannot_review_private_standard_content(session, access) -> None:
-    operations = ContentAccessRequestOperations(session)
+    operations = _operations(session)
     created = await operations.request_access(
         requester_id=access.peer_id,
         organization_id=access.org_id,
@@ -297,7 +303,7 @@ async def test_org_admin_cannot_review_private_standard_content(session, access)
 
 
 async def test_requester_cannot_approve_their_own_request(session, access) -> None:
-    operations = ContentAccessRequestOperations(session)
+    operations = _operations(session)
     created = await operations.request_access(
         requester_id=access.peer_id,
         organization_id=access.org_id,
@@ -318,7 +324,7 @@ async def test_requester_cannot_approve_their_own_request(session, access) -> No
 
 
 async def test_denial_enforces_cooldown_and_cancel_is_idempotent(session, access) -> None:
-    operations = ContentAccessRequestOperations(session)
+    operations = _operations(session)
     urn = _note_urn(access.private_note_id)
     created = await operations.request_access(
         requester_id=access.peer_id,
@@ -371,7 +377,7 @@ async def test_denial_enforces_cooldown_and_cancel_is_idempotent(session, access
 
 
 async def test_membership_and_organization_scope_are_required(session, access) -> None:
-    operations = ContentAccessRequestOperations(session)
+    operations = _operations(session)
     urn = _note_urn(access.private_note_id)
 
     with pytest.raises(PermissionDeniedError):
@@ -405,7 +411,7 @@ async def test_membership_and_organization_scope_are_required(session, access) -
 
 
 async def test_already_accessible_content_does_not_create_a_request(session, access) -> None:
-    result = await ContentAccessRequestOperations(session).request_access(
+    result = await _operations(session).request_access(
         requester_id=access.member_id,
         organization_id=access.org_id,
         requested_urn=_note_urn(access.private_note_id),
@@ -434,7 +440,7 @@ async def test_task_request_grants_its_canonical_project(session, access) -> Non
     session.add(task)
     await session.commit()
 
-    operations = ContentAccessRequestOperations(session)
+    operations = _operations(session)
     created = await operations.request_access(
         requester_id=access.peer_id,
         organization_id=access.org_id,
@@ -481,7 +487,7 @@ async def test_concurrent_duplicate_requests_create_one_pending_row(session, acc
 
     async def submit():
         async with open_session() as isolated:
-            return await ContentAccessRequestOperations(isolated).request_access(
+            return await _operations(isolated).request_access(
                 requester_id=access.peer_id,
                 organization_id=access.org_id,
                 requested_urn=urn,
@@ -560,14 +566,13 @@ async def test_project_acl_refresh_is_versioned_and_projects_current_policy(sess
     assert queued is not None
     assert queued.version == 2
 
-    meili = MagicMock()
-    meili.update_task_sharing = AsyncMock(return_value=3)
-    with patch.object(project_search_acl, "get_meilisearch_client", return_value=meili):
-        result = await project_search_acl._process_project(project.id)
+    search = MagicMock()
+    search.update_task_sharing = AsyncMock(return_value=3)
+    result = await project_search_acl._process_project(project.id, search)
 
     assert result == {"status": "complete", "updated": 3}
-    meili.update_task_sharing.assert_awaited_once()
-    kwargs = meili.update_task_sharing.await_args.kwargs
+    search.update_task_sharing.assert_awaited_once()
+    kwargs = search.update_task_sharing.await_args.kwargs
     assert kwargs["organization_id"] == access.org_id
     assert kwargs["project_id"] == project.id
     assert kwargs["owner_id"] == access.member_id

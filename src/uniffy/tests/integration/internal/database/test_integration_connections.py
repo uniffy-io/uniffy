@@ -15,8 +15,9 @@ from sqlalchemy import func, select
 from uniffy.core.crypto import OrgCipher
 from uniffy.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.integrations.connection import IntegrationConnection
+from uniffy.core.search import SearchIndexer
 from uniffy.core.types import generate_id
-from uniffy.db import open_session
+from uniffy.infrastructure.database import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.integrations.base import (
     IntegrationDescriptor,
@@ -561,8 +562,7 @@ async def test_mark_connection_invalid_records_the_error(session, env) -> None:
 
 
 def _agent_ops(session) -> AgentOperations:
-    ops = AgentOperations(session)
-    # Meilisearch stays out of these tests; the pin lives in PG.
+    ops = AgentOperations(session, MagicMock(spec=SearchIndexer))
     ops._index_for_search = AsyncMock()
     return ops
 

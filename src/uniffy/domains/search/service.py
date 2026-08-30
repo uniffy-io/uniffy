@@ -1,5 +1,7 @@
+from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.domains.search.handlers import SearchHandlers
 
 
 class SearchServiceImpl(SearchHandlers):
-    pass
+    def __init__(self, search: WorkspaceSearch) -> None:
+        self.search_engine = search

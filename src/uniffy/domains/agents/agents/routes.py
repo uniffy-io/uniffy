@@ -4,6 +4,7 @@ Identity comes from the shared asset dependency (Bearer or the asset-read
 cookie); the org check below is this route's own gate.
 """
 
+from functools import partial
 from typing import Annotated
 from uuid import UUID
 
@@ -16,17 +17,15 @@ from uniffy.core.auth.http import get_current_user_id
 from uniffy.core.avatars import AVATAR_SIZES
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.storage import get_s3_client
-from uniffy.db import open_session
+from uniffy.core.storage import ObjectStorage
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.agents.routes")
 
-agent_avatars_router = APIRouter(prefix="/agents/avatars", tags=["agent-avatars"])
 
-
-@agent_avatars_router.get("/{agent_id}/{size}", response_model=None)
 async def get_agent_avatar(
+    storage: ObjectStorage,
     agent_id: UUID,
     size: str,
     current_user_id: Annotated[UUID, Depends(get_current_user_id)],
@@ -88,11 +87,8 @@ async def get_agent_avatar(
                 )
 
             s3_key = f"{agent.avatar_key}/{size}.webp"
-            s3 = get_s3_client()
-
-            # Get object metadata for Content-Length
             try:
-                metadata = await s3.get_object_info(s3_key)
+                metadata = await storage.get_object_info(s3_key)
                 content_length = metadata.get("ContentLength", 0)
             except Exception:
                 raise HTTPException(
@@ -101,12 +97,12 @@ async def get_agent_avatar(
                 )
 
             async def stream_avatar(
-                _s3=s3,
-                _s3_key=s3_key,
+                _storage=storage,
+                _storage_key=s3_key,
             ):
                 """Stream avatar bytes from S3."""
-                async for chunk, _, _ in _s3.download_stream(
-                    key=_s3_key,
+                async for chunk, _, _ in _storage.download_stream(
+                    key=_storage_key,
                     chunk_size=64 * 1024,
                 ):
                     yield chunk
@@ -135,3 +131,14 @@ async def get_agent_avatar(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         )
+
+
+def create_agent_avatars_router(storage: ObjectStorage) -> APIRouter:
+    router = APIRouter(prefix="/agents/avatars", tags=["agent-avatars"])
+    router.add_api_route(
+        "/{agent_id}/{size}",
+        partial(get_agent_avatar, storage),
+        methods=["GET"],
+        response_model=None,
+    )
+    return router

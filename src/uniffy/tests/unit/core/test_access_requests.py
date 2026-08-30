@@ -200,7 +200,7 @@ async def test_standard_approval_stages_mode_and_member_mutations() -> None:
     target = _standard_target(request)
     target.canonical_row.access_mode = AccessMode.OWNER_ONLY
     session = MagicMock()
-    operations = ContentAccessRequestOperations(session)
+    operations = ContentAccessRequestOperations(session, MagicMock())
 
     checker = MagicMock()
     checker.get_org_defaults = AsyncMock(return_value=(AccessMode.OWNER_ONLY, None))
@@ -252,7 +252,7 @@ async def test_chat_approval_stages_channel_membership() -> None:
         "uniffy.domains.permissions.requests.operations.ChatChannelOperations",
         return_value=channels,
     ):
-        staged = await ContentAccessRequestOperations(MagicMock())._stage_access_grant(
+        staged = await ContentAccessRequestOperations(MagicMock(), MagicMock())._stage_access_grant(
             request,
             target,
             actor_user_id=generate_id(),
@@ -270,7 +270,7 @@ async def test_approval_remains_pending_when_grant_does_not_provide_view_access(
     session = MagicMock()
     session.commit = AsyncMock()
     session.rollback = AsyncMock()
-    operations = ContentAccessRequestOperations(session)
+    operations = ContentAccessRequestOperations(session, MagicMock())
     operations.targets = MagicMock()
     operations.targets.require_active_member = AsyncMock()
     operations.targets.resolve_request = AsyncMock(return_value=target)
@@ -310,7 +310,7 @@ async def test_approval_remains_pending_when_grant_does_not_provide_view_access(
 async def test_existing_access_repairs_without_inserting_request() -> None:
     request = _request()
     target = _standard_target(request)
-    operations = ContentAccessRequestOperations(MagicMock())
+    operations = ContentAccessRequestOperations(MagicMock(), MagicMock())
     operations.targets = MagicMock()
     operations.targets.require_active_member = AsyncMock()
     operations.targets.resolve = AsyncMock(return_value=target)
@@ -332,7 +332,7 @@ async def test_rate_limit_stops_request_before_insert() -> None:
     target = _standard_target(request)
     session = MagicMock()
     session.execute = AsyncMock()
-    operations = ContentAccessRequestOperations(session)
+    operations = ContentAccessRequestOperations(session, MagicMock())
     operations.targets = MagicMock()
     operations.targets.require_active_member = AsyncMock()
     operations.targets.resolve = AsyncMock(return_value=target)
@@ -369,7 +369,7 @@ async def test_retry_closes_pending_request_after_independent_grant() -> None:
     session = MagicMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
-    operations = ContentAccessRequestOperations(session)
+    operations = ContentAccessRequestOperations(session, MagicMock())
     operations.targets = MagicMock()
     operations.targets.require_active_member = AsyncMock()
     operations.targets.resolve_request = AsyncMock(return_value=target)

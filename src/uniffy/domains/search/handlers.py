@@ -19,7 +19,7 @@ from uniffy_proto.search.v1.search_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import PermissionDeniedError
-from uniffy.db import open_session
+from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.domains.search.converters import (
     proto_to_entity_type,
     search_result_to_proto,
@@ -27,11 +27,14 @@ from uniffy.domains.search.converters import (
 )
 from uniffy.domains.search.operations import SearchOperations
 from uniffy.domains.search.parser import parse_search_query
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="search.handlers")
 
 
 class SearchHandlers:
+    search_engine: WorkspaceSearch
+
     async def search(
         self,
         request: SearchRequest,
@@ -96,7 +99,7 @@ class SearchHandlers:
 
         try:
             async with open_session() as session:
-                ops = SearchOperations(session)
+                ops = SearchOperations(session, self.search_engine)
                 results, has_more, next_offset = await ops.search(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -152,7 +155,7 @@ class SearchHandlers:
 
         try:
             async with open_session() as session:
-                ops = SearchOperations(session)
+                ops = SearchOperations(session, self.search_engine)
                 results, total = await ops.get_references(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -183,7 +186,7 @@ class SearchHandlers:
 
         try:
             async with open_session() as session:
-                ops = SearchOperations(session)
+                ops = SearchOperations(session, self.search_engine)
                 edges, truncated = await ops.get_content_graph(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -220,7 +223,7 @@ class SearchHandlers:
 
         try:
             async with open_session() as session:
-                ops = SearchOperations(session)
+                ops = SearchOperations(session, self.search_engine)
                 results = await ops.resolve_urns(
                     user_id=user_id,
                     organization_id=organization_id,

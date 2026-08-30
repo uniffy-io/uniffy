@@ -220,7 +220,10 @@ async def _ensure_members(
     if not missing:
         return
 
-    await ChatChannelOperations(ctx.session).add_members(
+    await ChatChannelOperations(
+        ctx.session,
+        search_indexer=ctx.search_indexer,
+    ).add_members(
         user_id=ctx.actor_id,
         organization_id=ctx.organization_id,
         channel_id=channel_id,
@@ -261,7 +264,10 @@ async def _ensure_channel(
 
     owner_id = member_ids[0] if member_ids else ctx.actor_id
 
-    channel = await ChatChannelOperations(ctx.session).create_channel(
+    channel = await ChatChannelOperations(
+        ctx.session,
+        search_indexer=ctx.search_indexer,
+    ).create_channel(
         user_id=owner_id,
         organization_id=ctx.organization_id,
         name=spec.name,
@@ -291,7 +297,10 @@ async def _ensure_direct(
         result.created += 1
         return None
 
-    channel = await ChatChannelOperations(ctx.session).create_dm(
+    channel = await ChatChannelOperations(
+        ctx.session,
+        search_indexer=ctx.search_indexer,
+    ).create_dm(
         user_id=participants[0],
         organization_id=ctx.organization_id,
         target_user_ids=participants[1:],
@@ -355,7 +364,7 @@ async def _seed_messages(
         result.created += pending
         return
 
-    ops = ChatMessageOperations(ctx.session)
+    ops = ChatMessageOperations(ctx.session, search_indexer=ctx.search_indexer)
     seeded = await _seeded_messages(ctx, channel_id)
     stamps: dict[UUID, datetime] = {}
     root_ids: set[UUID] = set()

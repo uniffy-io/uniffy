@@ -38,13 +38,13 @@ from uniffy.core.auth.principal import (
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.message import ChatMessage
-from uniffy.db import open_session
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import message_to_proto, revision_to_proto
 from uniffy.domains.chat.messages.forwarding import ChatMessageForwardingOperations
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
 from uniffy.domains.chat.messages.projection import ForwardProjectionResolver
 from uniffy.domains.chat.senders import SenderResolver
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.messages.handlers")
 
@@ -103,7 +103,7 @@ class MessageHandlers:
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
-                ops = ChatMessageOperations(session, access)
+                ops = ChatMessageOperations(session, access, self.storage, self.search_indexer)
                 message, sender_name, sender_avatar = await ops.send_message(
                     user_id=user_id,
                     organization_id=org_id,
@@ -148,6 +148,8 @@ class MessageHandlers:
                 message, sender_name, sender_avatar = await ChatMessageForwardingOperations(
                     session,
                     access,
+                    self.storage,
+                    self.search_indexer,
                 ).forward_message(
                     user_id=user_id,
                     organization_id=org_id,
@@ -198,7 +200,7 @@ class MessageHandlers:
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
-                ops = ChatMessageOperations(session, access)
+                ops = ChatMessageOperations(session, access, self.storage, self.search_indexer)
                 messages, has_more = await ops.get_messages(
                     user_id=user_id,
                     organization_id=org_id,
@@ -241,7 +243,7 @@ class MessageHandlers:
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
-                ops = ChatMessageOperations(session, access)
+                ops = ChatMessageOperations(session, access, self.storage, self.search_indexer)
                 msg = await ops.get_message(user_id, org_id, channel_id, message_id)
                 forward_contexts = await ForwardProjectionResolver(session, access).resolve(
                     user_id=user_id,
@@ -273,7 +275,7 @@ class MessageHandlers:
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
-                ops = ChatMessageOperations(session, access)
+                ops = ChatMessageOperations(session, access, self.storage, self.search_indexer)
                 msg = await ops.update_message(
                     user_id, org_id, channel_id, message_id, request.content
                 )
@@ -306,7 +308,9 @@ class MessageHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatMessageOperations(session)
+                ops = ChatMessageOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 revisions = await ops.get_message_revisions(user_id, org_id, channel_id, message_id)
                 return GetMessageRevisionsResponse(
                     revisions=[revision_to_proto(r) for r in revisions]
@@ -329,7 +333,9 @@ class MessageHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatMessageOperations(session)
+                ops = ChatMessageOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 await ops.delete_message(user_id, org_id, channel_id, message_id)
                 return DeleteMessageResponse()
         except (NotFoundError, PermissionDeniedError) as e:
@@ -351,7 +357,7 @@ class MessageHandlers:
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
-                ops = ChatMessageOperations(session, access)
+                ops = ChatMessageOperations(session, access, self.storage, self.search_indexer)
                 msg = await ops.pin_message(user_id, org_id, channel_id, message_id)
                 forward_contexts = await ForwardProjectionResolver(session, access).resolve(
                     user_id=user_id,
@@ -383,7 +389,7 @@ class MessageHandlers:
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
-                ops = ChatMessageOperations(session, access)
+                ops = ChatMessageOperations(session, access, self.storage, self.search_indexer)
                 msg = await ops.unpin_message(user_id, org_id, channel_id, message_id)
                 forward_contexts = await ForwardProjectionResolver(session, access).resolve(
                     user_id=user_id,
@@ -414,7 +420,7 @@ class MessageHandlers:
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
-                ops = ChatMessageOperations(session, access)
+                ops = ChatMessageOperations(session, access, self.storage, self.search_indexer)
                 messages = await ops.get_pinned_messages(user_id, org_id, channel_id)
                 proto_messages = await self._enrich_messages(
                     session,

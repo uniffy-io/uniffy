@@ -41,7 +41,6 @@ from uniffy.core.auth.principal import (
     resolve_organization_id,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.agents.budgets.converters import (
     currency_rate_to_proto,
     org_budget_to_proto,
@@ -50,6 +49,7 @@ from uniffy.domains.agents.budgets.converters import (
 )
 from uniffy.domains.agents.budgets.operations import BudgetsOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.budgets.handlers")
 

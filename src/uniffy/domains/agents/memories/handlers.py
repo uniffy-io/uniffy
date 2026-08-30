@@ -33,7 +33,6 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.login.user import User
-from uniffy.db import open_session
 from uniffy.domains.agents.memories.bridge import (
     is_personal_bridge_enabled,
     set_personal_bridge,
@@ -46,6 +45,7 @@ from uniffy.domains.agents.memories.converters import (
 from uniffy.domains.agents.memories.operations import MemoryOperations
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.runtime.settings.operations import get_runtime_settings
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.memories.handlers")
 

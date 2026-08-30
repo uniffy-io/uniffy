@@ -23,8 +23,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.agent_folder import ChatAgentFolder
-from uniffy.db import open_session
 from uniffy.domains.chat.folders.operations import AgentFolderOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.folders.handlers")
 
@@ -56,7 +56,7 @@ class AgentFolderHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentFolderOperations(session)
+                ops = AgentFolderOperations(session, self.search_indexer)
                 folder = await ops.create(user_id, org_id, request.name)
                 return CreateAgentFolderResponse(folder=_folder_to_proto(folder))
         except (ValidationError, NotFoundError) as e:
@@ -76,7 +76,7 @@ class AgentFolderHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentFolderOperations(session)
+                ops = AgentFolderOperations(session, self.search_indexer)
                 folder = await ops.rename(user_id, org_id, folder_id, request.name)
                 return RenameAgentFolderResponse(folder=_folder_to_proto(folder))
         except (ValidationError, NotFoundError) as e:
@@ -96,7 +96,7 @@ class AgentFolderHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentFolderOperations(session)
+                ops = AgentFolderOperations(session, self.search_indexer)
                 await ops.delete(user_id, org_id, folder_id)
                 return DeleteAgentFolderResponse()
         except (ValidationError, NotFoundError) as e:
@@ -114,7 +114,7 @@ class AgentFolderHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         async with open_session() as session:
-            ops = AgentFolderOperations(session)
+            ops = AgentFolderOperations(session, self.search_indexer)
             folders = await ops.list_folders(user_id, org_id)
             return ListAgentFoldersResponse(folders=[_folder_to_proto(f) for f in folders])
 
@@ -137,7 +137,7 @@ class AgentFolderHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentFolderOperations(session)
+                ops = AgentFolderOperations(session, self.search_indexer)
                 await ops.set_chat_folder(user_id, org_id, channel_id, folder_id)
                 return SetAgentChatFolderResponse()
         except (ValidationError, NotFoundError) as e:

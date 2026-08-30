@@ -1,21 +1,27 @@
 """Run chat background work."""
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, delete, select, update
 
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
+from uniffy.core.json_codec import loads
+from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
+from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
 from uniffy.core.models.login.organization_member import OrganizationMember
-from uniffy.core.search.meilisearch import get_meilisearch_client
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, SearchIndexer
+from uniffy.core.search.workspace import WORKSPACE_SEARCH_CTX_KEY, WorkspaceSearch
 from uniffy.core.types import SubjectType
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db import open_session
 from uniffy.domains.chat.jobs.contracts import REFRESH_CHAT_SEARCH_ACL
+from uniffy.domains.chat.messages.operations import ChatMessageOperations
+from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="chat.jobs.jobs")
@@ -23,6 +29,42 @@ logger = logger.bind(component="chat.jobs.jobs")
 _LOCK_TTL_SECONDS = 330
 _FLUSH_BATCH = 100
 _ATTEMPTS_ALERT_THRESHOLD = 60
+
+
+async def post_send_chat_message(
+    ctx: dict[str, Any],
+    message_id: str,
+    channel_id: str,
+    user_id: str,
+    root_id: str | None,
+    sender_name: str,
+    member_ids_json: str,
+) -> dict[str, Any]:
+    try:
+        mid = UUID(message_id)
+        cid = UUID(channel_id)
+        uid = UUID(user_id)
+        rid = UUID(root_id) if root_id is not None else None
+        member_ids = [UUID(value) for value in loads(member_ids_json)]
+    except TypeError, ValueError:
+        return {"status": "error", "reason": "invalid_payload"}
+
+    session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
+    search_indexer = cast(SearchIndexer, ctx[SEARCH_INDEXER_CTX_KEY])
+    async with session_factory() as session:
+        message = await session.get(ChatMessage, mid)
+        channel = await session.get(ChatChannel, cid)
+        if message is None or channel is None:
+            return {"status": "skipped", "reason": "message_or_channel_missing"}
+        await ChatMessageOperations(session, search_indexer=search_indexer)._background_post_send(
+            message,
+            channel,
+            uid,
+            rid,
+            sender_name,
+            member_ids,
+        )
+    return {"status": "success", "message_id": message_id}
 
 
 def _lock_key(channel_id: UUID) -> str:
@@ -67,7 +109,10 @@ async def _record_failure(channel_id: UUID, version: int) -> None:
         await session.commit()
 
 
-async def _process_channel(channel_id: UUID) -> dict[str, Any]:
+async def _process_channel(
+    channel_id: UUID,
+    search: WorkspaceSearch,
+) -> dict[str, Any]:
     async with open_session() as session:
         row = (
             await session.execute(
@@ -96,7 +141,7 @@ async def _process_channel(channel_id: UUID) -> dict[str, Any]:
         member_ids = [user_id for user_id in member_result.scalars().all() if user_id]
 
         try:
-            updated = await get_meilisearch_client().update_chat_message_sharing(
+            updated = await search.update_chat_message_sharing(
                 organization_id=row.organization_id,
                 channel_id=channel_id,
                 shared_user_ids=member_ids,
@@ -127,7 +172,10 @@ async def refresh_chat_search_acl(
     if lock_token is None:
         return {"status": "locked"}
     try:
-        return await _process_channel(parsed_channel_id)
+        return await _process_channel(
+            parsed_channel_id,
+            ctx[WORKSPACE_SEARCH_CTX_KEY],
+        )
     except Exception as exc:
         logger.opt(exception=True).warning(
             f"Chat search ACL refresh failed for channel {parsed_channel_id}"

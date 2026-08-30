@@ -59,8 +59,10 @@ uniffy/
 │   ├── uniffy/           # Python backend (Granian + FastAPI + ConnectRPC)
 │   │   ├── core/         # Core models, auth, search, types, errors
 │   │   ├── domains/      # Domain modules (vertical slices)
+│   │   ├── infrastructure/ # Generic database, storage, cache, search, observability adapters
+│   │   ├── transport/      # Application HTTP and ConnectRPC middleware/instrumentation
 │   │   ├── data/         # Shipped content: agent templates, skills, prompts, model catalog, assets
-│   │   ├── db/           # Database session, migrations, seeding
+│   │   ├── db/           # Application schema migrations and bootstrap data
 │   │   ├── workers/      # ARQ fleet composition, registry, lifecycle
 │   │   └── factory.py    # App factory mounting services
 │   ├── ui/               # React frontend (TypeScript + Vite)

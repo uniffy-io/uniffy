@@ -20,7 +20,7 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.types import generate_id
-from uniffy.db import open_session
+from uniffy.infrastructure.database import open_session
 from uniffy.domains.auth.types import AuthResult
 from uniffy.domains.organizations.invitations.errors import InvitationAlreadyUsedError
 from uniffy.domains.organizations.invitations.operations import (

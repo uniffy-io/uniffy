@@ -18,7 +18,6 @@ from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.common_proto import access_mode_from_proto
 from uniffy.core.types import ContentType, ParentSelection, SortOrder
-from uniffy.db import open_session
 from uniffy.domains.notes.converters import note_to_proto, note_to_reference
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.notes.rpc.support import (
@@ -30,6 +29,7 @@ from uniffy.domains.notes.rpc.support import (
 )
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.tags.context import ContentTagContext
+from uniffy.infrastructure.database import open_session
 
 
 def _note_urn(note_id: UUID) -> str:
@@ -47,7 +47,7 @@ class NoteQueryHandlers:
         note_id = parse_uuid(request.note_id, "note_id")
         try:
             async with open_session() as session:
-                operations = NoteOperations(session)
+                operations = NoteOperations(session, self.storage, self.search_indexer)
                 note = await operations.get_by_id(user_id, organization_id, note_id)
                 sharing = (await operations.get_notes_sharing_info([note], user_id)).get(note.id)
                 tags_by_urn = await ContentTagContext(session).get_for_urns(
@@ -98,7 +98,7 @@ class NoteQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = NoteOperations(session)
+                operations = NoteOperations(session, self.storage, self.search_indexer)
                 notes, total = await operations.list_notes(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -173,7 +173,11 @@ class NoteQueryHandlers:
         note_id = parse_uuid(request.note_id, "note_id")
         try:
             async with open_session() as session:
-                backlinks = await NoteOperations(session).get_backlinks(
+                backlinks = await NoteOperations(
+                    session,
+                    self.storage,
+                    self.search_indexer,
+                ).get_backlinks(
                     user_id,
                     organization_id,
                     note_id,

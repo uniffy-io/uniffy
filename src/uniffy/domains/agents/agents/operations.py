@@ -25,7 +25,8 @@ from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.integrations.connection import IntegrationConnection
 from uniffy.core.models.tags.tag import TagAssignment
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.users.cache import invalidate_agent_profile
 from uniffy.domains.agents.access import is_agents_builder, require_agents_builder
@@ -177,9 +178,12 @@ class AgentOperations(BaseContentOperations[Agent]):
     content_type = ContentType.AGENT
     model_class = Agent
 
-    def __init__(self, session: AsyncSession) -> None:
-        """Initialize agent operations."""
-        super().__init__(session)
+    def __init__(
+        self,
+        session: AsyncSession,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
+        super().__init__(session, search_indexer)
 
     def _build_search_keywords(self, model: Agent) -> str:
         """Aggregate searchable text for an agent."""
@@ -234,7 +238,7 @@ class AgentOperations(BaseContentOperations[Agent]):
 
     async def _get_search_tags_async(self, model: Agent) -> list[str] | None:
         """Return the slug list assigned to this agent via the unified store."""
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.search_indexer)
         urn = build_content_urn(self.content_type, model.id)
         bulk = await tag_ops.get_for_urns(
             organization_id=model.organization_id,
@@ -274,7 +278,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         """
         if tag_ids is None:
             return
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.search_indexer)
         await tag_ops.replace_manual_tags(
             actor_id=actor_id,
             organization_id=agent.organization_id,
@@ -366,7 +370,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         staged_tags = None
         try:
             await self.session.flush()
-            members_ops = ContentMembersOperations(self.session)
+            members_ops = ContentMembersOperations(self.session, self.search_indexer)
             for gid in group_ids or []:
                 staged_members.append(
                     await members_ops.stage_member(
@@ -381,7 +385,10 @@ class AgentOperations(BaseContentOperations[Agent]):
                 )
 
             if tag_ids is not None:
-                staged_tags = await TagOperations(self.session).stage_manual_tags(
+                staged_tags = await TagOperations(
+                    self.session,
+                    self.search_indexer,
+                ).stage_manual_tags(
                     actor_id=user_id,
                     organization_id=organization_id,
                     content_urn=build_content_urn(self.content_type, agent.id),
@@ -410,7 +417,7 @@ class AgentOperations(BaseContentOperations[Agent]):
 
     async def _finish_agent_create_after_commit(self, staged: _StagedAgentCreate) -> None:
         agent = staged.agent
-        members_ops = ContentMembersOperations(self.session)
+        members_ops = ContentMembersOperations(self.session, self.search_indexer)
         for member in staged.members:
             try:
                 await members_ops.finish_member_add_after_commit(member)
@@ -422,7 +429,10 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         if staged.tags is not None:
             try:
-                await TagOperations(self.session).finish_manual_tags_after_commit(staged.tags)
+                await TagOperations(
+                    self.session,
+                    self.search_indexer,
+                ).finish_manual_tags_after_commit(staged.tags)
             except Exception:
                 logger.opt(exception=True).warning(
                     "Agent created with degraded tag projection",
@@ -802,6 +812,7 @@ class AgentOperations(BaseContentOperations[Agent]):
     async def upload_avatar(
         self,
         *,
+        storage: ObjectStorage,
         user_id: UUID,
         organization_id: UUID,
         agent_id: UUID,
@@ -813,9 +824,10 @@ class AgentOperations(BaseContentOperations[Agent]):
         await require_agents_builder(self.session, user_id, organization_id)
 
         if agent.avatar_key:
-            await s3_delete_avatar(agent.avatar_key)
+            await s3_delete_avatar(storage, agent.avatar_key)
 
         avatar_key = await s3_upload_avatar(
+            storage,
             agent_id,
             image_data,
             filename,
@@ -834,6 +846,7 @@ class AgentOperations(BaseContentOperations[Agent]):
     async def delete_avatar(
         self,
         *,
+        storage: ObjectStorage,
         user_id: UUID,
         organization_id: UUID,
         agent_id: UUID,
@@ -843,7 +856,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         await require_agents_builder(self.session, user_id, organization_id)
 
         if agent.avatar_key:
-            await s3_delete_avatar(agent.avatar_key)
+            await s3_delete_avatar(storage, agent.avatar_key)
             agent.avatar_key = None
             await self.session.commit()
             await self.session.refresh(agent)

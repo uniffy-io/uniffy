@@ -40,12 +40,12 @@ from uniffy_proto.calls.v1.calls_pb2 import (
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calls import ScreenShareQuality
-from uniffy.db import open_session
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config, get_turn_config
 from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto
 from uniffy.domains.calls.livekit import LiveKitUnavailableError
 from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.calls.turn import mint_turn_credentials
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="calls.handlers")
 

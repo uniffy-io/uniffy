@@ -12,6 +12,7 @@ from uniffy.core.content.references import parse_urn
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import ContentType
 from uniffy.domains.bookmarks.pagination import (
     BookmarkCursor,
@@ -47,9 +48,11 @@ class BookmarksOperations:
     def __init__(
         self,
         session: AsyncSession,
+        search: WorkspaceSearch,
         resource_access: ResourceAccessResolver | None = None,
     ) -> None:
         self.session = session
+        self.search = search
         self.resource_access = resource_access or ResourceAccessResolver(session)
 
     async def toggle(
@@ -261,7 +264,11 @@ class BookmarksOperations:
         failed_urns: frozenset[str] = frozenset()
         if available_urns:
             try:
-                lookup = await get_raw_documents_by_urns(available_urns, organization_id)
+                lookup = await get_raw_documents_by_urns(
+                    self.search,
+                    available_urns,
+                    organization_id,
+                )
                 documents = lookup.documents
                 failed_urns = lookup.failed_urns
             except Exception:
@@ -300,7 +307,7 @@ class BookmarksOperations:
         # Index documents lag PostgreSQL, so previews would otherwise show a
         # different status here than the same mention renders elsewhere.
         if live_documents:
-            await SearchOperations(self.session).enrich_live_state(
+            await SearchOperations(self.session, self.search).enrich_live_state(
                 live_documents,
                 organization_id,
                 user_id,

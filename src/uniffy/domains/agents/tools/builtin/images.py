@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import time
 
 from loguru import logger
@@ -58,7 +57,6 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.core.models.files.file import ExtractionStatus, File, ThumbnailStatus
     from uniffy.core.models.files.file_version import FileVersion
     from uniffy.core.search.indexer import build_content_urn
-    from uniffy.core.storage import get_s3_client
     from uniffy.core.types import AccessMode, ContentType, generate_id
     from uniffy.domains.agents.providers.operations import ProviderOperations
     from uniffy.domains.files.attachments.operations import AttachmentOperations
@@ -81,6 +79,9 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             data="",
             error="No agent context available",
         )
+
+    if ctx.storage is None:
+        return ToolResult(success=False, data="", error="Object storage is unavailable")
 
     # Load the agent to get image_model
     result = await ctx.session.execute(
@@ -160,14 +161,13 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     filename = f"generated-image-{file_id}.{ext}"
     storage_key = f"{ctx.organization_id}/{ctx.user_id}/{file_id}/{filename}"
 
-    s3 = get_s3_client()
-    await s3.upload_bytes(
+    await ctx.storage.upload_bytes(
         key=storage_key,
         data=image_bytes,
         content_type=mime_type,
     )
 
-    attach_ops = AttachmentOperations(ctx.session)
+    attach_ops = AttachmentOperations(ctx.session, ctx.storage, ctx.search_indexer)
     if access_mode == AccessMode.OPEN_TO_ORG:
         folder = await attach_ops.get_or_create_org_attachments_folder(ctx.organization_id)
     else:
@@ -176,8 +176,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             ctx.organization_id,
         )
 
-    # Determine storage bucket name from env (same as S3Client config)
-    bucket_name = os.getenv("S3_BUCKET", "uniffy")
+    bucket_name = ctx.storage.bucket_name
 
     # Create File record
     file_record = File(
@@ -218,9 +217,9 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     # Build the file URN and index for search
     file_urn = build_content_urn(ContentType.FILE, file_id)
 
-    from uniffy.core.search.indexer import SearchIndexer
-
-    indexer = SearchIndexer()
+    if ctx.search_indexer is None:
+        raise RuntimeError("Search indexing is required for image generation")
+    indexer = ctx.search_indexer
     description = f"AI-generated image: {prompt[:200]}"
     keywords = " ".join(filter(None, [filename, description, mime_type]))
     await indexer.index(

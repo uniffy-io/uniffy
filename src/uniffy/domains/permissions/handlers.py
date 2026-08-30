@@ -50,7 +50,6 @@ from uniffy.core.types import (
     ContentType,
     SubjectType,
 )
-from uniffy.db import open_session
 from uniffy.domains.permissions.converters import (
     audit_action_for_member_action,
     audit_event_to_content_member_event_proto,
@@ -58,6 +57,7 @@ from uniffy.domains.permissions.converters import (
     content_member_to_proto,
 )
 from uniffy.domains.permissions.members import ContentMembersOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="permissions.handlers")
 
@@ -159,7 +159,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 members = await ops.list_members(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -201,7 +201,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 member = await ops.add_member(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -234,7 +234,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 member = await ops.update_member_role(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -265,7 +265,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 await ops.remove_member(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -302,7 +302,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 await ops.set_access_mode(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -341,7 +341,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 await ops.transfer_ownership(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -404,7 +404,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 events = await ops.list_member_events(
                     actor_user_id=user_id,
                     organization_id=organization_id,

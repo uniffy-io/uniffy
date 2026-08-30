@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from uniffy.core.models.search import SearchRemovalQueue
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, SearchIndexer, WorkspaceSearch
 from uniffy.domains.search.jobs.jobs import flush_search_removals
 
 
@@ -22,8 +23,9 @@ async def test_failed_acknowledgement_remains_queued() -> None:
     async def open_session() -> AsyncIterator[AsyncMock]:
         yield session
 
-    meili = AsyncMock()
-    meili.delete_document.side_effect = RuntimeError("terminal task failed")
+    search = AsyncMock(spec=WorkspaceSearch)
+    search.delete_document.side_effect = RuntimeError("terminal task failed")
+    indexer = SearchIndexer(search)
     release_lock = AsyncMock()
     with (
         patch(
@@ -35,12 +37,8 @@ async def test_failed_acknowledgement_remains_queued() -> None:
             release_lock,
         ),
         patch("uniffy.domains.search.jobs.jobs.open_session", open_session),
-        patch(
-            "uniffy.domains.search.jobs.jobs.get_meilisearch_client",
-            return_value=meili,
-        ),
     ):
-        result = await flush_search_removals({})
+        result = await flush_search_removals({SEARCH_INDEXER_CTX_KEY: indexer})
 
     assert result == {"status": "completed", "flushed": 0, "failed": 1, "dropped": 0}
     assert row.attempts == 1

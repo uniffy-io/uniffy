@@ -132,7 +132,7 @@ class RoomOperations(BaseContentOperations[Room]):
                 resource_id=room.id,
                 details={"name": room.name, "room_type": room_type.value},
             )
-            members_ops = ContentMembersOperations(self.session)
+            members_ops = ContentMembersOperations(self.session, self.search_indexer)
             for group_id in group_ids or []:
                 staged = await members_ops.stage_member(
                     actor_user_id=user_id,

@@ -25,7 +25,6 @@ from uniffy_proto.settings.v1.settings_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.settings.converters import (
     appearance_dict_to_proto,
     appearance_from_proto,
@@ -39,6 +38,7 @@ from uniffy.domains.settings.converters import (
     scheduling_from_proto,
 )
 from uniffy.domains.settings.operations import SettingsOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="settings.handlers")
 

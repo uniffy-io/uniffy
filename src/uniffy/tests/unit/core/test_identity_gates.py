@@ -127,7 +127,10 @@ async def test_get_upload_status_hides_another_users_upload() -> None:
         patch("uniffy.domains.files.rpc.uploads.FileOperations", MagicMock(return_value=ops)),
         pytest.raises(ConnectError) as exc_info,
     ):
-        await FilesHandlers().get_upload_status(
+        handlers = FilesHandlers()
+        handlers.storage = MagicMock()
+        handlers.search_indexer = MagicMock()
+        await handlers.get_upload_status(
             GetUploadStatusRequest(upload_id=str(upload_id)), MagicMock()
         )
 

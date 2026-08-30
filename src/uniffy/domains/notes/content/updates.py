@@ -162,6 +162,7 @@ class NoteUpdates:
         if content_changed and fields is not None:
             await reconcile_inline_attachments(
                 self.operations.session,
+                self.operations.storage,
                 organization_id=organization_id,
                 content_type=ContentType.NOTE,
                 content_id=note_id,

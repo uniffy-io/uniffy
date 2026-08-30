@@ -10,7 +10,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import (
     ContentRole,
     ContentType,
@@ -27,8 +27,12 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
     content_type = ContentType.CALENDAR_EVENT
     model_class = CalendarEvent
 
-    def __init__(self, session: AsyncSession) -> None:
-        super().__init__(session)
+    def __init__(
+        self,
+        session: AsyncSession,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
+        super().__init__(session, search_indexer)
 
     def _build_search_keywords(self, model: CalendarEvent) -> str:
         # Tag slugs land in the dedicated `tags` array via

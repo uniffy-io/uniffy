@@ -43,7 +43,7 @@ from uniffy_proto.superadmin.v1.system_directory_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
+from uniffy.core.storage import ObjectStorage
 from uniffy.domains.platform.directory.converters import (
     org_detail_to_proto,
     org_summary_to_proto,
@@ -53,6 +53,7 @@ from uniffy.domains.platform.directory.converters import (
 from uniffy.domains.platform.directory.operations import (
     PlatformDirectoryOperations,
 )
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="platform.directory.handlers")
 
@@ -80,6 +81,9 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class SystemOrganizationsHandlers:
+    def __init__(self, storage: ObjectStorage) -> None:
+        self.storage = storage
+
     async def list_organizations(
         self, request: ListOrganizationsRequest, ctx: RequestContext
     ) -> ListOrganizationsResponse:
@@ -127,7 +131,9 @@ class SystemOrganizationsHandlers:
         user_id = current_user_id()
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).create_organization(
+                detail = await PlatformDirectoryOperations(
+                    session, self.storage
+                ).create_organization(
                     user_id=user_id,
                     name=request.name,
                     slug=request.slug,

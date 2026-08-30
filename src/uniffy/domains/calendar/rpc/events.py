@@ -20,7 +20,6 @@ from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, RecurrencePattern
-from uniffy.db import open_session
 from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.converters import (
     attendee_role_from_proto,
@@ -41,6 +40,7 @@ from uniffy.domains.calendar.rpc.support import (
     parse_uuid,
 )
 from uniffy.domains.rooms.projection import get_event_room_info
+from uniffy.infrastructure.database import open_session
 
 
 class EventMutationHandlers:
@@ -95,7 +95,7 @@ class EventMutationHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session)
+                operations = CalendarEventOperations(session, self.search_indexer)
 
                 calendar_id = None
                 if request.calendar_id:
@@ -229,7 +229,7 @@ class EventMutationHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session)
+                operations = CalendarEventOperations(session, self.search_indexer)
                 event = await operations.update(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -277,7 +277,7 @@ class EventMutationHandlers:
 
         try:
             async with open_session() as session:
-                await CalendarEventOperations(session).delete(
+                await CalendarEventOperations(session, self.search_indexer).delete(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,

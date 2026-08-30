@@ -45,7 +45,6 @@ from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.agents.skills.converters import (
     runnable_skill_to_proto,
     skill_draft_to_proto,
@@ -53,6 +52,7 @@ from uniffy.domains.agents.skills.converters import (
     skill_version_to_proto,
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.skills.handlers")
 

@@ -17,7 +17,7 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.login.user import User
 from uniffy.core.search.indexer import SearchIndexer
-from uniffy.core.storage import get_s3_client
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -63,9 +63,27 @@ __all__ = [
 class AttachmentOperations:
     """Link files to content; manages file copies in the Attachments folder."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self._session = session
-        self._s3 = get_s3_client()
+        self._storage = storage
+        self._search_indexer = search_indexer
+
+    @property
+    def storage(self) -> ObjectStorage:
+        if self._storage is None:
+            raise RuntimeError("Object storage is required for this attachment operation")
+        return self._storage
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("Search indexing is required for attachment mutations")
+        return self._search_indexer
 
     async def get_or_create_attachments_folder(
         self,
@@ -213,7 +231,7 @@ class AttachmentOperations:
         await self._index_attachment_file(file)
 
     async def _index_attachment_file(self, file: File) -> None:
-        await FileSearchOperations(self._session)._index_for_search(
+        await FileSearchOperations(self._session, self.search_indexer)._index_for_search(
             model=file,
             skip_member_lookup=True,
         )
@@ -258,14 +276,14 @@ class AttachmentOperations:
         file = file_result.scalar_one_or_none()
 
         if file:
-            await self._s3.delete_object(file.storage_key)
+            await self.storage.delete_object(file.storage_key)
 
             versions_result = await self._session.execute(
                 select(FileVersion).where(FileVersion.file_id == file.id)
             )
             for version in versions_result.scalars().all():
                 if version.storage_key != file.storage_key:
-                    await self._s3.delete_object(version.storage_key)
+                    await self.storage.delete_object(version.storage_key)
                 await self._session.delete(version)
 
             file.current_version_id = None
@@ -277,7 +295,7 @@ class AttachmentOperations:
             await self._session.delete(file)
 
             urn = f"urn:uniffy:content:{ContentType.FILE.value}:{attachment.file_id}"
-            await SearchIndexer(self._session).remove(urn)
+            await self.search_indexer.remove(urn)
 
             # A linked staged upload was quota-counted at complete_upload;
             # copies never were, so only the linked shape decrements.
@@ -566,7 +584,7 @@ class AttachmentOperations:
         new_file_id = generate_id()
         new_storage_key = f"{organization_id}/{user_id}/{new_file_id}/{source_file.filename}"
 
-        await self._s3.copy_object(
+        await self.storage.copy_object(
             source_key=source_file.storage_key,
             destination_key=new_storage_key,
             content_type=source_file.mime_type,
@@ -599,7 +617,7 @@ class AttachmentOperations:
             new_thumb_key = f"{organization_id}/thumbnails/{new_file_id}.jpg"
 
             try:
-                await self._s3.copy_object(
+                await self.storage.copy_object(
                     source_key=source_info.thumbnail_key,
                     destination_key=new_thumb_key,
                     content_type="image/jpeg",

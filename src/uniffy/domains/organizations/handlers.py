@@ -75,7 +75,6 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
-from uniffy.db import open_session
 from uniffy.domains.organizations.converters import (
     my_organization_to_proto,
     organization_detail_to_proto,
@@ -91,6 +90,7 @@ from uniffy.domains.organizations.invitations import (
 from uniffy.domains.organizations.invitations.converters import invitation_to_proto
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.organizations.security import SecurityOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="organizations.handlers")
 
@@ -105,7 +105,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 orgs_with_memberships = await ops.get_user_organizations(user_id)
 
                 return ListMyOrganizationsResponse(
@@ -132,7 +132,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await ops.require_org_member(user_id, org_id)
 
                 overview = await ops.get_overview(org_id)
@@ -167,7 +167,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await ops.require_org_admin(user_id, org_id)
 
                 org = await ops.update(
@@ -201,7 +201,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await ops.require_org_admin(user_id, org_id)
 
                 overview = await ops.get_overview(org_id)
@@ -235,7 +235,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await ops.require_org_member(user_id, org_id)
 
                 page = 1
@@ -295,7 +295,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await ops.require_org_admin(user_id, org_id)
 
                 role = org_role_from_proto(request.role)
@@ -335,7 +335,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
 
                 new_role = org_role_from_proto(request.role)
                 if new_role is None:
@@ -372,7 +372,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
 
                 await ops.remove_member(
                     admin_user_id=user_id,
@@ -403,7 +403,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await ops.require_org_admin(user_id, org_id)
 
                 defaults = await ops.get_permission_defaults(org_id)
@@ -435,7 +435,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
 
                 default_access_mode = None
                 if request.HasField("default_access_mode"):
@@ -481,7 +481,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 da, target_user = await ops.grant_domain_admin(
                     admin_user_id=user_id,
                     org_id=org_id,
@@ -518,7 +518,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await ops.revoke_domain_admin(
                     admin_user_id=user_id,
                     org_id=org_id,
@@ -548,7 +548,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await ops.require_org_admin(user_id, org_id)
 
                 domain_filter = None
@@ -602,7 +602,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
 
                 if user_id != target_user_id:
                     await ops.require_org_admin(user_id, org_id)
@@ -635,7 +635,7 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session)
+                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 previous_version, new_version, rotated_at = await ops.rotate_encryption_key(
                     user_id, org_id
                 )
@@ -795,7 +795,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
         try:
             async with open_session() as session:
-                org_ops = OrganizationOperations(session)
+                org_ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await org_ops.require_org_admin(user_id, org_id)
                 settings = await SecurityOperations(session).get(org_id)
                 return GetSecuritySettingsResponse(
@@ -825,7 +825,7 @@ class OrganizationsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
         try:
             async with open_session() as session:
-                org_ops = OrganizationOperations(session)
+                org_ops = OrganizationOperations(session, search_indexer=self.search_indexer)
                 await org_ops.require_org_admin(user_id, org_id)
                 security_ops = SecurityOperations(session)
                 settings = await security_ops.get(org_id)

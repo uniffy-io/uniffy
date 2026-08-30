@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from uniffy.core.models import Note, Organization, User
     from uniffy.core.models.files.file import File
     from uniffy.core.search.indexer import SearchIndexer
+    from uniffy.core.storage import ObjectStorage
 
 logger = logger.bind(component="db.seed_canvas")
 
@@ -28,6 +29,7 @@ async def seed_welcome_canvas(
     uniffy_folder: Note,
     seed_notes: dict[str, Note],
     search_indexer: SearchIndexer,
+    storage: ObjectStorage | None,
     tag_ids: list[UUID],
     tag_slugs: list[str],
 ) -> None:
@@ -42,17 +44,15 @@ async def seed_welcome_canvas(
     from uniffy.core.models.files.file import ExtractionStatus, File
     from uniffy.core.models.notes.note import Note
     from uniffy.core.search.indexer import build_content_urn
-    from uniffy.core.storage import get_s3_client
     from uniffy.core.types import AccessMode, ContentRole, ContentType, NodeType
 
     logo_source = DATA_DIR / "assets" / "logo-512.png"
     logo_file: File | None = None
 
-    if logo_source.is_file():
+    if logo_source.is_file() and storage is not None:
         try:
             logo_bytes = logo_source.read_bytes()
-            s3 = get_s3_client()
-            await s3.ensure_bucket_exists()
+            await storage.ensure_bucket_exists()
             logo_file = File(
                 organization_id=org.id,
                 owner_id=admin_user.id,
@@ -63,7 +63,7 @@ async def seed_welcome_canvas(
                 mime_type="image/png",
                 size_bytes=len(logo_bytes),
                 storage_key=f"{org.id}/assets/uniffy-logo.png",
-                storage_bucket=s3.config.bucket_name,
+                storage_bucket=storage.bucket_name,
                 folder_id=None,
                 description="Official Uniffy logo (512x512).",
                 extraction_status=ExtractionStatus.SKIPPED,
@@ -71,7 +71,7 @@ async def seed_welcome_canvas(
             session.add(logo_file)
             await session.flush()
             await session.refresh(logo_file)
-            await s3.upload_bytes(
+            await storage.upload_bytes(
                 key=logo_file.storage_key,
                 data=logo_bytes,
                 content_type="image/png",
@@ -92,7 +92,7 @@ async def seed_welcome_canvas(
         except Exception as exc:
             logger.warning(f"Skipping logo seed (S3 unavailable): {exc}")
             logo_file = None
-    else:
+    elif not logo_source.is_file():
         logger.warning(f"Logo asset missing at {logo_source}, skipping")
 
     canvas_content = _build_welcome_canvas(

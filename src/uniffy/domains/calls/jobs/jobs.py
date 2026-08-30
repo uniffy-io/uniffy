@@ -11,7 +11,6 @@ from sqlalchemy import func, select
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.calls import Call, CallEndReason, CallParticipant
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db.session import open_session
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config
 from uniffy.domains.calls.livekit import (
     LiveKitApiError,
@@ -20,6 +19,7 @@ from uniffy.domains.calls.livekit import (
 )
 from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.calls.tokens import parse_room_call_id
+from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="calls.jobs.jobs")
 

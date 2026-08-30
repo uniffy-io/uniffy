@@ -26,7 +26,6 @@ from uniffy.core.converters.common_proto import (
     content_role_from_proto,
 )
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.calendar.converters import template_to_proto
 from uniffy.domains.calendar.rpc.support import (
     map_domain_error,
@@ -34,6 +33,7 @@ from uniffy.domains.calendar.rpc.support import (
     resolve_template_effective_policy,
 )
 from uniffy.domains.calendar.templates.operations import EventTemplateOperations
+from uniffy.infrastructure.database import open_session
 
 
 class TemplateHandlers:

@@ -36,7 +36,7 @@ def _build_ops(execute_results):
     session.delete = AsyncMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
-    return AgentFolderOperations(session), session
+    return AgentFolderOperations(session, MagicMock()), session
 
 
 def _folder(user_id, org_id, name="Work", position=0):

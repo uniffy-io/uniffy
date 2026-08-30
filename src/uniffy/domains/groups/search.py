@@ -24,9 +24,9 @@ def build_team_urn(group_id: UUID) -> str:
 class TeamSearchIndexer:
     """Index + publish stay paired by construction, per the mention contract."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, search_indexer: SearchIndexer) -> None:
         self._session = session
-        self._indexer = SearchIndexer(session)
+        self._indexer = search_indexer
 
     async def index_team(self, group: Group) -> None:
         if group.kind is not GroupKind.TEAM:

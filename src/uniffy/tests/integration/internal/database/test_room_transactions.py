@@ -14,7 +14,6 @@ from uniffy.core.models.login.group import Group
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -23,7 +22,7 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
-from uniffy.db import open_session
+from uniffy.infrastructure.database import open_session
 from uniffy.domains.permissions.members import ContentMembersOperations
 from uniffy.domains.rooms.operations import BookingOperations, RoomOperations
 
@@ -63,7 +62,7 @@ async def _audit_count(session, organization_id, action: Action) -> int:
 
 
 async def test_room_creation_rolls_back_when_initial_share_staging_fails(
-    session, env, monkeypatch
+    session, env, search_indexer, monkeypatch
 ) -> None:
     group = Group(
         organization_id=env.org_id,
@@ -81,7 +80,7 @@ async def test_room_creation_rolls_back_when_initial_share_staging_fails(
 
     try:
         with pytest.raises(RuntimeError, match="member audit unavailable"):
-            await RoomOperations(session).create_room(
+            await RoomOperations(session, search_indexer).create_room(
                 env.admin_id,
                 env.org_id,
                 name=ROLLBACK_ROOM_NAME,
@@ -115,7 +114,7 @@ async def test_room_creation_rolls_back_when_initial_share_staging_fails(
 
 
 async def test_room_and_initial_group_share_commit_before_search_failure(
-    session, env, monkeypatch
+    session, env, search_indexer, monkeypatch
 ) -> None:
     group = Group(
         organization_id=env.org_id,
@@ -138,7 +137,7 @@ async def test_room_and_initial_group_share_commit_before_search_failure(
     )
 
     try:
-        room = await RoomOperations(session).create_room(
+        room = await RoomOperations(session, search_indexer).create_room(
             env.admin_id,
             env.org_id,
             name="Atomic shared room",
@@ -164,9 +163,10 @@ async def test_room_and_initial_group_share_commit_before_search_failure(
         await _cleanup(session, env.org_id, [group_id])
 
 
-async def test_room_update_and_delete_survive_projection_failures(session, env, monkeypatch) -> None:
-    monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
-    operations = RoomOperations(session)
+async def test_room_update_and_delete_survive_projection_failures(
+    session, env, search_indexer, monkeypatch
+) -> None:
+    operations = RoomOperations(session, search_indexer)
     room = await operations.create_room(
         env.admin_id,
         env.org_id,
@@ -192,11 +192,7 @@ async def test_room_update_and_delete_survive_projection_failures(session, env, 
         assert updated.name == UPDATED_ROOM_NAME
         assert await _audit_count(session, env.org_id, Action.ROOM_UPDATED) == 1
 
-        monkeypatch.setattr(
-            SearchIndexer,
-            "remove",
-            AsyncMock(side_effect=RuntimeError("search removal unavailable")),
-        )
+        search_indexer.remove = AsyncMock(side_effect=RuntimeError("search removal unavailable"))
         await operations.delete_room(env.admin_id, env.org_id, room.id)
         await session.refresh(room)
 

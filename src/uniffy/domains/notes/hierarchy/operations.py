@@ -71,6 +71,8 @@ class NoteHierarchy:
         if permanent:
             await purge_attachments_for_content(
                 self.operations.session,
+                self.operations.storage,
+                self.operations.search_indexer,
                 organization_id=organization_id,
                 content_type=ContentType.NOTE,
                 content_ids=removed_ids,
@@ -166,6 +168,8 @@ class NoteHierarchy:
         )
         await purge_attachments_for_content(
             self.operations.session,
+            self.operations.storage,
+            self.operations.search_indexer,
             organization_id=organization_id,
             content_type=ContentType.NOTE,
             content_ids=trash_ids,

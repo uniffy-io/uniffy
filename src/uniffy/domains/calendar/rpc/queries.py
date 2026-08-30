@@ -15,7 +15,6 @@ from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.converters import event_to_proto
 from uniffy.domains.calendar.events.operations import CalendarEventOperations
@@ -29,6 +28,7 @@ from uniffy.domains.calendar.rpc.support import (
 )
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.rooms.projection import get_event_room_info
+from uniffy.infrastructure.database import open_session
 
 
 class EventQueryHandlers:
@@ -43,7 +43,7 @@ class EventQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session)
+                operations = CalendarEventOperations(session, self.search_indexer)
                 event, attendees = await operations.get_event_with_attendees(
                     user_id, organization_id, event_id
                 )
@@ -97,7 +97,7 @@ class EventQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session)
+                operations = CalendarEventOperations(session, self.search_indexer)
                 events, total = await operations.list_events(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -180,7 +180,7 @@ class EventQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session)
+                operations = CalendarEventOperations(session, self.search_indexer)
                 events = await operations.get_events_in_range(
                     user_id=user_id,
                     organization_id=organization_id,

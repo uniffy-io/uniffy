@@ -35,13 +35,13 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.agents.cron.converters import (
     cron_run_log_to_proto,
     cron_task_to_proto,
 )
 from uniffy.domains.agents.cron.operations import CronTaskOperations
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.cron.handlers")
 
@@ -108,7 +108,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 task = await ops.create_cron_task(
                     user_id=user_id,
                     organization_id=org_id,
@@ -152,7 +152,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 task = await ops.get_by_id(user_id, org_id, task_id)
                 eff_mode, eff_baseline = await _resolve_effective_policy(
                     session,
@@ -194,7 +194,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 tasks, total = await ops.list_cron_tasks(
                     user_id=user_id,
                     organization_id=org_id,
@@ -272,7 +272,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 task = await ops.update_cron_task(
                     user_id=user_id,
                     organization_id=org_id,
@@ -310,7 +310,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 await ops.delete_cron_task(
                     user_id=user_id,
                     organization_id=org_id,
@@ -340,7 +340,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 logs, total = await ops.get_run_logs(
                     user_id=user_id,
                     organization_id=org_id,
@@ -375,7 +375,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 task, run_log = await ops.trigger_now(
                     user_id=user_id,
                     organization_id=org_id,

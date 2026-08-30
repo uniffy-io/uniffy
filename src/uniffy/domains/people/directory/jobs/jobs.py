@@ -13,10 +13,11 @@ from sqlalchemy import select
 from uniffy.core.errors import ValidationError
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.people.identity import IdentitySource
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db import open_session
 from uniffy.domains.people.directory.reconcile import run_full_sync
 from uniffy.domains.people.directory.registry import build_provider
+from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="people.directory.jobs.jobs")
@@ -91,7 +92,12 @@ async def sync_identity_source(ctx: dict[str, Any], source_id: str) -> dict[str,
                 return {"status": "skipped", "reason": "inactive", "source_id": source_id}
 
             provider = await build_provider(session, source)
-            report = await run_full_sync(session, source, provider)
+            report = await run_full_sync(
+                session,
+                source,
+                provider,
+                ctx[SEARCH_INDEXER_CTX_KEY],
+            )
             return {"status": "complete", **report.as_dict()}
     except ValidationError as e:
         # Misconfiguration is permanent; retrying cannot fix it.

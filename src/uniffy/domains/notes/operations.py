@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.models.notes.note import Note
+from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -40,9 +42,21 @@ class NoteOperations(BaseContentOperations[Note]):
     content_type = ContentType.NOTE
     model_class = Note
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         register_note_content()
-        super().__init__(session)
+        super().__init__(session, search_indexer)
+        self._storage = storage
+
+    @property
+    def storage(self) -> ObjectStorage:
+        if self._storage is None:
+            raise RuntimeError("Object storage is required for note attachment mutations")
+        return self._storage
 
     def _build_search_keywords(self, model: Note) -> str:
         return NoteProjections(self).build_search_keywords(model)

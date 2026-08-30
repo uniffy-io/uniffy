@@ -135,8 +135,7 @@ async def test_attacher_still_needs_current_parent_access(
     result = MagicMock()
     result.scalar_one_or_none.return_value = attachment
     session.execute.return_value = result
-    monkeypatch.setattr(operations_module, "get_s3_client", MagicMock())
-    operations = AttachmentOperations(session)
+    operations = AttachmentOperations(session, MagicMock())
     operations._verify_content_access = AsyncMock(  # type: ignore[method-assign]
         side_effect=PermissionDeniedError("access", "content")
     )

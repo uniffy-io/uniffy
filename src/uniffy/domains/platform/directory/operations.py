@@ -34,6 +34,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.realtime.publisher import publish_token_revoke
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.core.valkey.rate_limit import check_rate_limit
@@ -240,8 +241,13 @@ def _purge_at_from(deleted_at: datetime | None) -> datetime | None:
 class PlatformDirectoryOperations:
     """Platform-operator org + user directory; gated on ``is_system_admin``."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage | None = None,
+    ) -> None:
         self._session = session
+        self._storage = storage
         self._user_ops = UserOperations(session)
 
     async def list_organizations(
@@ -403,7 +409,7 @@ class PlatformDirectoryOperations:
         if existing is not None:
             raise ValidationError("slug", "Slug is already in use")
 
-        org = await OrganizationOperations(self._session).create(
+        org = await OrganizationOperations(self._session, self._storage).create(
             name=name,
             slug=slug,
             owner_user_id=owner.id,

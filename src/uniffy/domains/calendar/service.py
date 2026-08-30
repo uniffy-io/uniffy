@@ -5,4 +5,8 @@ from uniffy.domains.calendar.rpc.scheduling import SchedulingHandlers
 
 
 class CalendarServiceImpl(CalendarHandlers, SchedulingHandlers):
-    """ConnectRPC calendar service composed from its handler groups."""
+    def __init__(self, search_indexer: SearchIndexer) -> None:
+        self.search_indexer = search_indexer
+
+
+from uniffy.core.search import SearchIndexer

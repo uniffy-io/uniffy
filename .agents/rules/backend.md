@@ -34,10 +34,12 @@ Adding a new domain:
 
 ## Dependency boundaries
 
-- `core` is the shared kernel and infrastructure layer and never imports `domains`. The Import
-  Linter contract in `pyproject.toml` enforces this for every module below `core/` with no
-  exceptions. Move a shared dependency to core or invert the integration at the application
-  composition root.
+- `core` is the shared application kernel and never imports `domains`. `infrastructure` owns generic
+  technical adapters and never imports `domains`; domain-specific adapters stay with their owner.
+  Core and domains also never import the concrete search adapters under `infrastructure/search`;
+  web, worker, and explicit script roots select and inject the engine. Import Linter enforces all
+  three live package-graph rules from `pyproject.toml` with no exceptions. Additional inward-dependency
+  ratchets land only after every violation is removed.
 - Domain-to-domain imports use an owner-approved package export or a narrow `context`, `http`,
   `contracts`, `ports`, `policy`, `projection`, or `types` module. Another domain's handlers,
   services, converters, queries, caches, and operations are implementation details.
@@ -52,7 +54,7 @@ Adding a new domain:
 - **`BaseContentOperations`** (`core/content/base_operations.py`): extending it for content gets permission checking and search indexing for free.
 - **Permission checks live inside domain operations.** The full model is in `.agents/rules/permissions.md` - the single source of truth; do not re-explain it.
 - **Multi-tenancy:** all content scoped to `organization_id`; users are global, memberships org-scoped. Verifying org access is part of every domain operation's contract.
-- **Raise domain errors (`core/errors.py`), never leak exception text to clients.** `observability/crpc.py::DOMAIN_ERROR_CODES` maps every `UNIFFYError` subclass to its Connect code for ALL unary RPCs, so a handler without local mapping still returns the right code. Handlers may map locally for precision, but an `except Exception` block must respond with the literal `"Internal server error"` - `str(e)` in a client-facing message is a leak (the `logger.exception` line keeps the details server-side).
+- **Raise domain errors (`core/errors.py`), never leak exception text to clients.** `transport/rpc.py::DOMAIN_ERROR_CODES` maps every `UNIFFYError` subclass to its Connect code for ALL unary RPCs, so a handler without local mapping still returns the right code. Handlers may map locally for precision, but an `except Exception` block must respond with the literal `"Internal server error"` - `str(e)` in a client-facing message is a leak (the `logger.exception` line keeps the details server-side).
 - **Imports at the top.** The one exception is the circular-import case in agent tool executors.
 - **Content we ship is a file, not a literal.** Prompts, templates, catalogs and the like go in `src/uniffy/data/` (see "Shipped content"), never in a triple-quoted string or a hand-written python catalog.
 - **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.
@@ -112,7 +114,7 @@ When a migration introduces a brand new enum type, create it explicitly inside `
 
 ## Logging (loguru)
 
-Configured in `observability/`; console by default, structured JSON when `LOG_FORMAT=json`.
+Configured in `infrastructure/observability/`; console by default, structured JSON when `LOG_FORMAT=json`.
 
 - **Every module binds a `component` once, right after the import:**
   ```python

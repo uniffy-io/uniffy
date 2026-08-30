@@ -89,10 +89,6 @@ async def test_lock_held_returns_skipped(lock_held) -> None:
 async def test_missing_ops_client_skips_before_loading_file_state(monkeypatch) -> None:
     monkeypatch.setattr(transcode_mod, "_get_ops_client", lambda: None)
 
-    def fail_if_called() -> None:
-        raise AssertionError("storage must not be touched without the idempotency lock")
-
-    monkeypatch.setattr(transcode_mod, "get_s3_client", fail_if_called)
     file_id = str(generate_id())
     result = await transcode_mod.transcode_video_to_mp4(
         ctx={},

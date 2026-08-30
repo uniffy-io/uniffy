@@ -3,13 +3,18 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.projects.task import Task
+from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.domains.projects.tasks.operations import TaskOperations
 
 
-async def refresh_task_search_projection(session: AsyncSession, task: Task) -> None:
-    operations = TaskOperations(session)
+async def refresh_task_search_projection(
+    session: AsyncSession,
+    task: Task,
+    search_indexer: SearchIndexer,
+) -> None:
+    operations = TaskOperations(session, search_indexer=search_indexer)
     await operations._index_for_search(task)
     labels = await TaskNotifications(session).resolve_field_option_labels(
         task.project_id,

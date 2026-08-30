@@ -194,9 +194,14 @@ class TestDeprovision:
         org_ops = MagicMock()
         org_ops.get_membership = AsyncMock(return_value=membership)
         session = _session([])
+        search_indexer = MagicMock()
         with patch.object(reconcile, "OrganizationOperations", return_value=org_ops):
             done = await reconcile.deprovision_user(
-                session, source, user_id, active_owner_ids={user_id}
+                session,
+                source,
+                user_id,
+                search_indexer,
+                active_owner_ids={user_id},
             )
         assert done is False
         assert membership.is_active is True
@@ -212,13 +217,20 @@ class TestDeprovision:
         session = _session([])
         indexer = MagicMock()
         indexer.remove_from_organization = AsyncMock()
+        search_indexer = MagicMock()
         with (
             patch.object(reconcile, "OrganizationOperations", return_value=org_ops),
             patch.object(reconcile, "invalidate_person", AsyncMock()),
             patch.object(reconcile, "UserSearchIndexer", return_value=indexer),
             patch.object(reconcile, "publish_mention_state", AsyncMock()) as publish,
         ):
-            done = await reconcile.deprovision_user(session, source, user_id, active_owner_ids=set())
+            done = await reconcile.deprovision_user(
+                session,
+                source,
+                user_id,
+                search_indexer,
+                active_owner_ids=set(),
+            )
 
         assert done is True
         assert membership.is_active is False
@@ -232,7 +244,7 @@ class TestDeprovision:
         links = [(f"ext-{i}", generate_id()) for i in range(10)]
         session = _session([_result(rows=links), _result(scalar=20)])
         with patch.object(reconcile, "deprovision_user", AsyncMock()) as deprovision:
-            await reconcile._deprovision_pass(session, source, set(), report)
+            await reconcile._deprovision_pass(session, source, MagicMock(), set(), report)
         assert report.aborted is True
         assert report.users_deprovisioned == 0
         deprovision.assert_not_awaited()
@@ -246,7 +258,13 @@ class TestDeprovision:
         with patch.object(
             reconcile, "deprovision_user", AsyncMock(return_value=True)
         ) as deprovision:
-            await reconcile._deprovision_pass(session, source, {"ext-keep"}, report)
+            await reconcile._deprovision_pass(
+                session,
+                source,
+                MagicMock(),
+                {"ext-keep"},
+                report,
+            )
         assert report.aborted is False
         assert report.users_deprovisioned == 1
         assert deprovision.await_args.args[2] == drop_id
@@ -257,12 +275,13 @@ class TestRunFullSync:
         source = _source(IdentitySourceKind.LOCAL)
         provider = LocalDirectoryProvider(LocalSourceConfig(), None)
         session = _session([])
+        search_indexer = MagicMock()
         with (
             patch.object(reconcile, "write_audit_event", AsyncMock()) as audit,
             patch.object(reconcile, "invalidate_org_people", AsyncMock()) as invalidate,
             patch.object(reconcile, "sync_people_search", AsyncMock()) as search,
         ):
-            report = await reconcile.run_full_sync(session, source, provider)
+            report = await reconcile.run_full_sync(session, source, provider, search_indexer)
 
         assert source.last_sync_status == "succeeded"
         assert source.last_sync_at is not None

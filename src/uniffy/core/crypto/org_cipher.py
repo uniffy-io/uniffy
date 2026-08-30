@@ -23,14 +23,14 @@ from uniffy.core.crypto.errors import (
     CryptoError,
     OrgDekNotFoundError,
 )
-from uniffy.core.crypto.pubsub import publish_dek_invalidation
-from uniffy.core.crypto.wrapping import generate_dek, unwrap_dek, wrap_dek
-from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
-from uniffy.observability.metrics import (
+from uniffy.core.crypto.metrics import (
     ORG_DEK_CACHE_HIT_TOTAL,
     ORG_DEK_CACHE_MISS_TOTAL,
     ORG_DEK_UNWRAP_SECONDS,
 )
+from uniffy.core.crypto.pubsub import publish_dek_invalidation
+from uniffy.core.crypto.wrapping import generate_dek, unwrap_dek, wrap_dek
+from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
 
 logger = logger.bind(component="crypto")
 
@@ -109,7 +109,7 @@ class OrgCipher:
         from uniffy.core.audit import write_audit_event
         from uniffy.core.audit.actions import Action
         from uniffy.core.models.audit.event import AuditResourceType
-        from uniffy.db import open_session
+        from uniffy.infrastructure.database import open_session
 
         try:
             async with open_session() as audit_session:

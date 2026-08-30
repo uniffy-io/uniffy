@@ -1,20 +1,24 @@
 """Notification fan-out: resolve recipients, filter on prefs, deliver per channel."""
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.events.bus import event_from_json
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
-from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS, NotificationChannel
+from uniffy.domains.notifications.delivery import (
+    DELIVERY_ADAPTERS_CTX_KEY,
+    DeliveryAdapters,
+    NotificationChannel,
+)
 from uniffy.domains.notifications.delivery.app import InAppAdapter
 from uniffy.domains.notifications.delivery.email import EmailAdapter, StagedEmailDelivery
 from uniffy.domains.notifications.delivery.push import PushAdapter
@@ -22,13 +26,13 @@ from uniffy.domains.notifications.delivery.suppression import (
     InterruptiveDeliveryContext,
     load_interruptive_delivery_contexts,
 )
-from uniffy.domains.notifications.preferences import get_delivery_preferences_bulk
-from uniffy.domains.permissions.access import ResourceAudienceResolver, ResourceKey
-from uniffy.observability.metrics import (
+from uniffy.domains.notifications.metrics import (
     NOTIFICATION_DELIVERIES_TOTAL,
     NOTIFICATION_EVENTS_TOTAL,
     NOTIFICATION_RECIPIENTS_DROPPED_TOTAL,
 )
+from uniffy.domains.notifications.preferences import get_delivery_preferences_bulk
+from uniffy.domains.permissions.access import ResourceAudienceResolver, ResourceKey
 
 logger = logger.bind(component="notifications.jobs.jobs")
 
@@ -45,7 +49,9 @@ async def process_notification_event(
         NOTIFICATION_EVENTS_TOTAL.labels(status="error").inc()
         return {"status": "error", "reason": "invalid_event"}
 
-    async with open_session() as session:
+    session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
+    delivery_adapters = cast(DeliveryAdapters, ctx[DELIVERY_ADAPTERS_CTX_KEY])
+    async with session_factory() as session:
         recipient_ids = await _resolve_recipients(session, event)
 
         if not recipient_ids:
@@ -81,8 +87,8 @@ async def process_notification_event(
             metadata=event.metadata,
         )
 
-        in_app_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.IN_APP)
-        email_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.EMAIL)
+        in_app_adapter = delivery_adapters.get(NotificationChannel.IN_APP)
+        email_adapter = delivery_adapters.get(NotificationChannel.EMAIL)
         pending_notifications: list[Notification] = []
         pending_email_deliveries: list[StagedEmailDelivery] = []
         suppression_contexts: dict[UUID, InterruptiveDeliveryContext] | None = None
@@ -116,7 +122,7 @@ async def process_notification_event(
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="in_app").inc()
 
             if NotificationChannel.BROWSER in channels:
-                push_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.BROWSER)
+                push_adapter = delivery_adapters.get(NotificationChannel.BROWSER)
                 if isinstance(push_adapter, PushAdapter):
                     await push_adapter.deliver_with_session(
                         session,
@@ -174,7 +180,8 @@ async def deliver_push_notification(
     source_urn: str | None = None,
 ) -> dict[str, Any]:
     """Standalone retryable push delivery to one user's registered subscriptions."""
-    push_adapter = DELIVERY_ADAPTERS.get(NotificationChannel.BROWSER)
+    delivery_adapters = cast(DeliveryAdapters, ctx[DELIVERY_ADAPTERS_CTX_KEY])
+    push_adapter = delivery_adapters.get(NotificationChannel.BROWSER)
     if not push_adapter:
         return {"status": "skipped", "reason": "no_push_adapter"}
 
@@ -189,7 +196,8 @@ async def deliver_push_notification(
     )
 
     if isinstance(push_adapter, PushAdapter):
-        async with open_session() as session:
+        session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
+        async with session_factory() as session:
             ok = await push_adapter.deliver_with_session(session, uid, event)
             await session.commit()
             return {"status": "success" if ok else "skipped"}

@@ -16,13 +16,13 @@ from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import get_realtime_adapter
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
-from uniffy.core.realtime.state import DocKey, YDocSession
-from uniffy.core.types import ContentType
-from uniffy.db.session import open_session
-from uniffy.observability.metrics import (
+from uniffy.core.realtime.metrics import (
     REALTIME_SNAPSHOT_DROPPED_TOTAL,
     REALTIME_SNAPSHOT_DURATION,
 )
+from uniffy.core.realtime.state import DocKey, YDocSession
+from uniffy.core.types import ContentType
+from uniffy.infrastructure.database.session import open_session
 
 DEBOUNCE_SECONDS = 5.0
 # Continuous edits re-arm the debounce forever; cap how long a doc may stay unflushed.

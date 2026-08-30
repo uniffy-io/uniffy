@@ -24,11 +24,11 @@ from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.valkey.streams import get_chat_active_run, request_run_cancel
-from uniffy.db import open_session
 from uniffy.domains.agents.bridge.operations import AgentChatBridge
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.features import is_chat_agents_enabled
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.bridge.handlers")
 
@@ -82,7 +82,7 @@ class AgentConfirmationHandlers:
                         "Agents-in-chat is not enabled for this organization",
                     )
 
-                bridge = AgentChatBridge(session)
+                bridge = AgentChatBridge(session, open_session)
                 await bridge.handle_confirmation_decision(
                     request_id=request_id,
                     channel_id=channel_id,

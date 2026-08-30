@@ -13,7 +13,7 @@ import valkey.asyncio as aioredis
 from loguru import logger
 
 from uniffy.core.valkey.config import ValkeyConfig
-from uniffy.observability.metrics import CACHE_OP_TIMEOUT_TOTAL
+from uniffy.core.valkey.metrics import CACHE_OP_TIMEOUT_TOTAL
 
 CACHE_OP_TIMEOUT_SECONDS = 0.15
 _INIT_PING_TIMEOUT_SECONDS = 1.0

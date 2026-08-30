@@ -24,7 +24,7 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
-from uniffy.db.session import open_session
+from uniffy.infrastructure.database.session import open_session
 
 ENV_GATE = "ENABLE_BREAK_GLASS_CLI"
 OPERATOR_ENV = "UNIFFY_BREAK_GLASS_OPERATOR"

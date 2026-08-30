@@ -10,7 +10,8 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.files.file import File
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.files.folders.operations import FolderOperations
 from uniffy.domains.files.quota.operations import QuotaOperations
@@ -24,10 +25,16 @@ class FileMutationOperations:
     def __init__(self, files: object) -> None:
         self.files = files
         self.session = files.session
-        self.s3 = files.s3
         self.content_type = files.content_type
         self.access_query = files.access_query
-        self.search_indexer = files.search_indexer
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        return self.files.search_indexer
+
+    @property
+    def storage(self) -> ObjectStorage:
+        return self.files.storage
 
     async def update(
         self,
@@ -62,7 +69,7 @@ class FileMutationOperations:
         await self.session.refresh(file)
 
         if tag_ids is not None:
-            tag_ops = TagOperations(self.session)
+            tag_ops = TagOperations(self.session, self.search_indexer)
             await tag_ops.replace_manual_tags(
                 actor_id=user_id,
                 organization_id=organization_id,
@@ -114,7 +121,11 @@ class FileMutationOperations:
 
         folder_name = ""
         if folder_id is not None:
-            folder_ops = FolderOperations(self.session)
+            folder_ops = FolderOperations(
+                self.session,
+                self.storage,
+                self.search_indexer,
+            )
             folder = await folder_ops.get_by_id(folder_id, organization_id)
             if not folder or folder.is_deleted:
                 raise NotFoundError("Folder", folder_id)
@@ -156,7 +167,11 @@ class FileMutationOperations:
             logger.opt(exception=True).warning(f"Failed to publish parent_label for file {file.id}")
 
         if refresh_stats:
-            folder_ops = FolderOperations(self.session)
+            folder_ops = FolderOperations(
+                self.session,
+                self.storage,
+                self.search_indexer,
+            )
             await folder_ops.refresh_folder_stats(previous_folder_id, organization_id)
             await folder_ops.refresh_folder_stats(folder_id, organization_id)
 
@@ -189,13 +204,13 @@ class FileMutationOperations:
 
             versions = await self.files.versions.list_versions(file_id)
             for v in versions:
-                await self.s3.delete_object(v.storage_key)
+                await self.storage.delete_object(v.storage_key)
                 await self.session.delete(v)
             await self.session.flush()
 
             # Delete the file's own S3 object (if not already covered by a version)
             if not versions or all(v.storage_key != file.storage_key for v in versions):
-                await self.s3.delete_object(file.storage_key)
+                await self.storage.delete_object(file.storage_key)
 
             # Delete from database
             await self.session.delete(file)
@@ -221,7 +236,7 @@ class FileMutationOperations:
                 )
 
         if permanent:
-            tag_ops = TagOperations(self.session)
+            tag_ops = TagOperations(self.session, self.search_indexer)
             await tag_ops.unassign_all_for_urn(
                 actor_id=user_id,
                 organization_id=file_org,
@@ -245,7 +260,11 @@ class FileMutationOperations:
         )
         await self.session.commit()
 
-        await FolderOperations(self.session).refresh_folder_stats(parent_folder_id, organization_id)
+        await FolderOperations(
+            self.session,
+            self.storage,
+            self.search_indexer,
+        ).refresh_folder_stats(parent_folder_id, organization_id)
 
         return True
 
@@ -282,6 +301,10 @@ class FileMutationOperations:
         await self.files._index_for_search(model=file)
         await self.session.commit()
 
-        await FolderOperations(self.session).refresh_folder_stats(file.folder_id, organization_id)
+        await FolderOperations(
+            self.session,
+            self.storage,
+            self.search_indexer,
+        ).refresh_folder_stats(file.folder_id, organization_id)
 
         return file

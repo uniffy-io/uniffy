@@ -16,8 +16,8 @@ from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.shared import AttendeeStatus, NotificationType, RecurrencePattern
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.calendar.reminders import is_recurring_master, next_reminder_start
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="calendar.jobs.jobs")
 

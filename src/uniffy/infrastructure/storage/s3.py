@@ -1,4 +1,4 @@
-"""Async S3 client wrapper; simple + multipart uploads and streaming downloads."""
+"""Async S3-compatible object-storage adapter."""
 
 import os
 import time
@@ -11,20 +11,18 @@ from botocore.config import Config as BotocoreConfig
 from loguru import logger
 from types_aiobotocore_s3.client import S3Client as S3ClientType
 
-from uniffy.observability.metrics import (
+from uniffy.core.storage import DEFAULT_CHUNK_SIZE
+from uniffy.infrastructure.storage.metrics import (
     S3_BYTES_TRANSFERRED,
     S3_OPERATION_DURATION,
     S3_OPERATION_ERRORS_TOTAL,
     S3_OPERATIONS_TOTAL,
 )
 
-logger = logger.bind(component="storage.s3_client")
-
-# S3 multipart minimum.
-DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024
+logger = logger.bind(component="infrastructure.storage.s3")
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class S3Config:
     """S3 connection configuration."""
 
@@ -54,17 +52,7 @@ class S3Config:
         )
 
 
-@dataclass
-class MultipartUploadInfo:
-    """In-progress multipart upload."""
-
-    upload_id: str
-    bucket: str
-    key: str
-    parts: list[dict]
-
-
-class S3Client:
+class S3Storage:
     """Async aioboto3 wrapper covering simple + streaming + multipart S3 operations."""
 
     def __init__(self, config: S3Config | None = None) -> None:
@@ -78,6 +66,17 @@ class S3Client:
                 "mode": "adaptive",
             },
         )
+
+    @property
+    def bucket_name(self) -> str:
+        return self.config.bucket_name
+
+    async def startup(self) -> None:
+        await self.ensure_bucket_exists()
+        logger.info("S3 storage initialized")
+
+    async def shutdown(self) -> None:
+        logger.info("S3 storage closed")
 
     @asynccontextmanager
     async def _get_client(self) -> AsyncIterator[S3ClientType]:
@@ -473,26 +472,3 @@ class S3Client:
                 ExpiresIn=expires_in,
             )
         return url
-
-
-_s3_client: S3Client | None = None
-
-
-def get_s3_client() -> S3Client:
-    global _s3_client
-    if _s3_client is None:
-        _s3_client = S3Client()
-    return _s3_client
-
-
-async def init_s3() -> None:
-    """Initialize the process-singleton S3 client and ensure the bucket exists."""
-    client = get_s3_client()
-    await client.ensure_bucket_exists()
-    logger.info("S3 storage initialized")
-
-
-async def close_s3() -> None:
-    global _s3_client
-    _s3_client = None
-    logger.info("S3 storage closed")

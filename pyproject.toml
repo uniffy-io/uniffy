@@ -188,3 +188,24 @@ type = "forbidden"
 source_modules = ["uniffy.core"]
 forbidden_modules = ["uniffy.domains"]
 allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Infrastructure must not import domains"
+type = "forbidden"
+source_modules = ["uniffy.infrastructure"]
+forbidden_modules = ["uniffy.domains"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Application layers must not import search adapters"
+type = "forbidden"
+source_modules = ["uniffy.core", "uniffy.domains"]
+forbidden_modules = ["uniffy.infrastructure.search"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Application layers must not import observability adapters"
+type = "forbidden"
+source_modules = ["uniffy.core", "uniffy.domains"]
+forbidden_modules = ["uniffy.infrastructure.observability"]
+allow_indirect_imports = true

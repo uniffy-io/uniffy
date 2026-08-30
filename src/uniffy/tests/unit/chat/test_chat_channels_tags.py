@@ -33,6 +33,7 @@ def _make_ops() -> ChatChannelOperations:
     ops = ChatChannelOperations.__new__(ChatChannelOperations)
     ops.session = MagicMock()
     ops.access = MagicMock()
+    ops._search_indexer = MagicMock()
     return ops
 
 

@@ -15,9 +15,9 @@ from uniffy_proto.superadmin.v1.system_encryption_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.platform.encryption.converters import status_to_proto
 from uniffy.domains.platform.encryption.operations import SystemEncryptionOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="platform.encryption.handlers")
 

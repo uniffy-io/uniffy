@@ -23,6 +23,7 @@ def _make_agent() -> Agent:
 def _make_ops() -> AgentOperations:
     ops = AgentOperations.__new__(AgentOperations)
     ops.session = MagicMock()
+    ops._search_indexer = MagicMock()
     return ops
 
 

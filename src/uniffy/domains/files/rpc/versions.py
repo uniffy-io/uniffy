@@ -15,12 +15,12 @@ from uniffy_proto.files.v1.files_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.files.converters import (
     file_to_proto,
     file_version_to_proto,
 )
 from uniffy.domains.files.operations import FileOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.rpc.versions")
 
@@ -48,7 +48,7 @@ class VersionHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
 
                 # Verify access
                 await ops.get_by_id(user_id, organization_id, file_id)
@@ -87,7 +87,7 @@ class VersionHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
                 file = await ops.restore_file_version(user_id, organization_id, file_id, version_id)
                 user_role = await ops._resolve_role(user_id, organization_id, file)
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])

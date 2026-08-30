@@ -8,7 +8,9 @@ from pathlib import Path
 
 from loguru import logger
 
-from uniffy.db.session import open_session
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
+from uniffy.infrastructure.database.session import open_session
 from uniffy.scripts.demo_company.agents import seed_agents
 from uniffy.scripts.demo_company.chat import seed_chat
 from uniffy.scripts.demo_company.context import (
@@ -52,6 +54,8 @@ DOMAINS = tuple(DemoDomain)
 
 async def seed_demo_company(
     *,
+    storage: ObjectStorage,
+    search_indexer: SearchIndexer,
     content_dir: Path | None = None,
     org_slug: str | None = None,
     actor_email: str | None = None,
@@ -74,6 +78,8 @@ async def seed_demo_company(
 
         ctx = DemoContext(
             session=session,
+            storage=storage,
+            search_indexer=search_indexer,
             organization_id=organization.id,
             actor_id=actor.id,
             timezone=content.manifest.timezone,

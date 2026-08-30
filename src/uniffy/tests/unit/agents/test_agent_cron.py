@@ -72,6 +72,7 @@ class TestListCronTasksAccessFilter:
         ops = CronTaskOperations.__new__(CronTaskOperations)
         ops.session = session
         ops.access_query = ContentAccessQuery(session)
+        ops._search_indexer = MagicMock()
 
         agent_ops = MagicMock()
         agent_ops.get_by_id = AsyncMock()
@@ -110,6 +111,7 @@ class TestCronGetRunsTool:
             user_id=generate_id(),
             organization_id=generate_id(),
             agent_id=generate_id(),
+            search_indexer=MagicMock(),
         )
         ops = MagicMock()
         ops.get_run_logs = AsyncMock(return_value=(logs, total if total is not None else len(logs)))

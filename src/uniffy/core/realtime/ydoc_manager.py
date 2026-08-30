@@ -23,6 +23,14 @@ from uniffy.core.realtime.auth import (
     WS_CLOSE_TOKEN_REVOKED,
 )
 from uniffy.core.realtime.identity import replica_id
+from uniffy.core.realtime.metrics import (
+    REALTIME_ACTIVE_CLIENTS,
+    REALTIME_ACTIVE_DOCS,
+    REALTIME_FRAMES_DROPPED_TOTAL,
+    REALTIME_HYDRATION_DURATION,
+    REALTIME_PERMISSION_REJECTIONS_TOTAL,
+    REALTIME_UPDATE_MESSAGES_TOTAL,
+)
 from uniffy.core.realtime.multiplex import encode_doc_frame
 from uniffy.core.realtime.publisher import publish_doc_update
 from uniffy.core.realtime.router import RouterCallbacks, router
@@ -36,15 +44,7 @@ from uniffy.core.realtime.state import (
 )
 from uniffy.core.realtime.wire import create_update_message
 from uniffy.core.types import ContentRole
-from uniffy.db.session import open_session
-from uniffy.observability.metrics import (
-    REALTIME_ACTIVE_CLIENTS,
-    REALTIME_ACTIVE_DOCS,
-    REALTIME_FRAMES_DROPPED_TOTAL,
-    REALTIME_HYDRATION_DURATION,
-    REALTIME_PERMISSION_REJECTIONS_TOTAL,
-    REALTIME_UPDATE_MESSAGES_TOTAL,
-)
+from uniffy.infrastructure.database.session import open_session
 
 __all__ = ["ClientHandle", "DocKey", "WSSession", "YDocManager", "YDocSession", "ydoc_manager"]
 

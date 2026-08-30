@@ -24,6 +24,7 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
 from uniffy.db.seed_docs import (
     seed_workspace_docs,
@@ -72,12 +73,33 @@ class StagedOrganizationCreate:
 
 
 class OrganizationOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self._session = session
+        self._storage = storage
+        self._search_indexer = search_indexer
 
         from uniffy.domains.users.search import UserSearchIndexer
 
-        self._user_indexer = UserSearchIndexer(session)
+        self._user_indexer = (
+            UserSearchIndexer(session, search_indexer) if search_indexer is not None else None
+        )
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("Search indexing is required for organization mutations")
+        return self._search_indexer
+
+    @property
+    def user_indexer(self):
+        if self._user_indexer is None:
+            raise RuntimeError("Search indexing is required for organization mutations")
+        return self._user_indexer
 
     async def get_by_id(self, org_id: UUID) -> Organization:
         result = await self._session.execute(select(Organization).where(Organization.id == org_id))
@@ -194,7 +216,7 @@ class OrganizationOperations:
         org = staged.organization
         organization_id = org.id
         try:
-            await self._user_indexer.index_for_organization(staged.owner, organization_id)
+            await self.user_indexer.index_for_organization(staged.owner, organization_id)
         except Exception:
             await self._session.rollback()
             logger.opt(exception=True).warning(
@@ -204,9 +226,10 @@ class OrganizationOperations:
             await self._refresh_staged_organization(staged)
 
         try:
-            await ChatChannelOperations(self._session).finish_channel_create_after_commit(
-                staged.default_channel
-            )
+            await ChatChannelOperations(
+                self._session,
+                search_indexer=self.search_indexer,
+            ).finish_channel_create_after_commit(staged.default_channel)
         except Exception:
             await self._session.rollback()
             logger.opt(exception=True).warning(
@@ -216,7 +239,11 @@ class OrganizationOperations:
             await self._refresh_staged_organization(staged)
 
         try:
-            await finish_default_agent_after_commit(self._session, staged.default_agent)
+            await finish_default_agent_after_commit(
+                self._session,
+                staged.default_agent,
+                self.search_indexer,
+            )
         except Exception:
             await self._session.rollback()
             logger.opt(exception=True).warning(
@@ -248,7 +275,8 @@ class OrganizationOperations:
                 session=self._session,
                 org=staged.organization,
                 admin_user=staged.owner,
-                search_indexer=SearchIndexer(self._session),
+                search_indexer=self.search_indexer,
+                storage=self._storage,
             )
             await self._session.commit()
         except Exception:
@@ -520,7 +548,7 @@ class OrganizationOperations:
             result = await self._session.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
             if user:
-                await self._user_indexer.index_for_organization(user, org_id)
+                await self.user_indexer.index_for_organization(user, org_id)
         except Exception:
             logger.opt(exception=True).warning(
                 f"Failed to index organization member {user_id} in {org_id}"
@@ -638,7 +666,7 @@ class OrganizationOperations:
         await self._session.commit()
 
         try:
-            await self._user_indexer.remove_from_organization(target_user_id, org_id)
+            await self.user_indexer.remove_from_organization(target_user_id, org_id)
         except Exception:
             logger.opt(exception=True).warning(
                 "Organization member removal committed with stale search projection",

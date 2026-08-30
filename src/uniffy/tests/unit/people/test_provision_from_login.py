@@ -59,18 +59,29 @@ class TestProvisionFromLogin:
         load_result = MagicMock()
         load_result.scalar_one = MagicMock(return_value=user)
         session = _session([load_result])
+        search_indexer = MagicMock()
         with (
             patch.object(reconcile, "upsert_user", AsyncMock(return_value=user.id)) as upsert,
             patch.object(reconcile, "invalidate_person", AsyncMock()) as invalidate,
             patch.object(reconcile, "sync_people_search", AsyncMock()) as search,
         ):
-            provisioned = await reconcile.provision_from_login(session, source, _record())
+            provisioned = await reconcile.provision_from_login(
+                session,
+                source,
+                _record(),
+                search_indexer,
+            )
 
         assert provisioned is user
         upsert.assert_awaited_once()
         session.commit.assert_awaited()
         invalidate.assert_awaited_once_with(source.organization_id, user.id)
-        search.assert_awaited_once_with(session, source.organization_id, [user.id])
+        search.assert_awaited_once_with(
+            session,
+            search_indexer,
+            source.organization_id,
+            [user.id],
+        )
 
     async def test_unprovisionable_record_raises_typed_error(self) -> None:
         session = _session([])
@@ -78,4 +89,9 @@ class TestProvisionFromLogin:
             patch.object(reconcile, "upsert_user", AsyncMock(return_value=None)),
             pytest.raises(ValidationError, match="record"),
         ):
-            await reconcile.provision_from_login(session, _source(), _record(active=False))
+            await reconcile.provision_from_login(
+                session,
+                _source(),
+                _record(active=False),
+                MagicMock(),
+            )

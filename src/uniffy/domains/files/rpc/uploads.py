@@ -29,13 +29,12 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.files.multipart_upload import UploadStatus
-from uniffy.core.storage import get_s3_client
-from uniffy.db import open_session
 from uniffy.domains.files.converters import (
     file_to_proto,
     upload_to_proto_status,
 )
 from uniffy.domains.files.operations import FileOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.rpc.uploads")
 
@@ -62,7 +61,7 @@ class UploadHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
 
                 access_mode = None
                 if request.access_mode:
@@ -115,11 +114,11 @@ class UploadHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid upload_id")
 
         user_id = current_user_id()
-        s3 = get_s3_client()
+        storage = self.storage
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, storage, self.search_indexer)
 
                 upload = await ops.get_upload_status(upload_id)
                 if not upload:
@@ -132,7 +131,7 @@ class UploadHandlers:
                         f"Upload is {upload.status.value}; cannot accept chunks.",
                     )
 
-                etag = await s3.upload_part(
+                etag = await storage.upload_part(
                     key=upload.storage_key,
                     upload_id=upload.s3_upload_id,
                     part_number=request.chunk_number,
@@ -185,7 +184,7 @@ class UploadHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
 
                 file = await ops.complete_upload(
                     upload_id=upload_id,
@@ -226,7 +225,7 @@ class UploadHandlers:
     ) -> UploadChunksResponse:
         """Client-streaming chunk upload; returns the completed file."""
         user_id = current_user_id()
-        s3 = get_s3_client()
+        storage = self.storage
 
         upload_id: UUID | None = None
         storage_key: str | None = None
@@ -234,7 +233,7 @@ class UploadHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, storage, self.search_indexer)
 
                 async for chunk in request_iterator:
                     if upload_id is None:
@@ -253,7 +252,7 @@ class UploadHandlers:
                         storage_key = upload.storage_key
                         s3_upload_id = upload.s3_upload_id
 
-                    etag = await s3.upload_part(
+                    etag = await storage.upload_part(
                         key=storage_key,
                         upload_id=s3_upload_id,
                         part_number=chunk.chunk_number,
@@ -309,7 +308,7 @@ class UploadHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
                 upload = await ops.get_upload_status(upload_id)
 
                 # Same not-found shape for a foreign upload as for a missing one,
@@ -349,7 +348,7 @@ class UploadHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
                 await ops.abort_upload(upload_id, user_id)
 
                 return AbortUploadResponse(

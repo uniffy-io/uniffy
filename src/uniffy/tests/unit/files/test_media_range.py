@@ -6,11 +6,25 @@ end positions, suffix ranges, and clamp anything past the object size so S3 neve
 
 from __future__ import annotations
 
-import pytest
+from typing import cast
 
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from uniffy.core.storage import ObjectStorage
+from uniffy.domains.files.operations import FileOperations
 from uniffy.domains.files.routes import _parse_range
 
 _TOTAL = 1000
+
+
+def test_asset_read_operations_do_not_require_search_indexer() -> None:
+    session = cast(AsyncSession, object())
+    storage = cast(ObjectStorage, object())
+
+    operations = FileOperations(session, storage)
+
+    assert operations.storage is storage
 
 
 @pytest.mark.parametrize(

@@ -21,14 +21,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.crypto.cache import get_deployment_dek_cache
 from uniffy.core.crypto.consumers import DEPLOYMENT_CRYPTO_CONSUMERS
 from uniffy.core.crypto.errors import CiphertextFormatError, CryptoError
-from uniffy.core.crypto.pubsub import publish_deployment_dek_invalidation
-from uniffy.core.crypto.wrapping import generate_dek, unwrap_dek, wrap_dek
-from uniffy.core.models.crypto.deployment_encryption_key import DeploymentEncryptionKey
-from uniffy.observability.metrics import (
+from uniffy.core.crypto.metrics import (
     DEPLOYMENT_DEK_CACHE_HIT_TOTAL,
     DEPLOYMENT_DEK_CACHE_MISS_TOTAL,
     DEPLOYMENT_DEK_UNWRAP_SECONDS,
 )
+from uniffy.core.crypto.pubsub import publish_deployment_dek_invalidation
+from uniffy.core.crypto.wrapping import generate_dek, unwrap_dek, wrap_dek
+from uniffy.core.models.crypto.deployment_encryption_key import DeploymentEncryptionKey
 
 _REENCRYPT_BATCH_SIZE = 200
 

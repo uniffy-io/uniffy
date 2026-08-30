@@ -11,7 +11,10 @@ from uuid import UUID
 
 import pytest
 
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.jobs import jobs as agent_run_mod
@@ -108,7 +111,13 @@ def _install_runtime_stub(
     captured: list[Any] = []
 
     class _Stub:
-        def __init__(self, _session: Any) -> None:
+        def __init__(
+            self,
+            _session: Any,
+            _storage: Any,
+            _search_indexer: Any,
+            _session_factory: Any,
+        ) -> None:
             captured.append(self)
             self.invocations: list[dict[str, Any]] = []
 
@@ -128,14 +137,6 @@ async def _stream(
         yield ev
     if raises is not None:
         raise raises
-
-
-def _install_open_session_stub(monkeypatch) -> None:
-    @asynccontextmanager
-    async def fake_open_session():
-        yield object()
-
-    monkeypatch.setattr(agent_run_mod, "open_session", fake_open_session)
 
 
 def _install_publisher_stub(monkeypatch) -> _PublisherRecorder:
@@ -187,19 +188,37 @@ def _ids() -> dict[str, str]:
     }
 
 
+def _worker_ctx(valkey: _FakeValkey | None = None) -> dict[str, Any]:
+    @asynccontextmanager
+    async def session_factory():
+        yield object()
+
+    return {
+        "valkey": valkey or _FakeValkey(),
+        SESSION_FACTORY_CTX_KEY: session_factory,
+        OBJECT_STORAGE_CTX_KEY: object(),
+        SEARCH_INDEXER_CTX_KEY: object(),
+    }
+
+
 class TestRunAgentSession:
     async def test_configured_deadline_stops_the_run(self, monkeypatch) -> None:
         ops_client = _install_ops_client(monkeypatch)
         _install_session_stub(monkeypatch)
         publisher = _install_publisher_stub(monkeypatch)
-        _install_open_session_stub(monkeypatch)
         _install_state_stub(monkeypatch)
 
         async def settings(_session, _organization_id):
             return SimpleNamespace(send_deadline_seconds=0.01)
 
         class Runtime:
-            def __init__(self, _session: Any) -> None:
+            def __init__(
+                self,
+                _session: Any,
+                _storage: Any,
+                _search_indexer: Any,
+                _session_factory: Any,
+            ) -> None:
                 pass
 
             async def stream_send_message(self, **_kwargs: Any):
@@ -210,7 +229,7 @@ class TestRunAgentSession:
         monkeypatch.setattr(agent_run_mod, "RuntimeOperations", Runtime)
 
         result = await agent_run_mod.run_agent_session(
-            ctx={"valkey": _FakeValkey()},
+            ctx=_worker_ctx(),
             content="hi",
             files=None,
             user_timezone=None,
@@ -226,13 +245,12 @@ class TestRunAgentSession:
         session_ops = _install_session_stub(monkeypatch)
         runtime_ops = _install_runtime_stub(monkeypatch, events=[_make_done_event()])
         publisher = _install_publisher_stub(monkeypatch)
-        _install_open_session_stub(monkeypatch)
         _install_state_stub(monkeypatch)
         valkey = _FakeValkey()
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"valkey": valkey},
+                ctx=_worker_ctx(valkey),
                 content="hi",
                 files=None,
                 user_timezone=None,
@@ -259,13 +277,12 @@ class TestRunAgentSession:
             ],
         )
         publisher = _install_publisher_stub(monkeypatch)
-        _install_open_session_stub(monkeypatch)
         _install_state_stub(monkeypatch)
         valkey = _FakeValkey()
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"valkey": valkey},
+                ctx=_worker_ctx(valkey),
                 content="hi",
                 files=None,
                 user_timezone=None,
@@ -293,13 +310,12 @@ class TestRunAgentSession:
             events=[StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="partial", sequence=1)],
         )
         _install_publisher_stub(monkeypatch)
-        _install_open_session_stub(monkeypatch)
         _install_state_stub(monkeypatch)
         valkey = _FakeValkey()
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"valkey": valkey},
+                ctx=_worker_ctx(valkey),
                 content="hi",
                 files=None,
                 user_timezone=None,
@@ -316,13 +332,12 @@ class TestRunAgentSession:
         boom = RuntimeError("driver blew up")
         _install_runtime_stub(monkeypatch, events=[], raises=boom)
         publisher = _install_publisher_stub(monkeypatch)
-        _install_open_session_stub(monkeypatch)
         states = _install_state_stub(monkeypatch)
         valkey = _FakeValkey()
 
         async def run() -> Any:
             return await agent_run_mod.run_agent_session(
-                ctx={"valkey": valkey},
+                ctx=_worker_ctx(valkey),
                 content="hi",
                 files=None,
                 user_timezone=None,
@@ -349,7 +364,7 @@ class TestRunAgentSession:
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"valkey": _FakeValkey()},
+                ctx=_worker_ctx(),
                 run_id="not-a-uuid",
                 user_id=str(generate_id()),
                 organization_id=str(generate_id()),
@@ -369,7 +384,6 @@ class TestRunAgentSession:
         _install_session_stub(monkeypatch)
         captured = _install_runtime_stub(monkeypatch, events=[_make_done_event()])
         _install_publisher_stub(monkeypatch)
-        _install_open_session_stub(monkeypatch)
         _install_state_stub(monkeypatch)
 
         files = [
@@ -385,7 +399,7 @@ class TestRunAgentSession:
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"valkey": _FakeValkey()},
+                ctx=_worker_ctx(),
                 content="hi",
                 files=files,
                 user_timezone="UTC",

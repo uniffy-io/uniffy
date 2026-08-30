@@ -16,10 +16,10 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
 )
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
-from uniffy.db import open_session
 from uniffy.domains.calendar.categories.operations import CategoryOperations
 from uniffy.domains.calendar.converters import category_to_proto
 from uniffy.domains.calendar.rpc.support import map_domain_error, parse_uuid
+from uniffy.infrastructure.database import open_session
 
 
 class CategoryHandlers:

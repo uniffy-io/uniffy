@@ -73,7 +73,8 @@ class _Fanout:
 
 
 async def _run(method: str, user: User, org_ids: list, fanout: _Fanout) -> None:
-    ops = UserOperations(_session(org_ids))
+    ops = UserOperations(_session(org_ids), MagicMock())
+    storage = AsyncMock()
     with ExitStack() as stack:
         for context in (
             patch.object(UserOperations, "get_by_id", AsyncMock(return_value=user)),
@@ -89,9 +90,9 @@ async def _run(method: str, user: User, org_ids: list, fanout: _Fanout) -> None:
         ):
             stack.enter_context(context)
         if method == "upload":
-            await ops.upload_avatar(user.id, b"img", "a.png")
+            await ops.upload_avatar(storage, user.id, b"img", "a.png")
         else:
-            await ops.delete_avatar(user.id)
+            await ops.delete_avatar(storage, user.id)
 
 
 async def test_upload_refreshes_profile_person_chart_and_index() -> None:

@@ -17,9 +17,9 @@ from uniffy.domains.users.avatars import get_avatar_url
 class UserSearchIndexer:
     """Per-org user indexing for @ mention lookups and member search."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, search_indexer: SearchIndexer) -> None:
         self._session = session
-        self._indexer = SearchIndexer(session)
+        self._indexer = search_indexer
 
     def _build_user_urn(self, user_id: UUID) -> str:
         return f"urn:uniffy:content:USER:{user_id}"

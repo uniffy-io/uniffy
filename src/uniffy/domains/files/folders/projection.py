@@ -13,7 +13,7 @@ from uniffy.core.auth.permissions import (
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.permissions.content_member import ContentMember
-from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -87,8 +87,7 @@ class FolderProjection:
             **await self.child_stats(folder, effective_mode),
         }
 
-        indexer = SearchIndexer(self.session)
-        await indexer.index(
+        await self.folders.search_indexer.index(
             urn=build_content_urn(ContentType.FOLDER, folder.id),
             organization_id=folder.organization_id,
             title=folder.name,
@@ -197,7 +196,8 @@ class FolderProjection:
 
     async def remove_from_search(self, folder_id: UUID) -> None:
         try:
-            indexer = SearchIndexer(self.session)
-            await indexer.remove(build_content_urn(ContentType.FOLDER, folder_id))
+            await self.folders.search_indexer.remove(
+                build_content_urn(ContentType.FOLDER, folder_id)
+            )
         except Exception:
             logger.warning(f"Search remove failed for folder {folder_id}")

@@ -22,8 +22,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.draft import ChatDraft
-from uniffy.db import open_session
 from uniffy.domains.chat.drafts.operations import ChatDraftOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.drafts.handlers")
 

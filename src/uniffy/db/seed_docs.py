@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from uniffy.core.models import Organization, User
     from uniffy.core.search.indexer import SearchIndexer
+    from uniffy.core.storage import ObjectStorage
 
 logger = logger.bind(component="db.seed_docs")
 
@@ -86,6 +87,7 @@ async def seed_workspace_docs(
     org: Organization,
     admin_user: User,
     search_indexer: SearchIndexer,
+    storage: ObjectStorage | None,
 ) -> None:
     """Create the Uniffy folder tree, the docs notes and the Welcome canvas."""
     from uniffy.core.models import Note
@@ -376,6 +378,7 @@ async def seed_workspace_docs(
             "sharing": sharing_note,
         },
         search_indexer=search_indexer,
+        storage=storage,
         tag_ids=seed_tag_ids,
         tag_slugs=seed_tag_slugs,
     )

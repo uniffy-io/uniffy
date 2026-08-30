@@ -24,7 +24,6 @@ from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.calendar.rpc.support import map_domain_error
 from uniffy.domains.calendar.scheduling import (
     BusyInterval,
@@ -33,6 +32,7 @@ from uniffy.domains.calendar.scheduling import (
 )
 from uniffy.domains.rooms.projection import get_viewable_room_busy_intervals
 from uniffy.domains.settings.operations import get_users_scheduling_context
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="calendar.rpc.scheduling")
 

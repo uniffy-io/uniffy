@@ -25,12 +25,12 @@ from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.files.file import File
 from uniffy.core.models.login.user import User
-from uniffy.db import open_session
 from uniffy.domains.files.attachments.converters import (
     attachment_to_proto,
     content_type_from_proto,
 )
 from uniffy.domains.files.attachments.operations import AttachmentOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.attachments.handlers")
 
@@ -59,7 +59,7 @@ class AttachmentsHandlersMixin:
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 attachment = await ops.attach_file(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -115,7 +115,7 @@ class AttachmentsHandlersMixin:
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 success = await ops.detach_file(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -156,7 +156,7 @@ class AttachmentsHandlersMixin:
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 attachments = await ops.list_attachments(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -215,7 +215,7 @@ class AttachmentsHandlersMixin:
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 grouped = await ops.batch_list_attachments(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -266,7 +266,7 @@ class AttachmentsHandlersMixin:
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 folder = await ops.get_or_create_attachments_folder(
                     user_id=user_id,
                     organization_id=organization_id,

@@ -13,7 +13,7 @@ from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, SubjectType, generate_id
-from uniffy.db import open_session
+from uniffy.infrastructure.database import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.permissions.members import ContentMembersOperations
 from uniffy.domains.tags.operations import TagOperations
@@ -78,6 +78,7 @@ async def _audit_count(session, organization_id) -> int:
 async def test_agent_create_rolls_back_row_sharing_tags_and_member_audit(
     session,
     env,
+    search_indexer,
 ) -> None:
     group_id, tag_id = await _seed_group_and_tag(session, env)
     name = f"Rollback agent {generate_id().hex[:10]}"
@@ -91,7 +92,7 @@ async def test_agent_create_rolls_back_row_sharing_tags_and_member_audit(
             ),
             pytest.raises(RuntimeError, match="agent audit unavailable"),
         ):
-            await AgentOperations(session).create_agent(
+            await AgentOperations(session, search_indexer).create_agent(
                 user_id=env.admin_id,
                 organization_id=env.org_id,
                 name=name,
@@ -130,6 +131,7 @@ async def test_agent_create_rolls_back_row_sharing_tags_and_member_audit(
 async def test_agent_create_commits_authoritative_facts_before_projection_failures(
     session,
     env,
+    search_indexer,
     monkeypatch,
 ) -> None:
     group_id, tag_id = await _seed_group_and_tag(session, env)
@@ -160,7 +162,7 @@ async def test_agent_create_commits_authoritative_facts_before_projection_failur
 
     agent_id = None
     try:
-        agent = await AgentOperations(session).create_agent(
+        agent = await AgentOperations(session, search_indexer).create_agent(
             user_id=env.admin_id,
             organization_id=env.org_id,
             name=f"Durable agent {generate_id().hex[:10]}",

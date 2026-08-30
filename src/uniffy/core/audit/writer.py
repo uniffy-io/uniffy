@@ -14,11 +14,11 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.audit.metrics import AUDIT_ROLE_LOOKUP_SECONDS
 from uniffy.core.audit.request_context import audit_ip_var, audit_user_agent_var
 from uniffy.core.models.audit.event import AuditActorKind, AuditEvent, AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
-from uniffy.observability.metrics import AUDIT_ROLE_LOOKUP_SECONDS
 
 logger = logger.bind(component="audit.writer")
 

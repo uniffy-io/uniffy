@@ -25,8 +25,8 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.core.types import generate_id
-from uniffy.db import close_db, init_db, open_session
-from uniffy.db.session import get_database_url
+from uniffy.infrastructure.database import close_db, init_db, open_session
+from uniffy.infrastructure.database.session import get_database_url
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")

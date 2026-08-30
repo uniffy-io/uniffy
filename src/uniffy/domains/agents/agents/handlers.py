@@ -46,7 +46,6 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.agents.converters import (
     agent_template_to_proto,
@@ -73,6 +72,7 @@ from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.tags.operations import TagOperations
 from uniffy.domains.users.operations import UserOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.agents.handlers")
 
@@ -229,7 +229,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.create_agent(
                     user_id=user_id,
                     organization_id=org_id,
@@ -286,7 +286,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.get_by_id(user_id, org_id, agent_id)
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
@@ -333,7 +333,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 if request.deleted_only:
                     await require_agents_builder(session, user_id, org_id)
                 agents, total = await ops.list_agents(
@@ -516,7 +516,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.update_agent(
                     user_id=user_id,
                     organization_id=org_id,
@@ -574,7 +574,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 await ops.delete_agent(
                     user_id=user_id,
                     organization_id=org_id,
@@ -598,7 +598,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.restore_agent(
                     user_id=user_id,
                     organization_id=org_id,
@@ -643,8 +643,9 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.upload_avatar(
+                    storage=self.storage,
                     user_id=user_id,
                     organization_id=org_id,
                     agent_id=agent_id,
@@ -686,8 +687,9 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.delete_avatar(
+                    storage=self.storage,
                     user_id=user_id,
                     organization_id=org_id,
                     agent_id=agent_id,
@@ -725,7 +727,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                agent_ops = AgentOperations(session)
+                agent_ops = AgentOperations(session, search_indexer=self.search_indexer)
                 org_ops = OrganizationOperations(session)
                 user_ops = UserOperations(session)
                 skill_ops = SkillOperations(session)

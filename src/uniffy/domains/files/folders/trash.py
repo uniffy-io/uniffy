@@ -11,8 +11,7 @@ from uniffy.core.models.files.file import File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_upload import MultipartUpload
-from uniffy.core.search.indexer import SearchIndexer, build_content_urn
-from uniffy.core.storage import get_s3_client
+from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     ContentType,
 )
@@ -122,7 +121,7 @@ class FolderTrashOperations:
         # Deletion dropped every doc from the search index; restore must put
         # them back or restored content stays unfindable. Folders go through
         # refresh_folder_stats so each re-index ships with its broadcast.
-        file_ops = FileSearchOperations(self.session)
+        file_ops = FileSearchOperations(self.session, self.folders.search_indexer)
         for restored in restored_folders:
             await self.folders.refresh_folder_stats(restored.id, organization_id)
         for file in restored_files:
@@ -230,13 +229,13 @@ class FolderTrashOperations:
         )
         files = list(files_result.scalars().all())
 
-        file_ops = FileSearchOperations(self.session)
+        file_ops = FileSearchOperations(self.session, self.folders.search_indexer)
         for file in files:
             await file_ops._require_delete(user_id, organization_id, file)
 
         # Safe to delete all files (ownership verified)
         if permanent and files:
-            s3 = get_s3_client()
+            storage = self.folders.storage
 
             # Break FK constraint: clear current_version_id before deleting versions
             for file in files:
@@ -249,16 +248,15 @@ class FolderTrashOperations:
                     select(FileVersion).where(FileVersion.file_id == file.id)
                 )
                 for version in versions_result.scalars().all():
-                    await s3.delete_object(version.storage_key)
+                    await storage.delete_object(version.storage_key)
                     await self.session.delete(version)
             await self.session.flush()
 
-        indexer = SearchIndexer(self.session)
-        tag_ops = TagOperations(self.session)
+        indexer = self.folders.search_indexer
+        tag_ops = TagOperations(self.session, indexer)
         for file in files:
             if permanent:
-                s3 = get_s3_client()
-                await s3.delete_object(file.storage_key)
+                await self.folders.storage.delete_object(file.storage_key)
                 await tag_ops.unassign_all_for_urn(
                     actor_id=user_id,
                     organization_id=organization_id,

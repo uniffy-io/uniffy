@@ -26,10 +26,8 @@ class FileQueryOperations:
     def __init__(self, files: object) -> None:
         self.files = files
         self.session = files.session
-        self.s3 = files.s3
         self.content_type = files.content_type
         self.access_query = files.access_query
-        self.search_indexer = files.search_indexer
 
     async def list_trashed_items(
         self,

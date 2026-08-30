@@ -20,11 +20,11 @@ from uniffy_proto.superadmin.v1.system_config_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.auth.mfa.policy import MfaPolicyOperations
 from uniffy.domains.platform.config.converters import config_to_proto
 from uniffy.domains.platform.config.operations import SystemConfigOperations
 from uniffy.domains.users.operations import UserOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="platform.config.handlers")
 

@@ -47,7 +47,6 @@ from uniffy.core.errors import (
 )
 from uniffy.core.jobs import enqueue_job_reconnecting
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.tags.converters import (
     assignment_to_proto,
     sort_from_proto,
@@ -65,6 +64,7 @@ from uniffy.domains.tags.operations import (
     TagSlugCollisionError,
 )
 from uniffy.domains.tags.targets import TagTargetAccess
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="tags.handlers")
 
@@ -115,7 +115,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tag = await ops.create(
                     actor_id=actor_id,
                     organization_id=organization_id,
@@ -142,7 +142,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tag, slug_changed = await ops.update(
                     actor_id=actor_id,
                     organization_id=organization_id,
@@ -183,7 +183,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 affected_urns = await ops.delete(
                     actor_id=actor_id,
                     organization_id=organization_id,
@@ -218,7 +218,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tag = await ops.get(
                     organization_id=organization_id,
                     tag_or_slug=request.tag,
@@ -242,7 +242,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tags, counts, next_token = await ops.list_tags(
                     organization_id=organization_id,
                     content_types=_content_types_from_proto(list(request.content_types)),
@@ -272,7 +272,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tags = await ops.suggest(
                     organization_id=organization_id,
                     prefix=request.prefix,
@@ -303,7 +303,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 target = parse_urn(request.content_urn)
                 if target is None:
                     raise ValidationError("content_urn", "Invalid content URN")
@@ -344,7 +344,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 target = parse_urn(request.content_urn)
                 if target is None:
                     raise ValidationError("content_urn", "Invalid content URN")
@@ -377,7 +377,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 content_urns = await ops.filter_viewable_urns(
                     actor_id=actor_id,
                     organization_id=organization_id,
@@ -441,7 +441,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 assignments, next_token = await ops.list_content(
                     organization_id=organization_id,
                     tag_or_slug=request.tag,
@@ -475,7 +475,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 target = await ops.merge_tags(
                     actor_id=actor_id,
                     organization_id=organization_id,

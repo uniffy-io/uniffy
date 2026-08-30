@@ -13,7 +13,7 @@ from uniffy.core.models.login.password_reset_token import PasswordResetToken
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.types import generate_id
-from uniffy.db import open_session
+from uniffy.infrastructure.database import open_session
 from uniffy.domains.auth.operations import AuthOperations
 from uniffy.domains.auth.passwords.reset import PasswordResetOperations
 

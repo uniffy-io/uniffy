@@ -14,7 +14,8 @@ from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.tags.tag import TagAssignment
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     ContentRole,
     ContentType,
@@ -31,9 +32,21 @@ class TaskContentOperations(BaseContentOperations[Task]):
     content_type = ContentType.TASK
     model_class = Task
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         register_project_content()
-        super().__init__(session)
+        super().__init__(session, search_indexer)
+        self._storage = storage
+
+    @property
+    def storage(self) -> ObjectStorage:
+        if self._storage is None:
+            raise RuntimeError("Object storage is required for task attachment mutations")
+        return self._storage
 
     def _build_search_keywords(self, model: Task) -> str:
         parts = [model.title]
@@ -57,7 +70,7 @@ class TaskContentOperations(BaseContentOperations[Task]):
         return {"project_id": str(model.project_id)}
 
     async def _get_search_tags_async(self, model: Task) -> list[str] | None:
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.search_indexer)
         urn = build_content_urn(self.content_type, model.id)
         bulk = await tag_ops.get_for_urns(
             organization_id=model.organization_id,
@@ -76,7 +89,7 @@ class TaskContentOperations(BaseContentOperations[Task]):
         """``tag_ids=None`` leaves manual assignments untouched."""
         if tag_ids is None:
             return
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.search_indexer)
         await tag_ops.replace_manual_tags(
             actor_id=actor_id,
             organization_id=task.organization_id,

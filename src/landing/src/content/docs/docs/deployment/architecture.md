@@ -215,10 +215,9 @@ The audit middleware captures every state-changing RPC. Each event row records a
 | Backend metrics | Prometheus client, multiprocess mode | `GET /metrics` on the backend port. |
 | Core worker metrics | Prometheus client | `:9091/metrics` (`CORE_WORKER_METRICS_PORT`). |
 | Egress worker metrics | Prometheus client | `:9092/metrics` (`EGRESS_WORKER_METRICS_PORT`). |
-| Logs | stdout, JSON when `ENVIRONMENT!=development` | Container runtime collector. |
-| Traces | OpenTelemetry-compatible | Wire your collector at the OTLP endpoint. |
+| Logs | stdout, JSON when `LOG_FORMAT=json` | Container runtime collector. |
 
-Granian forks `WORKERS` children. Prometheus multiprocess mode is mandatory or each child only reports its own slice. The bootstrap helper in `uniffy._metrics_bootstrap` manages a component subdirectory under `PROMETHEUS_MULTIPROC_BASE_DIR`. Override only when the container needs a different writable path.
+Granian forks `WORKERS` children. Prometheus multiprocess mode is mandatory or each child only reports its own slice. The bootstrap helper in `uniffy.infrastructure.observability.bootstrap` manages a component subdirectory under `PROMETHEUS_MULTIPROC_BASE_DIR`. Override only when the container needs a different writable path.
 
 ### Worker signals
 

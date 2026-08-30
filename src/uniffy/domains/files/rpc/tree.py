@@ -20,11 +20,11 @@ from uniffy.core.converters.common_proto import (
     content_role_from_proto,
 )
 from uniffy.core.errors import ValidationError
-from uniffy.db import open_session
 from uniffy.domains.files.converters import (
     folder_to_proto,
 )
 from uniffy.domains.files.operations import FolderOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.rpc.tree")
 
@@ -74,7 +74,7 @@ class TreeHandlers:
 
         try:
             async with open_session() as session:
-                ops = FolderOperations(session)
+                ops = FolderOperations(session, self.storage, self.search_indexer)
                 created = await ops.create_folder_tree(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -120,7 +120,7 @@ class TreeHandlers:
 
         try:
             async with open_session() as session:
-                ops = FolderOperations(session)
+                ops = FolderOperations(session, self.storage, self.search_indexer)
                 folder = await ops.ensure_named_folder(
                     user_id=user_id,
                     organization_id=organization_id,

@@ -6,6 +6,7 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.content.references import parse_urn
+from uniffy.core.database import SessionFactory
 from uniffy.core.types import ContentType
 from uniffy.core.valkey.tags import (
     EVENT_TAG_ASSIGNMENT_CHANGED,
@@ -13,7 +14,6 @@ from uniffy.core.valkey.tags import (
     EVENT_TAG_DELETED,
     EVENT_TAG_UPDATED,
 )
-from uniffy.db import open_session
 from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
@@ -26,9 +26,15 @@ logger = logger.bind(component="notifications.tags")
 class TagEventRelay:
     """Filter org-wide tag and mention-state events for one recipient."""
 
-    def __init__(self, user_id: UUID, organization_id: UUID) -> None:
+    def __init__(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        session_factory: SessionFactory,
+    ) -> None:
         self.user_id = user_id
         self.organization_id = organization_id
+        self._session_factory = session_factory
 
     async def project(self, payload: dict[str, Any]) -> list[dict[str, str]]:
         """Return zero or more ``MENTION_STATE_CHANGED`` change-maps for this event."""
@@ -136,7 +142,7 @@ class TagEventRelay:
 
     async def _can_view_content(self, content_type: ContentType, content_id: UUID) -> bool:
         key = ResourceKey(content_type, content_id)
-        async with open_session() as session:
+        async with self._session_factory() as session:
             decisions = await ResourceAccessResolver(session).resolve(
                 actor_id=self.user_id,
                 organization_id=self.organization_id,
@@ -149,7 +155,7 @@ class TagEventRelay:
         return await self._can_view_content(ContentType.TAG, tag_id)
 
     async def _is_active_recipient(self) -> bool:
-        async with open_session() as session:
+        async with self._session_factory() as session:
             subject = await ResourceAccessResolver(session).subject(
                 actor_id=self.user_id,
                 organization_id=self.organization_id,

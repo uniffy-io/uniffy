@@ -6,6 +6,7 @@ event right after the RSVP), they stay searchable for the invitee, and an
 explicit BLOCKED grant still beats the invitation.
 """
 
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -13,7 +14,8 @@ import pytest
 
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.search.meilisearch import MeilisearchClient
+from uniffy.core.search.engine import SearchAll, SearchAny, SearchFilter, SearchNot, SearchTerm
+from uniffy.core.search.policy import build_permission_filter
 from uniffy.core.types import AccessMode, ContentRole, generate_id
 from uniffy.domains.calendar.operations import CalendarEventOperations
 
@@ -44,6 +46,15 @@ def _make_ops(
     ops.permission_checker.is_blocked = AsyncMock(return_value=is_blocked)
     ops._is_attendee = AsyncMock(return_value=is_attendee)
     return ops
+
+
+def _walk_filter(expression: SearchFilter) -> Iterator[SearchFilter]:
+    yield expression
+    if isinstance(expression, SearchNot):
+        yield from _walk_filter(expression.expression)
+    elif isinstance(expression, SearchAll | SearchAny):
+        for nested in expression.expressions:
+            yield from _walk_filter(nested)
 
 
 class TestResolveRoleAttendeeFloor:
@@ -175,31 +186,28 @@ class TestSearchAttendeeIds:
         await ops._refresh_search_attendees(_make_event())
 
 
-class TestMeiliPermissionFilter:
+class TestSearchCandidateFilter:
     def test_filter_includes_attendee_branch(self) -> None:
-        client = MeilisearchClient.__new__(MeilisearchClient)
         user_id = generate_id()
-        filter_expr = client._build_permission_filter(generate_id(), user_id)
-        assert f'attendee_user_ids = "{user_id}"' in filter_expr
-        # The allow branch stays inside the AND with the blocked exclusion.
-        assert f'NOT blocked_user_ids = "{user_id}"' in filter_expr
+        expressions = tuple(_walk_filter(build_permission_filter(generate_id(), user_id)))
+        assert SearchTerm("attendee_user_ids", str(user_id)) in expressions
+        assert SearchNot(SearchTerm("blocked_user_ids", str(user_id))) in expressions
 
     def test_my_content_only_narrows_to_owned(self) -> None:
-        client = MeilisearchClient.__new__(MeilisearchClient)
         user_id = generate_id()
-        filter_expr = client._build_permission_filter(generate_id(), user_id, my_content_only=True)
-        # The narrowing is an extra conjunct, so an attendee-only event cannot
-        # satisfy it, and the blocked exclusion still applies to owned rows.
-        assert filter_expr.endswith(f'AND owner_id = "{user_id}"')
-        assert f'NOT blocked_user_ids = "{user_id}"' in filter_expr
+        expression = build_permission_filter(generate_id(), user_id, my_content_only=True)
+        assert isinstance(expression, SearchAll)
+        assert expression.expressions[-1] == SearchTerm("owner_id", str(user_id))
+        assert SearchNot(SearchTerm("blocked_user_ids", str(user_id))) in tuple(
+            _walk_filter(expression)
+        )
 
     def test_owner_filter_keeps_permission_and_block_clauses(self) -> None:
-        client = MeilisearchClient.__new__(MeilisearchClient)
         user_id = generate_id()
-        victim_id = generate_id()
-        filter_expr = client._build_permission_filter(generate_id(), user_id, owner_filter=victim_id)
-        # owner_filter is client-supplied: it narrows what the caller may
-        # already reach, it does not replace the permission clause.
-        assert filter_expr.endswith(f'AND owner_id = "{victim_id}"')
-        assert f'NOT blocked_user_ids = "{user_id}"' in filter_expr
-        assert '(access_mode = "OPEN_TO_ORG" AND baseline_role EXISTS)' in filter_expr
+        owner_id = generate_id()
+        expression = build_permission_filter(generate_id(), user_id, owner_filter=owner_id)
+        assert isinstance(expression, SearchAll)
+        assert expression.expressions[-1] == SearchTerm("owner_id", str(owner_id))
+        expressions = tuple(_walk_filter(expression))
+        assert SearchNot(SearchTerm("blocked_user_ids", str(user_id))) in expressions
+        assert SearchTerm("access_mode", "OPEN_TO_ORG") in expressions

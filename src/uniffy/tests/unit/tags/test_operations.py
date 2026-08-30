@@ -50,9 +50,9 @@ def _make_assignment(tag_id, urn=None, sources=None) -> TagAssignment:
 def _make_ops(session_mock) -> TagOperations:
     ops = TagOperations.__new__(TagOperations)
     ops.session = session_mock
-    ops.indexer = MagicMock()
-    ops.indexer.index = AsyncMock()
-    ops.indexer.remove = AsyncMock()
+    ops._search_indexer = MagicMock()
+    ops._search_indexer.index = AsyncMock()
+    ops._search_indexer.remove = AsyncMock()
     return ops
 
 

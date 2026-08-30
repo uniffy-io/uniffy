@@ -5,16 +5,16 @@ Idempotent via `SET NX multipart_reaper:lock` (5 min TTL); S3
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
-from uniffy.core.storage import get_s3_client
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db.session import open_session
+from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="files.jobs.multipart")
 
@@ -57,7 +57,7 @@ async def reap_expired_multipart_uploads(ctx: dict[str, Any]) -> dict[str, Any]:
     purged_aborted = 0
 
     try:
-        s3 = get_s3_client()
+        storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
         now = datetime.now(UTC)
 
         async with open_session() as session:
@@ -73,7 +73,7 @@ async def reap_expired_multipart_uploads(ctx: dict[str, Any]) -> dict[str, Any]:
 
             for upload in expired:
                 try:
-                    await s3.abort_multipart_upload(
+                    await storage.abort_multipart_upload(
                         key=upload.storage_key,
                         upload_id=upload.s3_upload_id,
                     )

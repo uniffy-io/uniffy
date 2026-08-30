@@ -9,7 +9,8 @@ from uniffy.core.models.files.file import File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_upload import MultipartUpload
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     ContentType,
 )
@@ -23,10 +24,16 @@ class FileTrashOperations:
     def __init__(self, files: object) -> None:
         self.files = files
         self.session = files.session
-        self.s3 = files.s3
         self.content_type = files.content_type
         self.access_query = files.access_query
-        self.search_indexer = files.search_indexer
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        return self.files.search_indexer
+
+    @property
+    def storage(self) -> ObjectStorage:
+        return self.files.storage
 
     async def empty_trash(
         self,
@@ -70,7 +77,7 @@ class FileTrashOperations:
 
             # Delete version objects from S3 and DB
             for version in versions:
-                await self.s3.delete_object(version.storage_key)
+                await self.storage.delete_object(version.storage_key)
                 await self.session.delete(version)
 
         # Flush version deletions before deleting files
@@ -78,10 +85,10 @@ class FileTrashOperations:
 
         # Delete files from S3 and DB, track sizes for usage decrement
         total_deleted_bytes = 0
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.search_indexer)
         for file in files:
             total_deleted_bytes += file.size_bytes
-            await self.s3.delete_object(file.storage_key)
+            await self.storage.delete_object(file.storage_key)
             await tag_ops.unassign_all_for_urn(
                 actor_id=user_id,
                 organization_id=organization_id,

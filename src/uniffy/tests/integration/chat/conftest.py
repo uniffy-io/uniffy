@@ -24,8 +24,8 @@ from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.types import SubjectType, generate_id
-from uniffy.db import close_db, init_db, open_session
-from uniffy.db.session import get_database_url
+from uniffy.infrastructure.database import close_db, init_db, open_session
+from uniffy.infrastructure.database.session import get_database_url
 
 BASE_TIME = datetime(2026, 8, 4, 9, 0, tzinfo=UTC)
 

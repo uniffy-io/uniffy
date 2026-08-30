@@ -25,12 +25,15 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.database import SessionFactory
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.approval_audit import AgentApprovalAudit, AgentApprovalStatus
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import ContentType, SubjectType, generate_id
 from uniffy.core.valkey.streams import (
     clear_chat_active_run,
@@ -82,8 +85,17 @@ def _parse_invoked_skill_id(metadata: dict | None) -> UUID | None:
 class AgentChatBridge:
     """Facade between chat messages and the agent runtime."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        session_factory: SessionFactory,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self._session = session
+        self._session_factory = session_factory
+        self._storage = storage
+        self._search_indexer = search_indexer
 
     async def respond_to_chat_message(
         self,
@@ -183,7 +195,16 @@ class AgentChatBridge:
                 await set_chat_active_run(channel_id, agent_id, run_id)
 
         async def _drive_stream() -> None:
-            runtime_ops = RuntimeOperations(self._session)
+            if self._storage is None:
+                raise RuntimeError("Object storage is required for agent runtime")
+            if self._search_indexer is None:
+                raise RuntimeError("Search indexing is required for agent runtime")
+            runtime_ops = RuntimeOperations(
+                self._session,
+                self._storage,
+                self._search_indexer,
+                self._session_factory,
+            )
             destination = ChatDestination(
                 channel_id=channel_id,
                 agent_id=agent_id,

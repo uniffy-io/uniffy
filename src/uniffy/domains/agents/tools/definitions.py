@@ -7,6 +7,9 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.search import SearchIndexer, WorkspaceSearch
+from uniffy.core.storage import ObjectStorage
+
 if TYPE_CHECKING:
     from uniffy.domains.agents.memories.scope import MemoryScopeRef
 
@@ -21,6 +24,8 @@ class ToolContext:
     session: AsyncSession
     user_id: UUID
     organization_id: UUID
+    storage: ObjectStorage | None = None
+    search_indexer: SearchIndexer | None = None
     agent_id: UUID | None = None
     session_id: UUID | None = None
     user_timezone: str | None = None
@@ -63,6 +68,12 @@ class ToolContext:
     # after the image and integration filters. Deny by default: advertisement
     # is not authorization, and a model can name a tool it was never offered.
     allowed_tools: frozenset[str] = frozenset()
+
+    @property
+    def search(self) -> WorkspaceSearch:
+        if self.search_indexer is None:
+            raise RuntimeError("Search is required for workspace tools")
+        return self.search_indexer.search
 
 
 @dataclass

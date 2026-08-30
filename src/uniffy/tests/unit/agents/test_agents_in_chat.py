@@ -128,7 +128,7 @@ def _bridge_with_missing_trigger() -> AgentChatBridge:
     """Bridge whose session returns None for any `get(...)` - exercises the missing-trigger guard."""
     session = MagicMock()
     session.get = AsyncMock(return_value=None)
-    return AgentChatBridge(session)
+    return AgentChatBridge(session, MagicMock())
 
 
 class TestChatSubject:
@@ -384,7 +384,7 @@ class TestAgentChatBridgeStub:
         )
 
     async def test_handle_confirmation_decision_raises_when_state_missing(self) -> None:
-        bridge = AgentChatBridge(MagicMock())
+        bridge = AgentChatBridge(MagicMock(), MagicMock())
         with pytest.raises(NotFoundError):
             await bridge.handle_confirmation_decision(
                 request_id=generate_id(),

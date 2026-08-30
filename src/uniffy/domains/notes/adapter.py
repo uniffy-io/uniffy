@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, NodeType
 from uniffy.domains.notes.operations import NoteOperations
 
@@ -29,6 +30,9 @@ class NoteRealtimeAdapter:
     """Realtime adapter for notes and canvases."""
 
     content_type = ContentType.NOTE
+
+    def __init__(self, search_indexer: SearchIndexer) -> None:
+        self.search_indexer = search_indexer
 
     async def authorize(
         self,
@@ -118,7 +122,7 @@ class NoteRealtimeAdapter:
             content = _render_markdown(ydoc)
             canvas_content = None
 
-        await NoteOperations(session).realtime_save(
+        await NoteOperations(session, search_indexer=self.search_indexer).realtime_save(
             organization_id=organization_id,
             note_id=content_id,
             content=content,
@@ -139,11 +143,8 @@ class NoteRealtimeAdapter:
         return True
 
 
-_NOTE_REALTIME_ADAPTER = NoteRealtimeAdapter()
-
-
-def register_note_realtime_adapter() -> None:
-    register_realtime_adapter(_NOTE_REALTIME_ADAPTER)
+def register_note_realtime_adapter(search_indexer: SearchIndexer) -> None:
+    register_realtime_adapter(NoteRealtimeAdapter(search_indexer))
 
 
 def _seed_canvas_ydoc(ydoc: pycrdt.Doc, canvas_content: dict[str, Any] | None) -> None:

@@ -91,7 +91,6 @@ from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.converters import (
@@ -113,6 +112,7 @@ from uniffy.domains.projects.operations import (
 )
 from uniffy.domains.projects.statuses import parse_task_status_semantics
 from uniffy.domains.tags.operations import TagOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="projects.handlers")
 
@@ -255,7 +255,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -304,7 +304,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await ops.get_by_id(user_id, organization_id, project_id)
                 user_role = await ops._resolve_role(user_id, organization_id, project)
 
@@ -376,7 +376,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 try:
                     project = await ops.update(user_id, organization_id, project_id, **updates)
                 except IntegrityError as exc:
@@ -429,7 +429,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 await ops.delete(user_id, organization_id, project_id, permanent=request.permanent)
                 return DeleteProjectResponse(success=True, message="Project deleted successfully")
         except ConnectError:
@@ -458,7 +458,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 projects, total = await ops.list_projects(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -585,7 +585,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(session, self.storage)
                 task = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -636,7 +636,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(session, self.storage)
                 task = await ops.get_by_id(user_id, organization_id, task_id)
                 user_role = await ops._resolve_role(user_id, organization_id, task)
 
@@ -713,7 +713,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(session, self.storage)
                 task, spawned_task = await ops.update(user_id, organization_id, task_id, **updates)
 
                 user_role = await ops._resolve_role(user_id, organization_id, task)
@@ -774,7 +774,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(session, self.storage)
                 task, spawned_task = await ops.move(
                     user_id,
                     organization_id,
@@ -852,7 +852,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(session, self.storage)
                 tasks = await ops.bulk_update(
                     user_id,
                     organization_id,
@@ -888,7 +888,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(session, self.storage)
                 await ops.delete(user_id, organization_id, task_id, permanent=request.permanent)
                 return DeleteTaskResponse(success=True, message="Task deleted successfully")
         except ConnectError:
@@ -906,7 +906,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(session, self.storage)
                 count = 0
                 for task_id_str in request.task_ids:
                     try:
@@ -976,7 +976,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(session, self.storage)
                 tasks, total = await ops.list_tasks(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -1000,7 +1000,7 @@ class ProjectsHandlers:
 
                 total_pages = (total + page_size - 1) // page_size
 
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 user_role = await project_ops._resolve_role(user_id, organization_id, project)
 
@@ -1053,7 +1053,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1089,7 +1089,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1140,7 +1140,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1184,7 +1184,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1218,7 +1218,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1263,7 +1263,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1306,7 +1306,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                task_ops = TaskOperations(session)
+                task_ops = TaskOperations(session, self.storage)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 activities, total = await queries.get_activities_for_task(
@@ -1508,7 +1508,7 @@ class WatcherHandlers:
 
         try:
             async with open_session() as session:
-                task_ops = TaskOperations(session)
+                task_ops = TaskOperations(session, self.storage)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 ops = WatcherOperations(session)
@@ -1531,7 +1531,7 @@ class WatcherHandlers:
 
         try:
             async with open_session() as session:
-                task_ops = TaskOperations(session)
+                task_ops = TaskOperations(session, self.storage)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 ops = WatcherOperations(session)

@@ -76,7 +76,6 @@ from uniffy.core.models.chat.channel_member import ChatChannelMember as ChatChan
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, SubjectType
-from uniffy.db import open_session
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
     fetch_channel_members,
@@ -97,6 +96,7 @@ from uniffy.domains.notifications.operations import NotificationOperations
 from uniffy.domains.search.operations import SearchOperations
 from uniffy.domains.search.queries import UrnAvailability
 from uniffy.domains.tags.operations import TagOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.channels.handlers")
 
@@ -226,7 +226,7 @@ class ChannelHandlers:
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
-                ops = ChatChannelOperations(session, access)
+                ops = ChatChannelOperations(session, access, self.storage, self.search_indexer)
 
                 from uniffy.core.models.chat.channel import ChannelType
 
@@ -293,7 +293,7 @@ class ChannelHandlers:
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
-                ops = ChatChannelOperations(session, access)
+                ops = ChatChannelOperations(session, access, self.storage, self.search_indexer)
                 channel = await ops.get_by_id(user_id, org_id, channel_id)
 
                 from sqlalchemy import select
@@ -366,7 +366,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 channel = await ops.update(user_id, org_id, channel_id, **updates)
 
                 from sqlalchemy import select
@@ -402,7 +404,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 channel = await ops.create_agent_chat(
                     user_id=user_id,
                     organization_id=org_id,
@@ -447,7 +451,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 channel = await ops.rename_agent_chat(
                     user_id=user_id,
                     organization_id=org_id,
@@ -489,7 +495,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 rows, next_cursor = await ops.list_agent_chats(
                     user_id=user_id,
                     organization_id=org_id,
@@ -557,9 +565,15 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 channel = await ops.convert_group_dm_to_channel(
-                    user_id, org_id, channel_id, request.name, target_type=target_type
+                    user_id,
+                    org_id,
+                    channel_id,
+                    request.name,
+                    target_type=target_type,
                 )
                 tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
                 return ConvertGroupDmToChannelResponse(
@@ -587,7 +601,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 await ops.archive_channel(user_id, org_id, channel_id)
                 return ArchiveChannelResponse()
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
@@ -608,7 +624,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 await ops.delete_channel(user_id, org_id, channel_id)
                 return DeleteChannelResponse()
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
@@ -633,7 +651,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
 
                 if request.browse_public:
                     rows, next_cursor = await ops.list_public_channels(
@@ -736,7 +756,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 channel = await ops.join_channel(user_id, org_id, channel_id)
 
                 from sqlalchemy import select
@@ -775,7 +797,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 await ops.leave_channel(user_id, org_id, channel_id)
                 return LeaveChannelResponse()
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
@@ -797,8 +821,15 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
-                added = await ops.add_members_with_subjects(user_id, org_id, channel_id, subjects)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
+                added = await ops.add_members_with_subjects(
+                    user_id,
+                    org_id,
+                    channel_id,
+                    subjects,
+                )
                 return AddMembersResponse(members=[member_to_proto(m) for m in added])
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
@@ -819,8 +850,15 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
-                await ops.remove_members_with_subjects(user_id, org_id, channel_id, subjects)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
+                await ops.remove_members_with_subjects(
+                    user_id,
+                    org_id,
+                    channel_id,
+                    subjects,
+                )
                 return RemoveMembersResponse()
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
@@ -844,7 +882,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 rows, next_cursor = await ops.get_members(
                     user_id,
                     org_id,
@@ -906,7 +946,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 member, user = await ops.update_member(
                     user_id,
                     org_id,
@@ -943,7 +985,9 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatChannelOperations(session)
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
                 member, user = await ops.update_member_role(
                     user_id,
                     org_id,
@@ -1074,7 +1118,11 @@ class ChannelHandlers:
             from uniffy.domains.chat.channels.operations import ChatChannelOperations
             from uniffy.domains.chat.reads.operations import ChatReadStateOperations
 
-            ch_ops = ChatChannelOperations(session)
+            ch_ops = ChatChannelOperations(
+                session,
+                storage=self.storage,
+                search_indexer=self.search_indexer,
+            )
             channel_ids = await ch_ops.list_user_channel_ids(user_id, org_id)
 
             read_ops = ChatReadStateOperations(session)
@@ -1270,7 +1318,10 @@ class ChannelHandlers:
             return {}
 
         urns = [r.urn for r in resources]
-        resolved = await SearchOperations(session).resolve_urns(
+        resolved = await SearchOperations(
+            session,
+            self.search_indexer.search,
+        ).resolve_urns(
             user_id,
             organization_id,
             urns,

@@ -22,7 +22,6 @@ from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
-from uniffy.db import open_session
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.people import teams as team_ops
 from uniffy.domains.people.access import ViewerRelation, relation_for
@@ -56,6 +55,7 @@ from uniffy.domains.people.policy import (
     save_profile_policy,
 )
 from uniffy.domains.people.reader import PeopleReader, load_person_payload
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="people.handlers")
 
@@ -275,7 +275,7 @@ class PeopleHandlers:
             )
             async with open_session() as session:
                 await OrganizationOperations(session).require_org_member(user_id, org_id)
-                ops = PeopleOperations(session)
+                ops = PeopleOperations(session, self.search_indexer)
                 await ops.update_my_profile(org_id, user_id, changes)
                 payload = await load_person_payload(session, org_id, user_id)
             return pb.UpdateMyProfileResponse(
@@ -310,7 +310,7 @@ class PeopleHandlers:
                 membership = await OrganizationOperations(session).require_org_member(
                     user_id, org_id
                 )
-                ops = PeopleOperations(session)
+                ops = PeopleOperations(session, self.search_indexer)
                 await ops.update_person_profile(org_id, user_id, target_id, changes)
                 payload = await load_person_payload(session, org_id, target_id)
             return pb.UpdatePersonProfileResponse(
@@ -348,7 +348,7 @@ class PeopleHandlers:
                 membership = await OrganizationOperations(session).require_org_member(
                     user_id, org_id
                 )
-                ops = PeopleOperations(session)
+                ops = PeopleOperations(session, self.search_indexer)
                 await ops.set_manager(org_id, user_id, target_id, manager_id)
                 payload = await load_person_payload(session, org_id, target_id)
             return pb.SetManagerResponse(
@@ -472,6 +472,7 @@ class PeopleHandlers:
                 await OrganizationOperations(session).require_org_admin(user_id, org_id)
                 node = await team_ops.update_team(
                     session,
+                    self.search_indexer,
                     org_id,
                     user_id,
                     group_id,

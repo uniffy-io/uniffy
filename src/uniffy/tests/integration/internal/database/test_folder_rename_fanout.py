@@ -1,13 +1,10 @@
 """Folder rename fans out to child folders; tree drops refresh the destination."""
 
-from unittest.mock import AsyncMock
-
 import pytest
 from sqlalchemy import delete
 
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
-from uniffy.core.search.indexer import SearchIndexer
 from uniffy.domains.files.operations import FolderOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -37,11 +34,12 @@ async def _cleanup(session, org_id) -> None:
     await session.commit()
 
 
-async def test_rename_republishes_child_files_and_folders(session, env, monkeypatch) -> None:
-    monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
+async def test_rename_republishes_child_files_and_folders(
+    session, env, search_indexer, monkeypatch
+) -> None:
     published = await _capture_publishes(monkeypatch)
 
-    folder_ops = FolderOperations(session)
+    folder_ops = FolderOperations(session, search_indexer=search_indexer)
     try:
         parent = await folder_ops.create(env.admin_id, env.org_id, "itdb-old-name")
         child_folder = await folder_ops.create(
@@ -73,11 +71,12 @@ async def test_rename_republishes_child_files_and_folders(session, env, monkeypa
         await _cleanup(session, env.org_id)
 
 
-async def test_create_folder_tree_refreshes_destination(session, env, monkeypatch) -> None:
-    monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
+async def test_create_folder_tree_refreshes_destination(
+    session, env, search_indexer, monkeypatch
+) -> None:
     published = await _capture_publishes(monkeypatch)
 
-    folder_ops = FolderOperations(session)
+    folder_ops = FolderOperations(session, search_indexer=search_indexer)
     try:
         destination = await folder_ops.create(env.admin_id, env.org_id, "itdb-dest")
         published.clear()

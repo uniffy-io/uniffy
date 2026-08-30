@@ -10,6 +10,7 @@ from connectrpc.codec import Codec, proto_binary_codec, proto_json_codec
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from prometheus_client import Counter, Histogram
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import (
@@ -23,7 +24,20 @@ from uniffy.core.errors import (
     UNIFFYError,
     ValidationError,
 )
-from uniffy.observability.metrics import RPC_REQUEST_DURATION, RPC_REQUESTS_TOTAL
+
+logger = logger.bind(component="transport.rpc")
+
+RPC_REQUESTS_TOTAL = Counter(
+    "uniffy_rpc_requests_total",
+    "Total ConnectRPC requests",
+    ["service", "method", "code"],
+)
+
+RPC_REQUEST_DURATION = Histogram(
+    "uniffy_rpc_request_duration_seconds",
+    "ConnectRPC request duration in seconds",
+    ["service", "method"],
+)
 
 # Safety net for handlers without their own mapping: a domain error that
 # reaches the interceptor becomes its proper Connect code instead of INTERNAL.

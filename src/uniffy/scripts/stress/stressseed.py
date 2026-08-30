@@ -258,10 +258,10 @@ async def run_stress_seed(config: StressConfig) -> None:
     from sqlalchemy import select
 
     from uniffy.core.models import Note, Organization, User
-    from uniffy.core.search.indexer import SearchIndexer, build_content_urn
-    from uniffy.core.search.meilisearch import init_meilisearch
+    from uniffy.core.search import SearchIndexer, WorkspaceSearch, build_content_urn
     from uniffy.core.types import AccessMode, ContentRole, ContentType, NodeType
-    from uniffy.db.session import close_db, init_db, open_session
+    from uniffy.infrastructure.database.session import close_db, init_db, open_session
+    from uniffy.infrastructure.search import MeiliSearchEngine
 
     load_dotenv()
 
@@ -279,7 +279,9 @@ async def run_stress_seed(config: StressConfig) -> None:
         return
 
     await init_db()
-    await init_meilisearch()
+    search = WorkspaceSearch(MeiliSearchEngine())
+    await search.startup()
+    search_indexer = SearchIndexer(search)
 
     try:
         async with open_session() as session:
@@ -458,8 +460,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                 logger.info(f"Notes with outgoing references: {len(notes_with_refs)}")
 
                 logger.info("Indexing content for search...")
-                search_indexer = SearchIndexer(session)
-
                 all_items = folders + notes
                 for idx, item in enumerate(all_items):
                     await search_indexer.index(
@@ -498,6 +498,7 @@ async def run_stress_seed(config: StressConfig) -> None:
                 logger.error(f"Failed to generate stress test data: {e}")
                 raise
     finally:
+        await search.shutdown()
         await close_db()
 
 

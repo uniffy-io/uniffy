@@ -35,6 +35,7 @@ from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.auth.contracts import hash_refresh_token
 from uniffy.domains.auth.errors import AuthenticationError, RegistrationError, TokenError
+from uniffy.domains.auth.metrics import AUTH_ATTEMPTS_TOTAL
 from uniffy.domains.auth.mfa.challenge import (
     create_enrollment_only_token,
     create_mfa_challenge_token,
@@ -49,7 +50,6 @@ from uniffy.domains.auth.types import (
     MfaChallengeRequired,
     MfaEnrollmentRequired,
 )
-from uniffy.observability.metrics import AUTH_ATTEMPTS_TOTAL
 
 logger = logger.bind(component="auth.operations")
 

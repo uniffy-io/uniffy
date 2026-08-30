@@ -44,7 +44,6 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.rooms.converters import (
     BOOKING_STATUS_FROM_PROTO,
@@ -55,6 +54,7 @@ from uniffy.domains.rooms.converters import (
     time_slot_to_proto,
 )
 from uniffy.domains.rooms.operations import BookingOperations, RoomOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="rooms.handlers")
 

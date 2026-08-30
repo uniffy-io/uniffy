@@ -116,7 +116,7 @@ async def _ensure_agent(
         result.created += 1
         return
 
-    ops = AgentOperations(ctx.session)
+    ops = AgentOperations(ctx.session, ctx.search_indexer)
     agent = await ops.create_agent(
         user_id=ctx.actor_id,
         organization_id=ctx.organization_id,

@@ -32,12 +32,12 @@ from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
-from uniffy.db import open_session
 from uniffy.domains.agents.bridge.context import (
     ChatAgentContextOperations,
     ContextStats,
 )
 from uniffy.domains.chat.features import is_chat_agents_enabled
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.bridge.contexts")
 

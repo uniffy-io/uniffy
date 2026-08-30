@@ -164,7 +164,7 @@ class TestUpdate:
 
     async def test_managed_same_name_is_a_noop_not_an_error(self) -> None:
         group = _group(managed_fields=["name", "kind"])
-        ops = GroupOperations(_session())
+        ops = GroupOperations(_session(), MagicMock())
         with _as_admin(), patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)):
             result = await ops.update(
                 group_id=group.id,

@@ -41,11 +41,25 @@ class BaseContentOperations[TModel](ABC):
     content_type: ContentType
     model_class: type[TModel]
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self.session = session
         self.permission_checker = PermissionChecker(session)
         self.access_query = ContentAccessQuery(session)
-        self.search_indexer = SearchIndexer(session)
+        self._search_indexer = search_indexer
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("SearchIndexer is required for search projection writes")
+        return self._search_indexer
+
+    @search_indexer.setter
+    def search_indexer(self, value: SearchIndexer) -> None:
+        self._search_indexer = value
 
     @abstractmethod
     def _build_search_keywords(self, model: TModel) -> str:
@@ -77,12 +91,7 @@ class BaseContentOperations[TModel](ABC):
         return self._get_search_metadata(model)
 
     async def _get_search_attendee_user_ids(self, model: TModel) -> list[UUID] | None:
-        """User ids granted view through domain membership rather than ContentMember rows.
-
-        Indexed as ``attendee_user_ids`` and OR-ed into the Meili permission
-        filter, kept separate from ``shared_user_ids`` so member mutations
-        (which rewrite the sharing lists from ContentMember rows) cannot wipe it.
-        """
+        """Keep domain-membership grants separate from mutable content-member grants."""
         return None
 
     async def get_by_id(
@@ -315,7 +324,7 @@ class BaseContentOperations[TModel](ABC):
                 blocked_group_ids,
             ) = await self._get_member_id_lists(model.organization_id, model.id)
 
-        # Live policy resolution keeps Meili filters in sync; inheriting rows
+        # Live policy resolution keeps search candidates in sync; inheriting rows
         # would otherwise carry a stale create-time snapshot.
         effective_mode, effective_baseline = await self._effective_policy(
             model.organization_id,

@@ -40,7 +40,9 @@ from uniffy.core.models.chat.channel_member import (
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.tags.tag import TagAssignment
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.engine import SearchTerm, all_of
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     AccessMode,
     ContentType,
@@ -124,9 +126,16 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
     content_type = ContentType.CHAT
     model_class = ChatChannel
 
-    def __init__(self, session: AsyncSession, access: ChatAccessChecker | None = None) -> None:
-        super().__init__(session)
+    def __init__(
+        self,
+        session: AsyncSession,
+        access: ChatAccessChecker | None = None,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
+        super().__init__(session, search_indexer)
         self.access = access or ChatAccessChecker(session)
+        self.storage = storage
 
     def _build_search_keywords(self, model: ChatChannel) -> str:
         # Include both auto-name and custom override so renamed agent chats stay findable.
@@ -147,7 +156,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         """Tag slug list for this channel; skipped for DM/agent-DM (no tags)."""
         if model.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
             return None
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.search_indexer)
         urn = build_content_urn(self.content_type, model.id)
         bulk = await tag_ops.get_for_urns(
             organization_id=model.organization_id,
@@ -180,7 +189,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             return
         if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
             return
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.search_indexer)
         await tag_ops.replace_manual_tags(
             actor_id=actor_id,
             organization_id=channel.organization_id,
@@ -822,7 +831,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await invalidate_cached_member_ids(channel.id)
         await invalidate_cached_dm_peers(channel.id)
 
-        await self._post_membership_conversion_message(user_id, organization_id, channel)
+        await self._post_membership_conversion_message(
+            user_id,
+            organization_id,
+            channel,
+        )
 
         # PRIVATE channels index as EXPLICIT_MEMBERS; the GROUP_DM never was indexed.
         await self._refresh_channel_live_state(channel)
@@ -849,7 +862,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             actor_label = sanitize_mention_label(info.display_name)
             actor = f"[[[{actor_label}|urn:uniffy:content:USER:{actor_user_id}]]]"
             kind = "public" if channel.channel_type == ChannelType.PUBLIC else "private"
-            msg_ops = ChatMessageOperations(self.session)
+            msg_ops = ChatMessageOperations(
+                self.session,
+                storage=self.storage,
+                search_indexer=self.search_indexer,
+            )
             await msg_ops.send_message(
                 user_id=actor_user_id,
                 organization_id=organization_id,
@@ -951,7 +968,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             .all()
         )
         if attachment_parent_ids:
-            await AttachmentOperations(self.session).purge_attachments_for_content(
+            await AttachmentOperations(
+                self.session,
+                self.storage,
+                self.search_indexer,
+            ).purge_attachments_for_content(
                 organization_id,
                 ContentType.CHAT_MESSAGE,
                 attachment_parent_ids,
@@ -966,17 +987,17 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await self._broadcast_channel_removed(channel)
 
         try:
-            from uniffy.core.search.indexer import SearchIndexer
-
-            indexer = SearchIndexer(self.session)
             # Agent DMs are indexed under AGENT_CHAT (see _index_for_search);
             # removing the wrong URN type leaves the doc searchable forever.
             urn_type = ContentType.AGENT_CHAT if channel.is_agent_dm else ContentType.CHAT
             urn = f"urn:uniffy:content:{urn_type.value}:{channel.id}"
-            await indexer.remove(urn)
+            await self.search_indexer.remove(urn)
             # Cascade: drop chat_message docs under this channel so global search excludes them.
-            await indexer.remove_by_filter(
-                f'entity_type = "chat_message" AND metadata.channel_id = "{channel.id}"'
+            await self.search_indexer.remove_by_filter(
+                all_of(
+                    SearchTerm("entity_type", "chat_message"),
+                    SearchTerm("metadata.channel_id", str(channel.id)),
+                )
             )
         except Exception:
             logger.warning(f"Search remove failed for channel {channel.id}")
@@ -2588,7 +2609,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             else:
                 content = f"{actor} {action} {targets} from {place}"
 
-            msg_ops = ChatMessageOperations(self.session)
+            msg_ops = ChatMessageOperations(
+                self.session,
+                storage=self.storage,
+                search_indexer=self.search_indexer,
+            )
             await msg_ops.send_message(
                 user_id=actor_user_id,
                 organization_id=organization_id,
@@ -2617,7 +2642,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             mention = f"[[[{user_name}|urn:uniffy:content:USER:{user_id}]]]"
             content = f"{mention} joined the channel"
 
-            msg_ops = ChatMessageOperations(self.session)
+            msg_ops = ChatMessageOperations(
+                self.session,
+                storage=self.storage,
+                search_indexer=self.search_indexer,
+            )
             await msg_ops.send_message(
                 user_id=user_id,
                 organization_id=organization_id,

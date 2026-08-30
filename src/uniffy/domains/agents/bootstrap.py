@@ -57,9 +57,10 @@ async def stage_default_agent(
 async def finish_default_agent_after_commit(
     session: AsyncSession,
     staged: StagedDefaultAgent,
+    search_indexer: SearchIndexer,
 ) -> None:
     agent = staged.agent
-    await SearchIndexer(session).index(
+    await search_indexer.index(
         urn=build_content_urn(ContentType.AGENT, agent.id),
         organization_id=agent.organization_id,
         title=agent.name,

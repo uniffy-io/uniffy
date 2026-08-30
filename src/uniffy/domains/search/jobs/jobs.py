@@ -1,10 +1,9 @@
-"""Drain durable search-removal rows left by failed Meilisearch deletes."""
+"""Run search projection recovery work."""
 
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from meilisearch_python_sdk.errors import MeilisearchApiError
 from sqlalchemy import select
 
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
@@ -13,12 +12,13 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.search import SearchRemovalQueue
-from uniffy.core.search.meilisearch import get_meilisearch_client
+from uniffy.core.search.engine import SearchEngineError, search_filter_from_data
+from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db.session import open_session
 from uniffy.domains.calendar.search import refresh_event_search_projection
 from uniffy.domains.notes.search import refresh_note_search_projection
 from uniffy.domains.projects.search.projection import refresh_task_search_projection
+from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="search.jobs.jobs")
 
@@ -26,15 +26,6 @@ _LOCK_KEY = "search_removal_flush:lock"
 FLUSH_SEARCH_REMOVALS_JOB_TIMEOUT_SECONDS = 300
 _LOCK_TTL_SECONDS = FLUSH_SEARCH_REMOVALS_JOB_TIMEOUT_SECONDS + 30
 _FLUSH_BATCH = 500
-
-# Meilisearch rejects these synchronously and always will; retrying is
-# pointless and poison rows at the front of the created_at-ordered batch
-# would starve everything behind them.
-_PERMANENT_ERROR_CODES = {
-    "invalid_document_filter",
-    "missing_document_filter",
-    "invalid_document_id",
-}
 
 # One day of continuous 5-minute failures; from here every run logs an
 # error so a stuck-but-retriable queue surfaces to the operator.
@@ -91,14 +82,15 @@ async def reindex_renamed_content(ctx: dict[str, Any], payload_json: str) -> dic
             .all()
         )
 
+        search_indexer: SearchIndexer = ctx[SEARCH_INDEXER_CTX_KEY]
         for note in notes:
-            await refresh_note_search_projection(session, note)
+            await refresh_note_search_projection(session, note, search_indexer)
 
         for event in events:
-            await refresh_event_search_projection(session, event)
+            await refresh_event_search_projection(session, event, search_indexer)
 
         for task in tasks:
-            await refresh_task_search_projection(session, task)
+            await refresh_task_search_projection(session, task, search_indexer)
 
     return {
         "notes": len(notes),
@@ -129,7 +121,7 @@ async def _release_lock(token: str) -> None:
 
 
 async def flush_search_removals(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Retry queued removals; delete the row once Meilisearch confirms."""
+    """Retry queued removals and delete rows after engine acknowledgement."""
     lock_token = await _acquire_lock()
     if lock_token is None:
         return {"status": "locked"}
@@ -150,7 +142,8 @@ async def flush_search_removals(ctx: dict[str, Any]) -> dict[str, Any]:
             if not rows:
                 return {"status": "empty"}
 
-            client = get_meilisearch_client()
+            search_indexer: SearchIndexer = ctx[SEARCH_INDEXER_CTX_KEY]
+            search = search_indexer.search
             flushed = 0
             failed = 0
             dropped = 0
@@ -158,16 +151,17 @@ async def flush_search_removals(ctx: dict[str, Any]) -> dict[str, Any]:
             for row in rows:
                 try:
                     if row.urn:
-                        await client.delete_document(row.urn, row.organization_id)
-                    elif row.filter_expr:
-                        await client.delete_documents_by_filter_expr(row.filter_expr)
+                        await search.delete_document(row.urn, row.organization_id)
+                    elif row.filter_spec:
+                        await search.delete_documents(search_filter_from_data(row.filter_spec))
                     await session.delete(row)
                     flushed += 1
-                except MeilisearchApiError as exc:
-                    if exc.code in _PERMANENT_ERROR_CODES:
+                except (SearchEngineError, ValueError) as exc:
+                    if isinstance(exc, ValueError) or not exc.retryable:
                         logger.error(
-                            f"Dropping unexecutable search removal ({exc.code}): "
-                            f"urn={row.urn} filter={row.filter_expr}"
+                            "Dropping unexecutable search removal",
+                            code=getattr(exc, "code", None),
+                            row_id=str(row.id),
                         )
                         await session.delete(row)
                         dropped += 1
@@ -186,7 +180,7 @@ async def flush_search_removals(ctx: dict[str, Any]) -> dict[str, Any]:
         if stuck:
             logger.error(
                 f"search removal flush: {stuck} rows failing for over a day; "
-                "Meilisearch has been rejecting them - investigate"
+                "the search engine has been rejecting them - investigate"
             )
         if flushed or failed or dropped:
             logger.info(f"search removal flush: flushed={flushed} failed={failed} dropped={dropped}")

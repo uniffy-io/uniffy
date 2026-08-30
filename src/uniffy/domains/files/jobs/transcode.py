@@ -5,7 +5,7 @@ import os
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -14,13 +14,13 @@ from sqlalchemy import select
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.files.file import File, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
-from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.storage import get_s3_client
+from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, build_content_urn
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.types import ContentType, generate_id
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db.session import open_session
 from uniffy.domains.files.jobs.contracts import DELETE_S3_OBJECT
 from uniffy.domains.files.operations import FileOperations
+from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="files.jobs.transcode")
 
@@ -127,7 +127,7 @@ async def transcode_video_to_mp4(
     if lock_token is None:
         return {"status": "skipped", "reason": "lock_held", "file_id": file_id}
 
-    s3 = get_s3_client()
+    storage: ObjectStorage | None = None
     old_storage_key: str | None = None
     new_storage_key: str | None = None
 
@@ -143,6 +143,7 @@ async def transcode_video_to_mp4(
             if file.transcode_status == TranscodeStatus.NOT_NEEDED:
                 return {"status": "skipped", "reason": "not_needed"}
 
+            storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
             file.transcode_status = TranscodeStatus.PROCESSING
             await session.commit()
 
@@ -159,7 +160,7 @@ async def transcode_video_to_mp4(
             mp4_path = tmp_path / "out.mp4"
 
             log.info("Downloading WebM source")
-            webm_bytes = await s3.download_bytes(old_storage_key)
+            webm_bytes = await storage.download_bytes(old_storage_key)
             webm_path.write_bytes(webm_bytes)
             del webm_bytes
 
@@ -172,7 +173,7 @@ async def transcode_video_to_mp4(
 
             log.info("Uploading MP4", size=mp4_size, key=new_storage_key)
             mp4_bytes = mp4_path.read_bytes()
-            await s3.upload_bytes(
+            await storage.upload_bytes(
                 key=new_storage_key,
                 data=mp4_bytes,
                 content_type="video/mp4",
@@ -184,12 +185,12 @@ async def transcode_video_to_mp4(
             file = row.scalar_one_or_none()
             if file is None:
                 log.warning("File disappeared during swap")
-                await s3.delete_object(new_storage_key)
+                await storage.delete_object(new_storage_key)
                 return {"status": "not_found", "file_id": file_id}
 
             if file.transcode_status == TranscodeStatus.COMPLETED:
                 log.info("Another worker completed the swap; cleaning up our MP4")
-                await s3.delete_object(new_storage_key)
+                await storage.delete_object(new_storage_key)
                 return {"status": "skipped", "reason": "already_completed"}
 
             new_version_number = max(current_version, file.version) + 1
@@ -215,7 +216,8 @@ async def transcode_video_to_mp4(
             await session.commit()
             await session.refresh(file)
 
-            ops = FileOperations(session)
+            search_indexer = cast(SearchIndexer, ctx[SEARCH_INDEXER_CTX_KEY])
+            ops = FileOperations(session, storage, search_indexer)
             try:
                 await ops._index_for_search(file)
                 await session.commit()
@@ -246,9 +248,9 @@ async def transcode_video_to_mp4(
 
     except Exception as exc:
         log.exception(f"transcode_video_to_mp4 failed: {exc}")
-        if new_storage_key:
+        if new_storage_key and storage is not None:
             try:
-                await s3.delete_object(new_storage_key)
+                await storage.delete_object(new_storage_key)
             except Exception:
                 log.warning("Failed to clean up half-written MP4 on error")
         try:
@@ -274,9 +276,9 @@ async def delete_s3_object(
     storage_key: str,
 ) -> dict[str, Any]:
     """Delete one S3 object; used 24h after a transcode swap to drop the old WebM."""
-    s3 = get_s3_client()
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
     try:
-        await s3.delete_object(storage_key)
+        await storage.delete_object(storage_key)
         return {"status": "success", "storage_key": storage_key}
     except Exception as exc:
         logger.warning(f"delete_s3_object failed for {storage_key}: {exc}")

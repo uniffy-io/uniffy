@@ -15,6 +15,7 @@ from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
+from uniffy.core.search import SearchIndexer
 from uniffy.domains.groups.naming import ensure_name_available, resolve_slug
 from uniffy.domains.groups.search import TeamSearchIndexer
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -43,9 +44,20 @@ class GroupOperations:
     and reads gate on active org membership.
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self._session = session
-        self._org_ops = OrganizationOperations(session)
+        self._search_indexer = search_indexer
+        self._org_ops = OrganizationOperations(session, search_indexer=search_indexer)
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("Search indexing is required for group mutations")
+        return self._search_indexer
 
     async def get_by_id(
         self,
@@ -138,7 +150,7 @@ class GroupOperations:
 
         if kind is GroupKind.TEAM:
             await invalidate_chart(organization_id)
-            await TeamSearchIndexer(self._session).index_team(group)
+            await TeamSearchIndexer(self._session, self.search_indexer).index_team(group)
         return group
 
     async def require_team_parent(self, organization_id: UUID, parent_id: UUID) -> Group:
@@ -220,7 +232,7 @@ class GroupOperations:
             group.is_private = is_private
             changed_keys.append("is_private")
 
-        team_indexer = TeamSearchIndexer(self._session)
+        team_indexer = TeamSearchIndexer(self._session, self.search_indexer)
         detached_children = False
         detached_child_ids: list[UUID] = []
         if kind is not None and group.kind is not kind:
@@ -285,7 +297,12 @@ class GroupOperations:
             # Members' search documents and mention chips carry the team name.
             if "name" in changed_keys or "kind" in changed_keys:  # noqa: PLR2004
                 member_ids = await self._active_member_ids(group_id)
-                await sync_people_search(self._session, organization_id, member_ids)
+                await sync_people_search(
+                    self._session,
+                    self.search_indexer,
+                    organization_id,
+                    member_ids,
+                )
 
             if group.kind is GroupKind.TEAM:
                 await team_indexer.index_team(group)
@@ -336,7 +353,7 @@ class GroupOperations:
         )
 
         was_team = group.kind is GroupKind.TEAM
-        team_indexer = TeamSearchIndexer(self._session)
+        team_indexer = TeamSearchIndexer(self._session, self.search_indexer)
         # The parent FK is ON DELETE SET NULL, so child teams detach at the DB
         # level; snapshot them first to clear their denormalized parent_label.
         child_team_ids = await team_indexer.child_team_ids(group_id) if was_team else []
@@ -348,7 +365,12 @@ class GroupOperations:
 
         if was_team:
             await invalidate_org_people(organization_id)
-            await sync_people_search(self._session, organization_id, member_user_ids)
+            await sync_people_search(
+                self._session,
+                self.search_indexer,
+                organization_id,
+                member_user_ids,
+            )
             await team_indexer.remove_team(group_id, organization_id)
             await team_indexer.sync_teams(organization_id, child_team_ids)
 
@@ -497,8 +519,13 @@ class GroupOperations:
         if group.kind is GroupKind.TEAM:
             await invalidate_person(group.organization_id, user_id)
             await invalidate_chart(group.organization_id)
-            await sync_people_search(self._session, group.organization_id, [user_id])
-            await TeamSearchIndexer(self._session).index_team(group)
+            await sync_people_search(
+                self._session,
+                self.search_indexer,
+                group.organization_id,
+                [user_id],
+            )
+            await TeamSearchIndexer(self._session, self.search_indexer).index_team(group)
 
     async def update_member_role(
         self,

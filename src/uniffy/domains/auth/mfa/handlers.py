@@ -31,7 +31,6 @@ from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters import datetime_to_timestamp, domain_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.shared import DomainType
-from uniffy.db import open_session
 from uniffy.domains.auth.errors import (
     AuthenticationError,
     MfaRateLimitedError,
@@ -40,6 +39,7 @@ from uniffy.domains.auth.errors import (
 from uniffy.domains.auth.mfa.challenge import ENROLLMENT_ALLOWED_RPCS
 from uniffy.domains.auth.mfa.context import enrollment_organization_id, enrollment_user_id
 from uniffy.domains.auth.mfa.operations import MfaOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="auth.mfa.handlers")
 

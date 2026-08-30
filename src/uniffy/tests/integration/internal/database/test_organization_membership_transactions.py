@@ -18,7 +18,7 @@ from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.types import SubjectType, generate_id
-from uniffy.db import open_session
+from uniffy.infrastructure.database import open_session
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.search import UserSearchIndexer
 

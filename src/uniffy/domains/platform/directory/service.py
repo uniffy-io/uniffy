@@ -32,6 +32,7 @@ from uniffy_proto.superadmin.v1.system_directory_pb2 import (
     UpdateUserResponse,
 )
 
+from uniffy.core.storage import ObjectStorage
 from uniffy.domains.platform.directory.handlers import (
     SystemOrganizationsHandlers,
     SystemUsersHandlers,
@@ -39,8 +40,8 @@ from uniffy.domains.platform.directory.handlers import (
 
 
 class SystemOrganizationsServiceImpl:
-    def __init__(self) -> None:
-        self._handlers = SystemOrganizationsHandlers()
+    def __init__(self, storage: ObjectStorage) -> None:
+        self._handlers = SystemOrganizationsHandlers(storage)
 
     async def list_organizations(
         self, request: ListOrganizationsRequest, ctx: RequestContext

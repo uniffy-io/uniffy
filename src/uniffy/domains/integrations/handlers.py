@@ -33,7 +33,6 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     ValidationError,
 )
-from uniffy.db import open_session
 from uniffy.domains.agents.access import is_org_admin
 from uniffy.domains.integrations.converters import (
     connection_to_proto,
@@ -42,6 +41,7 @@ from uniffy.domains.integrations.converters import (
 from uniffy.domains.integrations.operations import ConnectionOperations
 from uniffy.domains.integrations.registry import get_integration_registry
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="integrations.handlers")
 

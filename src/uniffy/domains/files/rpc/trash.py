@@ -20,12 +20,12 @@ from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.files.converters import (
     file_to_proto,
     folder_to_proto,
 )
 from uniffy.domains.files.operations import FileOperations, FolderOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.rpc.trash")
 
@@ -52,7 +52,7 @@ class TrashHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
                 files_deleted, folders_deleted = await ops.empty_trash(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -86,7 +86,7 @@ class TrashHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
                 files, folders = await ops.list_trashed_items(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -156,7 +156,7 @@ class TrashHandlers:
 
         try:
             async with open_session() as session:
-                ops = FolderOperations(session)
+                ops = FolderOperations(session, self.storage, self.search_indexer)
                 folder = await ops.restore_folder(
                     user_id=user_id,
                     organization_id=organization_id,

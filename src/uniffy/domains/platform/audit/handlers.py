@@ -18,12 +18,12 @@ from uniffy_proto.superadmin.v1.platform_audit_pb2 import (
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.platform.audit.converters import (
     action_entry_to_proto,
     event_to_proto,
 )
 from uniffy.domains.platform.audit.operations import PlatformAuditOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="platform.audit.handlers")
 

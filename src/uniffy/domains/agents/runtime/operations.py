@@ -16,7 +16,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.references import sanitize_mention_label
+from uniffy.core.database import SessionFactory
 from uniffy.core.errors import ValidationError
+from uniffy.core.extraction import UnsupportedFormatError, extract_text
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
@@ -25,8 +27,9 @@ from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.chat.message import SenderType as ChatSenderType
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import SubjectType
-from uniffy.db.session import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.budgets.alerts import check_and_fire_alerts
 from uniffy.domains.agents.cache import (
@@ -282,15 +285,10 @@ async def _execute_read_tool_isolated(
     base_ctx: ToolContext,
     tc,
     semaphore: asyncio.Semaphore,
+    session_factory: SessionFactory,
 ) -> ToolResult:
-    """Run one read-only tool against a fresh ``AsyncSession``.
-
-    Concurrent SQL on a single ``AsyncSession`` is unsafe (asyncpg
-    serialises through one connection); so each task acquires its own
-    session via ``open_session`` for the duration of the call. The
-    semaphore caps in-flight session count per turn.
-    """
-    async with semaphore, open_session() as fresh_session:
+    """Isolate concurrent SQL because one asyncpg connection serializes operations."""
+    async with semaphore, session_factory() as fresh_session:
         new_ctx = replace(base_ctx, session=fresh_session)
         executor = ToolExecutor(registry, new_ctx)
         return await executor.execute(tc)
@@ -300,12 +298,16 @@ async def _gather_read_tool_results(
     registry: ToolRegistry,
     base_ctx: ToolContext,
     read_calls: list,
+    session_factory: SessionFactory,
 ) -> dict[str, ToolResult]:
     """Run read-only tool calls concurrently and key results by tool_use id."""
     if not read_calls:
         return {}
     semaphore = asyncio.Semaphore(READ_TOOL_POOL_SIZE)
-    tasks = [_execute_read_tool_isolated(registry, base_ctx, tc, semaphore) for tc in read_calls]
+    tasks = [
+        _execute_read_tool_isolated(registry, base_ctx, tc, semaphore, session_factory)
+        for tc in read_calls
+    ]
     raw = await asyncio.gather(*tasks, return_exceptions=True)
     results: dict[str, ToolResult] = {}
     for tc, res in zip(read_calls, raw, strict=True):
@@ -434,18 +436,12 @@ def _build_stored_content(
     return "\n\n".join(parts)
 
 
-async def _resolve_pending_content_blocks(messages: list[dict]) -> None:
-    """Resolve content blocks that need S3 downloads or on-demand extraction.
-
-    Mutates `messages` in place: image/document blocks get base64 data,
-    `text_pending_extraction` blocks become inline extracted text.
-    """
-    from uniffy.core.storage import get_s3_client
-
-    s3 = get_s3_client()
-
-    for msg in messages:
-        content = msg.get("content")
+async def _resolve_pending_content_blocks(
+    storage: ObjectStorage,
+    messages: list[dict],
+) -> None:
+    for message in messages:
+        content = message.get("content")
         if not isinstance(content, list):
             continue
 
@@ -454,37 +450,25 @@ async def _resolve_pending_content_blocks(messages: list[dict]) -> None:
             block_type = block.get("type", "")
 
             if block_type == CanonicalContentBlockType.IMAGE and "storage_key" in block:  # noqa: PLR2004
-                data = await s3.download_bytes(block["storage_key"])
-                b64 = base64.b64encode(data).decode("ascii")
+                data = await storage.download_bytes(block["storage_key"])
                 resolved.append({
                     "type": CanonicalContentBlockType.IMAGE,
                     "media_type": block["media_type"],
-                    "data": b64,
+                    "data": base64.b64encode(data).decode("ascii"),
                 })
-
             elif block_type == CanonicalContentBlockType.DOCUMENT and "storage_key" in block:  # noqa: PLR2004
-                data = await s3.download_bytes(block["storage_key"])
-                b64 = base64.b64encode(data).decode("ascii")
+                data = await storage.download_bytes(block["storage_key"])
                 resolved.append({
                     "type": CanonicalContentBlockType.DOCUMENT,
                     "media_type": block["media_type"],
-                    "data": b64,
+                    "data": base64.b64encode(data).decode("ascii"),
                     "filename": block.get("filename", ""),
                 })
-
             elif block_type == CanonicalContentBlockType.TEXT_PENDING_EXTRACTION:
-                from uniffy.core.extraction import (
-                    UnsupportedFormatError,
-                    extract_text,
-                )
-
-                data = await s3.download_bytes(block["storage_key"])
+                data = await storage.download_bytes(block["storage_key"])
                 filename = block.get("filename", "file")
                 try:
-                    result = extract_text(
-                        data,
-                        block["media_type"],
-                    )
+                    result = extract_text(data, block["media_type"])
                     resolved.append({
                         "type": CanonicalContentBlockType.TEXT,
                         "text": (
@@ -493,17 +477,16 @@ async def _resolve_pending_content_blocks(messages: list[dict]) -> None:
                     })
                 except UnsupportedFormatError:
                     resolved.append({
-                        "type": "text",
+                        "type": CanonicalContentBlockType.TEXT,
                         "text": (
                             f"[Attached file: {filename} "
                             f"({block['media_type']}) - content not extractable]"
                         ),
                     })
-
             else:
                 resolved.append(block)
 
-        msg["content"] = resolved
+        message["content"] = resolved
 
 
 async def _get_model_context_window(provider, model: str) -> int:
@@ -521,12 +504,21 @@ async def _get_model_context_window(provider, model: str) -> int:
 class RuntimeOperations:
     """Operations for agent runtime message execution."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
+        session_factory: SessionFactory,
+    ) -> None:
         self._session = session
-        self._org_ops = OrganizationOperations(session)
-        self._user_ops = UserOperations(session)
+        self._storage = storage
+        self._search_indexer = search_indexer
+        self._session_factory = session_factory
+        self._org_ops = OrganizationOperations(session, search_indexer=search_indexer)
+        self._user_ops = UserOperations(session, search_indexer)
         self._session_ops = SessionOperations(session)
-        self._agent_ops = AgentOperations(session)
+        self._agent_ops = AgentOperations(session, search_indexer)
         self._provider_ops = ProviderOperations(session)
         self._skill_ops = SkillOperations(session)
 
@@ -703,7 +695,7 @@ class RuntimeOperations:
         )
 
         # 11b. Resolve any content blocks that need S3 downloads
-        await _resolve_pending_content_blocks(llm_messages)
+        await _resolve_pending_content_blocks(self._storage, llm_messages)
 
         # 11c. Ephemeral query-conditioned recall on the trigger turn: rides
         # only llm_messages, never the stored row, so no turn re-quotes it.
@@ -789,6 +781,8 @@ class RuntimeOperations:
                     session=self._session,
                     user_id=user_id,
                     organization_id=organization_id,
+                    storage=self._storage,
+                    search_indexer=self._search_indexer,
                     agent_id=agent_session.agent_id,
                     session_id=session_id,
                     user_timezone=user_timezone,
@@ -903,48 +897,7 @@ class RuntimeOperations:
         model_params: dict | None = None,
         deferred_pool: dict[str, list[dict]] | None = None,
     ) -> CompletionResult:
-        """Run the tool-use loop until the LLM produces a final response.
-
-        Each iteration:
-        1. Store the assistant message with tool_use content blocks
-        2. Execute each tool call and store tool result messages
-        3. Rebuild the messages array with the new tool interactions
-        4. Re-invoke the LLM
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session for storing messages.
-        provider : LLMProvider
-            The LLM provider to call.
-        model : str
-            Model identifier.
-        system_prompt : str
-            System prompt.
-        tool_schemas : list[dict]
-            Tool schemas for the LLM.
-        llm_messages : list[dict]
-            Current message history.
-        result : CompletionResult
-            Initial LLM result containing tool calls.
-        executor : ToolExecutor
-            Tool executor with user context.
-
-        Returns
-        -------
-        CompletionResult
-            The final LLM result (stop_reason != "tool_use").
-
-        Raises
-        ------
-        ValidationError
-            If the loop exceeds MAX_TOOL_ITERATIONS.
-
-        """
+        """Run tool calls until the provider returns a final response."""
         run_usage = run_usage or RunUsageAccumulator()
         work_iterations = 0
         load_iterations = 0
@@ -1013,7 +966,7 @@ class RuntimeOperations:
             base_ctx = executor.context
             read_calls, write_calls = _split_read_write(registry, result.tool_calls)
             tool_results: dict[str, ToolResult] = await _gather_read_tool_results(
-                registry, base_ctx, read_calls
+                registry, base_ctx, read_calls, self._session_factory
             )
             for tc in write_calls:
                 tool_results[tc.id] = await executor.execute(tc)
@@ -1539,7 +1492,7 @@ class RuntimeOperations:
         )
 
         # Resolve any content blocks that need S3 downloads
-        await _resolve_pending_content_blocks(llm_messages)
+        await _resolve_pending_content_blocks(self._storage, llm_messages)
 
         # Ephemeral query-conditioned recall on the trigger turn: rides only
         # llm_messages, never a stored row and never the client stream. On the
@@ -1705,6 +1658,8 @@ class RuntimeOperations:
                 session=self._session,
                 user_id=user_id,
                 organization_id=organization_id,
+                storage=self._storage,
+                search_indexer=self._search_indexer,
                 agent_id=agent_id,
                 session_id=session_id,
                 user_timezone=user_timezone,
@@ -1963,7 +1918,12 @@ class RuntimeOperations:
             base_ctx = executor.context
 
             read_calls, write_calls = _split_read_write(registry, result.tool_calls)
-            read_results = await _gather_read_tool_results(registry, base_ctx, read_calls)
+            read_results = await _gather_read_tool_results(
+                registry,
+                base_ctx,
+                read_calls,
+                self._session_factory,
+            )
 
             results_content: dict[str, str] = {}
             results_success: dict[str, bool] = {}

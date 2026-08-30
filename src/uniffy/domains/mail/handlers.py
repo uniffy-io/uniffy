@@ -21,9 +21,9 @@ from uniffy_proto.mail.v1.mail_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.mail.converters import summary_to_proto
 from uniffy.domains.mail.operations import OrgMailOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="mail.handlers")
 

@@ -13,6 +13,7 @@ The schema is expected to be at head already; the dev stack migrates on boot.
 """
 
 from types import SimpleNamespace as NS
+from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
@@ -33,15 +34,18 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
+from uniffy.core.search import SearchIndexer
 from uniffy.core.types import generate_id
-from uniffy.db import close_db, init_db, open_session
-from uniffy.db.session import get_database_url
+from uniffy.domains.files.registration import register_file_content
+from uniffy.infrastructure.database import close_db, init_db, open_session
+from uniffy.infrastructure.database.session import get_database_url
 from uniffy.domains.notes.registration import register_note_content
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def database():
     """Bring up the real engine once, or skip the suite when nothing answers."""
+    register_file_content()
     register_note_content()
     try:
         await init_db(skip_migrations=True)
@@ -57,6 +61,11 @@ async def database():
 async def session(database):
     async with open_session() as db_session:
         yield db_session
+
+
+@pytest.fixture
+def search_indexer() -> SearchIndexer:
+    return MagicMock(spec=SearchIndexer)
 
 
 async def seed_env(db_session: AsyncSession) -> NS:

@@ -195,7 +195,7 @@ async def _execute_memory_read(ctx: ToolContext, args: dict) -> ToolResult:
 
     if not ctx.memory_recall_promoted:
         from uniffy.domains.agents.memories.scoring import script_class
-        from uniffy.observability.metrics import (
+        from uniffy.domains.agents.metrics import (
             AGENT_MEMORY_READ_AFTER_NO_RECALL_TOTAL,
         )
 

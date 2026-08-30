@@ -4,6 +4,7 @@ from uuid import UUID
 import pytest
 from uniffy_proto.search.v1.search_pb2 import UrnAvailability as ProtoUrnAvailability
 
+from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
 from uniffy.domains.permissions.access import (
     AccessGrantKind,
@@ -69,7 +70,7 @@ def _decision(
 
 @pytest.fixture
 def resolver() -> SearchOperations:
-    operations = SearchOperations(MagicMock())
+    operations = SearchOperations(MagicMock(), MagicMock(spec=WorkspaceSearch))
     operations.resource_access = MagicMock()
     operations.resource_access.resolve = AsyncMock()
     operations.enrich_live_state = AsyncMock()

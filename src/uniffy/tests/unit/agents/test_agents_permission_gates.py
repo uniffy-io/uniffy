@@ -591,6 +591,7 @@ class TestCronTransferOwnership:
         ops.session.execute = AsyncMock(return_value=_result(task))
         ops.session.commit = AsyncMock()
         ops.session.refresh = AsyncMock()
+        ops._search_indexer = MagicMock()
         ops._index_for_search = AsyncMock()
         return ops
 
@@ -873,7 +874,12 @@ class TestCronExecutionIdentity:
 
         ops = MagicMock(spec=CronTaskOperations)
         ops.delete_cron_task = AsyncMock()
-        ctx = NS(session=MagicMock(), user_id=generate_id(), organization_id=generate_id())
+        ctx = NS(
+            session=MagicMock(),
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            search_indexer=MagicMock(),
+        )
         with patch(
             "uniffy.domains.agents.cron.operations.CronTaskOperations",
             return_value=ops,

@@ -34,7 +34,7 @@ async def test_stage_instant_email_returns_durable_delivery() -> None:
     session.execute.return_value = MagicMock(scalar_one_or_none=MagicMock(return_value=delivery_id))
     now = datetime(2026, 8, 21, 12, 0, tzinfo=UTC)
 
-    staged = await EmailAdapter().stage_with_session(
+    staged = await EmailAdapter(MagicMock()).stage_with_session(
         session,
         generate_id(),
         _event(generate_id()),
@@ -63,7 +63,7 @@ async def test_instant_delivery_enqueues_stable_outbox_job() -> None:
         "uniffy.domains.notifications.delivery.email.enqueue_job",
         new=queue.enqueue_job,
     ):
-        result = await EmailAdapter().enqueue_if_due(delivery)
+        result = await EmailAdapter(MagicMock()).enqueue_if_due(delivery)
 
     assert result is True
     queue.enqueue_job.assert_awaited_once_with(
@@ -85,7 +85,7 @@ async def test_digest_delivery_waits_for_dispatcher() -> None:
         "uniffy.domains.notifications.delivery.email.enqueue_job",
         new=queue.enqueue_job,
     ):
-        result = await EmailAdapter().enqueue_if_due(delivery)
+        result = await EmailAdapter(MagicMock()).enqueue_if_due(delivery)
 
     assert result is True
     queue.enqueue_job.assert_not_awaited()
@@ -94,17 +94,14 @@ async def test_digest_delivery_waits_for_dispatcher() -> None:
 async def test_standalone_delivery_respects_email_preference() -> None:
     session = AsyncMock()
 
-    with (
-        patch(
-            "uniffy.domains.notifications.delivery.email.open_session",
-            new=lambda: _fake_session(session),
-        ),
-        patch(
-            "uniffy.domains.notifications.delivery.email.get_delivery_preferences",
-            new=AsyncMock(return_value=({NotificationChannel.IN_APP}, None)),
-        ),
+    with patch(
+        "uniffy.domains.notifications.delivery.email.get_delivery_preferences",
+        new=AsyncMock(return_value=({NotificationChannel.IN_APP}, None)),
     ):
-        delivered = await EmailAdapter().deliver(generate_id(), _event(generate_id()))
+        delivered = await EmailAdapter(lambda: _fake_session(session)).deliver(
+            generate_id(),
+            _event(generate_id()),
+        )
 
     assert delivered is False
     session.commit.assert_not_awaited()

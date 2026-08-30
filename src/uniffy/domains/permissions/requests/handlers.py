@@ -41,7 +41,6 @@ from uniffy.core.errors import (
 )
 from uniffy.core.models.permissions.content_access_request import ContentAccessRequestState
 from uniffy.core.types import ContentRole, ContentType
-from uniffy.db import open_session
 from uniffy.domains.permissions.converters import (
     access_request_outcome_to_proto,
     access_request_status_to_proto,
@@ -51,6 +50,7 @@ from uniffy.domains.permissions.requests.operations import (
     AccessRequestDecision,
     ContentAccessRequestOperations,
 )
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="permissions.requests.handlers")
 
@@ -122,7 +122,9 @@ class AccessRequestHandlers:
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                result = await ContentAccessRequestOperations(session).request_access(
+                result = await ContentAccessRequestOperations(
+                    session, self.search_indexer
+                ).request_access(
                     requester_id=user_id,
                     organization_id=organization_id,
                     requested_urn=request.requested_urn,
@@ -151,7 +153,9 @@ class AccessRequestHandlers:
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                statuses = await ContentAccessRequestOperations(session).get_my_statuses(
+                statuses = await ContentAccessRequestOperations(
+                    session, self.search_indexer
+                ).get_my_statuses(
                     requester_id=user_id,
                     organization_id=organization_id,
                     requested_urns=list(request.requested_urns),
@@ -176,7 +180,9 @@ class AccessRequestHandlers:
         request_id = _parse_uuid(request.request_id, "request_id")
         try:
             async with open_session() as session:
-                view = await ContentAccessRequestOperations(session).get_access_request(
+                view = await ContentAccessRequestOperations(
+                    session, self.search_indexer
+                ).get_access_request(
                     actor_user_id=user_id,
                     organization_id=organization_id,
                     request_id=request_id,
@@ -213,7 +219,9 @@ class AccessRequestHandlers:
 
         try:
             async with open_session() as session:
-                result = await ContentAccessRequestOperations(session).list_access_requests(
+                result = await ContentAccessRequestOperations(
+                    session, self.search_indexer
+                ).list_access_requests(
                     actor_user_id=user_id,
                     organization_id=organization_id,
                     canonical_content_type=canonical_content_type,
@@ -255,7 +263,7 @@ class AccessRequestHandlers:
         )
         try:
             async with open_session() as session:
-                view = await ContentAccessRequestOperations(session).respond(
+                view = await ContentAccessRequestOperations(session, self.search_indexer).respond(
                     actor_user_id=user_id,
                     organization_id=organization_id,
                     request_id=request_id,
@@ -281,7 +289,7 @@ class AccessRequestHandlers:
         request_id = _parse_uuid(request.request_id, "request_id")
         try:
             async with open_session() as session:
-                view = await ContentAccessRequestOperations(session).cancel(
+                view = await ContentAccessRequestOperations(session, self.search_indexer).cancel(
                     requester_id=user_id,
                     organization_id=organization_id,
                     request_id=request_id,

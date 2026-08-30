@@ -10,6 +10,8 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.core.valkey.cache import cache_invalidate_by_tag
 from uniffy.domains.people.cache import invalidate_chart
@@ -23,8 +25,19 @@ from uniffy.domains.users.search import UserSearchIndexer
 
 
 class UserOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self._session = session
+        self._search_indexer = search_indexer
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("Search indexing is required for user mutations")
+        return self._search_indexer
 
     async def get_by_id(self, user_id: UUID) -> User:
         result = await self._session.execute(select(User).where(User.id == user_id))
@@ -74,7 +87,7 @@ class UserOperations:
         await invalidate_user_profile(user.id)
         # Person payloads carry a `user:{id}` tag; the chart is tagged per org only.
         await cache_invalidate_by_tag(f"user:{user.id}")
-        indexer = UserSearchIndexer(self._session)
+        indexer = UserSearchIndexer(self._session, self.search_indexer)
         for organization_id in await self._active_org_ids(user.id):
             await invalidate_chart(organization_id)
             await indexer.index_for_organization(user, organization_id)
@@ -114,6 +127,7 @@ class UserOperations:
 
     async def upload_avatar(
         self,
+        storage: ObjectStorage,
         user_id: UUID,
         image_data: bytes,
         filename: str,
@@ -121,9 +135,9 @@ class UserOperations:
         user = await self.get_by_id(user_id)
 
         if user.avatar_key:
-            await s3_delete_avatar(user.avatar_key)
+            await s3_delete_avatar(storage, user.avatar_key)
 
-        avatar_key = await s3_upload_avatar(user_id, image_data, filename)
+        avatar_key = await s3_upload_avatar(storage, user_id, image_data, filename)
         user.avatar_key = avatar_key
 
         org_id = await self._profile_org_id(user_id)
@@ -144,11 +158,11 @@ class UserOperations:
 
         return user
 
-    async def delete_avatar(self, user_id: UUID) -> User:
+    async def delete_avatar(self, storage: ObjectStorage, user_id: UUID) -> User:
         user = await self.get_by_id(user_id)
 
         if user.avatar_key:
-            await s3_delete_avatar(user.avatar_key)
+            await s3_delete_avatar(storage, user.avatar_key)
             user.avatar_key = None
 
             org_id = await self._profile_org_id(user_id)

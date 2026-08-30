@@ -1,15 +1,16 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from uniffy.core.search.indexer import SearchIndexer
-from uniffy.core.search.meilisearch import MeilisearchClient
+from uniffy.core.search.workspace import WorkspaceSearch
+from uniffy.infrastructure.search.meili import MeiliSearchEngine
 
 
-def _client_with_wait_result(status: str) -> MeilisearchClient:
-    client = MeilisearchClient()
+def _engine_with_wait_result(status: str) -> MeiliSearchEngine:
+    client = MeiliSearchEngine()
     sdk_client = AsyncMock()
     sdk_client.wait_for_task.return_value = SimpleNamespace(status=status)
     client._client = sdk_client
@@ -17,25 +18,25 @@ def _client_with_wait_result(status: str) -> MeilisearchClient:
 
 
 async def test_await_task_requires_terminal_success() -> None:
-    client = _client_with_wait_result("failed")
+    client = _engine_with_wait_result("failed")
 
     with pytest.raises(RuntimeError, match="did not succeed"):
         await client._await_task(SimpleNamespace(task_uid=41))
 
 
 async def test_await_task_rejects_missing_task_identity() -> None:
-    client = _client_with_wait_result("succeeded")
+    client = _engine_with_wait_result("succeeded")
 
     with pytest.raises(RuntimeError, match="did not return a task"):
         await client._await_task(None)
-    with pytest.raises(RuntimeError, match="no uid"):
+    with pytest.raises(RuntimeError, match="no identity"):
         await client._await_task(SimpleNamespace())
 
 
 async def test_remove_preserves_pending_row_when_acknowledgement_fails() -> None:
     row_id = uuid4()
-    meili = AsyncMock()
-    meili.delete_document.side_effect = RuntimeError("task failed")
+    search = MagicMock(spec=WorkspaceSearch)
+    search.delete_document = AsyncMock(side_effect=RuntimeError("task failed"))
 
     with (
         patch(
@@ -46,12 +47,8 @@ async def test_remove_preserves_pending_row_when_acknowledgement_fails() -> None
             "uniffy.core.search.indexer._clear_pending_removal",
             AsyncMock(),
         ) as clear,
-        patch(
-            "uniffy.core.search.meilisearch.get_meilisearch_client",
-            return_value=meili,
-        ),
     ):
-        await SearchIndexer().remove(
+        await SearchIndexer(search).remove(
             "urn:uniffy:content:NOTE:01900000-0000-7000-8000-000000000001",
             uuid4(),
         )
@@ -61,7 +58,8 @@ async def test_remove_preserves_pending_row_when_acknowledgement_fails() -> None
 
 async def test_remove_clears_pending_row_after_confirmed_success() -> None:
     row_id = uuid4()
-    meili = AsyncMock()
+    search = MagicMock(spec=WorkspaceSearch)
+    search.delete_document = AsyncMock()
 
     with (
         patch(
@@ -72,12 +70,8 @@ async def test_remove_clears_pending_row_after_confirmed_success() -> None:
             "uniffy.core.search.indexer._clear_pending_removal",
             AsyncMock(),
         ) as clear,
-        patch(
-            "uniffy.core.search.meilisearch.get_meilisearch_client",
-            return_value=meili,
-        ),
     ):
-        await SearchIndexer().remove(
+        await SearchIndexer(search).remove(
             "urn:uniffy:content:NOTE:01900000-0000-7000-8000-000000000001",
             uuid4(),
         )

@@ -17,6 +17,7 @@ from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.profile import PeopleProfile
+from uniffy.core.search import SearchIndexer
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.people.cache import invalidate_chart, invalidate_person
 from uniffy.domains.people.search import sync_people_search
@@ -54,7 +55,7 @@ ADMIN_EDITABLE_FIELDS = frozenset({
 # Fields denormalized into the cached org chart payload.
 _CHART_NODE_FIELDS = frozenset({"job_title", "department"})
 
-# Fields denormalized into the Meili user document; mention chips read them.
+# Fields denormalized into the search document; mention chips read them.
 _SEARCH_DOC_FIELDS = _CHART_NODE_FIELDS | frozenset({"timezone"})
 
 _MAX_LENGTHS = {
@@ -98,8 +99,19 @@ def _validate_profile_value(name: str, value: Any) -> None:
 
 
 class PeopleOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self._session = session
+        self._search_indexer = search_indexer
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("Search indexing is required for people mutations")
+        return self._search_indexer
 
     async def get_profile(self, organization_id: UUID, user_id: UUID) -> PeopleProfile | None:
         """Read-only; a missing row means an empty profile. Reads must never INSERT."""
@@ -290,7 +302,12 @@ class PeopleOperations:
             if any(name in _CHART_NODE_FIELDS for name in changed_keys):
                 await invalidate_chart(organization_id)
             if any(name in _SEARCH_DOC_FIELDS for name in changed_keys):
-                await sync_people_search(self._session, organization_id, [target_id])
+                await sync_people_search(
+                    self._session,
+                    self.search_indexer,
+                    organization_id,
+                    [target_id],
+                )
         return profile
 
     async def set_manager(

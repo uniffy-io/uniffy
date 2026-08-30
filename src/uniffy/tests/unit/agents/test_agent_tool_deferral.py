@@ -1,5 +1,6 @@
 """Deferred tool advertisement: planning, the load_group tool, loop expansion."""
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -219,7 +220,11 @@ class TestLoopHelpers:
 
 
 def _loop_ops() -> RuntimeOperations:
-    ops = RuntimeOperations.__new__(RuntimeOperations)
+    @asynccontextmanager
+    async def session_factory():
+        yield AsyncMock()
+
+    ops = RuntimeOperations(MagicMock(), MagicMock(), MagicMock(), session_factory)
     ops._session_ops = MagicMock(add_message=AsyncMock(return_value=MagicMock()))
     return ops
 
@@ -229,6 +234,7 @@ class TestRunToolLoopExpansion:
         import uniffy.domains.agents.tools.executor as executor_mod
 
         monkeypatch.setattr(executor_mod, "write_audit_event", AsyncMock())
+        monkeypatch.setattr(executor_mod, "fetch_agent_row", AsyncMock(return_value=None))
 
         async def scenario():
             registry = _registry()
@@ -274,6 +280,7 @@ class TestRunToolLoopExpansion:
         import uniffy.domains.agents.tools.executor as executor_mod
 
         monkeypatch.setattr(executor_mod, "write_audit_event", AsyncMock())
+        monkeypatch.setattr(executor_mod, "fetch_agent_row", AsyncMock(return_value=None))
 
         async def scenario():
             registry = _registry()

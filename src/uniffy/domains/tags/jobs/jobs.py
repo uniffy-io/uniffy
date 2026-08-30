@@ -5,14 +5,14 @@ from uuid import UUID
 
 from loguru import logger
 
-from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, SearchIndexer
 from uniffy.core.valkey.tags import EVENT_TAG_UPDATED, publish_tag_event
-from uniffy.db import open_session
 from uniffy.domains.tags.operations import (
     TagOperations,
     _format_breakdown,
     _format_pipes,
 )
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="tags.jobs.jobs")
 
@@ -24,17 +24,16 @@ async def reindex_tag_urns(
     organization_id: str,
     content_urns: list[str],
 ) -> dict[str, Any]:
-    """Rewrite the `tags` array on every URN, chunked at 500 per Meilisearch call."""
     if not content_urns:
         return {"status": "skipped", "reason": "no_urns"}
 
     org_id = UUID(organization_id)
-    indexer = SearchIndexer()
+    indexer: SearchIndexer = ctx[SEARCH_INDEXER_CTX_KEY]
     processed = 0
     skipped = 0
 
     async with open_session() as session:
-        ops = TagOperations(session)
+        ops = TagOperations(session, indexer)
 
         for start in range(0, len(content_urns), _BATCH_SIZE):
             batch = content_urns[start : start + _BATCH_SIZE]
@@ -58,12 +57,12 @@ async def reindex_tag_doc(
     organization_id: str,
     tag_id: str,
 ) -> dict[str, Any]:
-    """Refresh a tag's Meilisearch entity doc and broadcast `tag.updated`."""
     org_id = UUID(organization_id)
     tid = UUID(tag_id)
+    indexer: SearchIndexer = ctx[SEARCH_INDEXER_CTX_KEY]
 
     async with open_session() as session:
-        ops = TagOperations(session)
+        ops = TagOperations(session, indexer)
         tag = await ops._get_by_id(org_id, tid)
         if tag is None:
             return {"status": "not_found"}

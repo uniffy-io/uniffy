@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from typing import Any
 
+from uniffy.core.jobs.metrics import WORKER_JOB_ENQUEUE_TOTAL
 from uniffy.core.valkey.queue import get_queue, get_queue_safe
-from uniffy.observability.metrics import WORKER_JOB_ENQUEUE_TOTAL
 from uniffy.vendor.arq.jobs import Job
 
 from .types import JobEnqueueOutcome, JobRef

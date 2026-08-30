@@ -2,7 +2,7 @@ import logging
 import sys
 import traceback
 from types import FrameType
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from colorama import just_fix_windows_console
 from loguru import logger
@@ -14,10 +14,7 @@ try:
 except ImportError:  # loguru internals relocated; the exc_info patcher degrades to a no-op
     RecordException = None
 
-from .config import LogLevel
-
-if TYPE_CHECKING:
-    from .config import ObservabilityConfig
+from .config import LoggingConfig, LogLevel
 
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
@@ -25,15 +22,12 @@ RED = "\033[31m"
 CYAN = "\033[36m"
 RESET = "\033[0m"
 
-app_name = "uniffy"
-app_version = "0.0.1"
+_app_name = "uniffy"
+_app_version = "0.0.1"
 
 
 def escape_loguru_markup(s: str) -> str:
-    """Escape `{}<>[]` so loguru does not parse log messages as markup.
-
-    Fast-paths the common case where the message contains none of those characters.
-    """
+    """Escape characters Loguru treats as markup."""
     if not ("{" in s or "}" in s or "<" in s or ">" in s or "[" in s or "]" in s):  # noqa: PLR2004
         return s
 
@@ -48,79 +42,7 @@ def escape_loguru_markup(s: str) -> str:
     )
 
 
-_LOGGING_LEVEL_MAP = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "CRITICAL": logging.CRITICAL,
-}
-
-_ORDERED_LOGGING_LEVELS = [
-    logging.DEBUG,
-    logging.INFO,
-    logging.WARNING,
-    logging.ERROR,
-    logging.CRITICAL,
-]
-
-
-def disable_leveled_namespace(level_to_disable_str: str, namespace: str) -> None:
-    """Suppress messages at and below `level_to_disable_str` for `namespace`."""
-    normalized_level_str = level_to_disable_str.upper()
-    level_to_disable_val = _LOGGING_LEVEL_MAP.get(normalized_level_str)
-
-    if level_to_disable_val is None:
-        logger.warning(
-            f"Invalid log level '{level_to_disable_str}' provided for namespace '{namespace}'. "
-            f"Valid levels are: {', '.join(_LOGGING_LEVEL_MAP.keys())}."
-        )
-        return
-
-    new_level_val = -1
-
-    try:
-        current_level_index = _ORDERED_LOGGING_LEVELS.index(level_to_disable_val)
-        if current_level_index == len(_ORDERED_LOGGING_LEVELS) - 1:
-            new_level_val = logging.CRITICAL + 1
-        else:
-            new_level_val = _ORDERED_LOGGING_LEVELS[current_level_index + 1]
-    except ValueError:
-        logger.error(
-            f"Internal consistency error: "
-            f"Level {normalized_level_str} (numeric: {level_to_disable_val}) "
-            f"was not found in the internal ordered list of levels. "
-            f"Cannot determine the new log level for namespace '{namespace}'. "
-            f"Falling back to disabling all standard levels up to "
-            f"CRITICAL for this namespace."
-        )
-        new_level_val = logging.CRITICAL + 1
-
-    if new_level_val == -1:
-        logger.error(
-            f"Failed to determine new log level for namespace '{namespace}' when "
-            f"attempting to disable level '{normalized_level_str}'. "
-            f"No changes made to logger '{namespace}'."
-        )
-        return
-
-    target_logger = logging.getLogger(namespace)
-    original_effective_level = target_logger.getEffectiveLevel()
-    target_logger.setLevel(new_level_val)
-
-    new_level_name = logging.getLevelName(new_level_val)
-    original_level_name = logging.getLevelName(original_effective_level)
-
-    logger.info(
-        f"Disabled logging for namespace '{namespace}' at level {normalized_level_str} and below. "
-        f"Logger '{namespace}' minimum level set to {new_level_name} (value: {new_level_val}). "
-        f"Its previous effective minimum level was"
-        f" {original_level_name} (value: {original_effective_level})."
-    )
-
-
 def format_extra(record: dict, color: str) -> str:
-    """Render `record["extra"]` as space-separated `key=value` pairs (logrus style)."""
     extra = record.get("extra", {})
     if not extra:
         return ""
@@ -204,17 +126,7 @@ class InterceptHandler(logging.Handler):
             frame = cast(FrameType, frame.f_back)
             depth += 1
 
-        ctx = {}
-        if hasattr(record, "otelTraceID"):
-            ctx["otelTraceID"] = record.otelTraceID
-        if hasattr(record, "otelSpanID"):
-            ctx["otelSpanID"] = record.otelSpanID
-
-        current_logger = logger
-        if ctx:
-            current_logger = logger.bind(**ctx)
-
-        logger_with_opts = current_logger.opt(depth=depth, exception=record.exc_info)
+        logger_with_opts = logger.opt(depth=depth, exception=record.exc_info)
         try:
             logger_with_opts.log(level, "{}", record.getMessage())
         except Exception as e:
@@ -227,13 +139,7 @@ class InterceptHandler(logging.Handler):
 
 
 def _capture_exc_info_from_extra(record) -> None:
-    """Rescue stdlib-style ``exc_info=True`` passed to loguru calls.
-
-    ``logger.error("msg", exc_info=True)`` is a stdlib-logging idiom loguru does not
-    honor: the kwarg lands in ``extra`` and the traceback is silently dropped. We pop
-    it and attach the live exception so the stack is captured. ``logger.exception`` /
-    ``logger.opt(exception=True)`` set ``record["exception"]`` directly and no-op here.
-    """
+    """Capture the traceback from stray stdlib-style ``exc_info=True`` calls."""
     flagged = record["extra"].pop("exc_info", None)
     if flagged and record["exception"] is None and RecordException is not None:
         type_, value, tb = sys.exc_info()
@@ -244,8 +150,8 @@ def _capture_exc_info_from_extra(record) -> None:
 def serialize(record):
     subset = {
         "time": record["time"],
-        "app": app_name,
-        "v": app_version,
+        "app": _app_name,
+        "v": _app_version,
         "level": record["level"].name,
         "msg": record["message"],
         "func": record["function"],
@@ -277,11 +183,11 @@ def sink(message):
     print(serialized, file=sys.stderr)
 
 
-def configure_loguru(config: ObservabilityConfig) -> None:
-    """Configure loguru with a logrus-style console format (or JSON)."""
-    global app_name, app_version
-    app_name = config.app_name
-    app_version = config.app_version
+def configure_logging(config: LoggingConfig) -> None:
+    """Configure Loguru and bridge standard-library logging into it."""
+    global _app_name, _app_version
+    _app_name = config.app_name
+    _app_version = config.app_version
 
     logger.remove()
     logger.configure(patcher=_capture_exc_info_from_extra)
@@ -316,7 +222,7 @@ def configure_loguru(config: ObservabilityConfig) -> None:
     for logger_name in loggers_to_intercept:
         level = logging_level
         if "sql" in logger_name:  # noqa: PLR2004
-            level = log_level_table[config.sqlalchemy_level]
+            level = logging.INFO
 
         mod_logger = logging.getLogger(logger_name)
         mod_logger.handlers = [InterceptHandler(level=level)]

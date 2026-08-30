@@ -29,7 +29,6 @@ from uniffy_proto.superadmin.v1.system_mail_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.mail.system.converters import (
     delivery_to_proto,
     org_row_to_proto,
@@ -37,6 +36,7 @@ from uniffy.domains.mail.system.converters import (
     system_summary_to_proto,
 )
 from uniffy.domains.mail.system.operations import SystemMailOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="mail.system.handlers")
 

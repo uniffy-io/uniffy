@@ -10,7 +10,7 @@ from uniffy.cli import MFA_RESET_FLAG
 
 
 def _run_backend() -> None:
-    from uniffy._metrics_bootstrap import bootstrap_multiproc_metrics
+    from uniffy.infrastructure.observability.bootstrap import bootstrap_multiproc_metrics
 
     bootstrap_multiproc_metrics("backend")
 
@@ -45,12 +45,12 @@ def _run_backend() -> None:
 
 
 def _run_worker_core() -> None:
-    from uniffy._metrics_bootstrap import bootstrap_multiproc_metrics
+    from uniffy.infrastructure.observability.bootstrap import bootstrap_multiproc_metrics
 
     bootstrap_multiproc_metrics("worker-core")
 
+    from uniffy.workers.fleets import CoreWorkerSettings
     from uniffy.workers.runner import run_worker_with_restart
-    from uniffy.workers.settings import CoreWorkerSettings
 
     port = int(os.getenv("CORE_WORKER_METRICS_PORT", os.getenv("WORKER_METRICS_PORT", "9091")))
     run_worker_with_restart(
@@ -62,12 +62,12 @@ def _run_worker_core() -> None:
 
 
 def _run_worker_egress() -> None:
-    from uniffy._metrics_bootstrap import bootstrap_multiproc_metrics
+    from uniffy.infrastructure.observability.bootstrap import bootstrap_multiproc_metrics
 
     bootstrap_multiproc_metrics("worker-egress")
 
+    from uniffy.workers.fleets import EgressWorkerSettings
     from uniffy.workers.runner import run_worker_with_restart
-    from uniffy.workers.settings import EgressWorkerSettings
 
     port = int(os.getenv("EGRESS_WORKER_METRICS_PORT", "9092"))
     run_worker_with_restart(

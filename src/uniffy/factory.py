@@ -83,8 +83,9 @@ from uniffy.core.crypto import (
 )
 from uniffy.core.realtime import realtime_router
 from uniffy.core.realtime.router import router as realtime_pubsub_router
-from uniffy.core.search import close_meilisearch, init_meilisearch
-from uniffy.core.storage.s3_client import close_s3, init_s3
+from uniffy.core.search import SearchIndexer, WorkspaceSearch
+from uniffy.core.search.engine import SearchEngine
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.streaming.disconnect import StreamDisconnectMiddleware
 from uniffy.core.streaming.middleware import StreamRevokeWatchMiddleware
 from uniffy.core.streaming.revoke_coordinator import coordinator as stream_revoke_coordinator
@@ -101,14 +102,8 @@ from uniffy.core.valkey import (
     signal_pubsub_shutdown,
 )
 from uniffy.core.webhooks import register_webhook_provider, webhooks_router
-from uniffy.db import (
-    close_db,
-    init_db,
-    open_session,
-    seed_initial_data,
-    sync_bundled_skills,
-)
-from uniffy.domains.agents.agents.routes import agent_avatars_router
+from uniffy.db import seed_initial_data, sync_bundled_skills
+from uniffy.domains.agents.agents.routes import create_agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
 from uniffy.domains.agents.budgets.service import BudgetsServiceImpl
 from uniffy.domains.agents.cron.service import CronServiceImpl
@@ -139,11 +134,7 @@ from uniffy.domains.chat.service import ChatServiceImpl
 from uniffy.domains.chat.streaming.service import ChatStreamServiceImpl
 from uniffy.domains.comments.service import CommentsServiceImpl
 from uniffy.domains.files.registration import register_file_content
-from uniffy.domains.files.routes import (
-    files_router,
-    media_router,
-    thumbnails_router,
-)
+from uniffy.domains.files.routes import create_file_routers
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
 from uniffy.domains.integrations.clients import (
@@ -179,13 +170,17 @@ from uniffy.domains.rooms.service import RoomsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.service import SettingsServiceImpl
 from uniffy.domains.tags.service import TagsServiceImpl
-from uniffy.domains.users.routes import avatars_router
+from uniffy.domains.users.routes import create_avatars_router
 from uniffy.domains.users.service import UsersServiceImpl
-from uniffy.observability import ObservabilityConfig, setup_observability
-from uniffy.observability.crpc import LoggingInterceptor, http_version_var, strict_request_codecs
-from uniffy.observability.fastapi.logger import setup_request_logging
-from uniffy.observability.metrics import get_metrics
-from uniffy.observability.otel import instrument_fastapi
+from uniffy.infrastructure.database import close_db, init_db, open_session
+from uniffy.infrastructure.database.metrics import update_pool_metrics
+from uniffy.infrastructure.observability.config import LoggingConfig
+from uniffy.infrastructure.observability.logger import configure_logging
+from uniffy.infrastructure.observability.prometheus import get_metrics
+from uniffy.infrastructure.search import MeiliSearchEngine
+from uniffy.infrastructure.storage import S3Storage
+from uniffy.transport.http import setup_request_logging
+from uniffy.transport.rpc import LoggingInterceptor, http_version_var, strict_request_codecs
 
 
 class HttpVersionMiddleware:
@@ -277,15 +272,13 @@ class ConnectRPCDispatcher:
             await send({"type": "http.response.body", "body": b"Not Found"})
 
 
-def _setup_observability() -> None:
-    environment = os.getenv("ENVIRONMENT", "development")
+def _setup_logging() -> None:
     log_level = os.getenv("LOG_LEVEL", "info").upper()
 
-    setup_observability(
-        config=ObservabilityConfig(
+    configure_logging(
+        config=LoggingConfig(
             app_name="uniffy",
             app_version="0.1.0",
-            environment=environment,
             console_log_level=log_level,
             console_log_type=os.getenv("LOG_FORMAT", "console").lower(),
         )
@@ -322,6 +315,8 @@ def _get_cors_origins() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    storage: ObjectStorage = app.state.object_storage
+    search: WorkspaceSearch = app.state.workspace_search
     logger.info("Starting UNIFFY application...")
 
     try:
@@ -332,14 +327,14 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
-        await init_meilisearch()
-        logger.info("Meilisearch initialized successfully")
+        await search.startup()
+        logger.info("Search engine initialized successfully")
     except Exception as e:
-        logger.exception(f"Failed to initialize Meilisearch: {e}")
+        logger.exception(f"Failed to initialize search engine: {e}")
         raise
 
     try:
-        await init_s3()
+        await storage.startup()
         logger.info("S3 storage initialized successfully")
     except Exception as e:
         logger.exception(f"Failed to initialize S3 storage: {e}")
@@ -419,7 +414,7 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
-        await seed_initial_data()
+        await seed_initial_data(storage)
         logger.info("Initial data seeded successfully")
     except Exception as e:
         logger.exception(f"Failed to seed initial data: {e}")
@@ -455,18 +450,24 @@ async def lifespan(app: FastAPI):
     await close_pubsub()
     await close_queue(QueueName.CORE)
     await close_queue(QueueName.EGRESS)
-    await close_s3()
-    await close_meilisearch()
+    await storage.shutdown()
+    await search.shutdown()
     await close_db()
 
 
-def create_app() -> FastAPI:
-    register_note_realtime_adapter()
+def create_app(
+    storage: ObjectStorage | None = None,
+    search_engine: SearchEngine | None = None,
+) -> FastAPI:
+    storage = storage or S3Storage()
+    search = WorkspaceSearch(search_engine or MeiliSearchEngine())
+    search_indexer = SearchIndexer(search)
+    register_note_realtime_adapter(search_indexer)
     register_note_content()
     register_calendar_content()
     register_file_content()
     register_project_content()
-    _setup_observability()
+    _setup_logging()
 
     app = FastAPI(
         title="UNIFFY - Unified Work Operating System",
@@ -474,6 +475,9 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+    app.state.object_storage = storage
+    app.state.workspace_search = search
+    app.state.search_indexer = search_indexer
 
     cors_origins = _get_cors_origins()
     app.add_middleware(
@@ -488,7 +492,7 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AuditRequestContextMiddleware)
 
-    api_dispatcher = _create_api_dispatcher()
+    api_dispatcher = _create_api_dispatcher(storage, search, search_indexer)
     app.mount("/api", api_dispatcher)
 
     # Signature-verified inbound webhooks; reached directly on the internal
@@ -505,15 +509,20 @@ def create_app() -> FastAPI:
 
     @app.get("/metrics")
     async def metrics():
-        return Response(content=get_metrics(), media_type="text/plain; version=0.0.4; charset=utf-8")
-
-    instrument_fastapi(app=app, exclude_paths=["/healthz", "/metrics"])
+        return Response(
+            content=get_metrics((update_pool_metrics,)),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
     logger.info(f"CORS allowed origins: {cors_origins}")
     return app
 
 
-def _create_api_dispatcher() -> ConnectRPCDispatcher:
+def _create_api_dispatcher(
+    storage: ObjectStorage,
+    search: WorkspaceSearch,
+    search_indexer: SearchIndexer,
+) -> ConnectRPCDispatcher:
     logging_interceptor = LoggingInterceptor()
     authentication_interceptor = AuthenticationInterceptor()
     interceptors = [
@@ -533,11 +542,15 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/notes.v1.NotesService",
-        NotesServiceASGIApplication(NotesServiceImpl(), interceptors=interceptors, codecs=codecs),
+        NotesServiceASGIApplication(
+            NotesServiceImpl(storage, search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/search.v1.SearchService",
-        SearchServiceASGIApplication(SearchServiceImpl(), interceptors=interceptors, codecs=codecs),
+        SearchServiceASGIApplication(
+            SearchServiceImpl(search), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/settings.v1.SettingsService",
@@ -548,16 +561,20 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/bookmarks.v1.BookmarksService",
         BookmarksServiceASGIApplication(
-            BookmarksServiceImpl(), interceptors=interceptors, codecs=codecs
+            BookmarksServiceImpl(search_indexer), interceptors=interceptors, codecs=codecs
         ),
     )
     dispatcher.add_service(
         "/tags.v1.TagsService",
-        TagsServiceASGIApplication(TagsServiceImpl(), interceptors=interceptors, codecs=codecs),
+        TagsServiceASGIApplication(
+            TagsServiceImpl(search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/chat.v1.ChatService",
-        ChatServiceASGIApplication(ChatServiceImpl(), interceptors=interceptors, codecs=codecs),
+        ChatServiceASGIApplication(
+            ChatServiceImpl(storage, search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/chat.v1.ChatStreamService",
@@ -572,7 +589,7 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/permissions.v1.MembersService",
         MembersServiceASGIApplication(
-            MembersServiceImpl(), interceptors=interceptors, codecs=codecs
+            MembersServiceImpl(search_indexer), interceptors=interceptors, codecs=codecs
         ),
     )
     dispatcher.add_service(
@@ -583,31 +600,39 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/users.v1.UsersService",
-        UsersServiceASGIApplication(UsersServiceImpl(), interceptors=interceptors, codecs=codecs),
+        UsersServiceASGIApplication(
+            UsersServiceImpl(storage, search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/organizations.v1.OrganizationsService",
         OrganizationsServiceASGIApplication(
-            OrganizationsServiceImpl(), interceptors=interceptors, codecs=codecs
+            OrganizationsServiceImpl(search_indexer), interceptors=interceptors, codecs=codecs
         ),
     )
     dispatcher.add_service(
         "/groups.v1.GroupsService",
-        GroupsServiceASGIApplication(GroupsServiceImpl(), interceptors=interceptors, codecs=codecs),
+        GroupsServiceASGIApplication(
+            GroupsServiceImpl(search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/people.v1.PeopleService",
-        PeopleServiceASGIApplication(PeopleServiceImpl(), interceptors=interceptors, codecs=codecs),
+        PeopleServiceASGIApplication(
+            PeopleServiceImpl(search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/cal.v1.CalendarService",
         CalendarServiceASGIApplication(
-            CalendarServiceImpl(), interceptors=interceptors, codecs=codecs
+            CalendarServiceImpl(search_indexer), interceptors=interceptors, codecs=codecs
         ),
     )
     dispatcher.add_service(
         "/files.v1.FilesService",
-        FilesServiceASGIApplication(FilesServiceImpl(), interceptors=interceptors, codecs=codecs),
+        FilesServiceASGIApplication(
+            FilesServiceImpl(storage, search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/audit.v1.AuditService",
@@ -646,7 +671,7 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/superadmin.v1.SystemOrganizationsService",
         SystemOrganizationsServiceASGIApplication(
-            SystemOrganizationsServiceImpl(), interceptors=interceptors, codecs=codecs
+            SystemOrganizationsServiceImpl(storage), interceptors=interceptors, codecs=codecs
         ),
     )
     dispatcher.add_service(
@@ -692,12 +717,14 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/projects.v1.ProjectsService",
         ProjectsServiceASGIApplication(
-            ProjectsServiceImpl(), interceptors=interceptors, codecs=codecs
+            ProjectsServiceImpl(storage, search_indexer), interceptors=interceptors, codecs=codecs
         ),
     )
     dispatcher.add_service(
         "/rooms.v1.RoomsService",
-        RoomsServiceASGIApplication(RoomsServiceImpl(), interceptors=interceptors, codecs=codecs),
+        RoomsServiceASGIApplication(
+            RoomsServiceImpl(search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/calls.v1.CallService",
@@ -723,7 +750,9 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/agents.v1.AgentsService",
-        AgentsServiceASGIApplication(AgentsServiceImpl(), interceptors=interceptors, codecs=codecs),
+        AgentsServiceASGIApplication(
+            AgentsServiceImpl(storage, search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/agents.v1.SkillsService",
@@ -737,7 +766,9 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/agents.v1.CronService",
-        CronServiceASGIApplication(CronServiceImpl(), interceptors=interceptors, codecs=codecs),
+        CronServiceASGIApplication(
+            CronServiceImpl(search_indexer), interceptors=interceptors, codecs=codecs
+        ),
     )
     dispatcher.add_service(
         "/agents.v1.BudgetsService",
@@ -756,7 +787,9 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         StreamDisconnectMiddleware(
             StreamRevokeWatchMiddleware(
                 RuntimeServiceASGIApplication(
-                    RuntimeServiceImpl(), interceptors=interceptors, codecs=codecs
+                    RuntimeServiceImpl(storage, search_indexer),
+                    interceptors=interceptors,
+                    codecs=codecs,
                 )
             )
         ),
@@ -770,6 +803,9 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
 
     http_app = FastAPI()
     setup_request_logging(http_app)
+    thumbnails_router, files_router, media_router = create_file_routers(storage)
+    avatars_router = create_avatars_router(storage)
+    agent_avatars_router = create_agent_avatars_router(storage)
     http_app.include_router(thumbnails_router)
     http_app.include_router(files_router)
     http_app.include_router(media_router)

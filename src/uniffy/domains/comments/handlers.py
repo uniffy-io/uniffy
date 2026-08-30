@@ -32,13 +32,13 @@ from uniffy_proto.comments.v1.comments_pb2 import (
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters import content_type_from_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import open_session
 from uniffy.domains.comments.converters import (
     anchor_type_from_proto,
     comment_to_proto,
 )
 from uniffy.domains.comments.operations import CommentOperations
 from uniffy.domains.comments.queries import aggregate_reactions
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="comments.handlers")
 

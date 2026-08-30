@@ -15,12 +15,12 @@ from uniffy_proto.agents.v1.rate_limits_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.agents.limits.converters import (
     rate_limit_kind_from_proto,
     rate_limit_row_to_proto,
 )
 from uniffy.domains.agents.limits.operations import RateLimitsOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.limits.handlers")
 

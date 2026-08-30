@@ -33,12 +33,12 @@ from uniffy.domains.permissions.access.types import (
     ResourceRowState,
     missing_decision,
 )
-from uniffy.domains.projects.access import resolve_tasks
-from uniffy.domains.tags.access import resolve_tags
-from uniffy.observability.metrics import (
+from uniffy.domains.permissions.metrics import (
     RESOURCE_ACCESS_CANDIDATES,
     RESOURCE_ACCESS_DURATION,
 )
+from uniffy.domains.projects.access import resolve_tasks
+from uniffy.domains.tags.access import resolve_tags
 
 MAX_RESOURCE_BATCH = 300
 MAX_RESOURCE_PAGE = 500

@@ -22,8 +22,8 @@ from uniffy.core.models.login.organization_member import (
 )
 from uniffy.core.models.login.user import User
 from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.db.session import open_session
 from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
+from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="platform.jobs.jobs")
 

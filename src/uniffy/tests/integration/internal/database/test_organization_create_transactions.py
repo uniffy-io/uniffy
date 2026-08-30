@@ -19,7 +19,7 @@ from uniffy.core.models.people.identity import IdentitySource
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uniffy.core.models.tags.saved_filter import SavedTagFilter
 from uniffy.core.types import generate_id
-from uniffy.db import open_session
+from uniffy.infrastructure.database import open_session
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -72,6 +72,7 @@ async def _delete_organization(session, organization_id) -> None:
 async def test_organization_bootstrap_rolls_back_every_fact_when_audit_fails(
     session,
     env,
+    search_indexer,
 ) -> None:
     slug = f"rollback-org-{generate_id().hex[:12]}"
     with (
@@ -85,7 +86,7 @@ async def test_organization_bootstrap_rolls_back_every_fact_when_audit_fails(
         ),
         pytest.raises(RuntimeError, match="organization audit unavailable"),
     ):
-        await OrganizationOperations(session).create(
+        await OrganizationOperations(session, search_indexer=search_indexer).create(
             name="Rollback organization",
             slug=slug,
             owner_user_id=env.admin_id,
@@ -102,9 +103,10 @@ async def test_organization_bootstrap_rolls_back_every_fact_when_audit_fails(
 async def test_organization_bootstrap_commits_required_rows_and_audits_once(
     session,
     env,
+    search_indexer,
 ) -> None:
     slug = f"atomic-org-{generate_id().hex[:12]}"
-    operations = OrganizationOperations(session)
+    operations = OrganizationOperations(session, search_indexer=search_indexer)
     with (
         patch(
             "uniffy.domains.chat.channels.operations.check_chat_mutation_limit",
@@ -216,9 +218,10 @@ async def test_organization_bootstrap_commits_required_rows_and_audits_once(
 async def test_organization_creation_survives_starter_content_failure(
     session,
     env,
+    search_indexer,
 ) -> None:
     slug = f"degraded-org-{generate_id().hex[:12]}"
-    operations = OrganizationOperations(session)
+    operations = OrganizationOperations(session, search_indexer=search_indexer)
     operations._user_indexer.index_for_organization = AsyncMock()
     with (
         patch(

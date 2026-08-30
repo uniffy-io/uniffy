@@ -1,6 +1,7 @@
 """Unified search and reference resolution."""
 
 import asyncio
+from functools import partial
 from uuid import UUID
 
 from loguru import logger
@@ -25,7 +26,8 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.shared import EventVisibility
 from uniffy.core.models.tags.tag import TagAssignment
-from uniffy.core.search.meilisearch import SearchCandidateScope
+from uniffy.core.search.policy import SearchCandidateScope
+from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentType
 from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
@@ -47,8 +49,9 @@ logger = logger.bind(component="search.operations")
 
 
 class SearchOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, search: WorkspaceSearch) -> None:
         self.session = session
+        self.search_engine = search
         self.access_query = ContentAccessQuery(session)
         self.resource_access = ResourceAccessResolver(session)
 
@@ -79,7 +82,10 @@ class SearchOperations:
             if subject.is_active_member
             else SearchCandidateScope.ORGANIZATION
         )
-        return await AuthorizedSearch(self.resource_access, execute_search).run(
+        return await AuthorizedSearch(
+            self.resource_access,
+            partial(execute_search, self.search_engine),
+        ).run(
             AuthorizedSearchQuery(
                 user_id=user_id,
                 organization_id=organization_id,
@@ -212,7 +218,11 @@ class SearchOperations:
             return {}
 
         raw_result, decisions_result = await asyncio.gather(
-            get_raw_documents_by_urns(list(key_by_urn), organization_id),
+            get_raw_documents_by_urns(
+                self.search_engine,
+                list(key_by_urn),
+                organization_id,
+            ),
             self.resource_access.resolve(
                 actor_id=user_id,
                 organization_id=organization_id,
@@ -233,7 +243,7 @@ class SearchOperations:
             }
         decisions = decisions_result
         if isinstance(raw_result, BaseException):
-            logger.opt(exception=raw_result).warning("Meilisearch URN preview lookup failed")
+            logger.opt(exception=raw_result).warning("Search preview lookup failed")
             return {
                 urn: _build_reference_result(
                     urn,

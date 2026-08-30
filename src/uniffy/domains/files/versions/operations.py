@@ -13,6 +13,8 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
+from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     generate_id,
 )
@@ -34,10 +36,16 @@ class FileVersionOperations:
     def __init__(self, files: object) -> None:
         self.files = files
         self.session = files.session
-        self.s3 = files.s3
         self.content_type = files.content_type
         self.access_query = files.access_query
-        self.search_indexer = files.search_indexer
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        return self.files.search_indexer
+
+    @property
+    def storage(self) -> ObjectStorage:
+        return self.files.storage
 
     async def complete_uploaded_version(
         self,
@@ -130,9 +138,11 @@ class FileVersionOperations:
         await self.files._index_for_search(model=file, skip_member_lookup=False)
         await self.session.commit()
 
-        await FolderOperations(self.session).refresh_folder_stats(
-            file.folder_id, file.organization_id
-        )
+        await FolderOperations(
+            self.session,
+            self.files.storage,
+            self.files.search_indexer,
+        ).refresh_folder_stats(file.folder_id, file.organization_id)
 
         if pending_jobs_for_file(file):
             await self.files.uploads._enqueue_processing_jobs(file)
@@ -172,7 +182,7 @@ class FileVersionOperations:
             raise ValidationError("version_id", "This version is already current")
         # Transcode swaps schedule a delayed delete of superseded objects, so a
         # listed version can outlive its bytes; fail cleanly instead of copying air.
-        if not await self.s3.object_exists(source.storage_key):
+        if not await self.storage.object_exists(source.storage_key):
             raise ValidationError(
                 "version_id",
                 "The stored bytes for this version are no longer available",
@@ -182,7 +192,7 @@ class FileVersionOperations:
         source_number = source.version_number
 
         new_storage_key = f"{organization_id}/{file.owner_id}/{generate_id()}/{file.filename}"
-        await self.s3.copy_object(
+        await self.storage.copy_object(
             source_key=source.storage_key,
             destination_key=new_storage_key,
             content_type=file.mime_type,
@@ -247,9 +257,11 @@ class FileVersionOperations:
         await self.files._index_for_search(model=file, skip_member_lookup=False)
         await self.session.commit()
 
-        await FolderOperations(self.session).refresh_folder_stats(
-            file.folder_id, file.organization_id
-        )
+        await FolderOperations(
+            self.session,
+            self.files.storage,
+            self.files.search_indexer,
+        ).refresh_folder_stats(file.folder_id, file.organization_id)
 
         if pending_jobs_for_file(file):
             await self.files.uploads._enqueue_processing_jobs(file)
@@ -284,7 +296,7 @@ class FileVersionOperations:
             # DB rows go first: a crash here orphans S3 objects (recoverable),
             # never a version row whose bytes are gone.
             try:
-                await self.s3.delete_objects(pruned_keys)
+                await self.storage.delete_objects(pruned_keys)
             except Exception:
                 logger.opt(exception=True).warning(
                     "Failed to delete pruned version objects", file_id=str(file.id)

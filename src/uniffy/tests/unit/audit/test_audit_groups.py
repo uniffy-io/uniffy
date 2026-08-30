@@ -53,7 +53,7 @@ async def test_create_emits_group_created() -> None:
     session.refresh = AsyncMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
-    ops = GroupOperations(session)
+    ops = GroupOperations(session, MagicMock())
     actor = generate_id()
     org = generate_id()
 
@@ -83,7 +83,7 @@ async def test_update_emits_changed_keys() -> None:
     session.refresh = AsyncMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
-    ops = GroupOperations(session)
+    ops = GroupOperations(session, MagicMock())
     with _permitted(group):
         await ops.update(
             group_id=group.id,
@@ -106,7 +106,7 @@ async def test_update_with_no_changes_skips_audit() -> None:
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
-    ops = GroupOperations(session)
+    ops = GroupOperations(session, MagicMock())
     with _permitted(group):
         await ops.update(
             group_id=group.id,
@@ -127,7 +127,7 @@ async def test_delete_emits_group_deleted_with_member_count() -> None:
     session.delete = AsyncMock()
     session.commit = AsyncMock()
 
-    ops = GroupOperations(session)
+    ops = GroupOperations(session, MagicMock())
     with _permitted(group):
         await ops.delete(group.id, group.organization_id, actor_user_id=generate_id())
 

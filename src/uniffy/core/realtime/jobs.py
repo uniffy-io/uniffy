@@ -5,9 +5,9 @@ import time
 from typing import Any
 from uuid import UUID
 
+from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_TASK_DURATION
 from uniffy.core.realtime.snapshot import persist_snapshot
 from uniffy.core.types import ContentType
-from uniffy.observability.metrics import REALTIME_SNAPSHOT_TASK_DURATION
 
 
 async def save_realtime_snapshot(

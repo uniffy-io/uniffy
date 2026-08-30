@@ -2,7 +2,7 @@
 
 import contextlib
 import io
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import av
@@ -13,9 +13,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from uniffy.core.models.files.file import File, ThumbnailStatus
 from uniffy.core.models.files.media_info import FileMediaInfo
-from uniffy.core.storage.s3_client import get_s3_client
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.valkey import NotificationPayloadType, publish_notification
-from uniffy.db.session import open_session
+from uniffy.infrastructure.database.session import open_session
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="files.jobs.thumbnails")
@@ -42,7 +42,7 @@ async def generate_image_thumbnail(
     file_uuid = UUID(file_id)
     org_uuid = UUID(organization_id)
 
-    s3 = get_s3_client()
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
 
     async with open_session() as session:
         file = await session.get(File, file_uuid)
@@ -57,7 +57,7 @@ async def generate_image_thumbnail(
         await session.commit()
 
         try:
-            image_bytes = await s3.download_bytes(file.storage_key)
+            image_bytes = await storage.download_bytes(file.storage_key)
             log.info("Downloaded image", bytes=len(image_bytes))
 
             thumbnail_bytes, thumb_width, thumb_height = _create_thumbnail(image_bytes)
@@ -69,7 +69,7 @@ async def generate_image_thumbnail(
             )
 
             thumb_key = get_thumbnail_key(org_uuid, file_uuid)
-            await s3.upload_bytes(
+            await storage.upload_bytes(
                 key=thumb_key,
                 data=thumbnail_bytes,
                 content_type="image/jpeg",
@@ -145,7 +145,7 @@ async def generate_pdf_thumbnail(
     file_uuid = UUID(file_id)
     org_uuid = UUID(organization_id)
 
-    s3 = get_s3_client()
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
 
     async with open_session() as session:
         file = await session.get(File, file_uuid)
@@ -160,13 +160,13 @@ async def generate_pdf_thumbnail(
         await session.commit()
 
         try:
-            pdf_bytes = await s3.download_bytes(file.storage_key)
+            pdf_bytes = await storage.download_bytes(file.storage_key)
             log.info("Downloaded PDF", bytes=len(pdf_bytes))
 
             thumbnail_bytes, thumb_width, thumb_height = _create_pdf_thumbnail(pdf_bytes)
 
             thumb_key = get_thumbnail_key(org_uuid, file_uuid)
-            await s3.upload_bytes(
+            await storage.upload_bytes(
                 key=thumb_key,
                 data=thumbnail_bytes,
                 content_type="image/jpeg",
@@ -242,7 +242,7 @@ async def generate_video_thumbnail(
     file_uuid = UUID(file_id)
     org_uuid = UUID(organization_id)
 
-    s3 = get_s3_client()
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
 
     async with open_session() as session:
         file = await session.get(File, file_uuid)
@@ -257,13 +257,13 @@ async def generate_video_thumbnail(
         await session.commit()
 
         try:
-            video_bytes = await s3.download_bytes(file.storage_key)
+            video_bytes = await storage.download_bytes(file.storage_key)
             log.info("Downloaded video", bytes=len(video_bytes))
 
             thumbnail_bytes, thumb_width, thumb_height = _create_video_thumbnail(video_bytes)
 
             thumb_key = get_thumbnail_key(org_uuid, file_uuid)
-            await s3.upload_bytes(
+            await storage.upload_bytes(
                 key=thumb_key,
                 data=thumbnail_bytes,
                 content_type="image/jpeg",

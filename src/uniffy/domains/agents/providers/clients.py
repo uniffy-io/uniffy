@@ -29,7 +29,7 @@ from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
 from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.valkey.config import ValkeyConfig
-from uniffy.observability.metrics import (
+from uniffy.domains.agents.metrics import (
     LLM_PROVIDER_LRU_HIT_TOTAL,
     LLM_PROVIDER_LRU_MISS_TOTAL,
 )

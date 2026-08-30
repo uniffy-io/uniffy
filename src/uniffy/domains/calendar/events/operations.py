@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import (
     AttendeeRole,
     AttendeeStatus,
@@ -37,9 +38,13 @@ from uniffy.domains.calendar.events.updates import EventUpdateOperations
 class CalendarEventOperations(EventContentOperations):
     """Stable event API composed from focused calendar workflows."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         register_calendar_content()
-        super().__init__(session)
+        super().__init__(session, search_indexer)
 
     async def create(
         self,

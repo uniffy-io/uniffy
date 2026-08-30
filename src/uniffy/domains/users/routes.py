@@ -4,6 +4,7 @@ Auth is handled via service worker token injection - <img> tags cannot send
 Authorization headers, so we rely on the SW to attach them per request.
 """
 
+from functools import partial
 from typing import Annotated
 from uuid import UUID
 
@@ -14,17 +15,15 @@ from sqlalchemy import select
 
 from uniffy.core.auth.http import get_current_user_id
 from uniffy.core.models.login.user import User
-from uniffy.core.storage import get_s3_client
-from uniffy.db import open_session
+from uniffy.core.storage import ObjectStorage
 from uniffy.domains.users.avatars import AVATAR_SIZES
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="users.routes")
 
-avatars_router = APIRouter(prefix="/avatars", tags=["avatars"])
 
-
-@avatars_router.get("/{user_id}/{size}", response_model=None)
 async def get_avatar(
+    storage: ObjectStorage,
     user_id: UUID,
     size: str,
     _current_user_id: Annotated[UUID, Depends(get_current_user_id)],
@@ -67,10 +66,8 @@ async def get_avatar(
                 )
 
             s3_key = f"{user.avatar_key}/{size}.webp"
-            s3 = get_s3_client()
-
             try:
-                metadata = await s3.get_object_info(s3_key)
+                metadata = await storage.get_object_info(s3_key)
                 content_length = metadata.get("ContentLength", 0)
             except Exception:
                 raise HTTPException(
@@ -79,11 +76,11 @@ async def get_avatar(
                 )
 
             async def stream_avatar(
-                _s3=s3,
-                _s3_key=s3_key,
+                _storage=storage,
+                _storage_key=s3_key,
             ):
-                async for chunk, _, _ in _s3.download_stream(
-                    key=_s3_key,
+                async for chunk, _, _ in _storage.download_stream(
+                    key=_storage_key,
                     chunk_size=64 * 1024,
                 ):
                     yield chunk
@@ -111,3 +108,14 @@ async def get_avatar(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         )
+
+
+def create_avatars_router(storage: ObjectStorage) -> APIRouter:
+    router = APIRouter(prefix="/avatars", tags=["avatars"])
+    router.add_api_route(
+        "/{user_id}/{size}",
+        partial(get_avatar, storage),
+        methods=["GET"],
+        response_model=None,
+    )
+    return router

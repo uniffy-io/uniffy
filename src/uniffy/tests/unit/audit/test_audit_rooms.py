@@ -50,7 +50,7 @@ async def test_create_room_emits_room_created() -> None:
     from uniffy.domains.rooms.operations import RoomOperations
 
     session = _build_session()
-    ops = RoomOperations(session)
+    ops = RoomOperations(session, MagicMock())
     ops._index_for_search = AsyncMock()
 
     with patch.object(

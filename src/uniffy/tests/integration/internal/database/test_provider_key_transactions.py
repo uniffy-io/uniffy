@@ -7,7 +7,7 @@ from sqlalchemy import delete, func, select
 
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.types import generate_id
-from uniffy.db import open_session
+from uniffy.infrastructure.database import open_session
 from uniffy.domains.agents.providers.operations import ProviderOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")

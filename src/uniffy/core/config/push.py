@@ -43,7 +43,7 @@ async def load_vapid_config() -> None:
 
     try:
         from uniffy.core.config.settings import DeploymentSettingsOperations
-        from uniffy.db.session import open_session
+        from uniffy.infrastructure.database.session import open_session
 
         async with open_session() as session:
             ops = DeploymentSettingsOperations(session)

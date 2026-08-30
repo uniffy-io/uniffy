@@ -46,6 +46,10 @@ def _session(execute_results=None):
     return session
 
 
+def _search_indexer() -> SearchIndexer:
+    return SearchIndexer(MagicMock())
+
+
 def _group(**overrides) -> Group:
     defaults = dict(
         id=generate_id(),
@@ -97,7 +101,7 @@ class TestIndexTeam:
             patch.object(SearchIndexer, "index", index_mock),
             patch("uniffy.domains.groups.search.publish_mention_state", publish_mock),
         ):
-            await TeamSearchIndexer(session).index_team(group)
+            await TeamSearchIndexer(session, _search_indexer()).index_team(group)
 
         kwargs = index_mock.call_args.kwargs
         assert kwargs["urn"] == f"urn:uniffy:content:TEAM:{group.id}"
@@ -123,7 +127,7 @@ class TestIndexTeam:
             patch.object(SearchIndexer, "index", AsyncMock()) as index_mock,
             patch("uniffy.domains.groups.search.publish_mention_state", publish_mock),
         ):
-            await TeamSearchIndexer(session).index_team(group)
+            await TeamSearchIndexer(session, _search_indexer()).index_team(group)
         assert index_mock.call_args.kwargs["metadata"] == {"member_count": "0"}
         assert publish_mock.call_args.args[2]["parent_label"] == ""
 
@@ -138,7 +142,7 @@ class TestIndexTeam:
             patch.object(SearchIndexer, "remove", remove_mock),
             patch("uniffy.domains.groups.search.publish_mention_state", publish_mock),
         ):
-            await TeamSearchIndexer(session).index_team(group)
+            await TeamSearchIndexer(session, _search_indexer()).index_team(group)
         index_mock.assert_not_awaited()
         remove_mock.assert_awaited_once_with(build_team_urn(group.id), ORG)
         assert publish_mock.call_args.args[2] == {"urn_status": "DELETED"}
@@ -151,7 +155,7 @@ class TestIndexTeam:
             patch.object(SearchIndexer, "remove", remove_mock),
             patch("uniffy.domains.groups.search.publish_mention_state", publish_mock),
         ):
-            await TeamSearchIndexer(_session()).remove_team(group_id, ORG)
+            await TeamSearchIndexer(_session(), _search_indexer()).remove_team(group_id, ORG)
         remove_mock.assert_awaited_once_with(build_team_urn(group_id), ORG)
         publish_mock.assert_awaited_once_with(
             ORG, build_team_urn(group_id), {"urn_status": "DELETED"}
@@ -161,19 +165,21 @@ class TestIndexTeam:
         groups = [_group(), _group(name="Design", slug="design")]
         session = _session([_rows_result(groups)])
         with patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team:
-            await TeamSearchIndexer(session).sync_teams(ORG, [g.id for g in groups])
+            await TeamSearchIndexer(session, _search_indexer()).sync_teams(
+                ORG, [g.id for g in groups]
+            )
         assert index_team.await_count == 2
 
     async def test_sync_teams_empty_ids_is_a_noop(self) -> None:
         session = _session()
-        await TeamSearchIndexer(session).sync_teams(ORG, [])
+        await TeamSearchIndexer(session, _search_indexer()).sync_teams(ORG, [])
         session.execute.assert_not_awaited()
 
 
 class TestGroupOperationsWiring:
     async def test_create_team_indexes(self) -> None:
         session = _session()
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         p = _ops_patches()
         with (
             _as_admin(),
@@ -196,7 +202,7 @@ class TestGroupOperationsWiring:
 
     async def test_create_access_group_never_indexes(self) -> None:
         session = _session()
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         p = _ops_patches()
         with (
             _as_admin(),
@@ -217,7 +223,7 @@ class TestGroupOperationsWiring:
         child_ids = [generate_id()]
         member_ids = [generate_id(), generate_id()]
         session = _session()
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         p = _ops_patches()
         sync_people = AsyncMock()
         with (
@@ -244,12 +250,12 @@ class TestGroupOperationsWiring:
             )
         index_team.assert_awaited_once_with(group)
         sync_teams.assert_awaited_once_with(ORG, child_ids)
-        sync_people.assert_awaited_once_with(session, ORG, member_ids)
+        sync_people.assert_awaited_once_with(session, ops.search_indexer, ORG, member_ids)
 
     async def test_description_change_reindexes_without_child_fanout(self) -> None:
         group = _group()
         session = _session()
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         p = _ops_patches()
         with (
             _as_admin(),
@@ -278,7 +284,7 @@ class TestGroupOperationsWiring:
         group = _group()
         detached = [generate_id(), generate_id()]
         session = _session()
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         p = _ops_patches()
         with (
             _as_admin(),
@@ -310,7 +316,7 @@ class TestGroupOperationsWiring:
     async def test_promote_to_team_indexes(self) -> None:
         group = _group(kind=GroupKind.ACCESS)
         session = _session()
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         p = _ops_patches()
         with (
             _as_admin(),
@@ -341,7 +347,7 @@ class TestGroupOperationsWiring:
         child_ids = [generate_id()]
         member_id = generate_id()
         session = _session([_rows_result([(member_id,)]), _scalar_result()])
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         p = _ops_patches()
         with (
             _as_admin(),
@@ -366,7 +372,7 @@ class TestGroupOperationsWiring:
         group = _group()
         user_id = generate_id()
         session = _session()
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         p = _ops_patches()
         with (
             p[1],
@@ -382,7 +388,7 @@ class TestGroupOperationsWiring:
     async def test_member_change_on_access_group_skips_indexing(self) -> None:
         group = _group(kind=GroupKind.ACCESS)
         session = _session()
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         with (
             patch.object(TeamSearchIndexer, "index_team", AsyncMock()) as index_team,
             patch.object(TeamSearchIndexer, "remove_team", AsyncMock()),
@@ -396,7 +402,7 @@ class TestFirstTeamDerivation:
         group = _group()
         member_ids = [generate_id()]
         session = _session()
-        ops = GroupOperations(session)
+        ops = GroupOperations(session, _search_indexer())
         p = _ops_patches()
         sync_people = AsyncMock()
         with (
@@ -421,4 +427,4 @@ class TestFirstTeamDerivation:
                 actor_user_id=ACTOR,
                 name="Platform Engineering",
             )
-        sync_people.assert_awaited_once_with(session, ORG, member_ids)
+        sync_people.assert_awaited_once_with(session, ops.search_indexer, ORG, member_ids)

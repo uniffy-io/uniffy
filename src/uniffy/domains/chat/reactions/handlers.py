@@ -20,8 +20,8 @@ from uniffy.core.auth.principal import (
     resolve_organization_id,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import open_session
 from uniffy.domains.chat.reactions.operations import ChatReactionOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.reactions.handlers")
 

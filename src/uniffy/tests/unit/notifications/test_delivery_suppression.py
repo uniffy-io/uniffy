@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.types import NotificationType, generate_id
 from uniffy.core.valkey.presence import PRESENCE_STATUS_DND
@@ -16,6 +17,7 @@ from uniffy.domains.notifications.delivery.suppression import (
 )
 from uniffy.domains.notifications.delivery.base import NotificationChannel
 from uniffy.domains.notifications.delivery.app import InAppAdapter
+from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS_CTX_KEY
 from uniffy.domains.notifications.jobs import jobs as notification_tasks
 
 
@@ -199,7 +201,6 @@ async def test_worker_keeps_in_app_delivery_when_push_context_is_suppressed() ->
         yield session
 
     with (
-        patch.object(notification_tasks, "open_session", new=open_session),
         patch.object(notification_tasks, "event_from_json", return_value=event),
         patch.object(
             notification_tasks,
@@ -223,16 +224,17 @@ async def test_worker_keeps_in_app_delivery_when_push_context_is_suppressed() ->
             "load_interruptive_delivery_contexts",
             new=AsyncMock(return_value={user_id: context}),
         ),
-        patch.dict(
-            notification_tasks.DELIVERY_ADAPTERS,
-            {
-                NotificationChannel.IN_APP: in_app,
-                NotificationChannel.BROWSER: push,
-            },
-            clear=True,
-        ),
     ):
-        result = await notification_tasks.process_notification_event({}, "event")
+        result = await notification_tasks.process_notification_event(
+            {
+                SESSION_FACTORY_CTX_KEY: open_session,
+                DELIVERY_ADAPTERS_CTX_KEY: {
+                    NotificationChannel.IN_APP: in_app,
+                    NotificationChannel.BROWSER: push,
+                },
+            },
+            "event",
+        )
 
     assert result == {"status": "success", "recipients": 1, "in_app": 1}
     in_app.deliver_with_session.assert_awaited_once_with(session, user_id, event)

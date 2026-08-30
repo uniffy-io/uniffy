@@ -21,8 +21,7 @@ from typing import Any
 from loguru import logger
 
 from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
-from uniffy.core.valkey.ops import _get_ops_client, ops_call
-from uniffy.observability.metrics import (
+from uniffy.core.valkey.metrics import (
     CACHE_HIT_TOTAL,
     CACHE_INVALIDATE_TOTAL,
     CACHE_LOAD_DURATION,
@@ -30,6 +29,7 @@ from uniffy.observability.metrics import (
     CACHE_SET_TOTAL,
     CACHE_STAMPEDE_LOCK_WAIT_TOTAL,
 )
+from uniffy.core.valkey.ops import _get_ops_client, ops_call
 
 logger = logger.bind(component="core.valkey.cache")
 

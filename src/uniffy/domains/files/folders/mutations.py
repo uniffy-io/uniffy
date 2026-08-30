@@ -198,7 +198,7 @@ class FolderMutationOperations:
         through ``refresh_folder_stats`` so each re-index ships with its
         recipient-gated broadcast.
         """
-        file_ops = FileSearchOperations(self.session)
+        file_ops = FileSearchOperations(self.session, self.folders.search_indexer)
         result = await self.session.execute(
             select(File).where(
                 File.folder_id == folder_id,

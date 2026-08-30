@@ -14,6 +14,8 @@ from uniffy.core.auth.permissions import (
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.files.folder import Folder
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.domains.files.folders.mutations import FolderMutationOperations
 from uniffy.domains.files.folders.projection import FolderProjection
@@ -24,17 +26,36 @@ from uniffy.domains.files.registration import register_file_content
 
 
 class FolderOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         register_file_content()
         self.session = session
         self.content_type = ContentType.FOLDER
         self.access_query = ContentAccessQuery(session)
         self.permission_checker = PermissionChecker(session)
+        self._storage = storage
+        self._search_indexer = search_indexer
         self.projection = FolderProjection(self)
         self.mutations = FolderMutationOperations(self)
         self.trash = FolderTrashOperations(self)
         self.tree = FolderTreeOperations(self)
         self.queries = FolderQueryOperations(self)
+
+    @property
+    def storage(self) -> ObjectStorage:
+        if self._storage is None:
+            raise RuntimeError("Object storage is required for this folder operation")
+        return self._storage
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("Search indexing is required for folder mutations")
+        return self._search_indexer
 
     async def _role_for(
         self,

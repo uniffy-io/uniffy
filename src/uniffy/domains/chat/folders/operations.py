@@ -21,14 +21,14 @@ MAX_FOLDERS_PER_USER = 100
 
 
 class AgentFolderOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, search_indexer: SearchIndexer) -> None:
         self.session = session
+        self.search_indexer = search_indexer
 
     async def _index_for_search(self, folder: ChatAgentFolder) -> None:
         """Folders are private to their owner, so the doc is OWNER_ONLY."""
         try:
-            indexer = SearchIndexer(self.session)
-            await indexer.index(
+            await self.search_indexer.index(
                 urn=build_content_urn(ContentType.AGENT_FOLDER, folder.id),
                 organization_id=folder.organization_id,
                 title=folder.name,
@@ -44,8 +44,7 @@ class AgentFolderOperations:
 
     async def _remove_from_search(self, folder_id: UUID, organization_id: UUID) -> None:
         try:
-            indexer = SearchIndexer(self.session)
-            await indexer.remove(
+            await self.search_indexer.remove(
                 build_content_urn(ContentType.AGENT_FOLDER, folder_id),
                 organization_id,
             )

@@ -60,7 +60,6 @@ from uniffy.core.models.login.user import User
 from uniffy.core.realtime.reauth import REAUTH_INTERVAL_SECONDS
 from uniffy.core.streaming.disconnect import get_disconnect_event
 from uniffy.core.valkey import NotificationPayloadType, subscribe_channels
-from uniffy.db import open_session
 from uniffy.domains.notifications.converters import (
     notification_to_proto,
     notification_type_from_proto,
@@ -71,6 +70,7 @@ from uniffy.domains.notifications.operations import (
     PushSubscriptionOperations,
 )
 from uniffy.domains.notifications.tags import TagEventRelay
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="notifications.handlers")
 
@@ -543,7 +543,7 @@ class NotificationsHandlers:
         heartbeat_interval = 30  # seconds
         disconnect = get_disconnect_event()
 
-        relay = TagEventRelay(user_id, organization_id)
+        relay = TagEventRelay(user_id, organization_id, open_session)
 
         try:
             async with aclosing(

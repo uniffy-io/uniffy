@@ -1,24 +1,22 @@
-"""Unified content search backed by Meilisearch."""
+"""Vendor-neutral workspace search contracts and policy."""
 
-from uniffy.core.search.indexer import SearchIndexer, build_content_urn
-from uniffy.core.search.meilisearch import (
-    INDEX_SETTINGS,
-    UNIFFY_INDEX_NAME,
-    MeilisearchClient,
-    MeilisearchConfig,
-    close_meilisearch,
-    get_meilisearch_client,
-    init_meilisearch,
+from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, build_content_urn
+from uniffy.core.search.policy import (
+    FILTERABLE_METADATA_KEYS,
+    WORKSPACE_SEARCH_SCHEMA,
+    SearchCandidateScope,
+    build_document_id,
 )
+from uniffy.core.search.workspace import WORKSPACE_SEARCH_CTX_KEY, WorkspaceSearch
 
 __all__ = [
     "SearchIndexer",
+    "SEARCH_INDEXER_CTX_KEY",
+    "SearchCandidateScope",
+    "WorkspaceSearch",
+    "WORKSPACE_SEARCH_CTX_KEY",
+    "WORKSPACE_SEARCH_SCHEMA",
+    "FILTERABLE_METADATA_KEYS",
+    "build_document_id",
     "build_content_urn",
-    "MeilisearchClient",
-    "MeilisearchConfig",
-    "init_meilisearch",
-    "close_meilisearch",
-    "get_meilisearch_client",
-    "UNIFFY_INDEX_NAME",
-    "INDEX_SETTINGS",
 ]

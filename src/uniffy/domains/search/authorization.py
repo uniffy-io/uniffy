@@ -4,18 +4,18 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from uniffy.core.content.references import parse_urn
-from uniffy.core.search.meilisearch import SearchCandidateScope
+from uniffy.core.search.policy import SearchCandidateScope
 from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
     ResourceRowState,
 )
-from uniffy.domains.search.queries import SearchResult, apply_type_priority
-from uniffy.observability.metrics import (
+from uniffy.domains.search.metrics import (
     SEARCH_AUTHORIZATION_TOTAL,
     SearchAuthorizationOutcome,
 )
+from uniffy.domains.search.queries import SearchResult, apply_type_priority
 
 SearchExecutor = Callable[..., Awaitable[tuple[list[SearchResult], int]]]
 

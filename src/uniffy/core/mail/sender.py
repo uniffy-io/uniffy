@@ -32,7 +32,7 @@ from uniffy.core.mail.resolver import MailConfigResolver
 from uniffy.core.mail.suppression import SuppressionRepository, _normalize
 from uniffy.core.mail.templates import get_template
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.db.session import open_session
+from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="mail")
 

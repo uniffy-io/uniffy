@@ -13,6 +13,7 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.search import SearchIndexer
 from uniffy.domains.groups.operations import GroupOperations
 from uniffy.domains.groups.search import TeamSearchIndexer
 from uniffy.domains.people.cache import (
@@ -169,6 +170,7 @@ async def get_team(
 
 async def update_team(
     session: AsyncSession,
+    search_indexer: SearchIndexer,
     organization_id: UUID,
     actor_id: UUID,
     group_id: UUID,
@@ -239,6 +241,6 @@ async def update_team(
         await invalidate_org_people(organization_id)
         if parent_changed:
             # The team's search doc denormalizes the parent name.
-            await TeamSearchIndexer(session).index_team(group)
+            await TeamSearchIndexer(session, search_indexer).index_team(group)
     node, _ = await get_team(session, organization_id, group_id)
     return node

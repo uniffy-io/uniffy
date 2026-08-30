@@ -11,24 +11,26 @@ from sqlalchemy import select
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from uniffy.core.storage import ObjectStorage
 
-async def seed_initial_data() -> None:
+
+async def seed_initial_data(storage: ObjectStorage) -> None:
     """Seed the default org + docs if the database is empty.
 
     Serialised across workers via advisory lock; the existing-org check inside
     keeps the body idempotent for followers.
     """
-    from uniffy.db.session import SEED_LOCK_ID, startup_advisory_lock
+    from uniffy.infrastructure.database.session import SEED_LOCK_ID, startup_advisory_lock
 
     with startup_advisory_lock(SEED_LOCK_ID, "initial seed"):
-        await _seed_initial_data_locked()
+        await _seed_initial_data_locked(storage)
 
 
-async def _seed_initial_data_locked() -> None:
+async def _seed_initial_data_locked(storage: ObjectStorage) -> None:
     # Lazy imports avoid the auth-module circular dependency.
     from uniffy.core.auth.passwords.crypto import hash_password
     from uniffy.core.models import Organization, User
-    from uniffy.db.session import open_session
+    from uniffy.infrastructure.database.session import open_session
 
     logger.info("Checking for existing data...")
 
@@ -103,7 +105,7 @@ async def _seed_initial_data_locked() -> None:
 
                 org_slug = slugify(org_name)
 
-            org_ops = OrganizationOperations(session)
+            org_ops = OrganizationOperations(session, storage)
             default_org = await org_ops.create(
                 name=org_name,
                 slug=org_slug,

@@ -22,13 +22,13 @@ from uniffy.core.auth.principal import (
     resolve_organization_id,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import open_session
 from uniffy.domains.tags.filters.converters import (
     criteria_from_proto,
     icon_from_proto,
     saved_filter_to_proto,
 )
 from uniffy.domains.tags.filters.operations import SavedTagFilterOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="tags.filters.handlers")
 

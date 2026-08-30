@@ -85,10 +85,10 @@ class StagedAccessModeChange:
 class ContentMembersOperations:
     """Canonical audited mutations for content membership and access policy."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, search_indexer: SearchIndexer) -> None:
         self.session = session
         self.permission_checker = PermissionChecker(session)
-        self.search_indexer = SearchIndexer(session)
+        self.search_indexer = search_indexer
 
     async def list_members(
         self,
@@ -698,6 +698,7 @@ class ContentMembersOperations:
             affected.extend(await loader(self.session, organization_id, content_id))
         await migrate_attachment_policy(
             self.session,
+            self.search_indexer,
             organization_id,
             affected,
             new_effective_mode,
@@ -1221,7 +1222,7 @@ class ContentMembersOperations:
         access_mode: AccessMode | None,
         baseline_role: ContentRole | None,
     ) -> None:
-        """Index must carry the effective values since the Meili filter matches literals."""
+        """Index effective policy values so candidate filtering never uses a stale default."""
         try:
             default_mode, default_baseline = await resolve_content_defaults(
                 self.session,

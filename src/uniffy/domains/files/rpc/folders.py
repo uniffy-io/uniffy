@@ -29,7 +29,6 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.types import AccessMode, ContentType
-from uniffy.db import open_session
 from uniffy.domains.files.converters import (
     folder_to_proto,
     tree_node_from_file,
@@ -37,6 +36,7 @@ from uniffy.domains.files.converters import (
 )
 from uniffy.domains.files.operations import FileOperations, FolderOperations
 from uniffy.domains.permissions.members import ContentMembersOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.rpc.folders")
 
@@ -75,7 +75,7 @@ class FolderHandlers:
 
         try:
             async with open_session() as session:
-                ops = FolderOperations(session)
+                ops = FolderOperations(session, self.storage, self.search_indexer)
                 folder = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -131,7 +131,7 @@ class FolderHandlers:
 
         try:
             async with open_session() as session:
-                ops = FolderOperations(session)
+                ops = FolderOperations(session, self.storage, self.search_indexer)
 
                 if request.access_mode:
                     new_access_mode = access_mode_from_proto(request.access_mode)
@@ -147,7 +147,7 @@ class FolderHandlers:
                         new_access_mode,
                         new_baseline_role,
                     )
-                    members_ops = ContentMembersOperations(session)
+                    members_ops = ContentMembersOperations(session, self.search_indexer)
                     await members_ops.set_access_mode(
                         actor_user_id=user_id,
                         organization_id=organization_id,
@@ -205,7 +205,7 @@ class FolderHandlers:
 
         try:
             async with open_session() as session:
-                ops = FolderOperations(session)
+                ops = FolderOperations(session, self.storage, self.search_indexer)
                 files_deleted, folders_deleted = await ops.delete(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -253,8 +253,8 @@ class FolderHandlers:
 
         try:
             async with open_session() as session:
-                folder_ops = FolderOperations(session)
-                file_ops = FileOperations(session)
+                folder_ops = FolderOperations(session, self.storage, self.search_indexer)
+                file_ops = FileOperations(session, self.storage, self.search_indexer)
 
                 checker = PermissionChecker(session)
                 file_default_mode, file_default_baseline = await checker.get_org_defaults(

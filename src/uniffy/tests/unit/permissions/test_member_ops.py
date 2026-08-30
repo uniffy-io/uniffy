@@ -28,7 +28,7 @@ def _make_ops() -> ContentMembersOperations:
     session.commit = AsyncMock()
     session.flush = AsyncMock()
     session.refresh = AsyncMock()
-    return ContentMembersOperations(session)
+    return ContentMembersOperations(session, MagicMock())
 
 
 def _fake_content(
@@ -546,7 +546,7 @@ class TestManageOverrides:
         import uniffy.domains.agents.agents.operations  # noqa: F401
 
         session = _dispatch_session(org_role=org_role, admin_domains=admin_domains)
-        ops = ContentMembersOperations(session)
+        ops = ContentMembersOperations(session, MagicMock())
         ops.permission_checker = MagicMock()
         ops.permission_checker.effective_role = AsyncMock(return_value=effective_role)
         return ops

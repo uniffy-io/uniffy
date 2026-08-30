@@ -17,7 +17,6 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType
-from uniffy.db import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.calendar.operations import CalendarEventOperations
 from uniffy.domains.files.operations import FileOperations, FolderOperations
@@ -29,6 +28,7 @@ from uniffy.domains.projects.search.access import (
     record_project_search_acl_refresh,
 )
 from uniffy.domains.rooms.operations import RoomOperations
+from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="permissions.jobs.jobs")

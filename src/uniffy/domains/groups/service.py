@@ -4,6 +4,8 @@ from uniffy.domains.groups.handlers import GroupsHandlers
 
 
 class GroupsServiceImpl(GroupsHandlers):
-    """ConnectRPC groups service."""
+    def __init__(self, search_indexer: SearchIndexer) -> None:
+        self.search_indexer = search_indexer
 
-    pass
+
+from uniffy.core.search import SearchIndexer

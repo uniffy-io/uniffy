@@ -8,7 +8,8 @@ from uniffy.core.models.files.file import ExtractionStatus, File, ThumbnailStatu
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_upload import MultipartUpload
-from uniffy.core.storage import get_s3_client
+from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -38,15 +39,26 @@ __all__ = [
 
 
 class FileOperations(FileSearchOperations):
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         register_file_content()
-        super().__init__(session)
-        self.s3 = get_s3_client()
+        super().__init__(session, search_indexer)
+        self._storage = storage
         self.uploads = FileUploadOperations(self)
         self.versions = FileVersionOperations(self)
         self.items = FileMutationOperations(self)
         self.queries = FileQueryOperations(self)
         self.trash = FileTrashOperations(self)
+
+    @property
+    def storage(self) -> ObjectStorage:
+        if self._storage is None:
+            raise RuntimeError("Object storage is required for this file operation")
+        return self._storage
 
     async def _resolve_role(
         self,

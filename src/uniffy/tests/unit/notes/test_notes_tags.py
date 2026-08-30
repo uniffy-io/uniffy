@@ -107,7 +107,7 @@ class TestReplaceManualTags:
     def _make_ops(session) -> TagOperations:
         ops = TagOperations.__new__(TagOperations)
         ops.session = session
-        ops.indexer = MagicMock()
+        ops._search_indexer = MagicMock()
         return ops
 
     async def test_diff_emits_combined_event(self) -> None:

@@ -53,8 +53,12 @@ from uniffy.core.valkey.streams import (
     set_run_state,
     stream_xread,
 )
-from uniffy.db import open_session
 from uniffy.domains.agents.budgets.operations import BudgetsOperations
+from uniffy.domains.agents.metrics import (
+    AGENT_RUN_ENQUEUE_FAILURES_TOTAL,
+    AGENT_RUN_RECONNECT_TOTAL,
+    AGENT_RUN_SUBSCRIBE_TIMEOUT_TOTAL,
+)
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.converters import (
@@ -77,11 +81,7 @@ from uniffy.domains.agents.runtime.settings.operations import (
 from uniffy.domains.agents.runtime.usage import UsageOperations
 from uniffy.domains.agents.sessions.operations import SessionOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.observability.metrics import (
-    AGENT_RUN_ENQUEUE_FAILURES_TOTAL,
-    AGENT_RUN_RECONNECT_TOTAL,
-    AGENT_RUN_SUBSCRIBE_TIMEOUT_TOTAL,
-)
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.runtime.handlers")
 
@@ -778,13 +778,17 @@ class RuntimeHandlers:
                 raise ConnectError(Code.INVALID_ARGUMENT, "params_patch must be a JSON object")
 
         try:
-            new_id, metadata = await regenerate_image(
-                user_id=user_id,
-                organization_id=org_id,
-                channel_id=channel_id,
-                message_id=message_id,
-                params_patch=patch,
-            )
+            async with open_session() as session:
+                new_id, metadata = await regenerate_image(
+                    session=session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                    user_id=user_id,
+                    organization_id=org_id,
+                    channel_id=channel_id,
+                    message_id=message_id,
+                    params_patch=patch,
+                )
             return RegenerateImageResponse(
                 message_id=str(new_id),
                 result_metadata=dumps_str(metadata),

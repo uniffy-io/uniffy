@@ -47,7 +47,7 @@ class TestLoadTriggerAttachments:
         safe_loader = AsyncMock()
         monkeypatch.setattr(bridge_mod, "_safe_load_files", safe_loader)
 
-        bridge = AgentChatBridge(MagicMock())
+        bridge = AgentChatBridge(MagicMock(), MagicMock())
         result = await bridge._load_trigger_attachments(
             user_id=generate_id(),
             organization_id=generate_id(),
@@ -72,7 +72,7 @@ class TestLoadTriggerAttachments:
         monkeypatch.setattr(bridge_mod, "_safe_load_files", safe_loader)
 
         user_id, org_id, trigger_id = generate_id(), generate_id(), generate_id()
-        bridge = AgentChatBridge(MagicMock())
+        bridge = AgentChatBridge(MagicMock(), MagicMock())
         result = await bridge._load_trigger_attachments(
             user_id=user_id,
             organization_id=org_id,
@@ -94,7 +94,7 @@ class TestLoadTriggerAttachments:
         safe_loader = AsyncMock(return_value=[])
         monkeypatch.setattr(bridge_mod, "_safe_load_files", safe_loader)
 
-        bridge = AgentChatBridge(MagicMock())
+        bridge = AgentChatBridge(MagicMock(), MagicMock())
         result = await bridge._load_trigger_attachments(
             user_id=generate_id(),
             organization_id=generate_id(),
@@ -110,7 +110,7 @@ class TestLoadTriggerAttachments:
         safe_loader = AsyncMock()
         monkeypatch.setattr(bridge_mod, "_safe_load_files", safe_loader)
 
-        bridge = AgentChatBridge(MagicMock())
+        bridge = AgentChatBridge(MagicMock(), MagicMock())
         result = await bridge._load_trigger_attachments(
             user_id=generate_id(),
             organization_id=generate_id(),

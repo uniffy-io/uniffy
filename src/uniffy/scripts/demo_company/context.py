@@ -17,6 +17,8 @@ from uniffy.core.models.login.organization_member import (
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.domains.tags.operations import TagOperations
 from uniffy.scripts.demo_company.loader import TagSpec
 
@@ -49,6 +51,8 @@ class DemoContext:
     """Everything the per-domain seeders need, resolved once per run."""
 
     session: AsyncSession
+    storage: ObjectStorage
+    search_indexer: SearchIndexer
     organization_id: UUID
     actor_id: UUID
     timezone: str
@@ -170,7 +174,7 @@ async def ensure_tags(
     if ctx.dry_run:
         return tag_ids
 
-    ops = TagOperations(ctx.session)
+    ops = TagOperations(ctx.session, ctx.search_indexer)
     for spec in specs:
         tag = await ops.create(
             actor_id=ctx.actor_id,

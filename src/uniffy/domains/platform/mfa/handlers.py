@@ -29,8 +29,8 @@ from uniffy_proto.superadmin.v1.system_mfa_pb2 import (
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import open_session
 from uniffy.domains.auth.mfa.operations import MfaOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="platform.mfa.handlers")
 

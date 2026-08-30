@@ -183,9 +183,10 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
     from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
     from uniffy.core.models.chat.message import ChatMessage, SenderType
     from uniffy.core.models.chat.reaction import ChatReaction
-    from uniffy.core.search.meilisearch import close_meilisearch, init_meilisearch
+    from uniffy.core.search import SearchIndexer, WorkspaceSearch
     from uniffy.core.types import generate_id
-    from uniffy.db.session import close_db, init_db, open_session
+    from uniffy.infrastructure.database.session import close_db, init_db, open_session
+    from uniffy.infrastructure.search import MeiliSearchEngine
 
     load_dotenv()
 
@@ -201,7 +202,9 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
         return
 
     await init_db()
-    await init_meilisearch()
+    search = WorkspaceSearch(MeiliSearchEngine())
+    await search.startup()
+    indexer = SearchIndexer(search)
 
     try:
         async with open_session() as session:
@@ -383,9 +386,6 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
 
             logger.info("Indexing messages to Meilisearch...")
             index_batch_size = 500
-            from uniffy.core.search.indexer import SearchIndexer
-
-            indexer = SearchIndexer()
             for batch_start in range(0, len(search_docs), index_batch_size):
                 batch = search_docs[batch_start : batch_start + index_batch_size]
                 await indexer.batch_index(batch)
@@ -404,7 +404,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             logger.info(f"Reactions: {total_reactions}")
             logger.info(f"Members: {len(users)}")
     finally:
-        await close_meilisearch()
+        await search.shutdown()
         await close_db()
 
 

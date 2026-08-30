@@ -17,8 +17,8 @@ from sqlalchemy import select
 from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.models import Organization, User
 from uniffy.core.models.login.organization_member import OrganizationRole
-from uniffy.db.session import close_db, init_db, open_session
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.infrastructure.database.session import close_db, init_db, open_session
 
 _PLANS = ["free", "pro", "team", "business", "enterprise"]
 _FIRST_NAMES = [

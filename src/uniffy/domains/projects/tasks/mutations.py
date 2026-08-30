@@ -360,7 +360,7 @@ class TaskMutationOperations:
         await self.content._require_delete(user_id, organization_id, task)
 
         if permanent:
-            tag_ops = TagOperations(self.session)
+            tag_ops = TagOperations(self.session, self.content.search_indexer)
             await tag_ops.unassign_all_for_urn(
                 actor_id=user_id,
                 organization_id=organization_id,
@@ -369,6 +369,8 @@ class TaskMutationOperations:
 
             await purge_attachments_for_content(
                 self.session,
+                self.content.storage,
+                self.content.search_indexer,
                 organization_id=organization_id,
                 content_type=self.content.content_type,
                 content_ids=[task_id],

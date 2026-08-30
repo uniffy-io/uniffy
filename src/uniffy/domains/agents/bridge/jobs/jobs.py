@@ -1,11 +1,13 @@
 """ARQ job: run an agent in response to a chat trigger (DM / mention / reply)."""
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
 
-from uniffy.db.session import open_session
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.domains.agents.bridge.operations import AgentChatBridge
 
 logger = logger.bind(component="agents.bridge.jobs.jobs")
@@ -30,8 +32,15 @@ async def respond_to_chat_message(
         return {"status": "error", "error": "invalid_uuid"}
 
     try:
-        async with open_session() as session:
-            bridge = AgentChatBridge(session)
+        session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
+        async with session_factory() as session:
+            storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
+            bridge = AgentChatBridge(
+                session,
+                session_factory,
+                storage,
+                ctx[SEARCH_INDEXER_CTX_KEY],
+            )
             await bridge.respond_to_chat_message(
                 channel_id=cid,
                 trigger_message_id=tmid,

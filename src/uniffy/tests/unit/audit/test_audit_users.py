@@ -53,7 +53,7 @@ async def test_upload_avatar_emits_avatar_changed() -> None:
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
-    ops = UserOperations(session)
+    ops = UserOperations(session, MagicMock())
 
     with (
         patch.object(UserOperations, "get_by_id", AsyncMock(return_value=user)),
@@ -82,7 +82,7 @@ async def test_upload_avatar_emits_avatar_changed() -> None:
             _indexer_mock(),
         ),
     ):
-        await ops.upload_avatar(user.id, b"img", "a.png")
+        await ops.upload_avatar(AsyncMock(), user.id, b"img", "a.png")
 
     rows = _audit_rows(session)
     assert len(rows) == 1

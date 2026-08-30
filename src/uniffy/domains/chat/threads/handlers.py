@@ -29,12 +29,12 @@ from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.chat.message import ChatMessage, SenderType
-from uniffy.db import open_session
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import SENDER_TYPE_TO_PROTO, message_to_proto
 from uniffy.domains.chat.messages.projection import ForwardProjectionResolver
 from uniffy.domains.chat.senders import SenderResolver
 from uniffy.domains.chat.threads.operations import ChatThreadOperations, ThreadInboxRow
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.threads.handlers")
 

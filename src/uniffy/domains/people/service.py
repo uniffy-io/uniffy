@@ -2,10 +2,12 @@
 
 from uniffy_proto.people.v1.people_connect import PeopleService
 
+from uniffy.core.search import SearchIndexer
 from uniffy.domains.people.handlers import PeopleHandlers
 
 
 class PeopleServiceImpl(PeopleHandlers, PeopleService):
-    """ConnectRPC people service; RPCs not yet implemented answer UNIMPLEMENTED."""
+    def __init__(self, search_indexer: SearchIndexer) -> None:
+        self.search_indexer = search_indexer
 
     pass

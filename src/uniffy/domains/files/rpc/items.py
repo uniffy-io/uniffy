@@ -32,14 +32,13 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.login.user import User
-from uniffy.core.storage import get_s3_client
 from uniffy.core.types import ContentType, ParentSelection, SortOrder
-from uniffy.db import open_session
 from uniffy.domains.files.converters import (
     file_to_proto,
 )
 from uniffy.domains.files.operations import FileOperations
 from uniffy.domains.permissions.members import ContentMembersOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.rpc.items")
 
@@ -72,14 +71,14 @@ class FileItemHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
 
                 file = await ops.get_by_id(user_id, organization_id, file_id)
 
-                s3 = get_s3_client()
+                storage = self.storage
                 first_chunk = True
 
-                async for chunk_data, chunk_num, total_chunks in s3.download_stream(
+                async for chunk_data, chunk_num, total_chunks in storage.download_stream(
                     key=file.storage_key
                 ):
                     response = DownloadFileResponse(
@@ -121,7 +120,7 @@ class FileItemHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
                 file = await ops.get_by_id(user_id, organization_id, file_id)
                 user_role = await ops._resolve_role(user_id, organization_id, file)
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
@@ -168,7 +167,7 @@ class FileItemHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
 
                 if request.access_mode:
                     new_access_mode = access_mode_from_proto(request.access_mode)
@@ -184,7 +183,7 @@ class FileItemHandlers:
                         new_access_mode,
                         new_baseline_role,
                     )
-                    members_ops = ContentMembersOperations(session)
+                    members_ops = ContentMembersOperations(session, self.search_indexer)
                     await members_ops.set_access_mode(
                         actor_user_id=user_id,
                         organization_id=organization_id,
@@ -250,7 +249,7 @@ class FileItemHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
                 await ops.delete(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -287,7 +286,7 @@ class FileItemHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
                 file = await ops.restore(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -358,7 +357,7 @@ class FileItemHandlers:
 
         try:
             async with open_session() as session:
-                ops = FileOperations(session)
+                ops = FileOperations(session, self.storage, self.search_indexer)
                 files, total = await ops.list_files(
                     user_id=user_id,
                     organization_id=organization_id,

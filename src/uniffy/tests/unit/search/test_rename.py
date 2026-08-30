@@ -1,9 +1,10 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.json_codec import loads
+from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, SearchIndexer
 from uniffy.core.types import EventVisibility, generate_id
 from uniffy.domains.search import rename
 from uniffy.domains.search.jobs import jobs
@@ -94,6 +95,7 @@ async def test_reindex_renamed_content_refreshes_search_and_live_mentions() -> N
     refresh_note = AsyncMock()
     refresh_event = AsyncMock()
     refresh_task = AsyncMock()
+    search_indexer = MagicMock(spec=SearchIndexer)
     payload = {
         "organization_id": str(organization_id),
         "note_ids": [str(note.id)],
@@ -107,9 +109,11 @@ async def test_reindex_renamed_content_refreshes_search_and_live_mentions() -> N
         patch.object(jobs, "refresh_event_search_projection", refresh_event),
         patch.object(jobs, "refresh_task_search_projection", refresh_task),
     ):
-        result = await jobs.reindex_renamed_content({}, rename.dumps_str(payload))
+        result = await jobs.reindex_renamed_content(
+            {SEARCH_INDEXER_CTX_KEY: search_indexer}, rename.dumps_str(payload)
+        )
 
     assert result == {"notes": 1, "events": 1, "tasks": 1}
-    refresh_note.assert_awaited_once_with(session, note)
-    refresh_event.assert_awaited_once_with(session, event)
-    refresh_task.assert_awaited_once_with(session, task)
+    refresh_note.assert_awaited_once_with(session, note, search_indexer)
+    refresh_event.assert_awaited_once_with(session, event, search_indexer)
+    refresh_task.assert_awaited_once_with(session, task, search_indexer)

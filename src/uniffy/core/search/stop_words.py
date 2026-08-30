@@ -1,15 +1,4 @@
-"""English and Bulgarian stop words applied to the Meilisearch index.
-
-The setting is index global, so every word applies to every org's content.
-Bulgarian is safe next to English because Cyrillic tokens never collide with
-Latin ones; the guard test enforces the script split. Function words only,
-same rule for both languages. English words that double as enterprise terms
-stay searchable on purpose: "it" (IT), "us" (US), "am" (times), "will",
-"may", "can" (names, month). Bulgarian words that double as content stay
-searchable too: public Bulgarian lists carry nouns like "време", "година",
-"работа" and "край" (end); none of those belong here. A broad net degrades
-precision faster than it helps recall.
-"""
+"""Conservative English and Bulgarian stop words for workspace search."""
 
 STOP_WORDS_EN: tuple[str, ...] = (
     "a",

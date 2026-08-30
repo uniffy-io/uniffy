@@ -27,6 +27,7 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.identity import IdentityLink, IdentitySource
 from uniffy.core.models.people.profile import PeopleProfile
+from uniffy.core.search import SearchIndexer
 from uniffy.core.types import SubjectType, generate_id
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.groups.naming import dedupe_name, resolve_slug
@@ -389,6 +390,7 @@ async def deprovision_user(
     session: AsyncSession,
     source: IdentitySource,
     user_id: UUID,
+    search_indexer: SearchIndexer,
     *,
     active_owner_ids: set[UUID],
 ) -> bool:
@@ -413,13 +415,16 @@ async def deprovision_user(
     await invalidate_person(org_id, user_id)
 
     urn = f"urn:uniffy:content:USER:{user_id}"
-    await UserSearchIndexer(session).remove_from_organization(user_id, org_id)
+    await UserSearchIndexer(session, search_indexer).remove_from_organization(user_id, org_id)
     await publish_mention_state(org_id, urn, {"urn_status": "DELETED"})
     return True
 
 
 async def provision_from_login(
-    session: AsyncSession, source: IdentitySource, record: DirectoryUser
+    session: AsyncSession,
+    source: IdentitySource,
+    record: DirectoryUser,
+    search_indexer: SearchIndexer,
 ) -> User:
     """The whole job of a future OIDC callback or SCIM push: one record through
     the same primitives the pull driver uses."""
@@ -429,7 +434,7 @@ async def provision_from_login(
         raise ValidationError("record", "record cannot be provisioned")
     await session.commit()
     await invalidate_person(source.organization_id, user_id)
-    await sync_people_search(session, source.organization_id, [user_id])
+    await sync_people_search(session, search_indexer, source.organization_id, [user_id])
     result = await session.execute(select(User).where(User.id == user_id))
     return result.scalar_one()
 
@@ -455,6 +460,7 @@ async def _resolve_sync_actor(session: AsyncSession, organization_id: UUID) -> U
 async def _deprovision_pass(
     session: AsyncSession,
     source: IdentitySource,
+    search_indexer: SearchIndexer,
     seen_external_ids: set[str],
     report: ReconcileReport,
 ) -> None:
@@ -502,14 +508,23 @@ async def _deprovision_pass(
     active_owner_ids = {row[0] for row in owners.all()}
 
     for user_id in candidates:
-        if await deprovision_user(session, source, user_id, active_owner_ids=active_owner_ids):
+        if await deprovision_user(
+            session,
+            source,
+            user_id,
+            search_indexer,
+            active_owner_ids=active_owner_ids,
+        ):
             report.users_deprovisioned += 1
         else:
             report.deprovision_skipped += 1
 
 
 async def run_full_sync(
-    session: AsyncSession, source: IdentitySource, provider: DirectorySyncProvider
+    session: AsyncSession,
+    source: IdentitySource,
+    provider: DirectorySyncProvider,
+    search_indexer: SearchIndexer,
 ) -> ReconcileReport:
     """Three-pass pull driver: users, then manager edges, then groups.
 
@@ -589,14 +604,22 @@ async def run_full_sync(
 
         # After rosters and parent edges are final: synced TEAMs get their
         # search doc refreshed; groups the feed demoted to ACCESS tombstone.
-        await TeamSearchIndexer(session).sync_teams(org_id, list(group_ids.values()))
+        await TeamSearchIndexer(session, search_indexer).sync_teams(
+            org_id,
+            list(group_ids.values()),
+        )
 
     if provider.capabilities.supports_pull_users:
-        await _deprovision_pass(session, source, seen_active, report)
+        await _deprovision_pass(session, source, search_indexer, seen_active, report)
 
     touched_list = list(touched)
     for start in range(0, len(touched_list), CHUNK_SIZE):
-        await sync_people_search(session, org_id, touched_list[start : start + CHUNK_SIZE])
+        await sync_people_search(
+            session,
+            search_indexer,
+            org_id,
+            touched_list[start : start + CHUNK_SIZE],
+        )
     await invalidate_org_people(org_id)
 
     report.elapsed_seconds = round(time.monotonic() - started, 3)

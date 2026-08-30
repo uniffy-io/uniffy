@@ -143,9 +143,19 @@ def _serialize_tag(tag: Tag, *, usage_count: int = 0) -> dict[str, object]:
 
 
 class TagOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self.session = session
-        self.indexer = SearchIndexer()
+        self._search_indexer = search_indexer
+
+    @property
+    def indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("Search indexing is required for tag mutations")
+        return self._search_indexer
 
     async def filter_viewable_urns(
         self,
@@ -1034,19 +1044,7 @@ class TagOperations:
         usage_count: int,
         breakdown_data: tuple[dict[str, int], list[str], list[str]] | None = None,
     ) -> None:
-        """Write the tag's Meilisearch document.
-
-        Tags are org-wide entities; visibility maps to ``OPEN_TO_ORG``
-        with a ``VIEWER`` baseline so every org member can resolve them
-        in spotlight / mention pickers. The per-tag visibility narrowing
-        for the unified-tags privacy rule is applied at read time by
-        :func:`build_tag_visibility_predicate`; the index just acts as
-        the denormalized read source for the chip preview.
-
-        ``breakdown_data`` lets a caller that already computed the
-        per-domain breakdown thread it through, avoiding a duplicate
-        scan of ``tag_assignments`` (background reindex worker).
-        """
+        """Index org-visible tag previews while preserving read-time assignment privacy."""
         owner_id = tag.created_by or tag.organization_id
         url_path = f"/tags/{tag.slug}"
         keywords = " ".join(filter(None, [tag.name, tag.slug, tag.description or ""]))
@@ -1082,17 +1080,7 @@ class TagOperations:
         organization_id: UUID,
         tag_ids: Iterable[UUID],
     ) -> dict[UUID, int]:
-        """Refresh each affected tag's Meilisearch document inline.
-
-        One COUNT, one breakdown / recent scan, and one Meilisearch
-        partial write per tag. The cost is bounded -- assign / unassign
-        touches at most the manual cap (20) tags in one call -- and
-        running inline guarantees the chip preview reflects the new
-        state on the next ``resolveUrns`` round-trip.
-
-        Returns a ``{tag_id: usage_count}`` map so callers don't need
-        a follow-up ``_get_usage_counts`` for the realtime payload.
-        """
+        """Refresh bounded tag previews inline and return their usage counts."""
         ids = list(dict.fromkeys(tag_ids))
         if not ids:
             return {}
@@ -1110,12 +1098,7 @@ class TagOperations:
     async def _compute_tag_breakdown(
         self, tag_id: UUID
     ) -> tuple[dict[str, int], list[str], list[str]]:
-        """Return ``(per_domain_count, recent_urns, recent_iso_timestamps)``.
-
-        Used by :meth:`_index_tag_entity` to denormalize the chip
-        preview's stats row into the tag's Meilisearch document so the
-        chip resolves without a per-render database hop.
-        """
+        """Build the denormalized stats needed to resolve a tag chip without another query."""
         breakdown_stmt = (
             select(TagAssignment.content_type, func.count())
             .where(TagAssignment.tag_id == tag_id)
@@ -1277,12 +1260,7 @@ class TagOperations:
 
 
 def _format_breakdown(breakdown: dict[str, int]) -> str:
-    """Pipe-encode a per-domain usage breakdown for Meili metadata.
-
-    Format: ``NOTE:12|FILE:3|TASK:5``. Empty when the tag has no
-    assignments. Pipes / colons match the existing convention used by
-    other metadata fields.
-    """
+    """Pipe-encode a per-domain usage breakdown for search metadata."""
     if not breakdown:
         return ""
     return "|".join(

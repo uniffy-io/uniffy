@@ -26,9 +26,9 @@ from uniffy.core.auth.principal import (
     resolve_organization_id,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
 from uniffy.domains.chat.categories.operations import ChatCategoryOperations
 from uniffy.domains.chat.channels.converters import category_to_proto, channel_to_proto
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.categories.handlers")
 
@@ -164,7 +164,11 @@ class CategoryHandlers:
 
                 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 
-                ch_ops = ChatChannelOperations(session)
+                ch_ops = ChatChannelOperations(
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                )
                 channel = await ch_ops.get_by_id(user_id, org_id, channel_id)
                 from uniffy.domains.chat.channels.handlers import _hydrate_channel_tags
 
