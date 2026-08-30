@@ -19,10 +19,8 @@ from uniffy.infrastructure.database.metrics import DB_POOL_TIMEOUT_TOTAL
 
 logger = logger.bind(component="infrastructure.database.session")
 
-# Stable 64-bit advisory-lock ids serialise idempotent startup steps across
-# Granian workers. Add new ids here, never reuse.
+# Stable 64-bit advisory-lock id for the infrastructure-owned startup step.
 MIGRATION_LOCK_ID = 0x756E_6966_6679_4D31  # "unifyM1"
-SEED_LOCK_ID = 0x756E_6966_6679_5331  # "unifyS1"
 
 ALEMBIC_INI_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "alembic.ini"

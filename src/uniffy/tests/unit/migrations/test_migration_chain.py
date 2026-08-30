@@ -16,7 +16,7 @@ from alembic.script import ScriptDirectory
 
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH
 
-VERSIONS_DIR = Path(ALEMBIC_INI_PATH).parent / "db" / "migrations" / "versions"
+VERSIONS_DIR = Path(ALEMBIC_INI_PATH).parent / "migrations" / "versions"
 
 _FILENAME_RE = re.compile(r"^(\d+)_(\w+)\.py$")
 

@@ -26,11 +26,6 @@ from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
-from uniffy.db.seed_docs import (
-    seed_workspace_docs,
-    starter_content_enabled,
-    workspace_docs_available,
-)
 from uniffy.domains.agents.bootstrap import (
     StagedDefaultAgent,
     finish_default_agent_after_commit,
@@ -50,6 +45,11 @@ from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
 from uniffy.domains.chat.search import enqueue_chat_search_acl_refresh
 from uniffy.domains.files.attachments import stage_personal_attachments_folder
 from uniffy.domains.files.filters.presets import create_default_presets
+from uniffy.domains.organizations.starter.docs import (
+    seed_workspace_docs,
+    starter_content_enabled,
+    workspace_docs_available,
+)
 from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
 from uniffy.domains.tags.filters.presets import create_default_tag_filter_presets
 

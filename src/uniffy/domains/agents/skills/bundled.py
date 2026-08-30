@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.data_files import DATA_DIR, load_documents
 
-logger = logger.bind(component="db.bundled_skills")
+logger = logger.bind(component="agents.skills.bundled")
 
 BUNDLED_LOCK_ID = 0x756E_6966_6679_5332  # "unifyS2"
 
@@ -25,8 +25,8 @@ BUNDLED_LOCK_ID = 0x756E_6966_6679_5332  # "unifyS2"
 async def sync_bundled_skills() -> None:
     """Reconcile the bundled skill rows with the shipped files.
 
-    Runs on every startup, ahead of the initial seed, so a release that adds or
-    edits a skill reaches deployments that were provisioned long ago.
+    Runs on every startup, ahead of deployment bootstrap, so a release that
+    adds or edits a skill reaches deployments that were provisioned long ago.
     """
     from uniffy.infrastructure.database.session import open_session, startup_advisory_lock
 

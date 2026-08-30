@@ -22,7 +22,7 @@ does nothing and reports success; that suite creates a scratch database per
 test so a broken or missing migration fails before a deploy finds it. The
 static half of the same question (one head, no duplicate ids, no dangling
 parent) needs no database at all and already runs in CI as
-`tests/unit/db/test_migration_chain.py`.
+`tests/unit/migrations/test_migration_chain.py`.
 
 New suites go under the matching area (`internal/valkey/`,
 `internal/meilisearch/`, `agents/embeddings/`) rather than growing an

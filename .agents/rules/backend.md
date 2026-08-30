@@ -161,10 +161,10 @@ Content we author and ship with the build - prompts, agent templates, bundled sk
 | Kind | Path | Consumed by |
 |---|---|---|
 | Agent templates | `data/catalog/*.md` | `domains/agents/templates.py` |
-| Bundled agent skills | `data/skills/*.md` | `db/bundled_skills.py` |
+| Bundled agent skills | `data/skills/*.md` | `domains/agents/skills/bundled.py` |
 | Platform prompts | `data/prompts/*.md` | `domains/agents/runtime/workspace.py` |
 | Model catalog | `data/models/catalog.json` | `domains/agents/providers/catalog/loader.py` |
-| Seed assets | `data/assets/` | `db/seed.py` |
+| Seed assets | `data/assets/` | `domains/organizations/starter/canvas.py` |
 
 `core/data_files.py` is the only reader: `DATA_DIR`, `load_documents(dir) -> list[DataDocument]`, and a deliberately tiny frontmatter parser (scalar `key: value` plus `- item` block lists - enough for this content, so no PyYAML dependency). Markdown-with-frontmatter is the default shape: metadata in the frontmatter, prose in the body, so prompt text stays readable and diffable instead of hiding inside a triple-quoted string.
 
@@ -172,7 +172,7 @@ Two consumption shapes. Pick by whether other rows must reference the content:
 
 - **Read at import into a module constant** - the default. `WORKSPACE_PROMPT`, `AGENT_TEMPLATES`, the model catalog. No table, no migration, no seeding, no lifecycle. Editing the file and restarting is the whole update path.
 - **Project into rows** only when other tables key on it (bundled skills: agents store skill ids in `enabled_skills`, usages record `skill_id`). Then the file stays the source of truth and the rows are its projection, which carries four obligations:
-  - Sync on **every** boot from its own entry point with its own advisory lock, **before** `seed_initial_data`. Never inside the "no organizations exist" guard - that block runs once on a virgin DB, so anything seeded there never reaches an existing deployment again.
+  - Sync on **every** boot from its own entry point with its own advisory lock, **before** `bootstrap_deployment`. Never inside the "no organizations exist" guard - that block runs once on a virgin DB, so anything seeded there never reaches an existing deployment again.
   - The file declares a **fixed id** (v7 literal, generated once and committed - `generate_id = uuid7`, there is no uuid5 anywhere). Generating ids at install time makes the same content a different entity per deployment and breaks every cross-deployment reference.
   - Upsert by that id so content edits propagate; insert-if-absent silently freezes old text forever.
   - Content removed from the repo is **retired** (a status flag the list/picker paths filter), never deleted - deleting cascades child rows and silently strips the id out of whatever referenced it.

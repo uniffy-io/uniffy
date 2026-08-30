@@ -10,7 +10,7 @@ from uuid import UUID
 
 from loguru import logger
 
-from uniffy.db.seed_canvas import seed_welcome_canvas
+from uniffy.domains.organizations.starter.canvas import seed_welcome_canvas
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,9 +19,9 @@ if TYPE_CHECKING:
     from uniffy.core.search.indexer import SearchIndexer
     from uniffy.core.storage import ObjectStorage
 
-logger = logger.bind(component="db.seed_docs")
+logger = logger.bind(component="organizations.starter.docs")
 
-DOCS_DIR = Path(__file__).parent.parent.parent.parent / "docs"
+DOCS_DIR = Path(__file__).parents[5] / "docs"
 
 
 def starter_content_enabled() -> bool:

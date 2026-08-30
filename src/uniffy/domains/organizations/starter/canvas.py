@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from uniffy.core.search.indexer import SearchIndexer
     from uniffy.core.storage import ObjectStorage
 
-logger = logger.bind(component="db.seed_canvas")
+logger = logger.bind(component="organizations.starter.canvas")
 
 
 async def seed_welcome_canvas(

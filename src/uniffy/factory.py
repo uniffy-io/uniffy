@@ -92,7 +92,6 @@ from uniffy.core.streaming.disconnect import StreamDisconnectMiddleware
 from uniffy.core.streaming.middleware import StreamRevokeWatchMiddleware
 from uniffy.core.streaming.revoke_coordinator import coordinator as stream_revoke_coordinator
 from uniffy.core.webhooks import register_webhook_provider, webhooks_router
-from uniffy.db import seed_initial_data, sync_bundled_skills
 from uniffy.domains.agents.agents.routes import create_agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
 from uniffy.domains.agents.budgets.handlers import BudgetsHandlers
@@ -109,6 +108,7 @@ from uniffy.domains.agents.runtime.settings.handlers import (
     RuntimeSettingsServiceImpl,
 )
 from uniffy.domains.agents.sessions.handlers import SessionsHandlers
+from uniffy.domains.agents.skills.bundled import sync_bundled_skills
 from uniffy.domains.agents.skills.handlers import SkillsHandlers
 from uniffy.domains.audit.service import AuditServiceImpl
 from uniffy.domains.auth.handlers import AuthHandlers
@@ -143,6 +143,7 @@ from uniffy.domains.organizations.service import OrganizationsServiceImpl
 from uniffy.domains.people.service import PeopleServiceImpl
 from uniffy.domains.permissions.service import MembersServiceImpl
 from uniffy.domains.platform.audit.service import PlatformAuditServiceImpl
+from uniffy.domains.platform.bootstrap import bootstrap_deployment
 from uniffy.domains.platform.config.service import SystemConfigServiceImpl
 from uniffy.domains.platform.directory.service import (
     SystemOrganizationsServiceImpl,
@@ -318,6 +319,7 @@ def _get_cors_origins() -> list[str]:
 async def lifespan(app: FastAPI):
     storage: ObjectStorage = app.state.object_storage
     search: WorkspaceSearch = app.state.workspace_search
+    search_indexer: SearchIndexer = app.state.search_indexer
     logger.info("Starting UNIFFY application...")
 
     try:
@@ -406,8 +408,8 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Stream revoke coordinator not available: {e}")
 
-    # Ahead of the seed: the bootstrapped default agent resolves bundled skills
-    # by id, so the rows have to exist before the first organization is created.
+    # The bootstrapped default agent resolves bundled skills by id, so those
+    # rows must exist before the first organization is created.
     try:
         await sync_bundled_skills()
     except Exception as e:
@@ -415,10 +417,10 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
-        await seed_initial_data(storage)
-        logger.info("Initial data seeded successfully")
+        await bootstrap_deployment(storage, search_indexer)
+        logger.info("Deployment bootstrap completed successfully")
     except Exception as e:
-        logger.exception(f"Failed to seed initial data: {e}")
+        logger.exception(f"Deployment bootstrap failed: {e}")
         raise
 
     try:
@@ -471,8 +473,8 @@ def create_app(
     _setup_logging()
 
     app = FastAPI(
-        title="UNIFFY - Unified Work Operating System",
-        description="The Operating System for Work",
+        title="Uniffy",
+        description="",
         version="0.1.0",
         lifespan=lifespan,
     )

@@ -1,4 +1,4 @@
-"""Initial data seeding for the database."""
+"""Deployment bootstrap for an empty installation."""
 
 from __future__ import annotations
 
@@ -8,41 +8,52 @@ from typing import TYPE_CHECKING
 from loguru import logger
 from sqlalchemy import select
 
+logger = logger.bind(component="platform.bootstrap")
+
+BOOTSTRAP_LOCK_ID = 0x756E_6966_6679_5331  # "unifyS1"
+
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from uniffy.core.search import SearchIndexer
     from uniffy.core.storage import ObjectStorage
 
 
-async def seed_initial_data(storage: ObjectStorage) -> None:
-    """Seed the default org + docs if the database is empty.
+async def bootstrap_deployment(
+    storage: ObjectStorage,
+    search_indexer: SearchIndexer,
+) -> None:
+    """Provision the default organization if the database is empty.
 
     Serialised across workers via advisory lock; the existing-org check inside
     keeps the body idempotent for followers.
     """
-    from uniffy.infrastructure.database.session import SEED_LOCK_ID, startup_advisory_lock
+    from uniffy.infrastructure.database.session import startup_advisory_lock
 
-    with startup_advisory_lock(SEED_LOCK_ID, "initial seed"):
-        await _seed_initial_data_locked(storage)
+    with startup_advisory_lock(BOOTSTRAP_LOCK_ID, "deployment bootstrap"):
+        await _bootstrap_deployment_locked(storage, search_indexer)
 
 
-async def _seed_initial_data_locked(storage: ObjectStorage) -> None:
+async def _bootstrap_deployment_locked(
+    storage: ObjectStorage,
+    search_indexer: SearchIndexer,
+) -> None:
     # Lazy imports avoid the auth-module circular dependency.
     from uniffy.core.auth.passwords.crypto import hash_password
     from uniffy.core.models import Organization, User
     from uniffy.infrastructure.database.session import open_session
 
-    logger.info("Checking for existing data...")
+    logger.info("Checking deployment state...")
 
     async with open_session() as session:
         result = await session.execute(select(Organization).limit(1))
         existing_org = result.scalar_one_or_none()
 
         if existing_org:
-            logger.info("Database already seeded. Skipping initialization.")
+            logger.info("Deployment already initialized. Skipping bootstrap.")
             return
 
-        logger.info("No organizations found. Seeding initial data...")
+        logger.info("No organizations found. Bootstrapping deployment...")
 
         try:
             # Bootstrap users. When INITIAL_ADMIN_EMAIL == INITIAL_PLATFORM_ADMIN_EMAIL
@@ -105,7 +116,7 @@ async def _seed_initial_data_locked(storage: ObjectStorage) -> None:
 
                 org_slug = slugify(org_name)
 
-            org_ops = OrganizationOperations(session, storage)
+            org_ops = OrganizationOperations(session, storage, search_indexer)
             default_org = await org_ops.create(
                 name=org_name,
                 slug=org_slug,
@@ -117,11 +128,11 @@ async def _seed_initial_data_locked(storage: ObjectStorage) -> None:
             await _seed_vapid_keys(session, admin_email)
 
             await session.commit()
-            logger.info("Initial data seeding completed successfully.")
+            logger.info("Deployment bootstrap completed successfully.")
 
         except Exception as e:
             await session.rollback()
-            logger.error(f"Failed to seed initial data: {e}")
+            logger.error(f"Failed to bootstrap deployment: {e}")
             raise
 
 

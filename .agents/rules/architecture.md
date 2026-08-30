@@ -62,7 +62,7 @@ uniffy/
 │   │   ├── infrastructure/ # Generic database, storage, cache, search, observability adapters
 │   │   ├── transport/      # Application HTTP and ConnectRPC middleware/instrumentation
 │   │   ├── data/         # Shipped content: agent templates, skills, prompts, model catalog, assets
-│   │   ├── db/           # Application schema migrations and bootstrap data
+│   │   ├── migrations/   # Alembic application-schema history
 │   │   ├── workers/      # ARQ fleet composition, registry, lifecycle
 │   │   └── factory.py    # App factory mounting services
 │   ├── ui/               # React frontend (TypeScript + Vite)

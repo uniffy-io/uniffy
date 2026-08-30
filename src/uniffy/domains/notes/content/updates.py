@@ -163,6 +163,7 @@ class NoteUpdates:
             await reconcile_inline_attachments(
                 self.operations.session,
                 self.operations.storage,
+                self.operations.search_indexer,
                 organization_id=organization_id,
                 content_type=ContentType.NOTE,
                 content_id=note_id,

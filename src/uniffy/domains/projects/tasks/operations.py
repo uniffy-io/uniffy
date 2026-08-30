@@ -118,10 +118,7 @@ class TaskOperations(TaskContentOperations):
         """``tag_filter_mode`` is ``all``/``any``/``none``; epic/depth
         filters use a recursive ancestry CTE.
         """
-        project_ops = ProjectOperations(
-            self.session,
-            search_indexer=self.search_indexer,
-        )
+        project_ops = ProjectOperations(self.session)
         await project_ops.get_by_id(user_id, organization_id, project_id)
 
         query = select(Task).where(

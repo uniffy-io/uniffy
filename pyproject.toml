@@ -135,7 +135,7 @@ exclude = [
 ]
 # Third-party code and historical migrations stay unchanged; extend-exclude survives
 # the CLI --exclude that manage.py passes, unlike exclude.
-extend-exclude = ["src/uniffy/db/migrations", "src/uniffy/tests", "src/uniffy/vendor"]
+extend-exclude = ["src/uniffy/migrations", "src/uniffy/tests", "src/uniffy/vendor"]
 
 [tool.ruff.lint]
 ignore = ["UP007", "SIM102", "UP042", "E402", "B904"]
