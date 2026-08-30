@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember
@@ -10,7 +11,6 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.users.avatars import get_avatar_url
 
 

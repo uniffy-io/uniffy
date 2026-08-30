@@ -5,9 +5,9 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.events.realtime import publish_notification
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.notifications.notification import Notification
-from uniffy.core.valkey import publish_notification
 from uniffy.domains.notifications.converters import notification_type_to_proto
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter, NotificationChannel
 

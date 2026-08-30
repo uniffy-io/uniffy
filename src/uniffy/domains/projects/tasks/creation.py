@@ -12,6 +12,7 @@ from uniffy.core.auth.permissions.defaults import (
     resolve_effective_policy,
 )
 from uniffy.core.converters.common_proto import content_type_to_proto
+from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.models.projects.field_definition import (
     TaskStatusSemantic,
 )
@@ -21,7 +22,6 @@ from uniffy.core.types import (
     AccessMode,
     ContentType,
 )
-from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
 from uniffy.domains.permissions.access import ResourceAudienceResolver
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.projects import ProjectOperations

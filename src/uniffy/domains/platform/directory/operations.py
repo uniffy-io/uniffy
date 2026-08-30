@@ -33,11 +33,11 @@ from uniffy.core.models.login.organization_member import (
 from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
+from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.realtime.publisher import publish_token_revoke
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
-from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations

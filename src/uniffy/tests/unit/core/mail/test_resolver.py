@@ -35,7 +35,7 @@ def _session_returning(rows: list[_Row]):
 
 
 def _miss():
-    from uniffy.core.valkey.cache import CACHE_MISS
+    from uniffy.core.cache.operations import CACHE_MISS
 
     return CACHE_MISS
 

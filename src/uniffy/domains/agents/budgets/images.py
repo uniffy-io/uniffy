@@ -2,7 +2,7 @@
 
 Used by ``tools/builtin/images.py`` to gate new image generations
 against the per-user daily cap and the per-organization monthly cap.
-Rate limiting (``core/valkey/rate_limit.py``) is independent: it
+Rate limiting (``domains/agents/limits/policy.py``) is independent: it
 governs burst within seconds/minutes, while the quota governs counts
 per day/month. Both checks run, and either one can trip.
 

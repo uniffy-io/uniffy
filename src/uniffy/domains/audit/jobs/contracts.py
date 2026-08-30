@@ -1,7 +1,6 @@
 """Producer-facing audit background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
 PROVISION_AUDIT_PARTITIONS_SCHEDULE = JobRef(
     name="cron:provision_audit_partitions",

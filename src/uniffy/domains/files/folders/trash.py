@@ -6,6 +6,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.file_version import FileVersion
@@ -15,7 +16,6 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     ContentType,
 )
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.files.search import FileSearchOperations
 from uniffy.domains.tags.operations import TagOperations
 

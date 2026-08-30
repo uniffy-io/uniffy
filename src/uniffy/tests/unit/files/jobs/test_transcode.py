@@ -42,7 +42,7 @@ class _FakeOpsClient:
 def lock_acquired(monkeypatch):
     """Patch the Valkey ops client so the worker can acquire its lock."""
     fake = _FakeOpsClient(owner_can_acquire=True)
-    monkeypatch.setattr(transcode_mod, "_get_ops_client", lambda: fake)
+    monkeypatch.setattr(transcode_mod, "get_ops_client", lambda: fake)
     return fake
 
 
@@ -50,7 +50,7 @@ def lock_acquired(monkeypatch):
 def lock_held(monkeypatch):
     """Patch the Valkey ops client so SET NX always returns False."""
     fake = _FakeOpsClient(owner_can_acquire=False)
-    monkeypatch.setattr(transcode_mod, "_get_ops_client", lambda: fake)
+    monkeypatch.setattr(transcode_mod, "get_ops_client", lambda: fake)
     return fake
 
 
@@ -87,7 +87,7 @@ async def test_lock_held_returns_skipped(lock_held) -> None:
 
 
 async def test_missing_ops_client_skips_before_loading_file_state(monkeypatch) -> None:
-    monkeypatch.setattr(transcode_mod, "_get_ops_client", lambda: None)
+    monkeypatch.setattr(transcode_mod, "get_ops_client", lambda: None)
 
     file_id = str(generate_id())
     result = await transcode_mod.transcode_video_to_mp4(
@@ -111,7 +111,7 @@ async def test_release_lock_called_on_invalid_uuid(monkeypatch) -> None:
     issued either - we never acquired the lock. Mirrors agent_compaction.
     """
     fake = _FakeOpsClient()
-    monkeypatch.setattr(transcode_mod, "_get_ops_client", lambda: fake)
+    monkeypatch.setattr(transcode_mod, "get_ops_client", lambda: fake)
     await transcode_mod.transcode_video_to_mp4(
         ctx={},
         file_id="not-a-uuid",

@@ -13,9 +13,9 @@ LOGGER_COMPONENT = "chat.reads.flush"
 
 
 async def flush_chat_read_cursors(ctx: dict[str, Any]) -> dict[str, Any]:
-    from uniffy.core.valkey.ops import _get_ops_client
+    from uniffy.infrastructure.valkey.ops import get_ops_client
 
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return {"status": "skipped", "reason": "valkey not available"}
 

@@ -9,8 +9,10 @@ from sqlalchemy import select
 from uniffy.core.auth.permissions import (
     resolve_access_policy,
 )
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.search.indexer import build_content_urn
@@ -19,8 +21,6 @@ from uniffy.core.types import (
     ContentRole,
     ContentType,
 )
-from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.files.search import FileSearchOperations
 
 logger = logger.bind(component="files.folders.mutations")

@@ -13,6 +13,13 @@ from sqlalchemy import and_, delete, exists, func, literal, or_, select, text, u
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.cache.operations import (
+    cache_delete,
+    cache_get_many,
+    cache_get_or_set_locked,
+    cache_invalidate_many,
+    cache_set,
+)
 from uniffy.core.content.references import CONTENT_URN_PREFIX, parse_urn
 from uniffy.core.errors import (
     ConflictError,
@@ -23,24 +30,17 @@ from uniffy.core.errors import (
 from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType
-from uniffy.core.valkey.cache import (
-    cache_delete,
-    cache_get_many,
-    cache_get_or_set_locked,
-    cache_invalidate_many,
-    cache_set,
+from uniffy.domains.permissions.access import (
+    ResourceAccessPurpose,
+    ResourceAccessResolver,
+    ResourceKey,
 )
-from uniffy.core.valkey.tags import (
+from uniffy.domains.tags.events import (
     EVENT_TAG_ASSIGNMENT_CHANGED,
     EVENT_TAG_CREATED,
     EVENT_TAG_DELETED,
     EVENT_TAG_UPDATED,
     publish_tag_event,
-)
-from uniffy.domains.permissions.access import (
-    ResourceAccessPurpose,
-    ResourceAccessResolver,
-    ResourceKey,
 )
 from uniffy.domains.tags.normalize import slugify_tag
 from uniffy.domains.tags.visibility import (

@@ -33,7 +33,9 @@ from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThreadStats
-from uniffy.core.valkey.streams import (
+from uniffy.domains.agents.providers.base import EventType, StreamEvent
+from uniffy.domains.agents.runtime.converters import runtime_stream_event_to_json
+from uniffy.domains.agents.runtime.streams import (
     RUN_STATE_TTL_SECONDS,
     RUN_STREAM_DEFAULT_MAXLEN,
     run_state_key,
@@ -41,8 +43,6 @@ from uniffy.core.valkey.streams import (
     set_run_state,
     stream_xadd,
 )
-from uniffy.domains.agents.providers.base import EventType, StreamEvent
-from uniffy.domains.agents.runtime.converters import runtime_stream_event_to_json
 from uniffy.domains.chat.messages.operations import (
     bump_channel_message_stats,
     counts_as_thread_reply,

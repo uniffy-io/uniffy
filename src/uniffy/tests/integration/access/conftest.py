@@ -43,7 +43,7 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
-from uniffy.core.valkey.ops import close_ops_client, init_ops_client
+from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.database.session import get_database_url
 from uniffy.domains.files.registration import register_file_content

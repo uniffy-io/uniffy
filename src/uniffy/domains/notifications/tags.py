@@ -8,16 +8,16 @@ from loguru import logger
 from uniffy.core.content.references import parse_urn
 from uniffy.core.database import SessionFactory
 from uniffy.core.types import ContentType
-from uniffy.core.valkey.tags import (
-    EVENT_TAG_ASSIGNMENT_CHANGED,
-    EVENT_TAG_CREATED,
-    EVENT_TAG_DELETED,
-    EVENT_TAG_UPDATED,
-)
 from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
+)
+from uniffy.domains.tags.events import (
+    EVENT_TAG_ASSIGNMENT_CHANGED,
+    EVENT_TAG_CREATED,
+    EVENT_TAG_DELETED,
+    EVENT_TAG_UPDATED,
 )
 
 logger = logger.bind(component="notifications.tags")

@@ -10,11 +10,11 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole
-from uniffy.core.valkey.mentions import publish_mention_state
 
 
 def build_team_urn(group_id: UUID) -> str:

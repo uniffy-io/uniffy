@@ -17,7 +17,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.rate_limit_config import AgentRateLimitConfig
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.core.valkey.rate_limit import (
+from uniffy.domains.agents.limits.policy import (
     ALL_LIMIT_KINDS,
     DEFAULT_LIMITS,
     LimitConfig,

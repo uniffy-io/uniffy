@@ -8,8 +8,8 @@ from loguru import logger
 
 from uniffy.core.audit.partitions import ensure_audit_partitions
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.infrastructure.database.session import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="audit.jobs.jobs")
 
@@ -19,7 +19,7 @@ _LOCK_TTL_SECONDS = PROVISION_AUDIT_PARTITIONS_JOB_TIMEOUT_SECONDS + 30
 
 
 async def _acquire_lock() -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -30,7 +30,7 @@ async def _acquire_lock() -> str | None:
 
 
 async def _release_lock(token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

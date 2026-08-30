@@ -26,9 +26,9 @@ _READ_CURSOR_TTL = 7 * 24 * 3600
 
 
 def _get_valkey_client():
-    from uniffy.core.valkey.ops import _get_ops_client
+    from uniffy.infrastructure.valkey.ops import get_ops_client
 
-    return _get_ops_client()
+    return get_ops_client()
 
 
 class ChatReadStateOperations:

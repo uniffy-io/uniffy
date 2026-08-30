@@ -30,9 +30,9 @@ from uniffy.core.auth.permissions import (
 )
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
-from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
 
 
 class BaseContentOperations[TModel](ABC):

@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from uuid import UUID
 
-from uniffy.core.valkey.rate_limit import check_rate_limit
+from uniffy.core.rate_limit import check_rate_limit
 
 
 @dataclass(frozen=True)

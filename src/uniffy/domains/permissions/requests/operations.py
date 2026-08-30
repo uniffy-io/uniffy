@@ -19,9 +19,9 @@ from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequest,
     ContentAccessRequestState,
 )
+from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
-from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.chat.channels.operations import (
     ChatChannelOperations,
     StagedChatMembersAdd,

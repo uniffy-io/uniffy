@@ -1,28 +1,15 @@
-"""Two ARQ pools - ``core`` (tight-SLA work) and ``egress`` (slow, I/O-bound, retry-heavy).
-
-Each pool binds ``default_queue_name`` so plain ``enqueue_job`` lands on the
-right fleet. ``get_queue_safe`` rebuilds a dropped pool once; ``get_queue`` raises.
-"""
+"""Generic ARQ queue-pool lifecycle for the core and egress fleets."""
 
 import asyncio
-from enum import StrEnum
 
 from loguru import logger
 
-from uniffy.core.valkey.config import ValkeyConfig
+from uniffy.core.jobs.types import QueueName
+from uniffy.infrastructure.valkey.config import ValkeyConfig
 from uniffy.vendor.arq import create_pool
 from uniffy.vendor.arq.connections import ArqValkey
 
-logger = logger.bind(component="valkey.queue")
-
-
-class QueueName(StrEnum):
-    CORE = "core"
-    EGRESS = "egress"
-
-    @property
-    def valkey_name(self) -> str:
-        return f"uniffy:queue:{self.value}"
+logger = logger.bind(component="infrastructure.valkey.queue")
 
 
 _pools: dict[QueueName, ArqValkey | None] = {name: None for name in QueueName}

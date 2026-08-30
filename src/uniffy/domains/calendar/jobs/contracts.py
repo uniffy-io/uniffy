@@ -1,7 +1,6 @@
 """Producer-facing calendar background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
 CHECK_CALENDAR_REMINDERS_SCHEDULE = JobRef(
     name="cron:check_calendar_reminders",

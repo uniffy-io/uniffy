@@ -81,6 +81,7 @@ from uniffy.core.crypto import (
     subscribe_dek_invalidations,
     subscribe_deployment_dek_invalidations,
 )
+from uniffy.core.jobs import QueueName
 from uniffy.core.realtime import realtime_router
 from uniffy.core.realtime.router import router as realtime_pubsub_router
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
@@ -89,18 +90,6 @@ from uniffy.core.storage import ObjectStorage
 from uniffy.core.streaming.disconnect import StreamDisconnectMiddleware
 from uniffy.core.streaming.middleware import StreamRevokeWatchMiddleware
 from uniffy.core.streaming.revoke_coordinator import coordinator as stream_revoke_coordinator
-from uniffy.core.valkey import (
-    QueueName,
-    close_ops_client,
-    close_pubsub,
-    close_queue,
-    close_streams_client,
-    init_ops_client,
-    init_pubsub,
-    init_queue,
-    init_streams_client,
-    signal_pubsub_shutdown,
-)
 from uniffy.core.webhooks import register_webhook_provider, webhooks_router
 from uniffy.db import seed_initial_data, sync_bundled_skills
 from uniffy.domains.agents.agents.routes import create_agent_avatars_router
@@ -179,6 +168,14 @@ from uniffy.infrastructure.observability.logger import configure_logging
 from uniffy.infrastructure.observability.prometheus import get_metrics
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
+from uniffy.infrastructure.valkey.pubsub import (
+    close_pubsub,
+    init_pubsub,
+    signal_pubsub_shutdown,
+)
+from uniffy.infrastructure.valkey.queue import close_queue, init_queue
+from uniffy.infrastructure.valkey.streams import close_streams_client, init_streams_client
 from uniffy.transport.http import setup_request_logging
 from uniffy.transport.rpc import LoggingInterceptor, http_version_var, strict_request_codecs
 

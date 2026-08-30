@@ -14,10 +14,10 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.people.identity import IdentitySource
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.people.directory.reconcile import run_full_sync
 from uniffy.domains.people.directory.registry import build_provider
 from uniffy.infrastructure.database import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="people.directory.jobs.jobs")
@@ -28,7 +28,7 @@ _LOCK_KEY_TEMPLATE = "directory:sync:{source_id}"
 
 
 async def _acquire_lock(source_id: UUID) -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -43,7 +43,7 @@ async def _acquire_lock(source_id: UUID) -> str | None:
 
 
 async def _release_lock(source_id: UUID, token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

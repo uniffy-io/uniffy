@@ -2,9 +2,9 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.models.notes.note import Note
 from uniffy.core.search.indexer import SearchIndexer
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.notes.operations import NoteOperations
 
 

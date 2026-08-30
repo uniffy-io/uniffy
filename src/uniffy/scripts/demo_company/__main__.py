@@ -13,16 +13,8 @@ from pathlib import Path
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.jobs import QueueName
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
-from uniffy.core.valkey import (
-    QueueName,
-    close_ops_client,
-    close_pubsub,
-    close_queue,
-    init_ops_client,
-    init_pubsub,
-    init_queue,
-)
 from uniffy.domains.chat.limits import (
     CHANNEL_CREATE,
     MEMBER_ADD,
@@ -32,6 +24,9 @@ from uniffy.domains.chat.limits import (
 from uniffy.infrastructure.database.session import init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
+from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
+from uniffy.infrastructure.valkey.queue import close_queue, init_queue
 from uniffy.scripts.demo_company.context import ResolutionError
 from uniffy.scripts.demo_company.loader import DEFAULT_PERSON_PASSWORD, ContentError
 from uniffy.scripts.demo_company.seeder import DOMAINS, DemoDomain, seed_demo_company

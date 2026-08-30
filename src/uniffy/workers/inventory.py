@@ -3,8 +3,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 
-from uniffy.core.jobs import JobRef
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, QueueName
 from uniffy.workers.fleets.core import CoreWorkerSettings
 from uniffy.workers.fleets.egress import EgressWorkerSettings
 from uniffy.workers.registration import JobRegistration, ScheduledJobRegistration, Seconds

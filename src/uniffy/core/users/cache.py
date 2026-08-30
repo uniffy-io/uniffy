@@ -3,7 +3,7 @@
 from typing import Any
 from uuid import UUID
 
-from uniffy.core.valkey.cache import (
+from uniffy.core.cache.operations import (
     cache_delete,
     cache_get_many,
     cache_set,

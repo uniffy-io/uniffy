@@ -101,8 +101,8 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
 
     image_model = agent.image_model
 
-    from uniffy.core.valkey.rate_limit import check_image_generation_limits
     from uniffy.domains.agents.budgets.images import check_image_quota
+    from uniffy.domains.agents.limits.policy import check_image_generation_limits
 
     await check_image_generation_limits(
         ctx.session,
@@ -332,7 +332,10 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
 
     if access_mode == AccessMode.OPEN_TO_ORG:
         from uniffy.core.converters.common_proto import content_type_to_proto
-        from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
+        from uniffy.core.events.realtime import (
+            ContentAccessAction,
+            publish_content_access_changed,
+        )
 
         await publish_content_access_changed(
             content_type=content_type_to_proto(ContentType.FILE),

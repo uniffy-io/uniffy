@@ -13,6 +13,7 @@ from uniffy_proto.permissions.v1.permissions_pb2 import (
 
 from uniffy.core.auth.membership import is_active_member
 from uniffy.core.events import NotificationEvent, emit_notification
+from uniffy.core.events.realtime import publish_access_request_changed
 from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
@@ -22,7 +23,6 @@ from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequestState,
 )
 from uniffy.core.types import NotificationType
-from uniffy.core.valkey import publish_access_request_changed
 from uniffy.domains.permissions.access.targets import (
     AccessGrantKind,
     AccessRequestTarget,

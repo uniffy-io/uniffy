@@ -16,17 +16,6 @@ from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
-from uniffy.core.valkey.ops import _get_ops_client
-from uniffy.core.valkey.streams import (
-    get_run_state,
-    is_cancel_requested,
-    run_state_key,
-    run_stream_key,
-    session_active_run_add,
-    session_active_run_remove,
-    set_run_state,
-    stream_delete,
-)
 from uniffy.domains.agents.metrics import (
     AGENT_RUN_ACTIVE,
     AGENT_RUN_DURATION,
@@ -39,7 +28,18 @@ from uniffy.domains.agents.runtime.jobs.contracts import DELETE_RUN_STREAM
 from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.publishers import RunStreamPublisher
 from uniffy.domains.agents.runtime.settings.operations import get_runtime_settings
+from uniffy.domains.agents.runtime.streams import (
+    get_run_state,
+    is_cancel_requested,
+    run_state_key,
+    run_stream_key,
+    session_active_run_add,
+    session_active_run_remove,
+    set_run_state,
+    stream_delete,
+)
 from uniffy.domains.agents.sessions.operations import SessionOperations
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="agents.runtime.jobs.jobs")
 
@@ -51,7 +51,7 @@ _ERROR_TRUNCATE_LIMIT = 500
 
 
 async def _acquire_lock(run_id: UUID) -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -66,7 +66,7 @@ async def _acquire_lock(run_id: UUID) -> str | None:
 
 
 async def _release_lock(run_id: UUID, token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

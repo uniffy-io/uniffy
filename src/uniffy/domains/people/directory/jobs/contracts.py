@@ -1,7 +1,6 @@
 """Producer-facing directory synchronization background-job contracts."""
 
-from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobReliability, JobWorkload, QueueName
 
 SYNC_IDENTITY_SOURCE = JobRef(
     name="sync_identity_source",

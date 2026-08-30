@@ -9,10 +9,10 @@ from loguru import logger
 from sqlalchemy import func, or_, select
 
 from uniffy.core.auth.permissions import modes_at_least_as_open
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.models.notes.note import Note
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, NodeType
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.notes.content.fields import extract_canvas_text, strip_markdown
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.context import ContentTagContext

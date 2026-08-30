@@ -7,11 +7,11 @@ from typing import Any
 from loguru import logger
 
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.platform.support.operations import (
     SupportSessionOperations,
 )
 from uniffy.infrastructure.database.session import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="platform.support.jobs.jobs")
 
@@ -21,7 +21,7 @@ _LOCK_TTL_SECONDS = EXPIRE_SUPPORT_SESSIONS_JOB_TIMEOUT_SECONDS + 30
 
 
 async def _acquire_lock() -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -32,7 +32,7 @@ async def _acquire_lock() -> str | None:
 
 
 async def _release_lock(token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

@@ -3,7 +3,14 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from uniffy.core.valkey.queue import QueueName
+
+class QueueName(StrEnum):
+    CORE = "core"
+    EGRESS = "egress"
+
+    @property
+    def valkey_name(self) -> str:
+        return f"uniffy:queue:{self.value}"
 
 
 class JobWorkload(StrEnum):

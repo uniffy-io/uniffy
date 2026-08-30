@@ -45,15 +45,8 @@ from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
-from uniffy.core.valkey.rate_limit import check_agent_message_limits
-from uniffy.core.valkey.streams import (
-    get_run_state,
-    request_run_cancel,
-    run_stream_key,
-    set_run_state,
-    stream_xread,
-)
 from uniffy.domains.agents.budgets.operations import BudgetsOperations
+from uniffy.domains.agents.limits.policy import check_agent_message_limits
 from uniffy.domains.agents.metrics import (
     AGENT_RUN_ENQUEUE_FAILURES_TOTAL,
     AGENT_RUN_RECONNECT_TOTAL,
@@ -77,6 +70,13 @@ from uniffy.domains.agents.runtime.jobs.contracts import RUN_AGENT_SESSION
 from uniffy.domains.agents.runtime.settings.operations import (
     ResolvedRuntimeSettings,
     get_runtime_settings,
+)
+from uniffy.domains.agents.runtime.streams import (
+    get_run_state,
+    request_run_cancel,
+    run_stream_key,
+    set_run_state,
+    stream_xread,
 )
 from uniffy.domains.agents.runtime.usage import UsageOperations
 from uniffy.domains.agents.sessions.operations import SessionOperations

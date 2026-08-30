@@ -23,9 +23,9 @@ from uniffy.core.models.shared import NotificationType
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.search.workspace import WORKSPACE_SEARCH_CTX_KEY, WorkspaceSearch
 from uniffy.core.types import ContentRole, ContentType, SubjectType
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.projects.jobs.contracts import REFRESH_PROJECT_SEARCH_ACL
 from uniffy.infrastructure.database import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="projects.jobs.jobs")
@@ -40,7 +40,7 @@ def _lock_key(project_id: UUID) -> str:
 
 
 async def _acquire_lock(project_id: UUID) -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -55,7 +55,7 @@ async def _acquire_lock(project_id: UUID) -> str | None:
 
 
 async def _release_lock(project_id: UUID, token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

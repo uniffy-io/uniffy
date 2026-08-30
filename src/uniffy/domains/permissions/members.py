@@ -35,6 +35,7 @@ from uniffy.core.content.registry import (
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.events import NotificationEvent, emit_notification
+from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
@@ -50,7 +51,6 @@ from uniffy.core.types import (
     NotificationType,
     SubjectType,
 )
-from uniffy.core.valkey import ContentAccessAction, publish_content_access_changed
 from uniffy.domains.files.attachments.policy import migrate_attachment_policy
 
 logger = logger.bind(component="permissions.members")

@@ -7,14 +7,13 @@ from uniffy.core.events.job_contracts import (
     EVENT_SCHEDULED_JOB_REFS,
     PROCESS_NOTIFICATION_EVENT,
 )
-from uniffy.core.jobs import JobRef
+from uniffy.core.jobs import JobRef, QueueName
 from uniffy.core.realtime.job_contracts import (
     REALTIME_JOB_REFS,
     REALTIME_SCHEDULED_JOB_REFS,
     SAVE_REALTIME_SNAPSHOT,
 )
 from uniffy.core.realtime.jobs import save_realtime_snapshot
-from uniffy.core.valkey.queue import QueueName
 from uniffy.domains.agents.bridge.jobs.contracts import (
     CHAT_INTEGRATION_JOB_REFS,
     CHAT_INTEGRATION_SCHEDULED_JOB_REFS,

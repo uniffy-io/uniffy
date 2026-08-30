@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import QueueName
 from uniffy.workers import runner
 from uniffy.workers.metrics import (
     WORKER_READY,

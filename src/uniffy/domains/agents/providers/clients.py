@@ -1,15 +1,4 @@
-"""In-process LRU for decrypted provider credentials and constructed clients.
-
-Keyed by ``ProviderKey.id``. A cache hit skips the Fernet decrypt AND the provider
-construction, preserving the Anthropic/OpenAI SDK ``httpx`` connection pools across
-turns. TTL 1 hour; the size cap (``PROVIDER_CLIENT_LRU_SIZE``) must sit above the
-deployment's live key count or every turn pays the decrypt + construction again.
-Cross-pod invalidation lands via the ``provider_keys:invalidate:{key_id}`` pubsub
-channel.
-
-The LRU is in-process only: the encrypted credential never leaves PG and the
-decrypted material never enters Valkey.
-"""
+"""In-process LRU and cross-process invalidation for decrypted provider clients."""
 
 from __future__ import annotations
 
@@ -22,17 +11,14 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-import valkey.asyncio as aioredis
 from loguru import logger
-from valkey.exceptions import ConnectionError as ValkeyConnectionError
-from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
 from uniffy.core.json_codec import JSONDecodeError, loads
-from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.domains.agents.metrics import (
     LLM_PROVIDER_LRU_HIT_TOTAL,
     LLM_PROVIDER_LRU_MISS_TOTAL,
 )
+from uniffy.infrastructure.valkey.pubsub import subscribe_patterns
 
 logger = logger.bind(component="agents.providers.clients")
 
@@ -44,7 +30,6 @@ _TTL_SECONDS = 3600
 _MAX_SIZE = int(os.getenv("PROVIDER_CLIENT_LRU_SIZE", "5000"))
 _INVALIDATE_PATTERN = "provider_keys:invalidate:*"
 _RECONNECT_BACKOFF_SECONDS = 5.0
-_POLL_TIMEOUT_SECONDS = 1.0
 
 
 @dataclass
@@ -151,41 +136,16 @@ async def close_provider_invalidation_subscriber() -> None:
 
 
 async def _run_subscriber() -> None:
-    """Listen on ``provider_keys:invalidate:*`` and drop LRU entries."""
-    url = ValkeyConfig.from_env().to_url()
-
     while _subscriber_shutdown is None or not _subscriber_shutdown.is_set():
-        client: aioredis.Redis | None = None
-        pubsub = None
         try:
-            client = aioredis.from_url(
-                url,
-                decode_responses=True,
-                socket_connect_timeout=5,
-                socket_timeout=5,
-                socket_keepalive=True,
-                health_check_interval=30,
-            )
-            pubsub = client.pubsub()
-            await pubsub.psubscribe(_INVALIDATE_PATTERN)
             logger.info(f"Provider invalidation subscriber listening on {_INVALIDATE_PATTERN}")
-
-            while _subscriber_shutdown is None or not _subscriber_shutdown.is_set():
-                msg = await pubsub.get_message(
-                    ignore_subscribe_messages=True,
-                    timeout=_POLL_TIMEOUT_SECONDS,
-                )
-                if msg is None:
-                    continue
-                if msg.get("type") != "pmessage":  # noqa: PLR2004
-                    continue
-                await _handle_invalidate_message(msg.get("data"))
-
-        except (ValkeyConnectionError, ValkeyTimeoutError, OSError) as exc:
-            logger.warning(
-                f"Provider invalidation subscriber connection error: {exc}; "
-                f"reconnecting in {_RECONNECT_BACKOFF_SECONDS}s"
-            )
+            async with contextlib.aclosing(subscribe_patterns(_INVALIDATE_PATTERN)) as messages:
+                async for item in messages:
+                    if _subscriber_shutdown is not None and _subscriber_shutdown.is_set():
+                        break
+                    if item is not None:
+                        _channel, payload = item
+                        await _handle_invalidate_message(payload)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -193,16 +153,6 @@ async def _run_subscriber() -> None:
                 f"Provider invalidation subscriber unexpected error: {exc}; "
                 f"reconnecting in {_RECONNECT_BACKOFF_SECONDS}s"
             )
-        finally:
-            if pubsub is not None:
-                with contextlib.suppress(Exception):
-                    await pubsub.punsubscribe(_INVALIDATE_PATTERN)
-                with contextlib.suppress(Exception):
-                    await pubsub.aclose()
-            if client is not None:
-                with contextlib.suppress(Exception):
-                    await client.aclose()
-
         if _subscriber_shutdown is not None and _subscriber_shutdown.is_set():
             break
         try:
@@ -222,11 +172,14 @@ async def _handle_invalidate_message(raw: object) -> None:
     """Parse one pubsub payload and drop the matching LRU entry."""
     if raw is None:
         return
-    try:
-        payload = loads(raw)
-    except JSONDecodeError, TypeError:
-        logger.warning(f"Provider invalidate message decode failed: {raw!r}")
-        return
+    if isinstance(raw, dict):
+        payload = raw
+    else:
+        try:
+            payload = loads(raw)
+        except JSONDecodeError, TypeError:
+            logger.warning(f"Provider invalidate message decode failed: {raw!r}")
+            return
     raw_id = payload.get("key_id") if isinstance(payload, dict) else None
     if not isinstance(raw_id, str):
         return

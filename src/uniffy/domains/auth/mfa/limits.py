@@ -27,7 +27,7 @@ from uuid import UUID
 
 from loguru import logger
 
-from uniffy.core.valkey.ops import _get_ops_client, ops_call
+from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
 
 logger = logger.bind(component="auth.mfa.limits")
 
@@ -69,7 +69,7 @@ async def is_verify_locked(user_id: UUID, ip: str | None) -> VerifyLockStatus:
     user gets ``429`` without spending Argon2 time on a recovery-code
     verify or running the TOTP comparison.
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return VerifyLockStatus(user_locked=False, ip_locked=False)
 
@@ -95,7 +95,7 @@ async def record_verify_attempt(
     racing other accounts). On failure both counters are incremented
     and the TTL re-armed.
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return RateLimitVerdict.OK
 
@@ -128,7 +128,7 @@ async def mark_code_used(user_id: UUID, counter: int) -> bool:
     window we accept) is enough to cover both the previous and next
     step that ``valid_window=1`` allows.
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return True
     try:

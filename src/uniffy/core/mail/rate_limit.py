@@ -11,7 +11,7 @@ import time
 from loguru import logger
 
 from uniffy.core.mail.errors import MailRateLimitedError
-from uniffy.core.valkey.ops import _get_ops_client, ops_call
+from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
 
 logger = logger.bind(component="mail")
 
@@ -25,7 +25,7 @@ async def check_send_rate_limit(scope: str, limit_per_min: int) -> None:
     if limit_per_min <= 0:
         return
 
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
 

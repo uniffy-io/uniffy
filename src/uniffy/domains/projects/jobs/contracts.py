@@ -1,7 +1,6 @@
 """Producer-facing project background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
 REFRESH_PROJECT_SEARCH_ACL = JobRef(
     name="refresh_project_search_acl",

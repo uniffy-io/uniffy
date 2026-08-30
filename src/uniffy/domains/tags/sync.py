@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.tags.tag import Tag, TagAssignment
-from uniffy.core.valkey.tags import (
+from uniffy.domains.tags.events import (
     EVENT_TAG_ASSIGNMENT_CHANGED,
     publish_tag_event,
 )

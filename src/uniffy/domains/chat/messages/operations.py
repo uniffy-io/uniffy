@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.content.references import (
     BroadcastMention,
     extract_all_outgoing_references,
@@ -37,8 +38,6 @@ from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
-from uniffy.core.valkey.mentions import publish_mention_state
-from uniffy.core.valkey.presence import PRESENCE_STATUS_ONLINE, presence_get_bulk
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
     get_cached_pinned_message_ids,
@@ -56,6 +55,7 @@ from uniffy.domains.chat.policies.operations import (
     EditHistoryVisibility,
     resolve_chat_policy,
 )
+from uniffy.domains.presence.state import PRESENCE_STATUS_ONLINE, presence_get_bulk
 
 logger = logger.bind(component="chat.messages.operations")
 

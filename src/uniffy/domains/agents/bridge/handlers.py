@@ -23,9 +23,9 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.channel import ChatChannel
-from uniffy.core.valkey.streams import get_chat_active_run, request_run_cancel
 from uniffy.domains.agents.bridge.operations import AgentChatBridge
 from uniffy.domains.agents.runtime.approvals import get_approval_store
+from uniffy.domains.agents.runtime.streams import get_chat_active_run, request_run_cancel
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.features import is_chat_agents_enabled
 from uniffy.infrastructure.database import open_session

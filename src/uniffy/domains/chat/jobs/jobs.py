@@ -18,10 +18,10 @@ from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, SearchIndexer
 from uniffy.core.search.workspace import WORKSPACE_SEARCH_CTX_KEY, WorkspaceSearch
 from uniffy.core.types import SubjectType
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.chat.jobs.contracts import REFRESH_CHAT_SEARCH_ACL
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
 from uniffy.infrastructure.database import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="chat.jobs.jobs")
@@ -72,7 +72,7 @@ def _lock_key(channel_id: UUID) -> str:
 
 
 async def _acquire_lock(channel_id: UUID) -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -87,7 +87,7 @@ async def _acquire_lock(channel_id: UUID) -> str | None:
 
 
 async def _release_lock(channel_id: UUID, token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

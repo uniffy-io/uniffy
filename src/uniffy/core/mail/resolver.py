@@ -17,6 +17,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.cache.operations import (
+    CACHE_MISS,
+    cache_delete,
+    cache_get,
+    cache_set,
+)
 from uniffy.core.crypto import DeploymentCipher, OrgCipher
 from uniffy.core.mail.config import (
     MAIL_NAMESPACE,
@@ -27,12 +33,6 @@ from uniffy.core.mail.config import (
 from uniffy.core.mail.errors import MailNotConfiguredError
 from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
-from uniffy.core.valkey.cache import (
-    CACHE_MISS,
-    cache_delete,
-    cache_get,
-    cache_set,
-)
 
 _CACHE_TTL_SECONDS = 60
 _PASSWORD_SOURCE_KEY = "_password_source"

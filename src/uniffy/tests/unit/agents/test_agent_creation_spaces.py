@@ -362,7 +362,7 @@ async def test_generated_image_file_uses_requested_space(
         ),
         patch("uniffy.core.search.indexer.SearchIndexer", return_value=indexer),
         patch(
-            "uniffy.core.valkey.rate_limit.check_image_generation_limits",
+            "uniffy.domains.agents.limits.policy.check_image_generation_limits",
             new=AsyncMock(),
         ),
         patch(
@@ -387,7 +387,7 @@ async def test_generated_image_file_uses_requested_space(
             new=AsyncMock(),
         ),
         patch(
-            "uniffy.core.valkey.publish_content_access_changed",
+            "uniffy.core.events.realtime.publish_content_access_changed",
             new=AsyncMock(),
         ) as publish_access,
     ):

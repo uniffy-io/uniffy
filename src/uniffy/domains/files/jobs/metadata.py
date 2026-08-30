@@ -11,10 +11,10 @@ from PIL import Image
 from PIL.ExifTags import GPSTAGS, IFD, TAGS
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
-from uniffy.core.valkey import NotificationPayloadType, publish_notification
 from uniffy.domains.files.jobs.thumbnails import _create_thumbnail, get_thumbnail_key
 from uniffy.infrastructure.database.session import open_session
 from uniffy.vendor.arq import Retry

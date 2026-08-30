@@ -1,15 +1,4 @@
-"""General-purpose Valkey cache.
-
-Every public entry runs under the 150ms ``ops_call`` deadline; a slow / down
-Valkey returns ``CACHE_MISS`` (or no-ops the write) and the caller falls through
-to PG. A ``"__none__"`` sentinel distinguishes a cached ``None`` from a miss.
-
-``CACHE_DISABLED_NAMESPACES`` (env, comma-separated) bypasses reads/writes per
-namespace; miss counters still increment so dashboards stay populated.
-
-``cache_get_or_set_locked`` uses a ``SET NX`` lock at ``lock:{cache_key}`` (5s)
-to prevent loader stampedes; lock losers poll every 100ms then fall through.
-"""
+"""Application cache policy with fail-fast degradation and stampede control."""
 
 import asyncio
 import os
@@ -20,8 +9,7 @@ from typing import Any
 
 from loguru import logger
 
-from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
-from uniffy.core.valkey.metrics import (
+from uniffy.core.cache.metrics import (
     CACHE_HIT_TOTAL,
     CACHE_INVALIDATE_TOTAL,
     CACHE_LOAD_DURATION,
@@ -29,9 +17,10 @@ from uniffy.core.valkey.metrics import (
     CACHE_SET_TOTAL,
     CACHE_STAMPEDE_LOCK_WAIT_TOTAL,
 )
-from uniffy.core.valkey.ops import _get_ops_client, ops_call
+from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
+from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
 
-logger = logger.bind(component="core.valkey.cache")
+logger = logger.bind(component="core.cache.operations")
 
 _SENTINEL = "__none__"
 _DEFAULT_TTL_SECONDS = 900
@@ -79,7 +68,7 @@ async def cache_get(key: str) -> dict[str, Any] | None | _CacheMiss:
         CACHE_MISS_TOTAL.labels(namespace=namespace).inc()
         return CACHE_MISS
 
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         CACHE_MISS_TOTAL.labels(namespace=namespace).inc()
         return CACHE_MISS
@@ -134,7 +123,7 @@ async def cache_get_many(
     if not enabled_keys:
         return hits, misses
 
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         for key in enabled_keys:
             CACHE_MISS_TOTAL.labels(namespace=_namespace_for_key(key)).inc()
@@ -193,7 +182,7 @@ async def cache_set(
     if _is_namespace_disabled(key):
         return
 
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
 
@@ -221,7 +210,7 @@ async def cache_set(
 
 
 async def cache_delete(key: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
 
@@ -242,7 +231,7 @@ async def cache_invalidate_many(*keys: str) -> None:
     if not keys:
         return
 
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
 
@@ -260,7 +249,7 @@ async def cache_invalidate_many(*keys: str) -> None:
 
 async def cache_invalidate_by_tag(tag: str) -> None:
     """Delete every key registered under ``tag`` and the tag set itself."""
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
 
@@ -334,7 +323,7 @@ async def cache_get_or_set_locked(
         return cached  # type: ignore[return-value]
 
     namespace = _namespace_for_key(key)
-    client = _get_ops_client()
+    client = get_ops_client()
 
     if client is None or _is_namespace_disabled(key):
         return await _load_and_store(key, loader, ttl, tags, namespace)

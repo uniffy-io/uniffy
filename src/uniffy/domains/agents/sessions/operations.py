@@ -17,9 +17,9 @@ from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import generate_id
-from uniffy.core.valkey.streams import session_has_active_run
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.runtime.compactor import summarise_conversation
+from uniffy.domains.agents.runtime.streams import session_has_active_run
 from uniffy.domains.agents.sessions.jobs.contracts import COMPACT_SESSION
 from uniffy.domains.agents.skills.jobs.contracts import (
     ANALYZE_SESSION_FOR_SKILLS,

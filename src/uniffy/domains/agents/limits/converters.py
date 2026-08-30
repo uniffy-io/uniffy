@@ -12,14 +12,14 @@ from uniffy_proto.common.v1.common_pb2 import (
 )
 
 from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.valkey.rate_limit import (
+from uniffy.domains.agents.limits.operations import RateLimitRow
+from uniffy.domains.agents.limits.policy import (
     AGENT_MSG_AGENT,
     AGENT_MSG_ORG,
     AGENT_MSG_USER,
     IMAGE_GEN_ORG,
     IMAGE_GEN_USER,
 )
-from uniffy.domains.agents.limits.operations import RateLimitRow
 
 RATE_LIMIT_KIND_TO_PROTO: dict[str, RateLimitKind] = {
     AGENT_MSG_USER: RATE_LIMIT_KIND_AGENT_MSG_USER,

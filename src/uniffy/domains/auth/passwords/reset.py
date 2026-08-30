@@ -44,7 +44,7 @@ from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.password_reset_token import PasswordResetToken
 from uniffy.core.models.login.user import User
-from uniffy.core.valkey.rate_limit import check_rate_limit
+from uniffy.core.rate_limit import check_rate_limit
 from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
 from uniffy.domains.organizations.security import SecurityOperations
 

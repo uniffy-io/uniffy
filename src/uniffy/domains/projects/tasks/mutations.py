@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.activity import TaskActivity
@@ -21,7 +22,6 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     ContentType,
 )
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.statuses import (

@@ -8,7 +8,7 @@ from uuid import UUID
 
 from loguru import logger
 
-from uniffy.core.valkey.ops import _get_ops_client, ops_call
+from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
 
 logger = logger.bind(component="core.auth.revocation")
 
@@ -48,7 +48,7 @@ async def mark_token_version_revoked(user_id: UUID, new_version: int) -> None:
     re-armed on every write so a long-running session that keeps
     bumping the version never lets the key expire mid-flight.
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:
@@ -69,7 +69,7 @@ async def is_access_token_revoked(user_id: UUID, token_version: int | None) -> b
     legacy token is rejected the moment any bump is published; if no
     watermark exists, the token is allowed (no information to act on).
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return False
     try:
@@ -96,7 +96,7 @@ async def mark_session_revoked(session_id: UUID) -> None:
     Idempotent; the TTL is re-armed on every write so a long-lived
     session that bumps repeatedly never lets the key expire mid-flight.
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:
@@ -114,7 +114,7 @@ async def mark_sessions_revoked(session_ids: Iterable[UUID]) -> None:
     ids = [sid for sid in session_ids]
     if not ids:
         return
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     ttl = _ttl_seconds()
@@ -140,7 +140,7 @@ async def is_session_revoked(session_id: UUID | None) -> bool:
     """
     if session_id is None:
         return False
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return False
     try:

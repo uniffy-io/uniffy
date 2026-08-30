@@ -10,6 +10,7 @@ from uniffy.core.auth.permissions import (
     modes_at_least_as_open,
     resolve_effective_policy,
 )
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.permissions.content_member import ContentMember
@@ -20,7 +21,6 @@ from uniffy.core.types import (
     ContentType,
     SubjectType,
 )
-from uniffy.core.valkey.mentions import publish_mention_state
 
 logger = logger.bind(component="files.folders.projection")
 

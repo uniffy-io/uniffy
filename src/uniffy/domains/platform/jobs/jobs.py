@@ -21,9 +21,9 @@ from uniffy.core.models.login.organization_member import (
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
 from uniffy.infrastructure.database.session import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="platform.jobs.jobs")
 
@@ -35,7 +35,7 @@ _TEMPLATE = "platform/org_purge_warning"
 
 
 async def _acquire_lock() -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -46,7 +46,7 @@ async def _acquire_lock() -> str | None:
 
 
 async def _release_lock(token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

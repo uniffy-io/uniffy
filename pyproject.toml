@@ -204,6 +204,13 @@ forbidden_modules = ["uniffy.infrastructure.search"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
+name = "Application layers must not import storage adapters"
+type = "forbidden"
+source_modules = ["uniffy.core", "uniffy.domains"]
+forbidden_modules = ["uniffy.infrastructure.storage"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
 name = "Application layers must not import observability adapters"
 type = "forbidden"
 source_modules = ["uniffy.core", "uniffy.domains"]

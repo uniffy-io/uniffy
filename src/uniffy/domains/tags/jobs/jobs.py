@@ -6,7 +6,7 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, SearchIndexer
-from uniffy.core.valkey.tags import EVENT_TAG_UPDATED, publish_tag_event
+from uniffy.domains.tags.events import EVENT_TAG_UPDATED, publish_tag_event
 from uniffy.domains.tags.operations import (
     TagOperations,
     _format_breakdown,

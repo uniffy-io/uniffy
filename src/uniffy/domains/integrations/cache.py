@@ -11,10 +11,10 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.cache.operations import CACHE_MISS, cache_delete, cache_get, cache_set
 from uniffy.core.json_codec import dumps_bytes
 from uniffy.core.models.integrations.connection import IntegrationConnection
-from uniffy.core.valkey.cache import CACHE_MISS, cache_delete, cache_get, cache_set
-from uniffy.core.valkey.ops import _get_ops_client
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="integrations.cache")
 
@@ -73,7 +73,7 @@ async def publish_connection_invalidation(connection_id: UUID) -> None:
     Call after any mutation to the row (add / update / validate / toggle /
     remove / auto-demote); every pod's subscriber drops its LRU entry.
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

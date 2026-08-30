@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.cache.operations import cache_invalidate_by_tag
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
@@ -13,7 +14,6 @@ from uniffy.core.models.login.user import User
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.users.cache import invalidate_user_profile
-from uniffy.core.valkey.cache import cache_invalidate_by_tag
 from uniffy.domains.people.cache import invalidate_chart
 from uniffy.domains.users.avatars import (
     delete_avatar as s3_delete_avatar,

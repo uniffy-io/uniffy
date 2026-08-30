@@ -28,7 +28,7 @@ async def test_dedupe_lock_acquired_inserts_one_row() -> None:
     valkey = MagicMock()
     valkey.set = AsyncMock(return_value=True)
 
-    with patch("uniffy.core.audit.writer._get_ops_client", return_value=valkey):
+    with patch("uniffy.core.audit.writer.get_ops_client", return_value=valkey):
         await write_audit_event(
             session,
             organization_id=generate_id(),
@@ -48,7 +48,7 @@ async def test_dedupe_lock_held_skips_write() -> None:
     valkey = MagicMock()
     valkey.set = AsyncMock(return_value=False)
 
-    with patch("uniffy.core.audit.writer._get_ops_client", return_value=valkey):
+    with patch("uniffy.core.audit.writer.get_ops_client", return_value=valkey):
         await write_audit_event(
             session,
             organization_id=generate_id(),
@@ -63,7 +63,7 @@ async def test_dedupe_lock_held_skips_write() -> None:
 async def test_dedupe_fails_open_when_valkey_unreachable() -> None:
     session = _session_with_role()
 
-    with patch("uniffy.core.audit.writer._get_ops_client", return_value=None):
+    with patch("uniffy.core.audit.writer.get_ops_client", return_value=None):
         await write_audit_event(
             session,
             organization_id=generate_id(),
@@ -80,7 +80,7 @@ async def test_dedupe_fails_open_when_valkey_call_errors() -> None:
     valkey = MagicMock()
     valkey.set = AsyncMock(side_effect=RuntimeError("network"))
 
-    with patch("uniffy.core.audit.writer._get_ops_client", return_value=valkey):
+    with patch("uniffy.core.audit.writer.get_ops_client", return_value=valkey):
         await write_audit_event(
             session,
             organization_id=generate_id(),

@@ -1,15 +1,4 @@
-"""Pin ``stream_xread`` onto the streams client tier.
-
-The original implementation used the fail-fast ops client whose 100ms
-socket timeout aborts XREAD's inner BLOCK on every call, causing a
-log-spam loop and effective polling at ~10Hz instead of blocking. The
-streams tier owns its own connection pool with a 30s socket timeout so
-the BLOCK actually blocks. These tests fail loudly if anyone wires
-``stream_xread`` back onto the ops client.
-
-The non-blocking helpers (XADD, HSET, DEL) stay on the ops client and
-inherit the 150ms ``ops_call`` deadline guard.
-"""
+"""Client-tier contracts for Valkey streams and non-blocking state operations."""
 
 from __future__ import annotations
 
@@ -18,7 +7,7 @@ from typing import Any
 import pytest
 
 from uniffy.core.json_codec import loads
-from uniffy.core.valkey import streams as streams_mod
+from uniffy.infrastructure.valkey import streams as streams_mod
 
 
 class _FakeStreamsClient:
@@ -50,9 +39,9 @@ async def test_stream_xread_uses_streams_client_not_ops_client(monkeypatch) -> N
     ops_client = _FakeOpsClient()
 
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: streams_client)
-    monkeypatch.setattr(streams_mod, "_get_ops_client", lambda: ops_client)
+    monkeypatch.setattr(streams_mod, "get_ops_client", lambda: ops_client)
 
-    await streams_mod.stream_xread("agent:run:test", last_id="0", block_ms=5000)
+    await streams_mod.xread("agent:run:test", last_id="0", block_ms=5000)
 
     assert len(streams_client.xread_calls) == 1, (
         "stream_xread MUST go through the streams client. "
@@ -64,7 +53,7 @@ async def test_stream_xread_uses_streams_client_not_ops_client(monkeypatch) -> N
 
 async def test_stream_xread_returns_empty_when_streams_client_missing(monkeypatch) -> None:
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: None)
-    result = await streams_mod.stream_xread("agent:run:test")
+    result = await streams_mod.xread("agent:run:test")
     assert result == []
 
 
@@ -76,9 +65,9 @@ async def test_stream_xadd_writes_json_bytes(monkeypatch) -> None:
             captured.update({"key": key, "fields": fields, "kwargs": kwargs})
             return "1-0"
 
-    monkeypatch.setattr(streams_mod, "_get_ops_client", lambda: _Client())
+    monkeypatch.setattr(streams_mod, "get_ops_client", lambda: _Client())
 
-    result = await streams_mod.stream_xadd("agent:run:test", {"seq": 1})
+    result = await streams_mod.xadd("agent:run:test", {"seq": 1}, maxlen=200)
 
     assert result == "1-0"
     assert isinstance(captured["fields"]["data"], bytes)
@@ -91,7 +80,7 @@ async def test_stream_xread_accepts_json_bytes(monkeypatch) -> None:
     )
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: client)
 
-    assert await streams_mod.stream_xread("agent:run:test") == [("1-0", {"seq": 1})]
+    assert await streams_mod.xread("agent:run:test") == [("1-0", {"seq": 1})]
 
 
 async def test_stream_xread_swallows_redis_timeout(monkeypatch, caplog) -> None:
@@ -104,7 +93,7 @@ async def test_stream_xread_swallows_redis_timeout(monkeypatch, caplog) -> None:
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: _BoomClient())
 
     with caplog.at_level("WARNING"):
-        result = await streams_mod.stream_xread("agent:run:test")
+        result = await streams_mod.xread("agent:run:test")
 
     assert result == []
     warnings = [r for r in caplog.records if r.levelname == "WARNING"]
@@ -118,7 +107,7 @@ async def test_stream_xread_swallows_redis_timeout(monkeypatch, caplog) -> None:
 def test_streams_kwargs_have_long_socket_timeout() -> None:
     """The streams tier's reason for existing: a long enough socket timeout
     that XREAD's inner BLOCK can actually wait."""
-    from uniffy.core.valkey.config import ValkeyConfig
+    from uniffy.infrastructure.valkey.config import ValkeyConfig
 
     cfg = ValkeyConfig(host="x", port=1, password="y")
     kwargs = cfg.to_streams_kwargs()
@@ -132,7 +121,7 @@ def test_streams_kwargs_have_long_socket_timeout() -> None:
 
 @pytest.mark.parametrize(
     "func_name",
-    ["stream_xadd", "stream_set_state", "stream_get_state", "stream_delete"],
+    ["xadd", "set_state", "get_state", "delete"],
 )
 async def test_non_blocking_helpers_still_use_ops_client(monkeypatch, func_name: str) -> None:
     """The non-blocking writes / reads stay on the ops client tier."""
@@ -183,17 +172,17 @@ async def test_non_blocking_helpers_still_use_ops_client(monkeypatch, func_name:
             streams_blew_up["called"] = True
             return 1
 
-    monkeypatch.setattr(streams_mod, "_get_ops_client", lambda: _OpsClient())
+    monkeypatch.setattr(streams_mod, "get_ops_client", lambda: _OpsClient())
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: _StreamsClient())
 
     func = getattr(streams_mod, func_name)
-    if func_name == "stream_xadd":
-        await func("agent:run:test", {"seq": 1})
-    elif func_name == "stream_set_state":
-        await func("agent:run:test:state", {"status": "running"})
-    elif func_name == "stream_get_state":
+    if func_name == "xadd":
+        await func("agent:run:test", {"seq": 1}, maxlen=200)
+    elif func_name == "set_state":
+        await func("agent:run:test:state", {"status": "running"}, ttl=300)
+    elif func_name == "get_state":
         await func("agent:run:test:state")
-    elif func_name == "stream_delete":
+    elif func_name == "delete":
         await func("agent:run:test", "agent:run:test:state")
 
     assert ops_used["called"] is True, f"{func_name} must use the ops client"

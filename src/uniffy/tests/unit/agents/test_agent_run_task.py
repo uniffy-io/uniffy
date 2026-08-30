@@ -161,7 +161,7 @@ def _install_state_stub(monkeypatch) -> list[dict[str, Any]]:
 
 def _install_ops_client(monkeypatch, *, lock_acquired: bool = True) -> _FakeOpsClient:
     client = _FakeOpsClient(lock_acquired=lock_acquired)
-    monkeypatch.setattr(agent_run_mod, "_get_ops_client", lambda: client)
+    monkeypatch.setattr(agent_run_mod, "get_ops_client", lambda: client)
     return client
 
 

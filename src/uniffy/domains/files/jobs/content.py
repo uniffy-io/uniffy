@@ -12,6 +12,7 @@ from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_policy,
 )
+from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 from uniffy.core.extraction import UnsupportedFormatError, extract_text
 from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import ExtractionStatus, File
@@ -20,7 +21,6 @@ from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, build_content_urn
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.types import ContentType
-from uniffy.core.valkey import NotificationPayloadType, publish_notification
 from uniffy.domains.files.attachments.folders import is_attachment_staging_folder
 from uniffy.domains.tags.operations import TagOperations
 from uniffy.infrastructure.database.session import open_session

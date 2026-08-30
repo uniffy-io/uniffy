@@ -36,8 +36,8 @@ from uniffy.core.models.platform.support_session import (
     SupportSessionScope,
     SupportSessionState,
 )
+from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.types import NotificationType
-from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
 from uniffy.domains.platform.support.errors import (
     SupportSessionScopeError,

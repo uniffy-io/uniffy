@@ -33,7 +33,7 @@ from loguru import logger
 
 from uniffy.core.realtime.identity import replica_id
 from uniffy.core.realtime.publisher import RealtimeChannelKind, RealtimeChannelNamespace
-from uniffy.core.valkey.pubsub import subscribe_patterns
+from uniffy.infrastructure.valkey.pubsub import subscribe_patterns
 
 LOGGER_COMPONENT = "streaming.revoke"
 

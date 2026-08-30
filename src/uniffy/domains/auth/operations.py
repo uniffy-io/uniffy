@@ -32,7 +32,7 @@ from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.core.models.login.user_session import UserSession
-from uniffy.core.valkey.rate_limit import check_rate_limit
+from uniffy.core.rate_limit import check_rate_limit
 from uniffy.domains.auth.contracts import hash_refresh_token
 from uniffy.domains.auth.errors import AuthenticationError, RegistrationError, TokenError
 from uniffy.domains.auth.metrics import AUTH_ATTEMPTS_TOTAL

@@ -9,6 +9,7 @@ from sqlalchemy.orm import aliased
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.content.registry import register_content_loader
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
@@ -29,7 +30,6 @@ from uniffy.core.types import (
     RoomType,
     SubjectType,
 )
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.permissions.members import ContentMembersOperations
 from uniffy.domains.rooms import queries

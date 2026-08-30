@@ -1,7 +1,6 @@
 """Producer-facing permission background-job contracts."""
 
-from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobReliability, JobWorkload, QueueName
 
 REINDEX_ORG_CONTENT_FOR_DEFAULTS = JobRef(
     name="reindex_org_content_for_defaults",

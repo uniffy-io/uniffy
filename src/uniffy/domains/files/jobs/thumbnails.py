@@ -11,10 +11,10 @@ from loguru import logger
 from PIL import Image, ImageOps
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 from uniffy.core.models.files.file import File, ThumbnailStatus
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
-from uniffy.core.valkey import NotificationPayloadType, publish_notification
 from uniffy.infrastructure.database.session import open_session
 from uniffy.vendor.arq import Retry
 

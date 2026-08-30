@@ -1,7 +1,6 @@
 """Producer-facing platform background-job contracts."""
 
-from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobReliability, JobWorkload, QueueName
 
 NOTIFY_PENDING_ORG_PURGES_SCHEDULE = JobRef(
     name="cron:notify_pending_org_purges",

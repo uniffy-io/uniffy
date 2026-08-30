@@ -7,7 +7,7 @@ import time
 from loguru import logger
 from valkey.exceptions import ConnectionError as ValkeyConnectionError
 
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import QueueName
 from uniffy.infrastructure.observability.config import LoggingConfig
 from uniffy.infrastructure.observability.logger import configure_logging
 from uniffy.infrastructure.observability.prometheus import start_worker_metrics_server

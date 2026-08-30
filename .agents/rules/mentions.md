@@ -7,7 +7,7 @@ paths:
   - "src/uniffy/domains/search/**/*.py"
   - "src/uniffy/core/search/**/*.py"
   - "src/uniffy/core/content/base_operations.py"
-  - "src/uniffy/core/valkey/mentions.py"
+  - "src/uniffy/core/content/mentions.py"
   - "src/proto/search/v1/search.proto"
 ---
 
@@ -322,7 +322,7 @@ Concrete checklist when, e.g., adding `assignee_count` to project mentions:
 | `src/proto/search/v1/search.proto` | `UrnMetadata` shape. Add new typed fields here when the metadata-dict-only path is too loose. |
 | `src/uniffy/core/content/base_operations.py` | `_get_search_metadata_async` hook + canonical `_index_for_search`. |
 | `src/uniffy/core/search/indexer.py` | `SearchIndexer.index` / `remove`. |
-| `src/uniffy/core/valkey/mentions.py` | `publish_mention_state`. |
+| `src/uniffy/core/content/mentions.py` | `publish_mention_state`. |
 | `src/uniffy/domains/permissions/access/` | PostgreSQL-authoritative lifecycle, access, and canonical request targets. |
 | `src/uniffy/domains/search/operations.py` | Authorized search and typed availability composition. |
 | `src/uniffy/domains/search/converters.py` | `SearchResult` -> `UrnMetadata` proto, including `urn_status` passthrough. |

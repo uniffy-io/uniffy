@@ -13,8 +13,8 @@ from sqlalchemy import select
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.infrastructure.database.session import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="files.jobs.multipart")
 
@@ -26,7 +26,7 @@ _ABORTED_RETENTION_DAYS = 7
 
 
 async def _acquire_lock() -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -37,7 +37,7 @@ async def _acquire_lock() -> str | None:
 
 
 async def _release_lock(token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

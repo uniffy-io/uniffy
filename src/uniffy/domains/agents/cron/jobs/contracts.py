@@ -1,7 +1,6 @@
 """Producer-facing agent cron background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
 EXECUTE_SINGLE_AGENT_CRON_TASK = JobRef(
     name="execute_single_agent_cron_task",

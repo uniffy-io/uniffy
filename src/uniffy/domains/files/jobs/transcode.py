@@ -17,10 +17,10 @@ from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, build_content_urn
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.types import ContentType, generate_id
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.files.jobs.contracts import DELETE_S3_OBJECT
 from uniffy.domains.files.operations import FileOperations
 from uniffy.infrastructure.database.session import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="files.jobs.transcode")
 
@@ -33,7 +33,7 @@ _HW_ENCODER = os.getenv("TRANSCODE_HW_ENCODER", "").strip()
 
 
 async def _acquire_lock(file_id: UUID) -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -48,7 +48,7 @@ async def _acquire_lock(file_id: UUID) -> str | None:
 
 
 async def _release_lock(file_id: UUID, token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

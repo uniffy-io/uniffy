@@ -12,6 +12,7 @@ from uniffy.core.crypto import (
     subscribe_dek_invalidations,
 )
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
+from uniffy.core.jobs import QueueName
 from uniffy.core.search import (
     SEARCH_INDEXER_CTX_KEY,
     WORKSPACE_SEARCH_CTX_KEY,
@@ -19,15 +20,6 @@ from uniffy.core.search import (
     WorkspaceSearch,
 )
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
-from uniffy.core.valkey import (
-    close_ops_client,
-    close_pubsub,
-    close_queue,
-    init_ops_client,
-    init_pubsub,
-    init_queue,
-)
-from uniffy.core.valkey.queue import QueueName
 from uniffy.domains.agents.providers.clients import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
@@ -49,6 +41,9 @@ from uniffy.domains.projects.registration import register_project_content
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
+from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
+from uniffy.infrastructure.valkey.queue import close_queue, init_queue
 from uniffy.vendor.arq.constants import job_start_delay_ctx_key
 from uniffy.vendor.arq.typing import JobRejectionReason
 from uniffy.workers.metrics import (

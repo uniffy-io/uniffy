@@ -12,7 +12,7 @@ from uuid import UUID
 
 from uniffy.core.realtime.identity import replica_id
 from uniffy.core.types import ContentType
-from uniffy.core.valkey.pubsub import publish_to_channel
+from uniffy.infrastructure.valkey.pubsub import publish_to_channel
 
 
 class RealtimeChannelNamespace(StrEnum):

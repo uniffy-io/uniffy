@@ -1,7 +1,6 @@
 """Background-job contracts owned by the core event subsystem."""
 
-from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobReliability, JobWorkload, QueueName
 
 PROCESS_NOTIFICATION_EVENT = JobRef(
     name="process_notification_event",

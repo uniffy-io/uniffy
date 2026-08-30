@@ -1,7 +1,6 @@
 """Producer-facing calls background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
 RECONCILE_CALLS_SCHEDULE = JobRef(
     name="cron:reconcile_calls",

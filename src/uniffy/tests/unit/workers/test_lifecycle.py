@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, WORKSPACE_SEARCH_CTX_KEY
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import QueueName
 from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS_CTX_KEY
 from uniffy.workers.metrics import (
     WORKER_JOB_START_DELAY,

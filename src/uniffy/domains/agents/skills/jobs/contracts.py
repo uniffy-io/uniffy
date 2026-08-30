@@ -2,8 +2,7 @@
 
 from enum import StrEnum
 
-from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobReliability, JobWorkload, QueueName
 
 
 class SkillAnalysisDestination(StrEnum):

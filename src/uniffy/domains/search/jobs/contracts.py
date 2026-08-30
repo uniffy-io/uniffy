@@ -1,7 +1,6 @@
 """Producer-facing search background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
 REINDEX_RENAMED_CONTENT = JobRef(
     name="reindex_renamed_content",

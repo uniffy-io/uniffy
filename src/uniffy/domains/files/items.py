@@ -7,12 +7,12 @@ from loguru import logger
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.files.file import File
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage import ObjectStorage
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.files.folders.operations import FolderOperations
 from uniffy.domains.files.quota.operations import QuotaOperations
 from uniffy.domains.search.rename import propagate_rename

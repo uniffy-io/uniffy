@@ -1,7 +1,4 @@
-"""Per-user presence state with 120s TTL. Each heartbeat resets the TTL; expiry means offline.
-
-Keys ``presence:{org_id}:{user_id}``; channel ``presence:{org_id}``.
-"""
+"""Per-user presence state and realtime publication with expiry-based offline status."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -9,8 +6,12 @@ from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.events.realtime import NotificationPayloadType
 from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
-from uniffy.core.valkey.ops import _get_ops_client, ops_call
+from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
+from uniffy.infrastructure.valkey.pubsub import publish_to_channel
+
+logger = logger.bind(component="presence.state")
 
 _PRESENCE_TTL = 120
 _MAX_BULK_IDS = 200
@@ -19,8 +20,6 @@ _NAMESPACE = "presence"
 # Stored status vocabulary; the proto mapping lives in domains/presence/converters.py.
 PRESENCE_STATUS_ONLINE = "online"
 PRESENCE_STATUS_DND = "dnd"
-
-LOGGER_COMPONENT = "presence"
 
 
 def _presence_key(org_id: UUID, user_id: UUID) -> str:
@@ -40,7 +39,7 @@ async def presence_set(
     """Set presence; returns previous status if it changed, ``"__new__"``
     on first heartbeat, ``None`` otherwise.
     """
-    redis = _get_ops_client()
+    redis = get_ops_client()
     if redis is None:
         return None
 
@@ -71,7 +70,7 @@ async def presence_set(
     except TimeoutError:
         return None
     except Exception:
-        logger.warning(f"presence_set failed for {key}", component=LOGGER_COMPONENT)
+        logger.warning(f"presence_set failed for {key}")
         return None
 
 
@@ -86,7 +85,7 @@ async def presence_get_bulk(
     if not user_ids:
         return {}
 
-    redis = _get_ops_client()
+    redis = get_ops_client()
     if redis is None:
         return {}
 
@@ -98,7 +97,7 @@ async def presence_get_bulk(
     except TimeoutError:
         return {}
     except Exception:
-        logger.warning("presence_get_bulk MGET failed", component=LOGGER_COMPONENT)
+        logger.warning("presence_get_bulk MGET failed")
         return {}
 
     result: dict[str, dict[str, Any]] = {}
@@ -109,7 +108,7 @@ async def presence_get_bulk(
             data = loads(raw)
             result[str(uid)] = data
         except JSONDecodeError, TypeError:
-            logger.warning(f"Invalid presence data for user {uid}", component=LOGGER_COMPONENT)
+            logger.warning(f"Invalid presence data for user {uid}")
 
     return result
 
@@ -122,15 +121,9 @@ async def presence_publish_change(
     custom_status: dict[str, Any] | None = None,
 ) -> None:
     """Publish a presence change on ``presence:{org_id}`` under the ops deadline guard."""
-    from uniffy.core.valkey import pubsub
-
-    redis = pubsub._pubsub_client
-    if redis is None:
-        return
-
     channel = _presence_channel(org_id)
     payload: dict[str, Any] = {
-        "_type": pubsub.NotificationPayloadType.PRESENCE_CHANGED,
+        "_type": NotificationPayloadType.PRESENCE_CHANGED,
         "user_id": str(user_id),
         "status": status,
         "last_active": last_active,
@@ -140,10 +133,9 @@ async def presence_publish_change(
 
     try:
         async with ops_call(_NAMESPACE, "presence_publish"):
-            message = dumps_bytes(payload)
-            await redis.publish(channel, message)
-        logger.debug(f"published presence change for {user_id}", component=LOGGER_COMPONENT)
+            await publish_to_channel(channel, payload)
+        logger.debug(f"published presence change for {user_id}")
     except TimeoutError:
         return
     except Exception:
-        logger.warning(f"Failed to publish presence change to {channel}", component=LOGGER_COMPONENT)
+        logger.warning(f"Failed to publish presence change to {channel}")

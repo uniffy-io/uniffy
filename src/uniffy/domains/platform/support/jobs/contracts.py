@@ -1,7 +1,6 @@
 """Producer-facing support-session background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
 EXPIRE_SUPPORT_SESSIONS_SCHEDULE = JobRef(
     name="cron:expire_support_sessions",

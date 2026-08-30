@@ -3,7 +3,8 @@
 import os
 from datetime import UTC
 
-from uniffy.core.valkey import QueueName, ValkeyConfig
+from uniffy.core.jobs import QueueName
+from uniffy.infrastructure.valkey.config import ValkeyConfig
 from uniffy.workers.lifecycle import (
     CORE_RESOURCE_PROFILE,
     core_on_shutdown,

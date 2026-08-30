@@ -19,7 +19,6 @@ from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_loc
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.chat.message import ChatMessage
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.models.resolver import resolve_provider_and_model
 from uniffy.domains.agents.sessions.operations import SKILL_ANALYSIS_DEBOUNCE_SECONDS
@@ -30,6 +29,7 @@ from uniffy.domains.agents.skills.analysis import (
 )
 from uniffy.domains.agents.skills.jobs.contracts import SkillAnalysisDestination
 from uniffy.infrastructure.database.session import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="agents.skills.jobs.jobs")
 
@@ -42,7 +42,7 @@ async def _acquire_lock(
     kind: SkillAnalysisDestination,
     destination_id: UUID,
 ) -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -60,7 +60,7 @@ async def _release_lock(
     destination_id: UUID,
     token: str,
 ) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

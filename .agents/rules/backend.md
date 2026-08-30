@@ -36,10 +36,12 @@ Adding a new domain:
 
 - `core` is the shared application kernel and never imports `domains`. `infrastructure` owns generic
   technical adapters and never imports `domains`; domain-specific adapters stay with their owner.
-  Core and domains also never import the concrete search adapters under `infrastructure/search`;
-  web, worker, and explicit script roots select and inject the engine. Import Linter enforces all
-  three live package-graph rules from `pyproject.toml` with no exceptions. Additional inward-dependency
-  ratchets land only after every violation is removed.
+  Core and domains also never import concrete search or storage adapters, or observability lifecycle
+  modules; web, worker, and explicit script roots select those implementations. PostgreSQL/SQLAlchemy,
+  Valkey, and owner-local Prometheus instrumentation are selected platform dependencies, so application
+  owners may consume their public capabilities without speculative wrapper layers. Import Linter
+  enforces all five live package-graph rules from `pyproject.toml` with no exceptions. Additional
+  dependency rules land only when they describe a universal ownership boundary.
 - Domain-to-domain imports use an owner-approved package export or a narrow `context`, `http`,
   `contracts`, `ports`, `policy`, `projection`, or `types` module. Another domain's handlers,
   services, converters, queries, caches, and operations are implementation details.
@@ -179,7 +181,7 @@ Do not duplicate shipped content in the frontend. Expose it over an RPC (`ListAg
 
 ## Performance-critical domains
 
-`domains/chat/` and `domains/agents/` carry the bulk of user traffic; changes there (and in what they call: `core/auth/`, `core/content/`, `core/valkey/`, `core/users/`) are held to a higher bar:
+`domains/chat/` and `domains/agents/` carry the bulk of user traffic; changes there (and in what they call: `core/auth/`, `core/cache/`, `core/content/`, `core/users/`, `infrastructure/valkey/`) are held to a higher bar:
 
 | Rule | Why |
 |---|---|
@@ -199,17 +201,22 @@ Cache adoption + invalidation hooks are part of any change that adds a hot read/
 
 ## Valkey cache layer
 
-Three physical clients per process; importing the right tier matters (mismatches cause subtle hangs):
+Four physical clients per process; importing the right tier matters (mismatches cause subtle hangs):
 
 | Tier | Module | Purpose | Resilience |
 |---|---|---|---|
-| Pubsub | `core/valkey/pubsub.py` | PUBLISH / SUBSCRIBE / PSUBSCRIBE only | 5s socket timeout, retries, long-lived connections |
-| Ops | `core/valkey/ops.py` | Cache, presence, rate-limit, mention-state | 200ms connect, 100ms read, zero retries, 150ms `ops_call` deadline |
-| Queue | `core/valkey/queue.py` | ARQ pool | 10s timeout, 5 retries |
+| Pubsub | `infrastructure/valkey/pubsub.py` | PUBLISH / SUBSCRIBE / PSUBSCRIBE transport | 5s socket timeout, retries, long-lived connections |
+| Ops | `infrastructure/valkey/ops.py` | Fail-fast non-blocking commands | 200ms connect, 100ms read, zero retries, 150ms `ops_call` deadline |
+| Streams | `infrastructure/valkey/streams.py` | Blocking XREAD for agent-run replay | 30s socket timeout, zero retries |
+| Queue | `infrastructure/valkey/queue.py` | ARQ pools | 10s timeout, 5 retries |
 
 Conventions:
 
 - Key naming `{namespace}:{scope}:{id}[:subkind]`; first segment is the metrics namespace.
+- Application cache, presence, mention, tag, realtime-event, rate-limit, and agent-run semantics stay
+  with their core or domain owner; infrastructure exposes transport operations only.
+- Application owners use the public `get_ops_client` accessor when they need concrete Valkey commands;
+  underscore-prefixed adapter state remains private to infrastructure.
 - Tag-based bulk invalidation via `tag:{name}` sets (`cache_invalidate_by_tag`) when the blast radius isn't cheaply enumerable.
 - Stampede control via `cache_get_or_set_locked` on the hottest helpers.
 - Per-namespace kill-switch: `CACHE_DISABLED_NAMESPACES` env var (misses still counted).

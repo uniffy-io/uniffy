@@ -24,7 +24,6 @@ from uniffy.core.models.agents.skill_draft import (
 )
 from uniffy.core.models.agents.skill_usage import AgentSkillUsage
 from uniffy.core.models.chat.message import ChatMessageMetadataKind, ChatMessageVisibility
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.skills.validation import (
     SKILL_DESCRIPTION_MAX,
@@ -35,6 +34,7 @@ from uniffy.domains.agents.skills.validation import (
     has_hard_injection,
     sanitize_skill_text,
 )
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="agents.skills.analysis")
 
@@ -115,7 +115,7 @@ async def consume_analysis_budget(organization_id: UUID) -> bool:
     Returns False when the org is over budget or Valkey is unavailable (fail
     closed - a missing budget counter must not let the analyzer run unbounded).
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return False
     try:

@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.types import NotificationType, generate_id
-from uniffy.core.valkey.presence import PRESENCE_STATUS_DND
+from uniffy.domains.presence.state import PRESENCE_STATUS_DND
 from uniffy.domains.notifications.delivery.push import PushAdapter
 from uniffy.domains.notifications.delivery.suppression import (
     InterruptiveDeliveryContext,

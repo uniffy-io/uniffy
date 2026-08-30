@@ -23,7 +23,6 @@ from uniffy.core.models.notifications.email_delivery import (
     NotificationEmailDelivery,
     NotificationEmailStatus,
 )
-from uniffy.core.valkey.presence import presence_get_bulk
 from uniffy.domains.notifications.delivery.content import (
     notification_action_url,
     notification_preferences_url,
@@ -47,6 +46,7 @@ from uniffy.domains.notifications.jobs.contracts import (
     SEND_NOTIFICATION_DIGEST,
     SEND_NOTIFICATION_EMAIL,
 )
+from uniffy.domains.presence.state import presence_get_bulk
 from uniffy.domains.settings.defaults import EmailFrequency
 from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry

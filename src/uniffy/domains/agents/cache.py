@@ -19,18 +19,18 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.json_codec import dumps_bytes
-from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.skill import AgentSkill
-from uniffy.core.types import AccessMode, ContentRole
-from uniffy.core.valkey.cache import (
+from uniffy.core.cache.operations import (
     cache_delete,
     cache_get_or_set_locked,
     cache_invalidate_by_tag,
     cache_invalidate_many,
     cache_set,
 )
-from uniffy.core.valkey.ops import _get_ops_client
+from uniffy.core.json_codec import dumps_bytes
+from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.agents.skill import AgentSkill
+from uniffy.core.types import AccessMode, ContentRole
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="agents.cache")
 
@@ -263,7 +263,7 @@ async def fetch_agent_skills(
 
 
 async def _set_add(set_key: str, member: str, ttl: int) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:
@@ -276,7 +276,7 @@ async def _set_add(set_key: str, member: str, ttl: int) -> None:
 
 
 async def _set_remove(set_key: str, member: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:
@@ -286,7 +286,7 @@ async def _set_remove(set_key: str, member: str) -> None:
 
 
 async def _set_members(set_key: str) -> list[str]:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return []
     try:
@@ -338,7 +338,7 @@ async def invalidate_agents_using_skill(
         if keys:
             await cache_invalidate_many(*keys)
     if drop_tag_set:
-        client = _get_ops_client()
+        client = get_ops_client()
         if client is not None:
             try:
                 await client.delete(set_key)
@@ -443,7 +443,7 @@ async def publish_provider_key_invalidation(key_id: UUID) -> None:
     every pod's subscriber drops its entry on this signal. Call after any
     mutation to the key (add / validate / toggle / remove).
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

@@ -1,7 +1,6 @@
 """Producer-facing mail background-job contracts."""
 
-from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobReliability, JobWorkload, QueueName
 
 SEND_EMAIL = JobRef(
     name="send_email",

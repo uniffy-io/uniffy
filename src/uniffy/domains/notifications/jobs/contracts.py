@@ -1,7 +1,6 @@
 """Producer-facing notification background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
 DELIVER_PUSH_NOTIFICATION = JobRef(
     name="deliver_push_notification",

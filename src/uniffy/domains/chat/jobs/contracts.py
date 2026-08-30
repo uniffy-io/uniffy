@@ -1,7 +1,6 @@
 """Producer-facing chat background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
 REFRESH_CHAT_SEARCH_ACL = JobRef(
     name="refresh_chat_search_acl",

@@ -7,10 +7,11 @@ from uuid import UUID
 
 from loguru import logger
 
-from uniffy.core.json_codec import dumps_bytes
-from uniffy.core.valkey.ops import ops_call
+from uniffy.core.events.realtime import NotificationPayloadType
+from uniffy.infrastructure.valkey.ops import ops_call
+from uniffy.infrastructure.valkey.pubsub import publish_to_channel
 
-LOGGER_COMPONENT = "mentions"
+logger = logger.bind(component="core.content.mentions")
 _NAMESPACE = "mentions"
 
 
@@ -20,24 +21,17 @@ async def publish_mention_state(
     changes: dict[str, Any],
 ) -> None:
     """Publish a mention state change so live chips refresh in place."""
-    from uniffy.core.valkey import pubsub
-
-    redis = pubsub._pubsub_client
-    if redis is None:
-        return
-
     channel = f"mentions:{organization_id}"
     payload: dict[str, Any] = {
-        "_type": pubsub.NotificationPayloadType.MENTION_STATE_CHANGED,
+        "_type": NotificationPayloadType.MENTION_STATE_CHANGED,
         "urn": urn,
         "changes": {k: str(v) for k, v in changes.items()},
     }
     try:
         async with ops_call(_NAMESPACE, "mentions_publish"):
-            message = dumps_bytes(payload)
-            await redis.publish(channel, message)
-        logger.debug(f"published mention state change for {urn}", component=LOGGER_COMPONENT)
+            await publish_to_channel(channel, payload)
+        logger.debug(f"published mention state change for {urn}")
     except TimeoutError:
         return
     except Exception:
-        logger.warning(f"Failed to publish mention state to {channel}", component=LOGGER_COMPONENT)
+        logger.warning(f"Failed to publish mention state to {channel}")

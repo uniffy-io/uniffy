@@ -1,9 +1,4 @@
-"""Fixed-window rate limiting via INCR + EXPIRE on the ops Valkey client.
-
-Fail-open: when Valkey is unavailable the request is allowed through with a
-warning log. Per-org overrides live in ``agents_rate_limits`` and load through a
-short process-local TTL cache.
-"""
+"""Agent and image-generation rate-limit policy with per-org overrides."""
 
 import time
 from dataclasses import dataclass
@@ -13,9 +8,9 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.errors import RateLimitExceededError
+from uniffy.core.rate_limit import check_rate_limit
 
-logger = logger.bind(component="rate_limit")
+logger = logger.bind(component="agents.limits.policy")
 
 AGENT_MSG_USER = "AGENT_MSG_USER"
 AGENT_MSG_ORG = "AGENT_MSG_ORG"
@@ -57,53 +52,6 @@ _CACHE_TTL_SECONDS = 30.0
 _overrides_cache: dict[UUID, tuple[float, dict[str, LimitConfig]]] = {}
 
 
-def _get_client():
-    from uniffy.core.valkey.ops import _get_ops_client
-
-    return _get_ops_client()
-
-
-async def check_rate_limit(
-    *,
-    key: str,
-    limit: int,
-    window_seconds: int,
-    resource: str = "request",
-) -> None:
-    """INCR + EXPIRE; raises ``RateLimitExceededError`` when over the cap.
-    Fails open on Valkey loss.
-    """
-    client = _get_client()
-    if client is None:
-        logger.warning(
-            "Rate limit check skipped: Valkey not available",
-            component="rate_limit",
-        )
-        return
-
-    try:
-        count = await client.incr(key)
-        if count == 1:
-            await client.expire(key, window_seconds)
-
-        if count > limit:
-            ttl = await client.ttl(key)
-            retry_after = max(ttl, 1)
-            raise RateLimitExceededError(
-                resource=resource,
-                limit=limit,
-                window_seconds=window_seconds,
-                retry_after=retry_after,
-            )
-    except RateLimitExceededError:
-        raise
-    except Exception:
-        logger.warning(
-            "Rate limit check failed, allowing request",
-            component="rate_limit",
-        )
-
-
 async def load_org_overrides(
     session: AsyncSession,
     organization_id: UUID,
@@ -126,7 +74,6 @@ async def load_org_overrides(
     except Exception:
         logger.warning(
             "Failed to load rate limit overrides, using defaults",
-            component="rate_limit",
             organization_id=str(organization_id),
         )
         return {}
@@ -215,25 +162,4 @@ async def check_image_generation_limits(
         limit=org_cfg.limit,
         window_seconds=org_cfg.window_seconds,
         resource="image generation (per organization)",
-    )
-
-
-async def check_agent_rate_limits(
-    user_id: str,
-    organization_id: str,
-) -> None:
-    """Stateless wrapper for callers without an ``AsyncSession``; uses user+org defaults only."""
-    cfg_user = DEFAULT_LIMITS[AGENT_MSG_USER]
-    cfg_org = DEFAULT_LIMITS[AGENT_MSG_ORG]
-    await check_rate_limit(
-        key=f"rl:agent_msg:user:{user_id}",
-        limit=cfg_user.limit,
-        window_seconds=cfg_user.window_seconds,
-        resource="agent messages (per user)",
-    )
-    await check_rate_limit(
-        key=f"rl:agent_msg:org:{organization_id}",
-        limit=cfg_org.limit,
-        window_seconds=cfg_org.window_seconds,
-        resource="agent messages (per organization)",
     )

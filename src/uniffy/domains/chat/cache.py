@@ -9,7 +9,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.valkey.cache import (
+from uniffy.core.cache.operations import (
     CACHE_MISS,
     cache_delete,
     cache_get,

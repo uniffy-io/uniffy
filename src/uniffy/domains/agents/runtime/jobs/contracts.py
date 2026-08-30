@@ -1,7 +1,6 @@
 """Producer-facing agent runtime background-job contracts."""
 
-from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobReliability, JobWorkload, QueueName
 
 RUN_AGENT_SESSION = JobRef(
     name="run_agent_session",

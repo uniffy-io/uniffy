@@ -6,7 +6,7 @@ from uniffy.core.events.job_contracts import PROCESS_NOTIFICATION_EVENT
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.json_codec import loads
 from uniffy.core.types import ContentType, NotificationType, generate_id
-from uniffy.core.valkey import pubsub
+from uniffy.infrastructure.valkey import pubsub
 
 
 async def test_pubsub_publishes_json_bytes(monkeypatch) -> None:

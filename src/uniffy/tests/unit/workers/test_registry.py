@@ -3,7 +3,7 @@ import inspect
 import pytest
 
 from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import QueueName
 from uniffy.vendor.arq.worker import create_worker
 from uniffy.workers.fleets import CoreWorkerSettings, EgressWorkerSettings
 from uniffy.workers.registration import (

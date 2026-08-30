@@ -65,9 +65,9 @@ from uniffy.core.auth.principal import current_user_id
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.chat.message import ChatMessageMetadataKey
 from uniffy.core.streaming.disconnect import get_disconnect_event
-from uniffy.core.valkey import subscribe_channels
 from uniffy.domains.chat.messages.converters import forward_context_to_proto
 from uniffy.domains.chat.streaming import events as evt
+from uniffy.infrastructure.valkey.pubsub import subscribe_channels
 
 LOGGER_COMPONENT = "chat.stream"
 HEARTBEAT_INTERVAL = 30

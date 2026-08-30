@@ -14,11 +14,11 @@ from uniffy.core.models.projects.task import Task
 from uniffy.core.models.search import SearchRemovalQueue
 from uniffy.core.search.engine import SearchEngineError, search_filter_from_data
 from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.calendar.search import refresh_event_search_projection
 from uniffy.domains.notes.search import refresh_note_search_projection
 from uniffy.domains.projects.search.projection import refresh_task_search_projection
 from uniffy.infrastructure.database.session import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="search.jobs.jobs")
 
@@ -100,7 +100,7 @@ async def reindex_renamed_content(ctx: dict[str, Any], payload_json: str) -> dic
 
 
 async def _acquire_lock() -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -111,7 +111,7 @@ async def _acquire_lock() -> str | None:
 
 
 async def _release_lock(token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

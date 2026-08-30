@@ -155,7 +155,7 @@ async def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
         ),
         patch("uniffy.domains.auth.operations.create_access_token", return_value="atk"),
         patch("uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"),
-        patch("uniffy.core.audit.writer._get_ops_client", return_value=valkey),
+        patch("uniffy.core.audit.writer.get_ops_client", return_value=valkey),
     ):
         await ops.refresh_token("doesnt-matter")
 
@@ -191,7 +191,7 @@ async def test_refresh_token_dedupe_suppresses_rapid_writes() -> None:
         ),
         patch("uniffy.domains.auth.operations.create_access_token", return_value="atk"),
         patch("uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"),
-        patch("uniffy.core.audit.writer._get_ops_client", return_value=valkey),
+        patch("uniffy.core.audit.writer.get_ops_client", return_value=valkey),
     ):
         await ops.refresh_token("doesnt-matter")
 

@@ -29,7 +29,7 @@ from uniffy.core.models.login.organization_member import (
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
-from uniffy.core.valkey.rate_limit import check_rate_limit
+from uniffy.core.rate_limit import check_rate_limit
 from uniffy.domains.auth.contracts import (
     stage_invitation_authentication,
     stage_invited_user,

@@ -11,8 +11,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.cache.operations import CACHE_MISS, cache_delete, cache_get, cache_set
 from uniffy.core.models.agents.memory_bridge import AgentMemoryBridgeOptIn
-from uniffy.core.valkey.cache import CACHE_MISS, cache_delete, cache_get, cache_set
 
 _BRIDGE_TTL_SECONDS = 300
 

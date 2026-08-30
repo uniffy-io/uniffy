@@ -858,7 +858,7 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(da)
 
-        from uniffy.core.valkey.pubsub import NotificationPayloadType, publish_notification
+        from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 
         await publish_notification(
             target_user_id,
@@ -908,7 +908,7 @@ class OrganizationOperations:
 
         await self._session.commit()
 
-        from uniffy.core.valkey.pubsub import NotificationPayloadType, publish_notification
+        from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 
         await publish_notification(
             target_user_id,

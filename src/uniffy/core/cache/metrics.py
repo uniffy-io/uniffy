@@ -1,10 +1,4 @@
-from prometheus_client import Counter, Gauge, Histogram
-
-PUBSUB_ACTIVE_SUBSCRIBERS = Gauge(
-    "uniffy_pubsub_active_subscribers",
-    "Number of active Pub/Sub streaming connections",
-    multiprocess_mode="livesum",
-)
+from prometheus_client import Counter, Histogram
 
 CACHE_HIT_TOTAL = Counter(
     "uniffy_cache_hit_total",
@@ -40,10 +34,4 @@ CACHE_STAMPEDE_LOCK_WAIT_TOTAL = Counter(
     "uniffy_cache_stampede_lock_wait_total",
     "Callers that waited for a cache stampede lock, per namespace",
     ["namespace"],
-)
-
-CACHE_OP_TIMEOUT_TOTAL = Counter(
-    "uniffy_cache_op_timeout_total",
-    "Valkey ops-client calls that tripped the per-call deadline guard",
-    ["namespace", "op"],
 )

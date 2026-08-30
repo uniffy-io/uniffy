@@ -1,9 +1,4 @@
-"""Fail-fast Valkey client for cache / presence / rate-limit / mention-state.
-
-The ops client does NOT retry: a slow Valkey is treated as a miss and the caller
-falls through to PG. ``ops_call`` adds a 150ms wall-clock deadline on top of the
-socket timeouts so a stuck syscall never blows the budget.
-"""
+"""Fail-fast Valkey operations client with a 150ms call deadline."""
 
 import asyncio
 import contextlib
@@ -12,14 +7,14 @@ from collections.abc import AsyncIterator
 import valkey.asyncio as aioredis
 from loguru import logger
 
-from uniffy.core.valkey.config import ValkeyConfig
-from uniffy.core.valkey.metrics import CACHE_OP_TIMEOUT_TOTAL
+from uniffy.infrastructure.valkey.config import ValkeyConfig
+from uniffy.infrastructure.valkey.metrics import CACHE_OP_TIMEOUT_TOTAL
+
+logger = logger.bind(component="infrastructure.valkey.ops")
 
 CACHE_OP_TIMEOUT_SECONDS = 0.15
 _INIT_PING_TIMEOUT_SECONDS = 1.0
 _CLOSE_TIMEOUT_SECONDS = 1.0
-
-LOGGER_COMPONENT = "valkey.ops"
 
 _ops_client: aioredis.Redis | None = None
 
@@ -49,7 +44,7 @@ async def init_ops_client() -> None:
         raise
 
     _ops_client = client
-    logger.info("Ops client initialised", component=LOGGER_COMPONENT)
+    logger.info("Ops client initialised")
 
 
 async def close_ops_client() -> None:
@@ -64,11 +59,11 @@ async def close_ops_client() -> None:
     try:
         await asyncio.wait_for(client.aclose(), timeout=_CLOSE_TIMEOUT_SECONDS)
     except TimeoutError, BaseException:
-        logger.warning("Ops client close timed out", component=LOGGER_COMPONENT)
-    logger.info("Ops client closed", component=LOGGER_COMPONENT)
+        logger.warning("Ops client close timed out")
+    logger.info("Ops client closed")
 
 
-def _get_ops_client() -> aioredis.Redis | None:
+def get_ops_client() -> aioredis.Redis | None:
     return _ops_client
 
 

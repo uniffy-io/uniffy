@@ -7,6 +7,7 @@ from uniffy.core.jobs.types import (
     JobRef,
     JobReliability,
     JobWorkload,
+    QueueName,
 )
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "JobRecovery",
     "JobReliability",
     "JobWorkload",
+    "QueueName",
     "enqueue_job",
     "enqueue_job_reconnecting",
 ]

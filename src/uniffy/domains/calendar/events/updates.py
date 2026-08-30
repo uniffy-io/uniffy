@@ -8,6 +8,7 @@ from sqlalchemy import and_, select
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.errors import (
     NotFoundError,
@@ -34,7 +35,6 @@ from uniffy.core.types import (
     RecurrenceEditScope,
     RecurrencePattern,
 )
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import TagOperations
 

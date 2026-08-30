@@ -13,7 +13,6 @@ from sqlalchemy import select
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.session import AgentSession
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.models.resolver import resolve_provider_and_model
 from uniffy.domains.agents.sessions.operations import (
@@ -21,6 +20,7 @@ from uniffy.domains.agents.sessions.operations import (
     SessionOperations,
 )
 from uniffy.infrastructure.database.session import open_session
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="agents.sessions.jobs.jobs")
 
@@ -30,7 +30,7 @@ _LOCK_KEY_TEMPLATE = "compaction_lock:{session_id}"
 
 
 async def _acquire_lock(session_id: UUID) -> str | None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return None
     try:
@@ -45,7 +45,7 @@ async def _acquire_lock(session_id: UUID) -> str | None:
 
 
 async def _release_lock(session_id: UUID, token: str) -> None:
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return
     try:

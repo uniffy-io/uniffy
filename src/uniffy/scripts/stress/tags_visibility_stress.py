@@ -345,9 +345,9 @@ async def run_visibility_stress(config: StressConfig) -> None:
     from dotenv import load_dotenv
 
     from uniffy.core.search import SearchIndexer, WorkspaceSearch
-    from uniffy.core.valkey.ops import close_ops_client, init_ops_client
     from uniffy.infrastructure.database.session import close_db, init_db, open_session
     from uniffy.infrastructure.search import MeiliSearchEngine
+    from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
 
     load_dotenv()
     await init_db()

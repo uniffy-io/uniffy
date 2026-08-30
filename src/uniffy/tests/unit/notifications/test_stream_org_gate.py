@@ -22,7 +22,7 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
 )
 
 from uniffy.core.types import generate_id
-from uniffy.core.valkey import NotificationPayloadType
+from uniffy.core.events.realtime import NotificationPayloadType
 from uniffy.domains.auth.interceptors import AuthenticationInterceptor
 from uniffy.domains.notifications.handlers import NotificationsHandlers
 

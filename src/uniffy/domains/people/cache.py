@@ -4,7 +4,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
-from uniffy.core.valkey.cache import (
+from uniffy.core.cache.operations import (
     CACHE_MISS,
     cache_delete,
     cache_get,

@@ -56,10 +56,10 @@ from uniffy.core.auth.membership import is_active_member
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.config.push import get_vapid_config
 from uniffy.core.converters.proto import timestamp_to_datetime
+from uniffy.core.events.realtime import NotificationPayloadType
 from uniffy.core.models.login.user import User
 from uniffy.core.realtime.reauth import REAUTH_INTERVAL_SECONDS
 from uniffy.core.streaming.disconnect import get_disconnect_event
-from uniffy.core.valkey import NotificationPayloadType, subscribe_channels
 from uniffy.domains.notifications.converters import (
     notification_to_proto,
     notification_type_from_proto,
@@ -71,6 +71,7 @@ from uniffy.domains.notifications.operations import (
 )
 from uniffy.domains.notifications.tags import TagEventRelay
 from uniffy.infrastructure.database import open_session
+from uniffy.infrastructure.valkey.pubsub import subscribe_channels
 
 logger = logger.bind(component="notifications.handlers")
 

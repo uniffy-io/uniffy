@@ -48,7 +48,7 @@ def _patch_helpers() -> tuple:
         AsyncMock(return_value=None),
     )
     publish = patch(
-        "uniffy.core.valkey.pubsub.publish_notification",
+        "uniffy.core.events.realtime.publish_notification",
         AsyncMock(return_value=None),
     )
     return require_admin, require_member, publish

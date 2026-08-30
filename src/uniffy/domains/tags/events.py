@@ -1,9 +1,4 @@
-"""Org-wide tag-event pubsub on channel ``tags:{org_id}``.
-
-Event types: ``tag.created`` / ``tag.updated`` (payload ``{"tag": {...}}``),
-``tag.deleted`` (``{"tag_id": str}``), ``tag.assignment.changed``
-(``{"content_urn", "content_type", "added", "removed"}``).
-"""
+"""Org-wide tag-event validation and realtime publication."""
 
 from typing import Any
 from uuid import UUID
@@ -11,9 +6,10 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.json_codec import dumps_bytes
-from uniffy.core.valkey.ops import ops_call
+from uniffy.infrastructure.valkey.ops import ops_call
+from uniffy.infrastructure.valkey.pubsub import publish_bytes
 
-LOGGER_COMPONENT = "tags"
+logger = logger.bind(component="tags.events")
 _NAMESPACE = "tags"
 
 EVENT_TAG_CREATED = "tag.created"
@@ -38,14 +34,7 @@ async def publish_tag_event(
     if event_type not in _VALID_EVENT_TYPES:
         logger.debug(
             f"publish_tag_event: rejecting unknown event type {event_type!r}",
-            component=LOGGER_COMPONENT,
         )
-        return
-
-    from uniffy.core.valkey import pubsub
-
-    redis = pubsub._pubsub_client
-    if redis is None:
         return
 
     channel = f"tags:{organization_id}"
@@ -56,15 +45,9 @@ async def publish_tag_event(
 
     try:
         async with ops_call(_NAMESPACE, "tags_publish"):
-            await redis.publish(channel, dumps_bytes(message, default=str))
-        logger.debug(
-            f"published {event_type} on {channel}",
-            component=LOGGER_COMPONENT,
-        )
+            await publish_bytes(channel, dumps_bytes(message, default=str))
+        logger.debug(f"published {event_type} on {channel}")
     except TimeoutError:
         return
     except Exception:
-        logger.warning(
-            f"Failed to publish tag event to {channel}",
-            component=LOGGER_COMPONENT,
-        )
+        logger.warning(f"Failed to publish tag event to {channel}")

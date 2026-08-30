@@ -1,7 +1,6 @@
 """Producer-facing tag background-job contracts."""
 
-from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobReliability, JobWorkload, QueueName
 
 REINDEX_TAG_URNS = JobRef(
     name="reindex_tag_urns",

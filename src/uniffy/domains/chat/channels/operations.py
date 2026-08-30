@@ -18,6 +18,7 @@ from uniffy.core.auth.permissions import (
     role_can_view,
 )
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.errors import (
     NotFoundError,
@@ -51,7 +52,6 @@ from uniffy.core.types import (
     generate_id,
     slugify,
 )
-from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calls.operations import (
     end_active_call_for_channel,
     kick_user_from_active_call,
