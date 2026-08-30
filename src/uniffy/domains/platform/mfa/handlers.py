@@ -1,8 +1,4 @@
-"""RPC handlers for ``superadmin.v1.SystemMfaService``.
-
-Thin layer over ``MfaOperations``; the operations (and their
-platform-admin gates) live in ``domains/auth/mfa/operations.py``.
-"""
+"""Platform MFA administration RPC handlers."""
 
 from __future__ import annotations
 
@@ -26,16 +22,20 @@ from uniffy_proto.superadmin.v1.system_mfa_pb2 import (
     PendingPeerReset as PendingPeerResetProto,
 )
 
+from uniffy.core.auth.identity import require_system_admin
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.domains.auth.mfa.operations import MfaOperations
+from uniffy.domains.auth.mfa.contracts import PlatformMfaOperationsFactory
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="platform.mfa.handlers")
 
 
 class SystemMfaHandlers:
+    def __init__(self, operations_factory: PlatformMfaOperationsFactory) -> None:
+        self._operations_factory = operations_factory
+
     async def reset_user_mfa(
         self,
         request: ResetUserMfaRequest,
@@ -44,7 +44,8 @@ class SystemMfaHandlers:
         actor_id = current_user_id()
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                await require_system_admin(session, actor_id)
+                ops = self._operations_factory(session)
                 await ops.platform_reset_mfa(
                     actor_user_id=actor_id,
                     target_user_id=UUID(request.target_user_id),
@@ -67,7 +68,8 @@ class SystemMfaHandlers:
         actor_id = current_user_id()
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                await require_system_admin(session, actor_id)
+                ops = self._operations_factory(session)
                 request_id, expires_at = await ops.request_platform_peer_reset(
                     actor_user_id=actor_id,
                     target_user_id=UUID(request.target_user_id),
@@ -95,7 +97,8 @@ class SystemMfaHandlers:
         actor_id = current_user_id()
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                await require_system_admin(session, actor_id)
+                ops = self._operations_factory(session)
                 pending = await ops.list_platform_peer_resets(actor_id)
         except PermissionDeniedError as exc:
             raise ConnectError(Code.PERMISSION_DENIED, str(exc))
@@ -125,7 +128,8 @@ class SystemMfaHandlers:
         actor_id = current_user_id()
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                await require_system_admin(session, actor_id)
+                ops = self._operations_factory(session)
                 await ops.approve_platform_peer_reset(
                     actor_user_id=actor_id,
                     request_id=UUID(request.request_id),

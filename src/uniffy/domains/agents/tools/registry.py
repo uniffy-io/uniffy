@@ -176,7 +176,7 @@ def get_tool_registry() -> ToolRegistry:
     if _registry is None:
         _registry = ToolRegistry()
         # Importing the builtin package triggers tool registration
-        from uniffy.domains.agents.tools.builtin import register_all
+        from uniffy.domains.agents.tools.builtin.registration import register_all
 
         register_all(_registry)
     return _registry

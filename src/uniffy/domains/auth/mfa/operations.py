@@ -39,6 +39,7 @@ from uniffy.domains.auth.mfa.codes import (
     replace_recovery_codes,
     verify_recovery_code,
 )
+from uniffy.domains.auth.mfa.contracts import PendingPeerReset
 from uniffy.domains.auth.mfa.crypto import (
     decrypt_totp_secret,
     encrypt_totp_secret,
@@ -94,18 +95,6 @@ class VerifyMfaResult:
     organization_slug: str | None = None
     organization_role: str | None = None
     domain_admin_domains: list[str] | None = None
-
-
-@dataclass(frozen=True)
-class PendingPeerReset:
-    request_id: UUID
-    requester_user_id: UUID
-    requester_email: str
-    target_user_id: UUID
-    target_email: str
-    reason: str
-    created_at: datetime
-    expires_at: datetime
 
 
 @dataclass(frozen=True)

@@ -9,17 +9,24 @@ actually exists.
 
 import pathlib
 import re
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.method import IdempotencyLevel, MethodInfo
 from connectrpc.request import Headers, RequestContext
 
 from uniffy.core.auth.principal import current_principal
 from uniffy.core.auth.tokens import create_access_token, create_refresh_token, decode_access_token
+from uniffy.core.search import SearchIndexer, WorkspaceSearch
+from uniffy.core.search.engine import SearchEngine
+from uniffy.core.storage import ObjectStorage
+from uniffy.core.streaming.disconnect import StreamDisconnectMiddleware
+from uniffy.core.streaming.middleware import StreamRevokeWatchMiddleware
 from uniffy.core.types import generate_id
 from uniffy.domains.auth.interceptors import PUBLIC_METHODS, AuthenticationInterceptor
+from uniffy.factory import _create_api_dispatcher
 
 _GEN_ROOT = pathlib.Path("src/gen/python/src/uniffy_proto")
 _METHOD_RE = re.compile(
@@ -79,7 +86,7 @@ async def test_every_other_method_is_denied_without_a_token() -> None:
     for qualified in private:
         with pytest.raises(ConnectError) as exc_info:
             await interceptor.on_start(_ctx(qualified))
-        assert exc_info.value.code.name == "UNAUTHENTICATED", qualified
+        assert exc_info.value.code is Code.UNAUTHENTICATED, qualified
 
 
 @pytest.mark.parametrize(
@@ -94,16 +101,29 @@ async def test_malformed_tokens_are_denied(bearer: str) -> None:
         )
 
 
-def test_every_mounted_service_carries_the_interceptors() -> None:
-    """The gate is per-service, so a service mounted without the interceptor
-    list would be authentication-free no matter what the allowlist says.
-    """
-    source = pathlib.Path("src/uniffy/factory.py").read_text()
-    calls = re.findall(
-        r'dispatcher\.add_service\(\s*"([^"]+)",\s*\w+\((.*?)\)\s*,?\s*\)', source, re.S
+def test_every_mounted_service_carries_the_authentication_interceptor() -> None:
+    search = WorkspaceSearch(MagicMock(spec=SearchEngine))
+    dispatcher = _create_api_dispatcher(
+        MagicMock(spec=ObjectStorage),
+        search,
+        SearchIndexer(search),
     )
-    assert len(calls) > 30, len(calls)
-    unguarded = [path for path, args in calls if "interceptors=interceptors" not in args]
+
+    unguarded: list[str] = []
+    discovered: list[str] = []
+    for prefix, application in dispatcher.services:
+        while isinstance(application, (StreamDisconnectMiddleware, StreamRevokeWatchMiddleware)):
+            application = application.app
+        if not hasattr(application, "_endpoints"):
+            continue
+        discovered.append(prefix)
+        if not any(
+            isinstance(interceptor, AuthenticationInterceptor)
+            for interceptor in application._interceptors
+        ):
+            unguarded.append(prefix)
+
+    assert discovered
     assert unguarded == []
 
 
@@ -124,13 +144,15 @@ async def test_private_request_publishes_one_decoded_principal(monkeypatch) -> N
     user_id = generate_id()
     organization_id = generate_id()
     session_id = generate_id()
+    full_name = "Ada Lovelace"
+    avatar_key = "avatars/ada.png"
     bearer = create_access_token(
         user_id,
         organization_id,
         token_version=7,
         session_id=session_id,
-        full_name="Ada Lovelace",
-        avatar_key="avatars/ada.png",
+        full_name=full_name,
+        avatar_key=avatar_key,
     )
     interceptor = AuthenticationInterceptor()
     ctx = _ctx("notes.v1.NotesService/ListNotes", bearer=bearer)
@@ -156,8 +178,8 @@ async def test_private_request_publishes_one_decoded_principal(monkeypatch) -> N
             assert principal.organization_id == organization_id
             assert principal.session_id == session_id
             assert principal.token_version == 7
-            assert principal.full_name == "Ada Lovelace"
-            assert principal.avatar_key == "avatars/ada.png"
+            assert principal.full_name == full_name
+            assert principal.avatar_key == avatar_key
             assert decode.call_count == 1
         finally:
             await interceptor.on_end(reset_token, ctx, None)
@@ -181,7 +203,7 @@ async def test_public_wrong_kind_token_still_obeys_revocation(monkeypatch) -> No
             _ctx("auth.v1.AuthService/RefreshToken", bearer=token)
         )
 
-    assert exc_info.value.code.name == "UNAUTHENTICATED"
+    assert exc_info.value.code is Code.UNAUTHENTICATED
 
 
 async def test_revoked_session_never_publishes_a_principal(monkeypatch) -> None:
@@ -203,7 +225,7 @@ async def test_revoked_session_never_publishes_a_principal(monkeypatch) -> None:
             _ctx("notes.v1.NotesService/ListNotes", bearer=bearer)
         )
 
-    assert exc_info.value.code.name == "UNAUTHENTICATED"
+    assert exc_info.value.code is Code.UNAUTHENTICATED
     with pytest.raises(ConnectError):
         current_principal()
 
