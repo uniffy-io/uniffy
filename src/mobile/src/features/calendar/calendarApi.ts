@@ -5,11 +5,14 @@ import {
   AddAttendeesRequestSchema,
   CreateCategoryRequestSchema,
   CreateEventRequestSchema,
+  CreateEventTemplateRequestSchema,
   DeleteCategoryRequestSchema,
   DeleteEventRequestSchema,
   GetEventRequestSchema,
   GetEventsInRangeRequestSchema,
   ListCategoriesRequestSchema,
+  ListEventActivitiesRequestSchema,
+  ListEventTemplatesRequestSchema,
   ListEventsRequestSchema,
   RemoveAttendeesRequestSchema,
   UpdateAttendeeStatusRequestSchema,
@@ -58,4 +61,13 @@ export const calendarApi = {
 
   removeAttendees: (request: MessageInitShape<typeof RemoveAttendeesRequestSchema>) =>
     client.removeAttendees(request),
+
+  listEventActivities: (request: MessageInitShape<typeof ListEventActivitiesRequestSchema>) =>
+    client.listEventActivities(request),
+
+  listEventTemplates: (request: MessageInitShape<typeof ListEventTemplatesRequestSchema>) =>
+    client.listEventTemplates(request),
+
+  createEventTemplate: (request: MessageInitShape<typeof CreateEventTemplateRequestSchema>) =>
+    client.createEventTemplate(request),
 };

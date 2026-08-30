@@ -41,6 +41,9 @@ import type {
   NotificationIconKind,
   SerializedNotification,
 } from "@features/notifications/notificationSerializer";
+import { useUpdateAttendeeStatus } from "@features/calendar/useCalendarMutations";
+import { RSVP_COLORS, RSVP_OPTIONS } from "@features/calendar/rsvp";
+import { userFacingError } from "@shared/lib/userFacingError";
 
 const ICON_MAP: Record<NotificationIconKind, React.ComponentType<IconProps>> = {
   share: ShareNetwork,
@@ -65,6 +68,7 @@ export function NotificationsScreen() {
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const deleteNotification = useDeleteNotification();
+  const updateAttendeeStatus = useUpdateAttendeeStatus();
 
   const data = feed.data?.notifications ?? [];
   const unreadCount = feed.data?.unreadCount ?? 0;
@@ -94,6 +98,26 @@ export function NotificationsScreen() {
     [markRead, deleteNotification],
   );
 
+  const handleRespond = useCallback(
+    (item: SerializedNotification, status: number) => {
+      if (!item.eventId) return;
+      updateAttendeeStatus.mutate(
+        { eventId: item.eventId, status },
+        {
+          onSuccess: () => {
+            if (!item.isRead) markRead.mutate(item.id);
+          },
+          onError: (error) =>
+            Alert.alert(
+              "Could not respond",
+              userFacingError(error, "Your response was not saved."),
+            ),
+        },
+      );
+    },
+    [updateAttendeeStatus, markRead],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: SerializedNotification }) => (
       <NotificationRow
@@ -101,9 +125,11 @@ export function NotificationsScreen() {
         T={T}
         onPress={() => handlePress(item)}
         onLongPress={() => handleLongPress(item)}
+        onRespond={item.eventId ? (status) => handleRespond(item, status) : undefined}
+        respondBusy={updateAttendeeStatus.isPending}
       />
     ),
-    [T, handlePress, handleLongPress],
+    [T, handlePress, handleLongPress, handleRespond, updateAttendeeStatus.isPending],
   );
 
   return (
@@ -187,11 +213,15 @@ function NotificationRow({
   T,
   onPress,
   onLongPress,
+  onRespond,
+  respondBusy,
 }: {
   item: SerializedNotification;
   T: ThemeColors;
   onPress: () => void;
   onLongPress: () => void;
+  onRespond?: (status: number) => void;
+  respondBusy?: boolean;
 }) {
   const Icon = ICON_MAP[item.iconKind] ?? Megaphone;
   const accent = item.tone === "danger" ? T.red : item.tone === "warning" ? T.yellow : T.accent;
@@ -240,6 +270,23 @@ function NotificationRow({
           </Text>
         ) : null}
         <Text style={[styles.time, { color: T.textDim }]}>{item.timeLabel}</Text>
+        {onRespond ? (
+          <View style={styles.rsvpRow}>
+            {RSVP_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.status}
+                style={[styles.rsvpChip, { borderColor: T.border, backgroundColor: T.surface }]}
+                onPress={() => onRespond(option.proto)}
+                disabled={respondBusy}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.rsvpChipText, { color: RSVP_COLORS[option.status] }]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
       </View>
       {!item.isRead ? <View style={[styles.unreadDot, { backgroundColor: T.accent }]} /> : null}
     </TouchableOpacity>
@@ -324,6 +371,14 @@ const styles = StyleSheet.create({
   bodyText: { fontSize: 13, fontFamily: FONT.regular, lineHeight: 18 },
   time: { fontSize: 11, fontFamily: FONT.regular, marginTop: 2 },
   unreadDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  rsvpRow: { flexDirection: "row", gap: 8, marginTop: 6 },
+  rsvpChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  rsvpChipText: { fontSize: 12, fontFamily: FONT.semibold },
   emptyState: {
     flex: 1,
     alignItems: "center",

@@ -23,6 +23,7 @@ import { router } from "expo-router";
 import { useAuth } from "@core/providers/AuthContext";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useEventsInRange } from "@features/calendar/useCalendar";
+import { eventDisplayState } from "@features/calendar/eventDisplay";
 import { useNotesList } from "@features/notes/useNotes";
 import { useProjectsList } from "@features/projects/useProjects";
 import { useChannels } from "@features/chat/useChat";
@@ -209,13 +210,20 @@ export function HomeScreen() {
             </View>
           ) : (
             events.map((event) => {
+              // A private event arrives with its fields stripped, so the title
+              // comes from the shared projection the calendar surfaces use.
+              const display = eventDisplayState(event);
               const metaParts = [event.startTimeFormatted, event.duration, event.location].filter(
                 Boolean,
               );
               return (
                 <TouchableOpacity
                   key={event.id}
-                  style={[styles.eventCard, { backgroundColor: T.surface, borderColor: T.border }]}
+                  style={[
+                    styles.eventCard,
+                    { backgroundColor: T.surface, borderColor: T.border },
+                    (display.cancelled || display.tentative) && styles.fadedCard,
+                  ]}
                   onPress={() => router.push(`/calendar/${event.id}` as any)}
                   activeOpacity={0.8}
                 >
@@ -223,7 +231,15 @@ export function HomeScreen() {
                     <CalendarBlank size={18} color={T.accent} weight="duotone" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.eventTitle, { color: T.textBright }]}>{event.title}</Text>
+                    <Text
+                      style={[
+                        styles.eventTitle,
+                        { color: T.textBright },
+                        display.cancelled && styles.struckTitle,
+                      ]}
+                    >
+                      {display.title}
+                    </Text>
                     {metaParts.length > 0 && (
                       <Text style={[styles.eventMeta, { color: T.textDim }]}>
                         {metaParts.join(" · ")}
@@ -493,6 +509,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONT.semibold,
   },
+  struckTitle: { textDecorationLine: "line-through" },
+  fadedCard: { opacity: 0.65 },
   eventMeta: {
     fontSize: 12,
     fontFamily: FONT.regular,

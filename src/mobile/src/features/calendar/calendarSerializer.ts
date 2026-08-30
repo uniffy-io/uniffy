@@ -1,7 +1,34 @@
-import type { CalendarEvent, Category } from "@uniffy/proto/cal/v1/calendar_pb";
-import { AttendeeStatus, RecurrencePattern, ResourceType } from "@uniffy/proto/cal/v1/calendar_pb";
+import type {
+  CalendarEvent,
+  Category,
+  EventActivity,
+  EventTemplate,
+} from "@uniffy/proto/cal/v1/calendar_pb";
+import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
+import {
+  AttendeeRole,
+  AttendeeStatus,
+  DayOfWeek,
+  EventStatus,
+  EventTransparency,
+  EventVisibility,
+  RecurrencePattern,
+  ResourceType,
+} from "@uniffy/proto/cal/v1/calendar_pb";
 import type { ContentRole } from "@uniffy/proto/common/v1/common_pb";
 import { getEffectiveTimeZone } from "@core/datetimePrefs";
+
+// An occurrence of a recurring event is addressed as
+// `{masterId}__occurrence__{date}` - a virtual id the calendar domain expands
+// from the one row that actually exists. Anything naming the event AS CONTENT
+// (its URN, a bookmark, a mention pasted into a note) has to name that row, or
+// it points at a key nothing will ever resolve.
+export const OCCURRENCE_SEPARATOR = "__occurrence__";
+
+export type EventStatusValue = "confirmed" | "tentative" | "cancelled";
+export type EventVisibilityValue = "standard" | "private";
+export type EventTransparencyValue = "opaque" | "transparent";
+export type AttendeeRoleValue = "organizer" | "required" | "optional";
 
 export interface SerializedAttendee {
   id: string;
@@ -9,12 +36,29 @@ export interface SerializedAttendee {
   email: string;
   initials: string;
   status: string;
+  role: AttendeeRoleValue;
 }
 
 export interface SerializedLinkedResource {
   id: string;
   type: string;
   name: string;
+}
+
+export interface SerializedTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface SerializedRecurrence {
+  pattern: string;
+  interval: number;
+  /** Lowercase day names ("monday".."sunday"). */
+  daysOfWeek: string[];
+  dayOfMonth?: number;
+  endDate?: string;
+  maxOccurrences?: number;
 }
 
 export interface SerializedEvent {
@@ -39,9 +83,26 @@ export interface SerializedEvent {
   /** Caller's effective role, advisory only - the backend stays the gate. */
   userRole: ContentRole;
   attendees: SerializedAttendee[];
-  recurrence?: { pattern: string };
+  recurrence?: SerializedRecurrence;
+  isRecurring: boolean;
+  /** For an expanded instance: the day it stands for (YYYY-MM-DD). */
+  occurrenceDate?: string;
   linkedResources: SerializedLinkedResource[];
-  tags: string[];
+  tags: SerializedTag[];
+  isFocusTime: boolean;
+  /** Minutes before start (15, 30, 60, 1440). */
+  reminders: number[];
+  roomId?: string;
+  roomName?: string;
+  roomLocation?: string;
+  roomCapacity?: number;
+  roomAmenities: string[];
+  status: EventStatusValue;
+  visibility: EventVisibilityValue;
+  transparency: EventTransparencyValue;
+  isOutOfOffice: boolean;
+  /** Server redacted this payload for the caller (private event, non-privileged viewer). */
+  detailsHidden: boolean;
 }
 
 export interface SerializedCategory {
@@ -58,12 +119,44 @@ const ATTENDEE_STATUS: Record<number, string> = {
   [AttendeeStatus.DECLINED]: "declined",
 };
 
+const ATTENDEE_ROLE: Record<number, AttendeeRoleValue> = {
+  [AttendeeRole.ORGANIZER]: "organizer",
+  [AttendeeRole.REQUIRED]: "required",
+  [AttendeeRole.OPTIONAL]: "optional",
+};
+
 const RECURRENCE_PATTERN: Record<number, string> = {
   [RecurrencePattern.DAILY]: "DAILY",
   [RecurrencePattern.WEEKLY]: "WEEKLY",
   [RecurrencePattern.BIWEEKLY]: "BIWEEKLY",
   [RecurrencePattern.MONTHLY]: "MONTHLY",
   [RecurrencePattern.YEARLY]: "YEARLY",
+};
+
+const DAY_OF_WEEK: Record<number, string> = {
+  [DayOfWeek.MONDAY]: "monday",
+  [DayOfWeek.TUESDAY]: "tuesday",
+  [DayOfWeek.WEDNESDAY]: "wednesday",
+  [DayOfWeek.THURSDAY]: "thursday",
+  [DayOfWeek.FRIDAY]: "friday",
+  [DayOfWeek.SATURDAY]: "saturday",
+  [DayOfWeek.SUNDAY]: "sunday",
+};
+
+const EVENT_STATUS: Record<number, EventStatusValue> = {
+  [EventStatus.CONFIRMED]: "confirmed",
+  [EventStatus.TENTATIVE]: "tentative",
+  [EventStatus.CANCELLED]: "cancelled",
+};
+
+const EVENT_VISIBILITY: Record<number, EventVisibilityValue> = {
+  [EventVisibility.STANDARD]: "standard",
+  [EventVisibility.PRIVATE]: "private",
+};
+
+const EVENT_TRANSPARENCY: Record<number, EventTransparencyValue> = {
+  [EventTransparency.OPAQUE]: "opaque",
+  [EventTransparency.TRANSPARENT]: "transparent",
 };
 
 const RESOURCE_TYPE: Record<number, string> = {
@@ -121,6 +214,20 @@ function formatDuration(start: Date, end: Date): string {
   return `${h}h ${m}m`;
 }
 
+function recurrenceToPlain(
+  recurrence: CalendarEvent["recurrence"],
+): SerializedRecurrence | undefined {
+  if (!recurrence) return undefined;
+  return {
+    pattern: RECURRENCE_PATTERN[recurrence.pattern] ?? "NONE",
+    interval: recurrence.interval || 1,
+    daysOfWeek: recurrence.daysOfWeek.map((d) => DAY_OF_WEEK[d]).filter(Boolean),
+    dayOfMonth: recurrence.dayOfMonth,
+    endDate: recurrence.endDate ? tsToDate(recurrence.endDate).toISOString() : undefined,
+    maxOccurrences: recurrence.maxOccurrences,
+  };
+}
+
 export function eventToPlain(event: CalendarEvent): SerializedEvent {
   const start = tsToDate(event.startTime);
   const end = tsToDate(event.endTime);
@@ -148,16 +255,29 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
       email: a.email,
       initials: a.initials,
       status: ATTENDEE_STATUS[a.status] ?? "pending",
+      role: ATTENDEE_ROLE[a.role] ?? "required",
     })),
-    recurrence: event.recurrence
-      ? { pattern: RECURRENCE_PATTERN[event.recurrence.pattern] ?? "NONE" }
-      : undefined,
+    recurrence: recurrenceToPlain(event.recurrence),
+    isRecurring: event.isRecurring,
+    occurrenceDate: event.occurrenceDate || undefined,
     linkedResources: event.linkedResources.map((r) => ({
       id: r.id,
       type: RESOURCE_TYPE[r.type] ?? "note",
       name: r.name,
     })),
-    tags: event.tags.map((t) => t.name),
+    tags: event.tags.map((t) => ({ id: t.id, name: t.name, color: t.color })),
+    isFocusTime: event.isFocusTime,
+    reminders: [...event.reminders],
+    roomId: event.roomId || undefined,
+    roomName: event.roomName || undefined,
+    roomLocation: event.roomLocation || undefined,
+    roomCapacity: event.roomCapacity,
+    roomAmenities: [...event.roomAmenities],
+    status: EVENT_STATUS[event.status] ?? "confirmed",
+    visibility: EVENT_VISIBILITY[event.visibility] ?? "standard",
+    transparency: EVENT_TRANSPARENCY[event.transparency] ?? "opaque",
+    isOutOfOffice: event.isOutOfOffice,
+    detailsHidden: event.detailsHidden,
   };
 }
 
@@ -167,5 +287,53 @@ export function categoryToPlain(category: Category): SerializedCategory {
     name: category.name,
     color: category.color,
     icon: category.icon,
+  };
+}
+
+export interface SerializedTemplate {
+  id: string;
+  title: string;
+  description: string;
+  durationMinutes: number;
+  location: string;
+  meetingUrl: string;
+  categoryId: string;
+}
+
+export function templateToPlain(template: EventTemplate): SerializedTemplate {
+  return {
+    id: template.id,
+    title: template.title,
+    description: template.description,
+    durationMinutes: template.durationMinutes,
+    location: template.location,
+    meetingUrl: template.meetingUrl,
+    categoryId: template.categoryId,
+  };
+}
+
+export interface SerializedActivity {
+  id: string;
+  actorId: string;
+  /** Proto EventActivityAction value; the list maps it to a label. */
+  action: number;
+  atSeconds: number;
+  timeLabel: string;
+  fieldId?: string;
+  previousValue?: string;
+  newValue?: string;
+}
+
+export function activityToPlain(activity: EventActivity): SerializedActivity {
+  const atSeconds = activity.timestamp ? Number(activity.timestamp.seconds) : 0;
+  return {
+    id: activity.id,
+    actorId: activity.actorId,
+    action: activity.action,
+    atSeconds,
+    timeLabel: formatRelativeSeconds(atSeconds),
+    fieldId: activity.fieldId,
+    previousValue: activity.previousValue,
+    newValue: activity.newValue,
   };
 }

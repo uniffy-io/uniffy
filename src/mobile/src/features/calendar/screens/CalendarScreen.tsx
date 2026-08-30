@@ -7,6 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Alert,
   Platform,
   useWindowDimensions,
 } from "react-native";
@@ -14,7 +15,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 import Svg, { Line } from "react-native-svg";
 import * as Haptics from "expo-haptics";
-import { Plus, CaretLeft, CaretRight, Funnel, Target, Warning } from "phosphor-react-native";
+import { AirplaneTilt, Funnel, Plus, Target, Warning } from "phosphor-react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@shared/hooks/useTheme";
@@ -28,9 +29,22 @@ import {
   zonedMinutesSinceMidnight,
   zonedParts,
 } from "@shared/lib/zonedTime";
+import { RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
 import { useEventsInRange, useCategories } from "@features/calendar/useCalendar";
+import { useUpdateEvent } from "@features/calendar/useCalendarMutations";
+import { blocksTime, eventDisplayState } from "@features/calendar/eventDisplay";
 import { CalendarFilterSheet } from "@features/calendar/components/CalendarFilterSheet";
+import { AgendaList } from "@features/calendar/components/AgendaList";
+import { AllDayEventChip } from "@features/calendar/components/AllDayEventChip";
+import { PeriodRail } from "@features/calendar/components/PeriodRail";
+import { railUnitFor, resolveRailSelection, type RailItem } from "@features/calendar/periodRail";
+import { RecurrenceScopeSheet } from "@features/calendar/components/RecurrenceScopeSheet";
+import { OCCURRENCE_SEPARATOR } from "@features/calendar/calendarSerializer";
 import type { SerializedEvent, SerializedCategory } from "@features/calendar/calendarSerializer";
+import { useActiveCalls } from "@features/calls/useCallsState";
+import { useTags } from "@features/tags/useTags";
+import { roleCanEdit } from "@shared/permissions/contentRoles";
+import { userFacingError } from "@shared/lib/userFacingError";
 
 const BASE_DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -38,7 +52,14 @@ function dayLabelsFrom(weekStartsOn: WeekStartDay): string[] {
   return Array.from({ length: 7 }, (_, i) => BASE_DAY_LABELS[(weekStartsOn + i) % 7]);
 }
 
-type ViewMode = "day" | "week" | "month";
+type ViewMode = "day" | "week" | "month" | "agenda";
+
+const VIEW_LABELS: Record<ViewMode, string> = {
+  day: "Day",
+  week: "Week",
+  month: "Month",
+  agenda: "Agenda",
+};
 
 const HITSLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
@@ -60,6 +81,7 @@ const DETAIL_LINE = 15;
 const WEEK_PAD_Y = 2;
 const WEEK_BORDER = 2;
 const WEEK_LINE = 12;
+const ALLDAY_ROW_HEIGHT = 24;
 
 type BlockText = { padY: number; rows: 1 | 2; title: number; detail: number };
 
@@ -112,24 +134,6 @@ function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
-function getMonthLabel(date: Date): string {
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-  return `${months[date.getMonth()]} ${date.getFullYear()}`;
-}
-
 function formatHourLabel(hour: number): string {
   if (hour === 0 || hour === 24) return "12 AM";
   if (hour === 12) return "12 PM";
@@ -161,6 +165,33 @@ const MAX_DRAFT_START_MIN = 24 * 60 - DRAFT_DURATION_MIN;
 // Wall-clock position of an instant on the grid, read in the display zone.
 function getMinutesSinceMidnight(iso: string): number {
   return zonedMinutesSinceMidnight(iso);
+}
+
+// A multi-day event belongs to every display-zone day its [start, end] touches,
+// not only the day it starts; each covered day repeats the same clock band.
+function eventCoversDay(event: SerializedEvent, dayKey: string): boolean {
+  if (!event.startTime) return false;
+  const startKey = zonedDayKey(event.startTime);
+  const endKey = event.endTime ? zonedDayKey(event.endTime) : startKey;
+  return startKey <= dayKey && dayKey <= endKey;
+}
+
+// Timed blocking events only: cancelled and free events overlap without
+// clashing, and all-day events are expected to sit over the whole schedule.
+function dayHasConflict(events: SerializedEvent[]): boolean {
+  const spans = events
+    .filter((e) => !e.isAllDay && blocksTime(e) && e.startTime)
+    .map((e) => {
+      const startMin = zonedMinutesSinceMidnight(e.startTime);
+      let endMin = e.endTime ? zonedMinutesSinceMidnight(e.endTime) : startMin + 30;
+      if (endMin <= startMin) endMin = HOUR_END * 60;
+      return { startMin, endMin };
+    })
+    .sort((a, b) => a.startMin - b.startMin);
+  for (let i = 1; i < spans.length; i++) {
+    if (spans[i].startMin < spans[i - 1].endMin) return true;
+  }
+  return false;
 }
 
 type EventSpan = { id: string; startMin: number; endMin: number };
@@ -271,6 +302,7 @@ function MonthGrid({
   categoriesMap,
   weekStartsOn,
   dayLabels,
+  liveChannelIds,
 }: {
   T: ReturnType<typeof useTheme>;
   currentMonth: Date;
@@ -281,21 +313,31 @@ function MonthGrid({
   categoriesMap: Map<string, SerializedCategory>;
   weekStartsOn: WeekStartDay;
   dayLabels: string[];
+  liveChannelIds: ReadonlySet<string>;
 }) {
   const cells = useMemo(
     () => buildMonthCells(currentMonth, weekStartsOn),
     [currentMonth, weekStartsOn],
   );
 
-  // Group events by the display-zone day of their start instant.
+  // Group events under every display-zone day they cover, so a multi-day
+  // event shows on each of its days rather than only where it starts.
   const eventsByDate = useMemo(() => {
     const map = new Map<string, SerializedEvent[]>();
     events.forEach((e) => {
       if (!e.startTime) return;
-      const key = zonedDayKey(e.startTime);
-      const arr = map.get(key) ?? [];
-      arr.push(e);
-      map.set(key, arr);
+      const endKey = e.endTime ? zonedDayKey(e.endTime) : zonedDayKey(e.startTime);
+      const [y, m, d] = zonedDayKey(e.startTime).split("-").map(Number);
+      const cursor = new Date(y, m - 1, d);
+      // Bounded walk so a malformed end date cannot spin the render.
+      for (let i = 0; i < 62; i++) {
+        const key = localDayKey(cursor);
+        if (key > endKey) break;
+        const arr = map.get(key) ?? [];
+        arr.push(e);
+        map.set(key, arr);
+        cursor.setDate(cursor.getDate() + 1);
+      }
     });
     return map;
   }, [events]);
@@ -322,6 +364,7 @@ function MonthGrid({
             const cellEvents = eventsByDate.get(dateKey) ?? [];
             const visibleEvents = cellEvents.slice(0, MAX_EVENTS_PER_CELL);
             const moreCount = cellEvents.length - MAX_EVENTS_PER_CELL;
+            const conflict = dayHasConflict(cellEvents);
 
             return (
               <TouchableOpacity
@@ -330,6 +373,9 @@ function MonthGrid({
                 onPress={() => cell.date !== null && onSelectDate(cell.date)}
                 activeOpacity={0.7}
               >
+                {conflict ? (
+                  <View style={[styles.monthConflictDot, { backgroundColor: T.red }]} />
+                ) : null}
                 <View style={[styles.monthCellHeader]}>
                   <View style={[styles.monthCellCircle, isToday && { backgroundColor: T.accent }]}>
                     <Text
@@ -351,16 +397,31 @@ function MonthGrid({
                 <View style={styles.monthCellEvents}>
                   {visibleEvents.map((evt) => {
                     const color = getEventColor(evt, categoriesMap, T.accent);
+                    const display = eventDisplayState(evt);
                     return (
                       <View
                         key={evt.id}
-                        style={[styles.monthCellEventChip, { backgroundColor: color + "30" }]}
+                        style={[
+                          styles.monthCellEventChip,
+                          { backgroundColor: color + (display.free ? "18" : "30") },
+                          (display.cancelled || display.tentative) && styles.fadedEvent,
+                        ]}
                       >
+                        {evt.channelId &&
+                        liveChannelIds.has(evt.channelId) &&
+                        !display.cancelled &&
+                        !display.detailsHidden ? (
+                          <View style={[styles.monthLiveDot, { backgroundColor: T.red }]} />
+                        ) : null}
                         <Text
-                          style={[styles.monthCellEventText, { color: T.textBright }]}
+                          style={[
+                            styles.monthCellEventText,
+                            { color: T.textBright },
+                            display.cancelled && styles.struckTitle,
+                          ]}
                           numberOfLines={1}
                         >
-                          {evt.title}
+                          {display.title}
                         </Text>
                       </View>
                     );
@@ -392,6 +453,7 @@ function WeekGrid({
   refreshing,
   onRefresh,
   dayLabels,
+  liveChannelIds,
 }: {
   T: ReturnType<typeof useTheme>;
   weekDates: Date[];
@@ -406,6 +468,7 @@ function WeekGrid({
   refreshing: boolean;
   onRefresh: () => void;
   dayLabels: string[];
+  liveChannelIds: ReadonlySet<string>;
 }) {
   const { width } = useWindowDimensions();
   const dayWidth = (width - TIME_COL_WIDTH) / 7;
@@ -419,23 +482,24 @@ function WeekGrid({
   }, []);
 
   // One absolute block per event, bucketed by day column. Timed events pack
-  // overlaps into side-by-side sub-columns; all-day events stack as short
-  // banners at the top of their column.
-  const blocks = useMemo(() => {
+  // overlaps into side-by-side sub-columns inside the scrolling grid; all-day
+  // events go to a pinned strip under the header, because a banner placed at
+  // the canvas top would sit at midnight and the grid opens scrolled to now.
+  const { timedBlocks, allDayBars, allDayRows } = useMemo(() => {
     const out: {
       key: string;
       event: SerializedEvent;
-      allDay: boolean;
       left: number;
       top: number;
       height: number;
       width: number;
+      conflict?: boolean;
+      showTitle?: boolean;
     }[] = [];
     weekDates.forEach((wd, dayIdx) => {
       const dayKey = localDayKey(wd);
-      const dayEvents = events.filter((e) => e.startTime && zonedDayKey(e.startTime) === dayKey);
+      const dayEvents = events.filter((e) => eventCoversDay(e, dayKey));
       const timed = dayEvents.filter((e) => !e.isAllDay);
-      const allDay = dayEvents.filter((e) => e.isAllDay);
       const spans = timed.map((e) => {
         const startMin = getMinutesSinceMidnight(e.startTime);
         let endMin = e.endTime ? getMinutesSinceMidnight(e.endTime) : startMin + 30;
@@ -445,6 +509,13 @@ function WeekGrid({
       const place = packEventColumns(
         spans.map((s) => ({ id: s.event.id, startMin: s.startMin, endMin: s.endMin })),
       );
+      // Conflict is a blocking-time signal: cancelled and free events overlap
+      // without clashing, so they get geometry above but no flag here.
+      const conflictPlace = packEventColumns(
+        spans
+          .filter((s) => blocksTime(s.event))
+          .map((s) => ({ id: s.event.id, startMin: s.startMin, endMin: s.endMin })),
+      );
       const dayLeft = TIME_COL_WIDTH + dayIdx * dayWidth;
       spans.forEach(({ event, startMin, endMin }) => {
         const p = place.get(event.id) ?? { colIndex: 0, colCount: 1, conflict: false };
@@ -452,7 +523,6 @@ function WeekGrid({
         out.push({
           key: event.id,
           event,
-          allDay: false,
           left: dayLeft + p.colIndex * w,
           top: (startMin / 60) * HOUR_HEIGHT,
           height: Math.max(
@@ -460,21 +530,76 @@ function WeekGrid({
             WEEK_BORDER + WEEK_PAD_Y * 2 + WEEK_LINE,
           ),
           width: w - 1,
-        });
-      });
-      allDay.forEach((event, i) => {
-        out.push({
-          key: `${event.id}-ad`,
-          event,
-          allDay: true,
-          left: dayLeft,
-          top: i * 17,
-          height: 16,
-          width: dayWidth - 1,
+          conflict: conflictPlace.get(event.id)?.conflict ?? false,
+          // Segments of a multi-day event carry the label only where it starts.
+          showTitle: zonedDayKey(event.startTime) === dayKey,
         });
       });
     });
-    return out;
+
+    // An all-day event is one continuous bar across every column it covers,
+    // clamped to the visible week and stacked into rows: cut into per-day
+    // chips, the days after the first carry no title and read as empty boxes.
+    const dayKeys = weekDates.map(localDayKey);
+    const bars: {
+      key: string;
+      event: SerializedEvent;
+      left: number;
+      top: number;
+      width: number;
+      row: number;
+    }[] = [];
+    const occupied: Set<number>[] = [];
+    const allDay = events
+      .filter((e) => e.isAllDay && e.startTime)
+      // Longest first so a wide span claims its row before shorter events fill
+      // the gaps around it.
+      .sort((a, b) => {
+        const byStart = new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+        if (byStart !== 0) return byStart;
+        return (
+          new Date(b.endTime || b.startTime).getTime() -
+          new Date(a.endTime || a.startTime).getTime()
+        );
+      });
+    for (const event of allDay) {
+      const startKey = zonedDayKey(event.startTime);
+      const endKey = event.endTime ? zonedDayKey(event.endTime) : startKey;
+      const startCol = dayKeys.findIndex((k) => k >= startKey);
+      let endCol = -1;
+      for (let i = dayKeys.length - 1; i >= 0; i--) {
+        if (dayKeys[i] <= endKey) {
+          endCol = i;
+          break;
+        }
+      }
+      if (startCol === -1 || endCol < startCol) continue;
+      let row = 0;
+      for (;;) {
+        if (!occupied[row]) occupied[row] = new Set();
+        let free = true;
+        for (let c = startCol; c <= endCol; c++) {
+          if (occupied[row].has(c)) {
+            free = false;
+            break;
+          }
+        }
+        if (free) {
+          for (let c = startCol; c <= endCol; c++) occupied[row].add(c);
+          break;
+        }
+        row++;
+      }
+      bars.push({
+        key: event.id,
+        event,
+        left: TIME_COL_WIDTH + startCol * dayWidth + 1,
+        top: 3 + row * ALLDAY_ROW_HEIGHT,
+        width: (endCol - startCol + 1) * dayWidth - 2,
+        row,
+      });
+    }
+    return { timedBlocks: out, allDayBars: bars, allDayRows: occupied.length };
   }, [events, weekDates, dayWidth]);
 
   const nowParts = zonedParts(now);
@@ -513,6 +638,42 @@ function WeekGrid({
           );
         })}
       </View>
+
+      {allDayRows > 0 && (
+        <View
+          style={[
+            styles.weekAllDayStrip,
+            { borderBottomColor: T.border, height: allDayRows * ALLDAY_ROW_HEIGHT + 6 },
+          ]}
+        >
+          <Text style={[styles.weekAllDayLabel, { color: T.textDim }]}>All day</Text>
+          {allDayBars.map((b) => {
+            const display = eventDisplayState(b.event);
+            return (
+              <AllDayEventChip
+                key={b.key}
+                event={b.event}
+                color={getEventColor(b.event, categoriesMap, T.accent)}
+                live={
+                  !!b.event.channelId &&
+                  liveChannelIds.has(b.event.channelId) &&
+                  !display.cancelled &&
+                  !display.detailsHidden
+                }
+                compact
+                style={{
+                  position: "absolute",
+                  top: b.top,
+                  left: b.left,
+                  width: b.width,
+                  height: ALLDAY_ROW_HEIGHT - 5,
+                }}
+                onPress={() => onEventPress(b.event.id)}
+              />
+            );
+          })}
+        </View>
+      )}
 
       <ScrollView
         ref={scrollRef}
@@ -619,35 +780,47 @@ function WeekGrid({
             </>
           )}
 
-          {blocks.map((b) => {
+          {timedBlocks.map((b) => {
             const color = getEventColor(b.event, categoriesMap, T.accent);
+            const display = eventDisplayState(b.event);
             return (
               <TouchableOpacity
                 key={b.key}
                 style={[
                   styles.weekEvent,
+                  (display.cancelled || display.tentative) && styles.fadedEvent,
                   {
                     top: b.top,
                     left: b.left,
                     width: b.width,
                     height: b.height,
-                    backgroundColor: color + "33",
-                    borderColor: color,
+                    backgroundColor: color + (display.free ? "1A" : "33"),
+                    borderColor: b.conflict ? T.red : color,
                   },
                 ]}
                 onPress={() => onEventPress(b.event.id)}
                 activeOpacity={0.85}
               >
-                <Text
-                  style={[styles.weekEventText, { color: T.textBright, lineHeight: WEEK_LINE }]}
-                  // Whole lines only: a second line is offered when the block
-                  // has room for one, never squeezed in to be sliced in half.
-                  numberOfLines={
-                    b.allDay || b.height - WEEK_BORDER - WEEK_PAD_Y * 2 < WEEK_LINE * 2 ? 1 : 2
-                  }
-                >
-                  {b.event.title}
-                </Text>
+                {b.event.channelId &&
+                liveChannelIds.has(b.event.channelId) &&
+                !display.cancelled &&
+                !display.detailsHidden ? (
+                  <View style={[styles.weekLiveDot, { backgroundColor: T.red }]} />
+                ) : null}
+                {b.showTitle !== false ? (
+                  <Text
+                    style={[
+                      styles.weekEventText,
+                      { color: T.textBright, lineHeight: WEEK_LINE },
+                      display.cancelled && styles.struckTitle,
+                    ]}
+                    // Whole lines only: a second line is offered when the block
+                    // has room for one, never squeezed in to be sliced in half.
+                    numberOfLines={b.height - WEEK_BORDER - WEEK_PAD_Y * 2 < WEEK_LINE * 2 ? 1 : 2}
+                  >
+                    {display.title}
+                  </Text>
+                ) : null}
               </TouchableOpacity>
             );
           })}
@@ -683,8 +856,18 @@ export function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [activeCategoryIds, setActiveCategoryIds] = useState<Set<string>>(new Set());
+  const [activeTagIds, setActiveTagIds] = useState<Set<string>>(new Set());
+  const [focusOnly, setFocusOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const dayScrollRef = useRef<ScrollView>(null);
+  const tagsQuery = useTags("");
+  const activeCalls = useActiveCalls();
+  const liveChannelIds = useMemo(() => new Set(Object.keys(activeCalls)), [activeCalls]);
+  const updateEvent = useUpdateEvent();
+  const [pendingMove, setPendingMove] = useState<((scope: RecurrenceEditScope) => void) | null>(
+    null,
+  );
 
   const weekStart = useMemo(
     () => startOfWeek(selectedDate, weekStartsOn),
@@ -704,8 +887,11 @@ export function CalendarScreen() {
     if (viewMode === "month") {
       return zonedStartOfDayInstant(startOfMonth(currentMonth), timeZone).toISOString();
     }
+    if (viewMode === "agenda") {
+      return zonedStartOfDayInstant(selectedDate, timeZone).toISOString();
+    }
     return zonedStartOfDayInstant(weekStart, timeZone).toISOString();
-  }, [viewMode, currentMonth, weekStart, timeZone]);
+  }, [viewMode, currentMonth, weekStart, selectedDate, timeZone]);
 
   const rangeEnd = useMemo(() => {
     if (viewMode === "month") {
@@ -714,10 +900,15 @@ export function CalendarScreen() {
       afterEnd.setHours(0, 0, 0, 0);
       return new Date(zonedStartOfDayInstant(afterEnd, timeZone).getTime() - 1000).toISOString();
     }
+    if (viewMode === "agenda") {
+      const end = new Date(selectedDate);
+      end.setDate(end.getDate() + 30);
+      return zonedStartOfDayInstant(end, timeZone).toISOString();
+    }
     const end = new Date(weekStart);
     end.setDate(end.getDate() + 7);
     return zonedStartOfDayInstant(end, timeZone).toISOString();
-  }, [viewMode, currentMonth, weekStart, timeZone]);
+  }, [viewMode, currentMonth, weekStart, selectedDate, timeZone]);
 
   const eventsQuery = useEventsInRange(rangeStart, rangeEnd);
   const categoriesQuery = useCategories();
@@ -742,53 +933,90 @@ export function CalendarScreen() {
     });
   }, []);
 
+  const toggleTag = useCallback((tagId: string) => {
+    setActiveTagIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(tagId)) {
+        next.delete(tagId);
+      } else {
+        next.add(tagId);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setActiveCategoryIds(new Set());
+    setActiveTagIds(new Set());
+    setFocusOnly(false);
+    setSearchQuery("");
+  }, []);
+
   const matchesFilter = useCallback(
     (event: SerializedEvent) => {
       if (activeCategoryIds.size > 0 && !activeCategoryIds.has(event.categoryId)) return false;
+      // Tag filter is logical AND, matching the web calendar's semantics.
+      if (activeTagIds.size > 0) {
+        const eventTagIds = new Set(event.tags.map((t) => t.id));
+        for (const tagId of activeTagIds) {
+          if (!eventTagIds.has(tagId)) return false;
+        }
+      }
+      if (focusOnly && !event.isFocusTime) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (
+          !event.title.toLowerCase().includes(q) &&
+          !event.description.toLowerCase().includes(q)
+        ) {
+          return false;
+        }
+      }
       return true;
     },
-    [activeCategoryIds],
+    [activeCategoryIds, activeTagIds, focusOnly, searchQuery],
   );
+
+  const filtersActive =
+    activeCategoryIds.size > 0 || activeTagIds.size > 0 || focusOnly || searchQuery.length > 0;
 
   const dayEvents = useMemo(() => {
     if (!eventsQuery.data) return [];
     const selectedKey = localDayKey(selectedDate);
     return eventsQuery.data
-      .filter((e) => {
-        if (!e.startTime) return false;
-        return zonedDayKey(e.startTime) === selectedKey && matchesFilter(e);
-      })
+      .filter((e) => eventCoversDay(e, selectedKey) && matchesFilter(e))
       .sort((a, b) => {
         if (!a.startTime || !b.startTime) return 0;
         return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
       });
   }, [eventsQuery.data, selectedDate, matchesFilter]);
 
+  const dayAllDayEvents = useMemo(() => dayEvents.filter((e) => e.isAllDay), [dayEvents]);
+
   const { width: windowWidth, fontScale } = useWindowDimensions();
 
-  // Box + side-by-side column placement for each event, so overlaps sit next
-  // to each other instead of stacking. All-day events span the full grid
-  // height (00:00-24:00) and pack as their own full-height column.
+  // Box + side-by-side column placement for each timed event, so overlaps sit
+  // next to each other instead of stacking. All-day events live in the pinned
+  // strip above the grid - as a full-height column they read as an anonymous
+  // stripe with the label parked at midnight, far off-screen.
   const positionedEvents = useMemo(() => {
-    const spans = dayEvents.map((event) => {
-      if (event.isAllDay) {
-        return { event, startMin: HOUR_START * 60, endMin: HOUR_END * 60 };
-      }
-      const startMin = event.startTime ? getMinutesSinceMidnight(event.startTime) : 0;
-      let endMin = event.endTime ? getMinutesSinceMidnight(event.endTime) : startMin + 30;
-      // Ends at or past midnight (00:00 reads as minute 0) - fill to day bottom.
-      if (endMin <= startMin) endMin = HOUR_END * 60;
-      return { event, startMin, endMin };
-    });
-    // Geometry uses every event so all-day cards sit beside the timed ones.
+    const spans = dayEvents
+      .filter((e) => !e.isAllDay)
+      .map((event) => {
+        const startMin = event.startTime ? getMinutesSinceMidnight(event.startTime) : 0;
+        let endMin = event.endTime ? getMinutesSinceMidnight(event.endTime) : startMin + 30;
+        // Ends at or past midnight (00:00 reads as minute 0) - fill to day bottom.
+        if (endMin <= startMin) endMin = HOUR_END * 60;
+        return { event, startMin, endMin };
+      });
     const placement = packEventColumns(
       spans.map(({ event, startMin, endMin }) => ({ id: event.id, startMin, endMin })),
     );
-    // Conflict is a timed-vs-timed signal; an all-day card overlapping the
-    // day's schedule is expected, not a clash.
+    // Conflict is a blocking-time signal: cancelled and free events overlap
+    // without clashing, so they get geometry but no flag.
     const timedConflict = packEventColumns(
       spans
-        .filter(({ event }) => !event.isAllDay)
+        .filter(({ event }) => blocksTime(event))
         .map(({ event, startMin, endMin }) => ({ id: event.id, startMin, endMin })),
     );
     const areaWidth = windowWidth - (TIME_COL_WIDTH + 4) - 12;
@@ -801,7 +1029,7 @@ export function CalendarScreen() {
         height: Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, minBlockHeight(fontScale)),
         left: TIME_COL_WIDTH + 4 + place.colIndex * colWidth,
         width: colWidth - (place.colCount > 1 ? 3 : 0),
-        conflict: event.isAllDay ? false : (timedConflict.get(event.id)?.conflict ?? false),
+        conflict: timedConflict.get(event.id)?.conflict ?? false,
       };
     });
   }, [dayEvents, windowWidth, fontScale]);
@@ -822,31 +1050,25 @@ export function CalendarScreen() {
     }
   }, [viewMode, selectedDate, hasData]);
 
-  // Prev/next moves the period the active view actually renders: a week in day
-  // mode (day view is driven by selectedDate's week), a month in month mode.
-  const shiftWeek = useCallback((delta: number) => {
-    setSelectedDate((d) => {
-      const next = new Date(d);
-      next.setDate(next.getDate() + delta * 7);
-      return next;
-    });
-  }, []);
-
-  const goPrev = useCallback(() => {
-    if (viewMode === "month") {
-      setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
-    } else {
-      shiftWeek(-1);
-    }
-  }, [viewMode, shiftWeek]);
-
-  const goNext = useCallback(() => {
-    if (viewMode === "month") {
-      setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
-    } else {
-      shiftWeek(1);
-    }
-  }, [viewMode, shiftWeek]);
+  const selectPeriod = useCallback(
+    (item: RailItem) => {
+      const unit = railUnitFor(viewMode);
+      setSelectedDate(
+        resolveRailSelection({
+          unit,
+          viewMode,
+          item,
+          current: selectedDate,
+          today,
+          weekStartsOn,
+        }),
+      );
+      if (unit === "month") {
+        setCurrentMonth(new Date(item.date.getFullYear(), item.date.getMonth(), 1));
+      }
+    },
+    [viewMode, selectedDate, today, weekStartsOn],
+  );
 
   const setView = useCallback(
     (mode: ViewMode) => {
@@ -864,8 +1086,6 @@ export function CalendarScreen() {
     setCurrentMonth(new Date(todayToken.getFullYear(), todayToken.getMonth(), 1));
   }, []);
 
-  const periodLabel =
-    viewMode === "month" ? getMonthLabel(currentMonth) : getMonthLabel(selectedDate);
   const isOnToday =
     viewMode === "month"
       ? currentMonth.getFullYear() === today.getFullYear() &&
@@ -877,8 +1097,46 @@ export function CalendarScreen() {
   const [draftStartMin, setDraftStartMin] = useState<number | null>(null);
   const draftAnchorRef = useRef(0);
   const draftStartRef = useRef<number | null>(null);
+  const [moveDraft, setMoveDraft] = useState<{
+    event: SerializedEvent;
+    startMin: number;
+    durationMin: number;
+  } | null>(null);
+  const moveAnchorRef = useRef(0);
+  const moveDraftRef = useRef<typeof moveDraft>(null);
+  // Gesture callbacks fire outside the render cycle; they read the current
+  // layout through a ref instead of a stale closure.
+  const positionedEventsRef = useRef(positionedEvents);
+  useEffect(() => {
+    positionedEventsRef.current = positionedEvents;
+  }, [positionedEvents]);
 
-  const beginDraft = useCallback((y: number) => {
+  const beginDraft = useCallback((x: number, y: number) => {
+    // A long-press landing on an event moves it; only editors get the gesture,
+    // and a press on someone else's event does not fall through to drafting a
+    // new event underneath it.
+    const hit = positionedEventsRef.current.find(
+      (p) =>
+        !p.event.isAllDay &&
+        y >= p.top &&
+        y <= p.top + p.height &&
+        x >= p.left &&
+        x <= p.left + p.width,
+    );
+    if (hit) {
+      if (!roleCanEdit(hit.event.userRole)) return;
+      const startMin = getMinutesSinceMidnight(hit.event.startTime);
+      let endMin = hit.event.endTime ? getMinutesSinceMidnight(hit.event.endTime) : startMin + 30;
+      if (endMin <= startMin) endMin = HOUR_END * 60;
+      const draft = { event: hit.event, startMin, durationMin: endMin - startMin };
+      moveAnchorRef.current = startMin;
+      moveDraftRef.current = draft;
+      setMoveDraft(draft);
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
+      return;
+    }
     const touchedMin = (y / HOUR_HEIGHT) * 60;
     const start = Math.min(
       MAX_DRAFT_START_MIN,
@@ -892,12 +1150,28 @@ export function CalendarScreen() {
     }
   }, []);
 
-  const moveDraft = useCallback((translationY: number) => {
+  const moveCreateDraft = useCallback((translationY: number) => {
     const deltaMin = Math.round(((translationY / HOUR_HEIGHT) * 60) / SNAP_MINUTES) * SNAP_MINUTES;
     const next = Math.min(MAX_DRAFT_START_MIN, Math.max(0, draftAnchorRef.current + deltaMin));
     if (next !== draftStartRef.current) {
       draftStartRef.current = next;
       setDraftStartMin(next);
+      if (Platform.OS !== "web") {
+        Haptics.selectionAsync().catch(() => {});
+      }
+    }
+  }, []);
+
+  const moveMoveDraft = useCallback((translationY: number) => {
+    const current = moveDraftRef.current;
+    if (!current) return;
+    const deltaMin = Math.round(((translationY / HOUR_HEIGHT) * 60) / SNAP_MINUTES) * SNAP_MINUTES;
+    const maxStart = HOUR_END * 60 - current.durationMin;
+    const next = Math.min(maxStart, Math.max(0, moveAnchorRef.current + deltaMin));
+    if (next !== current.startMin) {
+      const updated = { ...current, startMin: next };
+      moveDraftRef.current = updated;
+      setMoveDraft(updated);
       if (Platform.OS !== "web") {
         Haptics.selectionAsync().catch(() => {});
       }
@@ -923,28 +1197,81 @@ export function CalendarScreen() {
     [selectedDate],
   );
 
+  const finishMove = useCallback(
+    (commit: boolean) => {
+      const draft = moveDraftRef.current;
+      moveDraftRef.current = null;
+      setMoveDraft(null);
+      if (!commit || !draft) return;
+      if (draft.startMin === getMinutesSinceMidnight(draft.event.startTime)) return;
+      const newStart = instantFromZonedWall(
+        localDayKey(selectedDate),
+        minutesToHHMM(draft.startMin),
+      );
+      const newEnd = new Date(newStart.getTime() + draft.durationMin * 60 * 1000);
+      // The series' own first date renders under the plain master id, so the
+      // split yields no date there - the day on screen is the occurrence.
+      const [, suffixDate] = draft.event.id.split(OCCURRENCE_SEPARATOR);
+      const occurrenceDate = suffixDate ?? localDayKey(selectedDate);
+      const apply = (scope?: RecurrenceEditScope) =>
+        updateEvent.mutate(
+          {
+            eventId: draft.event.id,
+            startTime: newStart.toISOString(),
+            endTime: newEnd.toISOString(),
+            recurrenceEditScope: scope,
+            occurrenceDate: scope === undefined ? undefined : occurrenceDate,
+          },
+          {
+            onError: (error) =>
+              Alert.alert("Could not move", userFacingError(error, "The event was not moved.")),
+          },
+        );
+      if (draft.event.isRecurring) {
+        setPendingMove(() => apply);
+      } else {
+        apply();
+      }
+    },
+    [selectedDate, updateEvent],
+  );
+
+  const endDrag = useCallback(
+    (commit: boolean) => {
+      if (moveDraftRef.current) finishMove(commit);
+      else finishDraft(commit);
+    },
+    [finishMove, finishDraft],
+  );
+
+  const updateDrag = useCallback(
+    (translationY: number) => {
+      if (moveDraftRef.current) moveMoveDraft(translationY);
+      else moveCreateDraft(translationY);
+    },
+    [moveMoveDraft, moveCreateDraft],
+  );
+
   const dragCreateGesture = useMemo(
     () =>
       Gesture.Pan()
         .activateAfterLongPress(300)
         .onStart((e) => {
-          runOnJS(beginDraft)(e.y);
+          runOnJS(beginDraft)(e.x, e.y);
         })
         .onUpdate((e) => {
-          runOnJS(moveDraft)(e.translationY);
+          runOnJS(updateDrag)(e.translationY);
         })
         .onEnd(() => {
-          runOnJS(finishDraft)(true);
+          runOnJS(endDrag)(true);
         })
         .onFinalize(() => {
           // No-op after a committed end (the ref is already cleared); clears
           // the draft when the gesture is cancelled instead of released.
-          runOnJS(finishDraft)(false);
+          runOnJS(endDrag)(false);
         }),
-    [beginDraft, moveDraft, finishDraft],
+    [beginDraft, updateDrag, endDrag],
   );
-
-  const selectedDayIndex = weekDates.findIndex((d) => isSameDay(d, selectedDate));
 
   // The indicator carries a readable clock, so it has to tick: a stale line is
   // a pixel off and invisible, a stale label is a wrong time.
@@ -976,25 +1303,21 @@ export function CalendarScreen() {
           >
             <Target size={21} color={isOnToday ? T.textDim : T.accent} weight="bold" />
           </TouchableOpacity>
-          {categories.length > 0 && (
-            <TouchableOpacity
-              style={styles.iconBtn}
-              onPress={() => setFilterSheetOpen(true)}
-              hitSlop={HITSLOP}
-              accessibilityLabel="Filter by category"
-            >
-              <Funnel
-                size={20}
-                color={activeCategoryIds.size > 0 ? T.accent : T.textDim}
-                weight={activeCategoryIds.size > 0 ? "fill" : "regular"}
-              />
-              {activeCategoryIds.size > 0 && (
-                <View
-                  style={[styles.filterDot, { backgroundColor: T.accent, borderColor: T.bg }]}
-                />
-              )}
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => setFilterSheetOpen(true)}
+            hitSlop={HITSLOP}
+            accessibilityLabel="Filter events"
+          >
+            <Funnel
+              size={20}
+              color={filtersActive ? T.accent : T.textDim}
+              weight={filtersActive ? "fill" : "regular"}
+            />
+            {filtersActive && (
+              <View style={[styles.filterDot, { backgroundColor: T.accent, borderColor: T.bg }]} />
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => router.push("/calendar/create" as any)}
@@ -1007,17 +1330,8 @@ export function CalendarScreen() {
       </View>
 
       <View style={[styles.periodBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
-        <View style={styles.periodNav}>
-          <TouchableOpacity onPress={goPrev} hitSlop={HITSLOP} accessibilityLabel="Previous">
-            <CaretLeft size={18} color={T.text} weight="bold" />
-          </TouchableOpacity>
-          <Text style={[styles.monthText, { color: T.textBright }]}>{periodLabel}</Text>
-          <TouchableOpacity onPress={goNext} hitSlop={HITSLOP} accessibilityLabel="Next">
-            <CaretRight size={18} color={T.text} weight="bold" />
-          </TouchableOpacity>
-        </View>
         <View style={[styles.viewToggle, { backgroundColor: T.pageBg, borderColor: T.border }]}>
-          {(["day", "week", "month"] as ViewMode[]).map((mode) => (
+          {(["day", "week", "month", "agenda"] as ViewMode[]).map((mode) => (
             <TouchableOpacity
               key={mode}
               onPress={() => setView(mode)}
@@ -1029,50 +1343,46 @@ export function CalendarScreen() {
                   { color: viewMode === mode ? "#fff" : T.textDim },
                 ]}
               >
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                {VIEW_LABELS[mode]}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
+      <PeriodRail
+        viewMode={viewMode}
+        selectedDate={selectedDate}
+        currentMonth={currentMonth}
+        today={today}
+        weekStartsOn={weekStartsOn}
+        onSelect={selectPeriod}
+      />
+
       {viewMode === "day" ? (
         <>
-          <View style={[styles.weekStrip, { backgroundColor: T.bg, borderBottomColor: T.border }]}>
-            {weekDates.map((d, i) => {
-              const isDayToday = isSameDay(d, today);
-              const isSelected = i === selectedDayIndex;
-              return (
-                <TouchableOpacity
-                  key={i}
-                  style={styles.dayItem}
-                  onPress={() => setSelectedDate(new Date(d))}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.dayLabel, { color: isSelected ? T.accent : T.textDim }]}>
-                    {dayLabels[i]}
-                  </Text>
-                  <View style={[styles.dayCircle, isSelected && { backgroundColor: T.accent }]}>
-                    <Text
-                      style={[
-                        styles.dayNum,
-                        {
-                          color: isSelected ? "#fff" : isDayToday ? T.accent : T.textBright,
-                        },
-                      ]}
-                    >
-                      {d.getDate()}
-                    </Text>
-                  </View>
-                  {isDayToday && (
-                    <View
-                      style={[styles.todayDot, { backgroundColor: isSelected ? "#fff" : T.accent }]}
-                    />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {dayAllDayEvents.length > 0 && (
+            <View style={[styles.dayAllDayStrip, { borderBottomColor: T.border }]}>
+              {dayAllDayEvents.map((event) => {
+                const display = eventDisplayState(event);
+                return (
+                  <AllDayEventChip
+                    key={event.id}
+                    event={event}
+                    color={getEventColor(event, categoriesMap, T.accent)}
+                    live={
+                      !!event.channelId &&
+                      liveChannelIds.has(event.channelId) &&
+                      !display.cancelled &&
+                      !display.detailsHidden
+                    }
+                    showAllDayLabel
+                    onPress={() => router.push(`/calendar/${event.id}` as any)}
+                  />
+                );
+              })}
+            </View>
+          )}
 
           {eventsQuery.isLoading && !eventsQuery.data ? (
             <View style={styles.loadingWrap}>
@@ -1083,7 +1393,7 @@ export function CalendarScreen() {
               ref={dayScrollRef}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ height: GRID_HEIGHT + 20 + bottomPad }}
-              scrollEnabled={draftStartMin === null}
+              scrollEnabled={draftStartMin === null && moveDraft === null}
               refreshControl={
                 <RefreshControl
                   refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
@@ -1138,26 +1448,24 @@ export function CalendarScreen() {
                   {/* Events positioned on the grid */}
                   {positionedEvents.map(({ event, top, height, left, width, conflict }) => {
                     const color = getEventColor(event, categoriesMap, T.accent);
+                    const display = eventDisplayState(event);
                     const attendeeLabel = event.attendees.map((a) => a.name).join(", ");
-                    const isAllDay = event.isAllDay;
                     const fit = fitBlockText(height, fontScale);
-                    const showSecondRow = !isAllDay && fit.rows === 2;
+                    const showSecondRow = fit.rows === 2;
 
                     return (
                       <TouchableOpacity
                         key={event.id}
                         style={[
                           styles.gridEvent,
-                          // All-day cards fill the whole column; keep their text
-                          // near the top instead of pushed to the far bottom.
-                          isAllDay && styles.gridEventAllDay,
+                          (display.cancelled || display.tentative) && styles.fadedEvent,
                           {
                             top,
                             height,
                             left,
                             width,
                             paddingVertical: fit.padY,
-                            backgroundColor: color + "33",
+                            backgroundColor: color + (display.free ? "1A" : "33"),
                             borderColor: conflict ? T.red : color,
                           },
                         ]}
@@ -1167,14 +1475,24 @@ export function CalendarScreen() {
                         <View style={styles.gridEventRow}>
                           <View style={styles.gridEventTitleWrap}>
                             {conflict ? <Warning size={12} color={T.red} weight="fill" /> : null}
+                            {display.outOfOffice ? (
+                              <AirplaneTilt size={12} color={T.textDim} weight="duotone" />
+                            ) : null}
+                            {event.channelId &&
+                            liveChannelIds.has(event.channelId) &&
+                            !display.cancelled &&
+                            !display.detailsHidden ? (
+                              <View style={[styles.liveDotSm, { backgroundColor: T.red }]} />
+                            ) : null}
                             <Text
                               style={[
                                 styles.gridEventTitle,
                                 { color: T.textBright, lineHeight: fit.title },
+                                display.cancelled && styles.struckTitle,
                               ]}
                               numberOfLines={1}
                             >
-                              {event.title}
+                              {display.title}
                             </Text>
                           </View>
                           <Text
@@ -1183,20 +1501,9 @@ export function CalendarScreen() {
                               { color: T.textBright, lineHeight: fit.title },
                             ]}
                           >
-                            {isAllDay ? "All day" : event.startTimeFormatted}
+                            {event.startTimeFormatted}
                           </Text>
                         </View>
-                        {isAllDay && attendeeLabel ? (
-                          <Text
-                            style={[
-                              styles.gridEventDetail,
-                              { color: T.textDim, lineHeight: fit.detail },
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {attendeeLabel}
-                          </Text>
-                        ) : null}
                         {showSecondRow ? (
                           <View style={styles.gridEventRow}>
                             <Text
@@ -1259,6 +1566,44 @@ export function CalendarScreen() {
                       </View>
                     </View>
                   )}
+
+                  {/* Drag-to-move ghost: the picked event riding the finger,
+                      times updating live while the original stays in place. */}
+                  {moveDraft !== null && (
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.gridEvent,
+                        styles.draftSlot,
+                        {
+                          top: (moveDraft.startMin / 60) * HOUR_HEIGHT,
+                          left: TIME_COL_WIDTH + 4,
+                          right: 12,
+                          height: (moveDraft.durationMin / 60) * HOUR_HEIGHT,
+                          borderColor: T.accent,
+                          backgroundColor: T.accent + "33",
+                        },
+                      ]}
+                    >
+                      <View style={styles.gridEventRow}>
+                        <Text
+                          style={[styles.gridEventTitle, { color: T.textBright }]}
+                          numberOfLines={1}
+                        >
+                          {moveDraft.event.title}
+                        </Text>
+                        <Text style={[styles.gridEventTime, { color: T.textBright }]}>
+                          {minutesToHHMM(moveDraft.startMin)}
+                        </Text>
+                      </View>
+                      <View style={styles.gridEventRow}>
+                        <View style={styles.gridEventSpacer} />
+                        <Text style={[styles.gridEventEndTime, { color: T.textDim }]}>
+                          {minutesToHHMM(moveDraft.startMin + moveDraft.durationMin)}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
                 </View>
               </GestureDetector>
             </ScrollView>
@@ -1287,9 +1632,10 @@ export function CalendarScreen() {
             refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
             onRefresh={() => eventsQuery.refetch()}
             dayLabels={dayLabels}
+            liveChannelIds={liveChannelIds}
           />
         )
-      ) : (
+      ) : viewMode === "month" ? (
         <>
           {eventsQuery.isLoading && !eventsQuery.data ? (
             <View style={styles.loadingWrap}>
@@ -1322,10 +1668,25 @@ export function CalendarScreen() {
                 categoriesMap={categoriesMap}
                 weekStartsOn={weekStartsOn}
                 dayLabels={dayLabels}
+                liveChannelIds={liveChannelIds}
               />
             </ScrollView>
           )}
         </>
+      ) : eventsQuery.isLoading && !eventsQuery.data ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={T.accent} />
+        </View>
+      ) : (
+        <AgendaList
+          events={rangeEvents}
+          categoriesMap={categoriesMap}
+          liveChannelIds={liveChannelIds}
+          bottomPad={bottomPad}
+          onEventPress={(id) => router.push(`/calendar/${id}` as any)}
+          refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
+          onRefresh={() => eventsQuery.refetch()}
+        />
       )}
 
       <CalendarFilterSheet
@@ -1334,7 +1695,27 @@ export function CalendarScreen() {
         categories={categories}
         activeCategoryIds={activeCategoryIds}
         onToggle={toggleCategory}
-        onClear={() => setActiveCategoryIds(new Set())}
+        tags={tagsQuery.data ?? []}
+        activeTagIds={activeTagIds}
+        onToggleTag={toggleTag}
+        focusOnly={focusOnly}
+        onToggleFocus={() => setFocusOnly((v) => !v)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onClear={clearFilters}
+      />
+
+      <RecurrenceScopeSheet
+        visible={pendingMove !== null}
+        action="edit"
+        accentColor={T.accent}
+        busy={updateEvent.isPending}
+        onClose={() => setPendingMove(null)}
+        onSelect={(scope) => {
+          const apply = pendingMove;
+          setPendingMove(null);
+          apply?.(scope);
+        }}
       />
     </View>
   );
@@ -1371,18 +1752,18 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1.5,
   },
+  // The toggle gets its own full-width row: four names next to the period
+  // label overflow a 360dp screen, and worse at larger text sizes.
   periodBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   periodNav: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   viewToggle: {
     flexDirection: "row",
@@ -1391,31 +1772,33 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   viewToggleBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 7,
   },
   viewToggleBtnText: {
     fontSize: 13,
     fontFamily: FONT.medium,
   },
-  monthText: { fontSize: 16, fontFamily: FONT.semibold },
-  weekStrip: {
-    flexDirection: "row",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+  monthText: { fontSize: 16, fontFamily: FONT.semibold, flexShrink: 1 },
+  weekAllDayStrip: {
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  dayItem: { flex: 1, alignItems: "center", gap: 3 },
-  dayLabel: { fontSize: 11, fontFamily: FONT.medium },
-  dayCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+  weekAllDayLabel: {
+    position: "absolute",
+    left: 0,
+    top: 6,
+    width: TIME_COL_WIDTH,
+    textAlign: "center",
+    fontSize: 9,
+    fontFamily: FONT.medium,
   },
-  dayNum: { fontSize: 14, fontFamily: FONT.semibold },
-  todayDot: { width: 4, height: 4, borderRadius: 2 },
+  dayAllDayStrip: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    gap: 4,
+  },
   weekHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1523,10 +1906,6 @@ const styles = StyleSheet.create({
     // Title/start ride the top edge, participants/end the bottom edge.
     justifyContent: "space-between",
   },
-  gridEventAllDay: {
-    justifyContent: "flex-start",
-    gap: 3,
-  },
   gridEventRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1562,6 +1941,39 @@ const styles = StyleSheet.create({
   },
   draftSlot: {
     zIndex: 30,
+  },
+  fadedEvent: {
+    opacity: 0.65,
+  },
+  struckTitle: {
+    textDecorationLine: "line-through",
+  },
+  monthConflictDot: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    zIndex: 5,
+  },
+  monthLiveDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  weekLiveDot: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  liveDotSm: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   // ---- Month view ----
   monthGrid: {},
@@ -1608,6 +2020,9 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   monthCellEventChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
     borderRadius: 3,
     paddingHorizontal: 3,
     paddingVertical: 1,

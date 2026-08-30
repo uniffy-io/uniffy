@@ -1,9 +1,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
-import { AttendeeRole, RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
+import {
+  AttendeeRole,
+  DayOfWeek,
+  EventStatus,
+  EventTransparency,
+  EventVisibility,
+  RecurrenceEditScope,
+  RecurrencePattern,
+} from "@uniffy/proto/cal/v1/calendar_pb";
 import { useAuth } from "@core/providers/AuthContext";
 import { calendarApi } from "@features/calendar/calendarApi";
+import type {
+  AttendeeRoleValue,
+  EventStatusValue,
+  EventTransparencyValue,
+  EventVisibilityValue,
+  SerializedRecurrence,
+} from "@features/calendar/calendarSerializer";
 
 function isoToTimestamp(iso: string) {
   const date = new Date(iso);
@@ -11,6 +26,60 @@ function isoToTimestamp(iso: string) {
     seconds: BigInt(Math.floor(date.getTime() / 1000)),
     nanos: 0,
   });
+}
+
+const PATTERN_TO_PROTO: Record<string, RecurrencePattern> = {
+  NONE: RecurrencePattern.NONE,
+  DAILY: RecurrencePattern.DAILY,
+  WEEKLY: RecurrencePattern.WEEKLY,
+  BIWEEKLY: RecurrencePattern.BIWEEKLY,
+  MONTHLY: RecurrencePattern.MONTHLY,
+  YEARLY: RecurrencePattern.YEARLY,
+};
+
+const DAY_TO_PROTO: Record<string, DayOfWeek> = {
+  monday: DayOfWeek.MONDAY,
+  tuesday: DayOfWeek.TUESDAY,
+  wednesday: DayOfWeek.WEDNESDAY,
+  thursday: DayOfWeek.THURSDAY,
+  friday: DayOfWeek.FRIDAY,
+  saturday: DayOfWeek.SATURDAY,
+  sunday: DayOfWeek.SUNDAY,
+};
+
+const STATUS_TO_PROTO: Record<EventStatusValue, EventStatus> = {
+  confirmed: EventStatus.CONFIRMED,
+  tentative: EventStatus.TENTATIVE,
+  cancelled: EventStatus.CANCELLED,
+};
+
+const VISIBILITY_TO_PROTO: Record<EventVisibilityValue, EventVisibility> = {
+  standard: EventVisibility.STANDARD,
+  private: EventVisibility.PRIVATE,
+};
+
+const TRANSPARENCY_TO_PROTO: Record<EventTransparencyValue, EventTransparency> = {
+  opaque: EventTransparency.OPAQUE,
+  transparent: EventTransparency.TRANSPARENT,
+};
+
+const ROLE_TO_PROTO: Record<AttendeeRoleValue, AttendeeRole> = {
+  organizer: AttendeeRole.ORGANIZER,
+  required: AttendeeRole.REQUIRED,
+  optional: AttendeeRole.OPTIONAL,
+};
+
+function recurrenceToProto(recurrence: SerializedRecurrence) {
+  return {
+    pattern: PATTERN_TO_PROTO[recurrence.pattern] ?? RecurrencePattern.NONE,
+    interval: recurrence.interval,
+    daysOfWeek: recurrence.daysOfWeek
+      .map((d) => DAY_TO_PROTO[d])
+      .filter((d): d is DayOfWeek => d !== undefined),
+    dayOfMonth: recurrence.dayOfMonth,
+    endDate: recurrence.endDate ? isoToTimestamp(recurrence.endDate) : undefined,
+    maxOccurrences: recurrence.maxOccurrences,
+  };
 }
 
 export function useCreateEvent() {
@@ -31,7 +100,17 @@ export function useCreateEvent() {
       channelAutoCreated?: boolean;
       categoryId?: string;
       attendeeIds?: string[];
+      attendees?: { userId: string; role?: AttendeeRoleValue }[];
       tagIds?: string[];
+      isFocusTime?: boolean;
+      /** Omitted or empty = the server applies the user's reminder defaults. */
+      reminders?: number[];
+      recurrence?: SerializedRecurrence;
+      roomId?: string;
+      status?: EventStatusValue;
+      visibility?: EventVisibilityValue;
+      transparency?: EventTransparencyValue;
+      isOutOfOffice?: boolean;
     }) =>
       calendarApi.createEvent({
         organizationId: organizationId!,
@@ -47,7 +126,20 @@ export function useCreateEvent() {
         channelAutoCreated: args.channelAutoCreated,
         categoryId: args.categoryId,
         attendeeIds: args.attendeeIds ?? [],
+        attendees: (args.attendees ?? []).map((a) => ({
+          userId: a.userId,
+          role: ROLE_TO_PROTO[a.role ?? "required"],
+        })),
         tagIds: args.tagIds ?? [],
+        isFocusTime: args.isFocusTime ?? false,
+        reminders: args.reminders ?? [],
+        recurrence: args.recurrence ? recurrenceToProto(args.recurrence) : undefined,
+        roomId: args.roomId,
+        // UNSPECIFIED (unset) lets the server apply its defaults.
+        status: args.status ? STATUS_TO_PROTO[args.status] : undefined,
+        visibility: args.visibility ? VISIBILITY_TO_PROTO[args.visibility] : undefined,
+        transparency: args.transparency ? TRANSPARENCY_TO_PROTO[args.transparency] : undefined,
+        isOutOfOffice: args.isOutOfOffice ?? false,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events-range"] });
@@ -74,6 +166,18 @@ export function useUpdateEvent() {
       categoryId?: string;
       recurrenceEditScope?: RecurrenceEditScope;
       occurrenceDate?: string;
+      isFocusTime?: boolean;
+      /** Empty or omitted leaves reminders untouched - the wire cannot clear them all. */
+      reminders?: number[];
+      recurrence?: SerializedRecurrence;
+      /** "" clears the room, undefined leaves it untouched. */
+      roomId?: string;
+      /** Replacement set; undefined leaves tags untouched, [] clears them. */
+      tagIds?: string[];
+      status?: EventStatusValue;
+      visibility?: EventVisibilityValue;
+      transparency?: EventTransparencyValue;
+      isOutOfOffice?: boolean;
     }) =>
       calendarApi.updateEvent({
         organizationId: organizationId!,
@@ -92,10 +196,22 @@ export function useUpdateEvent() {
         channelId: args.channelId,
         channelAutoCreated: args.channelAutoCreated,
         categoryId: args.categoryId,
+        isFocusTime: args.isFocusTime,
+        reminders: args.reminders ?? [],
+        recurrence: args.recurrence ? recurrenceToProto(args.recurrence) : undefined,
+        roomId: args.roomId,
+        tagIds: args.tagIds !== undefined ? { ids: args.tagIds } : undefined,
+        status: args.status ? STATUS_TO_PROTO[args.status] : undefined,
+        visibility: args.visibility ? VISIBILITY_TO_PROTO[args.visibility] : undefined,
+        transparency: args.transparency ? TRANSPARENCY_TO_PROTO[args.transparency] : undefined,
+        isOutOfOffice: args.isOutOfOffice,
       }),
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events-range"] });
-      queryClient.invalidateQueries({ queryKey: ["event", organizationId, variables.eventId] });
+      // Prefix match: the entry on screen may be keyed by an occurrence's
+      // synthetic `{masterId}__occurrence__{date}` id while the mutation was
+      // given the master id the server resolved it to.
+      queryClient.invalidateQueries({ queryKey: ["event", organizationId] });
     },
   });
 }
@@ -222,6 +338,34 @@ export function useDeleteCategory() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calendar-categories"] });
+    },
+  });
+}
+
+export function useCreateEventTemplate() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: {
+      title: string;
+      description?: string;
+      durationMinutes: number;
+      location?: string;
+      meetingUrl?: string;
+      categoryId?: string;
+    }) =>
+      calendarApi.createEventTemplate({
+        organizationId: organizationId!,
+        title: args.title,
+        description: args.description ?? "",
+        durationMinutes: args.durationMinutes,
+        location: args.location ?? "",
+        meetingUrl: args.meetingUrl ?? "",
+        categoryId: args.categoryId ?? "",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["event-templates"] });
     },
   });
 }
