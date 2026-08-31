@@ -187,7 +187,10 @@ class EventCreateOperations:
             await self.events._log_activity(event.id, user_id, "created")
 
             if tag_ids is not None:
-                staged_tags = await TagOperations(self.session).stage_manual_tags(
+                staged_tags = await TagOperations(
+                    self.session,
+                    self.events.search_indexer,
+                ).stage_manual_tags(
                     actor_id=user_id,
                     organization_id=organization_id,
                     content_urn=build_content_urn(self.content_type, event.id),
@@ -224,7 +227,10 @@ class EventCreateOperations:
         event = staged.event
         if staged.tags is not None:
             try:
-                await TagOperations(self.session).finish_manual_tags_after_commit(staged.tags)
+                await TagOperations(
+                    self.session,
+                    self.events.search_indexer,
+                ).finish_manual_tags_after_commit(staged.tags)
             except Exception:
                 logger.opt(exception=True).warning(
                     "Calendar event created with degraded tag projection",

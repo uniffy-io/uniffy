@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -16,6 +17,7 @@ from uniffy.core.models.login.organization_member import (
 )
 from uniffy.core.models.login.user import User
 from uniffy.domains.directory.groups.lifecycle import GroupOperations
+from uniffy.domains.directory.groups.members import GroupMemberOperations
 from uniffy.domains.directory.groups.naming import slugify
 from uniffy.domains.directory.people.operations import PeopleOperations
 from uniffy.domains.directory.projection import sync_people_search
@@ -65,7 +67,12 @@ async def seed_people(ctx: DemoContext, content: PeopleContent, report: SeedRepo
     if not ctx.dry_run:
         # Job title, department and team name are denormalized into every
         # member's search document and mention chip.
-        await sync_people_search(ctx.session, ctx.organization_id, list(user_ids.values()))
+        await sync_people_search(
+            ctx.session,
+            ctx.search_indexer,
+            ctx.organization_id,
+            list(user_ids.values()),
+        )
 
 
 async def _ensure_person(ctx: DemoContext, spec: PersonSpec, result: DomainResult) -> UUID | None:
@@ -106,7 +113,7 @@ async def _ensure_person(ctx: DemoContext, spec: PersonSpec, result: DomainResul
 
     # add_member is the whole onboarding path (membership, user search index,
     # attachments folder, default channel joins, audit row) and is idempotent.
-    await OrganizationOperations(ctx.session).add_member(
+    await OrganizationOperations(ctx.session, search_indexer=ctx.search_indexer).add_member(
         user_id=user.id,
         org_id=ctx.organization_id,
         role=OrganizationRole.MEMBER,
@@ -133,14 +140,13 @@ async def _apply_profile(
     changes: dict[str, object] = {"job_title": spec.job_title, "department": spec.department}
     if spec.office_location:
         changes["office_location"] = spec.office_location
-    if spec.start_date:
-        changes["start_date"] = spec.start_date
+    changes["start_date"] = (ctx.now - timedelta(days=spec.start_days_ago)).date()
 
     manager_id = user_ids.get(spec.manager) if spec.manager else None
     if spec.manager and manager_id is None:
         logger.warning(f"{spec.email} reports to {spec.manager}, who was not seeded")
 
-    ops = PeopleOperations(ctx.session)
+    ops = PeopleOperations(ctx.session, ctx.search_indexer)
     current = await ops.get_profile(ctx.organization_id, user_id)
     if (
         current is not None
@@ -245,7 +251,7 @@ async def _ensure_group(
         result.skipped += 1
         return existing
 
-    group = await GroupOperations(ctx.session).create(
+    group = await GroupOperations(ctx.session, ctx.search_indexer).create(
         organization_id=ctx.organization_id,
         name=name,
         created_by_user_id=ctx.actor_id,
@@ -274,7 +280,7 @@ async def _ensure_group_members(
             )
         ).all()
     }
-    ops = GroupOperations(ctx.session)
+    ops = GroupMemberOperations(ctx.session, ctx.search_indexer)
     for user_id, role in members:
         if user_id in current:
             continue
@@ -327,7 +333,7 @@ async def ensure_demo_user(
 
     # add_member is the whole onboarding path: membership, user search index,
     # attachments folder, default channel joins, audit row, cache invalidation.
-    await OrganizationOperations(ctx.session).add_member(
+    await OrganizationOperations(ctx.session, search_indexer=ctx.search_indexer).add_member(
         user_id=user.id,
         org_id=ctx.organization_id,
         role=OrganizationRole.MEMBER,

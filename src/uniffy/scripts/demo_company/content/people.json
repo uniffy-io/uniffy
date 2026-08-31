@@ -1,45 +1,76 @@
 {
   "people": [
-    { "email": "elena@uniffy.io", "username": "elena", "full_name": "Elena Petrova", "job_title": "Chief Executive Officer", "department": "Leadership", "office_location": "Sofia HQ - Floor 5", "start_date": "2019-03-01" },
-    { "email": "viktor@uniffy.io", "username": "viktor", "full_name": "Viktor Stoyanov", "job_title": "Chief Technology Officer", "department": "Leadership", "office_location": "Sofia HQ - Floor 5", "start_date": "2019-03-01", "manager": "elena@uniffy.io" },
-    { "email": "maria@uniffy.io", "job_title": "Chief of Staff", "department": "Leadership", "office_location": "Sofia HQ - Floor 5", "start_date": "2020-01-10", "manager": "elena@uniffy.io" },
-    { "email": "diana@uniffy.io", "username": "diana", "full_name": "Diana Prince", "job_title": "VP Marketing", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_date": "2020-05-04", "manager": "elena@uniffy.io" },
-    { "email": "martin@uniffy.io", "username": "martin", "full_name": "Martin Georgiev", "job_title": "VP Sales", "department": "Sales", "office_location": "Remote (London)", "start_date": "2020-09-15", "manager": "elena@uniffy.io" },
+    { "email": "elena@uniffy.io", "username": "elena", "full_name": "Elena Petrova", "job_title": "Chief Executive Officer", "department": "Leadership", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 730 },
+    { "email": "viktor@uniffy.io", "username": "viktor", "full_name": "Viktor Stoyanov", "job_title": "Chief Technology Officer", "department": "Leadership", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 730, "manager": "elena@uniffy.io" },
+    { "email": "maria@uniffy.io", "job_title": "Chief of Staff", "department": "Leadership", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 621, "manager": "elena@uniffy.io" },
+    { "email": "diana@uniffy.io", "username": "diana", "full_name": "Diana Prince", "job_title": "VP Marketing", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 581, "manager": "elena@uniffy.io" },
+    { "email": "martin@uniffy.io", "username": "martin", "full_name": "Martin Georgiev", "job_title": "VP Sales", "department": "Sales", "office_location": "Remote (London)", "start_days_ago": 535, "manager": "elena@uniffy.io" },
 
-    { "email": "alice@uniffy.io", "username": "alice", "full_name": "Alice Johnson", "job_title": "VP Engineering", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_date": "2019-06-01", "manager": "viktor@uniffy.io" },
-    { "email": "bob@uniffy.io", "username": "bob", "full_name": "Bob Smith", "job_title": "Backend Lead", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_date": "2020-02-17", "manager": "alice@uniffy.io" },
-    { "email": "sofia@uniffy.io", "username": "sofia", "full_name": "Sofia Dimitrova", "job_title": "Frontend Lead", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_date": "2020-11-09", "manager": "alice@uniffy.io" },
-    { "email": "georgi@uniffy.io", "username": "georgi", "full_name": "Georgi Ivanov", "job_title": "Infrastructure Lead", "department": "Engineering", "office_location": "Sofia HQ - Floor 2", "start_date": "2021-01-18", "manager": "alice@uniffy.io" },
-    { "email": "teodora@uniffy.io", "username": "teodora", "full_name": "Teodora Vasileva", "job_title": "Senior Platform Engineer", "department": "Engineering", "office_location": "Remote (Varna)", "start_date": "2021-07-12", "manager": "alice@uniffy.io" },
-    { "email": "ivan@uniffy.io", "username": "ivan", "full_name": "Ivan Marinov", "job_title": "Senior Backend Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_date": "2021-02-22", "manager": "bob@uniffy.io" },
-    { "email": "nikolay@uniffy.io", "username": "nikolay", "full_name": "Nikolay Hristov", "job_title": "Backend Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_date": "2023-01-09", "manager": "bob@uniffy.io" },
-    { "email": "dimitar@uniffy.io", "username": "dimitar", "full_name": "Dimitar Angelov", "job_title": "Senior Frontend Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_date": "2021-11-01", "manager": "sofia@uniffy.io" },
-    { "email": "charlie@uniffy.io", "username": "charlie", "full_name": "Charlie Brown", "job_title": "Platform Engineer", "department": "Engineering", "office_location": "Remote (Plovdiv)", "start_date": "2021-04-05" },
-    { "email": "kristina@uniffy.io", "username": "kristina", "full_name": "Kristina Petkova", "job_title": "Backend Engineer", "department": "Engineering", "start_date": "2024-02-05" },
-    { "email": "radoslav@uniffy.io", "username": "radoslav", "full_name": "Radoslav Iliev", "job_title": "Backend Engineer", "department": "Engineering", "office_location": "Remote (Berlin)", "start_date": "2023-05-15" },
-    { "email": "yana@uniffy.io", "username": "yana", "full_name": "Yana Stefanova", "job_title": "Frontend Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_date": "2023-08-21" },
-    { "email": "stefan@uniffy.io", "username": "stefan", "full_name": "Stefan Kolev", "job_title": "Frontend Engineer", "department": "Engineering", "office_location": "Remote (Burgas)", "start_date": "2024-04-15" },
-    { "email": "gergana@uniffy.io", "username": "gergana", "full_name": "Gergana Mihaylova", "job_title": "Design Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3" },
-    { "email": "plamen@uniffy.io", "username": "plamen", "full_name": "Plamen Todorov", "job_title": "Platform Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_date": "2022-10-03" },
-    { "email": "milena@uniffy.io", "username": "milena", "full_name": "Milena Georgieva", "job_title": "DevOps Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 2", "start_date": "2022-08-08" },
-    { "email": "vasil@uniffy.io", "username": "vasil", "full_name": "Vasil Popov", "job_title": "Site Reliability Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 2", "start_date": "2022-01-24" },
-    { "email": "hristo@uniffy.io", "username": "hristo", "full_name": "Hristo Dimov", "job_title": "Cloud Engineer", "department": "Engineering", "office_location": "Remote (Ruse)", "start_date": "2023-10-02" },
+    { "email": "alice@uniffy.io", "username": "alice", "full_name": "Alice Johnson", "job_title": "VP Engineering", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 698, "manager": "viktor@uniffy.io" },
+    { "email": "bob@uniffy.io", "username": "bob", "full_name": "Bob Smith", "job_title": "Backend Lead", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 608, "manager": "alice@uniffy.io" },
+    { "email": "sofia@uniffy.io", "username": "sofia", "full_name": "Sofia Dimitrova", "job_title": "Frontend Lead", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 516, "manager": "alice@uniffy.io" },
+    { "email": "georgi@uniffy.io", "username": "georgi", "full_name": "Georgi Ivanov", "job_title": "Infrastructure Lead", "department": "Engineering", "office_location": "Sofia HQ - Floor 2", "start_days_ago": 492, "manager": "alice@uniffy.io" },
+    { "email": "teodora@uniffy.io", "username": "teodora", "full_name": "Teodora Vasileva", "job_title": "Senior Platform Engineer", "department": "Engineering", "office_location": "Remote (Varna)", "start_days_ago": 431, "manager": "alice@uniffy.io" },
+    { "email": "ivan@uniffy.io", "username": "ivan", "full_name": "Ivan Marinov", "job_title": "Senior Backend Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 480, "manager": "bob@uniffy.io" },
+    { "email": "nikolay@uniffy.io", "username": "nikolay", "full_name": "Nikolay Hristov", "job_title": "Backend Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 243, "manager": "bob@uniffy.io" },
+    { "email": "dimitar@uniffy.io", "username": "dimitar", "full_name": "Dimitar Angelov", "job_title": "Senior Frontend Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 393, "manager": "sofia@uniffy.io" },
+    { "email": "charlie@uniffy.io", "username": "charlie", "full_name": "Charlie Brown", "job_title": "Platform Engineer", "department": "Engineering", "office_location": "Remote (Plovdiv)", "start_days_ago": 465 },
+    { "email": "kristina@uniffy.io", "username": "kristina", "full_name": "Kristina Petkova", "job_title": "Backend Engineer", "department": "Engineering", "start_days_ago": 107 },
+    { "email": "radoslav@uniffy.io", "username": "radoslav", "full_name": "Radoslav Iliev", "job_title": "Backend Engineer", "department": "Engineering", "office_location": "Remote (Berlin)", "start_days_ago": 199 },
+    { "email": "yana@uniffy.io", "username": "yana", "full_name": "Yana Stefanova", "job_title": "Frontend Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 165 },
+    { "email": "stefan@uniffy.io", "username": "stefan", "full_name": "Stefan Kolev", "job_title": "Frontend Engineer", "department": "Engineering", "office_location": "Remote (Burgas)", "start_days_ago": 83 },
+    { "email": "gergana@uniffy.io", "username": "gergana", "full_name": "Gergana Mihaylova", "job_title": "Design Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 14 },
+    { "email": "plamen@uniffy.io", "username": "plamen", "full_name": "Plamen Todorov", "job_title": "Platform Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 277 },
+    { "email": "milena@uniffy.io", "username": "milena", "full_name": "Milena Georgieva", "job_title": "DevOps Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 2", "start_days_ago": 296 },
+    { "email": "vasil@uniffy.io", "username": "vasil", "full_name": "Vasil Popov", "job_title": "Site Reliability Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 2", "start_days_ago": 364 },
+    { "email": "hristo@uniffy.io", "username": "hristo", "full_name": "Hristo Dimov", "job_title": "Cloud Engineer", "department": "Engineering", "office_location": "Remote (Ruse)", "start_days_ago": 151 },
 
-    { "email": "eve@uniffy.io", "username": "eve", "full_name": "Eve Martinez", "job_title": "Brand Designer", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_date": "2021-09-01", "manager": "diana@uniffy.io" },
-    { "email": "anna@uniffy.io", "username": "anna", "full_name": "Anna Koleva", "job_title": "Growth Lead", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_date": "2022-03-14", "manager": "diana@uniffy.io" },
-    { "email": "silvia@uniffy.io", "username": "silvia", "full_name": "Silvia Ivanova", "job_title": "Marketing Manager", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_date": "2022-05-16" },
-    { "email": "dobrin@uniffy.io", "username": "dobrin", "full_name": "Dobrin Stoev", "job_title": "Content Strategist", "department": "Marketing", "office_location": "Remote (Veliko Tarnovo)", "start_date": "2023-02-13" },
-    { "email": "rosen@uniffy.io", "username": "rosen", "full_name": "Rosen Atanasov", "job_title": "Growth Analyst", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_date": "2023-06-19" },
-    { "email": "iva@uniffy.io", "username": "iva", "full_name": "Iva Nikolova", "job_title": "Performance Marketer", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_date": "2024-01-08" },
-    { "email": "boyko@uniffy.io", "username": "boyko", "full_name": "Boyko Rusev", "job_title": "Data Analyst", "department": "Marketing", "start_date": "2024-06-03" },
+    { "email": "eve@uniffy.io", "username": "eve", "full_name": "Eve Martinez", "job_title": "Brand Designer", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 414, "manager": "diana@uniffy.io" },
+    { "email": "anna@uniffy.io", "username": "anna", "full_name": "Anna Koleva", "job_title": "Growth Lead", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 347, "manager": "diana@uniffy.io" },
+    { "email": "silvia@uniffy.io", "username": "silvia", "full_name": "Silvia Ivanova", "job_title": "Marketing Manager", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 325 },
+    { "email": "dobrin@uniffy.io", "username": "dobrin", "full_name": "Dobrin Stoev", "job_title": "Content Strategist", "department": "Marketing", "office_location": "Remote (Veliko Tarnovo)", "start_days_ago": 231 },
+    { "email": "rosen@uniffy.io", "username": "rosen", "full_name": "Rosen Atanasov", "job_title": "Growth Analyst", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 187 },
+    { "email": "iva@uniffy.io", "username": "iva", "full_name": "Iva Nikolova", "job_title": "Performance Marketer", "department": "Marketing", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 117 },
+    { "email": "boyko@uniffy.io", "username": "boyko", "full_name": "Boyko Rusev", "job_title": "Data Analyst", "department": "Marketing", "start_days_ago": 66 },
 
-    { "email": "kaloyan@uniffy.io", "username": "kaloyan", "full_name": "Kaloyan Zhelev", "job_title": "Senior Account Executive", "department": "Sales", "office_location": "Sofia HQ - Floor 1", "start_date": "2021-10-11", "manager": "martin@uniffy.io" },
-    { "email": "petar@uniffy.io", "username": "petar", "full_name": "Petar Nikolov", "job_title": "SDR Lead", "department": "Sales", "office_location": "Sofia HQ - Floor 1", "start_date": "2022-06-01", "manager": "martin@uniffy.io" },
-    { "email": "desislava@uniffy.io", "username": "desislava", "full_name": "Desislava Toneva", "job_title": "Account Executive", "department": "Sales", "office_location": "Sofia HQ - Floor 1", "start_date": "2022-09-05" },
-    { "email": "veronika@uniffy.io", "username": "veronika", "full_name": "Veronika Simeonova", "job_title": "Account Executive", "department": "Sales", "office_location": "Remote (Munich)", "start_date": "2023-04-17" },
-    { "email": "emil@uniffy.io", "username": "emil", "full_name": "Emil Bogdanov", "job_title": "Sales Development Rep", "department": "Sales", "office_location": "Sofia HQ - Floor 1", "start_date": "2024-03-04" },
-    { "email": "tsveta@uniffy.io", "username": "tsveta", "full_name": "Tsveta Lazarova", "job_title": "Sales Development Rep", "department": "Sales", "start_date": "2024-09-16" },
-    { "email": "lyubomir@uniffy.io", "username": "lyubomir", "full_name": "Lyubomir Panov", "job_title": "Sales Development Rep", "department": "Sales", "office_location": "Sofia HQ - Floor 1" }
+    { "email": "kaloyan@uniffy.io", "username": "kaloyan", "full_name": "Kaloyan Zhelev", "job_title": "Senior Account Executive", "department": "Sales", "office_location": "Sofia HQ - Floor 1", "start_days_ago": 400, "manager": "martin@uniffy.io" },
+    { "email": "petar@uniffy.io", "username": "petar", "full_name": "Petar Nikolov", "job_title": "SDR Lead", "department": "Sales", "office_location": "Sofia HQ - Floor 1", "start_days_ago": 320, "manager": "martin@uniffy.io" },
+    { "email": "desislava@uniffy.io", "username": "desislava", "full_name": "Desislava Toneva", "job_title": "Account Executive", "department": "Sales", "office_location": "Sofia HQ - Floor 1", "start_days_ago": 286 },
+    { "email": "veronika@uniffy.io", "username": "veronika", "full_name": "Veronika Simeonova", "job_title": "Account Executive", "department": "Sales", "office_location": "Remote (Munich)", "start_days_ago": 209 },
+    { "email": "emil@uniffy.io", "username": "emil", "full_name": "Emil Bogdanov", "job_title": "Sales Development Rep", "department": "Sales", "office_location": "Sofia HQ - Floor 1", "start_days_ago": 98 },
+    { "email": "tsveta@uniffy.io", "username": "tsveta", "full_name": "Tsveta Lazarova", "job_title": "Sales Development Rep", "department": "Sales", "start_days_ago": 30 },
+    { "email": "lyubomir@uniffy.io", "username": "lyubomir", "full_name": "Lyubomir Panov", "job_title": "Sales Development Rep", "department": "Sales", "office_location": "Sofia HQ - Floor 1", "start_days_ago": 7 },
+    { "email": "anton@uniffy.io", "username": "anton", "full_name": "Anton Yordanov", "job_title": "Staff Backend Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 419, "manager": "bob@uniffy.io" },
+    { "email": "borislava@uniffy.io", "username": "borislava", "full_name": "Borislava Genova", "job_title": "Senior Data Engineer", "department": "Engineering", "office_location": "Remote (Prague)", "start_days_ago": 357, "manager": "anton@uniffy.io" },
+    { "email": "miroslav@uniffy.io", "username": "miroslav", "full_name": "Miroslav Kanev", "job_title": "API Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 223, "manager": "anton@uniffy.io" },
+    { "email": "nadia@uniffy.io", "username": "nadia", "full_name": "Nadia Kostova", "job_title": "Mobile Engineering Lead", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 381, "manager": "sofia@uniffy.io" },
+    { "email": "pavel@uniffy.io", "username": "pavel", "full_name": "Pavel Ganchev", "job_title": "iOS Engineer", "department": "Engineering", "office_location": "Remote (Varna)", "start_days_ago": 180, "manager": "nadia@uniffy.io" },
+    { "email": "yoana@uniffy.io", "username": "yoana", "full_name": "Yoana Milanova", "job_title": "Android Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 3", "start_days_ago": 158, "manager": "nadia@uniffy.io" },
+    { "email": "stoyan@uniffy.io", "username": "stoyan", "full_name": "Stoyan Kirov", "job_title": "Quality Engineering Lead", "department": "Engineering", "office_location": "Plovdiv Office", "start_days_ago": 523, "manager": "alice@uniffy.io" },
+    { "email": "radina@uniffy.io", "username": "radina", "full_name": "Radina Nedyalkova", "job_title": "QA Automation Engineer", "department": "Engineering", "office_location": "Plovdiv Office", "start_days_ago": 202, "manager": "stoyan@uniffy.io" },
+    { "email": "kamen@uniffy.io", "username": "kamen", "full_name": "Kamen Dobrev", "job_title": "Security Engineer", "department": "Engineering", "office_location": "Sofia HQ - Floor 2", "start_days_ago": 262, "manager": "georgi@uniffy.io" },
+    { "email": "lora@uniffy.io", "username": "lora", "full_name": "Lora Stancheva", "job_title": "Site Reliability Engineer", "department": "Engineering", "office_location": "Remote (Brno)", "start_days_ago": 105, "manager": "vasil@uniffy.io" },
+
+    { "email": "gabriela@uniffy.io", "username": "gabriela", "full_name": "Gabriela Taneva", "job_title": "VP Customer Success", "department": "Customer Success", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 550, "manager": "elena@uniffy.io" },
+    { "email": "alexandar@uniffy.io", "username": "alexandar", "full_name": "Alexandar Velchev", "job_title": "Customer Support Lead", "department": "Customer Success", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 470, "manager": "gabriela@uniffy.io" },
+    { "email": "simona@uniffy.io", "username": "simona", "full_name": "Simona Radeva", "job_title": "Senior Support Engineer", "department": "Customer Success", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 315, "manager": "alexandar@uniffy.io" },
+    { "email": "denitsa@uniffy.io", "username": "denitsa", "full_name": "Denitsa Markova", "job_title": "Support Engineer", "department": "Customer Success", "office_location": "Remote (Bucharest)", "start_days_ago": 115, "manager": "alexandar@uniffy.io" },
+    { "email": "valentin@uniffy.io", "username": "valentin", "full_name": "Valentin Lazarov", "job_title": "Customer Success Lead", "department": "Customer Success", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 390, "manager": "gabriela@uniffy.io" },
+    { "email": "monika@uniffy.io", "username": "monika", "full_name": "Monika Ilieva", "job_title": "Customer Success Manager", "department": "Customer Success", "office_location": "Remote (Vienna)", "start_days_ago": 284, "manager": "valentin@uniffy.io" },
+    { "email": "kiril@uniffy.io", "username": "kiril", "full_name": "Kiril Bonev", "job_title": "Implementation Lead", "department": "Customer Success", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 451, "manager": "gabriela@uniffy.io" },
+    { "email": "zornitsa@uniffy.io", "username": "zornitsa", "full_name": "Zornitsa Baleva", "job_title": "Implementation Engineer", "department": "Customer Success", "office_location": "Sofia HQ - Floor 4", "start_days_ago": 228, "manager": "kiril@uniffy.io" },
+    { "email": "asen@uniffy.io", "username": "asen", "full_name": "Asen Kolev", "job_title": "Solutions Engineer", "department": "Customer Success", "office_location": "Remote (Amsterdam)", "start_days_ago": 146, "manager": "kiril@uniffy.io" },
+
+    { "email": "nevena@uniffy.io", "username": "nevena", "full_name": "Nevena Hristova", "job_title": "VP Product", "department": "Product", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 586, "manager": "elena@uniffy.io" },
+    { "email": "todor@uniffy.io", "username": "todor", "full_name": "Todor Raykov", "job_title": "Senior Product Manager", "department": "Product", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 444, "manager": "nevena@uniffy.io" },
+    { "email": "ralitsa@uniffy.io", "username": "ralitsa", "full_name": "Ralitsa Petrova", "job_title": "Product Manager", "department": "Product", "office_location": "Remote (Athens)", "start_days_ago": 238, "manager": "todor@uniffy.io" },
+    { "email": "bozhidar@uniffy.io", "username": "bozhidar", "full_name": "Bozhidar Zlatev", "job_title": "Product Design Lead", "department": "Product", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 410, "manager": "nevena@uniffy.io" },
+    { "email": "slavena@uniffy.io", "username": "slavena", "full_name": "Slavena Todorova", "job_title": "UX Researcher", "department": "Product", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 139, "manager": "bozhidar@uniffy.io" },
+
+    { "email": "despina@uniffy.io", "username": "despina", "full_name": "Despina Vasileva", "job_title": "Head of People", "department": "Operations", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 560, "manager": "maria@uniffy.io" },
+    { "email": "velislav@uniffy.io", "username": "velislav", "full_name": "Velislav Petrov", "job_title": "People Operations Specialist", "department": "Operations", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 214, "manager": "despina@uniffy.io" },
+    { "email": "rumyana@uniffy.io", "username": "rumyana", "full_name": "Rumyana Dimitrova", "job_title": "Finance Lead", "department": "Operations", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 528, "manager": "maria@uniffy.io" },
+    { "email": "iliyan@uniffy.io", "username": "iliyan", "full_name": "Iliyan Stefanov", "job_title": "Finance Analyst", "department": "Operations", "office_location": "Sofia HQ - Floor 5", "start_days_ago": 95, "manager": "rumyana@uniffy.io" }
   ],
   "teams": [
     {
@@ -107,6 +138,143 @@
       "parent": "Sales",
       "lead": "petar@uniffy.io",
       "members": ["petar@uniffy.io", "emil@uniffy.io", "tsveta@uniffy.io", "lyubomir@uniffy.io"]
+    },
+    {
+      "name": "API Platform",
+      "description": "Public API contracts, service boundaries and compatibility",
+      "parent": "Backend Team",
+      "lead": "anton@uniffy.io",
+      "members": ["anton@uniffy.io", "miroslav@uniffy.io", "ivan@uniffy.io", "nikolay@uniffy.io"]
+    },
+    {
+      "name": "Data Services",
+      "description": "Database design, analytics pipelines and data quality",
+      "parent": "Backend Team",
+      "lead": "borislava@uniffy.io",
+      "members": ["borislava@uniffy.io", "radoslav@uniffy.io", "kristina@uniffy.io"]
+    },
+    {
+      "name": "Mobile Applications",
+      "description": "iOS and Android applications",
+      "parent": "Frontend Team",
+      "lead": "nadia@uniffy.io",
+      "members": ["nadia@uniffy.io", "pavel@uniffy.io", "yoana@uniffy.io", "dimitar@uniffy.io"]
+    },
+    {
+      "name": "Design Systems",
+      "description": "Shared interaction patterns, accessibility and visual primitives",
+      "parent": "Frontend Team",
+      "lead": "gergana@uniffy.io",
+      "members": ["gergana@uniffy.io", "bozhidar@uniffy.io", "slavena@uniffy.io"]
+    },
+    {
+      "name": "Reliability Engineering",
+      "description": "Service reliability, capacity and production readiness",
+      "parent": "Infrastructure Team",
+      "lead": "vasil@uniffy.io",
+      "members": ["vasil@uniffy.io", "lora@uniffy.io", "milena@uniffy.io"]
+    },
+    {
+      "name": "Cloud Operations",
+      "description": "Hosted fleet operations and deployment automation",
+      "parent": "Infrastructure Team",
+      "lead": "georgi@uniffy.io",
+      "members": ["georgi@uniffy.io", "hristo@uniffy.io", "kamen@uniffy.io"]
+    },
+    {
+      "name": "Security Engineering",
+      "description": "Product security, threat modelling and incident readiness",
+      "parent": "Infrastructure Team",
+      "lead": "kamen@uniffy.io",
+      "members": ["kamen@uniffy.io", "georgi@uniffy.io", "milena@uniffy.io"]
+    },
+    {
+      "name": "Quality Engineering",
+      "description": "Release qualification, automated regression and device coverage",
+      "parent": "Engineering",
+      "lead": "stoyan@uniffy.io",
+      "members": ["stoyan@uniffy.io", "radina@uniffy.io", "eve@uniffy.io"]
+    },
+    {
+      "name": "Product",
+      "description": "Product strategy, discovery and experience design",
+      "lead": "nevena@uniffy.io",
+      "members": ["nevena@uniffy.io", "todor@uniffy.io", "ralitsa@uniffy.io", "bozhidar@uniffy.io"]
+    },
+    {
+      "name": "Product Management",
+      "description": "Roadmaps, discovery and delivery outcomes",
+      "parent": "Product",
+      "lead": "todor@uniffy.io",
+      "members": ["todor@uniffy.io", "ralitsa@uniffy.io"]
+    },
+    {
+      "name": "Product Design",
+      "description": "Product design and user research",
+      "parent": "Product",
+      "lead": "bozhidar@uniffy.io",
+      "members": ["bozhidar@uniffy.io", "slavena@uniffy.io", "gergana@uniffy.io"]
+    },
+    {
+      "name": "Customer Success",
+      "description": "Customer adoption, support and implementation",
+      "lead": "gabriela@uniffy.io",
+      "members": ["gabriela@uniffy.io", "alexandar@uniffy.io", "valentin@uniffy.io", "kiril@uniffy.io"]
+    },
+    {
+      "name": "Customer Support",
+      "description": "Customer support and incident communication",
+      "parent": "Customer Success",
+      "lead": "alexandar@uniffy.io",
+      "members": ["alexandar@uniffy.io", "simona@uniffy.io", "denitsa@uniffy.io"]
+    },
+    {
+      "name": "Support Escalations",
+      "description": "Complex technical escalations and handover quality",
+      "parent": "Customer Support",
+      "lead": "simona@uniffy.io",
+      "members": ["simona@uniffy.io", "denitsa@uniffy.io", "charlie@uniffy.io"]
+    },
+    {
+      "name": "Customer Success Management",
+      "description": "Adoption plans, account health and renewals",
+      "parent": "Customer Success",
+      "lead": "valentin@uniffy.io",
+      "members": ["valentin@uniffy.io", "monika@uniffy.io"]
+    },
+    {
+      "name": "Professional Services",
+      "description": "Solution design and customer implementation",
+      "parent": "Customer Success",
+      "lead": "kiril@uniffy.io",
+      "members": ["kiril@uniffy.io", "zornitsa@uniffy.io", "asen@uniffy.io"]
+    },
+    {
+      "name": "Implementations",
+      "description": "Workspace rollout and migration delivery",
+      "parent": "Professional Services",
+      "lead": "zornitsa@uniffy.io",
+      "members": ["zornitsa@uniffy.io", "asen@uniffy.io"]
+    },
+    {
+      "name": "Operations",
+      "description": "People, finance and internal operations",
+      "lead": "maria@uniffy.io",
+      "members": ["maria@uniffy.io", "despina@uniffy.io", "rumyana@uniffy.io"]
+    },
+    {
+      "name": "People Operations",
+      "description": "Hiring, onboarding and employee operations",
+      "parent": "Operations",
+      "lead": "despina@uniffy.io",
+      "members": ["despina@uniffy.io", "velislav@uniffy.io"]
+    },
+    {
+      "name": "Finance",
+      "description": "Planning, reporting and purchasing controls",
+      "parent": "Operations",
+      "lead": "rumyana@uniffy.io",
+      "members": ["rumyana@uniffy.io", "iliyan@uniffy.io"]
     }
   ],
   "access_groups": [

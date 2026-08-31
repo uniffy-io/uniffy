@@ -324,7 +324,10 @@ class EventUpdateOperations:
         await self.events.session.refresh(event)
 
         if tag_ids is not None:
-            tag_ops = TagOperations(self.events.session)
+            tag_ops = TagOperations(
+                self.events.session,
+                self.events.search_indexer,
+            )
             await tag_ops.replace_manual_tags(
                 actor_id=user_id,
                 organization_id=organization_id,

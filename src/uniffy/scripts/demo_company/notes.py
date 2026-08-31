@@ -26,7 +26,7 @@ async def seed_notes(
 ) -> DomainResult:
     """Create the folder tree and the notes in it, registering each note's URN."""
     result = DomainResult()
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteOperations(ctx.session, ctx.storage, ctx.search_indexer)
 
     folder_ids: dict[tuple[str, ...], UUID | None] = {
         (): await _ensure_folder(ctx, ops, root_folder, None, result)
@@ -80,7 +80,7 @@ async def apply_note_mentions(
     if ctx.dry_run:
         return 0
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteOperations(ctx.session, ctx.storage, ctx.search_indexer)
     updated = 0
 
     for spec in notes:

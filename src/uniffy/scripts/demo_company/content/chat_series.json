@@ -1,8 +1,8 @@
 [
   {
     "channel": "eng-standup",
-    "occurrences": 50,
-    "start_days_ago": 75,
+    "occurrences": 160,
+    "start_days_ago": 365,
     "every_days": 1,
     "at": "09:02",
     "gap_minutes": 3,
@@ -212,8 +212,8 @@
   },
   {
     "channel": "infra-ops",
-    "occurrences": 50,
-    "start_days_ago": 75,
+    "occurrences": 160,
+    "start_days_ago": 365,
     "every_days": 1,
     "at": "07:45",
     "gap_minutes": 4,
@@ -357,8 +357,8 @@
   },
   {
     "channel": "infra-ops",
-    "occurrences": 10,
-    "start_days_ago": 63,
+    "occurrences": 52,
+    "start_days_ago": 365,
     "every_days": 7,
     "at": "16:20",
     "gap_minutes": 6,
@@ -434,8 +434,8 @@
   },
   {
     "channel": "plovdiv",
-    "occurrences": 40,
-    "start_days_ago": 60,
+    "occurrences": 140,
+    "start_days_ago": 330,
     "every_days": 1,
     "at": "11:35",
     "gap_minutes": 5,
@@ -540,8 +540,8 @@
   },
   {
     "channel": "support",
-    "occurrences": 45,
-    "start_days_ago": 70,
+    "occurrences": 150,
+    "start_days_ago": 365,
     "every_days": 1,
     "at": "18:45",
     "gap_minutes": 4,
@@ -652,8 +652,8 @@
   },
   {
     "channel": "cloud",
-    "occurrences": 40,
-    "start_days_ago": 70,
+    "occurrences": 120,
+    "start_days_ago": 365,
     "every_days": 1,
     "at": "20:10",
     "gap_minutes": 4,
@@ -749,8 +749,8 @@
   },
   {
     "channel": "dogfood",
-    "occurrences": 40,
-    "start_days_ago": 70,
+    "occurrences": 140,
+    "start_days_ago": 365,
     "every_days": 1,
     "at": "17:30",
     "gap_minutes": 5,
@@ -868,8 +868,8 @@
   },
   {
     "channel": "it-support",
-    "occurrences": 40,
-    "start_days_ago": 70,
+    "occurrences": 120,
+    "start_days_ago": 300,
     "every_days": 1,
     "at": "16:05",
     "gap_minutes": 4,
@@ -962,8 +962,8 @@
   },
   {
     "channel": "people-ops",
-    "occurrences": 25,
-    "start_days_ago": 56,
+    "occurrences": 90,
+    "start_days_ago": 300,
     "every_days": 2,
     "at": "15:15",
     "gap_minutes": 5,
@@ -1054,8 +1054,8 @@
   },
   {
     "channel": "procurement",
-    "occurrences": 25,
-    "start_days_ago": 56,
+    "occurrences": 80,
+    "start_days_ago": 300,
     "every_days": 2,
     "at": "14:40",
     "gap_minutes": 5,
@@ -1135,8 +1135,8 @@
   },
   {
     "channel": "sofia-hq",
-    "occurrences": 25,
-    "start_days_ago": 56,
+    "occurrences": 80,
+    "start_days_ago": 300,
     "every_days": 2,
     "at": "12:20",
     "gap_minutes": 4,
@@ -1208,8 +1208,8 @@
   },
   {
     "channel": "security",
-    "occurrences": 20,
-    "start_days_ago": 56,
+    "occurrences": 60,
+    "start_days_ago": 300,
     "every_days": 3,
     "at": "13:10",
     "gap_minutes": 6,
@@ -1281,8 +1281,8 @@
   },
   {
     "channel": "announcements",
-    "occurrences": 9,
-    "start_days_ago": 60,
+    "occurrences": 52,
+    "start_days_ago": 365,
     "every_days": 7,
     "at": "10:30",
     "gap_minutes": 8,
@@ -1342,8 +1342,8 @@
   },
   {
     "channel": "marketing",
-    "occurrences": 18,
-    "start_days_ago": 54,
+    "occurrences": 70,
+    "start_days_ago": 300,
     "every_days": 3,
     "at": "11:50",
     "gap_minutes": 5,
@@ -1396,6 +1396,184 @@
           {
             "from": "charlie@uniffy.io",
             "text": "Support has the answer macros ready for anyone who asks in a ticket."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "company-history",
+    "occurrences": 731,
+    "start_days_ago": 730,
+    "every_days": 1,
+    "weekdays_only": false,
+    "at": "00:00",
+    "gap_minutes": 1,
+    "messages_per_occurrence": 28,
+    "variables": {
+      "customer": [
+        "Northstar Retail",
+        "Blue Harbor Logistics",
+        "Kiteworks Studio",
+        "Danube Health",
+        "Atlas Manufacturing",
+        "Greenline Energy",
+        "Orchid Finance",
+        "Cobalt Research"
+      ],
+      "decision": [
+        "ship behind the organization flag",
+        "keep the PostgreSQL path authoritative",
+        "roll out to the internal workspace first",
+        "hold until the failure mode is documented",
+        "split the change into a reversible migration",
+        "measure another day before changing the limit"
+      ],
+      "metric": [
+        "p95 latency",
+        "activation completion",
+        "search success rate",
+        "message delivery lag",
+        "support resolution time",
+        "upload completion rate"
+      ],
+      "owner": [
+        "Platform",
+        "Application",
+        "Reliability",
+        "Customer Success",
+        "Product",
+        "Security"
+      ],
+      "risk": [
+        "tenant isolation",
+        "slow rollback",
+        "noisy alerts",
+        "stale search projection",
+        "mobile parity",
+        "operator confusion"
+      ],
+      "service": [
+        "authentication",
+        "workspace search",
+        "file processing",
+        "chat delivery",
+        "calendar sync",
+        "agent runtime"
+      ],
+      "status": [
+        "green",
+        "watching",
+        "recovering",
+        "ready for review",
+        "blocked on evidence",
+        "rolling out gradually"
+      ],
+      "workstream": [
+        "onboarding",
+        "permissions",
+        "mobile reliability",
+        "search quality",
+        "self-hosted operations",
+        "enterprise rollout",
+        "incident readiness",
+        "workspace performance"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "admin@uniffy.io",
+            "text": "Operating log {date}: {workstream} is {status}. Today's decision is to {decision}."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Engineering check: {service} is {status}. We are watching {metric} and treating {risk} as the release constraint."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Delivery update for {owner}: the next slice of {workstream} is ready. I will post evidence before handoff."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Customer context from {customer}: the workflow is clear, but {risk} still needs a concrete explanation in the runbook."
+          },
+          {
+            "from": "diana@uniffy.io",
+            "text": "Product note: {customer} validated the {workstream} path. Copy and screenshots will follow the actual behavior."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Reliability pass: {service} remains {status}; alerting is tied to {metric}, with {owner} holding the response."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Closing {short_date}: owner is {owner}, risk is {risk}, and the recorded decision is to {decision}."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "viktor@uniffy.io",
+            "text": "Architecture log {date}: {service} is {status}. Keep the boundary small and {decision}."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "The {owner} review found one concern around {risk}. No rollout until the invariant is visible in code and metrics."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Implementation update: {workstream} passed the normal path. I am exercising degraded {service} behavior next."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Support signal from {customer}: {metric} improved, while the explanation for {risk} still needs work."
+          },
+          {
+            "from": "diana@uniffy.io",
+            "text": "Release note draft for {workstream} uses the measured {metric}; there are no claims we cannot reproduce."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Operational status: {service} is {status}. {owner} owns follow-up and the rollback remains available."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Decision record {short_date}: {decision}; revisit when {metric} changes or {risk} is removed."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "elena@uniffy.io",
+            "text": "Company log {date}: {workstream} remains the priority. The customer outcome is more important than activity volume."
+          },
+          {
+            "from": "martin@uniffy.io",
+            "text": "Commercial context: {customer} asked for clarity on {risk}; {owner} has the factual answer and timeline."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Technical status for {service}: {status}. The decision is to {decision}, with {metric} as the check."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "The {workstream} implementation is staged. I have kept rollback separate from cleanup so it stays usable."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "People and support review: {owner} has coverage, and {customer} can follow the documented path without escalation."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Risk review: {risk} is explicit, {service} is {status}, and alerts are keyed to {metric}."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "End of day {short_date}: {owner} continues, {customer} gets the next update, and we {decision}."
           }
         ]
       }

@@ -28,7 +28,7 @@ class EventTagOperations:
         target_event_id: UUID,
     ) -> None:
         """Copy manual tag assignments from one event URN to another."""
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagOperations(self.session, self.events.search_indexer)
         source_urn = build_content_urn(self.content_type, source_event_id)
         target_urn = build_content_urn(self.content_type, target_event_id)
         bulk = await tag_ops.get_for_urns(

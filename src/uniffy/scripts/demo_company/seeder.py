@@ -8,10 +8,11 @@ from pathlib import Path
 
 from loguru import logger
 
-from uniffy.core.search import SearchIndexer
+from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.storage import ObjectStorage
 from uniffy.infrastructure.database.session import open_session
 from uniffy.scripts.demo_company.agents import seed_agents
+from uniffy.scripts.demo_company.bookmarks import seed_bookmarks
 from uniffy.scripts.demo_company.chat import seed_chat
 from uniffy.scripts.demo_company.context import (
     DemoContext,
@@ -34,6 +35,7 @@ from uniffy.scripts.demo_company.people import (
 )
 from uniffy.scripts.demo_company.projects import seed_projects
 from uniffy.scripts.demo_company.rooms import seed_rooms
+from uniffy.scripts.demo_company.timeline import apply_demo_timeline
 
 logger = logger.bind(component="scripts.demo_company.seeder")
 
@@ -47,6 +49,7 @@ class DemoDomain(StrEnum):
     EVENTS = "events"
     PROJECTS = "projects"
     CHAT = "chat"
+    BOOKMARKS = "bookmarks"
 
 
 DOMAINS = tuple(DemoDomain)
@@ -55,6 +58,7 @@ DOMAINS = tuple(DemoDomain)
 async def seed_demo_company(
     *,
     storage: ObjectStorage,
+    search: WorkspaceSearch,
     search_indexer: SearchIndexer,
     content_dir: Path | None = None,
     org_slug: str | None = None,
@@ -79,10 +83,12 @@ async def seed_demo_company(
         ctx = DemoContext(
             session=session,
             storage=storage,
+            search=search,
             search_indexer=search_indexer,
             organization_id=organization.id,
             actor_id=actor.id,
             timezone=content.manifest.timezone,
+            history_days=content.manifest.history_days,
             anchor=anchor_from_date(anchor_date, content.manifest.timezone),
             now=datetime.now(UTC),
             dry_run=dry_run,
@@ -160,6 +166,13 @@ async def _run_domains(
         report.results["chat"] = await seed_chat(
             ctx, content.chat, registry, demo_user_id=demo_user_id
         )
+
+    if not ctx.dry_run:
+        domains = {domain.value for domain in only}
+        await apply_demo_timeline(ctx, content, domains)
+
+    if DemoDomain.BOOKMARKS in only:
+        report.results["bookmarks"] = await seed_bookmarks(ctx)
 
 
 def _log_report(report: SeedReport, *, dry_run: bool) -> None:

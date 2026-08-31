@@ -45,7 +45,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python -m uniffy.scripts.demo_company",
         description="Seed an organization with a demo knowledge base: users, "
-        "agents, notes, files, rooms, calendar events, projects and chat.",
+        "agents, notes, files, rooms, calendar events, projects, chat and bookmarks.",
     )
     parser.add_argument(
         "--content-dir",
@@ -127,6 +127,7 @@ async def main() -> None:
     try:
         await seed_demo_company(
             storage=storage,
+            search=search,
             search_indexer=search_indexer,
             content_dir=args.content_dir,
             org_slug=args.org_slug,

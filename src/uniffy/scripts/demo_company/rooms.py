@@ -24,7 +24,7 @@ async def seed_rooms(
     if not rooms:
         return result
 
-    ops = RoomOperations(ctx.session)
+    ops = RoomOperations(ctx.session, ctx.search_indexer)
     existing_ids = {
         row.name: row.id
         for row in (

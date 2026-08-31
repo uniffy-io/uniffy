@@ -1,0 +1,41 @@
+[
+  {
+    "folder": "Engineering Decisions",
+    "count": 40,
+    "filename": "adr-{sequence}.md",
+    "description": "Archived architecture decision {sequence} for {area}.",
+    "tags": ["archive", "engineering"],
+    "variables": {
+      "area": ["authentication", "search", "realtime", "storage", "calendar", "chat", "agents", "permissions"],
+      "status": ["Accepted", "Superseded", "Accepted", "Accepted", "Under review"],
+      "owner": ["Platform", "Backend", "Infrastructure", "Frontend", "Security"]
+    },
+    "content": "# Architecture Decision {sequence}\n\nStatus: {status}\nOwner: {owner}\nArea: {area}\n\n## Context\n\nThis record captures the constraints, alternatives, and rollout checks used for the {area} decision.\n\n## Decision\n\nKeep the boundary explicit, validate both hosted and self-hosted operation, and preserve a measurable rollback path.\n\n## Follow-up\n\nReview operational evidence at the next quarterly architecture review.\n"
+  },
+  {
+    "folder": "Operations Reviews",
+    "count": 35,
+    "filename": "weekly-operations-{sequence}.md",
+    "description": "Weekly operations review {sequence} covering {service}.",
+    "tags": ["archive", "infra"],
+    "variables": {
+      "service": ["API", "realtime", "search", "object storage", "mail", "calls", "workers"],
+      "health": ["within budget", "watch", "within budget", "improving"],
+      "owner": ["Infrastructure", "Platform", "Backend", "Support"]
+    },
+    "content": "# Weekly Operations Review {sequence}\n\nService: {service}\nHealth: {health}\nOwner: {owner}\n\n## Reliability\n\nThe service stayed inside its published availability and latency objectives. Follow-up work remains linked from the operations board.\n\n## Capacity\n\nCurrent headroom is sufficient for the next release window. Growth assumptions and rollback triggers were checked.\n\n## Actions\n\nThe owning team will verify dashboards, alerts, and the recovery runbook before the next review.\n"
+  },
+  {
+    "folder": "Customer Success Reports",
+    "count": 35,
+    "filename": "account-health-{sequence}.csv",
+    "description": "Synthetic account-health snapshot {sequence} for demo list and search coverage.",
+    "tags": ["archive", "onboarding"],
+    "variables": {
+      "health": ["green", "green", "yellow", "green", "red"],
+      "segment": ["startup", "growth", "enterprise", "self-hosted"],
+      "stage": ["onboarding", "adoption", "renewal", "expansion"]
+    },
+    "content": "account,segment,stage,health,open_actions\nDemo Account {sequence},{segment},{stage},{health},{index}\n"
+  }
+]

@@ -82,7 +82,7 @@ class EventDeleteOperations:
         await EventBookingOperations(self.session).cancel(event_id)
 
         if permanent:
-            tag_ops = TagOperations(self.session)
+            tag_ops = TagOperations(self.session, self.events.search_indexer)
             await tag_ops.unassign_all_for_urn(
                 actor_id=user_id,
                 organization_id=organization_id,
