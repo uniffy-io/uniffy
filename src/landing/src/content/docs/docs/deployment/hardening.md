@@ -85,4 +85,4 @@ The backend serves an unauthenticated Prometheus endpoint at `/metrics`. The cha
 ## See also
 
 - [Configure Uniffy](/docs/deployment/configure/)
-- [Architecture](/docs/deployment/architecture/)
+- [System Architecture](/docs/deployment/system-architecture/)

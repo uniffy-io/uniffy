@@ -29,7 +29,7 @@ Uniffy never calls home, fetches nothing from third party CDNs at runtime, and k
 - [Upgrades](/docs/deployment/upgrades/): pinsets, forward only migrations, and the honest rollback story.
 - [Backups and Restore](/docs/deployment/backups/): continuous Postgres backups to S3, point in time recovery, the master key ritual.
 - [Configure Uniffy](/docs/deployment/configure/): every environment variable.
-- [Architecture](/docs/deployment/architecture/): services, data stores, scaling, and ports.
+- [System Architecture](/docs/deployment/system-architecture/): services, data stores, scaling, and ports.
 - [Harden the Edge](/docs/deployment/hardening/): lock the operator API to your private network.
 - [Behind an Edge](/docs/deployment/edges/): Cloudflare, CDNs, and corporate load balancers in front of Uniffy.
 - [Account Recovery](/docs/deployment/recovery/): the break glass command for a locked out admin.

@@ -1,8 +1,8 @@
 ---
-title: Architecture
-description: How Uniffy is put together. Services, data stores, network topology, worker fleets, multi-tenancy, permissions, encryption, search, and calls.
+title: System Architecture
+description: What a running Uniffy deployment is made of. Services, data stores, network topology, worker fleets, sizing, ports, and what an operator must know to run and debug it.
 sidebar:
-  label: Architecture
+  label: System Architecture
   order: 6
 ---
 

@@ -68,7 +68,7 @@ Envoy Gateway owns the Gateway API CRDs; the STUNner operator is configured to s
 
 Four decisions. Everything else is a value with a sane default.
 
-**Postgres.** Bundled by default: the chart creates a CloudNativePG cluster with three instances. To bring your own instead, it must be PostgreSQL 18 with the `pg_trgm`, `uuid-ossp`, and `unaccent` extensions available, and enough connections. Each backend or worker pod holds up to 100; the budget formula is in [Architecture](/docs/deployment/architecture/).
+**Postgres.** Bundled by default: the chart creates a CloudNativePG cluster with three instances. To bring your own instead, it must be PostgreSQL 18 with the `pg_trgm`, `uuid-ossp`, and `unaccent` extensions available, and enough connections. Each backend or worker pod holds up to 100; the budget formula is in [System Architecture](/docs/deployment/system-architecture/).
 
 **Gateway.** The chart creates its own Gateway by default. If you already run Envoy Gateway with a shared Gateway, point the chart at it with a parent reference instead.
 
@@ -81,7 +81,7 @@ kubectl -n uniffy create secret tls uniffy-tls \
 
 The certificate must be the full chain. Leaf only files fail on phones and corporate networks.
 
-**Sizing.** Defaults: three backend replicas, three of each worker fleet. Valkey and Meilisearch run as singletons and scale vertically; their ceilings and every other scaling lever are in [Architecture](/docs/deployment/architecture/).
+**Sizing.** Defaults: three backend replicas, three of each worker fleet. Valkey and Meilisearch run as singletons and scale vertically; their ceilings and every other scaling lever are in [System Architecture](/docs/deployment/system-architecture/).
 
 ## Create the secret
 
@@ -201,7 +201,7 @@ config:
   AUDIT_EVENTS_FILE_UPLOADED: "true"
 ```
 
-One family deserves respect before you touch it: `DB_POOL_SIZE` and `DB_MAX_OVERFLOW` multiply across every backend and worker pod into your Postgres connection budget. The formula and the defaults are in [Architecture](/docs/deployment/architecture/); raise replicas or pool sizes with the formula open, not from memory.
+One family deserves respect before you touch it: `DB_POOL_SIZE` and `DB_MAX_OVERFLOW` multiply across every backend and worker pod into your Postgres connection budget. The formula and the defaults are in [System Architecture](/docs/deployment/system-architecture/); raise replicas or pool sizes with the formula open, not from memory.
 
 ## Verify
 
@@ -217,7 +217,7 @@ The chart's test suite checks the pieces that fail quietly: the h2c path to the 
 
 - [Upgrades](/docs/deployment/upgrades/): pinsets, the maintenance window, and why the Postgres dump comes first.
 - [Backups and Restore](/docs/deployment/backups/): two things are non negotiable, Postgres and `APP_MASTER_KEY`. Turn on the continuous S3 backups the same day you install; the page has the four values it takes.
-- Monitoring: the chart ships ServiceMonitors for the backend and both worker fleets. The metrics and the alert starting points are in [Architecture](/docs/deployment/architecture/).
+- Monitoring: the chart ships ServiceMonitors for the backend and both worker fleets. The metrics and the alert starting points are in [System Architecture](/docs/deployment/system-architecture/).
 - [Harden the Edge](/docs/deployment/hardening/): one chart value keeps the operator API off the internet. Do it the same week.
 
 ## Private registries and isolated clusters
