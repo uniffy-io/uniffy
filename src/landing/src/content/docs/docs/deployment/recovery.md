@@ -3,7 +3,7 @@ title: Account Recovery
 description: Disable two factor authentication on a user account when no admin can perform the reset from inside the app. Self hosted only, command line, audit logged.
 sidebar:
   label: Account Recovery
-  order: 4
+  order: 9
 ---
 
 When a user loses their authenticator and there is nobody left who can reset two factor authentication from inside the app, you can disable it with a single command on the host running Uniffy. This page is for self hosted operators. The command does not exist on the hosted product.
@@ -28,37 +28,6 @@ The command is gated behind an environment variable so it does not exist in cont
 
 Set the variable inline for the single invocation. Do not bake it into the image and do not commit it to your deployment manifests. The whole point is that you have to consciously enable it.
 
-## Docker
-
-If you ship Uniffy with Docker Compose or a plain `docker run`, exec into the running backend container with the variable set for the one call.
-
-```bash
-docker exec \
-  -e ENABLE_BREAK_GLASS_CLI=1 \
-  -it uniffy-backend \
-  python -m uniffy --mfa-reset \
-    --user-email alice@example.com \
-    --reason "device lost, ticketed as INC-4821"
-```
-
-Replace `uniffy-backend` with the container name from your compose file or `docker ps` output. The `-it` is for the confirmation prompt. Pass `--yes` if you are scripting the call.
-
-If you prefer a one shot container instead of exec, run a fresh container with the same image and environment, but point the entrypoint at the command directly. This is useful when the running backend container is unhealthy and `docker exec` is failing.
-
-```bash
-docker run \
-  --rm \
-  --env-file ./.env \
-  -e ENABLE_BREAK_GLASS_CLI=1 \
-  -it \
-  ghcr.io/uniffy-io/uniffy:latest \
-  python -m uniffy --mfa-reset \
-    --user-email alice@example.com \
-    --reason "device lost, ticketed as INC-4821"
-```
-
-The fresh container needs the same database, Valkey, and master key configuration that the backend uses. The simplest path is to reuse the same `.env` file with `--env-file`. The `--rm` flag removes the container after the command exits.
-
 ## Kubernetes
 
 In Kubernetes you exec into a running backend pod. Pick any one. They all share the same database and the reset is a single transaction.
@@ -75,7 +44,7 @@ kubectl exec \
 
 The `env` shim sets the variable for the single command without touching the pod's environment. Replace the namespace and deployment name with what you use. Pass `--yes` to skip the confirmation prompt if you are running this from a script or a runbook automation.
 
-If the deployment is unhealthy and no backend pod is ready to exec into, run a one shot Job with the same image and config. This is the Kubernetes equivalent of the standalone `docker run` form above.
+If the deployment is unhealthy and no backend pod is ready to exec into, run a one shot Job with the same image and config.
 
 ```yaml
 apiVersion: batch/v1
@@ -132,7 +101,7 @@ Tell the user what you did and why. The out of band email that org admin and pla
 
 ## Disable the command afterward
 
-Unset `ENABLE_BREAK_GLASS_CLI` or remove the env file entry. The command should not be reachable by accident. If you used a one shot Kubernetes Job, delete the manifest. If you used `docker exec`, the inline env value is already gone with the shell.
+Unset `ENABLE_BREAK_GLASS_CLI` or remove the env file entry. The command should not be reachable by accident. If you used a one shot Job, delete the manifest. If you used `kubectl exec`, the inline env value is already gone with the shell.
 
 The shell history is the other place to clean up. The reason text often contains a ticket number or a brief description, neither of which need to live in your shell history forever. `history -d` on bash or the equivalent on your shell of choice.
 
