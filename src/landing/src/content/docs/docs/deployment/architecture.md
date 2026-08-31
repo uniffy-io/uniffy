@@ -3,7 +3,7 @@ title: Architecture
 description: How Uniffy is put together. Services, data stores, network topology, worker fleets, multi-tenancy, permissions, encryption, search, and calls.
 sidebar:
   label: Architecture
-  order: 2
+  order: 6
 ---
 
 This page describes how Uniffy runs in production. Read it before sizing infrastructure, planning an upgrade, or debugging an incident.
@@ -34,9 +34,6 @@ This page describes how Uniffy runs in production. Read it before sizing infrast
                 |                  |     LiveKit SFU     |
                 +----------------->|   (media plane)     |
                                    +---------------------+
-                                   +---------------------+
-                                   |  coturn (optional)  |
-                                   +---------------------+
 ```
 
 The control plane is the **backend**. The two **worker fleets** consume queues from Valkey and do background work. Real-time chat presence and notifications fan out through Valkey pub/sub. Calls media never touches the backend; it flows directly between clients and LiveKit.
@@ -52,8 +49,7 @@ The control plane is the **backend**. The two **worker fleets** consume queues f
 | Meilisearch | Search engine | Typo-tolerant full-text index for universal `@` mentions and search. |
 | Valkey | Redis-compatible KV | ARQ queue, ops cache, pub/sub channels. |
 | S3-compatible storage | Object store | File uploads, attachments, thumbnails. Pluggable: AWS S3, R2, B2, MinIO, RustFS. |
-| LiveKit | SFU | Audio and video calls. Forwards media between participants. |
-| coturn | TURN relay | Optional. NAT traversal for WebRTC when direct paths fail. |
+| LiveKit | SFU | Audio and video calls. Forwards media between participants. NAT traversal via its embedded TURN. |
 | Frontend | Vite + React 19 | Single-page app served as static assets. |
 | Mobile | Expo + React Native | iOS and Android client. Hits the same RPC endpoints. |
 | Landing + docs | Astro + Starlight | Marketing site and these docs. |
@@ -133,7 +129,7 @@ LiveKit uses a separate Valkey database (`LIVEKIT_VALKEY_DATABASE=1` by default)
 
 ### Object storage
 
-Any S3-compatible service. Backend signs PUT URLs for direct browser-to-storage uploads; the file content never traverses the backend. Files are addressed by `(bucket, key)` and tracked in Postgres for permissions and search indexing.
+Any S3-compatible service. Every upload and download flows through the backend, which enforces permissions on each request; browsers never talk to the storage endpoint. Keep it on a private network, reachable from the backend and workers only. Files are addressed by `(bucket, key)` and tracked in Postgres for permissions and search indexing.
 
 ## Multi-tenancy
 
@@ -196,9 +192,9 @@ Clients use `LIVEKIT_WS_URL` to reach LiveKit's signaling. The backend uses `LIV
 
 ### TURN relay
 
-Most browsers reach LiveKit's media ports directly. Behind symmetric NATs (some hotel WiFi, some enterprise networks), they cannot. `coturn` is an optional TURN relay that proxies media when direct paths fail. Off by default; bring up with the `calls-turn` profile when you see WebRTC connectivity errors in production.
+Most browsers reach LiveKit's media ports directly. Behind symmetric NATs (some hotel WiFi, some enterprise networks), they cannot. LiveKit's embedded TURN server (UDP 3478) handles that fallback by default, with nothing to configure.
 
-The backend mints TURN credentials via the REST API pattern: `username=<expiry_ts>:<user_id>`, `password=base64(HMAC-SHA1(shared_secret, username))`. TTL should match the LiveKit JWT.
+Setting `TURN_SERVER_URLS` switches to relayed media: all media flows through an external TURN gateway, and the backend mints per user ephemeral credentials via the TURN REST pattern: `username=<expiry_ts>:<user_id>`, `password=base64(HMAC-SHA1(shared_secret, username))`. See the TURN relay section in [Configure Uniffy](/docs/deployment/configure/).
 
 ## Audit log
 
@@ -299,8 +295,7 @@ identity or error context.
 | 9000 | Object storage (S3) | Local dev with RustFS. AWS/R2/B2 use provider's endpoints. |
 | 7880 | LiveKit signaling (TCP/WS) | Browsers connect here. |
 | 7881-7882 | LiveKit media (TCP/UDP) | UDP is preferred; cannot tunnel cleanly over SSH. |
-| 3478 | TURN/STUN | Only when coturn is enabled. |
-| 5349 | TURNS (TLS) | Only when coturn is enabled. |
+| 3478 | TURN/STUN | LiveKit's embedded TURN (UDP). |
 | 5173 | Frontend dev server | Vite dev only. |
 | 4321 | Landing + docs dev server | Astro dev only. |
 
@@ -310,7 +305,7 @@ identity or error context.
 2. Meilisearch comes up. Its healthcheck blocks dependents until it responds.
 3. Backend starts. On boot it runs Alembic migrations, then opens the listener.
 4. Core and egress workers connect to Valkey and start consuming queues.
-5. LiveKit and coturn are independent. They have no dependency on the backend other than shared Valkey for room registry.
+5. LiveKit is independent. It has no dependency on the backend other than shared Valkey for room registry.
 
 A backend pod with healthy `GET /healthz` accepts traffic. Workers report liveness via ARQ's built-in health checks every `WORKER_HEALTH_CHECK_INTERVAL` seconds.
 
