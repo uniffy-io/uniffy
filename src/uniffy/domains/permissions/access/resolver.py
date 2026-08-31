@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.types import ContentRole, ContentType, SubjectType
-from uniffy.domains.calendar.access import resolve_calendar_events
 from uniffy.domains.chat.folders.access import resolve_agent_folders
 from uniffy.domains.chat.resources.access import resolve_chat_resources
 from uniffy.domains.directory.access import resolve_directory_resources
@@ -39,6 +38,7 @@ from uniffy.domains.permissions.metrics import (
     RESOURCE_ACCESS_DURATION,
 )
 from uniffy.domains.projects.access import resolve_tasks
+from uniffy.domains.scheduling.calendar.access import resolve_calendar_events
 from uniffy.domains.tags.access import resolve_tags
 
 MAX_RESOURCE_BATCH = 300

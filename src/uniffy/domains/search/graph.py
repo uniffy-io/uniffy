@@ -13,7 +13,7 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.domains.calendar.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
 GRAPH_MAX_ROWS_PER_TYPE = 1000
 GRAPH_MAX_REFERENCES_PER_SOURCE = 50

@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import delete
 
 from uniffy.core.models.rooms.room import Room
-from uniffy.domains.rooms.operations import RoomOperations
+from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -17,7 +17,7 @@ async def test_room_update_publishes_cleared_fields(
     async def capture(organization_id, urn, changes):
         published.append((urn, dict(changes)))
 
-    monkeypatch.setattr("uniffy.domains.rooms.operations.publish_mention_state", capture)
+    monkeypatch.setattr("uniffy.domains.scheduling.rooms.lifecycle.publish_mention_state", capture)
 
     room_ops = RoomOperations(session, search_indexer)
     try:

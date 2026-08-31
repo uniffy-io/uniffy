@@ -109,7 +109,7 @@ class TestListRoomsExecutor:
         ]
 
         with patch(
-            "uniffy.domains.rooms.operations.RoomOperations.list_rooms",
+            "uniffy.domains.scheduling.rooms.lifecycle.RoomOperations.list_rooms",
             new=AsyncMock(return_value=(rooms, 2)),
         ) as mock_list:
             result = await _execute_list_rooms(
@@ -143,7 +143,7 @@ class TestListRoomsExecutor:
     async def test_empty_result_returns_friendly_message(self) -> None:
         ctx = _ctx()
         with patch(
-            "uniffy.domains.rooms.operations.RoomOperations.list_rooms",
+            "uniffy.domains.scheduling.rooms.lifecycle.RoomOperations.list_rooms",
             new=AsyncMock(return_value=([], 0)),
         ):
             result = await _execute_list_rooms(ctx, {})
@@ -165,11 +165,11 @@ class TestGetRoomExecutor:
         }
         with (
             patch(
-                "uniffy.domains.rooms.operations.RoomOperations.get_by_id",
+                "uniffy.domains.scheduling.rooms.lifecycle.RoomOperations.get_by_id",
                 new=AsyncMock(return_value=room),
             ),
             patch(
-                "uniffy.domains.rooms.operations.BookingOperations.check_availability",
+                "uniffy.domains.scheduling.rooms.bookings.BookingOperations.check_availability",
                 new=AsyncMock(return_value=[slot]),
             ),
         ):
@@ -201,7 +201,7 @@ class TestListBookingsExecutor:
         ctx = _ctx()
         booking = _make_booking(title="Planning")
         with patch(
-            "uniffy.domains.rooms.operations.BookingOperations.list_bookings",
+            "uniffy.domains.scheduling.rooms.bookings.BookingOperations.list_bookings",
             new=AsyncMock(return_value=([(booking, "Boardroom", "Bob")], 1)),
         ) as mock_list:
             result = await _execute_list_bookings(
@@ -227,7 +227,7 @@ class TestFindAvailableExecutor:
         ctx = _ctx()
         rooms = [_make_room(name="Free Room", capacity=6)]
         with patch(
-            "uniffy.domains.rooms.operations.BookingOperations.find_available_rooms",
+            "uniffy.domains.scheduling.rooms.bookings.BookingOperations.find_available_rooms",
             new=AsyncMock(return_value=rooms),
         ) as mock_find:
             result = await _execute_find_available(
@@ -269,7 +269,7 @@ class TestBookRoomExecutor:
         ctx = _ctx()
         booking = _make_booking(title="Pairing")
         with patch(
-            "uniffy.domains.rooms.operations.BookingOperations.create_booking",
+            "uniffy.domains.scheduling.rooms.bookings.BookingOperations.create_booking",
             new=AsyncMock(return_value=booking),
         ) as mock_create:
             result = await _execute_book_room(
@@ -292,7 +292,7 @@ class TestBookRoomExecutor:
     async def test_conflict_returns_structured_failure(self) -> None:
         ctx = _ctx()
         with patch(
-            "uniffy.domains.rooms.operations.BookingOperations.create_booking",
+            "uniffy.domains.scheduling.rooms.bookings.BookingOperations.create_booking",
             new=AsyncMock(
                 side_effect=ValidationError("room", "Room is already booked for this time slot.")
             ),
@@ -314,7 +314,7 @@ class TestCancelBookingExecutor:
         ctx = _ctx()
         booking = _make_booking(status=BookingStatus.CANCELLED)
         with patch(
-            "uniffy.domains.rooms.operations.BookingOperations.cancel_booking",
+            "uniffy.domains.scheduling.rooms.bookings.BookingOperations.cancel_booking",
             new=AsyncMock(return_value=booking),
         ) as mock_cancel:
             result = await _execute_cancel_booking(ctx, {"booking_id": str(booking.id)})
@@ -332,7 +332,7 @@ class TestCalendarRoomAtomicityPrecheck:
     """
 
     async def test_conflict_aborts_before_event_is_added(self) -> None:
-        from uniffy.domains.calendar.operations import CalendarEventOperations
+        from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
         session = MagicMock()
         session.add = MagicMock()
@@ -352,11 +352,11 @@ class TestCalendarRoomAtomicityPrecheck:
 
         with (
             patch(
-                "uniffy.domains.rooms.operations.RoomOperations.get_by_id",
+                "uniffy.domains.scheduling.rooms.lifecycle.RoomOperations.get_by_id",
                 new=AsyncMock(return_value=room),
             ),
             patch(
-                "uniffy.domains.rooms.queries.check_booking_conflict",
+                "uniffy.domains.scheduling.rooms.queries.check_booking_conflict",
                 new=AsyncMock(return_value=True),
             ),
         ):
@@ -383,7 +383,7 @@ class TestCalendarRoomAtomicityPrecheck:
         assert "CalendarEvent" not in added_types
 
     async def test_inactive_room_aborts_before_event_is_added(self) -> None:
-        from uniffy.domains.calendar.operations import CalendarEventOperations
+        from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
         session = MagicMock()
         session.add = MagicMock()
@@ -397,7 +397,7 @@ class TestCalendarRoomAtomicityPrecheck:
         room = _make_room(status=RoomStatus.MAINTENANCE)
 
         with patch(
-            "uniffy.domains.rooms.operations.RoomOperations.get_by_id",
+            "uniffy.domains.scheduling.rooms.lifecycle.RoomOperations.get_by_id",
             new=AsyncMock(return_value=room),
         ):
             raised = None

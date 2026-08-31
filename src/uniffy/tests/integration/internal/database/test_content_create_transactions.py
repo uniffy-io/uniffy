@@ -19,8 +19,8 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.types import AccessMode, ContentRole, RoomType, generate_id
-from uniffy.domains.calendar.operations import CalendarEventOperations
+from uniffy.core.types import AccessMode, BookingStatus, ContentRole, RoomType, generate_id
+from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 from uniffy.domains.files.operations import FileOperations
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.projects.operations import ProjectOperations
@@ -258,7 +258,7 @@ async def test_calendar_event_and_room_booking_roll_back_together_on_late_confli
     try:
         with (
             patch(
-                "uniffy.domains.rooms.queries.check_booking_conflict",
+                "uniffy.domains.scheduling.rooms.queries.check_booking_conflict",
                 new=AsyncMock(side_effect=[False, True]),
             ),
             pytest.raises(ValidationError, match="already booked"),
@@ -295,4 +295,81 @@ async def test_calendar_event_and_room_booking_roll_back_together_on_late_confli
         await session.execute(delete(RoomBooking).where(RoomBooking.room_id == room_id))
         await _delete_calendar(session, calendar_id)
         await session.execute(delete(Room).where(Room.id == room_id))
+        await session.commit()
+
+
+async def test_calendar_event_replaces_and_cancels_room_bookings(
+    session,
+    env,
+    search_indexer,
+) -> None:
+    calendar = Calendar(
+        organization_id=env.org_id,
+        owner_id=env.admin_id,
+        name=f"Booking lifecycle calendar {generate_id().hex[:10]}",
+    )
+    rooms = [
+        Room(
+            organization_id=env.org_id,
+            owner_id=env.admin_id,
+            name=f"Booking lifecycle room {generate_id().hex[:10]}",
+            room_type=RoomType.MEETING_ROOM,
+            access_mode=AccessMode.OPEN_TO_ORG,
+            baseline_role=ContentRole.VIEWER,
+        )
+        for _ in range(2)
+    ]
+    session.add_all([calendar, *rooms])
+    await session.commit()
+    calendar_id = calendar.id
+    room_ids = [room.id for room in rooms]
+    start_time = datetime.now(UTC) + timedelta(days=2)
+    operations = CalendarEventOperations(session, search_indexer)
+
+    try:
+        event = await operations.create(
+            user_id=env.admin_id,
+            organization_id=env.org_id,
+            title=f"Booking lifecycle event {generate_id().hex[:10]}",
+            start_time=start_time,
+            end_time=start_time + timedelta(hours=1),
+            calendar_id=calendar.id,
+            room_id=rooms[0].id,
+        )
+        first_booking = await session.scalar(
+            select(RoomBooking).where(
+                RoomBooking.event_id == event.id,
+                RoomBooking.room_id == rooms[0].id,
+            )
+        )
+        assert first_booking is not None
+        assert first_booking.status == BookingStatus.CONFIRMED
+
+        await operations.update(
+            user_id=env.admin_id,
+            organization_id=env.org_id,
+            event_id=event.id,
+            room_id=str(rooms[1].id),
+        )
+        await session.refresh(first_booking)
+        replacement = await session.scalar(
+            select(RoomBooking).where(
+                RoomBooking.event_id == event.id,
+                RoomBooking.room_id == rooms[1].id,
+            )
+        )
+        assert first_booking.status == BookingStatus.CANCELLED
+        assert replacement is not None
+        assert replacement.status == BookingStatus.CONFIRMED
+
+        await operations.delete(env.admin_id, env.org_id, event.id)
+        await session.refresh(replacement)
+        assert replacement.status == BookingStatus.CANCELLED
+    finally:
+        await session.rollback()
+        await session.execute(
+            delete(RoomBooking).where(RoomBooking.room_id.in_(room_ids))
+        )
+        await _delete_calendar(session, calendar_id)
+        await session.execute(delete(Room).where(Room.id.in_(room_ids)))
         await session.commit()

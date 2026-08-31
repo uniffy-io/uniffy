@@ -116,8 +116,6 @@ from uniffy.domains.auth.interceptors import AuthenticationInterceptor
 from uniffy.domains.auth.mfa.handlers import MfaHandlers
 from uniffy.domains.auth.mfa.operations import MfaOperations
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
-from uniffy.domains.calendar.events.registration import register_calendar_content
-from uniffy.domains.calendar.service import CalendarServiceImpl
 from uniffy.domains.calls.config import LiveKitConfigError
 from uniffy.domains.calls.handlers import CallHandlers
 from uniffy.domains.calls.webhook import LiveKitWebhookProvider
@@ -158,7 +156,9 @@ from uniffy.domains.platform.support.service import SupportServiceImpl
 from uniffy.domains.presence.handlers import PresenceHandlers
 from uniffy.domains.projects.registration import register_project_content
 from uniffy.domains.projects.service import ProjectsServiceImpl
-from uniffy.domains.rooms.service import RoomsServiceImpl
+from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
+from uniffy.domains.scheduling.calendar.service import CalendarServiceImpl
+from uniffy.domains.scheduling.rooms.service import RoomsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.handlers import SettingsHandlers
 from uniffy.domains.tags.service import TagsServiceImpl

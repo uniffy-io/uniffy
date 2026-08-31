@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from uniffy.core.types import EventStatus, EventTransparency, RecurrencePattern
 from uniffy.domains.agents.tools.builtin.args import parse_uuid, parse_uuid_list
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
-from uniffy.domains.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
+from uniffy.domains.scheduling.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
 from uniffy.domains.tags.operations import TagOperations
 
 _RECURRENCE_VALUES = ("NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "YEARLY")
@@ -152,7 +152,7 @@ async def _hidden_event_master_ids(ctx: ToolContext, events: list) -> set[UUID]:
 
 async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
     """List calendar events in a date range."""
-    from uniffy.domains.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     start_str = args.get("start_date", "")
     end_str = args.get("end_date", "")
@@ -236,7 +236,7 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
     """Read a single calendar event with full details including attendees."""
-    from uniffy.domains.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     event_id_str = args.get("event_id", "")
     if not event_id_str:
@@ -283,8 +283,8 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
     """Create a new calendar event."""
-    from uniffy.domains.calendar import queries as cal_queries
-    from uniffy.domains.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar import queries as cal_queries
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     title = args.get("title", "")
     if not title:
@@ -429,7 +429,7 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
     """Update a calendar event."""
-    from uniffy.domains.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     event_id_str = args.get("event_id", "")
     if not event_id_str:
@@ -519,7 +519,7 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_delete_event(ctx: ToolContext, args: dict) -> ToolResult:
     """Delete a calendar event."""
-    from uniffy.domains.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     event_id_str = args.get("event_id", "")
     if not event_id_str:
@@ -542,7 +542,7 @@ async def _execute_delete_event(ctx: ToolContext, args: dict) -> ToolResult:
 async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
     """Add attendees to a calendar event."""
     from uniffy.core.models.shared import AttendeeRole
-    from uniffy.domains.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     event_id_str = args.get("event_id", "")
     if not event_id_str:
@@ -598,7 +598,7 @@ async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
     """Remove attendees from a calendar event."""
-    from uniffy.domains.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     event_id_str = args.get("event_id", "")
     if not event_id_str:
@@ -640,7 +640,7 @@ async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
 async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
     """Update the current user's attendance status for an event."""
     from uniffy.core.models.shared import AttendeeStatus
-    from uniffy.domains.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     event_id_str = args.get("event_id", "")
     if not event_id_str:
@@ -678,7 +678,7 @@ async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_categories(ctx: ToolContext, args: dict) -> ToolResult:
     """List available event categories."""
-    from uniffy.domains.calendar.operations import CategoryOperations
+    from uniffy.domains.scheduling.calendar.operations import CategoryOperations
 
     ops = CategoryOperations(ctx.session)
     categories = await ops.list_categories(
@@ -1067,7 +1067,7 @@ def _fmt_local(dt: datetime, tz: ZoneInfo) -> str:
 
 
 async def _execute_get_free_busy(ctx: ToolContext, args: dict) -> ToolResult:
-    from uniffy.domains.calendar.scheduling import get_busy_intervals
+    from uniffy.domains.scheduling.calendar.availability import get_busy_intervals
 
     raw_users = args.get("user_ids")
     if not raw_users or not isinstance(raw_users, list):
@@ -1110,7 +1110,10 @@ async def _execute_get_free_busy(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_find_time(ctx: ToolContext, args: dict) -> ToolResult:
-    from uniffy.domains.calendar.scheduling import get_busy_intervals, suggest_meeting_times
+    from uniffy.domains.scheduling.calendar.availability import (
+        get_busy_intervals,
+        suggest_meeting_times,
+    )
     from uniffy.domains.settings.operations import get_users_scheduling_context
 
     raw_attendees = args.get("attendee_ids")

@@ -18,7 +18,6 @@ from uniffy.core.models.rooms.room import Room
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.calendar.operations import CalendarEventOperations
 from uniffy.domains.files.operations import FileOperations, FolderOperations
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
@@ -27,7 +26,8 @@ from uniffy.domains.projects.search.access import (
     enqueue_project_search_acl_refresh,
     record_project_search_acl_refresh,
 )
-from uniffy.domains.rooms.operations import RoomOperations
+from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
+from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry
 

@@ -10,8 +10,8 @@ from sqlalchemy import select
 
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.rooms.room import Room
-from uniffy.domains.calendar import queries as calendar_queries
-from uniffy.domains.calendar.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar import queries as calendar_queries
+from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 from uniffy.scripts.demo_company.context import (
     DemoContext,
     DomainResult,

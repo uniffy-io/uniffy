@@ -68,12 +68,6 @@ from uniffy.domains.audit.jobs.jobs import (
     PROVISION_AUDIT_PARTITIONS_JOB_TIMEOUT_SECONDS,
     provision_audit_partitions,
 )
-from uniffy.domains.calendar.jobs.contracts import (
-    CALENDAR_JOB_REFS,
-    CALENDAR_SCHEDULED_JOB_REFS,
-    CHECK_CALENDAR_REMINDERS_SCHEDULE,
-)
-from uniffy.domains.calendar.jobs.jobs import check_calendar_reminders
 from uniffy.domains.calls.jobs.contracts import (
     CALLS_JOB_REFS,
     CALLS_SCHEDULED_JOB_REFS,
@@ -200,6 +194,12 @@ from uniffy.domains.projects.jobs.jobs import (
     flush_project_search_acl_refreshes,
     refresh_project_search_acl,
 )
+from uniffy.domains.scheduling.calendar.jobs.contracts import (
+    CALENDAR_JOB_REFS,
+    CALENDAR_SCHEDULED_JOB_REFS,
+    CHECK_CALENDAR_REMINDERS_SCHEDULE,
+)
+from uniffy.domains.scheduling.calendar.jobs.jobs import check_calendar_reminders
 from uniffy.domains.search.jobs.contracts import (
     FLUSH_SEARCH_REMOVALS,
     FLUSH_SEARCH_REMOVALS_SCHEDULE,

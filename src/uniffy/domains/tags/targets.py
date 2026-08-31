@@ -7,12 +7,12 @@ from uniffy.core.errors import NotFoundError
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.types import ContentType
 from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.calendar.operations import CalendarEventOperations
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.files.operations import FileOperations, FolderOperations
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.projects.operations import ProjectOperations, TaskOperations
-from uniffy.domains.rooms.operations import RoomOperations
+from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
+from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 
 
 class TagTargetAccess:

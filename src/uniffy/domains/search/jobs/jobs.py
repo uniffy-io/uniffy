@@ -14,9 +14,9 @@ from uniffy.core.models.projects.task import Task
 from uniffy.core.models.search import SearchRemovalQueue
 from uniffy.core.search.engine import SearchEngineError, search_filter_from_data
 from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer
-from uniffy.domains.calendar.search import refresh_event_search_projection
 from uniffy.domains.notes.search import refresh_note_search_projection
 from uniffy.domains.projects.search.projection import refresh_task_search_projection
+from uniffy.domains.scheduling.calendar.search import refresh_event_search_projection
 from uniffy.infrastructure.database.session import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client
 

@@ -25,7 +25,6 @@ from uniffy.domains.agents.providers.clients import (
     init_provider_invalidation_subscriber,
 )
 from uniffy.domains.audit.jobs.jobs import provision_audit_partitions
-from uniffy.domains.calendar.events.registration import register_calendar_content
 from uniffy.domains.files.registration import register_file_content
 from uniffy.domains.integrations.clients import (
     close_integration_invalidation_subscriber,
@@ -38,6 +37,7 @@ from uniffy.domains.notifications.delivery import (
     build_delivery_adapters,
 )
 from uniffy.domains.projects.registration import register_project_content
+from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage

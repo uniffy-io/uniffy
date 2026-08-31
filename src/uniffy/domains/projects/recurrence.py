@@ -5,7 +5,7 @@ from typing import Any
 
 from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.shared import RecurrencePattern
-from uniffy.domains.calendar.recurrence import _generate_occurrence_dates
+from uniffy.domains.scheduling.calendar.recurrence import _generate_occurrence_dates
 
 
 def parse_recurrence_config(recurrence_rule: str | None) -> dict[str, Any] | None:

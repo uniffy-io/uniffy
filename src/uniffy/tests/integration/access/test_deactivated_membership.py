@@ -38,7 +38,7 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.domains.agents.access import is_agents_builder, require_agents_builder
-from uniffy.domains.calendar.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
 from uniffy.domains.organizations.operations import OrganizationOperations

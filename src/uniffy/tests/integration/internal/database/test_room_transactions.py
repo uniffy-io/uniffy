@@ -24,7 +24,8 @@ from uniffy.core.types import (
 )
 from uniffy.infrastructure.database import open_session
 from uniffy.domains.permissions.members import ContentMembersOperations
-from uniffy.domains.rooms.operations import BookingOperations, RoomOperations
+from uniffy.domains.scheduling.rooms.bookings import BookingOperations
+from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -178,7 +179,7 @@ async def test_room_update_and_delete_survive_projection_failures(
         AsyncMock(side_effect=RuntimeError("search unavailable")),
     )
     monkeypatch.setattr(
-        "uniffy.domains.rooms.operations.publish_mention_state",
+        "uniffy.domains.scheduling.rooms.lifecycle.publish_mention_state",
         AsyncMock(side_effect=RuntimeError("realtime unavailable")),
     )
 
