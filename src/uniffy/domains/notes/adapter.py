@@ -91,7 +91,7 @@ class NoteRealtimeAdapter:
         ydoc: pycrdt.Doc,
         content_id: UUID,
         organization_id: UUID,
-    ) -> None:
+    ) -> bool:
         note = (
             await session.execute(
                 select(Note).where(
@@ -106,7 +106,7 @@ class NoteRealtimeAdapter:
                 f"snapshot for missing or soft-deleted note {content_id}; skipping render",
                 component=LOGGER_COMPONENT,
             )
-            return
+            return False
 
         if note.node_type == NodeType.CANVAS:
             content = ""
@@ -117,17 +117,18 @@ class NoteRealtimeAdapter:
                     f"skipping canvas render for {content_id}: empty YDoc",
                     component=LOGGER_COMPONENT,
                 )
-                return
+                return True
         else:
             content = _render_markdown(ydoc)
             canvas_content = None
 
-        await NoteOperations(session, search_indexer=self.search_indexer).realtime_save(
+        saved = await NoteOperations(session, search_indexer=self.search_indexer).realtime_save(
             organization_id=organization_id,
             note_id=content_id,
             content=content,
             canvas_content=canvas_content,
         )
+        return saved is not None
 
     def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
         """Replace ``Y.Text("markdown")`` with a column write from the legacy

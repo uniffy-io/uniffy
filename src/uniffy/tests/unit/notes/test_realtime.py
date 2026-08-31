@@ -10,14 +10,17 @@ is covered separately by the live-stack harness.
 import asyncio
 import base64
 import time
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import quote
 from uuid import UUID
 
 import pycrdt
 import pytest
+from sqlalchemy.sql.dml import Delete
 
 from uniffy.core.jobs import JobEnqueueOutcome, JobEnqueueResult
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime import ydoc_manager as ydoc_manager_module
 from uniffy.core.realtime.adapter import (
     _adapters,
@@ -32,7 +35,8 @@ from uniffy.core.realtime.auth import (
     origin_is_allowed,
 )
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
-from uniffy.core.realtime.snapshot import SNAPSHOT_MAX_DELAY, SnapshotWriter
+from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
+from uniffy.core.realtime.snapshot import SNAPSHOT_MAX_DELAY, SnapshotWriter, persist_snapshot
 from uniffy.core.realtime.wire import (
     YMessageType,
     YSyncMessageType,
@@ -50,7 +54,6 @@ from uniffy.core.realtime.ydoc_manager import (
 )
 from uniffy.core.types import ContentRole, ContentType, NodeType, generate_id
 from uniffy.domains.notes.adapter import register_note_realtime_adapter
-from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
 
 _conn_id_seq = 0
 
@@ -202,7 +205,7 @@ class _DummyAdapter:
         return None
 
     async def render_and_persist(self, *args, **kwargs):  # type: ignore[no-untyped-def]
-        return None
+        return True
 
 
 class TestAdapterRegistry:
@@ -410,6 +413,38 @@ class TestSnapshotForceFlush:
             enqueue.assert_not_awaited()
 
         await go()
+
+    async def test_missing_target_removes_snapshot_written_by_a_stale_job(self) -> None:
+        ydoc = pycrdt.Doc()
+        ydoc["markdown"] = pycrdt.Text("stale")
+        session = MagicMock()
+        session.execute = AsyncMock()
+        session.commit = AsyncMock()
+        adapter = MagicMock()
+        adapter.render_and_persist = AsyncMock(return_value=False)
+
+        @asynccontextmanager
+        async def fake_open_session():
+            yield session
+
+        with (
+            patch("uniffy.core.realtime.snapshot.open_session", fake_open_session),
+            patch("uniffy.core.realtime.snapshot.get_realtime_adapter", return_value=adapter),
+        ):
+            rendered = await persist_snapshot(
+                ContentType.NOTE,
+                generate_id(),
+                generate_id(),
+                ydoc.get_update(),
+                ydoc.get_state(),
+            )
+
+        assert rendered is False
+        assert session.execute.await_count == 2
+        cleanup = session.execute.await_args_list[1].args[0]
+        assert isinstance(cleanup, Delete)
+        assert cleanup.table.name == RealtimeYjsSnapshot.__tablename__
+        assert session.commit.await_count == 2
 
     async def test_non_force_flush_enqueues(self) -> None:
         async def go() -> None:

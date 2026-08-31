@@ -10,6 +10,7 @@ from uuid import UUID
 
 import pycrdt
 from loguru import logger
+from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
@@ -80,7 +81,25 @@ async def persist_snapshot(
             return False
 
         try:
-            await adapter.render_and_persist(session, ydoc, content_id, organization_id)
+            target_exists = await adapter.render_and_persist(
+                session,
+                ydoc,
+                content_id,
+                organization_id,
+            )
+            if not target_exists:
+                await session.execute(
+                    delete(RealtimeYjsSnapshot).where(
+                        RealtimeYjsSnapshot.content_type == content_type,
+                        RealtimeYjsSnapshot.content_id == content_id,
+                    )
+                )
+                await session.commit()
+                REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
+                    content_type=content_type.value,
+                    reason="target_missing",
+                ).inc()
+                return False
             await session.commit()
         except Exception:
             REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(

@@ -83,7 +83,7 @@ class RealtimeContentAdapter(Protocol):
     content_type: ContentType
     async def authorize(session, user_id, organization_id, content_id) -> ContentRole | None: ...
     async def hydrate_ydoc(session, ydoc, content_id, organization_id) -> None: ...
-    async def render_and_persist(session, ydoc, content_id, organization_id) -> None: ...
+    async def render_and_persist(session, ydoc, content_id, organization_id) -> bool: ...
 ```
 
 The notes adapter lives at `domains/notes/adapter.py`. `factory.create_app` and the core
@@ -95,7 +95,11 @@ Adapter rules:
 - `hydrate_ydoc` is invoked once per process when the snapshot row is empty. Notes dispatches on `node_type`:
   - `NodeType.NOTE` / `TEMPLATE` -> seed `Y.Text("markdown")` with current `note.content`.
   - `NodeType.CANVAS` -> seed `Y.Map "nodes"` + `Y.Array "order"` + `Y.Map "edges"` + `Y.Map "defaults"`. Per-node text fields (`text.content`, `shape.label`, `mindmap.label`) are wrapped as `pycrdt.Text` at seed time - lazy-upgrading them later races concurrent attaches.
-- `render_and_persist` is idempotent. The ARQ job can fire repeatedly with the same state. Reach for `NoteOperations.realtime_save(...)`, which mirrors `autosave()` minus the permission gate + optimistic-version check. Snapshot has no acting user, so mention notifications / inline tags use the note's `owner_id` as the actor.
+- `render_and_persist` is idempotent. The ARQ job can fire repeatedly with the same state. Return
+  `False` when the target row is missing or soft-deleted so a stale queued or idle-eviction flush
+  removes its snapshot instead of recreating orphan state. Reach for `NoteOperations.realtime_save(...)`,
+  which mirrors `autosave()` minus the permission gate + optimistic-version check. Snapshot has no
+  acting user, so mention notifications / inline tags use the note's `owner_id` as the actor.
 
 ---
 
@@ -169,7 +173,7 @@ Failure isolation: multiplexed transport has head-of-line blocking (slow doc can
 ## 7. Snapshot pipeline
 
 - `SnapshotWriter` lives in `core/realtime/snapshot.py`. `schedule(session)` re-arms a 5s per-key debounce, capped by `SNAPSHOT_MAX_DELAY` (30s): once a key's pending window exceeds the cap, the flush runs immediately instead of re-arming, so continuous typing cannot starve persistence. `flush(session)` encodes `ydoc.get_update()` + `ydoc.get_state()` under `session.lock`, base64-wraps, enqueues `save_realtime_snapshot` on the `core` ARQ queue; `flush(session, force=True)` persists in-process via the shared `persist_snapshot()` (UPSERT + render) with no queue dependency. The debounce task must never cancel itself when it is the one flushing (`task is not asyncio.current_task()` guard).
-- The `SAVE_REALTIME_SNAPSHOT` contract lives in `core/realtime/job_contracts.py`; its `save_realtime_snapshot(ctx, content_type, content_id, organization_id, update_b64, state_vector_b64)` handler lives in `core/realtime/jobs.py` and `workers/registry.py` binds the pair to the core fleet. The handler UPSERTs `realtime_yjs_snapshots` (composite PK `(content_type, content_id)`), then calls `adapter.render_and_persist`.
+- The `SAVE_REALTIME_SNAPSHOT` contract lives in `core/realtime/job_contracts.py`; its `save_realtime_snapshot(ctx, content_type, content_id, organization_id, update_b64, state_vector_b64)` handler lives in `core/realtime/jobs.py` and `workers/registry.py` binds the pair to the core fleet. The handler UPSERTs `realtime_yjs_snapshots` (composite PK `(content_type, content_id)`), then calls `adapter.render_and_persist`; a missing target removes the snapshot again so a stale job cannot resurrect it.
 - `_job_id` is `snapshot:{ct}:{id}:{sha256(update_bytes)[:16]}`. Hashing the payload (rather than just the key) is part of the contract - ARQ caches completed job results for `WORKER_KEEP_RESULT` seconds and a static id silently drops every subsequent enqueue. Reusing `snapshot:NOTE:<id>` froze `notes_notes.content` mid-session in an earlier revision.
 - `YDocManager.apply_local_update` AND `_apply_remote_pubsub_update` both call `snapshot_writer.schedule(session)` so the pipeline runs whichever replica receives the edit.
 - `YDocManager._evict_after_idle` force-flushes in-process while the session STAYS registered, then re-checks for attached clients under the global lock before removal. A concurrent acquire finds the live session and never hydrates from the pre-flush snapshot row.
