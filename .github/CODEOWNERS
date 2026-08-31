@@ -1,0 +1,7 @@
+/.github/** @kaibauniffy
+/manage.py @kaibauniffy
+/pyproject.toml @kaibauniffy
+/.gitleaks.toml @kaibauniffy
+/lint/** @kaibauniffy
+/src/ui/.oxlintrc.json @kaibauniffy
+/src/mobile/oxlint.config.ts @kaibauniffy
