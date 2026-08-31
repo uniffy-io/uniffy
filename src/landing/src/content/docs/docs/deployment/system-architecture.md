@@ -1,82 +1,80 @@
 ---
 title: System Architecture
-description: What a running Uniffy deployment is made of. Services, data stores, network topology, worker fleets, sizing, ports, and what an operator must know to run and debug it.
+description: What a running Uniffy deployment is made of. Services, the traffic plane, data stores, worker fleets, sizing, ports, boot order, and what an operator must know to run and debug it.
 sidebar:
   label: System Architecture
   order: 6
 ---
 
-This page describes how Uniffy runs in production. Read it before sizing infrastructure, planning an upgrade, or debugging an incident.
+This page is the map a platform team needs of a running Uniffy. Read it before sizing infrastructure, planning an upgrade, or debugging an incident. How the code inside is organized is not here; this is about processes, ports, and data.
 
 ## Topology at a glance
 
 ```
-        Browser / Mobile
-                |
-                v
-       +-----------------+         +---------------------+
-       |    Backend      |<------->|     PostgreSQL      |
-       |  (FastAPI +     |         +---------------------+
-       |   ConnectRPC,   |         +---------------------+
-       |   Granian)      |<------->|      Meilisearch    |
-       +-----------------+         +---------------------+
-            |    ^   |             +---------------------+
-            |    |   +------------>|       Valkey        |
-            v    |                 |  (queue + cache +   |
-       +---------+--------+        |   pub/sub)          |
-       | Core Worker (ARQ)|<------>+---------------------+
-       +------------------+        +---------------------+
-       +------------------+<------>|  Object storage     |
-       | Egress Worker    |        |  (S3-compatible)    |
-       | (ARQ)            |        +---------------------+
-       +------------------+
-                ^                  +---------------------+
-                |                  |     LiveKit SFU     |
-                +----------------->|   (media plane)     |
-                                   +---------------------+
+                            Internet
+                               |
+               80/443 TCP      |      3478 UDP+TCP
+                    |          |           |
+                    v          |           v
+           +----------------+  |  +-----------------+
+           |  Envoy Gateway |  |  | STUNner Gateway |
+           +----------------+  |  +-----------------+
+             |      |      |             |
+         /   |  /api|      | /livekit    | relayed media
+             v      v      v             v
+      +----------+ +---------+ +--------------------+
+      | Frontend | | Backend | |    LiveKit SFU     |
+      |  (nginx) | |  pods   | | (signaling+media)  |
+      +----------+ +----+----+ +---------+----------+
+                        |                |
+        +--------+------+------+------+  | room registry
+        |        |             |      |  | (valkey db 1)
+        v        v             v      v  v
+   +----------+ +------------+ +----+ +--------+
+   | Postgres | | Meilisearch| | S3 | | Valkey |
+   +----------+ +------------+ +----+ +--------+
+        ^        ^              ^       ^
+        |        |              |       | queue + pub/sub
+      +-+--------+--------------+-------+-+
+      |   Core + egress worker fleets     |
+      +-----------------------------------+
 ```
 
-The control plane is the **backend**. The two **worker fleets** consume queues from Valkey and do background work. Real-time chat presence and notifications fan out through Valkey pub/sub. Calls media never touches the backend; it flows directly between clients and LiveKit.
+Two things enter from the internet and nothing else: HTTP on the Envoy Gateway, calls media on the STUNner gateway. The **backend** is the control plane. The two **worker fleets** consume queues from Valkey and do background work. Realtime presence and notifications fan out through Valkey pub/sub. Calls media never touches the backend.
 
 ## Services
 
-| Service | Process | Purpose |
+| Service | Runs as | Purpose |
 |---|---|---|
-| Backend | Granian + FastAPI + ConnectRPC | HTTP + RPC entrypoint. Auth, content CRUD, RPC handlers, search proxy, real-time streams. |
-| Core worker | ARQ | Tight-SLA jobs: thumbnails, file extraction, notifications, reminders, storage hygiene, chat-mute. |
-| Egress worker | ARQ | Slow / retry-heavy jobs: agent runtime, conversation compaction, cron, external API integrations. |
-| PostgreSQL 18 | Database | Primary data store. All durable state. |
-| Meilisearch | Search engine | Typo-tolerant full-text index for universal `@` mentions and search. |
-| Valkey | Redis-compatible KV | ARQ queue, ops cache, pub/sub channels. |
-| S3-compatible storage | Object store | File uploads, attachments, thumbnails. Pluggable: AWS S3, R2, B2, MinIO, RustFS. |
-| LiveKit | SFU | Audio and video calls. Forwards media between participants. NAT traversal via its embedded TURN. |
-| Frontend | Vite + React 19 | Single-page app served as static assets. |
-| Mobile | Expo + React Native | iOS and Android client. Hits the same RPC endpoints. |
-| Landing + docs | Astro + Starlight | Marketing site and these docs. |
+| Envoy Gateway | Operator + managed Envoy pods | TLS termination, HTTP routing, the operator API allowlist. |
+| STUNner | Operator + TURN gateway pods | Relays WebRTC media into the cluster on one UDP/TCP port. |
+| Backend | Granian, 3 pods default | RPC entrypoint. Auth, content, search proxy, realtime streams, migrations on boot. |
+| Core worker | ARQ, 3 pods default | Tight deadline jobs: thumbnails, text extraction, notifications, reminders, storage hygiene. |
+| Egress worker | ARQ, 3 pods default | Slow or retry heavy jobs: agent runtime, LLM calls, cron, external integrations. |
+| Frontend | nginx | The browser app as static assets. |
+| PostgreSQL 18 | CloudNativePG cluster, or external | Primary data store. All durable state. |
+| Meilisearch | Single pod | Typo tolerant index behind universal `@` mention lookup and search. |
+| Valkey | Single pod | Job queue, pub/sub, operational cache. |
+| Object storage | Yours (S3 compatible) | File bytes. Private network only; browsers never reach it. |
+| LiveKit | Single pod, scales to a cluster | Audio and video calls. Forwards media between participants. |
 
-## API layer
+## The traffic plane
 
-Uniffy uses **ConnectRPC** (Protocol Buffers + Connect) for all client-server communication. Proto definitions in `src/proto/` are the source of truth; generated clients in Python, TypeScript, and Go are shared via workspace packages (`uniffy-proto`, `@uniffy/proto`, `uniffy-proto-go`).
+Every client request is an HTTP POST to an RPC path with a JSON or binary protobuf body, plus one WebSocket for realtime and long lived streamed responses for agents. The chart encodes that into the gateway routes, and the route table is worth knowing by heart when debugging:
 
-Implications for operators:
+| Path | Goes to | Upstream protocol | Why |
+|---|---|---|---|
+| `/api/realtime` | backend | HTTP/1.1 | The WebSocket. Websockets over HTTP/2 are unreliable across the ecosystem, so this path is pinned down a version. |
+| `/api/superadmin.v1.` | backend | h2c | Named route rule so the [operator allowlist](/docs/deployment/hardening/) can target exactly it. |
+| `/api/` and `/healthz` | backend | h2c | HTTP/2 cleartext for RPC multiplexing and streaming. |
+| `/livekit/` | LiveKit 7880, prefix stripped | HTTP/1.1 | Calls signaling WebSocket. |
+| everything else | frontend | HTTP/1.1 | Static assets and the single page app fallback. |
 
-- All endpoints look the same to a reverse proxy: HTTP POST to a service path with JSON or binary protobuf bodies.
-- No REST contract to version. Versioning lives in proto namespaces (`users.v1`, `notes.v2`).
-- Compatibility is enforced by `buf` in CI.
-
-## Domain-driven vertical slices
-
-Each feature is self-contained:
-
-- **Backend**: `src/uniffy/domains/{feature}/` with `operations`, `handlers`, `service`, `converters`.
-- **Frontend**: `src/ui/src/features/{feature}/` with `api`, `store`, `components`, `pages`, `hooks`.
-- **Proto**: `src/proto/{service}/v1/{service}.proto` defines the contract.
-
-This means most changes touch a single domain. Cross-cutting work (search indexing, permissions, audit) goes through shared modules under `src/uniffy/core/`.
+The request timeout on these routes is zero and buffering is off. An agent answer is one HTTP response that streams for as long as the agent thinks. A proxy timeout or a buffer anywhere in this path turns streaming features into silent hangs, which is why the traffic plane ships as part of the product instead of as a suggestion.
 
 ## Worker fleet split
 
-Two ARQ workers run as separate processes (or separate Kubernetes Deployments). One image, two entrypoints:
+Two ARQ fleets, one image, two entrypoints:
 
 ```sh
 python -m uniffy --worker-core
@@ -85,18 +83,18 @@ python -m uniffy --worker-egress
 
 | Fleet | Default concurrency | Default timeout | Typical work |
 |---|---|---|---|
-| Core | 10 jobs / process | 300s | Image thumbnails, document text extraction, push notifications, reminder dispatch, storage GC, chat-mute fan-out. |
-| Egress | 50 jobs / process | 900s | Agent runtime, long-running LLM calls, conversation compaction, cron, future webhook delivery. |
+| Core | 10 jobs per process | 300s | Thumbnails, document text extraction, push notifications, reminder dispatch, storage GC. |
+| Egress | 50 jobs per process | 900s | Agent runtime, long running LLM calls, conversation compaction, cron, webhook delivery. |
 
-The split exists so a slow third-party LLM call cannot starve the local-I/O fleet. Scale them independently: core scales with user activity, egress scales with agent usage.
+The split exists so a slow third party LLM call cannot starve the local I/O fleet. Scale them independently: core scales with user activity, egress scales with agent usage.
 
 ## Data stores
 
 ### PostgreSQL
 
-All durable state. Async only (`asyncpg`). Migrations run on backend startup.
+All durable state. Migrations run on backend startup; the first pod up after an upgrade applies them.
 
-Connection budget per pod is `WORKERS * (DB_POOL_SIZE + DB_MAX_OVERFLOW)`. With the defaults (`WORKERS=1`, pool 30, overflow 70) that is 100 connections per backend pod. Workers reuse the same pool sizing. Size Postgres `max_connections` accordingly:
+Connection budget per pod is `WORKERS * (DB_POOL_SIZE + DB_MAX_OVERFLOW)`. With the defaults (`WORKERS=1`, pool 30, overflow 70) that is 100 connections per backend pod. Worker pods use the same sizing. Size `max_connections` accordingly:
 
 ```
 max_connections >= n_backend_pods * 100
@@ -105,133 +103,86 @@ max_connections >= n_backend_pods * 100
                  + headroom for pgbouncer / psql
 ```
 
-In production, run Postgres with sane defaults: `shared_buffers ~25%` of RAM, `effective_cache_size ~75%`, `work_mem` per-connection sized to your query patterns.
+The bundled CloudNativePG cluster ships sane parameters; for an external Postgres, start from `shared_buffers ~25%` of RAM and `effective_cache_size ~75%`.
 
 ### Meilisearch
 
-Indexes every piece of content that has a URN. The backend writes during normal operations and reindexes through a background job when schema changes ship. Treat the Meilisearch DB as reproducible: a full reindex from Postgres is supported and safe.
+The search index, and nothing but an index. The backend writes to it during normal operation and can rebuild it from Postgres entirely through a background job. Treat it as reproducible: losing the Meilisearch volume costs a reindex window, not data.
 
-Required for: universal `@` mention search, global search, filter prefixes.
+### Valkey
 
-### Valkey (Redis-compatible)
-
-Three roles, each with its own connection profile baked into code:
+Three roles, each with its own connection profile baked into the code:
 
 | Tier | Profile | Used by |
 |---|---|---|
-| ARQ queue | 10s timeout, 5 retries, 1s delay | Background job dequeue. |
-| Pub/Sub | 5s timeout, retry on transient, 30s health check | Chat presence, notification fan-out, live updates. |
-| Ops cache | 200ms connect, 100ms read, 0 retries, 150ms deadline guard | Permission cache, agent context, provider cache. Misses are silently treated as cache-misses when Valkey is slow. |
+| Job queue | 10s timeout, 5 retries | Background job dispatch and dequeue. |
+| Pub/sub | 5s timeout, retry on transient | Presence, notification fan out, live updates. |
+| Ops cache | 150ms deadline guard, no retries | Hot presentation caches. A miss is served from Postgres. |
 
-The 150ms deadline guard means a slow Valkey degrades the cache, not the user request. This is intentional.
+The deadline guard means a slow Valkey degrades into cache misses instead of stalling user requests. Authorization never reads from Valkey; permission decisions come from Postgres every time, so a poisoned or stale cache cannot extend access.
 
-LiveKit uses a separate Valkey database (`LIVEKIT_VALKEY_DATABASE=1` by default) so room registry pressure does not collide with the app's caches.
+LiveKit keeps its room registry in a separate Valkey database (db 1) so registry pressure and app caches cannot evict each other.
 
 ### Object storage
 
-Any S3-compatible service. Every upload and download flows through the backend, which enforces permissions on each request; browsers never talk to the storage endpoint. Keep it on a private network, reachable from the backend and workers only. Files are addressed by `(bucket, key)` and tracked in Postgres for permissions and search indexing.
+Any S3 compatible service, always yours on the cluster path. Every upload and download flows through the backend, which checks permissions per request; browsers never talk to the storage endpoint, so it stays on a private network with no CORS and no public exposure. File bytes ride backend bandwidth, which is why upload heavy orgs scale backend pods, not storage networking.
 
 ## Multi-tenancy
 
-Every content row carries an `organization_id`. Users are global; org membership is per-org. All RPCs derive the active org from the auth token and pass it into operations.
+One deployment serves many organizations. Every content row is scoped to an organization, RPC handlers derive the organization from the auth token, and the permission layer short circuits on any mismatch. A single org self hosted install is the same code with one tenant, no flags and no different binary.
 
-Cross-org access is prevented at three layers:
+The operational consequence: there is no per tenant infrastructure to provision. A new organization is a database row, not a namespace.
 
-1. RPC handlers reject calls outside the user's org.
-2. Operations always include `organization_id` in WHERE clauses.
-3. `PermissionChecker` short-circuits on org mismatch before any role resolution.
+## Access control, the operator's view
 
-## Permissions
+Permissions are enforced inside the application against Postgres, not by any infrastructure component. Nothing you deploy or misdeploy at the edge grants content access, and there is no admin bypass to protect: org admins hold no skeleton key over member content, and a platform operator reaches tenant content only through a time bound, audit logged **support session** the org owner approves and can revoke. Your one infrastructure duty here is keeping the operator API off the internet, which is [one chart value](/docs/deployment/hardening/).
 
-Every content row has:
+## Encryption and the master key
 
-- `access_mode`: `OWNER_ONLY`, `EXPLICIT_MEMBERS`, or `OPEN_TO_ORG`.
-- `baseline_role`: only meaningful with `OPEN_TO_ORG`. Sets the floor role for org members.
+| Layer | Key | Wrapped by |
+|---|---|---|
+| Deployment master key | `APP_MASTER_KEY` from the secret | You. It exists only in your secret and your backup. |
+| Per organization key | Row in the database | The master key. |
+| Field level | Per row nonce | The organization key. |
 
-Explicit grants live in `permissions_content_members` as `ContentMember` rows keyed by `(content_type, content_id, subject_type, subject_id)` with a `role`:
+Tenant secrets such as SMTP passwords, LLM provider keys, and identity source credentials are encrypted with the owning organization's key, which is itself wrapped by the master key. Losing `APP_MASTER_KEY` permanently locks every encrypted column in the deployment. The backup ritual is on [Backups and Restore](/docs/deployment/backups/).
 
-```
-VIEWER < COMMENTER < EDITOR < ADMIN < OWNER     and a separate BLOCKED deny state.
-```
+## Calls
 
-`PermissionChecker.effective_role()` resolves the highest of (ownership, explicit direct/group member, baseline when `OPEN_TO_ORG`) minus any `BLOCKED` row. Org OWNER/ADMIN and per-domain `DomainAdmin` bypass the filter. Helpers `role_can_view / _comment / _edit / _delete / _manage / _transfer` gate operations.
+The backend's role in a call is small: mint a short lived LiveKit token, create the room over LiveKit's admin API (server to server, never exposed), and record call metadata in Postgres. Everything heavy is media, and media takes one of two paths:
 
-Access-mode and member changes route through `permissions.v1.MembersService`, backed by `ContentMembersOperations`.
+- **Relayed through STUNner**, the mode both supported install paths deploy. Clients receive per user ephemeral TURN credentials minted by the backend from `TURN_SHARED_SECRET`, and all media enters the cluster through port 3478 on the media gateway. One port to firewall, one DNS record to keep honest.
+- **Direct media** exists for deployments without a relay: clients hit LiveKit's media port directly and its embedded TURN covers NAT fallback. The [Configure Uniffy](/docs/deployment/configure/) TURN section covers the switch.
 
-### Domain admins
-
-Some users get admin status for specific domains (chat, files, calendar) without being full org admins. Stored in a shared `DomainAdmin` table with `UNIQUE (organization_id, user_id, domain)`. Access check order: org `ADMIN`/`OWNER` > domain admin > regular member.
-
-## Encryption layers
-
-| Layer | Key | Wrapped by | Used for |
-|---|---|---|---|
-| App master KEK | `APP_MASTER_KEY` (env) | Operator | Wraps every per-org DEK + app-wide secrets (VAPID private key). |
-| Per-org DEK | Row in `org_encryption_keys` | App master KEK | Used by `OrgCipher` for tenant-scoped secrets (SMTP passwords, agent provider keys, future webhooks). |
-| Field-level | Per-row IV + AEAD tag | Per-org DEK | Each encrypted column carries its own nonce, decrypted only when needed. |
-
-`OrgCipher` is the only blessed entrypoint for encrypting tenant secrets. The legacy single-key path was removed. Losing `APP_MASTER_KEY` permanently locks every encrypted column in the deployment, so back it up out of band.
-
-## URNs and search
-
-Every content row carries a URN: `urn:uniffy:content:{TYPE}:{uuid}`.
-
-Supported types include `NOTE`, `FILE`, `CHAT`, `USER`, `CALENDAR_EVENT`, `PROJECT`, `TASK`, `GROUP`. All content models inherit from `BaseContentOperations`, which automatically generates URNs and indexes into Meilisearch.
-
-User-editable text is stored as Markdown with mentions of the form `[[[label|urn:uniffy:content:TYPE:uuid]]]`. Mentions render as live chips that resolve title, owner, status, and activity on every render.
-
-## Calls (LiveKit)
-
-Calls media flows directly between clients and LiveKit. The backend's role is:
-
-1. Mint a short-lived LiveKit JWT for the user (signed with `LIVEKIT_API_SECRET`).
-2. Create or look up the room via LiveKit's admin REST API.
-3. Record call metadata in Postgres for history and permissions.
-
-Clients use `LIVEKIT_WS_URL` to reach LiveKit's signaling. The backend uses `LIVEKIT_HOST` for the admin API (server-to-server, never exposed to browsers).
-
-### TURN relay
-
-Most browsers reach LiveKit's media ports directly. Behind symmetric NATs (some hotel WiFi, some enterprise networks), they cannot. LiveKit's embedded TURN server (UDP 3478) handles that fallback by default, with nothing to configure.
-
-Setting `TURN_SERVER_URLS` switches to relayed media: all media flows through an external TURN gateway, and the backend mints per user ephemeral credentials via the TURN REST pattern: `username=<expiry_ts>:<user_id>`, `password=base64(HMAC-SHA1(shared_secret, username))`. See the TURN relay section in [Configure Uniffy](/docs/deployment/configure/).
+If the app works and calls do not, start at the media path: the TURN DNS record, port 3478 over UDP, and the shared secret matching between backend and gateway.
 
 ## Audit log
 
-The audit middleware captures every state-changing RPC. Each event row records actor, org, resource, action, request IP, and timestamp.
-
-`TRUSTED_PROXIES` controls how the client IP is derived behind a load balancer: only entries from the trusted list cause `X-Forwarded-For` to be honored; otherwise the raw socket peer wins. Default empty is the safe choice for direct-connect deployments.
-
-`file.uploaded` is opt-in (`AUDIT_EVENTS_FILE_UPLOADED=true`) because every successful upload writes one row and that can dominate audit volume.
+The audit middleware records every state changing RPC: actor, organization, resource, action, client IP, timestamp. `TRUSTED_PROXY_HOPS` decides which forwarded address counts as the client IP behind your edge; get it wrong and every audit row names your proxy. `file.uploaded` rows are opt in (`AUDIT_EVENTS_FILE_UPLOADED=true`) because busy orgs can generate more upload rows than everything else combined.
 
 ## Observability
 
-| Signal | Source | How to scrape |
+| Signal | Source | How to collect |
 |---|---|---|
-| Backend metrics | Prometheus client, multiprocess mode | `GET /metrics` on the backend port. |
-| Core worker metrics | Prometheus client | `:9091/metrics` (`CORE_WORKER_METRICS_PORT`). |
-| Egress worker metrics | Prometheus client | `:9092/metrics` (`EGRESS_WORKER_METRICS_PORT`). |
-| Logs | stdout, JSON when `LOG_FORMAT=json` | Container runtime collector. |
+| Backend metrics | Prometheus multiprocess | `GET /metrics` on the backend port, ServiceMonitor shipped in the chart. |
+| Worker metrics | Prometheus | `:9091` core, `:9092` egress, ServiceMonitors shipped. |
+| Logs | stdout, JSON in the chart defaults | Your cluster's log collector. |
 
-Granian forks `WORKERS` children. Prometheus multiprocess mode is mandatory or each child only reports its own slice. The bootstrap helper in `uniffy.infrastructure.observability.bootstrap` manages a component subdirectory under `PROMETHEUS_MULTIPROC_BASE_DIR`. Override only when the container needs a different writable path.
+Granian forks `WORKERS` children and Prometheus multiprocess mode keeps their metrics coherent; the chart configures it, so this only concerns you when overriding writable paths.
 
 ### Worker signals
 
-The worker metrics separate four different problems. A fleet can be reachable but not ready. It can
-be ready with a growing queue. It can drain the queue while starting jobs too late. It can also reject
-a job before its handler runs.
+The worker metrics separate four different problems. A fleet can be reachable but not ready. It can be ready with a growing queue. It can drain the queue while starting jobs too late. It can also reject a job before its handler runs.
 
 | Question | Metrics | Read it as |
 |---|---|---|
 | Is the fleet alive and connected? | `uniffy_worker_ready`, `uniffy_worker_last_heartbeat_timestamp_seconds`, `uniffy_worker_restarts_total` | Ready should be 1 and the heartbeat should remain newer than two health intervals. |
 | Is work backing up? | `uniffy_worker_queue_depth`, `uniffy_worker_job_start_delay_seconds` | Depth is every job in the sorted set, including deferred work. Start delay is time from queue eligibility to handler start. |
 | Are handlers healthy? | `uniffy_worker_jobs_started_total`, `uniffy_worker_jobs_completed_total`, `uniffy_worker_job_duration_seconds`, `uniffy_worker_jobs_in_progress` | Compare completion status and duration by queue and registered job name. Duration buckets extend through 900 seconds. |
-| Are producers reaching the queue? | `uniffy_worker_job_enqueue_total` | Outcomes are `enqueued`, `deduplicated`, `unavailable`, and `error`. This metric can be emitted by the backend or a worker, depending on where dispatch happens. |
+| Are producers reaching the queue? | `uniffy_worker_job_enqueue_total` | Outcomes are `enqueued`, `deduplicated`, `unavailable`, and `error`. Emitted by whichever process dispatched the job. |
 | Is ARQ refusing queued data? | `uniffy_worker_job_rejected_total` | Reasons cover expired or malformed payloads, missing functions, aborts before start, and exhausted retries. |
 
-Every worker replica reads the same Valkey sorted set. Aggregate queue depth with `max by (queue)`,
-not `sum`. Use the newest heartbeat across healthy replicas for the same reason. Counters and
-histograms still aggregate with `sum`.
+Every worker replica reads the same Valkey sorted set. Aggregate queue depth with `max by (queue)`, not `sum`. Use the newest heartbeat across healthy replicas for the same reason. Counters and histograms still aggregate with `sum`.
 
 These PromQL examples are useful starting points. Tune the windows and thresholds for your traffic.
 
@@ -265,61 +216,62 @@ sum by (queue, outcome) (
 sum by (queue, reason) (rate(uniffy_worker_job_rejected_total[5m])) > 0
 ```
 
-Prometheus labels stay operational and bounded. They never include job ids, organization ids, user
-ids, arguments, results, or exception messages. Use structured logs when you need one job's exact
-identity or error context.
+Prometheus labels stay operational and bounded. They never include job ids, organization ids, user ids, arguments, results, or exception messages. Use structured logs when you need one job's exact identity or error context.
 
 ## Scaling
 
 | Component | Bottleneck | Scaling pattern |
 |---|---|---|
-| Backend | CPU on RPC handlers, Postgres pool | Horizontal. Each pod is stateless. Watch Postgres connection budget. |
-| Core worker | Local I/O (thumbnails, extraction) | Horizontal. Increase `CORE_WORKER_MAX_JOBS` or pod count. |
-| Egress worker | External API latency, agent iteration | Horizontal. Default concurrency 50 is high on purpose. |
-| PostgreSQL | Connections, write throughput | Vertical first, then read replicas (read-only queries can target replicas), then sharding by `organization_id` if you outgrow a single primary. |
-| Meilisearch | RAM, index size | Vertical. Plan for full-rebuild capacity. |
-| Valkey | Memory, network | Vertical, then Cluster mode for write-heavy pub/sub patterns. |
-| Object storage | Provider-managed | Provider's job. Just keep buckets per environment. |
-| LiveKit | Egress bandwidth | Horizontal cluster with shared Valkey-backed room registry. |
+| Backend | CPU on RPC handlers, Postgres pool, upload bandwidth | Horizontal. Stateless pods. Watch the connection budget. |
+| Core worker | Local I/O | Horizontal, or raise `CORE_WORKER_MAX_JOBS`. |
+| Egress worker | External API latency | Horizontal. Default concurrency of 50 is high on purpose. |
+| PostgreSQL | Connections, write throughput | Vertical first, then read replicas. |
+| Meilisearch | RAM, index size | Vertical. Plan for full rebuild capacity. |
+| Valkey | Memory, network | Vertical first. |
+| Object storage | Provider managed | Your provider's job. |
+| LiveKit | Egress bandwidth | Horizontal cluster over the shared Valkey room registry. |
 
 ## Network ports
 
-| Port | Component | Notes |
-|---|---|---|
-| 8000 | Backend HTTP | Defaults from `.env.example`. |
-| 9091 | Core worker metrics | Scraped by Prometheus. |
-| 9092 | Egress worker metrics | Scraped by Prometheus. |
-| 5432 | PostgreSQL | Internal only. |
-| 6380 | Valkey | Local dev maps to 6380 to avoid clashing with host Redis on 6379. |
-| 7700 | Meilisearch | Internal only. |
-| 9000 | Object storage (S3) | Local dev with RustFS. AWS/R2/B2 use provider's endpoints. |
-| 7880 | LiveKit signaling (TCP/WS) | Browsers connect here. |
-| 7881-7882 | LiveKit media (TCP/UDP) | UDP is preferred; cannot tunnel cleanly over SSH. |
-| 3478 | TURN/STUN | LiveKit's embedded TURN (UDP). |
-| 5173 | Frontend dev server | Vite dev only. |
-| 4321 | Landing + docs dev server | Astro dev only. |
+Public, the only two entry points:
+
+| Port | Component |
+|---|---|
+| 80/443 TCP | Envoy Gateway. TLS and every HTTP path. |
+| 3478 UDP+TCP | STUNner. Calls media. |
+
+Cluster internal, never exposed:
+
+| Port | Component |
+|---|---|
+| 8000 | Backend HTTP (the chart maps it behind the gateway). |
+| 5432 | PostgreSQL. |
+| 6379 | Valkey. |
+| 7700 | Meilisearch. |
+| 7880 | LiveKit signaling, reached only through the `/livekit` route. |
+| 7881/7882 | LiveKit media, reached only through STUNner. |
+| 9091/9092 | Worker metrics, scraped in cluster. |
 
 ## Boot order and health
 
-1. PostgreSQL and Valkey come up first. Both have container healthchecks.
-2. Meilisearch comes up. Its healthcheck blocks dependents until it responds.
-3. Backend starts. On boot it runs Alembic migrations, then opens the listener.
-4. Core and egress workers connect to Valkey and start consuming queues.
-5. LiveKit is independent. It has no dependency on the backend other than shared Valkey for room registry.
-
-A backend pod with healthy `GET /healthz` accepts traffic. Workers report liveness via ARQ's built-in health checks every `WORKER_HEALTH_CHECK_INTERVAL` seconds.
+1. The platform operators come first: Envoy Gateway, STUNner, CloudNativePG, cert-manager where used. The install pages sequence this.
+2. The data stores come up with their probes: the Postgres cluster, Valkey, Meilisearch.
+3. Backend pods boot, run migrations, then open the listener. A pod answering `GET /healthz` is ready; the chart wires that into the probes, so an unhealthy pod never receives traffic.
+4. Workers connect to Valkey and start consuming. Liveness rides ARQ's built in health check every `WORKER_HEALTH_CHECK_INTERVAL` seconds and the heartbeat metric.
+5. LiveKit is independent of the backend; they share only the Valkey room registry.
 
 ## Stateless vs stateful
 
-| Stateless (replace freely) | Stateful (back up) |
+| Stateless, replace freely | Stateful, back up |
 |---|---|
-| Backend, core worker, egress worker, frontend, landing, mobile. | PostgreSQL, Meilisearch, Valkey (queue depth survives restarts but cache is volatile by design), object storage, LiveKit room registry. |
+| Backend, both worker fleets, frontend, gateway pods, STUNner pods. | PostgreSQL, object storage, `APP_MASTER_KEY`. |
+| | Meilisearch and Valkey sit in between: losing them costs a reindex window and a queue drain, not data. |
 
-Backing up Postgres is mandatory. Meilisearch can be rebuilt from Postgres in O(content) time but you will lose indexing time during the rebuild; back it up if your SLA does not tolerate that gap. Object storage and `APP_MASTER_KEY` are non-negotiable backups: lose either and data is gone.
+Postgres, the master key, and object storage are the non negotiable three. [Backups and Restore](/docs/deployment/backups/) covers all of them, including the continuous archive that makes Postgres restorable to a point in time.
 
 ## Where to go next
 
 - [Configure Uniffy](/docs/deployment/configure/) for every environment variable.
-- [Harden the Edge](/docs/deployment/hardening/) to keep the platform operator API off the public internet.
-- [Administration Guide](/docs/administration/) for org-level configuration: members, permissions, SSO, audit, encryption.
-- [User Guide](/docs/user/) for end-user features.
+- [Harden the Edge](/docs/deployment/hardening/) for the operator API allowlist.
+- [Behind an Edge](/docs/deployment/edges/) before putting Cloudflare or a corporate proxy in front.
+- [Upgrades](/docs/deployment/upgrades/) and [Backups and Restore](/docs/deployment/backups/) for day two.
