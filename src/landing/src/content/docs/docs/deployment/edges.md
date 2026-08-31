@@ -23,13 +23,17 @@ The friendliest edge is a layer 4 passthrough: it preserves everything above by 
 
 ## Cloudflare
 
-The proxy works in front of Uniffy with the settings below. Anything not mentioned is fine at its default.
+:::caution[We do not recommend the Cloudflare proxy]
+Proxied mode means Cloudflare terminates your TLS. Every request is decrypted on their servers before it reaches you: every note, every message, every file, every credential. That is not a Cloudflare flaw. It is what an HTTP proxy is. It also puts a third party inside a product you chose to run on your own hardware. Turn it on only if you accept that Cloudflare can read everything your organization puts in Uniffy. DNS only mode avoids all of this and still gives you Cloudflare DNS.
+:::
+
+If you accept that tradeoff, the proxy works in front of Uniffy with the settings below. Anything not mentioned is fine at its default.
 
 ### DNS records
 
 | Record | Mode | Why |
 |---|---|---|
-| `uniffy.example.com` | Proxied or DNS only, your call | HTTP traffic proxies fine. |
+| `uniffy.example.com` | DNS only recommended | Proxied works for HTTP traffic, at the cost in the warning above. |
 | `turn.example.com` | DNS only, always | TURN is not HTTP. Proxied mode makes the record resolve to Cloudflare, which will never answer a TURN allocation, and calls fail with a working app. |
 
 The TURN record pointing at Cloudflare is the single most common way to break calls behind an edge. A DNS only record does reveal that address; if hiding your origin matters, give media its own IP rather than proxying it.
@@ -74,8 +78,8 @@ A corporate edge that terminates TCP instead has the same problem with a differe
 
 **A passthrough network load balancer** in front of the gateway needs nothing from this page. Client addresses, TLS, streams, and websockets all arrive intact. This is the recommended shape for a corporate edge.
 
-**A terminating layer 7 edge** such as an ALB, F5, or HAProxy in HTTP mode gets measured against the six rules at the top: websockets on, buffering off, idle timeouts up, no body rewriting, no challenges, and the client address delivered by forwarded headers with the hop count set accordingly.
+**A terminating layer 7 edge** such as an ALB, F5, or HAProxy in HTTP mode gets measured against the six rules at the top: websockets on, buffering off, idle timeouts up, no body rewriting, no challenges, and the client address delivered by forwarded headers with the hop count set accordingly. The decryption fact from the Cloudflare warning applies here too. Whoever terminates TLS reads everything, though trusting your own appliance is a different decision than trusting a third party.
 
-**A CDN other than Cloudflare** follows the Cloudflare section in spirit: proxy the app hostname if you like, never the TURN hostname, cache nothing under `/api`, and inject nothing.
+**A CDN other than Cloudflare** follows the Cloudflare section in spirit, warning included: the proxy reads your traffic, never proxy the TURN hostname, cache nothing under `/api`, and inject nothing.
 
 The pattern across all of it: Uniffy assumes the pipe between the browser and the gateway is dumb. Every edge feature is a smartness added to that pipe, and each one is your responsibility to test. When something breaks only for users behind the edge, take the edge out of the path first and let the difference tell you which feature to go look at.
