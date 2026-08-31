@@ -124,10 +124,11 @@ from uniffy.domains.calls.webhook import LiveKitWebhookProvider
 from uniffy.domains.chat.service import ChatServiceImpl
 from uniffy.domains.chat.streaming.handlers import ChatStreamHandlers
 from uniffy.domains.comments.handlers import CommentsHandlers
+from uniffy.domains.directory.groups.service import GroupsServiceImpl
+from uniffy.domains.directory.people.service import PeopleServiceImpl
 from uniffy.domains.files.registration import register_file_content
 from uniffy.domains.files.routes import create_file_routers
 from uniffy.domains.files.service import FilesServiceImpl
-from uniffy.domains.groups.service import GroupsServiceImpl
 from uniffy.domains.integrations.clients import (
     close_integration_invalidation_subscriber,
     init_integration_invalidation_subscriber,
@@ -140,7 +141,6 @@ from uniffy.domains.notes.registration import register_note_content
 from uniffy.domains.notes.service import NotesServiceImpl
 from uniffy.domains.notifications.handlers import NotificationsHandlers
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
-from uniffy.domains.people.service import PeopleServiceImpl
 from uniffy.domains.permissions.service import MembersServiceImpl
 from uniffy.domains.platform.audit.service import PlatformAuditServiceImpl
 from uniffy.domains.platform.bootstrap import bootstrap_deployment

@@ -44,18 +44,9 @@ def _session(org_ids: list) -> MagicMock:
 
 
 class _Fanout:
-    """The collaborators the fanout drives, patched as one unit."""
-
     def __init__(self) -> None:
         self.invalidate_profile = AsyncMock(return_value=None)
-        self.invalidate_by_tag = AsyncMock(return_value=None)
-        self.invalidate_chart = AsyncMock(return_value=None)
-        self.indexer = MagicMock()
-        self.indexer.return_value.index_for_organization = AsyncMock(return_value=None)
-
-    @property
-    def indexed(self) -> list:
-        return self.indexer.return_value.index_for_organization.await_args_list
+        self.refresh = AsyncMock(return_value=None)
 
     def patches(self):
         return (
@@ -63,12 +54,7 @@ class _Fanout:
                 "uniffy.domains.users.operations.invalidate_user_profile",
                 self.invalidate_profile,
             ),
-            patch(
-                "uniffy.domains.users.operations.cache_invalidate_by_tag",
-                self.invalidate_by_tag,
-            ),
-            patch("uniffy.domains.users.operations.invalidate_chart", self.invalidate_chart),
-            patch("uniffy.domains.users.operations.UserSearchIndexer", self.indexer),
+            patch("uniffy.domains.users.operations.refresh_global_user", self.refresh),
         )
 
 
@@ -95,7 +81,7 @@ async def _run(method: str, user: User, org_ids: list, fanout: _Fanout) -> None:
             await ops.delete_avatar(storage, user.id)
 
 
-async def test_upload_refreshes_profile_person_chart_and_index() -> None:
+async def test_upload_refreshes_profile_and_directory_projection() -> None:
     user = _make_user(avatar_key=None)
     org = generate_id()
     fanout = _Fanout()
@@ -103,13 +89,11 @@ async def test_upload_refreshes_profile_person_chart_and_index() -> None:
     await _run("upload", user, [org], fanout)
 
     fanout.invalidate_profile.assert_awaited_once_with(user.id)
-    # Person payloads are reachable only by tag; the chart key is per org.
-    fanout.invalidate_by_tag.assert_awaited_once_with(f"user:{user.id}")
-    fanout.invalidate_chart.assert_awaited_once_with(org)
-    assert [call.args for call in fanout.indexed] == [(user, org)]
+    fanout.refresh.assert_awaited_once()
+    assert fanout.refresh.await_args.args[2] is user
 
 
-async def test_delete_refreshes_the_same_surfaces() -> None:
+async def test_delete_refreshes_the_directory_projection() -> None:
     user = _make_user(avatar_key="avatars/abc")
     org = generate_id()
     fanout = _Fanout()
@@ -117,20 +101,8 @@ async def test_delete_refreshes_the_same_surfaces() -> None:
     await _run("delete", user, [org], fanout)
 
     assert user.avatar_key is None
-    fanout.invalidate_by_tag.assert_awaited_once_with(f"user:{user.id}")
-    fanout.invalidate_chart.assert_awaited_once_with(org)
-    assert [call.args for call in fanout.indexed] == [(user, org)]
-
-
-async def test_every_org_the_member_belongs_to_is_refreshed() -> None:
-    user = _make_user(avatar_key=None)
-    orgs = [generate_id(), generate_id()]
-    fanout = _Fanout()
-
-    await _run("upload", user, orgs, fanout)
-
-    assert [call.args[0] for call in fanout.invalidate_chart.await_args_list] == orgs
-    assert [call.args[1] for call in fanout.indexed] == orgs
+    fanout.refresh.assert_awaited_once()
+    assert fanout.refresh.await_args.args[2] is user
 
 
 async def test_delete_without_an_avatar_touches_nothing() -> None:
@@ -139,6 +111,4 @@ async def test_delete_without_an_avatar_touches_nothing() -> None:
 
     await _run("delete", user, [generate_id()], fanout)
 
-    fanout.invalidate_by_tag.assert_not_awaited()
-    fanout.invalidate_chart.assert_not_awaited()
-    assert fanout.indexed == []
+    fanout.refresh.assert_not_awaited()

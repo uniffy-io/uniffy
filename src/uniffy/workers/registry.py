@@ -101,6 +101,15 @@ from uniffy.domains.chat.jobs.jobs import (
     refresh_chat_search_acl,
 )
 from uniffy.domains.chat.reads.flush import flush_chat_read_cursors
+from uniffy.domains.directory.sync.jobs.contracts import (
+    DIRECTORY_JOB_REFS,
+    DIRECTORY_SCHEDULED_JOB_REFS,
+    SYNC_IDENTITY_SOURCE,
+)
+from uniffy.domains.directory.sync.jobs.jobs import (
+    SYNC_IDENTITY_SOURCE_JOB_TIMEOUT_SECONDS,
+    sync_identity_source,
+)
 from uniffy.domains.files.jobs.content import extract_document_content
 from uniffy.domains.files.jobs.contracts import (
     DELETE_S3_OBJECT,
@@ -154,15 +163,6 @@ from uniffy.domains.notifications.jobs.email import (
 from uniffy.domains.notifications.jobs.jobs import (
     deliver_push_notification,
     process_notification_event,
-)
-from uniffy.domains.people.directory.jobs.contracts import (
-    DIRECTORY_JOB_REFS,
-    DIRECTORY_SCHEDULED_JOB_REFS,
-    SYNC_IDENTITY_SOURCE,
-)
-from uniffy.domains.people.directory.jobs.jobs import (
-    SYNC_IDENTITY_SOURCE_JOB_TIMEOUT_SECONDS,
-    sync_identity_source,
 )
 from uniffy.domains.permissions.jobs.contracts import (
     PERMISSION_JOB_REFS,

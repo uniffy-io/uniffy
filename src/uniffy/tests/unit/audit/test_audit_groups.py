@@ -7,7 +7,8 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupRole
 from uniffy.core.types import generate_id
-from uniffy.domains.groups.operations import GroupOperations
+from uniffy.domains.directory.groups.lifecycle import GroupOperations
+from uniffy.domains.directory.groups.members import GroupMemberOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 
@@ -41,6 +42,9 @@ def _permitted(group: Group | None = None) -> ExitStack:
     )
     if group is not None:
         stack.enter_context(patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)))
+        stack.enter_context(
+            patch.object(GroupMemberOperations, "_fetch", AsyncMock(return_value=group))
+        )
     return stack
 
 
@@ -146,7 +150,7 @@ async def test_add_member_emits_group_member_added() -> None:
     session.refresh = AsyncMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
-    ops = GroupOperations(session)
+    ops = GroupMemberOperations(session)
     target = generate_id()
     actor = generate_id()
 
@@ -176,7 +180,7 @@ async def test_update_member_role_emits_role_changed() -> None:
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
-    ops = GroupOperations(session)
+    ops = GroupMemberOperations(session)
     target = generate_id()
     actor = generate_id()
 
@@ -207,7 +211,7 @@ async def test_remove_member_emits_group_member_removed() -> None:
     session.delete = AsyncMock()
     session.commit = AsyncMock()
 
-    ops = GroupOperations(session)
+    ops = GroupMemberOperations(session)
     target = generate_id()
     actor = generate_id()
 

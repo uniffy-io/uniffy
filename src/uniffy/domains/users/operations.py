@@ -14,14 +14,13 @@ from uniffy.core.models.login.user import User
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.users.cache import invalidate_user_profile
-from uniffy.domains.people.cache import invalidate_chart
+from uniffy.domains.directory.projection import refresh_global_user
 from uniffy.domains.users.avatars import (
     delete_avatar as s3_delete_avatar,
 )
 from uniffy.domains.users.avatars import (
     upload_avatar as s3_upload_avatar,
 )
-from uniffy.domains.users.search import UserSearchIndexer
 
 
 class UserOperations:
@@ -64,33 +63,13 @@ class UserOperations:
         )
         return result.scalar_one_or_none()
 
-    async def _active_org_ids(self, user_id: UUID) -> list[UUID]:
-        result = await self._session.execute(
-            select(OrganizationMember.organization_id)
-            .join(User, User.id == OrganizationMember.user_id)
-            .join(Organization, Organization.id == OrganizationMember.organization_id)
-            .where(
-                OrganizationMember.user_id == user_id,
-                OrganizationMember.is_active.is_(True),
-                User.is_active.is_(True),
-                Organization.deleted_at.is_(None),
-                Organization.is_suspended.is_(False),
-            )
-        )
-        return list(result.scalars().all())
-
     async def _fan_out_avatar_change(self, user: User) -> None:
         """Every surface that denormalizes the avatar URL bakes in the upload's
         content hash, and the previous hash's objects are gone from S3 by now.
         A surface left unrefreshed serves a URL that 404s into initials.
         """
         await invalidate_user_profile(user.id)
-        # Person payloads carry a `user:{id}` tag; the chart is tagged per org only.
-        await cache_invalidate_by_tag(f"user:{user.id}")
-        indexer = UserSearchIndexer(self._session, self.search_indexer)
-        for organization_id in await self._active_org_ids(user.id):
-            await invalidate_chart(organization_id)
-            await indexer.index_for_organization(user, organization_id)
+        await refresh_global_user(self._session, self.search_indexer, user)
 
     async def update_profile(
         self,

@@ -281,7 +281,7 @@ class TestAddMemberReactivation:
         self, session, access, monkeypatch
     ) -> None:
         monkeypatch.setattr(
-            "uniffy.domains.users.search.UserSearchIndexer.index_for_organization",
+            "uniffy.domains.directory.projection.UserDirectoryProjection.index_for_organization",
             AsyncMock(),
         )
         ops = OrganizationOperations(session)
@@ -293,7 +293,7 @@ class TestAddMemberReactivation:
 
     async def test_reactivation_restores_the_org_gate(self, session, access, monkeypatch) -> None:
         monkeypatch.setattr(
-            "uniffy.domains.users.search.UserSearchIndexer.index_for_organization",
+            "uniffy.domains.directory.projection.UserDirectoryProjection.index_for_organization",
             AsyncMock(),
         )
         ops = OrganizationOperations(session)
@@ -304,7 +304,7 @@ class TestAddMemberReactivation:
         self, session, access, monkeypatch
     ) -> None:
         monkeypatch.setattr(
-            "uniffy.domains.users.search.UserSearchIndexer.index_for_organization",
+            "uniffy.domains.directory.projection.UserDirectoryProjection.index_for_organization",
             AsyncMock(),
         )
         await OrganizationOperations(session).add_member(

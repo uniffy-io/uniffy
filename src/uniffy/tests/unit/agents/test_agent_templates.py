@@ -84,8 +84,8 @@ async def _org_create(skill_rows: list[tuple[UUID, str]]):
     ops = OrganizationOperations.__new__(OrganizationOperations)
     ops._session = session
     ops._search_indexer = MagicMock()
-    ops._user_indexer = MagicMock()
-    ops._user_indexer.index_for_organization = AsyncMock()
+    ops._directory_projection = MagicMock()
+    ops._directory_projection.index_for_organization = AsyncMock()
 
     cipher = MagicMock()
     cipher.provision = AsyncMock()

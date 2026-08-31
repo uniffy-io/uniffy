@@ -11,8 +11,9 @@ from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.types import ContentRole, ContentType, SubjectType
 from uniffy.domains.calendar.access import resolve_calendar_events
+from uniffy.domains.chat.folders.access import resolve_agent_folders
 from uniffy.domains.chat.resources.access import resolve_chat_resources
-from uniffy.domains.people.directory.access import resolve_directory_resources
+from uniffy.domains.directory.access import resolve_directory_resources
 from uniffy.domains.permissions.access.registry import (
     CHAT_CONTENT_TYPES,
     DIRECT_CONTENT_TYPES,
@@ -137,6 +138,14 @@ class ResourceAccessResolver:
             decisions.update(await resolve_tasks(self.session, subject, grouped[ContentType.TASK]))
         if CHAT_CONTENT_TYPES & grouped.keys():
             decisions.update(await resolve_chat_resources(self.session, subject, grouped))
+        if ContentType.AGENT_FOLDER in grouped:
+            decisions.update(
+                await resolve_agent_folders(
+                    self.session,
+                    subject,
+                    grouped[ContentType.AGENT_FOLDER],
+                )
+            )
         if DIRECTORY_CONTENT_TYPES & grouped.keys():
             decisions.update(await resolve_directory_resources(self.session, subject, grouped))
         if ContentType.TAG in grouped:

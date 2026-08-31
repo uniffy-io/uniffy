@@ -20,7 +20,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.types import SubjectType, generate_id
 from uniffy.infrastructure.database import open_session
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.users.search import UserSearchIndexer
+from uniffy.domains.directory.projection import UserDirectoryProjection
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -136,7 +136,7 @@ async def test_staged_membership_and_audit_roll_back_together(session, membershi
 async def test_member_cap_is_serialized_across_concurrent_adds(
     session, membership_env, monkeypatch
 ) -> None:
-    monkeypatch.setattr(UserSearchIndexer, "index_for_organization", AsyncMock())
+    monkeypatch.setattr(UserDirectoryProjection, "index_for_organization", AsyncMock())
     org = await session.get(Organization, membership_env.org_id)
     org.max_members = 2
     await session.commit()
@@ -186,7 +186,7 @@ async def test_member_cap_is_serialized_across_concurrent_adds(
 async def test_reactivation_provisions_defaults_idempotently(
     session, membership_env, monkeypatch
 ) -> None:
-    monkeypatch.setattr(UserSearchIndexer, "index_for_organization", AsyncMock())
+    monkeypatch.setattr(UserDirectoryProjection, "index_for_organization", AsyncMock())
     org = await session.get(Organization, membership_env.org_id)
     org.max_members = None
     target_id = membership_env.target_ids[3]
@@ -266,7 +266,7 @@ async def test_search_failure_after_commit_keeps_authoritative_membership(
     session, membership_env, monkeypatch
 ) -> None:
     monkeypatch.setattr(
-        UserSearchIndexer,
+        UserDirectoryProjection,
         "index_for_organization",
         AsyncMock(side_effect=RuntimeError("search unavailable")),
     )

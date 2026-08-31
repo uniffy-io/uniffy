@@ -28,7 +28,7 @@ from uniffy.domains.organizations.invitations.operations import (
     _hash_token,
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.users.search import UserSearchIndexer
+from uniffy.domains.directory.projection import UserDirectoryProjection
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -193,7 +193,7 @@ async def test_acceptance_failure_rolls_back_every_authoritative_fact(
         "uniffy.domains.organizations.invitations.operations.check_rate_limit",
         AsyncMock(),
     )
-    monkeypatch.setattr(UserSearchIndexer, "index_for_organization", AsyncMock())
+    monkeypatch.setattr(UserDirectoryProjection, "index_for_organization", AsyncMock())
     if failure_point is AcceptanceFailurePoint.AFTER_USER:
         monkeypatch.setattr(
             OrganizationOperations,
@@ -269,7 +269,7 @@ async def test_concurrent_token_consumption_has_exactly_one_success(
         "uniffy.domains.organizations.invitations.operations.check_rate_limit",
         AsyncMock(),
     )
-    monkeypatch.setattr(UserSearchIndexer, "index_for_organization", AsyncMock())
+    monkeypatch.setattr(UserDirectoryProjection, "index_for_organization", AsyncMock())
 
     async def accept(index: int):
         async with open_session() as transaction:

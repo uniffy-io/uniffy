@@ -15,11 +15,11 @@ from uniffy.core.models.login.organization_member import (
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
-from uniffy.domains.groups.naming import slugify
-from uniffy.domains.groups.operations import GroupOperations
+from uniffy.domains.directory.groups.lifecycle import GroupOperations
+from uniffy.domains.directory.groups.naming import slugify
+from uniffy.domains.directory.people.operations import PeopleOperations
+from uniffy.domains.directory.projection import sync_people_search
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.people.operations import PeopleOperations
-from uniffy.domains.people.search import sync_people_search
 from uniffy.scripts.demo_company.context import DemoContext, DomainResult, SeedReport
 from uniffy.scripts.demo_company.loader import (
     DemoUser,

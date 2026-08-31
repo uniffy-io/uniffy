@@ -10,8 +10,8 @@ from sqlalchemy import select
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.login.group import Group
-from uniffy.domains.groups.naming import ensure_name_available
-from uniffy.domains.groups.operations import GroupOperations
+from uniffy.domains.directory.groups.naming import ensure_name_available
+from uniffy.domains.directory.groups.lifecycle import GroupOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

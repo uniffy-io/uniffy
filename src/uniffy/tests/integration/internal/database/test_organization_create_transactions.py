@@ -222,7 +222,7 @@ async def test_organization_creation_survives_starter_content_failure(
 ) -> None:
     slug = f"degraded-org-{generate_id().hex[:12]}"
     operations = OrganizationOperations(session, search_indexer=search_indexer)
-    operations._user_indexer.index_for_organization = AsyncMock()
+    operations._directory_projection.index_for_organization = AsyncMock()
     with (
         patch(
             "uniffy.domains.chat.channels.operations.check_chat_mutation_limit",

@@ -12,7 +12,7 @@ from uniffy.domains.agents.tools.builtin.people import (
     _execute_list_teams,
 )
 from uniffy.domains.agents.tools.definitions import ToolContext
-from uniffy.domains.people.reader import PeoplePage
+from uniffy.domains.directory.people.reader import PeoplePage
 
 
 def _ctx() -> ToolContext:
@@ -91,7 +91,7 @@ class TestListMembers:
             return_value=PeoplePage(people=[person], total=1, is_admin=False)
         )
 
-        with patch("uniffy.domains.people.reader.PeopleReader", return_value=reader):
+        with patch("uniffy.domains.directory.people.reader.PeopleReader", return_value=reader):
             result = await _execute_list_members(
                 ctx,
                 {
@@ -129,7 +129,7 @@ class TestListMembers:
     async def test_empty_result_is_not_an_error(self) -> None:
         reader = MagicMock()
         reader.list_people = AsyncMock(return_value=PeoplePage(people=[], total=0, is_admin=False))
-        with patch("uniffy.domains.people.reader.PeopleReader", return_value=reader):
+        with patch("uniffy.domains.directory.people.reader.PeopleReader", return_value=reader):
             result = await _execute_list_members(_ctx(), {"query": "nobody"})
         assert result.success is True
         assert result.data == "No active organization members matched."
@@ -143,7 +143,7 @@ class TestGetPerson:
         reader = MagicMock()
         reader.get_person = AsyncMock(side_effect=[(person, False), (manager, False)])
 
-        with patch("uniffy.domains.people.reader.PeopleReader", return_value=reader):
+        with patch("uniffy.domains.directory.people.reader.PeopleReader", return_value=reader):
             result = await _execute_get_person(ctx, {"user_id": person["user_id"]})
 
         assert result.success is True
@@ -184,7 +184,7 @@ class TestListTeams:
                 "uniffy.domains.organizations.operations.OrganizationOperations",
                 return_value=org_ops,
             ),
-            patch("uniffy.domains.people.teams.search_team_nodes", search),
+            patch("uniffy.domains.directory.groups.teams.search_team_nodes", search),
         ):
             result = await _execute_list_teams(ctx, {"query": "plat", "limit": 50_000})
 

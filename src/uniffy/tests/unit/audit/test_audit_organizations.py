@@ -173,7 +173,7 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
     indexer.remove_from_organization = AsyncMock(return_value=None)
 
     ops = OrganizationOperations(session)
-    ops._user_indexer = indexer
+    ops._directory_projection = indexer
 
     with (
         patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)),

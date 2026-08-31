@@ -43,6 +43,7 @@ from uniffy.domains.chat.channels.operations import (
 )
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
 from uniffy.domains.chat.search import enqueue_chat_search_acl_refresh
+from uniffy.domains.directory.projection import UserDirectoryProjection
 from uniffy.domains.files.attachments import stage_personal_attachments_folder
 from uniffy.domains.files.filters.presets import create_default_presets
 from uniffy.domains.organizations.starter.docs import (
@@ -83,10 +84,8 @@ class OrganizationOperations:
         self._storage = storage
         self._search_indexer = search_indexer
 
-        from uniffy.domains.users.search import UserSearchIndexer
-
-        self._user_indexer = (
-            UserSearchIndexer(session, search_indexer) if search_indexer is not None else None
+        self._directory_projection = (
+            UserDirectoryProjection(session, search_indexer) if search_indexer is not None else None
         )
 
     @property
@@ -96,10 +95,10 @@ class OrganizationOperations:
         return self._search_indexer
 
     @property
-    def user_indexer(self):
-        if self._user_indexer is None:
+    def directory_projection(self) -> UserDirectoryProjection:
+        if self._directory_projection is None:
             raise RuntimeError("Search indexing is required for organization mutations")
-        return self._user_indexer
+        return self._directory_projection
 
     async def get_by_id(self, org_id: UUID) -> Organization:
         result = await self._session.execute(select(Organization).where(Organization.id == org_id))
@@ -216,7 +215,7 @@ class OrganizationOperations:
         org = staged.organization
         organization_id = org.id
         try:
-            await self.user_indexer.index_for_organization(staged.owner, organization_id)
+            await self.directory_projection.index_for_organization(staged.owner, organization_id)
         except Exception:
             await self._session.rollback()
             logger.opt(exception=True).warning(
@@ -548,7 +547,7 @@ class OrganizationOperations:
             result = await self._session.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
             if user:
-                await self.user_indexer.index_for_organization(user, org_id)
+                await self.directory_projection.index_for_organization(user, org_id)
         except Exception:
             logger.opt(exception=True).warning(
                 f"Failed to index organization member {user_id} in {org_id}"
@@ -666,7 +665,7 @@ class OrganizationOperations:
         await self._session.commit()
 
         try:
-            await self.user_indexer.remove_from_organization(target_user_id, org_id)
+            await self.directory_projection.remove_from_organization(target_user_id, org_id)
         except Exception:
             logger.opt(exception=True).warning(
                 "Organization member removal committed with stale search projection",

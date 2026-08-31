@@ -9,7 +9,8 @@ from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupRole
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.types import generate_id
-from uniffy.domains.groups.operations import GroupOperations
+from uniffy.domains.directory.groups.lifecycle import GroupOperations
+from uniffy.domains.directory.groups.members import GroupMemberOperations
 
 ORG = generate_id()
 OTHER_ORG = generate_id()
@@ -66,24 +67,29 @@ def _as(role: OrganizationRole | None, is_active: bool = True):
 
 _MUTATIONS = [
     pytest.param(
+        GroupOperations,
         lambda ops, g: ops.create(organization_id=ORG, name="X", created_by_user_id=ACTOR),
         id="create",
     ),
     pytest.param(
+        GroupOperations,
         lambda ops, g: ops.update(group_id=g.id, organization_id=ORG, actor_user_id=ACTOR, name="X"),
         id="update",
     ),
     pytest.param(
+        GroupOperations,
         lambda ops, g: ops.delete(g.id, ORG, actor_user_id=ACTOR),
         id="delete",
     ),
     pytest.param(
+        GroupMemberOperations,
         lambda ops, g: ops.add_member(
             group_id=g.id, organization_id=ORG, user_id=TARGET, actor_user_id=ACTOR
         ),
         id="add_member",
     ),
     pytest.param(
+        GroupMemberOperations,
         lambda ops, g: ops.update_member_role(
             group_id=g.id,
             organization_id=ORG,
@@ -94,6 +100,7 @@ _MUTATIONS = [
         id="update_member_role",
     ),
     pytest.param(
+        GroupMemberOperations,
         lambda ops, g: ops.remove_member(
             group_id=g.id, organization_id=ORG, user_id=TARGET, actor_user_id=ACTOR
         ),
@@ -103,85 +110,90 @@ _MUTATIONS = [
 
 _READS = [
     pytest.param(
+        GroupOperations,
         lambda ops, g: ops.get_by_id(g.id, ORG, ACTOR),
         id="get_by_id",
     ),
     pytest.param(
+        GroupOperations,
         lambda ops, g: ops.list_in_organization(organization_id=ORG, actor_user_id=ACTOR),
         id="list_in_organization",
     ),
     pytest.param(
+        GroupMemberOperations,
         lambda ops, g: ops.list_members(group_id=g.id, organization_id=ORG, actor_user_id=ACTOR),
         id="list_members",
     ),
     pytest.param(
+        GroupMemberOperations,
         lambda ops, g: ops.get_member(
             group_id=g.id, organization_id=ORG, user_id=TARGET, actor_user_id=ACTOR
         ),
         id="get_member",
     ),
     pytest.param(
+        GroupMemberOperations,
         lambda ops, g: ops.get_user_groups(ACTOR, ORG, ACTOR),
         id="get_user_groups_self",
     ),
 ]
 
 
-@pytest.mark.parametrize("call", _MUTATIONS)
-async def test_mutations_require_org_admin(call) -> None:
-    ops = GroupOperations(_session())
+@pytest.mark.parametrize(("ops_type", "call"), _MUTATIONS)
+async def test_mutations_require_org_admin(ops_type, call) -> None:
+    ops = ops_type(_session())
     group = _group()
     with (
         _as(OrganizationRole.MEMBER),
-        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        patch.object(ops_type, "_fetch", AsyncMock(return_value=group)),
         pytest.raises(PermissionDeniedError),
     ):
         await call(ops, group)
 
 
-@pytest.mark.parametrize("call", _MUTATIONS)
-async def test_mutations_reject_non_members(call) -> None:
-    ops = GroupOperations(_session())
+@pytest.mark.parametrize(("ops_type", "call"), _MUTATIONS)
+async def test_mutations_reject_non_members(ops_type, call) -> None:
+    ops = ops_type(_session())
     group = _group()
     with (
         _as(None),
-        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        patch.object(ops_type, "_fetch", AsyncMock(return_value=group)),
         pytest.raises(PermissionDeniedError),
     ):
         await call(ops, group)
 
 
-@pytest.mark.parametrize("call", _MUTATIONS)
-async def test_mutations_reject_deactivated_admins(call) -> None:
-    ops = GroupOperations(_session())
+@pytest.mark.parametrize(("ops_type", "call"), _MUTATIONS)
+async def test_mutations_reject_deactivated_admins(ops_type, call) -> None:
+    ops = ops_type(_session())
     group = _group()
     with (
         _as(OrganizationRole.ADMIN, is_active=False),
-        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        patch.object(ops_type, "_fetch", AsyncMock(return_value=group)),
         pytest.raises(PermissionDeniedError),
     ):
         await call(ops, group)
 
 
-@pytest.mark.parametrize("call", _READS)
-async def test_reads_reject_non_members(call) -> None:
-    ops = GroupOperations(_session())
+@pytest.mark.parametrize(("ops_type", "call"), _READS)
+async def test_reads_reject_non_members(ops_type, call) -> None:
+    ops = ops_type(_session())
     group = _group()
     with (
         _as(None),
-        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        patch.object(ops_type, "_fetch", AsyncMock(return_value=group)),
         pytest.raises(PermissionDeniedError),
     ):
         await call(ops, group)
 
 
-@pytest.mark.parametrize("call", _READS)
-async def test_reads_reject_deactivated_members(call) -> None:
-    ops = GroupOperations(_session())
+@pytest.mark.parametrize(("ops_type", "call"), _READS)
+async def test_reads_reject_deactivated_members(ops_type, call) -> None:
+    ops = ops_type(_session())
     group = _group()
     with (
         _as(OrganizationRole.MEMBER, is_active=False),
-        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        patch.object(ops_type, "_fetch", AsyncMock(return_value=group)),
         pytest.raises(PermissionDeniedError),
     ):
         await call(ops, group)
@@ -196,7 +208,7 @@ async def test_include_private_requires_admin() -> None:
 
 
 async def test_another_users_groups_require_admin() -> None:
-    ops = GroupOperations(_session())
+    ops = GroupMemberOperations(_session())
     with _as(OrganizationRole.MEMBER), pytest.raises(PermissionDeniedError):
         await ops.get_user_groups(TARGET, ORG, ACTOR)
 
@@ -205,7 +217,7 @@ async def test_add_member_rejects_target_outside_the_org() -> None:
     """The target inherits the group's content grants, so a non-member
     target would gain access to a tenant they do not belong to.
     """
-    ops = GroupOperations(_session())
+    ops = GroupMemberOperations(_session())
     group = _group()
 
     async def membership_for(_session, user_id, org_id):
@@ -216,7 +228,7 @@ async def test_add_member_rejects_target_outside_the_org() -> None:
             "uniffy.domains.organizations.operations.get_active_membership",
             AsyncMock(side_effect=membership_for),
         ),
-        patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)),
+        patch.object(GroupMemberOperations, "_fetch", AsyncMock(return_value=group)),
         pytest.raises(PermissionDeniedError),
     ):
         await ops.add_member(

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.references import BROADCAST_URNS
 from uniffy.core.models.chat.read_cursor import ChatReadCursor, ChatThreadReadCursor
-from uniffy.domains.people.teams import user_team_ids
+from uniffy.domains.directory.groups.teams import user_team_ids
 
 _EPOCH = datetime(1, 1, 1, tzinfo=UTC)
 
