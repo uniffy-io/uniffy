@@ -3,7 +3,7 @@ title: Account Recovery
 description: Disable two factor authentication on a user account when no admin can perform the reset from inside the app. Self hosted only, command line, audit logged.
 sidebar:
   label: Account Recovery
-  order: 9
+  order: 10
 ---
 
 When a user loses their authenticator and there is nobody left who can reset two factor authentication from inside the app, you can disable it with a single command on the host running Uniffy. This page is for self hosted operators. The command does not exist on the hosted product.

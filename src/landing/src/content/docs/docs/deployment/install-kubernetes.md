@@ -17,7 +17,7 @@ This page is for a platform team putting Uniffy on a cluster they already run. I
 | LoadBalancer capability, cloud or MetalLB | A tested **pinset** per release |
 | Two DNS records, app and TURN | A mirror script for private registries |
 | S3 compatible object storage | |
-| A TLS strategy: ACME, your CA, or a bought certificate | |
+| A TLS strategy: ACME, your CA, or an owned certificate | |
 | Optional: an external Postgres 18 | |
 | Optional: SMTP credentials | |
 
@@ -72,7 +72,7 @@ Four decisions. Everything else is a value with a sane default.
 
 **Gateway.** The chart creates its own Gateway by default. If you already run Envoy Gateway with a shared Gateway, point the chart at it with a parent reference instead.
 
-**TLS.** Three modes. `acme` lets cert-manager fetch and renew a certificate. `issuer` uses a cert-manager issuer you already run, for private CAs. `existing` points at a TLS secret you created from a bought certificate; in that mode cert-manager is not needed at all:
+**TLS.** Three modes. `acme` lets cert-manager fetch and renew a certificate. `issuer` uses a cert-manager issuer you already run, for private CAs. `existing` points at a TLS secret you created from a certificate you own; in that mode cert-manager is not needed at all:
 
 ```bash
 kubectl -n uniffy create secret tls uniffy-tls \
@@ -229,7 +229,7 @@ config:
   INITIAL_PLATFORM_ADMIN_EMAIL: "platform@acme.com"
 ```
 
-Leave `INITIAL_PLATFORM_ADMIN_EMAIL` unset and the initial admin is one combined account, which is the right shape for a small single org install. Set it and the platform operator becomes a separate login with its own password from the secret.
+Leave `INITIAL_PLATFORM_ADMIN_EMAIL` unset and the initial admin is one combined account, which is the right shape for a small single org install. Set it and the platform operator becomes a separate login with its own password from the secret. [Admins and Operators](/docs/deployment/admins-and-operators/) covers which shape fits which deployment.
 
 Behind an edge that terminates connections, tell the audit log and the rate limiter how many hops to look through, as covered in [Behind an Edge](/docs/deployment/edges/):
 

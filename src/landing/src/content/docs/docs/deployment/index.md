@@ -20,7 +20,7 @@ The edge that fronts Uniffy has a strict contract. It must speak HTTP/2 in clear
 
 ## Fully isolated deployments
 
-Uniffy never calls home, fetches nothing from third party CDNs at runtime, and keeps telemetry off by default. A deployment that is fully isolated from the internet is a supported configuration, not a special case. The VM installer takes an offline bundle, and the cluster path ships a mirror script for your private registry. Both install pages cover it.
+Uniffy never calls home, fetches nothing from third party CDNs at runtime, and keeps telemetry off by default. A deployment that is fully isolated from the internet is a supported configuration, not a special case. The VM installer takes an offline bundle, and the cluster path ships a mirror script for your private registry.
 
 ## What is here
 
@@ -30,6 +30,7 @@ Uniffy never calls home, fetches nothing from third party CDNs at runtime, and k
 - [Backups and Restore](/docs/deployment/backups/): continuous Postgres backups to S3, point in time recovery, the master key ritual.
 - [Configure Uniffy](/docs/deployment/configure/): every environment variable.
 - [System Architecture](/docs/deployment/system-architecture/): services, data stores, scaling, and ports.
+- [Admins and Operators](/docs/deployment/admins-and-operators/): the two admin jobs, the wall between them, one account or two.
 - [Harden the Edge](/docs/deployment/hardening/): lock the operator API to your private network.
 - [Behind an Edge](/docs/deployment/edges/): Cloudflare, CDNs, and corporate load balancers in front of Uniffy.
 - [Account Recovery](/docs/deployment/recovery/): the break glass command for a locked out admin.

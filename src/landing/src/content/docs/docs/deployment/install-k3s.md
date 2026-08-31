@@ -14,7 +14,7 @@ One virtual machine, one command, a running Uniffy. This page is for a team that
 - A DNS A record pointing your hostname at the VM, for example `uniffy.example.com`.
 - Inbound ports open: 80 and 443 over TCP, 3478 over UDP and TCP.
 - Optional: SMTP credentials. Without them Uniffy runs, but invites and password resets stay off until you add a mail server in the admin pages.
-- Optional: a TLS certificate you bought. Without one the installer gets a free certificate from Let's Encrypt.
+- Optional: a TLS certificate you own. Without one the installer gets a free certificate from Let's Encrypt.
 
 Port 3478 carries calls media. Everything else works without it, and calls quietly do not, which is why the installer probes it and tells you.
 
@@ -27,7 +27,7 @@ sudo bash uniffy-k3s.sh install \
   --acme-email admin@example.com
 ```
 
-With a purchased certificate, replace the ACME flag:
+With an owned certificate, replace the ACME flag:
 
 ```bash
 sudo bash uniffy-k3s.sh install \
@@ -59,7 +59,7 @@ Two operational habits from day one:
 - The master key backup from the install output, stored off the machine.
 - Continuous Postgres backups to an S3 bucket that is not on this VM. Four lines in `/etc/uniffy/values.yaml` turn them on; [Backups and Restore](/docs/deployment/backups/) has them. The local dumps the upgrade command takes are for walking back a bad upgrade, not for surviving a dead machine.
 
-## Renewing a purchased certificate
+## Renewing an owned certificate
 
 Public certificate authorities cap validity at about 13 months, so a purchased certificate is a yearly ritual. Ten year certificates exist only from a private CA. Either way, renewal is one command with the new files:
 
@@ -68,26 +68,6 @@ sudo bash uniffy-k3s.sh tls-update --tls-cert ./new-fullchain.pem --tls-key ./pr
 ```
 
 The installer and the upgrade command both warn when the current certificate expires within 30 days. ACME mode renews itself and none of this applies.
-
-## Installing without internet access
-
-For a deployment that is fully isolated from the internet, download the offline bundle for a release on a connected machine, verify it, and carry it over:
-
-```bash
-# on a connected machine
-curl -fsSLO https://github.com/uniffy-io/uniffy/releases/download/v1.0.0/uniffy-airgap-1.0.0.tar.gz
-curl -fsSLO https://github.com/uniffy-io/uniffy/releases/download/v1.0.0/SHA256SUMS
-sha256sum -c SHA256SUMS
-scp uniffy-airgap-1.0.0.tar.gz your-vm:
-
-# on the VM
-sudo bash uniffy-k3s.sh install \
-  --bundle ./uniffy-airgap-1.0.0.tar.gz \
-  --hostname uniffy.corp.internal \
-  --tls-cert ./corp-fullchain.pem --tls-key ./corp-private.key
-```
-
-The bundle carries k3s, every image, and every chart in the pinset. Nothing is pulled from the network during the install. Let's Encrypt needs the internet, so isolated installs bring a certificate from their own CA; with no certificate flags at all the installer mints a self signed one and prints its fingerprint.
 
 ## Calls and the firewall
 
