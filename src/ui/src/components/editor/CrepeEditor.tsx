@@ -158,6 +158,23 @@ function muteSyncBinding(view: EditorView | null | undefined) {
   }
 }
 
+function destroyCrepeAfterPendingViews(crepe: Crepe, view?: EditorView | null) {
+  // Crepe list node views restore their selection in a RAF that their destroy hook does not cancel.
+  // Register teardown after those callbacks so they cannot dispatch into a disposed Milkdown context.
+  requestAnimationFrame(() => {
+    if (view) {
+      muteSyncBinding(view);
+    } else {
+      try {
+        crepe.editor.action((ctx) => muteSyncBinding(ctx.get(editorViewCtx)));
+      } catch {
+        // The editor did not finish creating a view.
+      }
+    }
+    void crepe.destroy();
+  });
+}
+
 // Custom y-prosemirror cursor builder: colored caret with an
 // auto-hiding name flag so static labels do not clutter the editor.
 // Peer paint is derived from the display name, the same way avatars are, so a
@@ -692,7 +709,7 @@ export function CrepeEditor({
 
     // Clean up any existing instance first
     if (crepeRef.current) {
-      crepeRef.current.destroy();
+      destroyCrepeAfterPendingViews(crepeRef.current, viewRef.current);
       crepeRef.current = null;
     }
 
@@ -926,12 +943,7 @@ export function CrepeEditor({
       // ySync binding here or it lingers as a live fragment observer and
       // any fragment rebuild re-enters its half-destroyed view.
       if (cancelled) {
-        try {
-          crepe.editor.action((ctx) => muteSyncBinding(ctx.get(editorViewCtx)));
-        } catch {
-          // ctx already gone
-        }
-        crepe.destroy();
+        destroyCrepeAfterPendingViews(crepe);
         return;
       }
       crepeRef.current = crepe;
@@ -1091,10 +1103,10 @@ export function CrepeEditor({
         unregisterEditorRef.current();
         unregisterEditorRef.current = null;
       }
-      muteSyncBinding(viewRef.current);
+      const view = viewRef.current;
       viewRef.current = null;
       if (crepeRef.current) {
-        crepeRef.current.destroy();
+        destroyCrepeAfterPendingViews(crepeRef.current, view);
         crepeRef.current = null;
       }
       if (onEditorReadyRef.current) onEditorReadyRef.current(null);
@@ -1134,9 +1146,10 @@ export function CrepeEditor({
       unregisterEditorRef.current();
       unregisterEditorRef.current = null;
     }
+    const view = viewRef.current;
     viewRef.current = null;
 
-    crepeRef.current.destroy();
+    destroyCrepeAfterPendingViews(crepeRef.current, view);
     crepeRef.current = null;
 
     clearContainer(container);
@@ -1175,7 +1188,7 @@ export function CrepeEditor({
 
     crepe.create().then(() => {
       if (cancelled) {
-        crepe.destroy();
+        destroyCrepeAfterPendingViews(crepe);
         return;
       }
       crepeRef.current = crepe;
