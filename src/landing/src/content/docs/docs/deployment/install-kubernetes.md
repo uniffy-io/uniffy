@@ -68,7 +68,7 @@ Envoy Gateway owns the Gateway API CRDs; the STUNner operator is configured to s
 
 Four decisions. Everything else is a value with a sane default.
 
-**Postgres.** Bundled by default: the chart creates a CloudNativePG cluster with three instances. To bring your own instead, it must be PostgreSQL 18 with the `pg_trgm`, `uuid-ossp`, and `unaccent` extensions available, and enough connections. Each backend or worker pod holds up to 100; the budget formula is in [System Architecture](/docs/deployment/system-architecture/).
+**Postgres.** Bundled by default: the chart creates a CloudNativePG cluster with three instances, and anything under `postgres.parameters` lands in `postgresql.conf`, so tuning needs no chart surgery. To bring your own instead, it must be PostgreSQL 18 with the `pg_trgm`, `uuid-ossp`, and `unaccent` extensions available, and enough connections. Each backend or worker pod holds up to 100; the budget formula is in [System Architecture](/docs/deployment/system-architecture/).
 
 **Gateway.** The chart creates its own Gateway by default. If you already run Envoy Gateway with a shared Gateway, point the chart at it with a parent reference instead.
 
@@ -123,38 +123,70 @@ gateway:
   create: true
   # parentRef: { name: shared-gateway, namespace: networking }
 
+global:
+  # labels:                     # stamped on every object the chart renders
+  #   team: platform
+  #   cost-center: collab
+  # nodeSelector:               # every workload, unless the workload overrides
+  #   kubernetes.io/arch: amd64
+  # imageRegistry: registry.internal/uniffy
+  # imagePullSecrets: [{ name: registry-credentials }]
+
+backend:
+  replicas: 3
+  resources:                    # starting points, not gospel; measure and adjust
+    requests: { cpu: "1", memory: 1Gi }
+    limits: { memory: 2Gi }
+  # podLabels: { tier: api }
+
+workerCore:
+  replicas: 3
+  resources:
+    requests: { cpu: 500m, memory: 768Mi }
+
+workerEgress:
+  replicas: 3
+  # nodeSelector:               # overrides global for this workload only
+  #   workload-class: burst
+
+frontend:
+  replicas: 2
+
+livekit:
+  # nodeSelector: { network: fast }
+  # tolerations:
+  #   - key: media-only
+  #     operator: Exists
+
 postgres:
-  bundled: true
+  bundled: true                 # false to bring your own; fill external below
   instances: 3
   storageSize: 50Gi
   storageClass: fast-ssd
+  parameters:                   # passed through to postgresql.conf
+    max_connections: "1000"     # size with the connection budget formula
+    shared_buffers: 2GB
   # external:
   #   host: pg.internal
   #   database: uniffy
   #   user: uniffy
 
-s3:
-  endpoint: https://storage.internal:9000
-  bucket: uniffy-files
-  region: us-east-1
-
-smtp:
-  host: smtp.internal
-  port: 465
-  username: uniffy
-  fromAddress: no-reply@example.com
-
-initialAdmin:
-  email: admin@example.com
-
-replicas:
-  backend: 3
-  workerCore: 3
-  workerEgress: 3
-
-config:                     # application settings, next section
+config:                         # application settings, next section
   ALLOW_PUBLIC_REGISTRATION: "false"
+  S3_ENDPOINT_URL: "https://storage.internal:9000"
+  S3_BUCKET_NAME: "uniffy-files"
+  S3_REGION: "us-east-1"
+  SMTP_HOST: "smtp.internal"
+  SMTP_PORT: "465"
+  SMTP_USERNAME: "uniffy"
+  MAIL_FROM_ADDRESS: "no-reply@example.com"
+  INITIAL_ADMIN_EMAIL: "admin@example.com"
+
+# configSecrets:                # extra Secrets attached as env, next section
+#   - uniffy-extra-secrets
 ```
+
+Every workload block (`backend`, `workerCore`, `workerEgress`, `frontend`, `livekit`, and `meilisearch`, `valkey`, `rustfs` when bundled) accepts the same scheduling keys: `replicas`, `resources`, `podLabels`, `podAnnotations`, `nodeSelector`, `tolerations`, and `affinity`. A key set on the workload wins over the same key under `global`; a key set nowhere is left to the scheduler. That covers the usual fleet policies without chart surgery: pin media to network optimized nodes, push the egress fleet onto burst capacity, keep cost labels on everything for the billing exporter.
 
 ```bash
 helm upgrade --install uniffy oci://ghcr.io/uniffy-io/charts/uniffy \
@@ -165,11 +197,25 @@ helm upgrade --install uniffy oci://ghcr.io/uniffy-io/charts/uniffy \
 
 Uniffy itself is configured through environment variables, and [Configure Uniffy](/docs/deployment/configure/) documents every one. The chart splits them into two groups.
 
-**Chart owned.** Everything that wires services together: the base URL and CORS origins derived from `hostname`, every connection setting for Postgres, Valkey, Meilisearch, S3, LiveKit, and TURN, plus `WORKERS=1` and JSON logging. The chart renders these and a hand written value colliding with them fails the render loudly rather than silently losing.
+**Chart owned.** Everything that wires the services the chart itself runs: the base URL and CORS origins derived from `hostname`, the connection settings for Postgres, Valkey, Meilisearch, LiveKit, and TURN, plus `WORKERS=1` and JSON logging. The chart renders these and a hand written value colliding with them fails the render loudly rather than silently losing. Your storage endpoint, your mail server, and the bootstrap identities are not plumbing the chart can know; they ride under `config:` like any other setting, with their secrets in `uniffy-secret`.
 
-**Yours.** Everything that is policy rather than plumbing goes under `config:` in your values and lands in the app's environment as written. Secrets never go here; they belong in `uniffy-secret`.
+**Yours.** Everything that is policy rather than plumbing goes under `config:` in your values and lands in the app's environment as written. Secrets never go here: values files live in git, and a password in `config:` is a password in your history.
 
-Changing `config:` and running `helm upgrade` restarts the affected pods on its own; the pods carry a checksum of their configuration, so a config change is a rollout, not a mystery about which pod read what. The same `config:` block works in `/etc/uniffy/values.yaml` on the VM path.
+**Secret settings** ride in Secrets instead. The credentials the chart knows about live in `uniffy-secret`. For anything sensitive beyond that list, create your own Secret and name it under `configSecrets:`; the chart attaches every listed Secret to the backend and both worker fleets as environment, exactly like `config:` but out of the values file:
+
+```yaml
+configSecrets:
+  - uniffy-extra-secrets
+```
+
+```bash
+kubectl -n uniffy create secret generic uniffy-extra-secrets \
+  --from-literal=SOME_SENSITIVE_SETTING='...'
+```
+
+Sources apply in order and later wins: `config:`, then `uniffy-secret`, then `configSecrets` entries in list order. That precedence is what makes an external secret manager clean: point ExternalSecrets, a Vault agent, or SOPS at materializing the Secret, list its name, and a key there overrides the same key anywhere earlier, rotation included.
+
+Changing `config:` and running `helm upgrade` restarts the affected pods on its own; the pods carry a checksum of their configuration, so a config change is a rollout, not a mystery about which pod read what. The checksum only covers what the chart renders: when an external manager rotates a `configSecrets` Secret behind the chart's back, follow with `kubectl -n uniffy rollout restart deploy`, or let your secret operator's own reload annotation handle it. The same `config:` block works in `/etc/uniffy/values.yaml` on the VM path.
 
 Three blocks cover most real deployments.
 
@@ -217,7 +263,7 @@ The chart's test suite checks the pieces that fail quietly: the h2c path to the 
 
 - [Upgrades](/docs/deployment/upgrades/): pinsets, the maintenance window, and why the Postgres dump comes first.
 - [Backups and Restore](/docs/deployment/backups/): two things are non negotiable, Postgres and `APP_MASTER_KEY`. Turn on the continuous S3 backups the same day you install; the page has the four values it takes.
-- Monitoring: the chart ships ServiceMonitors for the backend and both worker fleets. The metrics and the alert starting points are in [System Architecture](/docs/deployment/system-architecture/).
+- Monitoring: the chart ships ServiceMonitors for the backend and both worker fleets, so metrics flow into whatever Prometheus stack the cluster runs.
 - [Harden the Edge](/docs/deployment/hardening/): one chart value keeps the operator API off the internet. Do it the same week.
 
 ## Private registries and isolated clusters

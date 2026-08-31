@@ -8,7 +8,7 @@ sidebar:
 
 Uniffy self hosted runs on Kubernetes. There are two supported paths, and both end in the same product our cloud runs.
 
-**The VM path.** One machine, one command. The installer brings k3s, every component, and Uniffy itself, makes the opinionated choices for you, and prints your admin password at the end. Start at [Install on a VM](/docs/deployment/install-k3s/).
+**The VM path.** One machine, one command. The installer brings [k3s](https://k3s.io), every component, and Uniffy itself, makes the opinionated choices for you, and prints your admin password at the end. Start at [Install on a VM](/docs/deployment/install-k3s/).
 
 **The cluster path.** You already run Kubernetes and a platform team. You install a Helm chart, bring your own object storage, and decide a short list of things like where Postgres lives. Start at [Install on Kubernetes](/docs/deployment/install-kubernetes/).
 
