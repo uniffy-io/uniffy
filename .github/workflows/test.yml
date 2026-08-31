@@ -41,11 +41,13 @@ jobs:
             frontend:
               - 'src/ui/**'
               - 'src/gen/typescript/**'
+              - 'lint/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
             mobile:
               - 'src/mobile/**'
               - 'src/gen/typescript/**'
+              - 'lint/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
             proto:
@@ -121,13 +123,7 @@ jobs:
 
       - name: Run Python linters
         shell: bash
-        run: |
-          uv run lint-imports
-          uv run ruff check src/uniffy/ --exclude src/gen
-
-      - name: Check Python formatting
-        shell: bash
-        run: uv run ruff format src/uniffy/ --exclude src/gen --check
+        run: ./manage.py lint -s backend --stack local --check
 
   lint-frontend:
     needs: changes
@@ -296,7 +292,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          uv run pytest src/uniffy/tests/unit/ \
+          ./manage.py test -s backend --stack local -- \
             --junitxml=reports/pytest-report.xml \
             --color=yes -vv
 
@@ -397,11 +393,7 @@ jobs:
       - name: Run benchmarks
         shell: bash
         run: |
-          uv run pytest src/uniffy/tests/benchmarks/ \
-            --benchmark-only \
-            --benchmark-group-by=func \
-            --benchmark-sort=mean \
-            --benchmark-columns=min,max,mean,stddev,rounds \
+          ./manage.py bench --stack local -- \
             --benchmark-json=reports/benchmark.json \
             --color=yes
 
